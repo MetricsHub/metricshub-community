@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲

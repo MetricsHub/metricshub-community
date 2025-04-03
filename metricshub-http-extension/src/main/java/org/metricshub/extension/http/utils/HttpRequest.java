@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -28,10 +28,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.extension.http.HttpConfiguration;
 import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
 import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
-import org.sentrysoftware.metricshub.extension.http.HttpConfiguration;
 
 /**
  * Represents an HTTP request.

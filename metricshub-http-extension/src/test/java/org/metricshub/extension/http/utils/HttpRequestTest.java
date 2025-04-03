@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -10,9 +10,9 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.http.utils.HttpRequest.HttpRequestBuilder;
 import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.extension.http.HttpConfiguration;
-import org.sentrysoftware.metricshub.extension.http.utils.HttpRequest.HttpRequestBuilder;
 
 class HttpRequestTest {
 

@@ -6,13 +6,13 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.http.HttpExtension;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.cli.service.protocol.HttpConfigCli.HttpOrHttps;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.http.HttpConfiguration;
-import org.sentrysoftware.metricshub.extension.http.HttpExtension;
 
 class HttpConfigCliTest {
 

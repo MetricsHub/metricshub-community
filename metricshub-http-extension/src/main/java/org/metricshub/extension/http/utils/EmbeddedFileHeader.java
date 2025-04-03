@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -29,22 +29,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
 
 /**
- * Represents an HTTP request header with a string content.
+ * Represents the header of an HTTP request containing an embedded file.
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class StringHeader implements Header {
+public class EmbeddedFileHeader implements Header {
 
-	private static final long serialVersionUID = 7838818669996389750L;
+	private static final long serialVersionUID = 7171137961999511622L;
 
 	/**
-	 * The actual content of the HTTP request header.
+	 * The embedded file header content.
 	 */
-	private String header;
+	private EmbeddedFile header;
 
 	@Override
 	public Map<String, String> getContent(
@@ -57,21 +58,23 @@ public class StringHeader implements Header {
 			return new HashMap<>();
 		}
 
-		return Header.resolveAndParseHeader(header, username, password, authenticationToken, hostname);
+		return Header.resolveAndParseHeader(header.getContentAsString(), username, password, authenticationToken, hostname);
 	}
 
 	@Override
 	public Header copy() {
-		return StringHeader.builder().header(header).build();
+		return EmbeddedFileHeader.builder().header(header.copy()).build();
 	}
 
 	@Override
 	public String description() {
-		return header;
+		return header != null ? header.description() : null;
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		header = updater.apply(header);
+		if (header != null) {
+			header.update(updater);
+		}
 	}
 }

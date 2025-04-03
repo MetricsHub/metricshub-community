@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http;
+package org.metricshub.extension.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -9,14 +9,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.MockedStatic;
+import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
+import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
 import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
 import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.http.utils.HttpRequest;
 
 class HttpRequestExecutorTest {
 

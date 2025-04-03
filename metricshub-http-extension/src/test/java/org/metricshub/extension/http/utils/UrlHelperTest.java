@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

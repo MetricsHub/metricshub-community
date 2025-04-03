@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.http.utils;
+package org.metricshub.extension.http.utils;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,60 +21,47 @@ package org.sentrysoftware.metricshub.extension.http.utils;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
 
 /**
- * Represents the header of an HTTP request containing an embedded file.
+ * Represents an HTTP request body with a string content.
  */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class EmbeddedFileHeader implements Header {
+public class StringBody implements Body {
 
-	private static final long serialVersionUID = 7171137961999511622L;
+	private static final long serialVersionUID = 7408610469247885489L;
 
 	/**
-	 * The embedded file header content.
+	 * The actual content of the HTTP request body.
 	 */
-	private EmbeddedFile header;
+	private String body;
 
 	@Override
-	public Map<String, String> getContent(
-		String username,
-		char[] password,
-		String authenticationToken,
-		@NonNull String hostname
-	) {
-		if (header == null) {
-			return new HashMap<>();
-		}
-
-		return Header.resolveAndParseHeader(header.getContentAsString(), username, password, authenticationToken, hostname);
+	public String getContent(String username, char[] password, String authenticationToken, @NonNull String hostname) {
+		return MacrosUpdater.update(body, username, password, authenticationToken, hostname, false);
 	}
 
 	@Override
-	public Header copy() {
-		return EmbeddedFileHeader.builder().header(header.copy()).build();
+	public Body copy() {
+		return StringBody.builder().body(body).build();
 	}
 
 	@Override
 	public String description() {
-		return header != null ? header.description() : null;
+		return body;
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		if (header != null) {
-			header.update(updater);
-		}
+		body = updater.apply(body);
 	}
 }
