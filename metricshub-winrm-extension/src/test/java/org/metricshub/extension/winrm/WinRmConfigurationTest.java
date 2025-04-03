@@ -1,14 +1,15 @@
-package org.sentrysoftware.metricshub.extension.winrm;
+package org.metricshub.extension.winrm;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.List;
+
 import org.junit.jupiter.api.Test;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
-import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 class WinRmConfigurationTest {
 

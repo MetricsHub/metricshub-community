@@ -1,10 +1,12 @@
-package org.sentrysoftware.metricshub.extension.winrm;
+package org.metricshub.extension.winrm;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_NAMESPACE;
+import static org.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_QUERY;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -13,14 +15,7 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mockStatic;
 import static org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType.HOST;
-import static org.sentrysoftware.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_NAMESPACE;
-import static org.sentrysoftware.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_QUERY;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.IntNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -28,8 +23,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -63,8 +61,12 @@ import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.extension.win.WinCommandService;
 import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
-import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
-import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
+
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.IntNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 
 @ExtendWith(MockitoExtension.class)
 class WinRmExtensionTest {

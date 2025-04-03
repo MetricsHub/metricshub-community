@@ -12,8 +12,8 @@ import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.winrm.WinRmConfiguration;
-import org.sentrysoftware.metricshub.extension.winrm.WinRmExtension;
+import org.metricshub.extension.winrm.WinRmConfiguration;
+import org.metricshub.extension.winrm.WinRmExtension;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 class WinRmConfigCliTest {

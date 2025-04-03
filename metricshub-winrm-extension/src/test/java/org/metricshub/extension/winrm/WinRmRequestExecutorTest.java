@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.winrm;
+package org.metricshub.extension.winrm;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
