@@ -6,12 +6,12 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.wbem.WbemConfiguration;
+import org.metricshub.extension.wbem.WbemExtension;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.wbem.WbemConfiguration;
-import org.sentrysoftware.metricshub.extension.wbem.WbemExtension;
 
 class WbemConfigCliTest {
 

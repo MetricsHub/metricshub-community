@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wbem;
+package org.metricshub.extension.wbem;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲

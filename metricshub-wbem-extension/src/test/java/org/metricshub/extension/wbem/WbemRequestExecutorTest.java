@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wbem;
+package org.metricshub.extension.wbem;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -14,12 +14,13 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 import org.metricshub.wbem.client.WbemExecutor;
 import org.metricshub.wbem.client.WbemQueryResult;
 import org.metricshub.wbem.javax.wbem.WBEMException;
+import org.mockito.MockedStatic;
+import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 
 class WbemRequestExecutorTest {
 
