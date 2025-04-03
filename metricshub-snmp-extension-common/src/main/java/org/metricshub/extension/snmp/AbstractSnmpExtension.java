@@ -34,7 +34,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
-
 import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
 import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
 import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;

@@ -35,7 +35,6 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;

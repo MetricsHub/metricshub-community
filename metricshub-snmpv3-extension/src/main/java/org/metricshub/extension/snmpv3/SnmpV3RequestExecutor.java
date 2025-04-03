@@ -23,7 +23,6 @@ package org.metricshub.extension.snmpv3;
 
 import java.io.IOException;
 import java.util.Optional;
-
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
 import org.metricshub.snmp.client.SnmpClient;

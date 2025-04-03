@@ -5,15 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doReturn;
 
+import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 import java.io.IOException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 
 @ExtendWith(MockitoExtension.class)
 class SnmpVersionDeserializerTest {

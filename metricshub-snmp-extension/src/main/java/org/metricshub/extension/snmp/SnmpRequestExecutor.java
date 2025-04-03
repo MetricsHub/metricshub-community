@@ -22,7 +22,6 @@ package org.metricshub.extension.snmp;
  */
 
 import java.io.IOException;
-
 import org.metricshub.snmp.client.SnmpClient;
 
 /**

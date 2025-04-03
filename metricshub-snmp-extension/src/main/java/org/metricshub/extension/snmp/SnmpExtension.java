@@ -1,10 +1,5 @@
 package org.metricshub.extension.snmp;
 
-import java.util.function.UnaryOperator;
-
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub SNMP Extension
@@ -27,10 +22,12 @@ import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-
+import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
 
 /**
  * This class extends {@link AbstractSnmpExtension}, reports the supported features,

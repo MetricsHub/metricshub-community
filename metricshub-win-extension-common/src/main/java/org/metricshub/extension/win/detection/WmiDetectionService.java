@@ -29,7 +29,6 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;

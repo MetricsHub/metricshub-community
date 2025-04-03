@@ -14,7 +14,6 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-
 import org.junit.jupiter.api.Test;
 import org.metricshub.wbem.client.WbemExecutor;
 import org.metricshub.wbem.client.WbemQueryResult;

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.function.UnaryOperator;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-
 import org.metricshub.extension.snmp.AbstractSnmpExtension;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;

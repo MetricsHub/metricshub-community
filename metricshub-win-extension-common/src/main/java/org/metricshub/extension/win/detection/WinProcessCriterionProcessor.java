@@ -23,10 +23,9 @@ package org.metricshub.extension.win.detection;
 
 import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.LOCALHOST;
 
-import org.metricshub.extension.win.IWinConfiguration;
-
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;

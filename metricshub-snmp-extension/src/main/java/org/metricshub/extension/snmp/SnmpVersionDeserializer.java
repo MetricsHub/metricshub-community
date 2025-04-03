@@ -1,9 +1,5 @@
 package org.metricshub.extension.snmp;
 
-import java.io.IOException;
-
-import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub SNMP Extension
@@ -28,6 +24,8 @@ import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import java.io.IOException;
+import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
 
 /**
  * Custom deserializer for converting SNMP version values from JSON during deserialization.

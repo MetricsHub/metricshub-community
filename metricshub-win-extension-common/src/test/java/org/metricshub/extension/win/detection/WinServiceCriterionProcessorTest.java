@@ -11,7 +11,6 @@ import static org.mockito.Mockito.mockStatic;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.extension.win.IWinConfiguration;
