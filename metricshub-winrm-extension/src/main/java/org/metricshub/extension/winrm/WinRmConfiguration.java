@@ -38,7 +38,7 @@ import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
 import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 import org.sentrysoftware.metricshub.engine.deserialization.MultiValueDeserializer;
 import org.sentrysoftware.metricshub.engine.deserialization.TimeDeserializer;
-import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
+import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 /**

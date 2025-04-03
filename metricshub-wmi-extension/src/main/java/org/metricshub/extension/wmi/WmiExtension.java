@@ -35,6 +35,18 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+
+import org.metricshub.extension.win.IWinConfiguration;
+import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
+import org.metricshub.extension.win.detection.WinIpmiCriterionProcessor;
+import org.metricshub.extension.win.detection.WinProcessCriterionProcessor;
+import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
+import org.metricshub.extension.win.detection.WmiCriterionProcessor;
+import org.metricshub.extension.win.detection.WmiDetectionService;
+import org.metricshub.extension.win.source.WinCommandLineSourceProcessor;
+import org.metricshub.extension.win.source.WinIpmiSourceProcessor;
+import org.metricshub.extension.win.source.WmiSourceProcessor;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
@@ -53,17 +65,6 @@ import org.sentrysoftware.metricshub.engine.extension.IProtocolExtension;
 import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.metricshub.extension.win.WinCommandService;
-import org.sentrysoftware.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
-import org.sentrysoftware.metricshub.extension.win.detection.WinIpmiCriterionProcessor;
-import org.sentrysoftware.metricshub.extension.win.detection.WinProcessCriterionProcessor;
-import org.sentrysoftware.metricshub.extension.win.detection.WinServiceCriterionProcessor;
-import org.sentrysoftware.metricshub.extension.win.detection.WmiCriterionProcessor;
-import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
-import org.sentrysoftware.metricshub.extension.win.source.WinCommandLineSourceProcessor;
-import org.sentrysoftware.metricshub.extension.win.source.WinIpmiSourceProcessor;
-import org.sentrysoftware.metricshub.extension.win.source.WmiSourceProcessor;
 
 /**
  * This class implements the {@link IProtocolExtension} contract, reports the supported features,

@@ -26,6 +26,8 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.detection.WmiDetectionService;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 import org.mockito.InjectMocks;
@@ -59,8 +61,6 @@ import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
 import org.sentrysoftware.metricshub.engine.telemetry.HostProperties;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.win.WinCommandService;
-import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.IntNode;
