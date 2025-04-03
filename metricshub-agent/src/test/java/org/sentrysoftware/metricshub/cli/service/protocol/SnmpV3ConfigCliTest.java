@@ -7,11 +7,11 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.snmpv3.SnmpV3Configuration;
+import org.metricshub.extension.snmpv3.SnmpV3Extension;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.snmpv3.SnmpV3Configuration;
-import org.sentrysoftware.metricshub.extension.snmpv3.SnmpV3Extension;
 
 class SnmpV3ConfigCliTest {
 

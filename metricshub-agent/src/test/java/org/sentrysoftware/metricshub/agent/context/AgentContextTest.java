@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.snmp.SnmpExtension;
 import org.sentrysoftware.metricshub.agent.config.AdditionalConnector;
 import org.sentrysoftware.metricshub.agent.config.AgentConfig;
 import org.sentrysoftware.metricshub.agent.config.ResourceConfig;
@@ -45,7 +46,6 @@ import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.Simple;
 import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.snmp.SnmpExtension;
 
 class AgentContextTest {
 

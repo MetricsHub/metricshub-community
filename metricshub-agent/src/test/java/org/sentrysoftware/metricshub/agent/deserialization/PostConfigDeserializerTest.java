@@ -10,6 +10,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.extension.snmp.SnmpExtension;
 import org.sentrysoftware.metricshub.agent.config.AgentConfig;
 import org.sentrysoftware.metricshub.agent.config.ResourceConfig;
 import org.sentrysoftware.metricshub.agent.config.ResourceGroupConfig;
@@ -18,8 +20,6 @@ import org.sentrysoftware.metricshub.engine.common.helpers.JsonHelper;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
 import org.sentrysoftware.metricshub.extension.oscommand.OsCommandExtension;
 import org.sentrysoftware.metricshub.extension.oscommand.SshConfiguration;
-import org.sentrysoftware.metricshub.extension.snmp.SnmpConfiguration;
-import org.sentrysoftware.metricshub.extension.snmp.SnmpExtension;
 
 class PostConfigDeserializerTest {
 
