@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.it.job.snmp.snmp4j;
+package org.metricshub.it.job.snmp.snmp4j;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -17,7 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Getter;
-import org.sentrysoftware.metricshub.it.job.ITJobUtils;
+import org.metricshub.it.job.ITJobUtils;
 import org.snmp4j.CommandResponder;
 import org.snmp4j.MessageDispatcher;
 import org.snmp4j.MessageDispatcherImpl;

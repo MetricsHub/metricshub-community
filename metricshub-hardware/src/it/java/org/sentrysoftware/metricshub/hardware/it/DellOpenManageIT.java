@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpExtension;
 import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
+import org.metricshub.it.job.snmp.SnmpITJob;
 import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
 import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
 import org.sentrysoftware.metricshub.engine.connector.model.ConnectorStore;
@@ -25,7 +26,6 @@ import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwareStrategy;
-import org.sentrysoftware.metricshub.it.job.snmp.SnmpITJob;
 
 class DellOpenManageIT {
 	static {

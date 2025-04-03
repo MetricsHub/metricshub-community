@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.it.job;
+package org.metricshub.it.job;
 
 import java.io.File;
 import java.io.FileInputStream;

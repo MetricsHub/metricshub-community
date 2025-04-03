@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.it.job;
+package org.metricshub.it.job;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
