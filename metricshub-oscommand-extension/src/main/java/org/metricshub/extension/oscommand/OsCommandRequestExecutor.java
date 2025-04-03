@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.oscommand;
+package org.metricshub.extension.oscommand;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -34,9 +34,9 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.ssh.SshClient;
 import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.metricshub.ssh.SshClient;
 
 /**
  * Provides functionality to execute remote SSH commands, manage SSH authentication, and transfer files to remote hosts.

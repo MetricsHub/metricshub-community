@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
 import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
 import org.sentrysoftware.metricshub.engine.connector.model.ConnectorStore;
@@ -19,8 +21,6 @@ import org.sentrysoftware.metricshub.engine.strategy.collect.ProtocolHealthCheck
 import org.sentrysoftware.metricshub.engine.strategy.detection.DetectionStrategy;
 import org.sentrysoftware.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.oscommand.OsCommandConfiguration;
-import org.sentrysoftware.metricshub.extension.oscommand.OsCommandExtension;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.sentrysoftware.metricshub.hardware.strategy.HardwareStrategy;

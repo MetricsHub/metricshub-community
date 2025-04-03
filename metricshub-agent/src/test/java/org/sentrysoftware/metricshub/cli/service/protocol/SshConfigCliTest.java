@@ -7,11 +7,11 @@ import static org.mockito.Mockito.mockStatic;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.oscommand.OsCommandExtension;
+import org.metricshub.extension.oscommand.SshConfiguration;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.oscommand.OsCommandExtension;
-import org.sentrysoftware.metricshub.extension.oscommand.SshConfiguration;
 
 class SshConfigCliTest {
 

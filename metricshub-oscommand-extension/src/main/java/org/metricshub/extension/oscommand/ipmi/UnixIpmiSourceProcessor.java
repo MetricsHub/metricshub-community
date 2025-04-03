@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.oscommand.ipmi;
+package org.metricshub.extension.oscommand.ipmi;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -24,12 +24,12 @@ package org.sentrysoftware.metricshub.extension.oscommand.ipmi;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.OsCommandService;
+import org.metricshub.extension.oscommand.SshConfiguration;
 import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.oscommand.OsCommandConfiguration;
-import org.sentrysoftware.metricshub.extension.oscommand.OsCommandService;
-import org.sentrysoftware.metricshub.extension.oscommand.SshConfiguration;
 
 /**
  * Processes IPMI source information for Unix systems, leveraging telemetry configurations to execute and retrieve data
