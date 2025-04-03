@@ -33,13 +33,13 @@ import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
 import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.extension.win.IWinRequestExecutor;
-import org.sentrysoftware.winrm.WinRMHttpProtocolEnum;
-import org.sentrysoftware.winrm.WindowsRemoteCommandResult;
-import org.sentrysoftware.winrm.command.WinRMCommandExecutor;
-import org.sentrysoftware.winrm.exceptions.WindowsRemoteException;
-import org.sentrysoftware.winrm.exceptions.WqlQuerySyntaxException;
-import org.sentrysoftware.winrm.service.client.auth.AuthenticationEnum;
-import org.sentrysoftware.winrm.wql.WinRMWqlExecutor;
+import org.metricshub.winrm.WinRMHttpProtocolEnum;
+import org.metricshub.winrm.WindowsRemoteCommandResult;
+import org.metricshub.winrm.command.WinRMCommandExecutor;
+import org.metricshub.winrm.exceptions.WindowsRemoteException;
+import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
+import org.metricshub.winrm.wql.WinRMWqlExecutor;
 
 /**
  * The WinRmRequestExecutor class provides utility methods for executing

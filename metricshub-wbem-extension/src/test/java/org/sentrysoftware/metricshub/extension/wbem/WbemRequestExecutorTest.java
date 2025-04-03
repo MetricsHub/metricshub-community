@@ -17,9 +17,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.wbem.client.WbemExecutor;
-import org.sentrysoftware.wbem.client.WbemQueryResult;
-import org.sentrysoftware.wbem.javax.wbem.WBEMException;
+import org.metricshub.wbem.client.WbemExecutor;
+import org.metricshub.wbem.client.WbemQueryResult;
+import org.metricshub.wbem.javax.wbem.WBEMException;
 
 class WbemRequestExecutorTest {
 

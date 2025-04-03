@@ -39,7 +39,7 @@ import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 import org.sentrysoftware.metricshub.engine.deserialization.MultiValueDeserializer;
 import org.sentrysoftware.metricshub.engine.deserialization.TimeDeserializer;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.winrm.service.client.auth.AuthenticationEnum;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 /**
  * The WinRmConfiguration interface represents the configuration for the Windows Remote Management protocol

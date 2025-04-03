@@ -38,8 +38,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>snmp</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>snmp-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -237,7 +237,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:snmp</include>
+									<include>org.metricshub:snmp-java</include>
 									<include>org.sentrysoftware:metricshub-snmp-extension</include>
 									<include>org.sentrysoftware:metricshub-snmp-extension-common</include>
 								</includes>

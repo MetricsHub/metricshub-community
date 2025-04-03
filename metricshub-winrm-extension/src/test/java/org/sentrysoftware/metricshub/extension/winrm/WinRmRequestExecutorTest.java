@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.winrm.exceptions.WindowsRemoteException;
-import org.sentrysoftware.winrm.exceptions.WqlQuerySyntaxException;
+import org.metricshub.winrm.exceptions.WindowsRemoteException;
+import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 
 class WinRmRequestExecutorTest {
 

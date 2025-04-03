@@ -33,13 +33,13 @@ import java.util.Collections;
 import java.util.List;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.sentrysoftware.jawk.ExitException;
-import org.sentrysoftware.jawk.backend.AVM;
-import org.sentrysoftware.jawk.frontend.AwkParser;
-import org.sentrysoftware.jawk.frontend.AwkSyntaxTree;
-import org.sentrysoftware.jawk.intermediate.AwkTuples;
-import org.sentrysoftware.jawk.util.AwkSettings;
-import org.sentrysoftware.jawk.util.ScriptSource;
+import org.metricshub.jawk.ExitException;
+import org.metricshub.jawk.backend.AVM;
+import org.metricshub.jawk.frontend.AwkParser;
+import org.metricshub.jawk.frontend.AwkSyntaxTree;
+import org.metricshub.jawk.intermediate.AwkTuples;
+import org.metricshub.jawk.util.AwkSettings;
+import org.metricshub.jawk.util.ScriptSource;
 
 /**
  * Utility class for working with AWK scripts.

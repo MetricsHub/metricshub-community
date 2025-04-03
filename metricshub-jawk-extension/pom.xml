@@ -76,7 +76,7 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>jawk</artifactId>
 		</dependency>
 	</dependencies>
@@ -167,7 +167,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:jawk</include>
+									<include>org.metricshub:jawk</include>
 									<include>org.sentrysoftware:metricshub-jawk-extension</include>
 								</includes>
 								<excludes>

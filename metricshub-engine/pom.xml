@@ -39,7 +39,7 @@
 			<artifactId>spring-context</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>jawk</artifactId>
 			<exclusions>
 				<exclusion>
@@ -53,15 +53,15 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>tablejoin</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>jflat</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>xflat</artifactId>
 		</dependency>
 		<dependency>

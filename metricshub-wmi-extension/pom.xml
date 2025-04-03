@@ -37,8 +37,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>wmi</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>wmi-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -171,7 +171,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:wmi</include>
+									<include>org.metricshub:wmi-java</include>
 									<include>org.sentrysoftware:metricshub-win-extension-common</include>
 									<include>org.sentrysoftware:metricshub-wmi-extension</include>
 									<include>net.java.dev.jna:jna</include>

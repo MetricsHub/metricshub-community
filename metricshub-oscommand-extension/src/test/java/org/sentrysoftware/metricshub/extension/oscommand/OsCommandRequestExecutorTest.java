@@ -14,7 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.ssh.SshClient;
+import org.metricshub.ssh.SshClient;
 
 @ExtendWith(MockitoExtension.class)
 class OsCommandRequestExecutorTest {

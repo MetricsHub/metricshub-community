@@ -24,7 +24,7 @@ package org.sentrysoftware.metricshub.cli;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import org.sentrysoftware.jawk.Main;
+import org.metricshub.jawk.Main;
 
 /**
  * Command-line interface for executing AWK scripts with validation.

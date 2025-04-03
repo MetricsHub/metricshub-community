@@ -63,8 +63,8 @@ import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.extension.win.WinCommandService;
 import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
-import org.sentrysoftware.winrm.exceptions.WqlQuerySyntaxException;
-import org.sentrysoftware.winrm.service.client.auth.AuthenticationEnum;
+import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 @ExtendWith(MockitoExtension.class)
 class WinRmExtensionTest {

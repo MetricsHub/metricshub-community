@@ -39,8 +39,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>ipmi</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>ipmi-java</artifactId>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -177,7 +177,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:ipmi</include>
+									<include>org.metricshub:ipmi-java</include>
 									<include>org.sentrysoftware:metricshub-ipmi-extension</include>
 								</includes>
 								<excludes>

@@ -33,10 +33,10 @@ import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.ThreadHelper;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.vcenter.VCenterClient;
-import org.sentrysoftware.wbem.client.WbemExecutor;
-import org.sentrysoftware.wbem.client.WbemQueryResult;
-import org.sentrysoftware.wbem.javax.wbem.WBEMException;
+import org.metricshub.vcenter.VCenterClient;
+import org.metricshub.wbem.client.WbemExecutor;
+import org.metricshub.wbem.client.WbemQueryResult;
+import org.metricshub.wbem.javax.wbem.WBEMException;
 
 @Slf4j
 public class WbemRequestExecutor {
@@ -308,7 +308,7 @@ public class WbemRequestExecutor {
 			return isAcceptableWbemError(cimErrorType);
 		} else if (
 			// CHECKSTYLE:OFF
-			t instanceof org.sentrysoftware.wbem.client.exceptions.WqlQuerySyntaxException
+			t instanceof org.metricshub.wbem.client.exceptions.WqlQuerySyntaxException
 			// CHECKSTYLE:ON
 		) {
 			return true;

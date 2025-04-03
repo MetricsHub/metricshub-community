@@ -50,7 +50,7 @@ import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
 import org.sentrysoftware.metricshub.engine.telemetry.HostProperties;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.wbem.javax.wbem.WBEMException;
+import org.metricshub.wbem.javax.wbem.WBEMException;
 
 @ExtendWith(MockitoExtension.class)
 class WbemExtensionTest {

@@ -60,7 +60,7 @@ import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.extension.win.WinCommandService;
 import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
-import org.sentrysoftware.wmi.exceptions.WmiComException;
+import org.metricshub.wmi.exceptions.WmiComException;
 
 @ExtendWith(MockitoExtension.class)
 class WmiExtensionTest {

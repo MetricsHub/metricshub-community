@@ -14,7 +14,7 @@ import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
 import org.sentrysoftware.metricshub.extension.winrm.WinRmConfiguration;
 import org.sentrysoftware.metricshub.extension.winrm.WinRmExtension;
-import org.sentrysoftware.winrm.service.client.auth.AuthenticationEnum;
+import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 
 class WinRmConfigCliTest {
 

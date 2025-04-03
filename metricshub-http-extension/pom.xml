@@ -34,8 +34,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>http</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>simple-http-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -173,7 +173,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:http</include>
+									<include>org.metricshub:simple-http-java</include>
 									<include>org.sentrysoftware:metricshub-http-extension</include>
 								</includes>
 							</artifactSet>

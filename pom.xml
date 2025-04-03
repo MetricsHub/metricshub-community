@@ -92,7 +92,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.09</community-connectors.version>
+		<community-connectors.version>1.0.10</community-connectors.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
 		<hwgraf.version>4</hwgraf.version>
@@ -253,8 +253,8 @@
 				<version>2.0.11</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>metricshub-community-connectors</artifactId>
+				<groupId>org.metricshub</groupId>
+				<artifactId>community-connectors</artifactId>
 				<version>${community-connectors.version}</version>
 				<classifier>sources</classifier>
 			</dependency>
@@ -311,59 +311,59 @@
 				<version>6.2.3</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>tablejoin</artifactId>
-				<version>1.0.01</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>snmp</artifactId>
-				<version>2.0.00</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>wmi</artifactId>
 				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>http</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>snmp-java</artifactId>
+				<version>2.0.01</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>wbem</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>wmi-java</artifactId>
+				<version>1.0.03</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>ipmi</artifactId>
-				<version>1.2.00</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>ssh</artifactId>
+				<groupId>org.metricshub</groupId>
+				<artifactId>simple-http-java</artifactId>
 				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
+				<artifactId>wbem-java</artifactId>
+				<version>1.0.02</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>ipmi-java</artifactId>
+				<version>1.2.01</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>ssh-java</artifactId>
+				<version>1.0.03</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
 				<artifactId>jflat</artifactId>
-				<version>1.0.01</version>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>xflat</artifactId>
-				<version>1.0.01</version>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>winrm</artifactId>
-				<version>1.1.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>winrm-java</artifactId>
+				<version>1.1.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>3.3.04</version>
+				<version>3.3.05</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -436,9 +436,9 @@
 				<version>4.29.3</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>vcenter</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>vcenter-java</artifactId>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
 				<groupId>io.opentelemetry.instrumentation</groupId>

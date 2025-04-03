@@ -39,8 +39,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>wbem</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>wbem-java</artifactId>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -53,8 +53,8 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>vcenter</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>vcenter-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -176,11 +176,12 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:wbem</include>
-									<include>org.sentrysoftware:vcenter</include>
+									<include>org.metricshub:wbem-java</include>
+									<include>org.metricshub:vcenter-java</include>
 									<include>com.vmware:vijava</include>
 									<include>dom4j:dom4j</include>
 									<include>org.sentrysoftware:metricshub-wbem-extension</include>
+									<include>javax.xml.bind:jaxb-api</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>

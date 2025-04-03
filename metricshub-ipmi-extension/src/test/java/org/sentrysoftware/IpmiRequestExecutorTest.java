@@ -8,8 +8,8 @@ import static org.mockito.Mockito.mockStatic;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.sentrysoftware.ipmi.client.IpmiClient;
-import org.sentrysoftware.ipmi.client.IpmiClientConfiguration;
+import org.metricshub.ipmi.client.IpmiClient;
+import org.metricshub.ipmi.client.IpmiClientConfiguration;
 import org.sentrysoftware.metricshub.extension.ipmi.IpmiConfiguration;
 import org.sentrysoftware.metricshub.extension.ipmi.IpmiRequestExecutor;
 

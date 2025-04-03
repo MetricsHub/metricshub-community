@@ -34,8 +34,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>ssh</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>ssh-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -223,7 +223,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:ssh</include>
+									<include>org.metricshub:ssh-java</include>
 									<include>org.sentrysoftware:metricshub-oscommand-extension</include>
 									<include>org.connectbot:sshlib</include>
 								</includes>

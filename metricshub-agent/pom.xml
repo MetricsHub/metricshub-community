@@ -43,8 +43,8 @@
 
 		<!-- MetricsHub Community Connectors -->
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>metricshub-community-connectors</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>community-connectors</artifactId>
 			<classifier>sources</classifier>
 		</dependency>
 

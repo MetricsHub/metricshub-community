@@ -34,11 +34,11 @@ import org.sentrysoftware.metricshub.engine.common.helpers.NetworkHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.extension.win.IWinRequestExecutor;
-import org.sentrysoftware.wmi.WmiHelper;
-import org.sentrysoftware.wmi.WmiStringConverter;
-import org.sentrysoftware.wmi.exceptions.WmiComException;
-import org.sentrysoftware.wmi.remotecommand.WinRemoteCommandExecutor;
-import org.sentrysoftware.wmi.wbem.WmiWbemServices;
+import org.metricshub.wmi.WmiHelper;
+import org.metricshub.wmi.WmiStringConverter;
+import org.metricshub.wmi.exceptions.WmiComException;
+import org.metricshub.wmi.remotecommand.WinRemoteCommandExecutor;
+import org.metricshub.wmi.wbem.WmiWbemServices;
 
 /**
  * The WmiRequestExecutor class provides utility methods for executing
@@ -257,7 +257,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		if (t instanceof WmiComException) {
 			final String message = t.getMessage();
 			return IWinRequestExecutor.isAcceptableWmiComError(message);
-		} else if (t instanceof org.sentrysoftware.wmi.exceptions.WqlQuerySyntaxException) {
+		} else if (t instanceof org.metricshub.wmi.exceptions.WqlQuerySyntaxException) {
 			return true;
 		}
 

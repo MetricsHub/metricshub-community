@@ -25,7 +25,7 @@ import java.text.ParseException;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.sentrysoftware.jawk.intermediate.AwkTuples;
+import org.metricshub.jawk.intermediate.AwkTuples;
 
 /**
  * Utility class for executing AWK scripts.

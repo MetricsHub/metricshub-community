@@ -31,16 +31,16 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.jflat.JFlat;
+import org.metricshub.jflat.JFlat;
 import org.sentrysoftware.metricshub.engine.awk.AwkException;
 import org.sentrysoftware.metricshub.engine.awk.AwkExecutor;
 import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.ThreadHelper;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.tablejoin.TableJoin;
-import org.sentrysoftware.xflat.XFlat;
-import org.sentrysoftware.xflat.exceptions.XFlatException;
+import org.metricshub.tablejoin.TableJoin;
+import org.metricshub.xflat.XFlat;
+import org.metricshub.xflat.exceptions.XFlatException;
 
 /**
  * The ClientsExecutor class provides utility methods for executing

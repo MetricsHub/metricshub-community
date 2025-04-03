@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.util.Optional;
 import org.sentrysoftware.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.sentrysoftware.metricshub.extension.snmp.ISnmpConfiguration;
-import org.sentrysoftware.snmp.client.SnmpClient;
+import org.metricshub.snmp.client.SnmpClient;
 
 /**
  * The SnmpRequestExecutor class extends {@link AbstractSnmpRequestExecutor} and provides utility methods

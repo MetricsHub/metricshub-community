@@ -19,8 +19,8 @@
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>snmp</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>snmp-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
