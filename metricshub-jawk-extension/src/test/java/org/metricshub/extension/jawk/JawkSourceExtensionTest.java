@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.jawk;
+package org.metricshub.extension.jawk;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

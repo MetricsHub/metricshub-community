@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.jawk;
+package org.metricshub.extension.jawk;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,15 +21,15 @@ package org.sentrysoftware.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_HTTP_REQUEST;
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_IPMI_REQUEST;
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_SNMP_GET;
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_SNMP_TABLE;
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_WBEM_REQUEST;
+import static org.metricshub.extension.jawk.KeyWords.EXECUTE_WMI_REQUEST;
+import static org.metricshub.extension.jawk.KeyWords.GET_VARIABLE;
+import static org.metricshub.extension.jawk.KeyWords.JSON_2CSV;
 import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_HTTP_REQUEST;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_IPMI_REQUEST;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_SNMP_GET;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_SNMP_TABLE;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_WBEM_REQUEST;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.EXECUTE_WMI_REQUEST;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.GET_VARIABLE;
-import static org.sentrysoftware.metricshub.extension.jawk.KeyWords.JSON_2CSV;
 
 import java.util.Arrays;
 import java.util.List;

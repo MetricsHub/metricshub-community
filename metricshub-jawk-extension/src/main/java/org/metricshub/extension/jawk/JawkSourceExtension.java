@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.jawk;
+package org.metricshub.extension.jawk;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
