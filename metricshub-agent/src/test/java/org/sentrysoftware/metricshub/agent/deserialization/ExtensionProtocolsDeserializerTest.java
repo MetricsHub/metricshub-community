@@ -13,12 +13,12 @@ import java.util.Collections;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.extension.ping.PingConfiguration;
+import org.metricshub.extension.ping.PingExtension;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.ping.PingConfiguration;
-import org.sentrysoftware.metricshub.extension.ping.PingExtension;
 
 @ExtendWith(MockitoExtension.class)
 class ExtensionProtocolsDeserializerTest {

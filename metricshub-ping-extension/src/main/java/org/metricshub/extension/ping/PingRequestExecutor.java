@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.ping;
+package org.metricshub.extension.ping;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
