@@ -1,4 +1,4 @@
-package org.sentrysoftware;
+package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -23,13 +23,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.ipmi.client.IpmiClient;
+import org.metricshub.ipmi.client.IpmiClientConfiguration;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.metricshub.ipmi.client.IpmiClient;
-import org.metricshub.ipmi.client.IpmiClientConfiguration;
 import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
 import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
@@ -40,9 +40,6 @@ import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResu
 import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiConfiguration;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiExtension;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiRequestExecutor;
 
 @ExtendWith(MockitoExtension.class)
 class IpmiExtensionTest {

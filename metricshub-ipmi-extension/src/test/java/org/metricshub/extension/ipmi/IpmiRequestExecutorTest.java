@@ -1,4 +1,4 @@
-package org.sentrysoftware;
+package org.metricshub.extension.ipmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -7,11 +7,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.MockedStatic;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiConfiguration;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiRequestExecutor;
+import org.mockito.MockedStatic;
 
 class IpmiRequestExecutorTest {
 

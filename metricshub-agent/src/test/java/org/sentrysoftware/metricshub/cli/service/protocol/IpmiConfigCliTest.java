@@ -6,11 +6,11 @@ import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.ipmi.IpmiConfiguration;
+import org.metricshub.extension.ipmi.IpmiExtension;
 import org.mockito.MockedStatic;
 import org.sentrysoftware.metricshub.cli.service.CliExtensionManager;
 import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiConfiguration;
-import org.sentrysoftware.metricshub.extension.ipmi.IpmiExtension;
 
 class IpmiConfigCliTest {
 

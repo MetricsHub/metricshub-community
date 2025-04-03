@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.ipmi;
+package org.metricshub.extension.ipmi;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
