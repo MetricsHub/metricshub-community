@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wmi;
+package org.metricshub.extension.wmi;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.wmi.exceptions.WmiComException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -60,7 +61,6 @@ import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.extension.win.WinCommandService;
 import org.sentrysoftware.metricshub.extension.win.detection.WmiDetectionService;
-import org.metricshub.wmi.exceptions.WmiComException;
 
 @ExtendWith(MockitoExtension.class)
 class WmiExtensionTest {

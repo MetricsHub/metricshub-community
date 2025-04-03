@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wmi;
+package org.metricshub.extension.wmi;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;

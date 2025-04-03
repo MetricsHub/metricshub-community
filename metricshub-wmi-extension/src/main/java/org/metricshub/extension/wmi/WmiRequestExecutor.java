@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wmi;
+package org.metricshub.extension.wmi;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -28,17 +28,17 @@ import java.util.List;
 import java.util.Map;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.wmi.WmiHelper;
+import org.metricshub.wmi.WmiStringConverter;
+import org.metricshub.wmi.exceptions.WmiComException;
+import org.metricshub.wmi.remotecommand.WinRemoteCommandExecutor;
+import org.metricshub.wmi.wbem.WmiWbemServices;
 import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.NetworkHelper;
 import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
 import org.sentrysoftware.metricshub.extension.win.IWinConfiguration;
 import org.sentrysoftware.metricshub.extension.win.IWinRequestExecutor;
-import org.metricshub.wmi.WmiHelper;
-import org.metricshub.wmi.WmiStringConverter;
-import org.metricshub.wmi.exceptions.WmiComException;
-import org.metricshub.wmi.remotecommand.WinRemoteCommandExecutor;
-import org.metricshub.wmi.wbem.WmiWbemServices;
 
 /**
  * The WmiRequestExecutor class provides utility methods for executing

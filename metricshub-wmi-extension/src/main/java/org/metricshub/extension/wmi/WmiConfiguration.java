@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.wmi;
+package org.metricshub.extension.wmi;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
