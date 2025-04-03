@@ -1,4 +1,4 @@
-package org.sentrysoftware.metricshub.extension.internaldb;
+package org.metricshub.extension.internaldb;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
