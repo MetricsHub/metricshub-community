@@ -33,6 +33,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
+import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -63,8 +65,6 @@ import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.MonitorFactory;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostCollectStrategy;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 
 @ExtendWith(MockitoExtension.class)
 class MonitoringTaskTest {

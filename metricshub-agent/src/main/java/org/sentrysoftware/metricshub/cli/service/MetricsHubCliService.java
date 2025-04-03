@@ -41,6 +41,9 @@ import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.Ansi.Attribute;
+import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
+import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
+import org.metricshub.hardware.strategy.HardwareStrategy;
 import org.sentrysoftware.metricshub.agent.helper.ConfigHelper;
 import org.sentrysoftware.metricshub.cli.service.converter.DeviceKindConverter;
 import org.sentrysoftware.metricshub.cli.service.protocol.HttpConfigCli;
@@ -70,9 +73,7 @@ import org.sentrysoftware.metricshub.engine.strategy.discovery.DiscoveryStrategy
 import org.sentrysoftware.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostCollectStrategy;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwareStrategy;
+
 import picocli.CommandLine;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;

@@ -34,6 +34,9 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.ThreadContext;
+import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
+import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
+import org.metricshub.hardware.strategy.HardwareStrategy;
 import org.sentrysoftware.metricshub.agent.config.ResourceConfig;
 import org.sentrysoftware.metricshub.agent.helper.ConfigHelper;
 import org.sentrysoftware.metricshub.agent.helper.OtelHelper;
@@ -55,9 +58,6 @@ import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
 import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
 import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 import org.sentrysoftware.metricshub.engine.telemetry.metric.AbstractMetric;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostCollectStrategy;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
-import org.sentrysoftware.metricshub.hardware.strategy.HardwareStrategy;
 
 /**
  * Task responsible for running the monitoring process, including detection, discovery, and collection strategies.
