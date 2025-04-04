@@ -131,9 +131,7 @@ class AgentContextTest {
 
 		// Check the TelemetryManager map is correctly created
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
-		final Map<String, TelemetryManager> parisTelemetryManagers = telemetryManagers.get(
-			PARIS_RESOURCE_GROUP_KEY
-		);
+		final Map<String, TelemetryManager> parisTelemetryManagers = telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY);
 		assertEquals(4, parisTelemetryManagers.size());
 
 		// Check the OpenTelemetry configuration is correctly created
@@ -154,10 +152,7 @@ class AgentContextTest {
 		// Make sure the engine is notified with configuredConnectorId
 		assertEquals(
 			"MetricsHub-Configured-Connector-paris-grafana-service",
-			parisTelemetryManagers
-				.get(GRAFANA_SERVICE_RESOURCE_CONFIG_KEY)
-				.getHostConfiguration()
-				.getConfiguredConnectorId()
+			parisTelemetryManagers.get(GRAFANA_SERVICE_RESOURCE_CONFIG_KEY).getHostConfiguration().getConfiguredConnectorId()
 		);
 	}
 

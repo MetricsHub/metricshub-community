@@ -89,12 +89,7 @@ class ResourceGroupSchedulingTest {
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
 		assertTrue(
 			MapHelper.areEqual(
-				Map.of(
-					COMPANY_ATTRIBUTE_KEY,
-					COMPANY_ATTRIBUTE_VALUE,
-					SITE_ATTRIBUTE_KEY,
-					TestConstants.PARIS_SITE_VALUE
-				),
+				Map.of(COMPANY_ATTRIBUTE_KEY, COMPANY_ATTRIBUTE_VALUE, SITE_ATTRIBUTE_KEY, TestConstants.PARIS_SITE_VALUE),
 				resourceAttributes
 			)
 		);

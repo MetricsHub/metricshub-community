@@ -28,8 +28,8 @@ This is a multi-module project:
 * **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
-* **metricshub-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
-* **metricshub-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
+* **metricshub-community-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
+* **metricshub-community-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
 * **metricshub-doc**: Houses the documentation for MetricsHub.
 
 > [!TIP]
@@ -53,13 +53,13 @@ $ mvn clean package
 #### Building Windows Packages (.zip)
 
 * **Host:** Windows
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.zip` package in the `metricshub/metricshub-windows/target` directory upon completion (`metricshub-windows-<version>.zip`).
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.zip` package in the `metricshub/metricshub-community-windows/target` directory upon completion (`metricshub-community-windows-<version>.zip`).
 
 #### Building Linux Packages (.tar.gz)
 
 * **Host:** Linux
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.tar.gz` package in the `metricshub/metricshub-linux/target` directory upon completion (`metricshub-linux-<version>.tar.gz`).
-  * The `Docker` package is compatible with the `debian:latest` image, it will be generated under the `metricshub/metricshub-linux/target` directory (`metricshub-linux-<version>-docker.tar.gz`).
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.tar.gz` package in the `metricshub/metricshub-community-linux/target` directory upon completion (`metricshub-community-linux-<version>.tar.gz`).
+  * The `Docker` package is compatible with the `debian:latest` image, it will be generated under the `metricshub/metricshub-community-linux/target` directory (`metricshub-community-linux-<version>-docker.tar.gz`).
 
 ## Checkstyle
 

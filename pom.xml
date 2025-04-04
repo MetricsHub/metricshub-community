@@ -126,7 +126,7 @@
 				</os>
 			</activation>
 			<modules>
-				<module>metricshub-windows</module>
+				<module>metricshub-community-windows</module>
 			</modules>
 			<build>
 				<plugins>
@@ -154,7 +154,7 @@
 				</os>
 			</activation>
 			<modules>
-				<module>metricshub-linux</module>
+				<module>metricshub-community-linux</module>
 			</modules>
 		</profile>
 		<!-- Profile for releasing the project -->

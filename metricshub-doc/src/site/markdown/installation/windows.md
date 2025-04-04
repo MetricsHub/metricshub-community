@@ -50,11 +50,11 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
 
 ### Download
 
-Download the Windows package, `metricshub-windows-${communityVersion}.zip`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page.
+Download the Windows package, `metricshub-community-windows-${communityVersion}.zip`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page.
 
 ### Install
 
-Unzip the content of `metricshub-windows-${communityVersion}.zip` into a program folder, like `C:\Program Files`. There is no need to create a specific subdirectory for `MetricsHub` as the zip archive already contains a `MetricsHub` directory.
+Unzip the content of `metricshub-community-windows-${communityVersion}.zip` into a program folder, like `C:\Program Files`. There is no need to create a specific subdirectory for `MetricsHub` as the zip archive already contains a `MetricsHub` directory.
 
 > Note: You will need administrative privileges to unzip into `C:\Program Files`.
 

@@ -6,7 +6,7 @@
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>metricshub-windows</artifactId>
+	<artifactId>metricshub-community-windows</artifactId>
 	<packaging>pom</packaging>
 
 	<name>MetricsHub for Windows</name>

@@ -6,7 +6,7 @@
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
-	<artifactId>metricshub-linux</artifactId>
+	<artifactId>metricshub-community-linux</artifactId>
 	<packaging>pom</packaging>
 
 	<name>MetricsHub for Linux</name>

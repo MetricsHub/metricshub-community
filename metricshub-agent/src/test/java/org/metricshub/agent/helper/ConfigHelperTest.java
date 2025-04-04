@@ -293,9 +293,7 @@ class ConfigHelperTest {
 		ConfigHelper.normalizeAgentConfiguration(agentConfig);
 
 		// Check self monitoring configuration
-		assertTrue(
-			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
-		);
+		assertTrue(agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring());
 	}
 
 	@Test
@@ -316,9 +314,7 @@ class ConfigHelperTest {
 		ConfigHelper.normalizeAgentConfiguration(agentConfig);
 
 		// Check self monitoring configuration
-		assertFalse(
-			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
-		);
+		assertFalse(agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring());
 	}
 
 	@Test
@@ -339,9 +335,7 @@ class ConfigHelperTest {
 		ConfigHelper.normalizeAgentConfiguration(agentConfig);
 
 		// Check self monitoring configuration
-		assertTrue(
-			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
-		);
+		assertTrue(agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring());
 	}
 
 	@Test
@@ -364,15 +358,10 @@ class ConfigHelperTest {
 
 	@Test
 	void testNormalizeConfiguredConnector() {
-		assertDoesNotThrow(() ->
-			ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, null)
-		);
+		assertDoesNotThrow(() -> ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, null));
 		final Connector configuredConnector = new Connector();
 		ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, configuredConnector);
-		assertEquals(
-			"MetricsHub-Configured-Connector-paris-resource-test-key",
-			configuredConnector.getCompiledFilename()
-		);
+		assertEquals("MetricsHub-Configured-Connector-paris-resource-test-key", configuredConnector.getCompiledFilename());
 	}
 
 	@Test

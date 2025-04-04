@@ -58,34 +58,10 @@ class PostConfigDeserializerTest {
 		assertSshResourceConfig(parisResources, "ssh-resources4-1-server-6", "server-6", "server-6-id", null);
 		assertSshResourceConfig(parisResources, "ssh-resources4-2-server-7", "server-7", "server-7-id", null);
 		assertSshResourceConfig(parisResources, "ssh-resources4-3-server-7", "server-7", "server-8-id", null);
-		assertSshResourceConfig(
-			parisResources,
-			"ssh-resources5-1-server-8",
-			"server-8",
-			"server-8-id",
-			"server-8-card"
-		);
-		assertSshResourceConfig(
-			parisResources,
-			"ssh-resources5-2-server-9",
-			"server-9",
-			"server-9-id",
-			"server-9-card"
-		);
-		assertSshResourceConfig(
-			parisResources,
-			"ssh-resources6-1-server-10",
-			"server-10",
-			"server-10-id",
-			"server-card"
-		);
-		assertSshResourceConfig(
-			parisResources,
-			"ssh-resources6-2-server-11",
-			"server-11",
-			"server-11-id",
-			"server-card"
-		);
+		assertSshResourceConfig(parisResources, "ssh-resources5-1-server-8", "server-8", "server-8-id", "server-8-card");
+		assertSshResourceConfig(parisResources, "ssh-resources5-2-server-9", "server-9", "server-9-id", "server-9-card");
+		assertSshResourceConfig(parisResources, "ssh-resources6-1-server-10", "server-10", "server-10-id", "server-card");
+		assertSshResourceConfig(parisResources, "ssh-resources6-2-server-11", "server-11", "server-11-id", "server-card");
 		assertSshResourceConfig(
 			parisResources,
 			"ssh-resources7-1-server-12",

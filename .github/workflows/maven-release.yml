@@ -172,19 +172,19 @@ jobs:
       uses: actions/upload-artifact@v4
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
-        name: metricshub-linux-package-${{ inputs.releaseVersion }}
+        name: metricshub-community-linux-package-${{ inputs.releaseVersion }}
         path: |
-          ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}.tar.gz
-          ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}.buildinfo
+          ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}.tar.gz
+          ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}.buildinfo
 
     - name: Upload Windows Artifact
       uses: actions/upload-artifact@v4
       if: ${{ matrix.os == 'windows-latest' }}
       with:
-        name: metricshub-windows-package-${{ inputs.releaseVersion }}
+        name: metricshub-community-windows-package-${{ inputs.releaseVersion }}
         path: |
-          ./metricshub-windows/target/metricshub-windows-${{ inputs.releaseVersion }}.zip
-          ./metricshub-windows/target/metricshub-windows-${{ inputs.releaseVersion }}.buildinfo
+          ./metricshub-community-windows/target/metricshub-community-windows-${{ inputs.releaseVersion }}.zip
+          ./metricshub-community-windows/target/metricshub-community-windows-${{ inputs.releaseVersion }}.buildinfo
 
     - name: Upload Site Artifact
       uses: actions/upload-artifact@v4
@@ -199,8 +199,8 @@ jobs:
       uses: actions/upload-artifact@v4
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
-        name: metricshub-docker-package-${{ inputs.releaseVersion }}
-        path: ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}-docker.tar.gz
+        name: metricshub-community-docker-package-${{ inputs.releaseVersion }}
+        path: ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}-docker.tar.gz
 
     - name: Summary with staging repositories and buildinfo
       id: stagingList
@@ -252,13 +252,13 @@ jobs:
         fail_on_unmatched_files: false
         generate_release_notes: true
         files: |
-          metricshub-linux-${{ inputs.releaseVersion }}-docker.tar.gz
+          metricshub-community-linux-${{ inputs.releaseVersion }}-docker.tar.gz
           metricshub-doc-${{ inputs.releaseVersion }}-site.jar
           metricshub-doc-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-windows-${{ inputs.releaseVersion }}.zip
-          metricshub-windows-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-linux-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-linux-${{ inputs.releaseVersion }}.tar.gz
+          metricshub-community-windows-${{ inputs.releaseVersion }}.zip
+          metricshub-community-windows-${{ inputs.releaseVersion }}.buildinfo
+          metricshub-community-linux-${{ inputs.releaseVersion }}.buildinfo
+          metricshub-community-linux-${{ inputs.releaseVersion }}.tar.gz
 
     - name: Create Pull Request from ${{ needs.prepare.outputs.branchName }} to ${{ github.event.repository.default_branch }}
       uses: devops-infra/action-pull-request@v0.6.0
