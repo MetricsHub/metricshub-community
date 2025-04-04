@@ -5,8 +5,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -17,7 +17,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-classloader-agent</artifactId>
 		</dependency>
 		<dependency>
@@ -192,9 +192,9 @@
 				<configuration>
 					<excludes>
 						<!-- Exclude simple DTO, VO and POJO -->
-						<exclude>org/sentrysoftware/metricshub/engine/connector/model/**</exclude>
-						<exclude>org/sentrysoftware/metricshub/engine/client/**</exclude>
-						<exclude>org/sentrysoftware/metricshub/engine/connector/model/common/**</exclude>
+						<exclude>org/metricshub/engine/connector/model/**</exclude>
+						<exclude>org/metricshub/engine/client/**</exclude>
+						<exclude>org/metricshub/engine/connector/model/common/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>

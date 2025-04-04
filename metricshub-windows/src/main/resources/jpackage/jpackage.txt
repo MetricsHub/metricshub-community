@@ -5,7 +5,7 @@
 --main-jar metricshub-agent-${project.version}.jar
 --name MetricsHub
 --description MetricsHub
---vendor "Sentry Software"
+--vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
 --dest "${project.build.directory}"
 --app-content metricshub\connectors,metricshub\config,metricshub\LICENSE,metricshub\site,metricshub\service-installer.exe,metricshub\extensions

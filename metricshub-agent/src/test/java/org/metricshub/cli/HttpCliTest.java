@@ -135,12 +135,12 @@ class HttpCliTest {
 	@Test
 	void testResolveUrl() {
 		// both url and positional url are specified
-		// httpcli patch www.metricshub.com --url sentrysoftware.com ...
-		httpCli.setUrl("www.sentrysoftware.com");
+		// httpcli patch www.metricshub.com --url m8b-demo.metricshub.com ...
+		httpCli.setUrl("www.m8b-demo.metricshub.com");
 		httpCli.setPositionalUrl("www.metricshub.com");
 		httpCli.resolveUrl();
 		// Url will be taken
-		assertEquals("www.sentrysoftware.com", httpCli.getUrl());
+		assertEquals("www.m8b-demo.metricshub.com", httpCli.getUrl());
 
 		// Only positional url is specified
 		httpCli.setUrl(null);
@@ -149,10 +149,10 @@ class HttpCliTest {
 		assertEquals("www.metricshub.com", httpCli.getUrl());
 
 		// Only url is specified using --url
-		httpCli.setUrl("www.sentrysoftware.com");
+		httpCli.setUrl("www.m8b-demo.metricshub.com");
 		httpCli.setPositionalUrl(null);
 		httpCli.resolveUrl();
-		assertEquals("www.sentrysoftware.com", httpCli.getUrl());
+		assertEquals("www.m8b-demo.metricshub.com", httpCli.getUrl());
 
 		httpCli.setUrl(null);
 		httpCli.setPositionalUrl(null);
@@ -237,12 +237,12 @@ class HttpCliTest {
 	void testResolvePositionalParameters() {
 		// Two positional parameters
 		httpCli = new HttpCli();
-		String[] command = { "post", "www.sentrysoftware.com" };
+		String[] command = { "post", "www.m8b-demo.metricshub.com" };
 		commandLine = new CommandLine(httpCli);
 		commandLine.parseArgs(command);
 		httpCli.resolvePositionalParameters();
 		assertEquals("post", httpCli.getPositionalMethod());
-		assertEquals("www.sentrysoftware.com", httpCli.getPositionalUrl());
+		assertEquals("www.m8b-demo.metricshub.com", httpCli.getPositionalUrl());
 
 		// The only positional parameter is a URL
 		command = new String[] { URL };

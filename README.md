@@ -1,9 +1,9 @@
 # MetricsHub
 
-![GitHub release (with filter)](https://img.shields.io/github/v/release/sentrysoftware/metricshub)
-![Build](https://img.shields.io/github/actions/workflow/status/sentrysoftware/metricshub/maven-deploy.yml)
-![GitHub top language](https://img.shields.io/github/languages/top/sentrysoftware/metricshub)
-![License](https://img.shields.io/github/license/sentrysoftware/metricshub)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/metricshub/metricshub-community)
+![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/maven-deploy.yml)
+![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community)
+![License](https://img.shields.io/github/license/metricshub/metricshub-community)
 
 ## Structure
 
@@ -33,7 +33,7 @@ This is a multi-module project:
 * **metricshub-doc**: Houses the documentation for MetricsHub.
 
 > [!TIP]
-> Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/sentrysoftware/metricshub-community-connectors) repository.
+> Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
 
 ## How to build the Project
 

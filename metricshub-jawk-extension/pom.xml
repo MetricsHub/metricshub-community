@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -168,7 +168,7 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:jawk</include>
-									<include>org.sentrysoftware:metricshub-jawk-extension</include>
+									<include>org.metricshub:metricshub-jawk-extension</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>

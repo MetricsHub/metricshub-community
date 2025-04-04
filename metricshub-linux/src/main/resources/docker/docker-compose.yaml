@@ -1,8 +1,8 @@
 version: "2.1"
 services:
   metricshub:
-    build: .        # for image we will use `image: sentrysoftware/metricshub`
-    container_name: metricshubs
+    build: .        # for image we will use `image: metricshub/metricshub-community`
+    container_name: metricshub
     volumes:
       - ./lib/logs:/opt/metricshub/lib/logs
       - ./lib/config:/opt/metricshub/lib/config

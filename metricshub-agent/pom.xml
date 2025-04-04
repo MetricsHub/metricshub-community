@@ -1,8 +1,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -261,8 +261,8 @@
 						</goals>
 						<configuration>
 							<outputDirectory>${project.build.directory}/connectors</outputDirectory>
-							<includeGroupIds>org.sentrysoftware</includeGroupIds>
-							<includeArtifactIds>metricshub-community-connectors</includeArtifactIds>
+							<includeGroupIds>org.metricshub</includeGroupIds>
+							<includeArtifactIds>community-connectors</includeArtifactIds>
 							<classifier>sources</classifier>
 							<excludes>META-INF/**</excludes>
 						</configuration>
@@ -323,7 +323,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/agent/config/**</exclude>
+						<exclude>org/metricshub/agent/config/**</exclude>
 					</excludes>
 					<outputDirectory>${project.build.directory}/coverage-reports/jacoco</outputDirectory>
 				</configuration>
@@ -356,7 +356,7 @@
 						<configuration>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>org.sentrysoftware.metricshub.agent.MetricsHubAgentApplication</mainClass>
+									<mainClass>org.metricshub.agent.MetricsHubAgentApplication</mainClass>
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
 									</manifestEntries>

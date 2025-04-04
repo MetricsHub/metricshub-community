@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -150,12 +150,12 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/http/*HttpConfigurationBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*EmbeddedFileBodyBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*EmbeddedFileHeaderBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*HttpRequestBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*StringBodyBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*StringHeaderBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/*HttpConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*EmbeddedFileBodyBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*EmbeddedFileHeaderBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*HttpRequestBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*StringBodyBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*StringHeaderBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -174,7 +174,7 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:simple-http-java</include>
-									<include>org.sentrysoftware:metricshub-http-extension</include>
+									<include>org.metricshub:metricshub-http-extension</include>
 								</includes>
 							</artifactSet>
 							<transformers>

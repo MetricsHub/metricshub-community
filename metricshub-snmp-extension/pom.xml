@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -16,11 +16,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId> 
+			<groupId>org.metricshub</groupId> 
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-snmp-extension-common</artifactId>
 		</dependency>
 		<dependency>
@@ -84,7 +84,7 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-it-common</artifactId>
 			<classifier>tests</classifier>
 			<scope>test</scope>
@@ -174,7 +174,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/snmp/*SnmpConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/snmp/*SnmpConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -238,8 +238,8 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:snmp-java</include>
-									<include>org.sentrysoftware:metricshub-snmp-extension</include>
-									<include>org.sentrysoftware:metricshub-snmp-extension-common</include>
+									<include>org.metricshub:metricshub-snmp-extension</include>
+									<include>org.metricshub:metricshub-snmp-extension-common</include>
 								</includes>
 							</artifactSet>
 							<minimizeJar>false</minimizeJar>

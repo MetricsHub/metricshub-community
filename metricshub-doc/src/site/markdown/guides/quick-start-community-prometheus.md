@@ -21,7 +21,7 @@ After completing this quick start, you will have:
 1. Download the latest package `metricshub-linux-${communityVersion}.tar.gz` using `wget` and save it under `/tmp`:
    
    ```shell
-   sudo wget -O /tmp/metricshub-linux-${communityVersion}.tar.gz https://github.com/sentrysoftware/metricshub/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}.tar.gz
+   sudo wget -O /tmp/metricshub-linux-${communityVersion}.tar.gz https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}.tar.gz
    ```
 
 2. Run the below command to unzip `/tmp/metricshub-linux-${communityVersion}.tar.gz` under `/opt`:
@@ -34,7 +34,7 @@ There is no need to create a specific subdirectory for `metricshub` as the archi
 
 ### On Windows
 
-1. Download the latest package, `metricshub-windows-${communityVersion}.zip`, from the [MetricsHub Releases](https://github.com/sentrysoftware/metricshub/releases/) page
+1. Download the latest package, `metricshub-windows-${communityVersion}.zip`, from the [MetricsHub Releases](https://github.com/metricshub/metricshub-community/releases/) page
 
 2. Right-click on the archive, select **Extract All...**, enter `C:\Program Files\`, and click **Extract**. This will place the `MetricsHub` directory in `C:\Program Files\`.
 

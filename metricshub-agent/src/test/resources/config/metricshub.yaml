@@ -88,7 +88,7 @@ resourceGroups:
               sources:
                 grafanaHealth:
                   type: http
-                  url: https://hws-demo.sentrysoftware.com/api/health
+                  url: https://m8b-demo.metricshub.com/api/health
                   method: GET
                   header: "Accept: application/json"
                   resultContent: body

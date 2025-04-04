@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -15,11 +15,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-win-extension-common</artifactId>
 		</dependency>
 		<dependency>
@@ -153,7 +153,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/wmi/*WmiConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/wmi/*WmiConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -172,8 +172,8 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:wmi-java</include>
-									<include>org.sentrysoftware:metricshub-win-extension-common</include>
-									<include>org.sentrysoftware:metricshub-wmi-extension</include>
+									<include>org.metricshub:metricshub-win-extension-common</include>
+									<include>org.metricshub:metricshub-wmi-extension</include>
 									<include>net.java.dev.jna:jna</include>
 									<include>net.java.dev.jna:jna-platform</include>
 								</includes>

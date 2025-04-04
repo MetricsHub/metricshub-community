@@ -12,7 +12,7 @@ public class TestConstants {
 	public static final String GRAFANA_HEALTH_SOURCE_REF = "${source::monitors.grafana.simple.sources.grafanaHealth}";
 	public static final String GRAFANA_MONITOR_JOB_KEY = "grafana";
 	public static final String GRAFANA_DB_STATE_METRIC = "grafana.db.state";
-	public static final String HTTP_SERVICE_URL = "https://hws-demo.sentrysoftware.com/api/health";
+	public static final String HTTP_SERVICE_URL = "https://m8b-demo.metricshub.com/api/health";
 	public static final String HTTP_ACCEPT_HEADER = "Accept: application/json";
 	public static final String SERVICE_VERSION = "service.version";
 	public static final String ID_ATTRIBUTE_KEY = "id";

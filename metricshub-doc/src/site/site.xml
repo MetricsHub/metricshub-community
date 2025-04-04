@@ -14,13 +14,6 @@
 		<alt>MetricsHub Official Website</alt>
 	</bannerLeft>
 
-	<bannerRight>
-		<name>Sentry Software</name>
-		<src>images/sentry-logo-white.png</src>
-		<href>https://sentrysoftware.com</href>
-		<alt>Sentry Software Official Website</alt>
-	</bannerRight>
-
 	<custom>
 
 		<bodyClass>metricshub</bodyClass>
@@ -28,7 +21,6 @@
 		<keywords>monitoring, observability, opentelemetry, otel</keywords>
 
 		<social>
-			<twitter>sentrysoftware</twitter>
 			<linkedin>metricshub</linkedin>
 			<custom>
 				<title>Join us on Slack!</title>
@@ -40,27 +32,27 @@
 		<additionalLinks>
 			<link>
 				<name>Terms of Service</name>
-				<href>https://sentrysoftware.com/legal/general.html</href>
+				<href>https://metricshub.com/legal/general.html</href>
 			</link>
 			<link>
 				<name>Privacy Policy</name>
-				<href>https://sentrysoftware.com/legal/privacy.html</href>
+				<href>https://metricshub.com/legal/privacy.html</href>
 			</link>
 			<link>
 				<name>Cookie Policy</name>
-				<href>https://sentrysoftware.com/legal/cookies.html</href>
+				<href>https://metricshub.com/legal/cookies.html</href>
 			</link>
 			<link>
 				<name>Disclaimer</name>
-				<href>https://sentrysoftware.com/legal/disclaimer.html</href>
+				<href>https://metricshub.com/legal/disclaimer.html</href>
 			</link>
 			<link>
 				<name>Trademarks</name>
-				<href>https://sentrysoftware.com/legal/trademarks.html</href>
+				<href>https://metricshub.com/legal/trademarks.html</href>
 			</link>
 			<link>
 				<name>Code of Ethics</name>
-				<href>https://sentrysoftware.com/legal/ethics.html</href>
+				<href>https://metricshub.com/legal/ethics.html</href>
 			</link>
 		</additionalLinks>
 
@@ -69,8 +61,8 @@
 	<body>
 
 		<links>
-			<item name="Open Sentry" href="https://sentrysoftware.org" />
-			<item name="&lt;i class='fa-brands fa-github'&gt;&lt;/i&gt; GitHub" href="https://github.com/sentrysoftware/metricshub" />
+			<item name="Open MetricsHub" href="https://metricshub.org" />
+			<item name="&lt;i class='fa-brands fa-github'&gt;&lt;/i&gt; GitHub" href="https://github.com/metricshub/metricshub-community" />
 			<item name="OpenTelemetry" href="https://opentelemetry.io" />
 		</links>
 

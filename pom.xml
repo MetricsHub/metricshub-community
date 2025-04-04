@@ -4,8 +4,8 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.sentrysoftware</groupId>
-	<artifactId>metricshub-parent</artifactId>
+	<groupId>org.metricshub</groupId>
+	<artifactId>metricshub-community</artifactId>
 	<version>1.0.03-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
@@ -29,13 +29,13 @@
 	</distributionManagement>
 
 	<scm>
-		<connection>scm:git:https://github.com/sentrysoftware/metricshub.git</connection>
-		<url>https://github.com/sentrysoftware/metricshub</url>
+		<connection>scm:git:https://github.com/metricshub/metricshub-community.git</connection>
+		<url>https://github.com/metricshub/metricshub-community</url>
 	</scm>
 
 	<organization>
-		<name>Sentry Software</name>
-		<url>https://sentrysoftware.com</url>
+		<name>MetricsHub</name>
+		<url>https://metricshub.com</url>
 	</organization>
 
 	<licenses>
@@ -49,14 +49,14 @@
 	<developers>
 		<developer>
 			<name>Bertrand Martin (@bertysentry)</name>
-			<email>bertrand@sentrysoftware.com</email>
+			<email>bertrand@metricshub.com</email>
 			<roles>
 				<role>maintainer</role>
 			</roles>
 		</developer>
 		<developer>
 			<name>Nassim Boutekedjiret (@NassimBtk)</name>
-			<email>nassim@sentrysoftware.com</email>
+			<email>nassim@metricshub.com</email>
 			<roles>
 				<role>maintainer</role>
 			</roles>
@@ -211,27 +211,27 @@
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-engine</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-win-extension-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-snmp-extension-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-classloader-agent</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-it-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
@@ -585,7 +585,7 @@
 				<version>2.5.0</version>
 				<configuration>
 					<licenseName>agpl_v3</licenseName>
-					<copyrightOwners>Sentry Software</copyrightOwners>
+					<copyrightOwners>MetricsHub</copyrightOwners>
 					<copyrightStringFormat>Copyright %1$s %2$s</copyrightStringFormat>
 					<includes>
 						<include>main/java/**/*.java</include>
@@ -662,88 +662,6 @@
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
 				<executions>
-					<!-- Parse the version into its components -->
-					<execution>
-						<id>parse-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>parse-cc-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${community-connectors.version}</versionString>
-							<formattedPropertyPrefix>formattedCcVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-hwgraf-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${hwgraf.version}</versionString>
-							<formattedPropertyPrefix>formattedHwGrafVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-ddog-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>1.0.00</versionString>
-							<formattedPropertyPrefix>formattedDDogVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<!-- Same as above, but when run with simple `mvn site` -->
-					<execution>
-						<id>parse-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>parse-cc-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${community-connectors.version}</versionString>
-							<formattedPropertyPrefix>formattedCcVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-hwgraf-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${hwgraf.version}</versionString>
-							<formattedPropertyPrefix>formattedHwGrafVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-ddog-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>1.0.00</versionString>
-							<formattedPropertyPrefix>formattedDDogVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
 					<execution>
 						<id>build-no-snapshot-version</id>
 						<phase>initialize</phase>

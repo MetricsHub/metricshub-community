@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -15,11 +15,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-win-extension-common</artifactId>
 		</dependency>
 		<dependency>
@@ -170,16 +170,16 @@
 						<configuration>
 							<artifactSet>
 								<excludes>
-									<exclude>org.sentrysoftware:xflat</exclude>
-									<exclude>org.sentrysoftware:wbem-java</exclude>
-									<exclude>org.sentrysoftware:vcenter-java</exclude>
-									<exclude>org.sentrysoftware:tablejoin</exclude>
-									<exclude>org.sentrysoftware:printf4j</exclude>
-									<exclude>org.sentrysoftware:metricshub-engine</exclude>
-									<exclude>org.sentrysoftware:jflat</exclude>
-									<exclude>org.sentrysoftware:jawk</exclude>
-									<exclude>org.sentrysoftware:snmp-java</exclude>
-									<exclude>org.sentrysoftware:ssh-java</exclude>
+									<exclude>org.metricshub:xflat</exclude>
+									<exclude>org.metricshub:wbem-java</exclude>
+									<exclude>org.metricshub:vcenter-java</exclude>
+									<exclude>org.metricshub:tablejoin</exclude>
+									<exclude>org.metricshub:printf4j</exclude>
+									<exclude>org.metricshub:metricshub-engine</exclude>
+									<exclude>org.metricshub:jflat</exclude>
+									<exclude>org.metricshub:jawk</exclude>
+									<exclude>org.metricshub:snmp-java</exclude>
+									<exclude>org.metricshub:ssh-java</exclude>
 								</excludes>
 							</artifactSet>
 							<transformers>

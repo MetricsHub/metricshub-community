@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -21,7 +21,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -159,7 +159,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/ipmi/*IpmiConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/ipmi/*IpmiConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -178,7 +178,7 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:ipmi-java</include>
-									<include>org.sentrysoftware:metricshub-ipmi-extension</include>
+									<include>org.metricshub:metricshub-ipmi-extension</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>
