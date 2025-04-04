@@ -21,7 +21,7 @@ package org.metricshub.extension.win;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
 
 /**
  * The IWinConfiguration interface represents the configuration for Windows protocols in the MetricsHub extension system.

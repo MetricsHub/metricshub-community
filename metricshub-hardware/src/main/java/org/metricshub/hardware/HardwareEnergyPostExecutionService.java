@@ -1,5 +1,26 @@
 package org.metricshub.hardware;
 
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Hardware Energy and Sustainability Module
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2024 Sentry Software
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
 import static org.metricshub.hardware.util.HwCollectHelper.connectorHasHardwareTag;
 import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_CPU_METRIC;
 import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_DISK_CONTROLLER_METRIC;
@@ -29,6 +50,13 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.delegate.IPostExecutionService;
+import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.telemetry.MetricFactory;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.hardware.sustainability.CpuPowerEstimator;
 import org.metricshub.hardware.sustainability.DiskControllerPowerAndEnergyEstimator;
 import org.metricshub.hardware.sustainability.FanPowerAndEnergyEstimator;
@@ -43,13 +71,6 @@ import org.metricshub.hardware.sustainability.TapeDrivePowerAndEnergyEstimator;
 import org.metricshub.hardware.sustainability.VmPowerAndEnergyEstimator;
 import org.metricshub.hardware.util.HwCollectHelper;
 import org.metricshub.hardware.util.PowerAndEnergyCollectHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType;
-import org.sentrysoftware.metricshub.engine.delegate.IPostExecutionService;
-import org.sentrysoftware.metricshub.engine.strategy.utils.CollectHelper;
-import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
 
 @Data
 @AllArgsConstructor

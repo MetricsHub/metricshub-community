@@ -5,11 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
-import static org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
@@ -23,6 +23,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
 import org.mockito.InjectMocks;
@@ -30,16 +40,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 @ExtendWith(MockitoExtension.class)
 class IpmiExtensionTest {

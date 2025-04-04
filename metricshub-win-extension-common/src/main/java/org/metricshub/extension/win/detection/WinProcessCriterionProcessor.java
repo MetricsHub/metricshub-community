@@ -21,14 +21,14 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.LOCALHOST;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOCALHOST;
 
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
 
 /**
  * A class responsible for processing Process criteria to evaluate local process existence.

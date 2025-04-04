@@ -27,9 +27,9 @@ import java.sql.SQLException;
 import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.extension.jdbc.client.JdbcClient;
 import org.metricshub.extension.jdbc.client.SqlResult;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 
 /**
  * Provides functionality to execute SQL queries via JDBC.

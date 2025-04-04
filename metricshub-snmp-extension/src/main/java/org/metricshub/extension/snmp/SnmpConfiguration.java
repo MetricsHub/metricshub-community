@@ -34,11 +34,11 @@ import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.deserialization.MultiValueDeserializer;
-import org.sentrysoftware.metricshub.engine.deserialization.TimeDeserializer;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * The SnmpConfiguration class represents the configuration for SNMP in the MetricsHub engine.

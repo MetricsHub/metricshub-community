@@ -15,11 +15,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.wbem.client.WbemExecutor;
 import org.metricshub.wbem.client.WbemQueryResult;
 import org.metricshub.wbem.javax.wbem.WBEMException;
 import org.mockito.MockedStatic;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 
 class WbemRequestExecutorTest {
 

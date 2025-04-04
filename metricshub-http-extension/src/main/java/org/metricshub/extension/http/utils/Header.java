@@ -21,14 +21,14 @@ package org.metricshub.extension.http.utils;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.springframework.util.Assert.isTrue;
 
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.UnaryOperator;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
 
 /**
  * Represents the header of an HTTP request.

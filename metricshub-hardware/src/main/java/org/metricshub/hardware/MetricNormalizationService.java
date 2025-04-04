@@ -29,6 +29,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.delegate.IPostExecutionService;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.hardware.threshold.CpuMetricNormalizer;
 import org.metricshub.hardware.threshold.FanMetricNormalizer;
 import org.metricshub.hardware.threshold.GpuMetricNormalizer;
@@ -42,10 +46,6 @@ import org.metricshub.hardware.threshold.RoboticsMetricNormalizer;
 import org.metricshub.hardware.threshold.TapeDriveMetricNormalizer;
 import org.metricshub.hardware.threshold.TemperatureMetricNormalizer;
 import org.metricshub.hardware.threshold.VoltageMetricNormalizer;
-import org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType;
-import org.sentrysoftware.metricshub.engine.delegate.IPostExecutionService;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Service class for normalizing hardware monitor metrics.

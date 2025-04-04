@@ -28,10 +28,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.extension.http.HttpConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
-import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 
 /**
  * Represents an HTTP request.

@@ -11,10 +11,10 @@ import java.io.File;
 import java.io.IOException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.ssh.SshClient;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
 
 @ExtendWith(MockitoExtension.class)
 class OsCommandRequestExecutorTest {

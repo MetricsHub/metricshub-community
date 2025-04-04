@@ -7,8 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 class LunMetricNormalizerTest {
 

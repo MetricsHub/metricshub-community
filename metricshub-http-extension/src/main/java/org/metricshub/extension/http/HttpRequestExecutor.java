@@ -22,7 +22,7 @@ package org.metricshub.extension.http;
  */
 
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.springframework.util.Assert.notNull;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
@@ -32,19 +32,19 @@ import java.util.Collections;
 import java.util.Map;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.RetryableException;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.strategy.utils.RetryOperation;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.Body;
 import org.metricshub.extension.http.utils.Header;
 import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.extension.http.utils.UrlHelper;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
-import org.sentrysoftware.metricshub.engine.common.exception.RetryableException;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
-import org.sentrysoftware.metricshub.engine.strategy.utils.RetryOperation;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Executes HTTP requests configured through {@link HttpRequest} objects.

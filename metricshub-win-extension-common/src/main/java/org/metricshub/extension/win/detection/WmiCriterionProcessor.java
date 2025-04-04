@@ -21,7 +21,7 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC_NAMESPACE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC_NAMESPACE;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,10 +37,10 @@ import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * A class responsible for processing WMI criteria to evaluate WMI queries against specified criteria.

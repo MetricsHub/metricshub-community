@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -15,7 +16,6 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
-import static org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
 
 import java.io.File;
 import java.io.FilenameFilter;
@@ -40,20 +40,20 @@ import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.engine.common.exception.ControlledSshException;
+import org.metricshub.engine.common.exception.NoCredentialProvidedException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
+import org.metricshub.engine.strategy.utils.OsCommandHelper;
+import org.metricshub.engine.strategy.utils.OsCommandResult;
+import org.metricshub.engine.strategy.utils.SudoInformation;
+import org.metricshub.engine.telemetry.SshSemaphoreFactory;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sentrysoftware.metricshub.engine.common.exception.ControlledSshException;
-import org.sentrysoftware.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
-import org.sentrysoftware.metricshub.engine.strategy.utils.SudoInformation;
-import org.sentrysoftware.metricshub.engine.telemetry.SshSemaphoreFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 @ExtendWith(MockitoExtension.class)
 class OsCommandHelperTest {

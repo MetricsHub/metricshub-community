@@ -8,7 +8,7 @@
 --app-version ${project.version.noSnapshot}
 --dest "${project.build.directory}"
 --app-content metricshub/config,metricshub/LICENSE,metricshub/connectors,metricshub/site,metricshub/extensions
---main-class org.sentrysoftware.metricshub.cli.MetricsHubCliApplication
+--main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
 --java-options java.xml/com.sun.org.apache.xerces.internal.parsers=ALL-UNNAMED
 --java-options --add-opens

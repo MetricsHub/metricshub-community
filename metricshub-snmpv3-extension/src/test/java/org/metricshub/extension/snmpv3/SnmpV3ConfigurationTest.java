@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.extension.snmpv3.SnmpV3Configuration.AuthType;
 import org.metricshub.extension.snmpv3.SnmpV3Configuration.Privacy;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
 
 class SnmpV3ConfigurationTest {
 

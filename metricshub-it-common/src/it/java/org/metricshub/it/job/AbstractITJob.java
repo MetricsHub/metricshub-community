@@ -11,13 +11,13 @@ import java.nio.file.Path;
 import java.util.Map.Entry;
 import lombok.Data;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.alert.AlertRule;
-import org.sentrysoftware.metricshub.engine.common.helpers.JsonHelper;
-import org.sentrysoftware.metricshub.engine.strategy.IStrategy;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.MonitorsVo;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.AbstractMetric;
+import org.metricshub.engine.alert.AlertRule;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.strategy.IStrategy;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorsVo;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.AbstractMetric;
 
 @Data
 public abstract class AbstractITJob implements ITJob {

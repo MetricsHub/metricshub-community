@@ -3,30 +3,30 @@ package org.metricshub.hardware.strategy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 import static org.metricshub.hardware.common.Constants.ENCLOSURE_PRESENT_METRIC;
 import static org.metricshub.hardware.util.HwConstants.CONNECTOR;
 import static org.metricshub.hardware.util.HwConstants.ENCLOSURE;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.Connector;
-import org.sentrysoftware.metricshub.engine.connector.model.ConnectorStore;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.ConnectorIdentity;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.Detection;
-import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.MonitorFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.Detection;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.MonitorFactory;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 class HardwarePostCollectStrategyTest {
 

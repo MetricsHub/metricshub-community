@@ -10,9 +10,9 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.utils.HttpRequest.HttpRequestBuilder;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
 
 class HttpRequestTest {
 

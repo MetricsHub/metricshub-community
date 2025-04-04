@@ -21,6 +21,7 @@ package org.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.extension.jawk.KeyWords.EXECUTE_HTTP_REQUEST;
 import static org.metricshub.extension.jawk.KeyWords.EXECUTE_IPMI_REQUEST;
 import static org.metricshub.extension.jawk.KeyWords.EXECUTE_SNMP_GET;
@@ -29,7 +30,6 @@ import static org.metricshub.extension.jawk.KeyWords.EXECUTE_WBEM_REQUEST;
 import static org.metricshub.extension.jawk.KeyWords.EXECUTE_WMI_REQUEST;
 import static org.metricshub.extension.jawk.KeyWords.GET_VARIABLE;
 import static org.metricshub.extension.jawk.KeyWords.JSON_2CSV;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.Arrays;
 import java.util.List;
@@ -37,25 +37,25 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.connector.model.common.HttpMethod;
+import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
+import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
+import org.metricshub.engine.strategy.source.SourceProcessor;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.jawk.NotImplementedError;
 import org.metricshub.jawk.ext.AbstractExtension;
 import org.metricshub.jawk.ext.JawkExtension;
 import org.metricshub.jawk.jrt.AssocArray;
-import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.configuration.ConnectorVariables;
-import org.sentrysoftware.metricshub.engine.connector.model.common.HttpMethod;
-import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.WbemSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.WmiSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.compute.Json2Csv;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceProcessor;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * This class implements the {@link JawkExtension} contract, reports the supported features, processes sources and computes.

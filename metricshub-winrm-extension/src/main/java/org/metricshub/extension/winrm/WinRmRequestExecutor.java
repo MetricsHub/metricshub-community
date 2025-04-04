@@ -26,6 +26,11 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 import org.metricshub.winrm.WinRMHttpProtocolEnum;
@@ -35,11 +40,6 @@ import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
 import org.metricshub.winrm.wql.WinRMWqlExecutor;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
-import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
 
 /**
  * The WinRmRequestExecutor class provides utility methods for executing

@@ -1,6 +1,6 @@
 package org.metricshub.hardware.strategy;
 
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Helper class for the strategy tests

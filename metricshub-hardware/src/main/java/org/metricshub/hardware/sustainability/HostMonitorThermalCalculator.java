@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 import static org.metricshub.hardware.util.HwConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 
 import java.math.RoundingMode;
 import java.util.Map;
@@ -31,15 +31,15 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.ArrayHelper;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.strategy.utils.MathOperationsHelper;
+import org.metricshub.engine.telemetry.MetricFactory;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.hardware.util.HwConstants;
-import org.sentrysoftware.metricshub.engine.common.helpers.ArrayHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType;
-import org.sentrysoftware.metricshub.engine.common.helpers.NumberHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.CollectHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.MathOperationsHelper;
-import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 @Data
 @AllArgsConstructor

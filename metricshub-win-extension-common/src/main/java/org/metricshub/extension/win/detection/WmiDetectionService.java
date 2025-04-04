@@ -21,7 +21,7 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -29,12 +29,12 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.strategy.utils.PslUtils;
 
 /**
  * A class responsible for processing WMI criteria to evaluate WMI queries against specified criteria.

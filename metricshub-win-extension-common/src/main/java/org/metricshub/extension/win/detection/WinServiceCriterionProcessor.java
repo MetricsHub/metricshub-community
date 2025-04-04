@@ -21,19 +21,19 @@ package org.metricshub.extension.win.detection;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.metricshub.engine.common.helpers.LocalOsHandler;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * A class responsible for processing Service criteria to evaluate service states.

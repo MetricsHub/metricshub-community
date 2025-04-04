@@ -11,12 +11,12 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.NoCredentialProvidedException;
+import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
 
 @ExtendWith(MockitoExtension.class)
 class WinCommandServiceTest {

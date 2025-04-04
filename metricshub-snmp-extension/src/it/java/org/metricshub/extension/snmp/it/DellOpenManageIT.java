@@ -8,21 +8,21 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.strategy.collect.CollectStrategy;
+import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
+import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
+import org.metricshub.engine.strategy.detection.DetectionStrategy;
+import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
-import org.metricshub.it.job.snmp.SnmpITJob;
 import org.metricshub.extension.snmp.SnmpExtension;
-import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.ConnectorStore;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.extension.ExtensionManager;
-import org.sentrysoftware.metricshub.engine.strategy.collect.CollectStrategy;
-import org.sentrysoftware.metricshub.engine.strategy.collect.PrepareCollectStrategy;
-import org.sentrysoftware.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
-import org.sentrysoftware.metricshub.engine.strategy.detection.DetectionStrategy;
-import org.sentrysoftware.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.it.job.snmp.SnmpITJob;
 
 class DellOpenManageIT {
 	static {

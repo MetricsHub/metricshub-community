@@ -23,14 +23,14 @@ package org.metricshub.extension.internaldb;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.common.SqlTable;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.extension.ISourceComputationExtension;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.connector.model.common.SqlTable;
+import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.extension.ISourceComputationExtension;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * This class implements the {@link ISourceComputationExtension} contract, reports the supported features,

@@ -21,8 +21,8 @@ package org.metricshub.extension.win;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
-import static org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper.replaceSudo;
+import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
+import static org.metricshub.engine.strategy.utils.OsCommandHelper.replaceSudo;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,13 +32,13 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.NoCredentialProvidedException;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
+import org.metricshub.engine.strategy.utils.OsCommandHelper;
+import org.metricshub.engine.strategy.utils.OsCommandResult;
 
 /**
  * Provides a service for executing Windows commands through Windows Management Instrumentation (WMI).

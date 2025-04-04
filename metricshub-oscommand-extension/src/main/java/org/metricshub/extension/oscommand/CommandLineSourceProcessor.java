@@ -21,19 +21,19 @@ package org.metricshub.extension.oscommand;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.common.helpers.FilterResultHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.common.helpers.FilterResultHelper;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.utils.OsCommandResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Processes command-line data sources to extract and transform the output into structured {@link SourceTable} format.

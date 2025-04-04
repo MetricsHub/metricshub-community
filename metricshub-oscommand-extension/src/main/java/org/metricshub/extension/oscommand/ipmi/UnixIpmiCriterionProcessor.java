@@ -25,15 +25,15 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.ControlledSshException;
+import org.metricshub.engine.common.exception.IpmiCommandForSolarisException;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.oscommand.OsCommandService;
 import org.metricshub.extension.oscommand.SshConfiguration;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.exception.ControlledSshException;
-import org.sentrysoftware.metricshub.engine.common.exception.IpmiCommandForSolarisException;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Processes IPMI criteria for Unix-based systems, particularly handling command construction

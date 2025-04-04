@@ -21,22 +21,22 @@ package org.metricshub.extension.win.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC_NAMESPACE;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAULT_NAMESPACE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC_NAMESPACE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAULT_NAMESPACE;
 
 import java.util.List;
 import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.WmiSource;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.ConnectorNamespace;
-import org.sentrysoftware.metricshub.engine.telemetry.HostProperties;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * A class responsible for processing WMI sources producing the {@link SourceTable} result.

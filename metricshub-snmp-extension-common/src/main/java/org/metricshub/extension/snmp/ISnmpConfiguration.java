@@ -21,7 +21,7 @@ package org.metricshub.extension.snmp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
 
 /**
  * The ISnmpConfiguration interface represents the configuration for SNMP

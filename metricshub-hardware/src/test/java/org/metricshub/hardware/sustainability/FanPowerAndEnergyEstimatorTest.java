@@ -12,11 +12,11 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.telemetry.MetricFactory;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 class FanPowerAndEnergyEstimatorTest {
 

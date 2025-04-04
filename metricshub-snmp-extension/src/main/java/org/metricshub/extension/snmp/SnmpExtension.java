@@ -26,8 +26,8 @@ import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.IConfiguration;
 
 /**
  * This class extends {@link AbstractSnmpExtension}, reports the supported features,

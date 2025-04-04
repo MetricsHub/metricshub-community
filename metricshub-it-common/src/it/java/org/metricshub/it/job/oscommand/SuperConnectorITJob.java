@@ -1,10 +1,10 @@
 package org.metricshub.it.job.oscommand;
 
 import lombok.NonNull;
+import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.it.job.AbstractITJob;
 import org.metricshub.it.job.ITJob;
-import org.sentrysoftware.metricshub.engine.client.ClientsExecutor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 public class SuperConnectorITJob extends AbstractITJob {
 

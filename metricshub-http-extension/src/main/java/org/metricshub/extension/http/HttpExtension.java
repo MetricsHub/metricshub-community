@@ -21,7 +21,7 @@ package org.metricshub.extension.http;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.JsonHelper.isNotNull;
+import static org.metricshub.engine.common.helpers.JsonHelper.isNotNull;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,19 +35,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.utils.HttpRequest;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.ResultContent;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.extension.IProtocolExtension;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * This class implements the {@link IProtocolExtension} contract, reports the supported features,

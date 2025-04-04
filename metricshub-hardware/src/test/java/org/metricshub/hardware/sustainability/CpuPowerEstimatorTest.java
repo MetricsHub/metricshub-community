@@ -9,11 +9,11 @@ import static org.metricshub.hardware.util.HwConstants.HW_CPU_SPEED_LIMIT_LIMIT_
 import static org.metricshub.hardware.util.HwConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
 
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.telemetry.MetricFactory;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 class CpuPowerEstimatorTest {
 

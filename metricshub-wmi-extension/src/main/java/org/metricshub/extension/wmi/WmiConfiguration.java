@@ -30,12 +30,12 @@ import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 import org.metricshub.extension.win.IWinConfiguration;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.deserialization.MultiValueDeserializer;
-import org.sentrysoftware.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * The WmiConfiguration interface represents the configuration for the Windows Management Instrumentation protocol

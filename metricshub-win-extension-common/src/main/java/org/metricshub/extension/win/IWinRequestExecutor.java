@@ -23,7 +23,7 @@ package org.metricshub.extension.win;
 
 import java.util.List;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.ClientException;
 
 /**
  * Interface defining the contract for executing Windows Management Instrumentation (WMI) requests

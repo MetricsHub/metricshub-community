@@ -2,6 +2,7 @@ package org.metricshub.hardware.sustainability;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.hardware.common.Constants.HW_CONNECTOR;
 import static org.metricshub.hardware.common.Constants.HW_CPU_POWER;
 import static org.metricshub.hardware.common.Constants.HW_ENCLOSURE_POWER;
@@ -11,21 +12,20 @@ import static org.metricshub.hardware.common.Constants.LOCALHOST;
 import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_POWER;
 import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_ENERGY;
 import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_POWER;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.strategy.utils.CollectHelper;
-import org.sentrysoftware.metricshub.engine.telemetry.ConnectorNamespace;
-import org.sentrysoftware.metricshub.engine.telemetry.HostProperties;
-import org.sentrysoftware.metricshub.engine.telemetry.MetricFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.MetricFactory;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 class HostMonitorEnergyAndPowerEstimatorTest {
 

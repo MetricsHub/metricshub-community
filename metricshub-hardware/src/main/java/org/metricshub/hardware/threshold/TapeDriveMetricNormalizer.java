@@ -21,7 +21,7 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.Monitor;
 
 /**
  * The TapeDriveMetricNormalizer class is responsible for normalizing TAPE DRIVE metrics.

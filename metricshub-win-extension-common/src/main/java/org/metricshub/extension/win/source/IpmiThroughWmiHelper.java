@@ -21,7 +21,7 @@ package org.metricshub.extension.win.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -34,9 +34,9 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.helpers.ArrayHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.ListHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.common.helpers.ArrayHelper;
+import org.metricshub.engine.common.helpers.ListHelper;
+import org.metricshub.engine.common.helpers.NumberHelper;
 
 /**
  * Utility class for IPMI (Intelligent Platform Management Interface) operations and data processing.

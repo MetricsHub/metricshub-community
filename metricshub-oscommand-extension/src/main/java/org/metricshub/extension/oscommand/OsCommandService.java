@@ -21,13 +21,13 @@ package org.metricshub.extension.oscommand;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_LOCK_TIMEOUT;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
-import static org.sentrysoftware.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
-import static org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
-import static org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper.createOsCommandEmbeddedFiles;
-import static org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandHelper.replaceSudo;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_LOCK_TIMEOUT;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
+import static org.metricshub.engine.strategy.utils.OsCommandHelper.TEMP_FILE_CREATOR;
+import static org.metricshub.engine.strategy.utils.OsCommandHelper.createOsCommandEmbeddedFiles;
+import static org.metricshub.engine.strategy.utils.OsCommandHelper.replaceSudo;
 import static org.springframework.util.Assert.isTrue;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
@@ -53,19 +53,19 @@ import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientRuntimeException;
-import org.sentrysoftware.metricshub.engine.common.exception.ControlledSshException;
-import org.sentrysoftware.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.sentrysoftware.metricshub.engine.common.helpers.LocalOsHandler;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.OsCommandResult;
-import org.sentrysoftware.metricshub.engine.strategy.utils.SudoInformation;
-import org.sentrysoftware.metricshub.engine.telemetry.SshSemaphoreFactory;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.exception.ClientRuntimeException;
+import org.metricshub.engine.common.exception.ControlledSshException;
+import org.metricshub.engine.common.exception.NoCredentialProvidedException;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
+import org.metricshub.engine.strategy.utils.OsCommandResult;
+import org.metricshub.engine.strategy.utils.SudoInformation;
+import org.metricshub.engine.telemetry.SshSemaphoreFactory;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * Os Command Service that handles OS commands, including local and remote execution.

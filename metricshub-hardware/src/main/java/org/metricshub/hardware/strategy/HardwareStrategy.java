@@ -27,11 +27,11 @@ import java.util.stream.Stream;
 import lombok.Data;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.strategy.IStrategy;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.hardware.HardwareEnergyPostExecutionService;
 import org.metricshub.hardware.MetricNormalizationService;
-import org.sentrysoftware.metricshub.engine.common.helpers.KnownMonitorType;
-import org.sentrysoftware.metricshub.engine.strategy.IStrategy;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 @RequiredArgsConstructor
 @Data

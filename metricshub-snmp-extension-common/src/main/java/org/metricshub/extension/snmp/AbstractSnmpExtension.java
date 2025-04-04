@@ -34,22 +34,22 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
 import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
 import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;
 import org.metricshub.extension.snmp.source.SnmpTableSourceProcessor;
-import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.extension.IProtocolExtension;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * An abstract base class for SNMP protocol extensions.

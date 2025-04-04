@@ -27,13 +27,13 @@ import java.util.function.Function;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * A class responsible for processing IPMI sources producing the {@link SourceTable} result.

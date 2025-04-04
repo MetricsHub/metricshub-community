@@ -30,12 +30,12 @@ import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.configuration.TransportProtocols;
-import org.sentrysoftware.metricshub.engine.deserialization.MultiValueDeserializer;
-import org.sentrysoftware.metricshub.engine.deserialization.TimeDeserializer;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.configuration.TransportProtocols;
+import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * The WbemConfiguration interface represents the configuration for the Web-Based Enterprise Management protocol in the MetricsHub engine.

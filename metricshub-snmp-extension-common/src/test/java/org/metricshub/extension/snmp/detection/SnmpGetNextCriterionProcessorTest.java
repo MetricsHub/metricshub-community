@@ -13,14 +13,14 @@ import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 @ExtendWith(MockitoExtension.class)
 public class SnmpGetNextCriterionProcessorTest {

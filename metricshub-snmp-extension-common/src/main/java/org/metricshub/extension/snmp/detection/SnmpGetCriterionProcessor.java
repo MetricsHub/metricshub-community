@@ -27,12 +27,12 @@ import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.utils.PslUtils;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.utils.PslUtils;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * A class responsible for processing SNMP Get criteria to evaluate SNMP queries against specified criteria.

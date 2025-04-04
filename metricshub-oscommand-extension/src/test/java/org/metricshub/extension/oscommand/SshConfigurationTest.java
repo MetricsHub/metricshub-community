@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
 
 /**
  * Test of {@link SshConfiguration}

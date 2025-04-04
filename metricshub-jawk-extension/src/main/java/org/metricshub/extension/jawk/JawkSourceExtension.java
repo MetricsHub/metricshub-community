@@ -21,8 +21,8 @@ package org.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -37,6 +37,17 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.awk.UniformPrintStream;
+import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.extension.ICompositeSourceScriptExtension;
+import org.metricshub.engine.strategy.source.SourceProcessor;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
+import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jawk.backend.AVM;
 import org.metricshub.jawk.ext.JawkExtension;
 import org.metricshub.jawk.frontend.AwkParser;
@@ -44,17 +55,6 @@ import org.metricshub.jawk.frontend.AwkSyntaxTree;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
-import org.sentrysoftware.metricshub.engine.awk.UniformPrintStream;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.JawkSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.extension.ICompositeSourceScriptExtension;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceProcessor;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceUpdaterProcessor;
-import org.sentrysoftware.metricshub.engine.strategy.utils.EmbeddedFileHelper;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * This class implements the {@link ICompositeSourceScriptExtension} contract, reports the supported features,

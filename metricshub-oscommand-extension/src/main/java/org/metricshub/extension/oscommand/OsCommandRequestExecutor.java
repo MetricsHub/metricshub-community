@@ -21,7 +21,7 @@ package org.metricshub.extension.oscommand;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
+import static org.metricshub.engine.common.helpers.StringHelper.protectCaseInsensitiveRegex;
 import static org.springframework.util.Assert.isTrue;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
@@ -34,9 +34,9 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.ssh.SshClient;
-import org.sentrysoftware.metricshub.engine.common.exception.ClientException;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 
 /**
  * Provides functionality to execute remote SSH commands, manage SSH authentication, and transfer files to remote hosts.

@@ -2,7 +2,7 @@ package org.metricshub.it.job;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import org.sentrysoftware.metricshub.engine.strategy.IStrategy;
+import org.metricshub.engine.strategy.IStrategy;
 
 public interface ITJob {
 	/**

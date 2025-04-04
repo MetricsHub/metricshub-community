@@ -21,7 +21,7 @@ package org.metricshub.extension.http.utils;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 
 import java.util.function.UnaryOperator;
 import lombok.AllArgsConstructor;
@@ -29,8 +29,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 
 /**
  * Represents the body of an HTTP request containing an embedded file.

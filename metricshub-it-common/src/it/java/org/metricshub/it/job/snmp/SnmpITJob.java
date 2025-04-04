@@ -2,10 +2,10 @@ package org.metricshub.it.job.snmp;
 
 import java.util.function.BiConsumer;
 import lombok.NonNull;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.it.job.AbstractITJob;
 import org.metricshub.it.job.ITJob;
 import org.metricshub.it.job.snmp.snmp4j.SnmpAgent;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
 
 public class SnmpITJob extends AbstractITJob {
 

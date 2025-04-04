@@ -27,10 +27,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.ArrayHelper;
+import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
-import org.sentrysoftware.metricshub.engine.common.helpers.ArrayHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.LoggingHelper;
 
 @Slf4j
 public class IpmiRequestExecutor {

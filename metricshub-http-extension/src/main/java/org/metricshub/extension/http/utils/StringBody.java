@@ -27,7 +27,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.common.helpers.MacrosUpdater;
+import org.metricshub.engine.common.helpers.MacrosUpdater;
 
 /**
  * Represents an HTTP request body with a string content.

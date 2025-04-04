@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.IConfiguration;
 
 class WmiConfigurationTest {
 

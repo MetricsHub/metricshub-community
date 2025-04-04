@@ -33,18 +33,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.common.helpers.StringHelper;
-import org.sentrysoftware.metricshub.engine.common.helpers.TextTableHelper;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.Source;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.WbemSource;
-import org.sentrysoftware.metricshub.engine.extension.IProtocolExtension;
-import org.sentrysoftware.metricshub.engine.strategy.detection.CriterionTestResult;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.common.helpers.TextTableHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 @Slf4j
 public class WbemExtension implements IProtocolExtension {

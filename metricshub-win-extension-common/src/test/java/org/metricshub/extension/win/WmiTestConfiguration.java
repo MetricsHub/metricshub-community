@@ -3,8 +3,8 @@ package org.metricshub.extension.win;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
-import org.sentrysoftware.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.sentrysoftware.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.configuration.IConfiguration;
 
 @Data
 @Builder

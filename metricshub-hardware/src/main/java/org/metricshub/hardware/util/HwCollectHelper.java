@@ -21,10 +21,10 @@ package org.metricshub.hardware.util;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_SHARE_METRIC;
 import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_STATE_METRIC;
 import static org.metricshub.hardware.util.HwConstants.PRESENT_STATUS;
-import static org.sentrysoftware.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 
 import java.util.Map;
 import java.util.Optional;
@@ -32,15 +32,15 @@ import java.util.Set;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.connector.model.Connector;
-import org.sentrysoftware.metricshub.engine.connector.model.ConnectorStore;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.ConnectorIdentity;
-import org.sentrysoftware.metricshub.engine.connector.model.identity.Detection;
-import org.sentrysoftware.metricshub.engine.strategy.utils.CollectHelper;
-import org.sentrysoftware.metricshub.engine.strategy.utils.MathOperationsHelper;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.Detection;
+import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.strategy.utils.MathOperationsHelper;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)

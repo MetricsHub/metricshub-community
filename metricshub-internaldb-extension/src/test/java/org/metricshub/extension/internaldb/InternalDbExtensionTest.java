@@ -10,17 +10,17 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.sentrysoftware.metricshub.engine.configuration.HostConfiguration;
-import org.sentrysoftware.metricshub.engine.connector.model.common.DeviceKind;
-import org.sentrysoftware.metricshub.engine.connector.model.common.SqlColumn;
-import org.sentrysoftware.metricshub.engine.connector.model.common.SqlTable;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.HttpSource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
-import org.sentrysoftware.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.ConnectorNamespace;
-import org.sentrysoftware.metricshub.engine.telemetry.HostProperties;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.common.SqlColumn;
+import org.metricshub.engine.connector.model.common.SqlTable;
+import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.ConnectorNamespace;
+import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 class InternalDbExtensionTest {
 

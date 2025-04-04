@@ -29,7 +29,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.sentrysoftware.metricshub.engine.connector.model.common.EmbeddedFile;
+import org.metricshub.engine.connector.model.common.EmbeddedFile;
 
 /**
  * Represents the header of an HTTP request containing an embedded file.

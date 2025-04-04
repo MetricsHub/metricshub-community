@@ -37,10 +37,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.sentrysoftware.metricshub.engine.connector.model.common.SqlColumn;
-import org.sentrysoftware.metricshub.engine.connector.model.common.SqlTable;
-import org.sentrysoftware.metricshub.engine.strategy.source.SourceTable;
-import org.sentrysoftware.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.engine.connector.model.common.SqlColumn;
+import org.metricshub.engine.connector.model.common.SqlTable;
+import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
  * The SqlClientExecutor class provides a method for executing

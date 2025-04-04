@@ -10,7 +10,7 @@
 --dest "${project.build.directory}"
 --app-content metricshub\connectors,metricshub\config,metricshub\LICENSE,metricshub\site,metricshub\service-installer.exe,metricshub\extensions
 --win-console
---main-class org.sentrysoftware.metricshub.cli.MetricsHubCliApplication
+--main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
 --java-options java.xml/com.sun.org.apache.xerces.internal.parsers=ALL-UNNAMED
 --java-options --add-opens

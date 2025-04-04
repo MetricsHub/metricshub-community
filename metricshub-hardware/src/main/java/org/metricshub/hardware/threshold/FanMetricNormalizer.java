@@ -23,8 +23,8 @@ package org.metricshub.hardware.threshold;
 
 import java.util.Map;
 import java.util.Optional;
-import org.sentrysoftware.metricshub.engine.telemetry.Monitor;
-import org.sentrysoftware.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.engine.telemetry.Monitor;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 /**
  * The FanMetricNormalizer class is responsible for normalizing FAN metrics.
