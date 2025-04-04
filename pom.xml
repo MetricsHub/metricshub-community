@@ -10,7 +10,7 @@
 
 	<packaging>pom</packaging>
 
-	<name>MetricsHub</name>
+	<name>MetricsHub Community</name>
 
 	<description>Universal Metrics Collection for OpenTelemetry</description>
 
