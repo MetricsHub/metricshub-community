@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.TestConstants.COMPANY_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.COMPANY_ATTRIBUTE_VALUE;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.PARIS_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.SITE_ATTRIBUTE_KEY;
 import static org.metricshub.agent.service.scheduling.ResourceGroupScheduling.HW_SITE_CARBON_INTENSITY_METRIC;
 import static org.metricshub.agent.service.scheduling.ResourceGroupScheduling.HW_SITE_ELECTRICITY_COST_METRIC;
@@ -52,7 +52,7 @@ class ResourceGroupSchedulingTest {
 			.metrics(
 				Map.of(HW_SITE_CARBON_INTENSITY_METRIC, 350D, HW_SITE_ELECTRICITY_COST_METRIC, 0.12D, HW_SITE_PUE_METRIC, 1.8D)
 			)
-			.attributes(Map.of(SITE_ATTRIBUTE_KEY, TestConstants.SENTRY_PARIS_SITE_VALUE))
+			.attributes(Map.of(SITE_ATTRIBUTE_KEY, TestConstants.PARIS_SITE_VALUE))
 			.build();
 
 		final ThreadPoolTaskScheduler taskSchedulerMock = spy(ThreadPoolTaskScheduler.class);
@@ -68,7 +68,7 @@ class ResourceGroupSchedulingTest {
 			.withAgentConfig(agentConfig)
 			.withMetricsExporter(metricsExporter)
 			.withResourceGroupConfig(resourceGroupConfig)
-			.withResourceGroupKey(SENTRY_PARIS_RESOURCE_GROUP_KEY)
+			.withResourceGroupKey(PARIS_RESOURCE_GROUP_KEY)
 			.withSchedules(new HashMap<>())
 			.withTaskScheduler(taskSchedulerMock)
 			.build();
@@ -93,7 +93,7 @@ class ResourceGroupSchedulingTest {
 					COMPANY_ATTRIBUTE_KEY,
 					COMPANY_ATTRIBUTE_VALUE,
 					SITE_ATTRIBUTE_KEY,
-					TestConstants.SENTRY_PARIS_SITE_VALUE
+					TestConstants.PARIS_SITE_VALUE
 				),
 				resourceAttributes
 			)

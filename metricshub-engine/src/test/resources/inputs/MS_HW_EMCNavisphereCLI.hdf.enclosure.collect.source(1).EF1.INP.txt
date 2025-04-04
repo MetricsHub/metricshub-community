@@ -3763,7 +3763,7 @@ Resume Information
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRYSP 1.60GHZ QC CPU
+    Assembly Name:                   M8BSP 1.60GHZ QC CPU
     Programmable Name:               BIOS:POST:MCU:MCU BB:PLX8608:CMDAPP:CMDTABLE:CMDBOOT:FWBL:CDES
     Programmable Revision:           7.20:42.20:5.40:1.10:3.05:5.04:0.96:0.02:72.90:1.55
   SP A
@@ -3780,7 +3780,7 @@ Resume Information
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRYSP SPARE CPU
+    Assembly Name:                   M8BSP SPARE CPU
     Programmable Name:               BIOS:POST:CMDAPP:CMDTABLE:CMDBOOT:FWBL:MCU:MCU BB:PLX8608:CDES
     Programmable Revision:           7.20:42.20:5.04:0.96:0.02:72.90:5.40:1.10:3.05:1.55
 Storage Processor A 
@@ -3798,7 +3798,7 @@ Storage Processor A
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRYSP SPARE CPU
+    Assembly Name:                   M8BSP SPARE CPU
     Programmable Name:               BIOS:POST:CMDAPP:CMDTABLE:CMDBOOT:FWBL:MCU:MCU BB:PLX8608:CDES
     Programmable Revision:           7.20:42.20:5.04:0.96:0.02:72.90:5.40:1.10:3.05:1.55
 Storage Processor B 
@@ -3816,7 +3816,7 @@ Storage Processor B
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRYSP 1.60GHZ QC CPU
+    Assembly Name:                   M8BSP 1.60GHZ QC CPU
     Programmable Name:               BIOS:POST:MCU:MCU BB:PLX8608:CMDAPP:CMDTABLE:CMDBOOT:FWBL:CDES
     Programmable Revision:           7.20:42.20:5.40:1.10:3.05:5.04:0.96:0.02:72.90:1.55
 Storage Processor A 
@@ -3852,7 +3852,7 @@ Storage Processor A
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRY CPU BRD MEZZ, GROWLER DVT
+    Assembly Name:                   M8B CPU BRD MEZZ, GROWLER DVT
     Programmable Name:               N/A
     Programmable Revision:           0.0
 Storage Processor A 
@@ -3924,7 +3924,7 @@ Storage Processor B
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRY CPU BRD MEZZ, GROWLER DVT
+    Assembly Name:                   M8B CPU BRD MEZZ, GROWLER DVT
     Programmable Name:               N/A
     Programmable Revision:           0.0
 Storage Processor B 
@@ -3981,7 +3981,7 @@ Bus 0 Enclosure 0
     Year of Manufacture:             N/A
     Month of Manufacture:            N/A
     Day of Manufacture:              N/A
-    Assembly Name:                   SENTRYLITE DUAL SP 8GB DVT AO
+    Assembly Name:                   M8BLITE DUAL SP 8GB DVT AO
     Programmable Name:               N/A
     Programmable Revision:           N/A
     EMC Product Serial Number:       CKM00120300966

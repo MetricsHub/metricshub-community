@@ -7,10 +7,10 @@ import static org.metricshub.agent.helper.TestConstants.COMPANY_ATTRIBUTE_VALUE;
 import static org.metricshub.agent.helper.TestConstants.HOST_ID_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.HOST_TYPE_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.OS_LINUX;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_OTTAWA_RESOURCE_GROUP_KEY;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_OTTAWA_SITE_VALUE;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_RESOURCE_GROUP_KEY;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_SITE_VALUE;
+import static org.metricshub.agent.helper.TestConstants.OTTAWA_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.OTTAWA_SITE_VALUE;
+import static org.metricshub.agent.helper.TestConstants.PARIS_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.PARIS_SITE_VALUE;
 import static org.metricshub.agent.helper.TestConstants.SITE_ATTRIBUTE_KEY;
 import static org.metricshub.agent.service.scheduling.ResourceGroupScheduling.HW_SITE_PUE_METRIC;
 import static org.metricshub.agent.service.scheduling.ResourceGroupScheduling.METRICSHUB_RESOURCE_GROUP_KEY_FORMAT;
@@ -80,18 +80,18 @@ class TaskSchedulingServiceTest {
 	void testScheduleResourceGroupRecorders() {
 		final Map<String, ResourceGroupConfig> resourceGroups = new HashMap<>();
 		resourceGroups.put(
-			SENTRY_PARIS_RESOURCE_GROUP_KEY,
+			PARIS_RESOURCE_GROUP_KEY,
 			ResourceGroupConfig
 				.builder()
-				.attributes(Map.of(SITE_ATTRIBUTE_KEY, SENTRY_PARIS_SITE_VALUE))
+				.attributes(Map.of(SITE_ATTRIBUTE_KEY, PARIS_SITE_VALUE))
 				.metrics(Map.of(HW_SITE_PUE_METRIC, 1D))
 				.build()
 		);
 		resourceGroups.put(
-			SENTRY_OTTAWA_RESOURCE_GROUP_KEY,
+			OTTAWA_RESOURCE_GROUP_KEY,
 			ResourceGroupConfig
 				.builder()
-				.attributes(Map.of(SITE_ATTRIBUTE_KEY, SENTRY_OTTAWA_SITE_VALUE))
+				.attributes(Map.of(SITE_ATTRIBUTE_KEY, OTTAWA_SITE_VALUE))
 				.metrics(Map.of(HW_SITE_PUE_METRIC, 1D))
 				.build()
 		);
@@ -120,14 +120,14 @@ class TaskSchedulingServiceTest {
 			scheduledFutureMock,
 			taskSchedulingService
 				.getSchedules()
-				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, SENTRY_PARIS_RESOURCE_GROUP_KEY))
+				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY))
 		);
 
 		assertEquals(
 			scheduledFutureMock,
 			taskSchedulingService
 				.getSchedules()
-				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, SENTRY_OTTAWA_RESOURCE_GROUP_KEY))
+				.get(String.format(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT, OTTAWA_RESOURCE_GROUP_KEY))
 		);
 
 		assertNull(
@@ -170,7 +170,7 @@ class TaskSchedulingServiceTest {
 
 		final AgentConfig agentConfig = AgentConfig
 			.builder()
-			.resourceGroups(Map.of(SENTRY_PARIS_RESOURCE_GROUP_KEY, resourceGroupConfig))
+			.resourceGroups(Map.of(PARIS_RESOURCE_GROUP_KEY, resourceGroupConfig))
 			.build();
 
 		final ThreadPoolTaskScheduler taskSchedulerMock = spy(ThreadPoolTaskScheduler.class);
@@ -186,7 +186,7 @@ class TaskSchedulingServiceTest {
 			.withTaskScheduler(taskSchedulerMock)
 			.withTelemetryManagers(
 				Map.of(
-					SENTRY_PARIS_RESOURCE_GROUP_KEY,
+					PARIS_RESOURCE_GROUP_KEY,
 					Map.of(resourceKey1, new TelemetryManager(), resourceKey2, new TelemetryManager())
 				)
 			)
@@ -194,7 +194,7 @@ class TaskSchedulingServiceTest {
 			.withExtensionManager(ExtensionManager.empty())
 			.build();
 
-		taskSchedulingService.scheduleResourcesInResourceGroups(SENTRY_PARIS_RESOURCE_GROUP_KEY, resourceGroupConfig);
+		taskSchedulingService.scheduleResourcesInResourceGroups(PARIS_RESOURCE_GROUP_KEY, resourceGroupConfig);
 
 		verify(taskSchedulerMock, times(2)).schedule(any(Runnable.class), any(Trigger.class));
 
@@ -202,14 +202,14 @@ class TaskSchedulingServiceTest {
 			scheduledFutureMock,
 			taskSchedulingService
 				.getSchedules()
-				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, SENTRY_PARIS_RESOURCE_GROUP_KEY, resourceKey1))
+				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY, resourceKey1))
 		);
 
 		assertEquals(
 			scheduledFutureMock,
 			taskSchedulingService
 				.getSchedules()
-				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, SENTRY_PARIS_RESOURCE_GROUP_KEY, resourceKey2))
+				.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, PARIS_RESOURCE_GROUP_KEY, resourceKey2))
 		);
 	}
 }

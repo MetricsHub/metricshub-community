@@ -4,7 +4,7 @@ package org.metricshub.cli.service;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2024 Sentry Software
+ * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -576,8 +576,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 			// Update the Log level at the root level
 			LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
 			Configuration config = loggerContext.getConfiguration();
-			LoggerConfig sentryLoggerConfig = config.getLoggerConfig("org.metricshub");
-			sentryLoggerConfig.setLevel(logLevel);
+			LoggerConfig metricshubLoggerConfig = config.getLoggerConfig("org.metricshub");
+			metricshubLoggerConfig.setLevel(logLevel);
 			loggerContext.updateLoggers();
 		}
 	}

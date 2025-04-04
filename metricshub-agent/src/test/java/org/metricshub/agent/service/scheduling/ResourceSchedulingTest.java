@@ -3,7 +3,7 @@ package org.metricshub.agent.service.scheduling;
 import static org.metricshub.agent.helper.TestConstants.HOSTNAME;
 import static org.metricshub.agent.helper.TestConstants.HOST_TYPE_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.OS_LINUX;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.PARIS_RESOURCE_GROUP_KEY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOST_NAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -55,7 +55,7 @@ class ResourceSchedulingTest {
 			.withResourceConfig(resourceConfig)
 			.withTelemetryManager(new TelemetryManager())
 			.withTaskScheduler(taskSchedulerMock)
-			.withResourceGroupKey(SENTRY_PARIS_RESOURCE_GROUP_KEY)
+			.withResourceGroupKey(PARIS_RESOURCE_GROUP_KEY)
 			.withResourceKey(HOSTNAME)
 			.withSchedules(new HashMap<>())
 			.withTaskScheduler(taskSchedulerMock)

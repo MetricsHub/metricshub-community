@@ -14,8 +14,8 @@ import static org.metricshub.agent.helper.TestConstants.HTTP_ACCEPT_HEADER;
 import static org.metricshub.agent.helper.TestConstants.HTTP_KEY_TYPE;
 import static org.metricshub.agent.helper.TestConstants.HTTP_SERVICE_URL;
 import static org.metricshub.agent.helper.TestConstants.ID_ATTRIBUTE_KEY;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_RESOURCE_GROUP_KEY;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_SITE_VALUE;
+import static org.metricshub.agent.helper.TestConstants.PARIS_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.PARIS_SITE_VALUE;
 import static org.metricshub.agent.helper.TestConstants.SERVER_1_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.SERVICE_VERSION_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.SITE_ATTRIBUTE_KEY;
@@ -68,7 +68,7 @@ class AgentContextTest {
 
 		final Map<String, ResourceGroupConfig> resourceGroupsConfig = agentConfig.getResourceGroups();
 		assertNotNull(resourceGroupsConfig);
-		final ResourceGroupConfig resourceGroupConfig = resourceGroupsConfig.get(SENTRY_PARIS_RESOURCE_GROUP_KEY);
+		final ResourceGroupConfig resourceGroupConfig = resourceGroupsConfig.get(PARIS_RESOURCE_GROUP_KEY);
 		assertNotNull(resourceGroupConfig);
 		final Map<String, ResourceConfig> resourcesConfigInTheGroup = resourceGroupConfig.getResources();
 		assertNotNull(resourcesConfigInTheGroup);
@@ -79,7 +79,7 @@ class AgentContextTest {
 		assertNotNull(grafanaServiceResourceConfig);
 		final Map<String, String> attributesConfig = grafanaServiceResourceConfig.getAttributes();
 		assertNotNull(attributesConfig);
-		assertEquals(SENTRY_PARIS_SITE_VALUE, attributesConfig.get(SITE_ATTRIBUTE_KEY));
+		assertEquals(PARIS_SITE_VALUE, attributesConfig.get(SITE_ATTRIBUTE_KEY));
 
 		final Map<String, String> attributes = new LinkedHashMap<>();
 		attributes.put(ID_ATTRIBUTE_KEY, "$1");
@@ -131,10 +131,10 @@ class AgentContextTest {
 
 		// Check the TelemetryManager map is correctly created
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
-		final Map<String, TelemetryManager> sentryParisTelemetryManagers = telemetryManagers.get(
-			SENTRY_PARIS_RESOURCE_GROUP_KEY
+		final Map<String, TelemetryManager> parisTelemetryManagers = telemetryManagers.get(
+			PARIS_RESOURCE_GROUP_KEY
 		);
-		assertEquals(4, sentryParisTelemetryManagers.size());
+		assertEquals(4, parisTelemetryManagers.size());
 
 		// Check the OpenTelemetry configuration is correctly created
 		final Map<String, String> expectedOtelConfiguration = new HashMap<>();
@@ -153,8 +153,8 @@ class AgentContextTest {
 
 		// Make sure the engine is notified with configuredConnectorId
 		assertEquals(
-			"MetricsHub-Configured-Connector-sentry-paris-grafana-service",
-			sentryParisTelemetryManagers
+			"MetricsHub-Configured-Connector-paris-grafana-service",
+			parisTelemetryManagers
 				.get(GRAFANA_SERVICE_RESOURCE_CONFIG_KEY)
 				.getHostConfiguration()
 				.getConfiguredConnectorId()
@@ -184,7 +184,7 @@ class AgentContextTest {
 
 		// Check the presence of the top-level resources and the resources inside resource groups
 		assertNotNull(telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY).get("server-2"));
-		assertNotNull(telemetryManagers.get(SENTRY_PARIS_RESOURCE_GROUP_KEY).get("server-1"));
+		assertNotNull(telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY).get("server-1"));
 	}
 
 	@Test
@@ -203,7 +203,7 @@ class AgentContextTest {
 
 		final ResourceConfig resourceConfig = agentConfig
 			.getResourceGroups()
-			.get(SENTRY_PARIS_RESOURCE_GROUP_KEY)
+			.get(PARIS_RESOURCE_GROUP_KEY)
 			.getResources()
 			.get(SERVER_1_RESOURCE_GROUP_KEY);
 

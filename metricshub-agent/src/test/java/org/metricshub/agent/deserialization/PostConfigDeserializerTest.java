@@ -42,59 +42,59 @@ class PostConfigDeserializerTest {
 		final Map<String, ResourceGroupConfig> resourceGroups = configuration.getResourceGroups();
 
 		assertNotNull(resourceGroups);
-		final ResourceGroupConfig sentryParisResourceGroup = resourceGroups.get("sentry-paris");
+		final ResourceGroupConfig parisResourceGroup = resourceGroups.get("paris");
 
-		assertNotNull(sentryParisResourceGroup);
+		assertNotNull(parisResourceGroup);
 
-		final Map<String, ResourceConfig> sentryParisResources = sentryParisResourceGroup.getResources();
+		final Map<String, ResourceConfig> parisResources = parisResourceGroup.getResources();
 
-		assertNotNull(sentryParisResources);
+		assertNotNull(parisResources);
 
-		assertSshResourceConfig(sentryParisResources, "ssh-resources1-1-server-1", "server-1", "server-1-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources1-2-server-2", "server-2", "server-2-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources2", "server-3", "server-3-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources3-1-server-4", "server-4", "server-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources3-2-server-5", "server-5", "server-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources4-1-server-6", "server-6", "server-6-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources4-2-server-7", "server-7", "server-7-id", null);
-		assertSshResourceConfig(sentryParisResources, "ssh-resources4-3-server-7", "server-7", "server-8-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources1-1-server-1", "server-1", "server-1-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources1-2-server-2", "server-2", "server-2-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources2", "server-3", "server-3-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources3-1-server-4", "server-4", "server-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources3-2-server-5", "server-5", "server-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources4-1-server-6", "server-6", "server-6-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources4-2-server-7", "server-7", "server-7-id", null);
+		assertSshResourceConfig(parisResources, "ssh-resources4-3-server-7", "server-7", "server-8-id", null);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources5-1-server-8",
 			"server-8",
 			"server-8-id",
 			"server-8-card"
 		);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources5-2-server-9",
 			"server-9",
 			"server-9-id",
 			"server-9-card"
 		);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources6-1-server-10",
 			"server-10",
 			"server-10-id",
 			"server-card"
 		);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources6-2-server-11",
 			"server-11",
 			"server-11-id",
 			"server-card"
 		);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources7-1-server-12",
 			"server-12",
 			"server-12-id",
 			"server-12-card"
 		);
 		assertSshResourceConfig(
-			sentryParisResources,
+			parisResources,
 			"ssh-resources7-2-server-13",
 			"server-13",
 			"server-13-id",
@@ -121,20 +121,20 @@ class PostConfigDeserializerTest {
 	/**
 	 * Asserts the SSH resource configuration.
 	 *
-	 * @param sentryParisResources     The resource group from which the resources are extracted
+	 * @param parisResources     The resource group from which the resources are extracted
 	 * @param expectedResourceKey      The key of the resource to assert
 	 * @param expectedHostName         The expected hostname
 	 * @param expectedHostId           The expected host id
 	 * @param expectedProtocolHostname The expected hostname for the protocol
 	 */
 	private void assertSshResourceConfig(
-		final Map<String, ResourceConfig> sentryParisResources,
+		final Map<String, ResourceConfig> parisResources,
 		String expectedResourceKey,
 		String expectedHostName,
 		String expectedHostId,
 		String expectedProtocolHostname
 	) {
-		final ResourceConfig resourceConfig = sentryParisResources.get(expectedResourceKey);
+		final ResourceConfig resourceConfig = parisResources.get(expectedResourceKey);
 
 		assertResourceConfigAttributes(expectedResourceKey, expectedHostName, expectedHostId, resourceConfig);
 		final SshConfiguration sshProtocol = (SshConfiguration) resourceConfig.getProtocols().get("ssh");
@@ -154,20 +154,20 @@ class PostConfigDeserializerTest {
 	/**
 	 * Asserts the SNMP resource configuration.
 	 *
-	 * @param sentryParisResources     The resource group from which the resources are extracted
+	 * @param parisResources     The resource group from which the resources are extracted
 	 * @param expectedResourceKey      The key of the resource to assert
 	 * @param expectedHostName         The expected hostname
 	 * @param expectedHostId           The expected host id
 	 * @param expectedProtocolHostname The expected hostname for the protocol
 	 */
 	private void assertSnmpResourceConfig(
-		final Map<String, ResourceConfig> sentryParisResources,
+		final Map<String, ResourceConfig> parisResources,
 		String expectedResourceKey,
 		String expectedHostName,
 		String expectedHostId,
 		String expectedProtocolHostname
 	) {
-		final ResourceConfig resourceConfig = sentryParisResources.get(expectedResourceKey);
+		final ResourceConfig resourceConfig = parisResources.get(expectedResourceKey);
 
 		assertResourceConfigAttributes(expectedResourceKey, expectedHostName, expectedHostId, resourceConfig);
 		final SnmpConfiguration snmpProtocol = (SnmpConfiguration) resourceConfig.getProtocols().get("snmp");

@@ -39,7 +39,7 @@ class PrettyPrinterServiceTest {
 	private static final String DEGRADED_STATE_VALUE = "degraded";
 	private static final String HW_STATUS_METRIC_KEY = "hw.status";
 	private static final String BATTERY_MODEL_VALUE = "Test Battery Model";
-	private static final String SENTRY_SOFTWARE_VENDOR_VALUE = "Sentry Software";
+	private static final String METRICSHUB_VENDOR_VALUE = "MetricsHub";
 	private static final String ENCLOSURE_ID_VALUE = "enclosure-1";
 	private static final String BATTERY_1_ID_VALUE = "battery-1";
 	private static final String BATTERY_2_ID_VALUE = "battery-2";
@@ -94,7 +94,7 @@ class PrettyPrinterServiceTest {
 					MODEL_ATTRIBUTE_KEY,
 					"Test Model",
 					VENDOR_ATTRIBUTE_KEY,
-					SENTRY_SOFTWARE_VENDOR_VALUE,
+					METRICSHUB_VENDOR_VALUE,
 					INTERNAL_ATTRIBUTE_KEY,
 					"value"
 				)
@@ -132,7 +132,7 @@ class PrettyPrinterServiceTest {
 					MODEL_ATTRIBUTE_KEY,
 					BATTERY_MODEL_VALUE,
 					VENDOR_ATTRIBUTE_KEY,
-					SENTRY_SOFTWARE_VENDOR_VALUE,
+					METRICSHUB_VENDOR_VALUE,
 					HW_PARENT_ID_ATTRIBUTE_KEY,
 					ENCLOSURE_ID_VALUE,
 					HW_PARENT_TYPE_ATTRIBUTE_KEY,
@@ -169,7 +169,7 @@ class PrettyPrinterServiceTest {
 					MODEL_ATTRIBUTE_KEY,
 					BATTERY_MODEL_VALUE,
 					VENDOR_ATTRIBUTE_KEY,
-					SENTRY_SOFTWARE_VENDOR_VALUE,
+					METRICSHUB_VENDOR_VALUE,
 					HW_PARENT_ID_ATTRIBUTE_KEY,
 					ENCLOSURE_ID_VALUE,
 					HW_PARENT_TYPE_ATTRIBUTE_KEY,

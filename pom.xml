@@ -62,13 +62,6 @@
 			</roles>
 		</developer>
 		<developer>
-			<name>Alex Gilbert (@alexdgilbert)</name>
-			<email>alex@sentrysoftware.com</email>
-			<roles>
-				<role>maintainer</role>
-			</roles>
-		</developer>
-		<developer>
 			<name>Mohamed Maalej (@MedMaalej)</name>
 			<email>maalej@sentrysoftware.com</email>
 			<roles>

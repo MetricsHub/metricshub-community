@@ -15,7 +15,7 @@ import picocli.CommandLine.ParameterException;
 public class JdbcCliTest {
 
 	public static final String SQL_QUERY = "SELECT * FROM Win32_OperatingSystem";
-	public static final String URL = "jdbc:postgresql://hostname:5432/SentrySoftwareDB";
+	public static final String URL = "jdbc:postgresql://hostname:5432/MetricsHubDB";
 	public static final String USERNAME = "username";
 	public static final String PASSWORD = "password";
 	public static final String HOSTNAME = "hostname";

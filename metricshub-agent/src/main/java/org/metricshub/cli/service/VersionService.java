@@ -4,7 +4,7 @@ package org.metricshub.cli.service;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2024 Sentry Software
+ * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -66,7 +66,7 @@ public class VersionService implements IVersionProvider {
 			"| |\\/| |  / _ \\ | __| | '__| | |  / __| / __| |  __  | | | | | | '_ \\  ",
 			"| |  | | |  __/ | |_  | |    | | | (__  \\__ \\ | |  | | | |_| | | |_) |  ",
 			"|_|  |_|  \\___|  \\__| |_|    |_|  \\___| |___/ |_|  |_|  \\__,_| |_.__/ ",
-			"                                 @|faint Copyright (c) Sentry Software|@",
+			"                                 @|faint Copyright (c) MetricsHub|@",
 			"",
 			String.format("@|bold %s|@ version @|bold,magenta %s|@", projectName, projectVersion),
 			String.format("@|faint - Build Number:|@ @|magenta %s (on %s)|@", buildNumber, buildDate),

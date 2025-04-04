@@ -102,7 +102,7 @@ Server Blade #2 Information:
 	System Board Spare Part Number: 468915-001
 	Serial Number: CZJ82506SX      
 	UUID: 39373634-3835-5A43-4A38-323530365358
-	Server Name: fermat-2.internal.sentrysoft
+	Server Name: fermat-2.some.domain
 	Asset Tag: [Unknown]
 	ROM Version: I20 04/10/2008
 

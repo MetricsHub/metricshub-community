@@ -6,11 +6,11 @@ enableSelfMonitoring: true
 # Resource Groups configuration
 resourceGroups:
   # Resource Group identifier
-  sentry-paris:
+  paris:
     enableSelfMonitoring: false
     # Adds additional static attributes to all the resources in the group.
     attributes:
-      site: Sentry-Paris
+      site: Paris
     resources:
       # Resource configuration
       server-1:

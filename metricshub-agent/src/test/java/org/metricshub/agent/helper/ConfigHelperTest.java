@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.AgentConstants.CONFIG_EXAMPLE_FILENAME;
 import static org.metricshub.agent.helper.AgentConstants.DEFAULT_CONFIG_FILENAME;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
-import static org.metricshub.agent.helper.TestConstants.SENTRY_PARIS_RESOURCE_GROUP_KEY;
+import static org.metricshub.agent.helper.TestConstants.PARIS_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.SERVER_1_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.TEST_CONFIG_FILE_PATH;
 import static org.metricshub.agent.helper.TestConstants.TOP_LEVEL_RESOURCES_CONFIG_PATH;
@@ -172,7 +172,7 @@ class ConfigHelperTest {
 		);
 
 		final Map<String, TelemetryManager> resourceGroupTelemetryManagers = telemetryManagers.get(
-			SENTRY_PARIS_RESOURCE_GROUP_KEY
+			PARIS_RESOURCE_GROUP_KEY
 		);
 		assertNotNull(resourceGroupTelemetryManagers);
 		final TelemetryManager telemetryManager = resourceGroupTelemetryManagers.get(SERVER_1_RESOURCE_GROUP_KEY);
@@ -181,7 +181,7 @@ class ConfigHelperTest {
 		assertEquals(
 			agentConfig
 				.getResourceGroups()
-				.get(SENTRY_PARIS_RESOURCE_GROUP_KEY)
+				.get(PARIS_RESOURCE_GROUP_KEY)
 				.getResources()
 				.get(SERVER_1_RESOURCE_GROUP_KEY)
 				.getAttributes()
@@ -225,7 +225,7 @@ class ConfigHelperTest {
 		// Check resources under resource groups
 
 		final Map<String, TelemetryManager> resourceGroupTelemetryManagers = telemetryManagers.get(
-			SENTRY_PARIS_RESOURCE_GROUP_KEY
+			PARIS_RESOURCE_GROUP_KEY
 		);
 		assertNotNull(resourceGroupTelemetryManagers);
 		final TelemetryManager telemetryManager = resourceGroupTelemetryManagers.get(SERVER_1_RESOURCE_GROUP_KEY);
@@ -234,7 +234,7 @@ class ConfigHelperTest {
 		assertEquals(
 			agentConfig
 				.getResourceGroups()
-				.get(SENTRY_PARIS_RESOURCE_GROUP_KEY)
+				.get(PARIS_RESOURCE_GROUP_KEY)
 				.getResources()
 				.get(SERVER_1_RESOURCE_GROUP_KEY)
 				.getAttributes()
@@ -294,7 +294,7 @@ class ConfigHelperTest {
 
 		// Check self monitoring configuration
 		assertTrue(
-			agentConfig.getResourceGroups().get("sentry-paris").getResources().get("server-1").getEnableSelfMonitoring()
+			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
 		);
 	}
 
@@ -317,7 +317,7 @@ class ConfigHelperTest {
 
 		// Check self monitoring configuration
 		assertFalse(
-			agentConfig.getResourceGroups().get("sentry-paris").getResources().get("server-1").getEnableSelfMonitoring()
+			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
 		);
 	}
 
@@ -340,7 +340,7 @@ class ConfigHelperTest {
 
 		// Check self monitoring configuration
 		assertTrue(
-			agentConfig.getResourceGroups().get("sentry-paris").getResources().get("server-1").getEnableSelfMonitoring()
+			agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring()
 		);
 	}
 
@@ -365,12 +365,12 @@ class ConfigHelperTest {
 	@Test
 	void testNormalizeConfiguredConnector() {
 		assertDoesNotThrow(() ->
-			ConfigHelper.normalizeConfiguredConnector(SENTRY_PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, null)
+			ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, null)
 		);
 		final Connector configuredConnector = new Connector();
-		ConfigHelper.normalizeConfiguredConnector(SENTRY_PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, configuredConnector);
+		ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, configuredConnector);
 		assertEquals(
-			"MetricsHub-Configured-Connector-sentry-paris-resource-test-key",
+			"MetricsHub-Configured-Connector-paris-resource-test-key",
 			configuredConnector.getCompiledFilename()
 		);
 	}
@@ -394,7 +394,7 @@ class ConfigHelperTest {
 		{
 			// Create a new Connector and configure it
 			final Connector configuredConnector = new Connector();
-			ConfigHelper.normalizeConfiguredConnector(SENTRY_PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, configuredConnector);
+			ConfigHelper.normalizeConfiguredConnector(PARIS_RESOURCE_GROUP_KEY, RESOURCE_KEY, configuredConnector);
 
 			// Attempt to add the configured connector
 			ConfigHelper.addConfiguredConnector(connectorStore, configuredConnector);
@@ -402,7 +402,7 @@ class ConfigHelperTest {
 			// Verify that the configured connector is now in the ConnectorStore
 			assertEquals(
 				configuredConnector,
-				connectorStore.getStore().get("MetricsHub-Configured-Connector-sentry-paris-resource-test-key")
+				connectorStore.getStore().get("MetricsHub-Configured-Connector-paris-resource-test-key")
 			);
 		}
 	}
