@@ -18,14 +18,14 @@
 	<inceptionYear>2023</inceptionYear>
 
 	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
 		<repository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+			<id>central</id>
+			<url>https://central.sonatype.com</url>
 		</repository>
+		<snapshotRepository>
+			<id>central</id>
+			<url>https://central.sonatype.com/repository/maven-snapshots</url>
+		</snapshotRepository>
 	</distributionManagement>
 
 	<scm>
@@ -88,7 +88,6 @@
 		<community-connectors.version>1.0.10</community-connectors.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
-		<hwgraf.version>4</hwgraf.version>
 		<metricshub-jre.version>17.0.14_7</metricshub-jre.version>
 		<project.build.outputTimestamp>2025-03-26T10:18:10Z</project.build.outputTimestamp>
 
@@ -129,6 +128,7 @@
 				<module>metricshub-community-windows</module>
 			</modules>
 			<build>
+				<!-- No need to deploy artifacts from the windows build -->
 				<plugins>
 					<plugin>
 						<artifactId>maven-deploy-plugin</artifactId>
@@ -137,10 +137,10 @@
 						</configuration>
 					</plugin>
 					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
 						<configuration>
-							<skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+							<skipPublishing>true</skipPublishing>
 						</configuration>
 					</plugin>
 				</plugins>
@@ -157,6 +157,38 @@
 				<module>metricshub-community-linux</module>
 			</modules>
 		</profile>
+
+		<!-- Profile to deploy on Maven Central -->
+		<profile>
+			<id>maven-central</id>
+			<activation>
+				<property>
+					<name>env.MAVEN_CENTRAL_TOKEN</name>
+				</property>
+			</activation>
+			<properties>
+				<maven.deploy.skip>true</maven.deploy.skip>
+			</properties>
+			<build>
+				<plugins>
+
+					<!-- Replaces the default Maven Deploy plugin -->
+					<!-- publishes on https://central.sonatype.com -->
+					<plugin>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
+						<extensions>true</extensions>
+						<configuration>
+							<publishingServerId>central</publishingServerId>
+							<autoPublish>${env.AUTO_RELEASE_AFTER_CLOSE}</autoPublish>
+							<centralSnapshotsUrl>https://central.sonatype.com/repository/maven-snapshots/</centralSnapshotsUrl>
+						</configuration>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+
 		<!-- Profile for releasing the project -->
 		<profile>
 			<id>release</id>
@@ -185,17 +217,6 @@
 						</executions>
 					</plugin>
 
-					<!-- nexus-staging (Sonatype) -->
-					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<extensions>true</extensions>
-						<configuration>
-							<serverId>ossrh</serverId>
-							<nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-							<autoReleaseAfterClose>${env.AUTO_RELEASE_AFTER_CLOSE}</autoReleaseAfterClose>
-						</configuration>
-					</plugin>
 				</plugins>
 			</build>
 		</profile>
@@ -557,14 +578,14 @@
 					<version>3.1.1</version>
 				</plugin>
 				<plugin>
-					<groupId>org.sonatype.plugins</groupId>
-					<artifactId>nexus-staging-maven-plugin</artifactId>
-					<version>1.7.0</version>
-				</plugin>
-				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-shade-plugin</artifactId>
 					<version>3.5.2</version>
+				</plugin>
+				<plugin>
+					<groupId>org.sonatype.central</groupId>
+					<artifactId>central-publishing-maven-plugin</artifactId>
+					<version>0.7.0</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>
@@ -729,11 +750,6 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-
-			<!-- Maven Deploy Plugin-->
-			<plugin>
-				<artifactId>maven-deploy-plugin</artifactId>
 			</plugin>
 
 			<!-- Maven Source Plugin -->

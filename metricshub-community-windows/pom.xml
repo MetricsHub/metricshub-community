@@ -354,26 +354,6 @@
 				</executions>
 			</plugin>
 
-			<!-- Deploy Windows Artifact -->
-			<plugin>
-				<artifactId>maven-deploy-plugin</artifactId>
-				<configuration>
-					<skip>false</skip>
-				</configuration>
-			</plugin>
-
-			<!-- Stage artifact -->
-			<plugin>
-				<groupId>org.sonatype.plugins</groupId>
-				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<extensions>true</extensions>
-				<configuration>
-					<skipNexusStagingDeployMojo>false</skipNexusStagingDeployMojo>
-					<serverId>ossrh</serverId>
-					<nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-					<autoReleaseAfterClose>${env.AUTO_RELEASE_AFTER_CLOSE}</autoReleaseAfterClose>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 </project>

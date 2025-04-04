@@ -44,15 +44,15 @@ jobs:
       uses: s4u/maven-settings-action@v3.1.0
       with:
         repositories: '[{"id":"github","name":"MetricsHub JRE Builder","url":"https://maven.pkg.github.com/metricshub/metricshub-jre-builder","snapshots":{"enabled":true},"releases":{"enabled":true}}]'
-        servers: '[{"id": "ossrh", "username": "${env.OSSRH_USERNAME}", "password": "${env.OSSRH_TOKEN}"}]'
+        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
         sonatypeSnapshots: true
 
     - name: Build with Maven on ${{ matrix.os }}
       run: mvn -B -U deploy --file pom.xml
       env:
         GITHUB_TOKEN: ${{ github.token }}
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
     - name: Get version
       run: |

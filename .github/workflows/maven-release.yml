@@ -142,7 +142,7 @@ jobs:
       uses: s4u/maven-settings-action@v3.1.0
       with:
         repositories: '[{"id":"github","name":"MetricsHub JRE Builder","url":"https://maven.pkg.github.com/metricshub/metricshub-jre-builder","snapshots":{"enabled":true},"releases":{"enabled":true}}]'
-        servers: '[{"id": "ossrh", "username": "${env.OSSRH_USERNAME}", "password": "${env.OSSRH_TOKEN}"}, {"id": "gpg.passphrase", "passphrase": "${env.MAVEN_GPG_PASSPHRASE}", "configuration": {}}]'
+        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}, {"id": "gpg.passphrase", "passphrase": "${env.MAVEN_GPG_PASSPHRASE}", "configuration": {}}]'
         sonatypeSnapshots: true
 
     - name: Checkout ${{ needs.prepare.outputs.tagName }} branch
@@ -159,8 +159,8 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
         AUTO_RELEASE_AFTER_CLOSE: ${{ inputs.autoRelease }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
     - name: Upload Maven Site to GitHub Pages
       uses: actions/upload-pages-artifact@v3
@@ -201,23 +201,6 @@ jobs:
       with:
         name: metricshub-community-docker-package-${{ inputs.releaseVersion }}
         path: ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}-docker.tar.gz
-
-    - name: Summary with staging repositories and buildinfo
-      id: stagingList
-      run: |
-        echo "# Staging Repositories" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        mvn -B -U \
-          -Prelease \
-          org.sonatype.plugins:nexus-staging-maven-plugin:rc-list >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "# Buildinfo" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        cat target/*.buildinfo >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-      env:
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
 
   # Deployment job
   deploy:
