@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>oss-parent</artifactId>
-		<version>2</version>
+		<version>3-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
@@ -149,7 +149,6 @@
 				<module>metricshub-community-linux</module>
 			</modules>
 		</profile>
-
 	</profiles>
 
 	<dependencyManagement>
@@ -227,20 +226,14 @@
 			</dependency>
 			<dependency>
 				<groupId>org.mockito</groupId>
-				<artifactId>mockito-core</artifactId>
-				<version>5.7.0</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.mockito</groupId>
 				<artifactId>mockito-junit-jupiter</artifactId>
-				<version>5.15.2</version>
+				<version>5.17.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.mockito</groupId>
-				<artifactId>mockito-inline</artifactId>
-				<version>5.2.0</version>
+				<artifactId>mockito-core</artifactId>
+				<version>5.17.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
@@ -405,54 +398,8 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
-					<groupId>org.jacoco</groupId>
-					<artifactId>jacoco-maven-plugin</artifactId>
-					<version>0.8.12</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-failsafe-plugin</artifactId>
-					<version>3.5.2</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>buildnumber-maven-plugin</artifactId>
-					<version>1.4</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-dependency-plugin</artifactId>
-					<version>3.2.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>exec-maven-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>build-helper-maven-plugin</artifactId>
-					<version>3.2.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-enforcer-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
-					<groupId>com.googlecode.maven-download-plugin</groupId>
-					<artifactId>download-maven-plugin</artifactId>
-					<version>1.6.7</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-antrun-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
 					<groupId>com.hubspot.maven.plugins</groupId>
 					<artifactId>prettier-maven-plugin</artifactId>
-					<version>0.21</version>
 					<configuration>
 						<prettierJavaVersion>2.5.0</prettierJavaVersion>
 						<ignoreConfigFile>false</ignoreConfigFile>
@@ -480,6 +427,20 @@
 		</pluginManagement>
 
 		<plugins>
+			<!-- maven-dependency-plugin -->
+			<!--  Sets a property pointing to the artifact file for each project dependency -->
+			<!--  This is required by the maven-surefire-plugin for the mockito javaagent -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
 			<!-- license -->
 			<plugin>
@@ -508,23 +469,6 @@
 						</goals>
 						<configuration>
 							<failOnMissingHeader>true</failOnMissingHeader>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<!-- artifact (Reproducible Build) -->
-			<plugin>
-				<artifactId>maven-artifact-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>buildinfo</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>buildinfo</goal>
-						</goals>
-						<configuration>
-							<reproducible>true</reproducible>
 						</configuration>
 					</execution>
 				</executions>
@@ -632,19 +576,6 @@
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<!-- Maven Source Plugin -->
-			<plugin>
-				<artifactId>maven-source-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
 						<goals>
 							<goal>jar</goal>
 						</goals>

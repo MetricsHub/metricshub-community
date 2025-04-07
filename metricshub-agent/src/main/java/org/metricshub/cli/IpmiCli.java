@@ -248,7 +248,7 @@ public class IpmiCli implements IQuery, Callable<Integer> {
 	 * Prints query details.
 	 */
 	void displayRequest() {
-		printWriter.println(Ansi.ansi().a("Hostname ").bold().a(hostname).a(" - Executing SQL request."));
+		printWriter.println(Ansi.ansi().a("Hostname ").bold().a(hostname).a(" - Executing IPMI request."));
 		printWriter.flush();
 	}
 
