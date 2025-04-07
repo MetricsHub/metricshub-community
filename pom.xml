@@ -4,7 +4,12 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.metricshub</groupId>
+	<parent>
+		<groupId>org.metricshub</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>2</version>
+	</parent>
+
 	<artifactId>metricshub-community</artifactId>
 	<version>1.0.03-SNAPSHOT</version>
 
@@ -17,26 +22,10 @@
 	<url>https://metricshub.com</url>
 	<inceptionYear>2023</inceptionYear>
 
-	<distributionManagement>
-		<repository>
-			<id>central</id>
-			<url>https://central.sonatype.com</url>
-		</repository>
-		<snapshotRepository>
-			<id>central</id>
-			<url>https://central.sonatype.com/repository/maven-snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
-
 	<scm>
 		<connection>scm:git:https://github.com/metricshub/metricshub-community.git</connection>
 		<url>https://github.com/metricshub/metricshub-community</url>
 	</scm>
-
-	<organization>
-		<name>MetricsHub</name>
-		<url>https://metricshub.com</url>
-	</organization>
 
 	<licenses>
 		<license>
@@ -45,6 +34,11 @@
 			<distribution>repo</distribution>
 		</license>
 	</licenses>
+
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/metricshub/metricshub-community/issues/</url>
+	</issueManagement>
 
 	<developers>
 		<developer>
@@ -86,11 +80,9 @@
 
 	<properties>
 		<community-connectors.version>1.0.10</community-connectors.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
 		<metricshub-jre.version>17.0.14_7</metricshub-jre.version>
 		<project.build.outputTimestamp>2025-03-26T10:18:10Z</project.build.outputTimestamp>
-
 	</properties>
 
 	<modules>
@@ -158,68 +150,6 @@
 			</modules>
 		</profile>
 
-		<!-- Profile to deploy on Maven Central -->
-		<profile>
-			<id>maven-central</id>
-			<activation>
-				<property>
-					<name>env.MAVEN_CENTRAL_TOKEN</name>
-				</property>
-			</activation>
-			<properties>
-				<maven.deploy.skip>true</maven.deploy.skip>
-			</properties>
-			<build>
-				<plugins>
-
-					<!-- Replaces the default Maven Deploy plugin -->
-					<!-- publishes on https://central.sonatype.com -->
-					<plugin>
-						<groupId>org.sonatype.central</groupId>
-						<artifactId>central-publishing-maven-plugin</artifactId>
-						<extensions>true</extensions>
-						<configuration>
-							<publishingServerId>central</publishingServerId>
-							<autoPublish>${env.AUTO_RELEASE_AFTER_CLOSE}</autoPublish>
-							<centralSnapshotsUrl>https://central.sonatype.com/repository/maven-snapshots/</centralSnapshotsUrl>
-						</configuration>
-					</plugin>
-
-				</plugins>
-			</build>
-		</profile>
-
-		<!-- Profile for releasing the project -->
-		<profile>
-			<id>release</id>
-			<build>
-				<plugins>
-
-					<!-- gpg to sign the released artifacts -->
-					<plugin>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.1.0</version>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-								<configuration>
-									<updateReleaseInfo>true</updateReleaseInfo>
-									<gpgArguments>
-										<arg>--pinentry-mode</arg>
-										<arg>loopback</arg>
-									</gpgArguments>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-
-				</plugins>
-			</build>
-		</profile>
 	</profiles>
 
 	<dependencyManagement>
@@ -475,16 +405,6 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.13.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M5</version>
-				</plugin>
-				<plugin>
 					<groupId>org.jacoco</groupId>
 					<artifactId>jacoco-maven-plugin</artifactId>
 					<version>0.8.12</version>
@@ -493,16 +413,6 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-failsafe-plugin</artifactId>
 					<version>3.5.2</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-resources-plugin</artifactId>
-					<version>3.3.1</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-assembly-plugin</artifactId>
-					<version>3.3.0</version>
 				</plugin>
 				<plugin>
 					<groupId>org.codehaus.mojo</groupId>
@@ -530,11 +440,6 @@
 					<version>3.0.0</version>
 				</plugin>
 				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-site-plugin</artifactId>
-					<version>3.12.1</version>
-				</plugin>
-				<plugin>
 					<groupId>com.googlecode.maven-download-plugin</groupId>
 					<artifactId>download-maven-plugin</artifactId>
 					<version>1.6.7</version>
@@ -560,7 +465,6 @@
 				</plugin>
 				<plugin>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>3.6.3</version>
 					<configuration>
 						<detectJavaApiLink>false</detectJavaApiLink>
 						<source>${maven.compiler.target}</source>
@@ -572,20 +476,6 @@
 						</additionalJOptions>
 					</configuration>
 				</plugin>
-				<plugin>
-					<artifactId>maven-deploy-plugin</artifactId>
-					<version>3.1.1</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-shade-plugin</artifactId>
-					<version>3.5.2</version>
-				</plugin>
-				<plugin>
-					<groupId>org.sonatype.central</groupId>
-					<artifactId>central-publishing-maven-plugin</artifactId>
-					<version>0.7.0</version>
-				</plugin>
 			</plugins>
 		</pluginManagement>
 
@@ -595,7 +485,6 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>license-maven-plugin</artifactId>
-				<version>2.5.0</version>
 				<configuration>
 					<licenseName>agpl_v3</licenseName>
 					<copyrightOwners>MetricsHub</copyrightOwners>
@@ -627,7 +516,6 @@
 			<!-- artifact (Reproducible Build) -->
 			<plugin>
 				<artifactId>maven-artifact-plugin</artifactId>
-				<version>3.6.0</version>
 				<executions>
 					<execution>
 						<id>buildinfo</id>
@@ -754,7 +642,6 @@
 			<!-- Maven Source Plugin -->
 			<plugin>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>

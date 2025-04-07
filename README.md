@@ -42,6 +42,68 @@ This is a multi-module project:
 * Have [Maven 3.x properly installed and configured](https://maven.apache.org/download.cgi).
 * Latest LTS Release of [JDK 21](https://adoptium.net).
 
+### JRE Builder dependency
+
+MetricsHub Community uses a custom JRE builder hosted in a separate repository: [metricshub-jre-builder](https://github.com/metricshub/metricshub-jre-builder).
+
+The custom JRE artifact is deployed to **GitHub Packages**. To consume this dependency, ensure your Maven `settings.xml` is properly configured with authentication to GitHub's package registry. Here are the required steps:
+
+##### 1. Update your `~/.m2/settings.xml`
+
+Add the following `<server>` block inside the `<servers>` section of your `settings.xml`:
+
+```xml
+<servers>
+	...
+	<server>
+		<id>github</id>
+		<username>YOUR_GITHUB_USERNAME</username>
+		<password>YOUR_PERSONAL_ACCESS_TOKEN</password>
+	</server>
+	...
+</servers>
+
+```
+
+> 💡 The personal access token (PAT) must have at least the `read:packages` and `repo` scopes.
+
+> 🔐 **Want to encrypt your GitHub token?**
+> Maven supports secure encryption of your credentials. Follow the official [Maven Password Encryption](https://maven.apache.org/guides/mini/guide-encryption.html) guide to encrypt your token.
+
+##### 2. Add GitHub packages to `<profiles>`
+
+Add the following configuration inside a new `<profile>` section in your `settings.xml`, and activate it:
+
+```xml
+<profiles>
+	...
+	<profile>
+		<id>github</id>
+		<repositories>
+			<repository>
+			<id>github</id>
+			<name>GitHub JRE Builder Package</name>
+			<url>https://maven.pkg.github.com/metricshub/metricshub-jre-builder</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+			</repository>
+		</repositories>
+	</profile>
+	...
+</profiles>
+
+<activeProfiles>
+	...
+	<activeProfile>github</activeProfile>
+</activeProfiles>
+```
+
+> 📦 Artifacts published here are used to build a custom runtime tailored to MetricsHub’s needs.
+
 ### Build
 
 To build the MetricsHub package, from `./metricshub`:
