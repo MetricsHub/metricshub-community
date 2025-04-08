@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -21,7 +21,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -39,8 +39,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>ipmi</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>ipmi-java</artifactId>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -85,11 +85,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.snmp4j</groupId>
 			<artifactId>snmp4j-agent</artifactId>
 			<scope>test</scope>
@@ -105,6 +100,7 @@
 		</resources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -116,6 +112,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
 				</configuration>
 			</plugin>
 
@@ -159,7 +156,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/ipmi/*IpmiConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/ipmi/*IpmiConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -177,8 +174,8 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:ipmi</include>
-									<include>org.sentrysoftware:metricshub-ipmi-extension</include>
+									<include>org.metricshub:ipmi-java</include>
+									<include>org.metricshub:metricshub-ipmi-extension</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>

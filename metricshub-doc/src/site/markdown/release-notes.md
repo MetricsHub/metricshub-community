@@ -74,43 +74,43 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                   | Description                                                          |
 | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [**\#583**](https://github.com/sentrysoftware/metricshub/issues/583) | Added `jawk` CLI, a command-line interface for executing AWK scripts |
+| [**\#583**](https://github.com/metricshub/metricshub-community/issues/583) | Added `jawk` CLI, a command-line interface for executing AWK scripts |
 
 #### Changes and Improvements
 
 | ID                                                                   | Description                                                                                            |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| [**\#339**](https://github.com/sentrysoftware/metricshub/issues/339) | **MetricsHub Agent**: Improved OpenTelemetry resource usage                                            |
-| [**\#575**](https://github.com/sentrysoftware/metricshub/issues/575) | **Authentication Protocols**: Added support for SNMPv3 HMAC-SHA-2 (SHA224, SHA256, SHA384, and SHA512) |
-| [**\#576**](https://github.com/sentrysoftware/metricshub/issues/576) | **Authentication Protocols**: Added support for IPMI-over-LAN (SHA-256 and MD5)                        |
-| [**\#582**](https://github.com/sentrysoftware/metricshub/issues/582) | **HTTP CLI**: Improved usability with simplified syntax                                                |
-| [**\#620**](https://github.com/sentrysoftware/metricshub/issues/620) | **Health Check**: Added support for Oracle and Cassandra databases                                     |
-| [**\#626**](https://github.com/sentrysoftware/metricshub/issues/626) | **Metrics Collection**: The `id` attribute is now optional                                             |
-| [**\#634**](https://github.com/sentrysoftware/metricshub/issues/634) | **MetricsHub CLI**: Added the `--job-timeout` option                                                   |
+| [**\#339**](https://github.com/metricshub/metricshub-community/issues/339) | **MetricsHub Agent**: Improved OpenTelemetry resource usage                                            |
+| [**\#575**](https://github.com/metricshub/metricshub-community/issues/575) | **Authentication Protocols**: Added support for SNMPv3 HMAC-SHA-2 (SHA224, SHA256, SHA384, and SHA512) |
+| [**\#576**](https://github.com/metricshub/metricshub-community/issues/576) | **Authentication Protocols**: Added support for IPMI-over-LAN (SHA-256 and MD5)                        |
+| [**\#582**](https://github.com/metricshub/metricshub-community/issues/582) | **HTTP CLI**: Improved usability with simplified syntax                                                |
+| [**\#620**](https://github.com/metricshub/metricshub-community/issues/620) | **Health Check**: Added support for Oracle and Cassandra databases                                     |
+| [**\#626**](https://github.com/metricshub/metricshub-community/issues/626) | **Metrics Collection**: The `id` attribute is now optional                                             |
+| [**\#634**](https://github.com/metricshub/metricshub-community/issues/634) | **MetricsHub CLI**: Added the `--job-timeout` option                                                   |
 
 #### Fixed Issues
 
 | ID                                                                   | Description                                                                                                 |
 | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [**\#572**](https://github.com/sentrysoftware/metricshub/issues/572) | **HTTP CLI**: A `NullPointerException` occurs when no password is provided                                  |
-| [**\#574**](https://github.com/sentrysoftware/metricshub/issues/574) | Extensions are not updated during upgrade                                                                   |
-| [**\#577**](https://github.com/sentrysoftware/metricshub/issues/577) | **IPMI CLI**: An `ArrayIndexOutOfBoundsException` occurs when running the `ipmitool` command                |
-| [**\#580**](https://github.com/sentrysoftware/metricshub/issues/580) | **SNMPv3 CLI**: The `--snmpv3-retry-intervals` option is not standardized                                   |
-| [**\#584**](https://github.com/sentrysoftware/metricshub/issues/584) | **Security Vulnerabilities**: CVE-2022-46364, CVE-2024-28752, CVE-2022-46363, CVE-2025-23184, CVE-2024-7254 |
-| [**\#590**](https://github.com/sentrysoftware/metricshub/issues/590) | **Metrics Collection**: `hw_voltage_limit_volts{limit_type="low.critical"}` is incorrectly collected        |
-| [**\#597**](https://github.com/sentrysoftware/metricshub/issues/597) | **[BREAKING_CHANGE]** Renamed `metricshub.host.up.response_time` to `metricshub.host.response_time`         |
-| [**\#605**](https://github.com/sentrysoftware/metricshub/issues/605) | An incorrect JAR name prevents MetricsHub from starting                                                     |
-| [**\#608**](https://github.com/sentrysoftware/metricshub/issues/608) | **SNMP CLI**: The `--snmp-retry-intervals` option is not standardized                                       |
-| [**\#614**](https://github.com/sentrysoftware/metricshub/issues/614) | **Metrics Collection**: `metricshub.host.response_time` is reported even when `metricshub.host.up` is down  |
-| [**\#619**](https://github.com/sentrysoftware/metricshub/issues/619) | **SNMP Logs**: Text tables are not properly displayed                                                       |
-| [**\#623**](https://github.com/sentrysoftware/metricshub/issues/623) | **JDBC Protocol:** URL is not generated when database type is `mssql`                                       |
+| [**\#572**](https://github.com/metricshub/metricshub-community/issues/572) | **HTTP CLI**: A `NullPointerException` occurs when no password is provided                                  |
+| [**\#574**](https://github.com/metricshub/metricshub-community/issues/574) | Extensions are not updated during upgrade                                                                   |
+| [**\#577**](https://github.com/metricshub/metricshub-community/issues/577) | **IPMI CLI**: An `ArrayIndexOutOfBoundsException` occurs when running the `ipmitool` command                |
+| [**\#580**](https://github.com/metricshub/metricshub-community/issues/580) | **SNMPv3 CLI**: The `--snmpv3-retry-intervals` option is not standardized                                   |
+| [**\#584**](https://github.com/metricshub/metricshub-community/issues/584) | **Security Vulnerabilities**: CVE-2022-46364, CVE-2024-28752, CVE-2022-46363, CVE-2025-23184, CVE-2024-7254 |
+| [**\#590**](https://github.com/metricshub/metricshub-community/issues/590) | **Metrics Collection**: `hw_voltage_limit_volts{limit_type="low.critical"}` is incorrectly collected        |
+| [**\#597**](https://github.com/metricshub/metricshub-community/issues/597) | **[BREAKING_CHANGE]** Renamed `metricshub.host.up.response_time` to `metricshub.host.response_time`         |
+| [**\#605**](https://github.com/metricshub/metricshub-community/issues/605) | An incorrect JAR name prevents MetricsHub from starting                                                     |
+| [**\#608**](https://github.com/metricshub/metricshub-community/issues/608) | **SNMP CLI**: The `--snmp-retry-intervals` option is not standardized                                       |
+| [**\#614**](https://github.com/metricshub/metricshub-community/issues/614) | **Metrics Collection**: `metricshub.host.response_time` is reported even when `metricshub.host.up` is down  |
+| [**\#619**](https://github.com/metricshub/metricshub-community/issues/619) | **SNMP Logs**: Text tables are not properly displayed                                                       |
+| [**\#623**](https://github.com/metricshub/metricshub-community/issues/623) | **JDBC Protocol:** URL is not generated when database type is `mssql`                                       |
 
 #### Documentation Updates
 
 | ID                                                                   | Description                                                      |
 | -------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [**\#631**](https://github.com/sentrysoftware/metricshub/issues/631) | Documented the Docker deployment setup for MetricsHub Enterprise |
-| [**\#632**](https://github.com/sentrysoftware/metricshub/issues/632) | Listed the supported operating systems                           |
+| [**\#631**](https://github.com/metricshub/metricshub-community/issues/631) | Documented the Docker deployment setup for MetricsHub Enterprise |
+| [**\#632**](https://github.com/metricshub/metricshub-community/issues/632) | Listed the supported operating systems                           |
 
 ## MetricsHub Community Connectors v1.0.09
 
@@ -118,30 +118,30 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                                        | Description                                                                        |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [**\#188**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/188) | Defined semantic conventions for Oracle and SQL Server database metrics            |
-| [**\#190**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/190) | **MySQL:** `db.server.name` attribute is now reported                              |
-| [**\#193**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/193) | **Generic Ethernet Switch:** `hw.network.name` and `hw.network.alias` now reported |
+| [**\#188**](https://github.com/metricshub/community-connectors/issues/188) | Defined semantic conventions for Oracle and SQL Server database metrics            |
+| [**\#190**](https://github.com/metricshub/community-connectors/issues/190) | **MySQL:** `db.server.name` attribute is now reported                              |
+| [**\#193**](https://github.com/metricshub/community-connectors/issues/193) | **Generic Ethernet Switch:** `hw.network.name` and `hw.network.alias` now reported |
 
 #### Changes and Improvements
 
 | ID                                                                                        | Description                                                                  |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [**\#177**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/177) | **Linux OS and Windows OS**: `network.interface.name` attribute now reported |
+| [**\#177**](https://github.com/metricshub/community-connectors/issues/177) | **Linux OS and Windows OS**: `network.interface.name` attribute now reported |
 
 #### Fixed Issues
 
 | ID                                                                                        | Description                                                                          |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [**\#173**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/173) | **Generic UPS:** Some voltage sensors are not discovered                             |
-| [**\#176**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/176) | **Linux and Windows OS**: `system.device` attribute missing from FS and disk metrics |
-| [**\#178**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/178) | **Linux OS**: Incorrect attribute names and invalid mapping syntax on disk metrics   |
-| [**\#187**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/187) | **Linux OS**: Docker overlay FS causes inaccurate capacity reporting                 |
+| [**\#173**](https://github.com/metricshub/community-connectors/issues/173) | **Generic UPS:** Some voltage sensors are not discovered                             |
+| [**\#176**](https://github.com/metricshub/community-connectors/issues/176) | **Linux and Windows OS**: `system.device` attribute missing from FS and disk metrics |
+| [**\#178**](https://github.com/metricshub/community-connectors/issues/178) | **Linux OS**: Incorrect attribute names and invalid mapping syntax on disk metrics   |
+| [**\#187**](https://github.com/metricshub/community-connectors/issues/187) | **Linux OS**: Docker overlay FS causes inaccurate capacity reporting                 |
 
 #### Documentation Updates
 
 | ID                                                                                        | Description                                                |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [**\#184**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/184) | Documented `awk` source in the Connector Developer’s Guide |
+| [**\#184**](https://github.com/metricshub/community-connectors/issues/184) | Documented `awk` source in the Connector Developer’s Guide |
 
 ## MetricsHub Enterprise Edition v1.1.00
 
@@ -203,30 +203,30 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                   | Description                                                                                                        |
 |----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
-| [**\#424**](https://github.com/sentrysoftware/metricshub/issues/424) | Added protocol CLIs to validate configurations, troubleshoot connectivity, and ensure successful metric extraction |
+| [**\#424**](https://github.com/metricshub/metricshub-community/issues/424) | Added protocol CLIs to validate configurations, troubleshoot connectivity, and ensure successful metric extraction |
 
 #### Changes and Improvements
 
 | ID                                                                   | Description                                                                                                                            |
 |----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#519**](https://github.com/sentrysoftware/metricshub/issues/519) | Updated connector semantics by replacing `leftConcat` with `prepend`, `rightConcat` with `append`, and `osCommand` with `commandLine`. |
-| [**\#521**](https://github.com/sentrysoftware/metricshub/issues/521) | Updated OpenTelemetry Java dependencies to version `1.45.0`                                                                            |
-| [**\#525**](https://github.com/sentrysoftware/metricshub/issues/525) | Added the ability to enable or disable self-monitoring                                                                                 |
+| [**\#519**](https://github.com/metricshub/metricshub-community/issues/519) | Updated connector semantics by replacing `leftConcat` with `prepend`, `rightConcat` with `append`, and `osCommand` with `commandLine`. |
+| [**\#521**](https://github.com/metricshub/metricshub-community/issues/521) | Updated OpenTelemetry Java dependencies to version `1.45.0`                                                                            |
+| [**\#525**](https://github.com/metricshub/metricshub-community/issues/525) | Added the ability to enable or disable self-monitoring                                                                                 |
 
 #### Fixed Issues
 
 | ID                                                                   | Description                                                                                 |
 |----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
-| [**\#523**](https://github.com/sentrysoftware/metricshub/issues/523) | The `hw.network.up` metric is not reported for connectors with `WARN` or `ALARM` link state |
+| [**\#523**](https://github.com/metricshub/metricshub-community/issues/523) | The `hw.network.up` metric is not reported for connectors with `WARN` or `ALARM` link state |
 
 #### Documentation Updates
 
 | ID                                                                   | Description                                                                                       |
 |----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| [**\#546**](https://github.com/sentrysoftware/metricshub/issues/546) | Integrated platform icons and enhanced connectors directory page                                  |
-| [**\#541**](https://github.com/sentrysoftware/metricshub/issues/541) | Moved use cases from the documentation to [MetricsHub Use Cases](https://metricshub.com/usecases) |
-| [**\#533**](https://github.com/sentrysoftware/metricshub/issues/533) | Documented the self-monitoring feature                                                            |
-| [**\#529**](https://github.com/sentrysoftware/metricshub/issues/529) | Created a Troubleshooting section in the user documentation                                       |
+| [**\#546**](https://github.com/metricshub/metricshub-community/issues/546) | Integrated platform icons and enhanced connectors directory page                                  |
+| [**\#541**](https://github.com/metricshub/metricshub-community/issues/541) | Moved use cases from the documentation to [MetricsHub Use Cases](https://metricshub.com/usecases) |
+| [**\#533**](https://github.com/metricshub/metricshub-community/issues/533) | Documented the self-monitoring feature                                                            |
+| [**\#529**](https://github.com/metricshub/metricshub-community/issues/529) | Created a Troubleshooting section in the user documentation                                       |
 
 ### MetricsHub Community Edition v1.0.01
 
@@ -234,7 +234,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                   | Description                                                                        |
 |----------------------------------------------------------------------|------------------------------------------------------------------------------------|
-| [**\#563**](https://github.com/sentrysoftware/metricshub/issues/563) | MetricsHub Engine Internal DB: Improved memory usage and data types identification |
+| [**\#563**](https://github.com/metricshub/metricshub-community/issues/563) | MetricsHub Engine Internal DB: Improved memory usage and data types identification |
 
 ### MetricsHub Community Connectors v1.0.08
 
@@ -242,21 +242,21 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                                        | Description                                    |
 |-------------------------------------------------------------------------------------------|------------------------------------------------|
-| [**\#137**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/137) | Added support for `MySQL` databases via `JDBC` |
+| [**\#137**](https://github.com/metricshub/community-connectors/issues/137) | Added support for `MySQL` databases via `JDBC` |
 
 #### Changes and Improvements
 
 | ID                                                                                        | Description                                                                       |
 |-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-| [**\#158**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/158) | Updated platforms for community connectors                                        |
-| [**\#160**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/160) | Created Storage metric semantic conventions                                       |
-| [**\#163**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/163) | `MIB2Switch` and `GenericSwitchEnclosure` connectors now support Arista platforms |
+| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                        |
+| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                       |
+| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | `MIB2Switch` and `GenericSwitchEnclosure` connectors now support Arista platforms |
 
 #### Fixed Issues
 
 | ID                                                                                        | Description                                               |
 |-------------------------------------------------------------------------------------------|-----------------------------------------------------------|
-| [**\#111**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/111) | LinuxIPNetwork: Fails to monitor some Ethernet interfaces |
+| [**\#111**](https://github.com/metricshub/community-connectors/issues/111) | LinuxIPNetwork: Fails to monitor some Ethernet interfaces |
 
 ## MetricsHub Enterprise Edition v1.0.02
 
@@ -292,35 +292,35 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                   | Description                                                                                        |
 |----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| [**\#379**](https://github.com/sentrysoftware/metricshub/issues/379) | Added support for escaped macros                                                                   |
-| [**\#422**](https://github.com/sentrysoftware/metricshub/issues/422) | Developed a **JDBC** Extension to enable support for SQL-based connectors                          |
-| [**\#432**](https://github.com/sentrysoftware/metricshub/issues/432) | Standardized the log messages for all the criteria tests                                           |
-| [**\#435**](https://github.com/sentrysoftware/metricshub/issues/435) | **[BREAKING_CHANGE]** Added support for multiple variable values for the same connector            |
-| [**\#468**](https://github.com/sentrysoftware/metricshub/issues/468) | Added support for shared-characteristics for centralized resource configuration                    |
-| [**\#470**](https://github.com/sentrysoftware/metricshub/issues/470) | Added support for `host.id`, `host.name`, and other attributes as arrays in resource configuration |
-| [**\#472**](https://github.com/sentrysoftware/metricshub/issues/472) | Prevented sensitive configuration details from being displayed in error logs                       |
-| [**\#474**](https://github.com/sentrysoftware/metricshub/issues/474) | Handled blank values when creating INSERT queries for `internalDbQuery` Sources                    |
-| [**\#498**](https://github.com/sentrysoftware/metricshub/issues/498) | Improved monitoring jobs when invoking **Jawk** sources in connectors                              |
+| [**\#379**](https://github.com/metricshub/metricshub-community/issues/379) | Added support for escaped macros                                                                   |
+| [**\#422**](https://github.com/metricshub/metricshub-community/issues/422) | Developed a **JDBC** Extension to enable support for SQL-based connectors                          |
+| [**\#432**](https://github.com/metricshub/metricshub-community/issues/432) | Standardized the log messages for all the criteria tests                                           |
+| [**\#435**](https://github.com/metricshub/metricshub-community/issues/435) | **[BREAKING_CHANGE]** Added support for multiple variable values for the same connector            |
+| [**\#468**](https://github.com/metricshub/metricshub-community/issues/468) | Added support for shared-characteristics for centralized resource configuration                    |
+| [**\#470**](https://github.com/metricshub/metricshub-community/issues/470) | Added support for `host.id`, `host.name`, and other attributes as arrays in resource configuration |
+| [**\#472**](https://github.com/metricshub/metricshub-community/issues/472) | Prevented sensitive configuration details from being displayed in error logs                       |
+| [**\#474**](https://github.com/metricshub/metricshub-community/issues/474) | Handled blank values when creating INSERT queries for `internalDbQuery` Sources                    |
+| [**\#498**](https://github.com/metricshub/metricshub-community/issues/498) | Improved monitoring jobs when invoking **Jawk** sources in connectors                              |
 
 #### Fixed Issues
 
 | ID                                                                   | Description                                                             |
 |----------------------------------------------------------------------|-------------------------------------------------------------------------|
-| [**\#478**](https://github.com/sentrysoftware/metricshub/issues/478) | A NullPointerException occurs when processing `HTTP` detection criteria |
-| [**\#480**](https://github.com/sentrysoftware/metricshub/issues/480) | IPMITool criteria and source fail due to invalid `ipmitool` command     |
-| [**\#500**](https://github.com/sentrysoftware/metricshub/issues/500) | Only one monitor is processed due to incorrect indexing                 |
-| [**\#502**](https://github.com/sentrysoftware/metricshub/issues/502) | Incorrect link status check leads to an incorrect power consumption     |
+| [**\#478**](https://github.com/metricshub/metricshub-community/issues/478) | A NullPointerException occurs when processing `HTTP` detection criteria |
+| [**\#480**](https://github.com/metricshub/metricshub-community/issues/480) | IPMITool criteria and source fail due to invalid `ipmitool` command     |
+| [**\#500**](https://github.com/metricshub/metricshub-community/issues/500) | Only one monitor is processed due to incorrect indexing                 |
+| [**\#502**](https://github.com/metricshub/metricshub-community/issues/502) | Incorrect link status check leads to an incorrect power consumption     |
 
 #### Documentation Updates
 
 | ID                                                                   | Description                                                                                                                                                                                                                                                                |
 |----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#462**](https://github.com/sentrysoftware/metricshub/issues/462) | Reviewed **Configure Monitoring** documentation                                                                                                                                                                                                                            |
-| [**\#462**](https://github.com/sentrysoftware/metricshub/issues/462) | Moved the CLI documentation to the Appendix section                                                                                                                                                                                                                        |
-| [**\#463**](https://github.com/sentrysoftware/metricshub/issues/463) | Combined the Linux and Windows Prometheus quick starts into a unique Prometheus quick start                                                                                                                                                                                |
-| [**\#484**](https://github.com/sentrysoftware/metricshub/issues/484) | Documented the Prometheus/Grafana integration                                                                                                                                                                                                                              |
-| [**\#289**](https://github.com/sentrysoftware/metricshub/issues/289) | Documented the use cases: **Monitoring network interfaces using SNMP**, **Monitoring a process on Windows**, **Monitoring a remote system running on Linux**, **Monitoring a service running on Linux**, **Monitoring the Health of a Service**, and **Pinging resources** |
-| [**\#505**](https://github.com/sentrysoftware/metricshub/issues/505) | Updated references to the deprecated `loggingexporter`                                                                                                                                                                                                                     |
+| [**\#462**](https://github.com/metricshub/metricshub-community/issues/462) | Reviewed **Configure Monitoring** documentation                                                                                                                                                                                                                            |
+| [**\#462**](https://github.com/metricshub/metricshub-community/issues/462) | Moved the CLI documentation to the Appendix section                                                                                                                                                                                                                        |
+| [**\#463**](https://github.com/metricshub/metricshub-community/issues/463) | Combined the Linux and Windows Prometheus quick starts into a unique Prometheus quick start                                                                                                                                                                                |
+| [**\#484**](https://github.com/metricshub/metricshub-community/issues/484) | Documented the Prometheus/Grafana integration                                                                                                                                                                                                                              |
+| [**\#289**](https://github.com/metricshub/metricshub-community/issues/289) | Documented the use cases: **Monitoring network interfaces using SNMP**, **Monitoring a process on Windows**, **Monitoring a remote system running on Linux**, **Monitoring a service running on Linux**, **Monitoring the Health of a Service**, and **Pinging resources** |
+| [**\#505**](https://github.com/metricshub/metricshub-community/issues/505) | Updated references to the deprecated `loggingexporter`                                                                                                                                                                                                                     |
 
 ### MetricsHub Community Connectors v1.0.07
 
@@ -328,24 +328,24 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                                        | Description                                                                                                      |
 |-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| [**\#112**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/112) | **Windows Process**: The process user name is now retrieved and selectable through configuration variables       |
-| [**\#143**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/143) | **Linux OS**: The connector no longer reports services, as these are now handled by the `LinuxService` connector |
-| [**\#148**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/148) | **Linux OS**: Enhanced `filesystem` utilization calculation                                                      |
+| [**\#112**](https://github.com/metricshub/community-connectors/issues/112) | **Windows Process**: The process user name is now retrieved and selectable through configuration variables       |
+| [**\#143**](https://github.com/metricshub/community-connectors/issues/143) | **Linux OS**: The connector no longer reports services, as these are now handled by the `LinuxService` connector |
+| [**\#148**](https://github.com/metricshub/community-connectors/issues/148) | **Linux OS**: Enhanced `filesystem` utilization calculation                                                      |
 
 #### Fixed Issues
 
 | ID                                                                                        | Description                                                                                                                                       |
 |-------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#140**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/140) | `Platform` mispelling in `Linux` & `LinuxService` connectors                                                                                      |
-| [**\#145**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/145) | **IpmiTool**: The `hw.status` metric is not collected because `enclosure.awk` reports `OK`, `WARN`, `ALARM` instead of `ok`, `degraded`, `failed` |
-| [**\#152**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/152) | Connectors reporting voltage metrics do not set the `high.critical` threshold                                                                     |
+| [**\#140**](https://github.com/metricshub/community-connectors/issues/140) | `Platform` mispelling in `Linux` & `LinuxService` connectors                                                                                      |
+| [**\#145**](https://github.com/metricshub/community-connectors/issues/145) | **IpmiTool**: The `hw.status` metric is not collected because `enclosure.awk` reports `OK`, `WARN`, `ALARM` instead of `ok`, `degraded`, `failed` |
+| [**\#152**](https://github.com/metricshub/community-connectors/issues/152) | Connectors reporting voltage metrics do not set the `high.critical` threshold                                                                     |
 
 #### Documentation Updates
 
 | ID                                                                                        | Description                                             |
 |-------------------------------------------------------------------------------------------|---------------------------------------------------------|
-| [**\#128**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/128) | Documented default connector `variables`                |
-| [**\#129**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/129) | Replaced all references to `sql` with `internalDbQuery` |
+| [**\#128**](https://github.com/metricshub/community-connectors/issues/128) | Documented default connector `variables`                |
+| [**\#129**](https://github.com/metricshub/community-connectors/issues/129) | Replaced all references to `sql` with `internalDbQuery` |
 
 ## MetricsHub Enterprise Edition v1.0.01
 
@@ -378,26 +378,26 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                   | Description                                                                                                              |
 |----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
-| [**\#433**](https://github.com/sentrysoftware/metricshub/issues/433) | **[BREAKING_CHANGE]** Disabled Automatic Hostname to FQDN resolution                                                     |
-| [**\#427**](https://github.com/sentrysoftware/metricshub/issues/427) | BMC Helix Integration: Added the `StatusInformation` internal text parameter to the connector monitor                    |
-| [**\#421**](https://github.com/sentrysoftware/metricshub/issues/421) | Reduced Alert noise for `hw.status{state="present"}`                                                                     |
-| [**\#414**](https://github.com/sentrysoftware/metricshub/issues/414) | Added a link to MetricsHub Community Connectors 1.0.06                                                                   |
-| [**\#412**](https://github.com/sentrysoftware/metricshub/issues/412) | The `hw.status{state="present"}` metric is no longer reported for cpu monitors discovered by Linux and Window connectors |
-| [**\#383**](https://github.com/sentrysoftware/metricshub/issues/383) | Implemented a new engine method `megaBit2Byte` to align with OpenTelemetry unit standards                                |
-| [**\#374**](https://github.com/sentrysoftware/metricshub/issues/374) | Default connector variables can now be specified in YAML connector files                                                 |
-| [**\#302**](https://github.com/sentrysoftware/metricshub/issues/302) | Defined `afterAll` and `beforeAll` jobs in YAML connectors                                                               |
-| [**\#423**](https://github.com/sentrysoftware/metricshub/issues/423) | Added the ability to filter monitors                                                                                     |
+| [**\#433**](https://github.com/metricshub/metricshub-community/issues/433) | **[BREAKING_CHANGE]** Disabled Automatic Hostname to FQDN resolution                                                     |
+| [**\#427**](https://github.com/metricshub/metricshub-community/issues/427) | BMC Helix Integration: Added the `StatusInformation` internal text parameter to the connector monitor                    |
+| [**\#421**](https://github.com/metricshub/metricshub-community/issues/421) | Reduced Alert noise for `hw.status{state="present"}`                                                                     |
+| [**\#414**](https://github.com/metricshub/metricshub-community/issues/414) | Added a link to MetricsHub Community Connectors 1.0.06                                                                   |
+| [**\#412**](https://github.com/metricshub/metricshub-community/issues/412) | The `hw.status{state="present"}` metric is no longer reported for cpu monitors discovered by Linux and Window connectors |
+| [**\#383**](https://github.com/metricshub/metricshub-community/issues/383) | Implemented a new engine method `megaBit2Byte` to align with OpenTelemetry unit standards                                |
+| [**\#374**](https://github.com/metricshub/metricshub-community/issues/374) | Default connector variables can now be specified in YAML connector files                                                 |
+| [**\#302**](https://github.com/metricshub/metricshub-community/issues/302) | Defined `afterAll` and `beforeAll` jobs in YAML connectors                                                               |
+| [**\#423**](https://github.com/metricshub/metricshub-community/issues/423) | Added the ability to filter monitors                                                                                     |
 
 #### Fixed Issues
 
 | ID                                                                   | Description                                                                      |
 |----------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| [**\#436**](https://github.com/sentrysoftware/metricshub/issues/436) | The log message for SNMP v3 credential validation is incorrect                   |
-| [**\#439**](https://github.com/sentrysoftware/metricshub/issues/439) | Connector default variables are not serializable                                 |
-| [**\#417**](https://github.com/sentrysoftware/metricshub/issues/417) | JavaDoc references are incorrect                                                 |
-| [**\#410**](https://github.com/sentrysoftware/metricshub/issues/410) | Protocol definition is applied to only one host in a multiple-host configuration |
-| [**\#368**](https://github.com/sentrysoftware/metricshub/issues/368) | The `hw.power{hw.type="vm"}` metric is erroneously set to 0                      |
-| [**\#456**](https://github.com/sentrysoftware/metricshub/issues/456) | An exception occurs when monitoring ESXi through vCenter authentication          |
+| [**\#436**](https://github.com/metricshub/metricshub-community/issues/436) | The log message for SNMP v3 credential validation is incorrect                   |
+| [**\#439**](https://github.com/metricshub/metricshub-community/issues/439) | Connector default variables are not serializable                                 |
+| [**\#417**](https://github.com/metricshub/metricshub-community/issues/417) | JavaDoc references are incorrect                                                 |
+| [**\#410**](https://github.com/metricshub/metricshub-community/issues/410) | Protocol definition is applied to only one host in a multiple-host configuration |
+| [**\#368**](https://github.com/metricshub/metricshub-community/issues/368) | The `hw.power{hw.type="vm"}` metric is erroneously set to 0                      |
+| [**\#456**](https://github.com/metricshub/metricshub-community/issues/456) | An exception occurs when monitoring ESXi through vCenter authentication          |
 
 ### MetricsHub Community Connectors v1.0.06
 
@@ -405,12 +405,12 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                                        | Description                                                                                                         |
 |-------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-| [**\#125**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/125) | Disabled automatic detection for WindowsProcess, WindowsService, and LinuxService                                   |
-| [**\#122**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/122) | Added default values for connector variables in `WindowsService`, `LinuxService`, `WindowsProcess` & `LinuxProcess` |
-| [**\#114**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/114) | The `hw.network.bandwidth.limit` metric is now displayed in bytes                                                   |
+| [**\#125**](https://github.com/metricshub/community-connectors/issues/125) | Disabled automatic detection for WindowsProcess, WindowsService, and LinuxService                                   |
+| [**\#122**](https://github.com/metricshub/community-connectors/issues/122) | Added default values for connector variables in `WindowsService`, `LinuxService`, `WindowsProcess` & `LinuxProcess` |
+| [**\#114**](https://github.com/metricshub/community-connectors/issues/114) | The `hw.network.bandwidth.limit` metric is now displayed in bytes                                                   |
 
 #### Fixed Issues
 
 | ID                                                                                        | Description                                                              |
 |-------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
-| [**\#120**](https://github.com/sentrysoftware/metricshub-community-connectors/issues/120) | The `hw.vm.power_ratio` unit is incorrect. It should be 1 instead of Cel |
+| [**\#120**](https://github.com/metricshub/community-connectors/issues/120) | The `hw.vm.power_ratio` unit is incorrect. It should be 1 instead of Cel |

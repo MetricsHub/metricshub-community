@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -16,11 +16,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-snmp-extension-common</artifactId>
 		</dependency>
 		<dependency>
@@ -38,8 +38,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>snmp</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>snmp-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -74,11 +74,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
@@ -100,6 +95,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -111,6 +107,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
 				</configuration>
 			</plugin>
 
@@ -154,7 +151,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/snmpv3/*SnmpV3ConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/snmpv3/*SnmpV3ConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -172,9 +169,9 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:snmp</include>
-									<include>org.sentrysoftware:metricshub-snmpv3-extension</include>
-									<include>org.sentrysoftware:metricshub-snmp-extension-common</include>
+									<include>org.metricshub:snmp-java</include>
+									<include>org.metricshub:metricshub-snmpv3-extension</include>
+									<include>org.metricshub:metricshub-snmp-extension-common</include>
 								</includes>
 							</artifactSet>
 							<minimizeJar>false</minimizeJar>

@@ -3,8 +3,8 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -13,7 +13,7 @@
 	<description>MetricsHub ClassLoader Agent for dynamic class loading</description>
 
 	<properties>
-		<agentClass>org.sentrysoftware.metricshub.classloader.agent.ClassLoaderAgent</agentClass>
+		<agentClass>org.metricshub.classloader.agent.ClassLoaderAgent</agentClass>
 	</properties>
 
 	<dependencies>
@@ -21,19 +21,10 @@
 	</dependencies>
 
 	<build>
-		<pluginManagement>
-			<plugins>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-				</plugin>
-			</plugins>
-		</pluginManagement>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.5.2</version>
 				<executions>
 					<execution>
 						<phase>package</phase>

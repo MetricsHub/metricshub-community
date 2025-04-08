@@ -18,7 +18,7 @@ otel:
 # Resource Groups configuration
 resourceGroups:
     # Resource Group identifier
-  sentry-paris:
+  paris:
     # Adds additional static metrics to all the resources in the group.
     resources:
        # Resource configuration

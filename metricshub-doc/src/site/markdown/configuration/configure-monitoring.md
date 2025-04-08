@@ -650,7 +650,7 @@ Follow the structure below to declare your monitor:
 ```
 
 Refer to:
-- [Monitors](https://sentrysoftware.org/metricshub-community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
+- [Monitors](https://metricshub.org/community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
 - [Monitoring the health of a Web service](https://metricshub.com/usecases/monitoring-the-health-of-a-web-service/) for a practical example that demonstrates how to use this feature effectively.
 
 ### OTLP Exporter settings

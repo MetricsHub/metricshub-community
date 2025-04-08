@@ -141,19 +141,19 @@ To upgrade to a newer version of **MetricsHub Enterprise**:
 
 ### Download
 
-Download the Docker package, `metricshub-linux-${communityVersion}-docker.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/sentrysoftware/metricshub/releases/tag/v${communityVersion}) page using the following command:
+Download the Docker package, `metricshub-community-linux-${communityVersion}-docker.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page using the following command:
 
 ```shell-session
-wget -P /tmp https://github.com/sentrysoftware/metricshub/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}-docker.tar.gz
+wget -P /tmp https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}-docker.tar.gz
 ```
 
 ### Install
 
-Unzip and untar the content of `metricshub-linux-${communityVersion}-docker.tar.gz` into a directory, like `/docker`.
+Unzip and untar the content of `metricshub-community-linux-${communityVersion}-docker.tar.gz` into a directory, like `/docker`.
 
 ```shell-session
 sudo mkdir -p /docker
-sudo tar xzf /tmp/metricshub-linux-${communityVersion}-docker.tar.gz -C /docker
+sudo tar xzf /tmp/metricshub-community-linux-${communityVersion}-docker.tar.gz -C /docker
 ```
 
 ### Configure
@@ -204,7 +204,7 @@ Example (`docker-compose.yaml`):
 version: "2.1"
 services:
   metricshub:
-    # for image we will use ``image: sentrysoftware/metricshub:latest``
+    # for image we will use ``image: metricshub/metricshub-community:latest``
     build: .
     container_name: metricshub
     volumes:

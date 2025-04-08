@@ -1,9 +1,9 @@
 # MetricsHub
 
-![GitHub release (with filter)](https://img.shields.io/github/v/release/sentrysoftware/metricshub)
-![Build](https://img.shields.io/github/actions/workflow/status/sentrysoftware/metricshub/maven-deploy.yml)
-![GitHub top language](https://img.shields.io/github/languages/top/sentrysoftware/metricshub)
-![License](https://img.shields.io/github/license/sentrysoftware/metricshub)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/metricshub/metricshub-community)
+![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/maven-deploy.yml)
+![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community)
+![License](https://img.shields.io/github/license/metricshub/metricshub-community)
 
 ## Structure
 
@@ -28,12 +28,12 @@ This is a multi-module project:
 * **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
-* **metricshub-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
-* **metricshub-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
+* **metricshub-community-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
+* **metricshub-community-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
 * **metricshub-doc**: Houses the documentation for MetricsHub.
 
 > [!TIP]
-> Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/sentrysoftware/metricshub-community-connectors) repository.
+> Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
 
 ## How to build the Project
 
@@ -41,6 +41,68 @@ This is a multi-module project:
 
 * Have [Maven 3.x properly installed and configured](https://maven.apache.org/download.cgi).
 * Latest LTS Release of [JDK 21](https://adoptium.net).
+
+### JRE Builder dependency
+
+MetricsHub Community uses a custom JRE builder hosted in a separate repository: [metricshub-jre-builder](https://github.com/metricshub/metricshub-jre-builder).
+
+The custom JRE artifact is deployed to **GitHub Packages**. To consume this dependency, ensure your Maven `settings.xml` is properly configured with authentication to GitHub's package registry. Here are the required steps:
+
+##### 1. Update your `~/.m2/settings.xml`
+
+Add the following `<server>` block inside the `<servers>` section of your `settings.xml`:
+
+```xml
+<servers>
+	...
+	<server>
+		<id>github</id>
+		<username>YOUR_GITHUB_USERNAME</username>
+		<password>YOUR_PERSONAL_ACCESS_TOKEN</password>
+	</server>
+	...
+</servers>
+
+```
+
+> 💡 The personal access token (PAT) must have at least the `read:packages` and `repo` scopes.
+
+> 🔐 **Want to encrypt your GitHub token?**
+> Maven supports secure encryption of your credentials. Follow the official [Maven Password Encryption](https://maven.apache.org/guides/mini/guide-encryption.html) guide to encrypt your token.
+
+##### 2. Add GitHub packages to `<profiles>`
+
+Add the following configuration inside a new `<profile>` section in your `settings.xml`, and activate it:
+
+```xml
+<profiles>
+	...
+	<profile>
+		<id>github</id>
+		<repositories>
+			<repository>
+			<id>github</id>
+			<name>GitHub JRE Builder Package</name>
+			<url>https://maven.pkg.github.com/metricshub/metricshub-jre-builder</url>
+			<releases>
+				<enabled>true</enabled>
+			</releases>
+			<snapshots>
+				<enabled>true</enabled>
+			</snapshots>
+			</repository>
+		</repositories>
+	</profile>
+	...
+</profiles>
+
+<activeProfiles>
+	...
+	<activeProfile>github</activeProfile>
+</activeProfiles>
+```
+
+> 📦 Artifacts published here are used to build a custom runtime tailored to MetricsHub’s needs.
 
 ### Build
 
@@ -53,13 +115,13 @@ $ mvn clean package
 #### Building Windows Packages (.zip)
 
 * **Host:** Windows
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.zip` package in the `metricshub/metricshub-windows/target` directory upon completion (`metricshub-windows-<version>.zip`).
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.zip` package in the `metricshub/metricshub-community-windows/target` directory upon completion (`metricshub-community-windows-<version>.zip`).
 
 #### Building Linux Packages (.tar.gz)
 
 * **Host:** Linux
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.tar.gz` package in the `metricshub/metricshub-linux/target` directory upon completion (`metricshub-linux-<version>.tar.gz`).
-  * The `Docker` package is compatible with the `debian:latest` image, it will be generated under the `metricshub/metricshub-linux/target` directory (`metricshub-linux-<version>-docker.tar.gz`).
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.tar.gz` package in the `metricshub/metricshub-community-linux/target` directory upon completion (`metricshub-community-linux-<version>.tar.gz`).
+  * The `Docker` package is compatible with the `debian:latest` image, it will be generated under the `metricshub/metricshub-community-linux/target` directory (`metricshub-community-linux-<version>-docker.tar.gz`).
 
 ## Checkstyle
 

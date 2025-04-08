@@ -1211,7 +1211,7 @@ END {
 		}
 
 		# If the machine is ON, leave the powerConsumption empty (as it was before we arrived in this place)
-		# so that Hardware Sentry will evaluate the power consumption by himself
+		# so that Hardware will evaluate the power consumption by himself
 	}
 
 	# Remove trailing comma at the end of systemSensorNameList

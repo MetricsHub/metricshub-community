@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
 		<version>1.0.03-SNAPSHOT</version>
 	</parent>
 
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -34,8 +34,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>http</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>simple-http-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -70,11 +70,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
@@ -96,6 +91,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -107,6 +103,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
 				</configuration>
 			</plugin>
 
@@ -150,12 +147,12 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/http/*HttpConfigurationBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*EmbeddedFileBodyBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*EmbeddedFileHeaderBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*HttpRequestBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*StringBodyBuilder*</exclude>
-						<exclude>org/sentrysoftware/metricshub/extension/http/utils/*StringHeaderBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/*HttpConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*EmbeddedFileBodyBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*EmbeddedFileHeaderBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*HttpRequestBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*StringBodyBuilder*</exclude>
+						<exclude>org/metricshub/extension/http/utils/*StringHeaderBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -173,8 +170,8 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:http</include>
-									<include>org.sentrysoftware:metricshub-http-extension</include>
+									<include>org.metricshub:simple-http-java</include>
+									<include>org.metricshub:metricshub-http-extension</include>
 								</includes>
 							</artifactSet>
 							<transformers>

@@ -94,19 +94,19 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
 
 ### Download
 
-Download the Linux package, `metricshub-linux-${communityVersion}.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/sentrysoftware/metricshub/releases/tag/v${communityVersion}) page using the following command:
+Download the Linux package, `metricshub-community-linux-${communityVersion}.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page using the following command:
 
 ```shell-session
-wget -P /tmp https://github.com/sentrysoftware/metricshub/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}.tar.gz
+wget -P /tmp https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}.tar.gz
 ```
 
 ### Install
 
-Unzip and untar the content of `metricshub-linux-${communityVersion}.tar.gz` into a program directory, like `/opt`. There is no need to create a specific subdirectory for `metricshub` as the archive already contains a `metricshub` directory.
+Unzip and untar the content of `metricshub-community-linux-${communityVersion}.tar.gz` into a program directory, like `/opt`. There is no need to create a specific subdirectory for `metricshub` as the archive already contains a `metricshub` directory.
 
 ```shell-session
 cd /opt
-sudo tar xzf /tmp/metricshub-linux-${communityVersion}.tar.gz
+sudo tar xzf /tmp/metricshub-community-linux-${communityVersion}.tar.gz
 ```
 
 ### Configure
