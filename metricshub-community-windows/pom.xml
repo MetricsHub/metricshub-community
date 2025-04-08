@@ -360,6 +360,7 @@
 				<artifactId>central-publishing-maven-plugin</artifactId>
 				<configuration>
 					<skipPublishing>false</skipPublishing>
+					<ignorePublishedComponents>true</ignorePublishedComponents>
 				</configuration>
 			</plugin>
 
