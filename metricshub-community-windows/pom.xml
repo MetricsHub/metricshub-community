@@ -354,16 +354,6 @@
 				</executions>
 			</plugin>
 
-			<!-- Publish artifact -->
-			<plugin>
-				<groupId>org.sonatype.central</groupId>
-				<artifactId>central-publishing-maven-plugin</artifactId>
-				<configuration>
-					<skipPublishing>false</skipPublishing>
-					<ignorePublishedComponents>true</ignorePublishedComponents>
-				</configuration>
-			</plugin>
-
 		</plugins>
 	</build>
 </project>
