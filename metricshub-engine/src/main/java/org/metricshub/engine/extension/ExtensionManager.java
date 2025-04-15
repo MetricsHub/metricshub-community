@@ -77,6 +77,9 @@ public class ExtensionManager {
 	@Default
 	private List<ICompositeSourceScriptExtension> compositeSourceScriptExtensions = new ArrayList<>();
 
+	@Default
+	private List<IConfigurationProvider> configurationProviderExtensions = new ArrayList<>();
+
 	/**
 	 * Create a new empty instance of the Extension Manager.
 	 * @return a new instance of {@link ExtensionManager}.
