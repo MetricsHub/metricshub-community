@@ -21,10 +21,15 @@ package org.metricshub.agent.helper;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.agent.helper.AgentConstants.DEFAULT_OTEL_CONFIG_FILENAME;
 import static org.metricshub.agent.helper.AgentConstants.DEFAULT_OTEL_CRT_FILENAME;
+import static org.metricshub.agent.helper.AgentConstants.FILE_PATH_FORMAT;
+import static org.metricshub.agent.helper.AgentConstants.OTEL_DIRECTORY_NAME;
+import static org.metricshub.agent.helper.AgentConstants.PRODUCT_WIN_DIR_NAME;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -34,6 +39,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
+import org.metricshub.engine.common.helpers.LocalOsHandler;
 
 /**
  * Helper class providing methods related to OpenTelemetry (OTEL) configuration.
@@ -145,5 +151,44 @@ public class OtelConfigHelper {
 			)
 				.ifPresent(trustedCertificatesFile -> properties.put(otlpCertificatePropertyKey, trustedCertificatesFile));
 		}
+	}
+
+	/**
+	 * Get the default configuration file path either in the Windows <em>ProgramData\metricshub\otel\otel-config.yaml</em>
+	 * directory or under the install directory <em>/opt/metricshub/lib/otel/otel-config.yaml</em> on Linux systems.
+	 *
+	 * @return new {@link Path} instance
+	 */
+	public static Path getDefaultOtelConfigFilePath() {
+		if (LocalOsHandler.isWindows()) {
+			return getProgramDataOtelConfigFile();
+		}
+		return ConfigHelper.getSubPath(String.format(FILE_PATH_FORMAT, OTEL_DIRECTORY_NAME, DEFAULT_OTEL_CONFIG_FILENAME));
+	}
+
+	/**
+	 * Get the configuration file under the ProgramData windows directory.<br>
+	 * If the ProgramData path is not valid then the configuration file will be located
+	 * under the install directory.
+	 *
+	 * @return new {@link Path} instance
+	 */
+	static Path getProgramDataOtelConfigFile() {
+		return ConfigHelper
+			.getProgramDataPath()
+			.stream()
+			.map(path ->
+				Paths.get(
+					ConfigHelper
+						.createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, OTEL_DIRECTORY_NAME))
+						.toAbsolutePath()
+						.toString(),
+					DEFAULT_OTEL_CONFIG_FILENAME
+				)
+			)
+			.findFirst()
+			.orElseGet(() ->
+				ConfigHelper.getSubPath(String.format(FILE_PATH_FORMAT, OTEL_DIRECTORY_NAME, DEFAULT_OTEL_CONFIG_FILENAME))
+			);
 	}
 }

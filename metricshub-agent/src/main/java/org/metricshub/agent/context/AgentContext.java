@@ -27,10 +27,10 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,7 +67,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class AgentContext {
 
 	private AgentInfo agentInfo;
-	private File configFile;
+	private Path configDirectory;
 	private AgentConfig agentConfig;
 	private ConnectorStore connectorStore;
 	private String pid;
@@ -82,26 +82,27 @@ public class AgentContext {
 	/**
 	 * Instantiate the global context
 	 *
-	 * @param alternateConfigFile Alternation configuration file passed by the user
+	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
 	 * @param extensionManager    Manages and aggregates various types of extensions used within MetricsHub.
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
-	public AgentContext(final String alternateConfigFile, final ExtensionManager extensionManager) throws IOException {
+	public AgentContext(final String alternateConfigDirectory, final ExtensionManager extensionManager)
+		throws IOException {
 		this.extensionManager = extensionManager;
-		build(alternateConfigFile, true);
+		build(alternateConfigDirectory, true);
 	}
 
 	/**
 	 * Builds the agent context
-	 * @param alternateConfigFile Alternation configuration file passed by the user
+	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
 	 * @param createConnectorStore Whether we should create a new connector store
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
-	public void build(final String alternateConfigFile, final boolean createConnectorStore) throws IOException {
+	public void build(final String alternateConfigDirectory, final boolean createConnectorStore) throws IOException {
 		final long startTime = System.nanoTime();
 
 		// Find the configuration file
-		configFile = ConfigHelper.findConfigFile(alternateConfigFile);
+		configDirectory = ConfigHelper.findConfigFile(alternateConfigDirectory);
 
 		// Load the pre configuration (logging configuration & connectors patch path)
 		// before starting any processing because we want to log any potential error
@@ -152,7 +153,6 @@ public class AgentContext {
 				.builder()
 				.withAgentConfig(agentConfig)
 				.withAgentInfo(agentInfo)
-				.withConfigFile(configFile)
 				.withOtelCollectorProcessService(otelCollectorProcessService)
 				.withTaskScheduler(TaskSchedulingService.newScheduler(agentConfig.getJobPoolSize()))
 				.withTelemetryManagers(telemetryManagers)

@@ -29,9 +29,6 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.service.OtelCollectorProcessService;
-import org.metricshub.agent.service.TaskSchedulingService;
-import org.metricshub.agent.service.task.FileWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -53,9 +50,9 @@ public class MetricsHubAgentApplication implements Runnable {
 		names = { "-c", "--config" },
 		usageHelp = false,
 		required = false,
-		description = "Alternate MetricsHub's configuration file"
+		description = "Alternate MetricsHub's configuration directory"
 	)
-	private String alternateConfigFile;
+	private String alternateConfigDirectory;
 
 	/**
 	 * The main entry point for the MetricsHub Agent application.
@@ -75,49 +72,17 @@ public class MetricsHubAgentApplication implements Runnable {
 			final ExtensionManager extensionManager = ConfigHelper.loadExtensionManager();
 
 			// Initialize the application context
-			final AgentContext agentContext = new AgentContext(alternateConfigFile, extensionManager);
+			final AgentContext agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
 
 			// Start OpenTelemetry Collector process
 			agentContext.getOtelCollectorProcessService().launch();
 
 			// Start the Scheduler
 			agentContext.getTaskSchedulingService().start();
-
-			FileWatcherTask
-				.builder()
-				.file(agentContext.getConfigFile())
-				.filter(event ->
-					event.context() != null && agentContext.getConfigFile().getName().equals(event.context().toString())
-				)
-				.checksum(ConfigHelper.calculateMD5Checksum(agentContext.getConfigFile()))
-				.await(500)
-				.onChange(() -> resetContext(agentContext, alternateConfigFile))
-				.build()
-				.start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
-		}
-	}
-
-	/**
-	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
-	 * @param agentContext The agent context
-	 * @param alternateConfigFile Alternation configuration file passed by the user
-	 */
-	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigFile) {
-		try {
-			agentContext.getTaskSchedulingService().stop();
-			agentContext.getOtelCollectorProcessService().stop();
-
-			agentContext.build(alternateConfigFile, false);
-			agentContext.getOtelCollectorProcessService().launch();
-			agentContext.getTaskSchedulingService().start();
-		} catch (Exception e) {
-			configureGlobalErrorLogger();
-			log.error("Failed to start MetricsHub Agent.", e);
-			throw new IllegalStateException("Error detected during MetricsHub agent startup.", e);
 		}
 	}
 

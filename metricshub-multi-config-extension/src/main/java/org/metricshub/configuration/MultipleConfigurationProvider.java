@@ -1,8 +1,8 @@
-package org.metricshub.engine.extension;
+package org.metricshub.configuration;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Engine
+ * MetricsHub Multiple Configuration Provider Extension
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -24,16 +24,14 @@ package org.metricshub.engine.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import org.metricshub.engine.extension.IConfigurationProvider;
 
-/**
- * Contract for configuration providers.<br>
- */
-public interface IConfigurationProvider {
-	/**
-	 * Load configuration fragments based on the provider's implementation.
-	 *
-	 * @param path The path to the configuration directory.
-	 * @return A collection of {@link JsonNode} representing the configuration fragments.
-	 */
-	Collection<JsonNode> load(Path path);
+public class MultipleConfigurationProvider implements IConfigurationProvider {
+
+	@Override
+	public Collection<JsonNode> load(final Path path) {
+		// Implement logic to load configuration fragments from multiple sources
+
+		return null;
+	}
 }

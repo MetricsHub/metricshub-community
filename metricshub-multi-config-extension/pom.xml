@@ -10,7 +10,7 @@
 
 	<artifactId>metricshub-multi-config-extension</artifactId>
 
-	<name>MetricsHub Multi Config Extension</name>
+	<name>MetricsHub Multi Config Provider Extension</name>
 	<description>MetricsHub Multi Config Extension implementation providing a set of functionalities used to load multiple configurations.</description>
 
 	<dependencies>

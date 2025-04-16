@@ -73,7 +73,7 @@ class ConfigHelperTest {
 			) {
 				mockedConfigHelper.when(() -> ConfigHelper.getProgramDataPath()).thenReturn(Optional.empty());
 				mockedConfigHelper
-					.when(() -> ConfigHelper.getProgramDataConfigFile(anyString(), anyString()))
+					.when(() -> ConfigHelper.getProgramDataOtelConfigFile(anyString(), anyString()))
 					.thenCallRealMethod();
 				mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenCallRealMethod();
 				mockedConfigHelper.when(() -> ConfigHelper.getSourceDirectory()).thenCallRealMethod();
@@ -82,7 +82,7 @@ class ConfigHelperTest {
 					.when(() -> ResourceHelper.findSourceDirectory(ConfigHelper.class))
 					.thenAnswer(invocation -> tempDir.resolve("metricshub/app/jar").toFile());
 
-				final Path configFileOnWindows = ConfigHelper.getProgramDataConfigFile("config", DEFAULT_CONFIG_FILENAME);
+				final Path configFileOnWindows = ConfigHelper.getProgramDataOtelConfigFile("config", DEFAULT_CONFIG_FILENAME);
 
 				final String expectedPath = "metricshub\\app\\..\\config\\" + DEFAULT_CONFIG_FILENAME;
 
@@ -101,10 +101,10 @@ class ConfigHelperTest {
 
 				mockedConfigHelper.when(() -> ConfigHelper.createDirectories(any(Path.class))).thenCallRealMethod();
 				mockedConfigHelper
-					.when(() -> ConfigHelper.getProgramDataConfigFile(anyString(), anyString()))
+					.when(() -> ConfigHelper.getProgramDataOtelConfigFile(anyString(), anyString()))
 					.thenCallRealMethod();
 
-				final Path configFileOnWindows = ConfigHelper.getProgramDataConfigFile("config", DEFAULT_CONFIG_FILENAME);
+				final Path configFileOnWindows = ConfigHelper.getProgramDataOtelConfigFile("config", DEFAULT_CONFIG_FILENAME);
 
 				final String expectedPath = "metricshub\\config\\" + DEFAULT_CONFIG_FILENAME;
 
@@ -133,7 +133,7 @@ class ConfigHelperTest {
 
 			// Mock the method which gets the real production config file
 			mockedConfigHelper
-				.when(() -> ConfigHelper.getDefaultConfigFilePath(anyString(), anyString()))
+				.when(() -> ConfigHelper.getDefaultOtelConfigFilePath(anyString(), anyString()))
 				.thenAnswer(invocation -> Paths.get(configDir.toString(), DEFAULT_CONFIG_FILENAME));
 
 			// Call real method when invoking getDefaultConfigFile

@@ -23,7 +23,6 @@ package org.metricshub.agent.config.otel;
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.agent.config.otel.OtelCollectorOutput.LOG;
-import static org.metricshub.agent.helper.AgentConstants.DEFAULT_OTEL_CONFIG_FILENAME;
 import static org.metricshub.agent.helper.AgentConstants.OTEL_DIRECTORY_NAME;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -40,6 +39,7 @@ import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.helper.OtelConfigHelper;
 import org.metricshub.agent.process.config.ProcessConfig;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MapHelper;
@@ -115,9 +115,7 @@ public class OtelCollectorConfig {
 		commandLine.add("--config");
 
 		// Get the default configuration file path located under the otel directory
-		final String defaultConfigFilePath = ConfigHelper
-			.getDefaultConfigFilePath(OTEL_DIRECTORY_NAME, DEFAULT_OTEL_CONFIG_FILENAME)
-			.toString();
+		final String defaultConfigFilePath = OtelConfigHelper.getDefaultOtelConfigFilePath().toString();
 
 		commandLine.add(
 			LocalOsHandler.isWindows() ? String.format("\"%s\"", defaultConfigFilePath) : defaultConfigFilePath
