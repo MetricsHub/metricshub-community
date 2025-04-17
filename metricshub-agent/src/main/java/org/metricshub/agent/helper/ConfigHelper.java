@@ -235,7 +235,7 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Find the application's configuration directory (/config).<br>
+	 * Find the application's configuration directory (E.g. /config).<br>
 	 * <ol>
 	 *   <li>If the user has configured the configDirectory via <em>--config=$Dir</em> then it is the chosen directory</li>
 	 *   <li>Else if <em>config/</em> path exists, the resulting directory is the one representing this path</li>
@@ -252,20 +252,20 @@ public class ConfigHelper {
 	 *   <li>If an I/O error occurs</li>
 	 * </ul>
 	 *
-	 * @param configDirectoryAsString The configuration directory passed by the user. E.g. --config=/opt/SOME_DIR
+	 * @param userConfigDirectory The configuration directory passed by the user. E.g. --config=/opt/SOME_DIR
 	 * @return {@link Path} instance
 	 * @throws IOException  This exception is thrown is the directory is not found
 	 */
-	public static Path findConfigFile(final String configDirectoryAsString) throws IOException {
+	public static Path findConfigDirectory(final String userConfigDirectory) throws IOException {
 		final Path configDirectory;
 		// The user has configured a configuration directory path
-		if (configDirectoryAsString != null && !configDirectoryAsString.isBlank()) {
-			configDirectory = Path.of(configDirectoryAsString);
+		if (userConfigDirectory != null && !userConfigDirectory.isBlank()) {
+			configDirectory = Path.of(userConfigDirectory);
 			if (!Files.exists(configDirectory)) {
 				throw new IllegalStateException(
 					String.format(
 						"Cannot find %s. Please make sure the configuration directory exists on your system",
-						configDirectoryAsString
+						userConfigDirectory
 					)
 				);
 			}

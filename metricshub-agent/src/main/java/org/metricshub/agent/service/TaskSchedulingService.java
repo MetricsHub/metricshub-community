@@ -52,7 +52,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @Slf4j
 public class TaskSchedulingService {
 
-	private Path configurationDirectory;
+	private Path configDirectory;
 	private AgentConfig agentConfig;
 	private AgentInfo agentInfo;
 	private ThreadPoolTaskScheduler taskScheduler;

@@ -60,7 +60,7 @@ class AgentContextTest {
 		final AgentContext agentContext = new AgentContext(TEST_CONFIG_FILE_PATH, extensionManager);
 
 		assertNotNull(agentContext.getAgentInfo());
-		assertNotNull(agentContext.getConfigFile());
+		assertNotNull(agentContext.getConfigDirectory());
 		assertNotNull(agentContext.getPid());
 
 		final AgentConfig agentConfig = agentContext.getAgentConfig();

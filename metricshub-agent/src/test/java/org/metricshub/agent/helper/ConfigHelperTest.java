@@ -152,7 +152,7 @@ class ConfigHelperTest {
 
 	@Test
 	void testBuildTelemetryManagers() throws IOException {
-		final File configFile = ConfigHelper.findConfigFile("src/test/resources/config/metricshub-server1.yaml");
+		final File configFile = ConfigHelper.findConfigDirectory("src/test/resources/config/metricshub-server1.yaml");
 
 		final ConnectorStore connectorStore = new ConnectorStore(Path.of("src/test/resources"));
 		final Connector connector = new Connector();
@@ -195,7 +195,7 @@ class ConfigHelperTest {
 	@Test
 	void testBuildTelemetryManagersWithTopLevelResources() throws IOException {
 		// Find the configuration file
-		final File configFile = ConfigHelper.findConfigFile(TOP_LEVEL_RESOURCES_CONFIG_PATH);
+		final File configFile = ConfigHelper.findConfigDirectory(TOP_LEVEL_RESOURCES_CONFIG_PATH);
 
 		// Create the connector store
 		final ConnectorStore connectorStore = new ConnectorStore(Path.of("src/test/resources"));
@@ -261,7 +261,7 @@ class ConfigHelperTest {
 	@Test
 	void testEnableSelfMonitoringWithTopLevelResources() throws IOException {
 		// Find the configuration file
-		final File configFile = ConfigHelper.findConfigFile(TOP_LEVEL_RESOURCES_CONFIG_PATH);
+		final File configFile = ConfigHelper.findConfigDirectory(TOP_LEVEL_RESOURCES_CONFIG_PATH);
 
 		// Create the agent configuration
 		final AgentConfig agentConfig = JsonHelper.deserialize(
@@ -280,7 +280,7 @@ class ConfigHelperTest {
 	@Test
 	void testEnableSelfMonitoringOnlyGlobalConfiguration() throws IOException {
 		// Find the configuration file
-		final File configFile = ConfigHelper.findConfigFile(TEST_CONFIG_FILE_PATH);
+		final File configFile = ConfigHelper.findConfigDirectory(TEST_CONFIG_FILE_PATH);
 
 		// Create the agent configuration
 		final AgentConfig agentConfig = JsonHelper.deserialize(
@@ -299,7 +299,7 @@ class ConfigHelperTest {
 	@Test
 	void testEnableSelfMonitoringConfigurationOverride() throws IOException {
 		// Find the configuration file
-		final File configFile = ConfigHelper.findConfigFile(
+		final File configFile = ConfigHelper.findConfigDirectory(
 			"src/test/resources/config/metricshub-enable-self-monitoring-override.yaml"
 		);
 
@@ -320,7 +320,7 @@ class ConfigHelperTest {
 	@Test
 	void testEnableSelfMonitoringNoConfiguration() throws IOException {
 		// Find the configuration file
-		final File configFile = ConfigHelper.findConfigFile(
+		final File configFile = ConfigHelper.findConfigDirectory(
 			"src/test/resources/config/metricshub-enable-self-monitoring-no-config.yaml"
 		);
 

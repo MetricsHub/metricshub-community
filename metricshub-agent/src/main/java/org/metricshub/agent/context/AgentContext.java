@@ -27,7 +27,6 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
@@ -48,6 +47,7 @@ import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.helper.OtelConfigHelper;
 import org.metricshub.agent.helper.PostConfigDeserializeHelper;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
+import org.metricshub.agent.service.ConfigurationService;
 import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.common.helpers.JsonHelper;
@@ -68,6 +68,7 @@ public class AgentContext {
 
 	private AgentInfo agentInfo;
 	private Path configDirectory;
+	private JsonNode configNode;
 	private AgentConfig agentConfig;
 	private ConnectorStore connectorStore;
 	private String pid;
@@ -101,13 +102,17 @@ public class AgentContext {
 	public void build(final String alternateConfigDirectory, final boolean createConnectorStore) throws IOException {
 		final long startTime = System.nanoTime();
 
-		// Find the configuration file
-		configDirectory = ConfigHelper.findConfigFile(alternateConfigDirectory);
+		// Find the configuration directory
+		configDirectory = ConfigHelper.findConfigDirectory(alternateConfigDirectory);
+
+		final var configurationService = ConfigurationService.builder().withConfigDirectory(configDirectory).build();
+
+		configNode = configurationService.loadConfiguration(extensionManager);
 
 		// Load the pre configuration (logging configuration & connectors patch path)
 		// before starting any processing because we want to log any potential error
 		// at the start up of the application.
-		final PreConfig preConfig = loadPreConfig();
+		final var preConfig = loadPreConfig(configNode);
 
 		// Configure the global logger
 		ConfigHelper.configureGlobalLogger(preConfig.getLoggerLevel(), preConfig.getOutputDirectory());
@@ -125,7 +130,7 @@ public class AgentContext {
 		agentInfo = new AgentInfo();
 
 		// Read the agent configuration file (Default: metricshub.yaml)
-		agentConfig = loadConfiguration();
+		agentConfig = loadConfiguration(configNode);
 
 		logProductInformation();
 
@@ -151,6 +156,7 @@ public class AgentContext {
 		taskSchedulingService =
 			TaskSchedulingService
 				.builder()
+				.withConfigDirectory(configDirectory)
 				.withAgentConfig(agentConfig)
 				.withAgentInfo(agentInfo)
 				.withOtelCollectorProcessService(otelCollectorProcessService)
@@ -162,33 +168,35 @@ public class AgentContext {
 				.withExtensionManager(extensionManager)
 				.build();
 
-		final Duration startupDuration = Duration.ofNanos(System.nanoTime() - startTime);
+		final var startupDuration = Duration.ofNanos(System.nanoTime() - startTime);
 
 		log.info("Started MetricsHub Agent in {} seconds.", startupDuration.toMillis() / 1000.0);
 	}
 
 	/**
 	 * Load the {@link PreConfig} instance
+	 *
+	 * @param configNode The configuration JSON node
+	 *
 	 * @return new {@link PreConfig} instance.
 	 * @throws IOException  If an I/O error occurs during the initial reading of the YAML file.
 	 */
-	private PreConfig loadPreConfig() throws IOException {
+	private static PreConfig loadPreConfig(final JsonNode configNode) throws IOException {
 		final ObjectMapper objectMapper = ConfigHelper.newObjectMapper();
-		return JsonHelper.deserialize(objectMapper, new FileInputStream(configFile), PreConfig.class);
+		return JsonHelper.deserialize(objectMapper, configNode, PreConfig.class);
 	}
 
 	/**
 	 * Loads the agent configuration from a YAML configuration file into an {@link AgentConfig} instance.
 	 *
+	 * @param configNode The configuration JSON node
 	 * @return {@link AgentConfig} instance.
 	 * @throws IOException If an I/O error occurs during the initial reading of the YAML file, during
 	 *         the processing phase with {@link EnvironmentProcessor} or at the final deserialization
 	 *		   into an {@link AgentConfig}.
 	 */
-	private AgentConfig loadConfiguration() throws IOException {
-		final ObjectMapper objectMapper = newAgentConfigObjectMapper(extensionManager);
-
-		JsonNode configNode = objectMapper.readTree(new FileInputStream(configFile));
+	private AgentConfig loadConfiguration(final JsonNode configNode) throws IOException {
+		final var objectMapper = newAgentConfigObjectMapper(extensionManager);
 
 		new EnvironmentProcessor().process(configNode);
 
@@ -208,7 +216,7 @@ public class AgentContext {
 		PostConfigDeserializeHelper.addPostDeserializeSupport(objectMapper);
 
 		// Inject the extension manager in the deserialization context
-		final InjectableValues.Std injectableValues = new InjectableValues.Std();
+		final var injectableValues = new InjectableValues.Std();
 		injectableValues.addValue(ExtensionManager.class, extensionManager);
 		objectMapper.setInjectableValues(injectableValues);
 
