@@ -362,12 +362,12 @@ public class ConfigHelper {
 	 *
 	 * @throws IOException if the permissions cannot be set
 	 */
-	private static void setUserPermissionsOnWindows(final Path configDirectory) throws IOException {
+	static void setUserPermissionsOnWindows(final Path configDirectory) throws IOException {
 		if (LocalOsHandler.isWindows()) {
 			// Set write permissions configuration files on Windows
 			try (Stream<Path> stream = Files.list(configDirectory).filter(Files::isRegularFile)) {
 				// Set write permissions for all files in the configuration directory
-				stream.forEach(path -> setUserPermissions(path));
+				stream.forEach(ConfigHelper::setUserPermissions);
 			}
 		}
 	}
