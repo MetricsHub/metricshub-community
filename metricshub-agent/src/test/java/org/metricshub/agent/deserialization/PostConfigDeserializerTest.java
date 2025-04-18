@@ -35,7 +35,7 @@ class PostConfigDeserializerTest {
 
 		final AgentConfig configuration = JsonHelper.deserialize(
 			mapper,
-			mapper.readTree(new FileInputStream("src/test/resources/config/metricshub-multi-hosts.yaml")),
+			mapper.readTree(new FileInputStream("src/test/resources/config/metricshub-multi-hosts/metricshub.yaml")),
 			AgentConfig.class
 		);
 

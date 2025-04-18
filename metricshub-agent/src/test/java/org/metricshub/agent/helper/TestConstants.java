@@ -25,8 +25,8 @@ public class TestConstants {
 	public static final String PARIS_RESOURCE_GROUP_KEY = "paris";
 	public static final String OTTAWA_RESOURCE_GROUP_KEY = "ottawa";
 	public static final String SERVER_1_RESOURCE_GROUP_KEY = "server-1";
-	public static final String TEST_CONFIG_FILE_PATH = "src/test/resources/config/metricshub.yaml";
-	public static final String TOP_LEVEL_RESOURCES_CONFIG_PATH = "src/test/resources/config/top-level-resource-test.yaml";
+	public static final String TEST_CONFIG_DIRECTORY_PATH = "src/test/resources/config/metricshub";
+	public static final String TOP_LEVEL_RESOURCES_CONFIG_PATH = "src/test/resources/config/top-level-resource-test";
 	public static final String COMPANY_ATTRIBUTE_VALUE = "MetricsHub";
 	public static final String COMPANY_ATTRIBUTE_KEY = "company";
 	public static final String HOST_TYPE_ATTRIBUTE_KEY = "host.type";
