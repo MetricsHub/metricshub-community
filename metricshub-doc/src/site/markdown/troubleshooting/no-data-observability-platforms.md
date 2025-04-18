@@ -27,4 +27,4 @@ The troubleshooting steps vary depending on your edition of **MetricsHub**.
        * **Exporters and processors properly started**
        * **No connection issues or authentication failures** with the configured observability platform(s) (Datadog, BMC Helix, Prometheus, Grafana, etc.).
 
-Refer to [What to look for in otelcol-$timestamp.log](./otel-logs#what-to-look-for-in-otelcol-timestamplog) for more details.
+Refer to [What to look for in otelcol-$timestamp.log](./otel-logs.md#what-to-look-for-in-otelcol--3ctimestamp-3e-log) for more details.
