@@ -9,9 +9,9 @@ import static org.metricshub.hardware.common.Constants.HW_ENCLOSURE_POWER;
 import static org.metricshub.hardware.common.Constants.HW_MEMORY_POWER;
 import static org.metricshub.hardware.common.Constants.HW_PHYSICAL_DISK_POWER;
 import static org.metricshub.hardware.common.Constants.LOCALHOST;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_ENERGY;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_POWER;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_POWER;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_ENERGY;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_POWER;
 
 import java.util.Date;
 import java.util.HashMap;

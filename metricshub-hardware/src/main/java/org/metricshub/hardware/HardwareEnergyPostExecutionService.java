@@ -21,26 +21,26 @@ package org.metricshub.hardware;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.constants.CpuConstants.HW_ENERGY_CPU_METRIC;
+import static org.metricshub.hardware.constants.CpuConstants.HW_POWER_CPU_METRIC;
+import static org.metricshub.hardware.constants.DiskControllerConstants.HW_ENERGY_DISK_CONTROLLER_METRIC;
+import static org.metricshub.hardware.constants.DiskControllerConstants.HW_POWER_DISK_CONTROLLER_METRIC;
+import static org.metricshub.hardware.constants.FanConstants.HW_ENERGY_FAN_METRIC;
+import static org.metricshub.hardware.constants.FanConstants.HW_POWER_FAN_METRIC;
+import static org.metricshub.hardware.constants.MemoryConstants.HW_ENERGY_MEMORY_METRIC;
+import static org.metricshub.hardware.constants.MemoryConstants.HW_POWER_MEMORY_METRIC;
+import static org.metricshub.hardware.constants.NetworkConstants.HW_ENERGY_NETWORK_METRIC;
+import static org.metricshub.hardware.constants.NetworkConstants.HW_POWER_NETWORK_METRIC;
+import static org.metricshub.hardware.constants.PhysicalDiskConstants.HW_ENERGY_PHYSICAL_DISK_METRIC;
+import static org.metricshub.hardware.constants.PhysicalDiskConstants.HW_POWER_PHYSICAL_DISK_METRIC;
+import static org.metricshub.hardware.constants.RoboticsConstants.HW_ENERGY_ROBOTICS_METRIC;
+import static org.metricshub.hardware.constants.RoboticsConstants.HW_POWER_ROBOTICS_METRIC;
+import static org.metricshub.hardware.constants.TapeDriveConstants.HW_ENERGY_TAPE_DRIVE_METRIC;
+import static org.metricshub.hardware.constants.TapeDriveConstants.HW_POWER_TAPE_DRIVE_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.HW_ENERGY_VM_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.HW_POWER_VM_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.POWER_SOURCE_ID_ATTRIBUTE;
 import static org.metricshub.hardware.util.HwCollectHelper.connectorHasHardwareTag;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_CPU_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_DISK_CONTROLLER_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_FAN_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_MEMORY_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_NETWORK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_PHYSICAL_DISK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_ROBOTICS_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_TAPE_DRIVE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_VM_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_CPU_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_DISK_CONTROLLER_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_FAN_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_MEMORY_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_NETWORK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_PHYSICAL_DISK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_ROBOTICS_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_TAPE_DRIVE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_VM_METRIC;
-import static org.metricshub.hardware.util.HwConstants.POWER_SOURCE_ID_ATTRIBUTE;
 
 import java.util.Map;
 import java.util.function.BiFunction;

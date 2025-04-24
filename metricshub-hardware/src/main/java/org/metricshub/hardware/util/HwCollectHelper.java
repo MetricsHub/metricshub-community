@@ -22,13 +22,19 @@ package org.metricshub.hardware.util;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
-import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_SHARE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_STATE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.PRESENT_STATUS;
+import static org.metricshub.hardware.constants.CommonConstants.PRESENT_STATUS;
+import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_SHARE_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_STATE_METRIC;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.BiFunction;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,10 +47,48 @@ import org.metricshub.engine.strategy.utils.MathOperationsHelper;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
+import org.metricshub.hardware.constants.CommonConstants;
 
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class HwCollectHelper {
+
+	// Create a lookup table that maps monitor type (lowercase) to the corresponding build method.
+	private static final Map<String, BiFunction<Monitor, TelemetryManager, String>> MONITOR_NAME_BUILDERS =
+		new HashMap<>();
+
+	static {
+		MONITOR_NAME_BUILDERS.put("cpu", (monitor, telemetry) -> MonitorNameBuilder.buildCpuName(monitor));
+		MONITOR_NAME_BUILDERS.put("memory", (monitor, telemetry) -> MonitorNameBuilder.buildMemoryName(monitor));
+		MONITOR_NAME_BUILDERS.put(
+			"physical_disk",
+			(monitor, telemetry) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put("logical_disk", (monitor, telemetry) -> MonitorNameBuilder.buildLogicalDiskName(monitor));
+		MONITOR_NAME_BUILDERS.put(
+			"disk_controller",
+			(monitor, telemetry) -> MonitorNameBuilder.buildDiskControllerName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put("network", (monitor, telemetry) -> MonitorNameBuilder.buildNetworkCardName(monitor));
+		MONITOR_NAME_BUILDERS.put("fan", (monitor, telemetry) -> MonitorNameBuilder.buildFanName(monitor));
+		MONITOR_NAME_BUILDERS.put("power_supply", (monitor, telemetry) -> MonitorNameBuilder.buildPowerSupplyName(monitor));
+		MONITOR_NAME_BUILDERS.put("temperature", (monitor, telemetry) -> MonitorNameBuilder.buildTemperatureName(monitor));
+		MONITOR_NAME_BUILDERS.put("tape_drive", (monitor, telemetry) -> MonitorNameBuilder.buildTapeDriveName(monitor));
+		MONITOR_NAME_BUILDERS.put("robotics", (monitor, telemetry) -> MonitorNameBuilder.buildRoboticsName(monitor));
+		// Note: 'enclosure' requires a telemetryManager, so we pass it into the method.
+		MONITOR_NAME_BUILDERS.put(
+			"enclosure",
+			(monitor, telemetry) -> MonitorNameBuilder.buildEnclosureName(telemetry, monitor)
+		);
+		MONITOR_NAME_BUILDERS.put("vm", (monitor, telemetry) -> MonitorNameBuilder.buildVmName(monitor));
+		MONITOR_NAME_BUILDERS.put("voltage", (monitor, telemetry) -> MonitorNameBuilder.buildVoltageName(monitor));
+		MONITOR_NAME_BUILDERS.put("blade", (monitor, telemetry) -> MonitorNameBuilder.buildBladeName(monitor));
+		MONITOR_NAME_BUILDERS.put("gpu", (monitor, telemetry) -> MonitorNameBuilder.buildGpuName(monitor));
+		MONITOR_NAME_BUILDERS.put("battery", (monitor, telemetry) -> MonitorNameBuilder.buildBatteryName(monitor));
+		MONITOR_NAME_BUILDERS.put("led", (monitor, telemetry) -> MonitorNameBuilder.buildLedName(monitor));
+		MONITOR_NAME_BUILDERS.put("lun", (monitor, telemetry) -> MonitorNameBuilder.buildLunName(monitor));
+		MONITOR_NAME_BUILDERS.put("other_device", (monitor, telemetry) -> MonitorNameBuilder.buildOtherDeviceName(monitor));
+	}
 
 	/**
 	 * Check if the given value is a valid positive
@@ -203,7 +247,7 @@ public class HwCollectHelper {
 	}
 
 	/**
-	 * Checks whether the current monitor has the metric {@link HwConstants#PRESENT_STATUS}
+	 * Checks whether the current monitor has the metric {@link CommonConstants#PRESENT_STATUS}
 	 * @param monitor A given monitor
 	 * @return true or false
 	 */
@@ -282,5 +326,41 @@ public class HwCollectHelper {
 		final Detection detection = connectorIdentity != null ? connectorIdentity.getDetection() : null;
 		final Set<String> connectorTags = detection != null ? detection.getTags() : null;
 		return connectorTags != null && connectorTags.stream().anyMatch(tag -> tag.equalsIgnoreCase("hardware"));
+	}
+
+	/**
+	 * Builds the monitor name using the monitor type. The method looks up the correct build function
+	 * based on the monitor's type (normalized to lowercase) and applies it; if no matching type is found,
+	 * it returns the monitor type as is.
+	 *
+	 * @param monitor the {@link Monitor} instance
+	 * @param telemetryManager the {@link TelemetryManager} instance, required for some build functions
+	 * @return the built monitor name, or the monitor type if no match is found.
+	 */
+	public static String buildMonitorNameUsingType(final Monitor monitor, final TelemetryManager telemetryManager) {
+		if (monitor == null) {
+			throw new IllegalArgumentException("Monitor cannot be null");
+		}
+		String type = monitor.getType();
+		if (type == null) {
+			return null;
+		}
+		// Normalize type to lowercase
+		BiFunction<Monitor, TelemetryManager, String> builder = MONITOR_NAME_BUILDERS.get(type.toLowerCase());
+		return builder != null ? builder.apply(monitor, telemetryManager) : type;
+	}
+
+	public static String md5Hex(String input) {
+		try {
+			// Get an instance of the MD5 message digest
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			// Compute the digest, converting the input string to bytes using UTF-8 encoding
+			byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+			// Convert the digest bytes to a hexadecimal string using HexFormat (available since Java 17)
+			return HexFormat.of().formatHex(digest);
+		} catch (NoSuchAlgorithmException e) {
+			// MD5 should always be available in Java implementations
+			throw new RuntimeException("MD5 algorithm not available.", e);
+		}
 	}
 }

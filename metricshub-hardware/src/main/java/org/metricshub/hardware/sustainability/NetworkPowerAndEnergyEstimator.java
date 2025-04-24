@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_NETWORK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_NETWORK_METRIC;
+import static org.metricshub.hardware.constants.NetworkConstants.HW_ENERGY_NETWORK_METRIC;
+import static org.metricshub.hardware.constants.NetworkConstants.HW_POWER_NETWORK_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

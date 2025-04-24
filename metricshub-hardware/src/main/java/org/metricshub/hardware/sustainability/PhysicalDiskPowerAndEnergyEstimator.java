@@ -22,8 +22,8 @@ package org.metricshub.hardware.sustainability;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_PHYSICAL_DISK_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_PHYSICAL_DISK_METRIC;
+import static org.metricshub.hardware.constants.PhysicalDiskConstants.HW_ENERGY_PHYSICAL_DISK_METRIC;
+import static org.metricshub.hardware.constants.PhysicalDiskConstants.HW_POWER_PHYSICAL_DISK_METRIC;
 
 import java.util.ArrayList;
 import java.util.List;

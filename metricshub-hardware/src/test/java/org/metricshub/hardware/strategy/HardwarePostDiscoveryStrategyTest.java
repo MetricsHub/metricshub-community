@@ -8,8 +8,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_K
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 import static org.metricshub.hardware.common.Constants.ENCLOSURE_PRESENT_METRIC;
-import static org.metricshub.hardware.util.HwConstants.CONNECTOR;
-import static org.metricshub.hardware.util.HwConstants.ENCLOSURE;
+import static org.metricshub.hardware.constants.CommonConstants.CONNECTOR;
+import static org.metricshub.hardware.constants.CommonConstants.ENCLOSURE;
 
 import java.util.HashMap;
 import java.util.Map;

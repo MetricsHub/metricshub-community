@@ -21,7 +21,7 @@ package org.metricshub.hardware.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.PRESENT_STATUS;
+import static org.metricshub.hardware.constants.CommonConstants.PRESENT_STATUS;
 
 import java.util.Collection;
 import java.util.Map;
