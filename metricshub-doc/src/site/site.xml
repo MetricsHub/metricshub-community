@@ -111,6 +111,7 @@
 			<item name="No Data in Observability Platforms" href="troubleshooting/no-data-observability-platforms.html"/>
 			<item name="MetricsHub Logs" href="troubleshooting/metricshub-logs.html"/>
 			<item name="OTel Logs" href="troubleshooting/otel-logs.html"/>
+			<item name="Self-Observability" href="troubleshooting/self-observability.html"/>
 			<item name="Protocol CLIs" href="troubleshooting/cli/index.html">
 				<item name="HTTP CLI" href="troubleshooting/cli/http.html"/>
 				<item name="IPMI CLI" href="troubleshooting/cli/ipmi.html"/>
