@@ -80,7 +80,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
-					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
