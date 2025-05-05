@@ -3,15 +3,13 @@ package org.metricshub.configuration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 class YamlConfigurationProviderTest {
 
@@ -24,42 +22,87 @@ class YamlConfigurationProviderTest {
 		final Path yamlFile2 = tempDir.resolve("config2.yml");
 		final Path nonYamlFile = tempDir.resolve("config.txt");
 
+		// Create an empty directory to make sure the parser does not fail
+		Files.createDirectories(tempDir.resolve("additional-dir"));
+
 		final String yamlContent1 = "key1: value1";
-		String yamlContent2 = "key2: value2\nkey3: 3";
-		String txtContent = "This should not be parsed";
+		final String yamlContent2 = "key2: value2\nkey3: 3";
+		final String txtContent = "This should not be parsed";
 
 		Files.writeString(yamlFile1, yamlContent1);
 		Files.writeString(yamlFile2, yamlContent2);
 		Files.writeString(nonYamlFile, txtContent);
 
 		// Invoke the provider to load configurations
-		Collection<JsonNode> configurations = provider.load(tempDir);
+		final Collection<JsonNode> configurations = provider.load(tempDir);
 
 		// Verify that only YAML files are loaded
 		assertEquals(2, configurations.size(), "Should load exactly 2 YAML files");
 
 		// Verify the contents of the loaded YAML configurations
-		boolean config1Found = configurations.stream().anyMatch(node -> "value1".equals(node.get("key1").asText()));
-		boolean config2Found = configurations.stream()
-				.anyMatch(node -> "value2".equals(node.get("key2").asText()) && node.get("key3").asInt() == 3);
+		final boolean config1Found = configurations
+			.stream()
+			.anyMatch(node -> "value1".equals(getJsonNodeAsText(node, "key1")));
+		final boolean config2Found = configurations
+			.stream()
+			.anyMatch(node ->
+				"value2".equals(getJsonNodeAsText(node, "key2")) && Integer.valueOf(3).equals(getJsonNodeAsInt(node, "key3"))
+			);
 
 		assertTrue(config1Found, "config1.yaml should be correctly loaded");
 		assertTrue(config2Found, "config2.yml should be correctly loaded");
 	}
 
+	/**
+	 * Get the JSON node as text.
+	 *
+	 * @param node the JSON node which contains the key
+	 * @param key  the key to look for
+	 * @return the value of the key as text or null if the key does not exist
+	 */
+	private String getJsonNodeAsText(final JsonNode node, final String key) {
+		final JsonNode jsonNode = node.get(key);
+		if (jsonNode == null) {
+			return null;
+		}
+		return jsonNode.asText();
+	}
+
+	/**
+	 * Get the JSON node as integer.
+	 *
+	 * @param node the JSON node which contains the key
+	 * @param key  the key to look for
+	 * @return the value of the key as integer or null if the key does not exist
+	 */
+	private Integer getJsonNodeAsInt(final JsonNode node, final String key) {
+		final JsonNode jsonNode = node.get(key);
+		if (jsonNode == null) {
+			return null;
+		}
+		return jsonNode.asInt();
+	}
+
 	@Test
 	void testLoadWithInvalidYaml(@TempDir Path tempDir) throws IOException {
-		Path invalidYaml = tempDir.resolve("invalid.yaml");
+		final Path invalidYaml = tempDir.resolve("invalid.yaml");
 		Files.writeString(invalidYaml, "key: : : value");
 
-		Collection<JsonNode> configurations = provider.load(tempDir);
+		final Collection<JsonNode> configurations = provider.load(tempDir);
 
 		assertEquals(0, configurations.size(), "Invalid YAML should not be loaded");
 	}
 
 	@Test
 	void testLoadEmptyDirectory(@TempDir Path tempDir) {
-		Collection<JsonNode> configurations = provider.load(tempDir);
+		final Collection<JsonNode> configurations = provider.load(tempDir);
 		assertTrue(configurations.isEmpty(), "Empty directory should yield no configurations");
+	}
+
+	@Test
+	void testLoadWithInvalidDirectory(@TempDir Path tempDir) {
+		final Path invalidDir = tempDir.resolve("invalid-dir");
+		final Collection<JsonNode> configurations = provider.load(invalidDir);
+		assertTrue(configurations.isEmpty(), "Invalid directory should yield no configurations");
 	}
 }

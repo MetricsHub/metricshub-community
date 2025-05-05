@@ -96,7 +96,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
-					<argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar}</argLine>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -130,7 +130,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.56</minimum>
+											<minimum>0.85</minimum>
 										</limit>
 									</limits>
 								</rule>
