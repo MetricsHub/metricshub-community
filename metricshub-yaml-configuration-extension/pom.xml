@@ -12,7 +12,8 @@
 
 	<name>MetricsHub YAML Configuration Extension</name>
 	<description>
-		MetricsHub YAML Configuration Extension implementation for loading configuration fragments from YAML files.
+		MetricsHub extension implementing the IConfigurationProvider interface to load
+		configuration fragments from YAML files located in a configuration directory.
 	</description>
 
 	<dependencies>
