@@ -12,8 +12,7 @@
 
 	<name>MetricsHub YAML Configuration Extension</name>
 	<description>
-		MetricsHub YAML Configuration Extension implementation providing a set of functionalities
-		used to load configuration fragments from a specific directory.
+		MetricsHub YAML Configuration Extension implementation for loading configuration fragments from YAML files.
 	</description>
 
 	<dependencies>
