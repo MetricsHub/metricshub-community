@@ -66,9 +66,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 				);
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());
-			if (log.isDebugEnabled()) {
-				log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
-			}
+			log.debug("Failed to list configuration directory: '{}'. Exception:", configDirectory, e);
 		}
 
 		final int size = configurations.size();
@@ -89,9 +87,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 			return Optional.of(YAML_MAPPER.readTree(path.toFile()));
 		} catch (IOException e) {
 			log.error("Failed to load YAML configuration fragment: '{}'. Error: {}", path, e.getMessage());
-			if (log.isDebugEnabled()) {
-				log.debug("Failed to load YAML configuration fragment: '{}'. Exception:", path, e);
-			}
+			log.debug("Failed to load YAML configuration fragment: '{}'. Exception:", path, e);
 			return Optional.empty();
 		}
 	}
