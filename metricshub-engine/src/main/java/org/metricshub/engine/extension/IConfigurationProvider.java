@@ -24,6 +24,7 @@ package org.metricshub.engine.extension;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Path;
 import java.util.Collection;
+import java.util.Set;
 
 /**
  * Contract for configuration providers.<br>
@@ -36,4 +37,11 @@ public interface IConfigurationProvider {
 	 * @return A collection of {@link JsonNode} representing the configuration fragments.
 	 */
 	Collection<JsonNode> load(Path path);
+
+	/**
+	 * Get the set of the file extensions that this configuration provider can handle.
+	 *
+	 * @return A collection of file extensions.
+	 */
+	Set<String> getFileExtensions();
 }

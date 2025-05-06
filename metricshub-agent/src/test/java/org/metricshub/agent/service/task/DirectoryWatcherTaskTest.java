@@ -10,6 +10,7 @@ import org.awaitility.Durations;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.TestHelper;
 
 class DirectoryWatcherTaskTest {
@@ -34,6 +35,9 @@ class DirectoryWatcherTaskTest {
 				String fileName = event.context().toString().toLowerCase();
 				return event.kind() == StandardWatchEventKinds.ENTRY_CREATE && fileName.endsWith(".yaml");
 			})
+			.checksumSupplier(() ->
+				ConfigHelper.calculateDirectoryMD5ChecksumSafe(tempDir, path -> path.toString().endsWith(".yaml"))
+			)
 			.onChange(() -> result.append("File created"))
 			.build();
 
@@ -57,12 +61,12 @@ class DirectoryWatcherTaskTest {
 			.directory(tempDir)
 			.filter(event -> {
 				String fileName = event.context().toString().toLowerCase();
-				return (
-					event.kind() == StandardWatchEventKinds.ENTRY_CREATE &&
-					(fileName.endsWith(".yaml") || fileName.endsWith(".yml") || fileName.endsWith(".vm"))
-				);
+				return (event.kind() == StandardWatchEventKinds.ENTRY_CREATE && fileName.endsWith(".yaml"));
 			})
 			.onChange(() -> result.append("File created"))
+			.checksumSupplier(() ->
+				ConfigHelper.calculateDirectoryMD5ChecksumSafe(tempDir, path -> path.toString().endsWith(".yaml"))
+			)
 			.build();
 
 		watcher.start();

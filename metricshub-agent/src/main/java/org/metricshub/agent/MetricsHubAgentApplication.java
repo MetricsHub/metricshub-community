@@ -21,6 +21,7 @@ package org.metricshub.agent;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.nio.file.WatchEvent;
 import java.util.Locale;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +30,7 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -42,6 +43,11 @@ public class MetricsHubAgentApplication implements Runnable {
 	static {
 		Locale.setDefault(Locale.US);
 	}
+
+	/**
+	 * Default milliseconds await delay for the DirectoryWatcherTask.
+	 */
+	private static final long CONFIG_WATCHER_AWAIT_MS = 500L;
 
 	@Option(names = { "-h", "-?", "--help" }, usageHelp = true, description = "Shows this help message and exits")
 	private boolean usageHelpRequested;
@@ -69,20 +75,68 @@ public class MetricsHubAgentApplication implements Runnable {
 		try {
 			// Initialize the extension loader to load all the extensions which will be handled
 			// by the ExtensionManager
-			final ExtensionManager extensionManager = ConfigHelper.loadExtensionManager();
+			final var extensionManager = ConfigHelper.loadExtensionManager();
 
 			// Initialize the application context
-			final AgentContext agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
+			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
 
 			// Start OpenTelemetry Collector process
 			agentContext.getOtelCollectorProcessService().launch();
 
 			// Start the Scheduler
 			agentContext.getTaskSchedulingService().start();
+
+			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
+			DirectoryWatcherTask
+				.builder()
+				.directory(agentContext.getConfigDirectory())
+				.filter((WatchEvent<?> event) -> {
+					final Object context = event.context();
+					return (
+						context != null &&
+						extensionManager
+							.findConfigurationFileExtensions()
+							.stream()
+							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
+					);
+				})
+				.await(CONFIG_WATCHER_AWAIT_MS)
+				.checksumSupplier(() ->
+					ConfigHelper.calculateDirectoryMD5ChecksumSafe(
+						agentContext.getConfigDirectory(),
+						path ->
+							extensionManager
+								.findConfigurationFileExtensions()
+								.stream()
+								.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
+					)
+				)
+				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
+				.build()
+				.start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
+		}
+	}
+
+	/**
+	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
+	 * @param agentContext The agent context
+	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
+	 */
+	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigDirectory) {
+		try {
+			agentContext.getTaskSchedulingService().stop();
+
+			agentContext.build(alternateConfigDirectory, false);
+
+			agentContext.getTaskSchedulingService().start();
+		} catch (Exception e) {
+			configureGlobalErrorLogger();
+			log.error("Failed to start MetricsHub Agent.", e);
+			throw new IllegalStateException("Error detected during MetricsHub agent startup.", e);
 		}
 	}
 

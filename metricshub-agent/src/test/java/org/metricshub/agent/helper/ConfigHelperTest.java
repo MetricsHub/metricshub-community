@@ -3,7 +3,6 @@ package org.metricshub.agent.helper;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.AgentConstants.CONFIG_EXAMPLE_FILENAME;
@@ -27,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.StateSetMetricCompression;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.ResourceHelper;
@@ -60,6 +62,11 @@ class ConfigHelperTest {
 		.withProtocolExtensions(List.of(new SnmpExtension()))
 		.build();
 
+	@BeforeAll
+	static void setUp() {
+		TestHelper.configureGlobalLogger();
+	}
+
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
 	void testGetProgramDataConfigDirectory() {
@@ -69,6 +76,7 @@ class ConfigHelperTest {
 				final MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class);
 				final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)
 			) {
+				mockedConfigHelper.when(ConfigHelper::getDefaultConfigDirectoryPath).thenCallRealMethod();
 				mockedConfigHelper.when(ConfigHelper::getProgramDataPath).thenReturn(Optional.empty());
 				mockedConfigHelper.when(ConfigHelper::getProgramDataConfigDirectory).thenCallRealMethod();
 				mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenCallRealMethod();
@@ -93,8 +101,8 @@ class ConfigHelperTest {
 		// ProgramData valid
 		{
 			try (final MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class)) {
+				mockedConfigHelper.when(ConfigHelper::getDefaultConfigDirectoryPath).thenCallRealMethod();
 				mockedConfigHelper.when(ConfigHelper::getProgramDataPath).thenReturn(Optional.of(tempDir.toString()));
-
 				mockedConfigHelper.when(() -> ConfigHelper.createDirectories(any(Path.class))).thenCallRealMethod();
 				mockedConfigHelper.when(ConfigHelper::getProgramDataConfigDirectory).thenCallRealMethod();
 
@@ -119,7 +127,7 @@ class ConfigHelperTest {
 			final Path configDir = Files.createDirectories(tempDir.resolve("metricshub\\config").toAbsolutePath());
 
 			// Create the example file
-			final Path examplePath = Path.of(configDir + "\\" + CONFIG_EXAMPLE_FILENAME);
+			final Path examplePath = Files.createDirectories(configDir.resolve("example")).resolve(CONFIG_EXAMPLE_FILENAME);
 			Files.copy(
 				Path.of("src", "test", "resources", "config", "metricshub", DEFAULT_CONFIG_FILENAME),
 				examplePath,
@@ -133,6 +141,7 @@ class ConfigHelperTest {
 
 			// Setting user permissions should be a real call
 			mockedConfigHelper.when(() -> ConfigHelper.setUserPermissionsOnWindows(configDir)).thenCallRealMethod();
+			mockedConfigHelper.when(() -> ConfigHelper.setUserPermissions(any(Path.class))).thenCallRealMethod();
 
 			// Mock getSubPath as it will try to retrieve the example file deployed in production environment
 			mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenReturn(examplePath);
@@ -478,30 +487,26 @@ class ConfigHelperTest {
 	}
 
 	@Test
-	void testCalculateMD5Checksum() {
-		// Check that calculateMD5Checksum returns always the same value for the same input file
-		final File file = Path.of("src", "test", "resources", "md5Checksum", "checkSumTest.txt").toFile();
-		final String md5CheckSumFirstCallResult = ConfigHelper.calculateMD5Checksum(file);
-		final String md5CheckSumSecondCallResult = ConfigHelper.calculateMD5Checksum(file);
-		assertNotNull(md5CheckSumFirstCallResult, "MD5 checksum should not be null");
-		assertNotNull(md5CheckSumSecondCallResult, "MD5 checksum should not be null");
-		assertEquals(
-			md5CheckSumFirstCallResult,
-			md5CheckSumSecondCallResult,
-			"MD5 checksum should be the same for the same file"
-		);
+	void testCalculateDirectoryMD5ChecksumFixedContent() {
+		final Path dir = Path.of("src", "test", "resources", "md5Checksum");
+		final Predicate<Path> filesFilter = path -> path.toString().endsWith(".txt");
+		final String checksum1 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(dir, filesFilter);
+		final String checksum2 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(dir, filesFilter);
+		assertNotNull(checksum1, "Checksum 1 should be present");
+		assertNotNull(checksum2, "Checksum 2 should be present");
+		assertEquals(checksum1, checksum2, "Checksums should match for the same directory content");
+	}
 
-		// Check that calculateMD5Checksum returns different values for different input files
-		final File secondFile = Path.of("src", "test", "resources", "md5Checksum", "otherCheckSumTest.txt").toFile();
-		final String md5CheckSumFirstFileResult = ConfigHelper.calculateMD5Checksum(file);
-		final String md5CheckSumSecondFileResult = ConfigHelper.calculateMD5Checksum(secondFile);
-		assertNotNull(md5CheckSumFirstFileResult, "MD5 checksum should not be null");
-		assertNotNull(md5CheckSumSecondFileResult, "MD5 checksum should not be null");
-		assertNotEquals(
-			md5CheckSumFirstFileResult,
-			md5CheckSumSecondFileResult,
-			"MD5 checksum should be different for different files"
-		);
+	@Test
+	void testCalculateDirectoryMD5ChecksumEmptyDirectory(@TempDir Path emptyDir) {
+		final String checksum1 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, path -> true);
+		assertNotNull(checksum1, "Checksum 1 should not be null");
+		assertFalse(checksum1.isEmpty(), "Checksum 1 should not be empty string");
+
+		final String checksum2 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, path -> true);
+		assertNotNull(checksum2, "Checksum 2 should not be null");
+		assertFalse(checksum2.isEmpty(), "Checksum 2 should not be empty string");
+		assertEquals(checksum1, checksum2, "Checksums should match for the same empty directory");
 	}
 
 	@Test

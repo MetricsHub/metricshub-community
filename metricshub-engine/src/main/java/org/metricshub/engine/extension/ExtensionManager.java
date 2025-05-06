@@ -317,4 +317,16 @@ public class ExtensionManager {
 	public Optional<ICompositeSourceScriptExtension> findCompositeSourceScriptExtension(final Source source) {
 		return compositeSourceScriptExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
 	}
+
+	/**
+	 * Finds the file extensions supported by all configuration providers.
+	 *
+	 * @return A set of supported file extensions.
+	 */
+	public Set<String> findConfigurationFileExtensions() {
+		return configurationProviderExtensions
+			.stream()
+			.flatMap((IConfigurationProvider provider) -> provider.getFileExtensions().stream())
+			.collect(Collectors.toSet());
+	}
 }

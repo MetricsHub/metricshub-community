@@ -28,6 +28,7 @@ import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
 import java.nio.file.WatchKey;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import lombok.Builder;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -48,11 +49,17 @@ public class DirectoryWatcherTask extends Thread {
 	@NonNull
 	private Runnable onChange;
 
+	@NonNull
+	private Supplier<String> checksumSupplier;
+
 	private long await;
+
+	private String checksum;
 
 	@Override
 	public void run() {
 		try {
+			checksum = checksumSupplier.get();
 			watchDirectory();
 		} catch (Exception e) {
 			if (e instanceof InterruptedException) {
@@ -64,6 +71,12 @@ public class DirectoryWatcherTask extends Thread {
 		}
 	}
 
+	/**
+	 * Watch the directory for changes and trigger actions based on events.
+	 *
+	 * @throws IOException if an I/O error occurs
+	 * @throws InterruptedException if the thread is interrupted while waiting
+	 */
 	private void watchDirectory() throws IOException, InterruptedException {
 		try (var watchService = FileSystems.getDefault().newWatchService()) {
 			directory.register(
@@ -95,7 +108,9 @@ public class DirectoryWatcherTask extends Thread {
 	 * @param event the event to process
 	 */
 	private void performActionOnEvent(final WatchEvent<?> event) {
-		if (filter.test(event)) {
+		final String newChecksum = checksumSupplier.get();
+		if (checksum != null && !checksum.equals(newChecksum) && filter.test(event)) {
+			checksum = newChecksum;
 			performAction();
 		}
 	}

@@ -48,6 +48,7 @@ public class ConfigurationService {
 
 	/**
 	 * Loads the configuration from the specified directory.
+	 *
 	 * @param extensionManager The extension manager to use for loading configuration providers.
 	 * @return The merged configuration as a JsonNode.
 	 */
@@ -67,8 +68,9 @@ public class ConfigurationService {
 	}
 
 	/**
-	 * Merge the fragments into the mergedConfiguration.
+	 * Merge the fragments into the mergedConfiguration.<br>
 	 * This method iterates over the fragments and merges each one into the mergedConfiguration.
+	 *
 	 * @param mergedConfiguration The merged configuration node.
 	 * @param fragments The collection of fragments to merge.
 	 */

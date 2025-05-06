@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
@@ -54,7 +55,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 				.filter((Path path) -> !Files.isDirectory(path))
 				.filter((Path path) -> {
 					String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
-					return fileName.endsWith(".yaml") || fileName.endsWith(".yml");
+					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
 				.forEach((Path path) ->
 					readFragment(path)
@@ -93,5 +94,10 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 			}
 			return Optional.empty();
 		}
+	}
+
+	@Override
+	public Set<String> getFileExtensions() {
+		return Set.of("yaml", "yml");
 	}
 }

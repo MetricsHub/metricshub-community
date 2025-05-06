@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +46,8 @@ import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.GroupPrincipal;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,6 +57,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
@@ -377,7 +380,7 @@ public class ConfigHelper {
 	 *
 	 * @param configPath the configuration file absolute path
 	 */
-	private static void setUserPermissions(final Path configPath) {
+	static void setUserPermissions(final Path configPath) {
 		try {
 			final GroupPrincipal users = configPath
 				.getFileSystem()
@@ -1183,19 +1186,64 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Calculates the MD5 checksum of the specified file.
+	 * Calculates the MD5 checksum of the specified directory safely.
 	 *
-	 * @param file The file for which the MD5 checksum is to be calculated.
+	 * @param dir         The directory for which the MD5 checksum is to be calculated.
+	 * @param filesFilter A filter to apply to the files in the directory.
 	 * @return The MD5 checksum as a hexadecimal string or <code>null</code> if the calculation has failed.
 	 */
-	public static String calculateMD5Checksum(final File file) {
+	public static String calculateDirectoryMD5ChecksumSafe(final Path dir, final Predicate<Path> filesFilter) {
 		try {
-			byte[] data = Files.readAllBytes(file.toPath());
-			byte[] hash = MessageDigest.getInstance("MD5").digest(data);
-			return new BigInteger(1, hash).toString(16);
+			return calculateDirectoryMD5Checksum(dir, filesFilter);
 		} catch (Exception e) {
+			log.error("Error calculating checksum for directory: {}. Error: {}", dir, e.getMessage());
+			log.debug("Exception: ", e);
 			return null;
 		}
+	}
+
+	/**
+	 * Calculates the MD5 checksum of the specified directory.
+	 *
+	 * @param dir         The directory for which the MD5 checksum is to be calculated.
+	 * @param filesFilter A filter to apply to the files in the directory.
+	 * @return The MD5 checksum as a hexadecimal string.
+	 * @throws NoSuchAlgorithmException if the MD5 algorithm is not available.
+	 * @throws IOException              if an I/O error occurs while reading the directory.
+	 */
+	private static String calculateDirectoryMD5Checksum(final Path dir, final Predicate<Path> filesFilter)
+		throws NoSuchAlgorithmException, IOException {
+		var digest = MessageDigest.getInstance("MD5");
+
+		final List<Path> files = new ArrayList<>();
+		try (var stream = Files.walk(dir)) {
+			files.addAll(stream.filter(Files::isRegularFile).filter(filesFilter).sorted().toList());
+		}
+
+		for (Path file : files) {
+			// Include relative path in digest
+			digest.update(dir.relativize(file).toString().getBytes(StandardCharsets.UTF_8));
+
+			// Read file content and update digest
+			byte[] content = Files.readAllBytes(file);
+			digest.update(content);
+		}
+
+		return toHexString(digest.digest());
+	}
+
+	/**
+	 * Converts a byte array to a hexadecimal string representation.
+	 *
+	 * @param hash The byte array to convert.
+	 * @return The hexadecimal string representation of the byte array.
+	 */
+	private static String toHexString(byte[] hash) {
+		var sb = new StringBuilder();
+		for (byte b : hash) {
+			sb.append(String.format("%02x", b));
+		}
+		return sb.toString();
 	}
 
 	/**
