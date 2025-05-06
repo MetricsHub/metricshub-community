@@ -47,5 +47,5 @@ public class AdditionalConnectorsParsingResult {
 	/**
 	 * A set of connector IDs to add into the host connectors set.
 	 */
-	final Set<String> hostConnectors = new HashSet<>();
+	final Set<String> resourceConnectors = new HashSet<>();
 }

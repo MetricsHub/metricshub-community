@@ -35,14 +35,18 @@ import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.StateSetMetricCompression;
+import org.metricshub.agent.connector.ConnectorStoreComposer;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpExtension;
@@ -154,7 +158,15 @@ class ConfigHelperTest {
 	void testBuildTelemetryManagers() throws IOException {
 		final File configFile = ConfigHelper.findConfigFile("src/test/resources/config/metricshub-server1.yaml");
 
-		final ConnectorStore connectorStore = new ConnectorStore(Path.of("src/test/resources"));
+		final ConnectorStore connectorStore = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(new RawConnectorStore(Path.of("src/test/resources")))
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+			.withAdditionalConnectors(null)
+			.build()
+			.generateStaticConnectorStore();
+
 		final Connector connector = new Connector();
 		connector.getOrCreateConnectorIdentity().setCompiledFilename(PURE_STORAGE_REST_CONNECTOR_ID);
 		connectorStore.addOne(PURE_STORAGE_REST_CONNECTOR_ID, connector);
@@ -198,7 +210,15 @@ class ConfigHelperTest {
 		final File configFile = ConfigHelper.findConfigFile(TOP_LEVEL_RESOURCES_CONFIG_PATH);
 
 		// Create the connector store
-		final ConnectorStore connectorStore = new ConnectorStore(Path.of("src/test/resources"));
+		final ConnectorStore connectorStore = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(new RawConnectorStore(Path.of("src/test/resources")))
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+			.withAdditionalConnectors(null)
+			.build()
+			.generateStaticConnectorStore();
+
 		final Connector connector = new Connector();
 		connector.getOrCreateConnectorIdentity().setCompiledFilename(PURE_STORAGE_REST_CONNECTOR_ID);
 		connectorStore.addOne(PURE_STORAGE_REST_CONNECTOR_ID, connector);
@@ -336,24 +356,6 @@ class ConfigHelperTest {
 
 		// Check self monitoring configuration
 		assertTrue(agentConfig.getResourceGroups().get("paris").getResources().get("server-1").getEnableSelfMonitoring());
-	}
-
-	@Test
-	void testUpdateConnectorStore() {
-		// Create a custom connectors Map
-		final Map<String, Connector> customConnectors = Map.of("custom-connector-1", new Connector());
-
-		// Initialize the original connector store
-		final ConnectorStore connectorStore = new ConnectorStore(Path.of("src/test/resources/storeMerge"));
-
-		// Call updateConnectorStore
-		ConfigHelper.updateConnectorStore(connectorStore, customConnectors);
-
-		final Map<String, Connector> store = connectorStore.getStore();
-		// Check that the merge of custom and standard connectors was successfully executed
-		assertEquals(2, store.size());
-		assertTrue(store.containsKey("custom-connector-1"));
-		assertTrue(store.containsKey("noTemplateVariable"));
 	}
 
 	@Test

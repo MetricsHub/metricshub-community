@@ -24,7 +24,9 @@ package org.metricshub.engine.connector.model;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
@@ -45,10 +47,14 @@ public class ConnectorStore implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private Map<String, Connector> store;
+	private Map<String, Connector> store = new HashMap<>();
 
 	@Getter
 	private transient Path connectorDirectory;
+
+	private RawConnectorStore rawConnectorStore;
+
+	private List<String> connectorsWithVariables = new ArrayList<>();
 
 	/**
 	 * Constructs a {@link ConnectorStore} using the specified connector directory.
@@ -98,6 +104,15 @@ public class ConnectorStore implements Serializable {
 	}
 
 	/**
+	 * Add a connector with variables
+	 *
+	 * @param connectors A list of connectors with variables IDs to be added.
+	 */
+	public void addConnectorsWithVariables(List<String> connectors) {
+		connectorsWithVariables.addAll(connectors);
+	}
+
+	/**
 	 * Creates and returns a new instance of ConnectorStore, initialized with a copy of the current connectors.
 	 *
 	 * This method is useful for creating a snapshot of the current state of the ConnectorStore used for each resource.
@@ -110,6 +125,8 @@ public class ConnectorStore implements Serializable {
 		final Map<String, Connector> originalConnectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		originalConnectors.putAll(store);
 		newConnectorStore.setStore(originalConnectors);
+		newConnectorStore.setRawConnectorStore(rawConnectorStore);
+		newConnectorStore.setConnectorsWithVariables(connectorsWithVariables);
 		return newConnectorStore;
 	}
 }

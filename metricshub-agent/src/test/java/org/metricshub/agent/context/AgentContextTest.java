@@ -219,6 +219,7 @@ class AgentContextTest {
 		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"));
 		AdditionalConnector windows = AdditionalConnector
 			.builder()
+			.uses("Windows")
 			.variables(Map.of("osType", "windows"))
 			.force(true)
 			.build();
@@ -229,14 +230,19 @@ class AgentContextTest {
 			.variables(Map.of())
 			.force(true)
 			.build();
-
+		AdditionalConnector linuxProcess = AdditionalConnector
+			.builder()
+			.uses("LinuxProcess")
+			.variables(null)
+			.force(true)
+			.build();
 		final Map<String, AdditionalConnector> expectedAdditionalConnectors = new LinkedHashMap<>();
 
 		expectedAdditionalConnectors.put("PureStorageREST", pureStorageREST);
 		expectedAdditionalConnectors.put("Windows", windows);
 		expectedAdditionalConnectors.put("Linux", linux);
 		expectedAdditionalConnectors.put("IpmiTool", ipmiTool);
-		expectedAdditionalConnectors.put("LinuxProcess", null);
+		expectedAdditionalConnectors.put("LinuxProcess", linuxProcess);
 		assertEquals(expectedAdditionalConnectors, additionalConnectors);
 	}
 

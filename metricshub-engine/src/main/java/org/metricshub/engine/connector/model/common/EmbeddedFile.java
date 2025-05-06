@@ -67,6 +67,15 @@ public class EmbeddedFile implements Serializable {
 	}
 
 	/**
+	 * Creates a deep copy of the current embedded file.
+	 *
+	 * @return A new instance of {@link EmbeddedFile} with the same content, filename, and reference.
+	 */
+	public EmbeddedFile deepCopy() {
+		return EmbeddedFile.builder().content(content != null ? content.clone() : null).filename(filename).id(id).build();
+	}
+
+	/**
 	 * Gets a string containing the embedded file reference.
 	 *
 	 * @return A string representing the reference to the embedded file.

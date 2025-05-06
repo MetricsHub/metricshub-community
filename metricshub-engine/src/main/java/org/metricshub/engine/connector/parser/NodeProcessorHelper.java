@@ -62,15 +62,15 @@ public class NodeProcessorHelper {
 	}
 
 	/**
-	 * Creates a {@link ExtendsProcessor} with a {@link TemplateVariableProcessor} destination
+	 * Creates a {@link ExtendsProcessor} with a {@link ConnectorVariableProcessor} destination
 	 * that redirects to {@link ConstantsProcessor}.
 	 *
 	 * @param connectorDirectory   The directory containing connectors YAML files.
 	 * @param mapper               The object mapper.
 	 * @param connectorVariables   The map of connector variables.
-	 * @return A new {@link TemplateVariableProcessor} instance.
+	 * @return A new {@link ConnectorVariableProcessor} instance.
 	 */
-	public static AbstractNodeProcessor withExtendsAndTemplateVariableProcessor(
+	public static AbstractNodeProcessor withExtendsAndConnectorVariableProcessor(
 		final Path connectorDirectory,
 		final ObjectMapper mapper,
 		final Map<String, String> connectorVariables
@@ -79,7 +79,7 @@ public class NodeProcessorHelper {
 			.builder()
 			.connectorDirectory(connectorDirectory)
 			.next(
-				TemplateVariableProcessor
+				ConnectorVariableProcessor
 					.builder()
 					.connectorVariables(connectorVariables)
 					.next(new ReferenceResolverProcessor(constantsProcessorWithSourceKeyProcessor()))
