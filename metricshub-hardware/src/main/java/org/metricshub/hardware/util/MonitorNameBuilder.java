@@ -536,16 +536,18 @@ public class MonitorNameBuilder {
 		if (hasMeaningfulContent(vendorModel)) {
 			// We will use vendor/model as enclosure DisplayId if it is not set
 			if (hasMeaningfulContent(enclosureDisplayId)) {
+				enclosureDisplayId = enclosureDisplayId.trim();
 				// Add vendor/model as additionalInfo in parentheses
-				additionalInfo = vendorModel;
+				additionalInfo = vendorModel.trim();
 			} else {
 				// Use it as enclosure DisplayId
-				enclosureDisplayId = vendorModel;
+				enclosureDisplayId = vendorModel.trim();
 			}
 		} else if (COMPUTER.equals(enclosureType)) {
 			// Find the computer display name
-			final String computerDisplayName = handleComputerDisplayName(hostMonitor, deviceKind);
+			String computerDisplayName = handleComputerDisplayName(hostMonitor, deviceKind);
 			if (hasMeaningfulContent(computerDisplayName)) {
+				computerDisplayName = computerDisplayName.trim();
 				// We will use computer display name as enclosure DisplayId if it is still not set
 				if (hasMeaningfulContent(enclosureDisplayId)) {
 					// Add computerDisplayName as additionalInfo in parentheses
