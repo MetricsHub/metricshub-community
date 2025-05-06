@@ -31,6 +31,7 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
+import org.metricshub.engine.extension.ExtensionManager;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -93,24 +94,17 @@ public class MetricsHubAgentApplication implements Runnable {
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
 					return (
+						// CHECKSTYLE:OFF
 						context != null &&
 						extensionManager
 							.findConfigurationFileExtensions()
 							.stream()
 							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
 					);
+					// CHECKSTYLE:ON
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
-				.checksumSupplier(() ->
-					ConfigHelper.calculateDirectoryMD5ChecksumSafe(
-						agentContext.getConfigDirectory(),
-						path ->
-							extensionManager
-								.findConfigurationFileExtensions()
-								.stream()
-								.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
-					)
-				)
+				.checksumSupplier(() -> buildChecksum(extensionManager, agentContext))
 				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
 				.build()
 				.start();
@@ -119,6 +113,24 @@ public class MetricsHubAgentApplication implements Runnable {
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
 		}
+	}
+
+	/**
+	 * Builds the checksum of the configuration directory.
+	 *
+	 * @param extensionManager The extension manager
+	 * @param agentContext     The agent context
+	 * @return The checksum of the configuration directory
+	 */
+	private static String buildChecksum(final ExtensionManager extensionManager, final AgentContext agentContext) {
+		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(
+			agentContext.getConfigDirectory(),
+			path ->
+				extensionManager
+					.findConfigurationFileExtensions()
+					.stream()
+					.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
+		);
 	}
 
 	/**
