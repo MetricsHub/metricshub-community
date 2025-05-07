@@ -54,7 +54,6 @@ class SuperConnectorOsIT {
 			.hostType(DeviceKind.STORAGE)
 			.connectors(Set.of("+" + CONNECTOR_ID))
 			.configurations(Map.of(OsCommandConfiguration.class, osCommandConfiguration))
-			.strategyTimeout(60 * 10)
 			.build();
 
 		final ConnectorStore connectorStore = new ConnectorStore(CONNECTOR_DIRECTORY);
