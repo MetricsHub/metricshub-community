@@ -21,13 +21,14 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
+import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
+
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
@@ -47,24 +48,6 @@ public abstract class AbstractMetricNormalizer {
 	private static final Pattern LIMIT_TYPE_PATTERN = Pattern.compile("limit_type\s*=\s*\"([^\"]+)\"");
 
 	/**
-	 * Checks if all entries of the second map are contained in the first map.
-	 * This method iterates through all entries of the second map and checks if each entry is present
-	 * in the first map with the same key and value.
-	 *
-	 * @param firstMap  the map to be checked for containing all entries of the second map
-	 * @param secondMap the map whose entries are to be checked against the first map
-	 * @return {@code true} if all entries of the second map are contained in the first map,
-	 * {@code false} otherwise
-	 */
-	static boolean containsAllEntries(Map<String, String> firstMap, Map<String, String> secondMap) {
-		// Checks if the second map entries are all contained within the first map
-		return secondMap
-			.entrySet()
-			.stream()
-			.allMatch(entry -> firstMap.containsKey(entry.getKey()) && firstMap.get(entry.getKey()).equals(entry.getValue()));
-	}
-
-	/**
 	 * Adjusts the corresponding monitor's metric as follows:
 	 * For example:
 	 * If the hw.fan.speed.limit{limit_type="low.critical"} metric is not available while the hw.fan.speed.limit{limit_type="low.degraded"}
@@ -79,73 +62,6 @@ public abstract class AbstractMetricNormalizer {
 	public abstract void normalize(Monitor monitor);
 
 	/**
-	 * Whether a metric with a given metricNamePrefix is collected or not for the given monitor.
-	 *
-	 * @param monitor The monitor instance where the metric is collected.
-	 * @param metricNamePrefix The prefix of the metric name to check for.
-	 * @return true if a metric with a given metricNamePrefix is collected, false otherwise.
-	 */
-	protected boolean isMetricCollected(final Monitor monitor, final String metricNamePrefix) {
-		return monitor
-			.getMetrics()
-			.values()
-			.stream()
-			.anyMatch(metric -> {
-				// Extract the metric name prefix
-				final String currentMetricNamePrefix = MetricFactory.extractName(metric.getName());
-				final Map<String, String> metricAttributes = metric.getAttributes();
-				// CHECKSTYLE:OFF
-				return (
-					metricNamePrefix.equals(currentMetricNamePrefix) &&
-					(!metricAttributes.containsKey("hw.type") || monitor.getType().equals(metricAttributes.get("hw.type"))) &&
-					metric.isUpdated()
-				);
-				// CHECKSTYLE:ON
-			});
-	}
-
-	/**
-	 * Get the metric from the monitor by metric name prefix and attributes
-	 * @param monitor          The monitor instance where the metric is collected
-	 * @param metricNamePrefix The metric name prefix. E.g 'hw.errors.limit'
-	 * @param metricAttributes A key value pair of attributes to be matched with the metric attributes
-	 * @return Optional of the metric if found, otherwise an empty Optional
-	 */
-	protected Optional<NumberMetric> findMetricByNamePrefixAndAttributes(
-		@NonNull final Monitor monitor,
-		@NonNull final String metricNamePrefix,
-		@NonNull final Map<String, String> metricAttributes
-	) {
-		// Get the metric from the monitor by metric name prefix and attributes
-		// This atomic integer is used to log a warning if multiple metrics are found with the same prefix and attributes
-		final AtomicInteger count = new AtomicInteger(0);
-		return monitor
-			.getMetrics()
-			.values()
-			.stream()
-			.filter(metric -> {
-				// Extract the metric name prefix and check if the metric attributes are contained in the given attributes
-				final boolean result =
-					metric.isUpdated() &&
-					metricNamePrefix.equals(MetricFactory.extractName(metric.getName())) &&
-					containsAllEntries(metric.getAttributes(), metricAttributes);
-
-				// Log a warning if multiple metrics are found with the same prefix and attributes
-				if (result && count.incrementAndGet() > 1) {
-					log.warn(
-						"Hostname {} - Multiple metrics found for the same prefix and attributes: {}",
-						hostname,
-						metricNamePrefix,
-						metricAttributes
-					);
-				}
-				return result;
-			})
-			.map(NumberMetric.class::cast)
-			.findFirst();
-	}
-
-	/**
 	 * Normalizes the errors limit metric.
 	 *
 	 * @param monitor The monitor to normalize
@@ -157,6 +73,7 @@ public abstract class AbstractMetricNormalizer {
 
 		// Get the degraded metric
 		final Optional<NumberMetric> maybeDegradedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.errors.limit",
 			Map.of("limit_type", "degraded", "hw.type", monitor.getType())
@@ -164,6 +81,7 @@ public abstract class AbstractMetricNormalizer {
 
 		// Get the critical metric
 		final Optional<NumberMetric> maybeCriticalMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.errors.limit",
 			Map.of("limit_type", "critical", "hw.type", monitor.getType())

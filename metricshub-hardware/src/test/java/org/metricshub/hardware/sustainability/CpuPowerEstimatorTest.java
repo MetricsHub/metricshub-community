@@ -5,8 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.metricshub.hardware.common.Constants.CPU_ENERGY_METRIC;
 import static org.metricshub.hardware.common.Constants.CPU_POWER_METRIC;
 import static org.metricshub.hardware.common.Constants.LOCALHOST;
-import static org.metricshub.hardware.util.HwConstants.HW_CPU_SPEED_LIMIT_LIMIT_TYPE_MAX;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
+import static org.metricshub.hardware.constants.CpuConstants.HW_CPU_SPEED_LIMIT_LIMIT_TYPE_MAX;
+import static org.metricshub.hardware.constants.CpuConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.configuration.HostConfiguration;

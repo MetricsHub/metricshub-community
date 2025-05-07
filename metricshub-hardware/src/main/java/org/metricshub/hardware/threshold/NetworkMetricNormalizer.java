@@ -21,6 +21,9 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
+import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
+
 import java.util.Map;
 import java.util.Optional;
 import org.metricshub.engine.telemetry.Monitor;
@@ -57,6 +60,7 @@ public class NetworkMetricNormalizer extends AbstractMetricNormalizer {
 		}
 		// Get the degraded metric
 		final Optional<NumberMetric> maybeDegradedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.network.error_ratio.limit",
 			Map.of("limit_type", "degraded", "hw.type", monitor.getType())
@@ -64,6 +68,7 @@ public class NetworkMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the critical metric
 		final Optional<NumberMetric> maybeCriticalMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.network.error_ratio.limit",
 			Map.of("limit_type", "critical", "hw.type", monitor.getType())

@@ -21,6 +21,9 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
+import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
+
 import java.util.Map;
 import java.util.Optional;
 import org.metricshub.engine.telemetry.Monitor;
@@ -86,6 +89,7 @@ public class FanMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the low degraded metric
 		final Optional<NumberMetric> maybeLowDegradedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			String.format("%s.limit", metricNamePrefix),
 			Map.of("limit_type", "low.degraded")
@@ -93,6 +97,7 @@ public class FanMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the low critical metric
 		final Optional<NumberMetric> maybeLowCriticalMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			String.format("%s.limit", metricNamePrefix),
 			Map.of("limit_type", "low.critical")

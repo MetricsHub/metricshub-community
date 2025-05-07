@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_DISK_CONTROLLER_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_DISK_CONTROLLER_METRIC;
+import static org.metricshub.hardware.constants.DiskControllerConstants.HW_ENERGY_DISK_CONTROLLER_METRIC;
+import static org.metricshub.hardware.constants.DiskControllerConstants.HW_POWER_DISK_CONTROLLER_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

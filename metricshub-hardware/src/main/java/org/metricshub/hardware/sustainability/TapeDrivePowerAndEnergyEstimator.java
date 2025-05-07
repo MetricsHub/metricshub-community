@@ -23,8 +23,8 @@ package org.metricshub.hardware.sustainability;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_TAPE_DRIVE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_TAPE_DRIVE_METRIC;
+import static org.metricshub.hardware.constants.TapeDriveConstants.HW_ENERGY_TAPE_DRIVE_METRIC;
+import static org.metricshub.hardware.constants.TapeDriveConstants.HW_POWER_TAPE_DRIVE_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

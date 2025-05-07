@@ -21,12 +21,12 @@ package org.metricshub.hardware.util;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENCLOSURE_ENERGY;
-import static org.metricshub.hardware.util.HwConstants.HW_ENCLOSURE_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_ENERGY;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_ENERGY;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_POWER;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_ENERGY;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_POWER;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_ENERGY;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_POWER;
+import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_ENERGY;
+import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_POWER;
 
 import java.util.Collection;
 import java.util.Map;
