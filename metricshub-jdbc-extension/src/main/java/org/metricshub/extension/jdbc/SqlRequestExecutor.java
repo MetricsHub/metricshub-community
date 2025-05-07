@@ -63,7 +63,7 @@ public class SqlRequestExecutor {
 				Hostname {}
 				- Username: {}
 				- Query: {}
-				- Timeout: {} s
+				- Timeout: {}
 				""",
 				hostname,
 				jdbcConfig.getUsername(),
