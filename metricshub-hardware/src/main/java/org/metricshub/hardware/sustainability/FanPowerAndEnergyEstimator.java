@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_FAN_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_FAN_METRIC;
+import static org.metricshub.hardware.constants.FanConstants.HW_ENERGY_FAN_METRIC;
+import static org.metricshub.hardware.constants.FanConstants.HW_POWER_FAN_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
