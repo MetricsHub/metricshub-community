@@ -21,12 +21,12 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENCLOSURE_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_VM_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_MEASURED_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_VM_METRIC;
-import static org.metricshub.hardware.util.HwConstants.POWER_SOURCE_ID_ATTRIBUTE;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_POWER;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_POWER;
+import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_POWER;
+import static org.metricshub.hardware.constants.VmConstants.HW_ENERGY_VM_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.HW_POWER_VM_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.POWER_SOURCE_ID_ATTRIBUTE;
 
 import java.math.RoundingMode;
 import java.util.Map;

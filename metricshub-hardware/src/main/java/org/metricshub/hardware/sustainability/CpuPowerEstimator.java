@@ -21,10 +21,10 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_CPU_SPEED_LIMIT_LIMIT_TYPE_MAX;
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_CPU_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_CPU_METRIC;
+import static org.metricshub.hardware.constants.CpuConstants.HW_CPU_SPEED_LIMIT_LIMIT_TYPE_MAX;
+import static org.metricshub.hardware.constants.CpuConstants.HW_ENERGY_CPU_METRIC;
+import static org.metricshub.hardware.constants.CpuConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
+import static org.metricshub.hardware.constants.CpuConstants.HW_POWER_CPU_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

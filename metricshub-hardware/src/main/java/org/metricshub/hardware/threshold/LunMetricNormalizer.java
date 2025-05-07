@@ -21,6 +21,8 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
+
 import java.util.Map;
 import java.util.Optional;
 import org.metricshub.engine.telemetry.Monitor;
@@ -54,6 +56,7 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 	private void normalizeLunPathsLimit(final Monitor monitor) {
 		// Get the hw.lun.paths available metric
 		final Optional<NumberMetric> maybeAvailableMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.lun.paths",
 			Map.of("type", "available")
@@ -66,6 +69,7 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the hw.lun.paths expected metric
 		final Optional<NumberMetric> maybeExpectedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.lun.paths",
 			Map.of("type", "expected")
@@ -73,6 +77,7 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the low degraded metric
 		final Optional<NumberMetric> maybeLowDegradedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.lun.paths.limit",
 			Map.of("limit_type", "low.degraded")
@@ -80,6 +85,7 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 
 		// Get the maximum metric
 		final Optional<NumberMetric> maybeMaximumMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
 			monitor,
 			"hw.lun.paths.limit",
 			Map.of("limit_type", "maximum")

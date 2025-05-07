@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.hardware.util.HwCollectHelper.containsAllEntries;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,10 +32,10 @@ class AbstractMetricNormalizerTest {
 		final Map<String, String> secondMap = new HashMap<>();
 		secondMap.put("key1", "value1");
 
-		assertTrue(AbstractMetricNormalizer.containsAllEntries(firstMap, secondMap));
+		assertTrue(containsAllEntries(firstMap, secondMap));
 
 		secondMap.put("key2", "differentValue");
-		assertFalse(AbstractMetricNormalizer.containsAllEntries(firstMap, secondMap));
+		assertFalse(containsAllEntries(firstMap, secondMap));
 	}
 
 	@Test
