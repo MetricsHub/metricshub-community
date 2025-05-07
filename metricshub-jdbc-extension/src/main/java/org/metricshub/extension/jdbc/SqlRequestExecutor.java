@@ -59,11 +59,13 @@ public class SqlRequestExecutor {
 
 			// Log the details of the SQL request including the hostname
 			log.trace(
-				"Hostname {} - Executing SQL query on database {}\n- " +
-				"URL: {}\n- Username: {}\n- Query: {}\n- Timeout: {} s\n",
+				"""
+				Hostname {} - Executing SQL query:
+				- Username: {}
+				- Query: {}
+				- Timeout: {}
+				""",
 				hostname,
-				jdbcConfig.getDatabase(),
-				url,
 				jdbcConfig.getUsername(),
 				sqlQuery,
 				jdbcConfig.getTimeout()
@@ -82,12 +84,14 @@ public class SqlRequestExecutor {
 			final List<List<String>> results = sqlResult.getResults();
 
 			log.trace(
-				"Hostname {} - Executed SQL query on database {}\n" +
-				"- URL: {}\n- Username: {}\n- Query: {}\n- Timeout: {} s\n" +
-				"- Result: {}",
+				"""
+				Hostname {} - Executing SQL query:
+				- Username: {}
+				- Query: {}
+				- Timeout: {}
+				- Result: {}
+				""",
 				hostname,
-				jdbcConfig.getDatabase(),
-				url,
 				jdbcConfig.getUsername(),
 				sqlQuery,
 				jdbcConfig.getTimeout(),
