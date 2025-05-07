@@ -1,4 +1,4 @@
-package org.metricshub.agent.connector;
+package org.metricshub.engine.connector.parser;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -36,8 +37,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.agent.config.AdditionalConnector;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
+import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
+import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.IntermediateConnector;
@@ -45,7 +47,6 @@ import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.identity.ConnectorDefaultVariable;
-import org.metricshub.engine.connector.parser.ConnectorVariableProcessor;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 
 /**
@@ -105,30 +106,33 @@ public class ConnectorStoreComposer {
 
 		final List<String> connectorsWithVariables = new ArrayList<>();
 
-		// For each Raw Connector, search for variables in the JsonNode or the Embedded Files.
-		rawConnectorStore
-			.getStore()
-			.forEach((connectorId, rawConnector) -> {
-				final IntermediateConnector intermediateConnector = new IntermediateConnector(connectorId, rawConnector);
+		if (rawConnectorStore != null) {
+			// For each Raw Connector, search for variables in the JsonNode or the Embedded Files.
+			rawConnectorStore
+				.getStore()
+				.forEach((connectorId, rawConnector) -> {
+					final IntermediateConnector intermediateConnector = new IntermediateConnector(connectorId, rawConnector);
 
-				// If the connector contains variables, do not parse it in this phase.
-				// This is due to the absence of additional connectors configuration.
-				// If processed, this may cause parsing errors.
-				if (intermediateConnector.hasVariables()) {
-					connectorsWithVariables.add(connectorId);
-				} else {
-					try {
-						// Add all the resulting connectors in the connector store
-						connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
-					} catch (IOException e) {
-						log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
-						log.debug(EXCEPTION_MESSAGE, e);
+					// If the connector contains variables, do not parse it in this phase.
+					// This is due to the absence of additional connectors configuration.
+					// If processed, this may cause parsing errors.
+					if (intermediateConnector.hasVariables()) {
+						connectorsWithVariables.add(connectorId);
+					} else {
+						try {
+							// Add all the resulting connectors in the connector store
+							connectorStore.addOne(connectorId, parseConnector(intermediateConnector));
+						} catch (IOException e) {
+							log.error(DESERIALIZATION_ERROR_MESSAGE, connectorId);
+							log.debug(EXCEPTION_MESSAGE, e);
+						}
 					}
-				}
-			});
+				});
 
-		connectorStore.setRawConnectorStore(rawConnectorStore);
-		connectorStore.addConnectorsWithVariables(connectorsWithVariables);
+			connectorStore.setRawConnectorStore(rawConnectorStore);
+			connectorStore.addConnectorsWithVariables(connectorsWithVariables);
+		}
+
 		return connectorStore;
 	}
 
@@ -180,7 +184,7 @@ public class ConnectorStoreComposer {
 		// Store all the connectors that emerged from the current one in a map.
 		final List<IntermediateConnector> processedConnectors = processVariables(intermediateConnector);
 
-		final Map<String, Connector> connectors = new HashMap<>();
+		final Map<String, Connector> connectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		processedConnectors.forEach(processedIntermediateConnector -> {
 			final String connectorId = processedIntermediateConnector.getConnectorId();
 			try {
@@ -384,7 +388,7 @@ public class ConnectorStoreComposer {
 	 */
 	private Map<String, AdditionalConnector> filterAdditionalConnectors(final String connectorId) {
 		if (additionalConnectors == null) {
-			return new HashMap<>();
+			return new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		}
 
 		// Filtering all the configurations that are not using this connector.
@@ -392,7 +396,14 @@ public class ConnectorStoreComposer {
 			.entrySet()
 			.stream()
 			.filter(entry -> connectorId.equalsIgnoreCase(entry.getValue().getUses()))
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+			.collect(
+				Collectors.toMap(
+					Map.Entry::getKey,
+					Map.Entry::getValue,
+					(e1, e2) -> e1,
+					() -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)
+				)
+			);
 	}
 
 	/**
@@ -403,6 +414,9 @@ public class ConnectorStoreComposer {
 	 * @throws IOException If an error occurs during deserialization.
 	 */
 	private Connector parseConnector(final IntermediateConnector intermediateConnector) throws IOException {
+		// adding post-deserialization support to the deserializer {@link ObjectMapper}
+		PostDeserializeHelper.addPostDeserializeSupport(deserializer.getMapper());
+
 		// POST-Processing
 		final Connector connector = deserializer.deserialize(intermediateConnector.getConnectorNode());
 

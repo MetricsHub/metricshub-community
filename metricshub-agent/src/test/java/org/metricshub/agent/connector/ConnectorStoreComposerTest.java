@@ -7,21 +7,22 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import org.apache.logging.log4j.ThreadContext;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metricshub.agent.config.AdditionalConnector;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
+import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
+import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
 import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 
 class ConnectorStoreComposerTest {
 

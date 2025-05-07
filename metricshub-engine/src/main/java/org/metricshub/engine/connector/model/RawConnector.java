@@ -24,7 +24,6 @@ package org.metricshub.engine.connector.model;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -76,21 +75,5 @@ public class RawConnector implements Serializable {
 		throws JsonProcessingException {
 		byteConnector = MAPPER.writeValueAsBytes(rawConnectorNode);
 		this.embeddedFiles.putAll(embeddedFiles);
-	}
-
-	/**
-	 * Deserializes the raw byte representation of the connector into a {@link JsonNode}.
-	 *
-	 * @param connectorId The connector identifier (used for logging context).
-	 * @return The deserialized {@link JsonNode}, or {@code null} if deserialization fails.
-	 */
-	public JsonNode getConnectorNode(final String connectorId) {
-		try {
-			return MAPPER.readTree(byteConnector);
-		} catch (IOException e) {
-			log.error("Error while deserializing byte array as JsonNode in connector {}.", connectorId);
-			log.debug("Exception: ", e);
-		}
-		return null;
 	}
 }
