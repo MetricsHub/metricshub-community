@@ -21,6 +21,7 @@ package org.metricshub.agent;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.util.Locale;
 import lombok.Data;
@@ -88,9 +89,11 @@ public class MetricsHubAgentApplication implements Runnable {
 			agentContext.getTaskSchedulingService().start();
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
+			final Path configDirectory = agentContext.getConfigDirectory();
+
 			DirectoryWatcherTask
 				.builder()
-				.directory(agentContext.getConfigDirectory())
+				.directory(configDirectory)
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
 					// CHECKSTYLE:OFF
@@ -104,7 +107,7 @@ public class MetricsHubAgentApplication implements Runnable {
 					// CHECKSTYLE:ON
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
-				.checksumSupplier(() -> buildChecksum(extensionManager, agentContext))
+				.checksumSupplier(() -> buildChecksum(extensionManager, configDirectory))
 				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
 				.build()
 				.start();
@@ -119,12 +122,12 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * Builds the checksum of the configuration directory.
 	 *
 	 * @param extensionManager The extension manager
-	 * @param agentContext     The agent context
+	 * @param configDirectory  The agent configuration directory
 	 * @return The checksum of the configuration directory
 	 */
-	private static String buildChecksum(final ExtensionManager extensionManager, final AgentContext agentContext) {
+	private static String buildChecksum(final ExtensionManager extensionManager, final Path configDirectory) {
 		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(
-			agentContext.getConfigDirectory(),
+			configDirectory,
 			path ->
 				extensionManager
 					.findConfigurationFileExtensions()
