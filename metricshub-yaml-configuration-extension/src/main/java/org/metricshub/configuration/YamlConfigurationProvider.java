@@ -70,7 +70,7 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 		}
 
 		final int size = configurations.size();
-		log.info("Loaded {} YAML configuration fragment{} from '{}'.", size > 1 ? "s" : "", size, configDirectory);
+		log.info("Loaded {} YAML configuration fragment{} from '{}'.", size, size > 1 ? "s" : "", configDirectory);
 		return configurations;
 	}
 
