@@ -94,6 +94,6 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 
 	@Override
 	public Set<String> getFileExtensions() {
-		return Set.of("yaml", "yml");
+		return Set.of(".yaml", ".yml");
 	}
 }

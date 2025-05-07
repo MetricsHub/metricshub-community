@@ -109,8 +109,8 @@ class YamlConfigurationProviderTest {
 	@Test
 	void testGetFileExtensions() {
 		final Collection<String> extensions = provider.getFileExtensions();
-		assertTrue(extensions.contains("yaml"), "Should support 'yaml' extension");
-		assertTrue(extensions.contains("yml"), "Should support 'yml' extension");
+		assertTrue(extensions.contains(".yaml"), "Should support 'yaml' extension");
+		assertTrue(extensions.contains(".yml"), "Should support 'yml' extension");
 		assertEquals(2, extensions.size(), "Should support exactly 2 file extensions");
 	}
 }
