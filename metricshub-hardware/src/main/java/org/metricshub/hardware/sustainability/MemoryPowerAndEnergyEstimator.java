@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_MEMORY_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_MEMORY_METRIC;
+import static org.metricshub.hardware.constants.MemoryConstants.HW_ENERGY_MEMORY_METRIC;
+import static org.metricshub.hardware.constants.MemoryConstants.HW_POWER_MEMORY_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;

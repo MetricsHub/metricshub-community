@@ -22,7 +22,7 @@ package org.metricshub.hardware.sustainability;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
+import static org.metricshub.hardware.constants.CpuConstants.HW_HOST_CPU_THERMAL_DISSIPATION_RATE;
 
 import java.math.RoundingMode;
 import java.util.Map;
@@ -39,7 +39,7 @@ import org.metricshub.engine.strategy.utils.MathOperationsHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.hardware.util.HwConstants;
+import org.metricshub.hardware.constants.CommonConstants;
 
 @Data
 @AllArgsConstructor
@@ -63,7 +63,7 @@ public class HostMonitorThermalCalculator {
 	 * <ul>
 	 * <li><b>{@value #HW_HOST_AMBIENT_TEMPERATURE}</b> the minimum temperature between 5 and 100 degrees Celsius</li>
 	 * <li><b>{@value #HW_HOST_AVERAGE_CPU_TEMPERATURE}</b>: the average CPU temperatures</li>
-	 * <li><b>{@link HwConstants#HW_HOST_CPU_THERMAL_DISSIPATION_RATE }</b> : the heat dissipation rate of the
+	 * <li><b>{@link CommonConstants#HW_HOST_CPU_THERMAL_DISSIPATION_RATE }</b> : the heat dissipation rate of the
 	 * processors (as a fraction of the maximum heat/power they can emit)</li>
 	 * </ul>
 	 */

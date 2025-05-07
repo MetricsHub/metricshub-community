@@ -12,10 +12,10 @@ import static org.metricshub.hardware.common.Constants.VM_ONLINE_3;
 import static org.metricshub.hardware.common.Constants.VM_ONLINE_BAD_POWER_SHARE_5;
 import static org.metricshub.hardware.common.Constants.VM_ONLINE_NO_POWER_SHARE_4;
 import static org.metricshub.hardware.common.Constants.VM_ONLINE_ZERO_POWER_SHARE_1;
-import static org.metricshub.hardware.util.HwConstants.HW_HOST_ESTIMATED_POWER;
-import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_SHARE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_VM_POWER_STATE_METRIC;
-import static org.metricshub.hardware.util.HwConstants.POWER_SOURCE_ID_ATTRIBUTE;
+import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_POWER;
+import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_SHARE_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_STATE_METRIC;
+import static org.metricshub.hardware.constants.VmConstants.POWER_SOURCE_ID_ATTRIBUTE;
 
 import java.util.HashMap;
 import java.util.Map;

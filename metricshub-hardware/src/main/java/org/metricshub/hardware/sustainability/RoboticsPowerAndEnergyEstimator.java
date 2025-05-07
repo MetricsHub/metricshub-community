@@ -21,8 +21,8 @@ package org.metricshub.hardware.sustainability;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.hardware.util.HwConstants.HW_ENERGY_ROBOTICS_METRIC;
-import static org.metricshub.hardware.util.HwConstants.HW_POWER_ROBOTICS_METRIC;
+import static org.metricshub.hardware.constants.RoboticsConstants.HW_ENERGY_ROBOTICS_METRIC;
+import static org.metricshub.hardware.constants.RoboticsConstants.HW_POWER_ROBOTICS_METRIC;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
