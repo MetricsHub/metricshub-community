@@ -93,8 +93,8 @@ public class MetricsHubAgentApplication implements Runnable {
 				.directory(agentContext.getConfigDirectory())
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
+					// CHECKSTYLE:OFF
 					return (
-						// CHECKSTYLE:OFF
 						context != null &&
 						extensionManager
 							.findConfigurationFileExtensions()

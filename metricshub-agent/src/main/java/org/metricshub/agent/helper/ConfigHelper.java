@@ -322,7 +322,6 @@ public class ConfigHelper {
 	 *
 	 * @param configDirectory Directory of the configuration files.
 	 *                        (e.g. /opt/metricshub/lib/config or %PROGRAMDATA%/metricshub/config)
-	 * @return {@link File} instance
 	 * @throws IOException if the copy fails
 	 */
 	public static void generateDefaultConfigurationFileIfAbsent(final Path configDirectory) throws IOException {

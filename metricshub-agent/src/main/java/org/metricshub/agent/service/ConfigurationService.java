@@ -103,8 +103,6 @@ public class ConfigurationService {
 	 * @param mainNode   The base JSON node to merge into (must be mutable, typically an {@link com.fasterxml.jackson.databind.node.ObjectNode}).
 	 * @param updateNode The JSON node containing new values to merge into {@code mainNode}.
 	 * @return The merged {@code mainNode} with all changes from {@code updateNode} applied.
-	 *
-	 * @return The merged JSON node.
 	 */
 	public static JsonNode deepMerge(JsonNode mainNode, JsonNode updateNode) {
 		final Iterator<String> fieldNames = updateNode.fieldNames();
