@@ -60,7 +60,7 @@ public class SqlRequestExecutor {
 			// Log the details of the SQL request including the hostname
 			log.trace(
 				"""
-				Hostname {}
+				Hostname {} - Executing SQL query:
 				- Username: {}
 				- Query: {}
 				- Timeout: {}
@@ -85,7 +85,7 @@ public class SqlRequestExecutor {
 
 			log.trace(
 				"""
-				Hostname {}
+				Hostname {} - Executing SQL query:
 				- Username: {}
 				- Query: {}
 				- Timeout: {}
