@@ -24,6 +24,9 @@ package org.metricshub.hardware.constants;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+/**
+ * Common constants used across the hardware module.
+ */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CommonConstants {
 
@@ -34,14 +37,13 @@ public class CommonConstants {
 	public static final String CONNECTOR = "connector";
 	public static final String ENCLOSURE = "enclosure";
 	public static final String PRESENT_STATUS = "hw.status{hw.type=\"%s\", state=\"present\"}";
-	public static final String WHITE_SPACE_REPEAT_REGEX = "[ \t]+";
+	public static final String WHITE_SPACE_REPEAT_REGEX = "\\s+";
 	public static final String LOCALHOST = "localhost";
 	public static final String MODEL = "model";
 	public static final String VENDOR = "vendor";
 	public static final String DEVICE_ID = "id";
-	public static final String ID_COUNT = "idCount";
+	public static final String ID_COUNT = "__id_count";
 	public static final String DISPLAY_ID = "__display_id";
 	public static final String LOCATION = "location";
-	public static final String ADDITIONAL_LABEL = "additionalLabel";
-	public static final int ID_MAX_LENGTH = 10;
+	public static final int ID_MAX_LENGTH = 32;
 }

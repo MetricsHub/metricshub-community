@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for GPU-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GpuConstants {
 
 	public static final Pattern GPU_TRIM_PATTERN = Pattern.compile("gpu|graphic|card", Pattern.CASE_INSENSITIVE);

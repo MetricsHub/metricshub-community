@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for tape-drive related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TapeDriveConstants {
 
 	public static final String HW_ENERGY_TAPE_DRIVE_METRIC = "hw.energy{hw.type=\"tape_drive\"}";

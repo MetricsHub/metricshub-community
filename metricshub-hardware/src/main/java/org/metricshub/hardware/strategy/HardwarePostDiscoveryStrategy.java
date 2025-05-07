@@ -21,6 +21,7 @@ package org.metricshub.hardware.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.hardware.constants.CommonConstants.ID_COUNT;
 import static org.metricshub.hardware.constants.CommonConstants.PRESENT_STATUS;
 import static org.metricshub.hardware.util.HwCollectHelper.connectorHasHardwareTag;
 
@@ -51,7 +52,7 @@ import org.metricshub.engine.strategy.AbstractStrategy;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.hardware.util.HwCollectHelper;
+import org.metricshub.hardware.util.MonitorNameBuilder;
 
 /**
  * Strategy responsible for executing post-discovery actions for hardware monitors.<br>
@@ -162,7 +163,7 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	/**
 	 * Iterates all monitors from the telemetry manager, groups them by connector ID and type,
 	 * computes a hash-based sequence number (idCount) within each group, and assigns it as an attribute.
-	 * If a monitor has no name, generates one via {@link HwCollectHelper#buildMonitorNameUsingType}.
+	 * If a monitor has no name, generates one via buildMonitorNameUsingType method.
 	 */
 	private void setMonitorsNames() {
 		// Prepare hash storage per connector and type
@@ -174,7 +175,7 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 			.stream()
 			.map(Map::values)
 			.flatMap(Collection::stream)
-			.forEach(monitor -> {
+			.forEach((Monitor monitor) -> {
 				// Look up the true connectorId on the monitor
 				final String connectorId = monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID);
 
@@ -206,11 +207,15 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 				for (int i = 0; i < sortedHashes.size(); i++) {
 					final String hash = sortedHashes.get(i);
 					final Monitor monitor = hashMap.get(hash);
-					monitor.addAttribute("idCount", String.valueOf(i + 1));
+					monitor.addAttribute(ID_COUNT, String.valueOf(i + 1));
 
-					if (monitor.getAttribute("name") == null || monitor.getAttribute("name").isEmpty()) {
-						final String generatedName = HwCollectHelper.buildMonitorNameUsingType(monitor, telemetryManager);
-						monitor.addAttribute("name", generatedName);
+					if (
+						monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME) == null ||
+						monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME).isBlank()
+					) {
+						final String generatedName = new MonitorNameBuilder(telemetryManager.getHostname())
+							.buildMonitorNameUsingType(monitor, telemetryManager);
+						monitor.addAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME, generatedName);
 					}
 				}
 			}

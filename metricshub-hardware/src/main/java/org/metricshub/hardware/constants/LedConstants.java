@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for LED-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class LedConstants {
 
 	public static final String NAME = "name";

@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for battery-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class BatteryConstants {
 
 	public static final Pattern BATTERY_TRIM_PATTERN = Pattern.compile("battery", Pattern.CASE_INSENSITIVE);

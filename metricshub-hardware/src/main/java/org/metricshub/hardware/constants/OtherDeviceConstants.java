@@ -21,10 +21,15 @@ package org.metricshub.hardware.constants;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for other device-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class OtherDeviceConstants {
 
-	public static final Pattern OTHER_DEVICE_TRIM_PATTERN = null;
 	public static final String OTHER_DEVICE_TYPE = "device_type";
+	public static final String ADDITIONAL_LABEL = "additional_label";
 }

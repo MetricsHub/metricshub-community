@@ -26,7 +26,6 @@ import static org.metricshub.hardware.constants.BatteryConstants.BATTERY_TRIM_PA
 import static org.metricshub.hardware.constants.BatteryConstants.BATTERY_TYPE;
 import static org.metricshub.hardware.constants.BladeConstants.BLADE_NAME;
 import static org.metricshub.hardware.constants.BladeConstants.BLADE_TRIM_PATTERN;
-import static org.metricshub.hardware.constants.CommonConstants.ADDITIONAL_LABEL;
 import static org.metricshub.hardware.constants.CommonConstants.DEVICE_ID;
 import static org.metricshub.hardware.constants.CommonConstants.DISPLAY_ID;
 import static org.metricshub.hardware.constants.CommonConstants.ENCLOSURE;
@@ -37,13 +36,11 @@ import static org.metricshub.hardware.constants.CommonConstants.LOCATION;
 import static org.metricshub.hardware.constants.CommonConstants.MODEL;
 import static org.metricshub.hardware.constants.CommonConstants.VENDOR;
 import static org.metricshub.hardware.constants.CommonConstants.WHITE_SPACE_REPEAT_REGEX;
-import static org.metricshub.hardware.constants.CpuConstants.CPU_MAXIMUM_SPEED;
 import static org.metricshub.hardware.constants.CpuConstants.CPU_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.DiskControllerConstants.DISK_CONTROLLER_NUMBER;
 import static org.metricshub.hardware.constants.DiskControllerConstants.DISK_CONTROLLER_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.EnclosureConstants.BLADE_ENCLOSURE;
 import static org.metricshub.hardware.constants.EnclosureConstants.COMPUTER;
-import static org.metricshub.hardware.constants.EnclosureConstants.ENCLOSURE_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.EnclosureConstants.ENCLOSURE_TYPE;
 import static org.metricshub.hardware.constants.EnclosureConstants.STORAGE;
 import static org.metricshub.hardware.constants.EnclosureConstants.SWITCH;
@@ -67,7 +64,7 @@ import static org.metricshub.hardware.constants.MemoryConstants.MEMORY_TYPE;
 import static org.metricshub.hardware.constants.NetworkConstants.NETWORK_CARD_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.NetworkConstants.NETWORK_DEVICE_TYPE;
 import static org.metricshub.hardware.constants.NetworkConstants.NETWORK_VENDOR_MODEL_TRIM_PATTERN;
-import static org.metricshub.hardware.constants.OtherDeviceConstants.OTHER_DEVICE_TRIM_PATTERN;
+import static org.metricshub.hardware.constants.OtherDeviceConstants.ADDITIONAL_LABEL;
 import static org.metricshub.hardware.constants.OtherDeviceConstants.OTHER_DEVICE_TYPE;
 import static org.metricshub.hardware.constants.PhysicalDiskConstants.PHYSICAL_DISK_DEVICE_TYPE;
 import static org.metricshub.hardware.constants.PhysicalDiskConstants.PHYSICAL_DISK_SIZE_METRIC;
@@ -84,27 +81,33 @@ import static org.metricshub.hardware.constants.VmConstants.HOSTNAME;
 import static org.metricshub.hardware.constants.VmConstants.VM_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.VoltageConstants.VOLTAGE_SENSOR_LOCATION;
 import static org.metricshub.hardware.constants.VoltageConstants.VOLTAGE_TRIM_PATTERN;
+import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
+import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
 
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.NonNull;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
-import org.springframework.util.Assert;
+import org.metricshub.engine.telemetry.metric.NumberMetric;
 
+/**
+ * This class is responsible for building monitor names based on various attributes, metrics and conditions.
+ */
 public class MonitorNameBuilder {
 
-	private MonitorNameBuilder() {}
-
-	// Enclosure details
 	public static final String HP_OPEN_VMS_COMPUTER = "HP Open-VMS Computer";
 	public static final String HP_TRU64_UNIX_COMPUTER = "HP Tru64 Computer";
 	public static final String HP_UX_COMPUTER = "HP-UX Computer";
@@ -116,13 +119,96 @@ public class MonitorNameBuilder {
 	public static final String STORAGE_ENCLOSURE = "Storage System";
 	public static final String SUN_SOLARIS_COMPUTER = "Oracle Solaris Computer";
 	public static final String LOCALHOST_ENCLOSURE = System.getProperty("os.name") + " " + System.getProperty("os.arch");
-
-	// Error messages
-	private static final String HOST_MONITOR_CANNOT_BE_NULL = "hostMonitor cannot be null.";
-	private static final String HOST_TYPE_CANNOT_BE_NULL = "DeviceKind cannot be null.";
-	private static final String ATTRIBUTES_CANNOT_BE_NULL = "Attributes cannot be null.";
-
+	private static final Pattern WHITE_SPACE_REPEAT_PATTERN = Pattern.compile(WHITE_SPACE_REPEAT_REGEX);
 	private static final Map<DeviceKind, String> COMPUTE_DISPLAY_NAMES;
+
+	// Create a lookup table that maps monitor type (lowercase) to the corresponding build method.
+	private static final Map<String, BiFunction<Monitor, TelemetryManager, String>> MONITOR_NAME_BUILDERS =
+		new HashMap<>();
+
+	static {
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.CPU.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildCpuName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.MEMORY.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildMemoryName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.PHYSICAL_DISK.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.LOGICAL_DISK.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildLogicalDiskName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.DISK_CONTROLLER.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildDiskControllerName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.NETWORK.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildNetworkCardName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.FAN.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildFanName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.POWER_SUPPLY.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildPowerSupplyName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.TEMPERATURE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildTemperatureName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.TAPE_DRIVE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildTapeDriveName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.ROBOTICS.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildRoboticsName(monitor)
+		);
+		// Note: 'enclosure' requires a telemetryManager, so we pass it into the method.
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.ENCLOSURE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildEnclosureName(telemetry, monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.VM.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildVmName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.VOLTAGE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildVoltageName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.BLADE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildBladeName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.GPU.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildGpuName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.BATTERY.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildBatteryName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.LED.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildLedName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.LUN.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildLunName(monitor)
+		);
+		MONITOR_NAME_BUILDERS.put(
+			KnownMonitorType.OTHER_DEVICE.getKey(),
+			(monitor, telemetry) -> MonitorNameBuilder.buildOtherDeviceName(monitor)
+		);
+	}
 
 	static {
 		final Map<DeviceKind, String> map = new EnumMap<>(DeviceKind.class);
@@ -151,6 +237,17 @@ public class MonitorNameBuilder {
 		COMPUTE_DISPLAY_NAMES = Collections.unmodifiableMap(map);
 	}
 
+	// The hostname of the monitor
+	static String hostname;
+
+	/**
+	 * Constructor for MonitorNameBuilder
+	 * @param hostName The hostname of the monitor
+	 */
+	public MonitorNameBuilder(String hostName) {
+		hostname = hostName;
+	}
+
 	/**
 	 * Checks whether the given string has meaningful content – that is, it is not null,
 	 * empty, or composed solely of whitespace characters.
@@ -171,7 +268,15 @@ public class MonitorNameBuilder {
 	 * @return the trimmed name
 	 */
 	static String trimUnwantedCharacters(final String name) {
-		return name.replace(",", "").replace("()", "").replaceAll(WHITE_SPACE_REPEAT_REGEX, WHITE_SPACE).trim();
+		if (name == null) {
+			return null;
+		}
+
+		String cleaned = name.replace(",", "").replace("()", "");
+
+		cleaned = WHITE_SPACE_REPEAT_PATTERN.matcher(cleaned).replaceAll(WHITE_SPACE);
+
+		return cleaned.trim();
 	}
 
 	/**
@@ -250,72 +355,54 @@ public class MonitorNameBuilder {
 	}
 
 	/**
-	 * Converts a numeric string representing bytes into a human-readable format
-	 * using a binary divisor.
-	 * <p>
-	 * If the input is not a valid number, the original string is returned.
-	 * </p>
+	 * Converts a byte count to a human-readable string using binary (1024-based) units.
 	 *
-	 * @param string the {@link String} representing the number of bytes
-	 * @return a formatted string with appropriate binary units (B, KB, MB, etc.)
+	 * @param bytes the number of bytes, or {@code null} to return {@code null}
+	 * @return a string such as "1.5 MiB"
 	 */
-	private static String humanReadableByteCountBin(final String string) {
-		if (string == null) {
+	private static String humanReadableByteCountBin(final Double bytes) {
+		if (bytes == null) {
 			return null;
 		}
-		Double bytesDoubleValue;
-		try {
-			bytesDoubleValue = Double.parseDouble(string);
-		} catch (NumberFormatException e) {
-			return string;
+
+		long valueLong = bytes.longValue();
+		long absValue = valueLong == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(valueLong);
+
+		if (absValue < 1024) {
+			return valueLong + " B";
 		}
 
-		final long bytes = bytesDoubleValue.longValue();
-		final long updatedBytes = bytes == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(bytes);
-		if (updatedBytes < 1024) {
-			return bytes + " B";
-		}
-
-		long value = updatedBytes;
-		final CharacterIterator characterIterator = new StringCharacterIterator("KMGTPE");
-		for (int i = 40; i >= 0 && updatedBytes > 0xfffccccccccccccL >> i; i -= 10) {
+		long value = absValue;
+		final CharacterIterator ci = new StringCharacterIterator("KMGTPE");
+		for (int i = 40; i >= 0 && absValue > 0xfffccccccccccccL >> i; i -= 10) {
 			value >>= 10;
-			characterIterator.next();
+			ci.next();
 		}
-		value *= Long.signum(bytes);
-		return String.format("%.1f %cB", value / 1024.0, characterIterator.current());
+		value *= Long.signum(valueLong);
+
+		return String.format("%.1f %cB", value / 1024.0, ci.current());
 	}
 
 	/**
-	 * Converts a number in the string to readable bytes format using decimal divisor
+	 * Converts a byte count to a human-readable string using SI (decimal) units.
 	 *
-	 * @param string        {@link String} to be formatted
-	 *
-	 * @return {@link String} formatted bytes with units
+	 * @param bytes the number of bytes
+	 * @return a string such as "1.5 MB"
 	 */
-	private static String humanReadableByteCountSI(final String string) {
-		if (string == null) {
-			return null;
-		}
-
-		double bytes;
-		try {
-			bytes = Double.parseDouble(string);
-		} catch (NumberFormatException e) {
-			return string;
-		}
-
+	private static String humanReadableByteCountSI(final Double bytes) {
+		// Treat the ±999 B corner-case first
 		if (-1000 < bytes && bytes < 1000) {
 			return bytes + " B";
 		}
 
-		final CharacterIterator characterIterator = new StringCharacterIterator("KMGTPE");
-		while (bytes <= -999_950 || bytes >= 999_950) {
-			bytes /= 1000;
-			characterIterator.next();
+		double value = bytes;
+		final CharacterIterator ci = new StringCharacterIterator("KMGTPE");
+		while (value <= -999_950 || value >= 999_950) {
+			value /= 1000;
+			ci.next();
 		}
 
-		return String.format("%.1f %cB", bytes / 1000.0, characterIterator.current());
+		return String.format("%.1f %cB", value / 1000.0, ci.current());
 	}
 
 	/**
@@ -382,9 +469,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted battery name
 	 */
 	public static String buildBatteryName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -405,9 +491,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted blade name
 	 */
 	public static String buildBladeName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -428,9 +513,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted CPU name
 	 */
 	public static String buildCpuName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Format the CPU maximum speed
 		final String cpuMaxSpeed = getCpuMaxSpeed(monitor);
@@ -454,11 +538,17 @@ public class MonitorNameBuilder {
 	 * @return a formatted string representing the CPU speed in MHz or GHz, or an empty string if unavailable
 	 */
 	private static String getCpuMaxSpeed(final Monitor monitor) {
-		final Map<String, AbstractMetric> metrics = monitor.getMetrics();
-		final AbstractMetric cpuMaxSpeedMetric = metrics.get(CPU_MAXIMUM_SPEED);
+		final String cpuSpeedMetricNamePrefix = "hw.cpu.speed.limit";
+		Optional<NumberMetric> cpuMaxSpeedMetric = null;
+		if (isMetricCollected(monitor, cpuSpeedMetricNamePrefix)) {
+			final Map<String, String> cpuSpeedMetricAttributes = Map.of("limit_type", "max");
+			cpuMaxSpeedMetric =
+				findMetricByNamePrefixAndAttributes(hostname, monitor, cpuSpeedMetricNamePrefix, cpuSpeedMetricAttributes);
+		}
+
 		String cpuMaxSpeed = "";
-		if (cpuMaxSpeedMetric != null) {
-			double cpuMaxSpeedDouble = cpuMaxSpeedMetric.getValue();
+		if (cpuMaxSpeedMetric.isPresent()) {
+			double cpuMaxSpeedDouble = cpuMaxSpeedMetric.get().getValue();
 			try {
 				if (cpuMaxSpeedDouble < 1000D) {
 					cpuMaxSpeed = String.format("%.0f MHz", cpuMaxSpeedDouble);
@@ -479,9 +569,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted disk controller name
 	 */
 	public static String buildDiskControllerName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -502,13 +591,10 @@ public class MonitorNameBuilder {
 	 */
 	public static String buildEnclosureName(final TelemetryManager telemetryManager, final Monitor monitor) {
 		final DeviceKind deviceKind = telemetryManager.getHostConfiguration().getHostType();
-		Assert.notNull(deviceKind, HOST_TYPE_CANNOT_BE_NULL);
 
 		final Monitor hostMonitor = telemetryManager.getEndpointHostMonitor();
-		Assert.notNull(hostMonitor, HOST_MONITOR_CANNOT_BE_NULL);
 
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Find the enclosure type
 		String enclosureType = attributes.get(ENCLOSURE_TYPE);
@@ -564,7 +650,7 @@ public class MonitorNameBuilder {
 			enclosureDisplayId,
 			attributes.get(DEVICE_ID),
 			attributes.get(ID_COUNT),
-			ENCLOSURE_TRIM_PATTERN,
+			null,
 			additionalInfo
 		);
 	}
@@ -576,9 +662,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted fan name
 	 */
 	public static String buildFanName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -598,9 +683,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted LED name
 	 */
 	public static String buildLedName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Format the LED color
 		String ledColor = attributes.get(COLOR);
@@ -627,9 +711,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted logical disk name
 	 */
 	public static String buildLogicalDiskName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Format the RAID level
 		String logicalDiskRaidLevel = attributes.get(RAID_LEVEL);
@@ -654,7 +737,7 @@ public class MonitorNameBuilder {
 			attributes.get(ID_COUNT),
 			LOGICAL_DISK_TRIM_PATTERN,
 			logicalDiskRaidLevel,
-			humanReadableByteCountBin(logicalDiskSize != null ? Double.toString(logicalDiskSize.getValue()) : null)
+			humanReadableByteCountBin(logicalDiskSize != null ? logicalDiskSize.getValue() : null)
 		);
 	}
 
@@ -665,9 +748,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted LUN name
 	 */
 	public static String buildLunName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -688,9 +770,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted memory name
 	 */
 	public static String buildMemoryName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Retrieve the size metric
 		final String memorySize = getMemorySize(monitor);
@@ -740,9 +821,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted network card name
 	 */
 	public static String buildNetworkCardName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Network card vendor without unwanted words
 		String networkCardVendor = attributes.get(VENDOR);
@@ -779,9 +859,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted device name
 	 */
 	public static String buildOtherDeviceName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -789,7 +868,7 @@ public class MonitorNameBuilder {
 			attributes.get(DISPLAY_ID),
 			attributes.get(DEVICE_ID),
 			attributes.get(ID_COUNT),
-			OTHER_DEVICE_TRIM_PATTERN,
+			null,
 			attributes.get(ADDITIONAL_LABEL)
 		);
 	}
@@ -801,9 +880,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted physical disk name
 	 */
 	public static String buildPhysicalDiskName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Retrieve the size metric
 		final Map<String, AbstractMetric> metrics = monitor.getMetrics();
@@ -817,7 +895,7 @@ public class MonitorNameBuilder {
 			attributes.get(ID_COUNT),
 			PHYSICAL_DISK_TRIM_PATTERN,
 			attributes.get(VENDOR),
-			humanReadableByteCountSI(diskSize != null ? Double.toString(diskSize.getValue()) : null)
+			humanReadableByteCountSI(diskSize != null ? diskSize.getValue() : null)
 		);
 	}
 
@@ -828,17 +906,18 @@ public class MonitorNameBuilder {
 	 * @return the formatted power supply name
 	 */
 	public static String buildPowerSupplyName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Retrieve the power supply limit metric
 		final Map<String, AbstractMetric> metrics = monitor.getMetrics();
-		String powerSupplyPower = Double.toString(metrics.get(POWER_SUPPLY_LIMIT_METRIC).getValue());
+		final AbstractMetric powerSupplyPowerLimit = metrics.get(POWER_SUPPLY_LIMIT_METRIC);
+		final Double powerSupplyPowerMetricValue = powerSupplyPowerLimit != null ? powerSupplyPowerLimit.getValue() : null;
+		String powerSupplyPower = powerSupplyPowerMetricValue == null ? "" : String.valueOf(powerSupplyPowerMetricValue);
 
 		// Format the power
 		if (hasMeaningfulContent(powerSupplyPower)) {
-			powerSupplyPower = powerSupplyPower + " W";
+			powerSupplyPower = "%.0f W".formatted(powerSupplyPowerMetricValue);
 		}
 
 		//Build the name
@@ -860,9 +939,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted robotics name
 	 */
 	public static String buildRoboticsName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -883,9 +961,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted tape drive name
 	 */
 	public static String buildTapeDriveName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -905,9 +982,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted temperature sensor name
 	 */
 	public static String buildTemperatureName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -927,9 +1003,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted voltage sensor name
 	 */
 	public static String buildVoltageName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the name
 		return buildName(
@@ -949,9 +1024,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted VM name
 	 */
 	public static String buildVmName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Format the display ID
 		String displayId = attributes.get(DISPLAY_ID);
@@ -975,9 +1049,8 @@ public class MonitorNameBuilder {
 	 * @return the formatted GPU name
 	 */
 	public static String buildGpuName(final Monitor monitor) {
-		// Check the attributes
+		// Retrieve the attributes
 		final Map<String, String> attributes = monitor.getAttributes();
-		Assert.notNull(attributes, ATTRIBUTES_CANNOT_BE_NULL);
 
 		// Build the base name using the GPU-specific trim pattern
 		final String name = buildName(
@@ -1018,5 +1091,27 @@ public class MonitorNameBuilder {
 			return trimUnwantedCharacters(String.format("%s (%s%s)", name, model, formattedSize));
 		}
 		return trimUnwantedCharacters(String.format("%s%s", name, formattedSize));
+	}
+
+	/**
+	 * Builds the monitor name using the monitor type. The method looks up the correct build function
+	 * based on the monitor's type (normalized to lowercase) and applies it; if no matching type is found,
+	 * it returns the monitor type as is.
+	 *
+	 * @param monitor the {@link Monitor} instance
+	 * @param telemetryManager the {@link TelemetryManager} instance, required for some build functions
+	 * @return the built monitor name, or the monitor type if no match is found.
+	 */
+	public static String buildMonitorNameUsingType(
+		@NonNull final Monitor monitor,
+		final TelemetryManager telemetryManager
+	) {
+		String type = monitor.getType();
+		if (type == null) {
+			return null;
+		}
+		// Normalize type to lowercase
+		BiFunction<Monitor, TelemetryManager, String> builder = MONITOR_NAME_BUILDERS.get(type.toLowerCase());
+		return builder != null ? builder.apply(monitor, telemetryManager) : type;
 	}
 }

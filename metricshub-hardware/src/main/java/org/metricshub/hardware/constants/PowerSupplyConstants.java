@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for power-supply related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PowerSupplyConstants {
 
 	public static final String POWER_SUPPLY_TYPE = "power_supply_type";

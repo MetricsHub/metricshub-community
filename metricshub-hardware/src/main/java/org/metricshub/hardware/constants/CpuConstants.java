@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for CPU-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CpuConstants {
 
 	public static final String HW_ENERGY_CPU_METRIC = "hw.energy{hw.type=\"cpu\"}";

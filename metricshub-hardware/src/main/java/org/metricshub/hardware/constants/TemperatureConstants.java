@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for temperature-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TemperatureConstants {
 
 	public static final Pattern TEMPERATURE_TRIM_PATTERN = Pattern.compile(

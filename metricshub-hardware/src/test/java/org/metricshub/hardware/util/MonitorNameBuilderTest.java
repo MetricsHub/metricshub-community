@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 import static org.metricshub.hardware.constants.BatteryConstants.BATTERY_TYPE;
 import static org.metricshub.hardware.constants.BladeConstants.BLADE_NAME;
-import static org.metricshub.hardware.constants.CommonConstants.ADDITIONAL_LABEL;
 import static org.metricshub.hardware.constants.CommonConstants.DEVICE_ID;
 import static org.metricshub.hardware.constants.CommonConstants.DISPLAY_ID;
 import static org.metricshub.hardware.constants.CommonConstants.ID_COUNT;
@@ -16,7 +15,6 @@ import static org.metricshub.hardware.constants.CommonConstants.LOCATION;
 import static org.metricshub.hardware.constants.CommonConstants.MODEL;
 import static org.metricshub.hardware.constants.CommonConstants.VENDOR;
 import static org.metricshub.hardware.constants.CpuConstants.CPU_MAXIMUM_SPEED;
-import static org.metricshub.hardware.constants.DiskControllerConstants.DISK_CONTROLLER_NUMBER;
 import static org.metricshub.hardware.constants.EnclosureConstants.COMPUTER;
 import static org.metricshub.hardware.constants.EnclosureConstants.ENCLOSURE_TYPE;
 import static org.metricshub.hardware.constants.FanConstants.FAN_SENSOR_LOCATION;
@@ -30,6 +28,7 @@ import static org.metricshub.hardware.constants.LunConstants.REMOTE_DEVICE_NAME;
 import static org.metricshub.hardware.constants.MemoryConstants.MEMORY_SIZE_METRIC;
 import static org.metricshub.hardware.constants.MemoryConstants.MEMORY_TYPE;
 import static org.metricshub.hardware.constants.NetworkConstants.DEVICE_TYPE;
+import static org.metricshub.hardware.constants.OtherDeviceConstants.ADDITIONAL_LABEL;
 import static org.metricshub.hardware.constants.PhysicalDiskConstants.PHYSICAL_DISK_SIZE_METRIC;
 import static org.metricshub.hardware.constants.PowerSupplyConstants.POWER_SUPPLY_LIMIT_METRIC;
 import static org.metricshub.hardware.constants.PowerSupplyConstants.POWER_SUPPLY_TYPE;
@@ -221,7 +220,7 @@ class MonitorNameBuilderTest {
 			Pattern.compile("Device", Pattern.CASE_INSENSITIVE),
 			"Info"
 		);
-		assertEquals("3 (Info)", resultTooLongDeviceId);
+		assertEquals("verylongid_exceeding_limit (Info)", resultTooLongDeviceId);
 	}
 
 	@Test
@@ -267,16 +266,31 @@ class MonitorNameBuilderTest {
 		cpuAttributes.put(MODEL, "Xeon");
 
 		final Map<String, AbstractMetric> cpuMetrics = new HashMap<>();
-		cpuMetrics.put(CPU_MAXIMUM_SPEED, NumberMetric.builder().value(3600.0).build());
+		NumberMetric cpuMaxSpeedMetric = NumberMetric
+			.builder()
+			.value(3600.0)
+			.name(CPU_MAXIMUM_SPEED)
+			.attributes(Map.of("limit_type", "max"))
+			.collectTime(System.currentTimeMillis() - 120000)
+			.build();
+		cpuMetrics.put(CPU_MAXIMUM_SPEED, cpuMaxSpeedMetric);
 
 		Monitor cpu = Monitor.builder().attributes(cpuAttributes).metrics(cpuMetrics).build();
-		assertEquals("CPU #1 (Intel - Xeon - 3.60 GHz)", buildCpuName(cpu));
+		assertEquals("CPU #1 (Intel - Xeon - 3.60 GHz)", new MonitorNameBuilder(LOCALHOST).buildCpuName(cpu));
 
 		cpuAttributes.clear();
 		cpuAttributes.put(ID_COUNT, "0");
 		cpuAttributes.put(DEVICE_ID, "CPU1,1");
 		cpuAttributes.put(VENDOR, "Intel");
-		cpuMetrics.put(CPU_MAXIMUM_SPEED, NumberMetric.builder().value(999.0).build());
+		cpuMaxSpeedMetric =
+			NumberMetric
+				.builder()
+				.value(999.0)
+				.name(CPU_MAXIMUM_SPEED)
+				.attributes(Map.of("limit_type", "max"))
+				.collectTime(System.currentTimeMillis() - 120000)
+				.build();
+		cpuMetrics.put(CPU_MAXIMUM_SPEED, cpuMaxSpeedMetric);
 		cpu = Monitor.builder().attributes(cpuAttributes).metrics(cpuMetrics).build();
 		assertEquals("11 (Intel - 999 MHz)", buildCpuName(cpu));
 	}
@@ -454,7 +468,7 @@ class MonitorNameBuilderTest {
 
 			final Monitor monitor = Monitor.builder().attributes(attributes).build();
 
-			assertEquals("0 (additional details)", MonitorNameBuilder.buildOtherDeviceName(monitor));
+			assertEquals("other device 11 (additional details)", MonitorNameBuilder.buildOtherDeviceName(monitor));
 		}
 
 		{
@@ -516,7 +530,7 @@ class MonitorNameBuilderTest {
 		final Monitor powerSupply = Monitor.builder().attributes(powerSupplyAttributes).metrics(powerSupplyMetrics).build();
 
 		// expected format: "<deviceId> ( <type> - 1000 W )"
-		assertEquals("01 (Dell - 1000.0 W)", buildPowerSupplyName(powerSupply));
+		assertEquals("01 (Dell - 1000 W)", buildPowerSupplyName(powerSupply));
 	}
 
 	@Test
@@ -575,10 +589,6 @@ class MonitorNameBuilderTest {
 
 	@Test
 	void testBuildVmName() {
-		final Monitor vmWithoutAttributes = new Monitor();
-		vmWithoutAttributes.setAttributes(null);
-		assertThrows(IllegalArgumentException.class, () -> buildVmName(vmWithoutAttributes));
-
 		final Map<String, String> vmAttributes = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		vmAttributes.put(ID_COUNT, "0");
 		vmAttributes.put(DEVICE_ID, "vm 101");
@@ -666,7 +676,7 @@ class MonitorNameBuilderTest {
 		);
 
 		assertEquals(
-			"0 (info)",
+			"12345678901234567890 (info)",
 			MonitorNameBuilder.buildName(
 				"",
 				WHITE_SPACE,

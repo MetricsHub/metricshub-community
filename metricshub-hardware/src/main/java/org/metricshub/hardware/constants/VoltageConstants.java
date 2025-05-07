@@ -22,10 +22,15 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for voltage-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class VoltageConstants {
 
-	public static final String VOLTAGE_TYPE = "voltageType";
 	public static final Pattern VOLTAGE_TRIM_PATTERN = Pattern.compile("voltage", Pattern.CASE_INSENSITIVE);
 	public static final String VOLTAGE_SENSOR_LOCATION = "sensor_location";
 }

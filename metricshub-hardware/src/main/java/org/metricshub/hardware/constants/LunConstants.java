@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for LUN (Logical Unit Number) related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class LunConstants {
 
 	public static final String REMOTE_DEVICE_NAME = "remote_device_name";

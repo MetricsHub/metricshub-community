@@ -36,7 +36,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
 /**
- * Strategy responsible of executing post collect actions for hardware monitors.<br>
+ * Strategy responsible for executing post-collect actions for hardware monitors.<br>
  * This strategy is responsible for refreshing the collect time of <code>hw.status{hw.type="&lt;monitor-type&gt;", state="present"}</code> metrics.
  */
 @NoArgsConstructor

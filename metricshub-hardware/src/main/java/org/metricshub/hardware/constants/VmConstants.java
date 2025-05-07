@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for VM-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class VmConstants {
 
 	public static final String HW_ENERGY_VM_METRIC = "hw.energy{hw.type=\"vm\"}";

@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for logical disk-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class LogicalDiskConstants {
 
 	public static final String RAID_LEVEL = "raid_level";

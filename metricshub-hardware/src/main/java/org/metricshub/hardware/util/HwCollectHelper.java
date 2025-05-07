@@ -26,17 +26,13 @@ import static org.metricshub.hardware.constants.CommonConstants.PRESENT_STATUS;
 import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_SHARE_METRIC;
 import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_STATE_METRIC;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiFunction;
+import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
@@ -44,6 +40,7 @@ import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.strategy.utils.CollectHelper;
 import org.metricshub.engine.strategy.utils.MathOperationsHelper;
+import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
@@ -52,43 +49,6 @@ import org.metricshub.hardware.constants.CommonConstants;
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class HwCollectHelper {
-
-	// Create a lookup table that maps monitor type (lowercase) to the corresponding build method.
-	private static final Map<String, BiFunction<Monitor, TelemetryManager, String>> MONITOR_NAME_BUILDERS =
-		new HashMap<>();
-
-	static {
-		MONITOR_NAME_BUILDERS.put("cpu", (monitor, telemetry) -> MonitorNameBuilder.buildCpuName(monitor));
-		MONITOR_NAME_BUILDERS.put("memory", (monitor, telemetry) -> MonitorNameBuilder.buildMemoryName(monitor));
-		MONITOR_NAME_BUILDERS.put(
-			"physical_disk",
-			(monitor, telemetry) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put("logical_disk", (monitor, telemetry) -> MonitorNameBuilder.buildLogicalDiskName(monitor));
-		MONITOR_NAME_BUILDERS.put(
-			"disk_controller",
-			(monitor, telemetry) -> MonitorNameBuilder.buildDiskControllerName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put("network", (monitor, telemetry) -> MonitorNameBuilder.buildNetworkCardName(monitor));
-		MONITOR_NAME_BUILDERS.put("fan", (monitor, telemetry) -> MonitorNameBuilder.buildFanName(monitor));
-		MONITOR_NAME_BUILDERS.put("power_supply", (monitor, telemetry) -> MonitorNameBuilder.buildPowerSupplyName(monitor));
-		MONITOR_NAME_BUILDERS.put("temperature", (monitor, telemetry) -> MonitorNameBuilder.buildTemperatureName(monitor));
-		MONITOR_NAME_BUILDERS.put("tape_drive", (monitor, telemetry) -> MonitorNameBuilder.buildTapeDriveName(monitor));
-		MONITOR_NAME_BUILDERS.put("robotics", (monitor, telemetry) -> MonitorNameBuilder.buildRoboticsName(monitor));
-		// Note: 'enclosure' requires a telemetryManager, so we pass it into the method.
-		MONITOR_NAME_BUILDERS.put(
-			"enclosure",
-			(monitor, telemetry) -> MonitorNameBuilder.buildEnclosureName(telemetry, monitor)
-		);
-		MONITOR_NAME_BUILDERS.put("vm", (monitor, telemetry) -> MonitorNameBuilder.buildVmName(monitor));
-		MONITOR_NAME_BUILDERS.put("voltage", (monitor, telemetry) -> MonitorNameBuilder.buildVoltageName(monitor));
-		MONITOR_NAME_BUILDERS.put("blade", (monitor, telemetry) -> MonitorNameBuilder.buildBladeName(monitor));
-		MONITOR_NAME_BUILDERS.put("gpu", (monitor, telemetry) -> MonitorNameBuilder.buildGpuName(monitor));
-		MONITOR_NAME_BUILDERS.put("battery", (monitor, telemetry) -> MonitorNameBuilder.buildBatteryName(monitor));
-		MONITOR_NAME_BUILDERS.put("led", (monitor, telemetry) -> MonitorNameBuilder.buildLedName(monitor));
-		MONITOR_NAME_BUILDERS.put("lun", (monitor, telemetry) -> MonitorNameBuilder.buildLunName(monitor));
-		MONITOR_NAME_BUILDERS.put("other_device", (monitor, telemetry) -> MonitorNameBuilder.buildOtherDeviceName(monitor));
-	}
 
 	/**
 	 * Check if the given value is a valid positive
@@ -329,38 +289,89 @@ public class HwCollectHelper {
 	}
 
 	/**
-	 * Builds the monitor name using the monitor type. The method looks up the correct build function
-	 * based on the monitor's type (normalized to lowercase) and applies it; if no matching type is found,
-	 * it returns the monitor type as is.
+	 * Whether a metric with a given metricNamePrefix is collected or not for the given monitor.
 	 *
-	 * @param monitor the {@link Monitor} instance
-	 * @param telemetryManager the {@link TelemetryManager} instance, required for some build functions
-	 * @return the built monitor name, or the monitor type if no match is found.
+	 * @param monitor The monitor instance where the metric is collected.
+	 * @param metricNamePrefix The prefix of the metric name to check for.
+	 * @return true if a metric with a given metricNamePrefix is collected, false otherwise.
 	 */
-	public static String buildMonitorNameUsingType(final Monitor monitor, final TelemetryManager telemetryManager) {
-		if (monitor == null) {
-			throw new IllegalArgumentException("Monitor cannot be null");
-		}
-		String type = monitor.getType();
-		if (type == null) {
-			return null;
-		}
-		// Normalize type to lowercase
-		BiFunction<Monitor, TelemetryManager, String> builder = MONITOR_NAME_BUILDERS.get(type.toLowerCase());
-		return builder != null ? builder.apply(monitor, telemetryManager) : type;
+	public static boolean isMetricCollected(final Monitor monitor, final String metricNamePrefix) {
+		return monitor
+			.getMetrics()
+			.values()
+			.stream()
+			.anyMatch(metric -> {
+				// Extract the metric name prefix
+				final String currentMetricNamePrefix = MetricFactory.extractName(metric.getName());
+				final Map<String, String> metricAttributes = metric.getAttributes();
+				// CHECKSTYLE:OFF
+				return (
+					metricNamePrefix.equals(currentMetricNamePrefix) &&
+					(!metricAttributes.containsKey("hw.type") || monitor.getType().equals(metricAttributes.get("hw.type"))) &&
+					metric.isUpdated()
+				);
+				// CHECKSTYLE:ON
+			});
 	}
 
-	public static String md5Hex(String input) {
-		try {
-			// Get an instance of the MD5 message digest
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			// Compute the digest, converting the input string to bytes using UTF-8 encoding
-			byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
-			// Convert the digest bytes to a hexadecimal string using HexFormat (available since Java 17)
-			return HexFormat.of().formatHex(digest);
-		} catch (NoSuchAlgorithmException e) {
-			// MD5 should always be available in Java implementations
-			throw new RuntimeException("MD5 algorithm not available.", e);
-		}
+	/**
+	 * Get the metric from the monitor by metric name prefix and attributes
+	 * @param hostname         The hostname of the monitor
+	 * @param monitor          The monitor instance where the metric is collected
+	 * @param metricNamePrefix The metric name prefix. E.g 'hw.errors.limit'
+	 * @param metricAttributes A key value pair of attributes to be matched with the metric attributes
+	 * @return Optional of the metric if found, otherwise an empty Optional
+	 */
+	public static Optional<NumberMetric> findMetricByNamePrefixAndAttributes(
+		@NonNull String hostname,
+		@NonNull final Monitor monitor,
+		@NonNull final String metricNamePrefix,
+		@NonNull final Map<String, String> metricAttributes
+	) {
+		// Get the metric from the monitor by metric name prefix and attributes
+		// This atomic integer is used to log a warning if multiple metrics are found with the same prefix and attributes
+		final AtomicInteger count = new AtomicInteger(0);
+		return monitor
+			.getMetrics()
+			.values()
+			.stream()
+			.filter(metric -> {
+				// Extract the metric name prefix and check if the metric attributes are contained in the given attributes
+				final boolean result =
+					metric.isUpdated() &&
+					metricNamePrefix.equals(MetricFactory.extractName(metric.getName())) &&
+					containsAllEntries(metric.getAttributes(), metricAttributes);
+
+				// Log a warning if multiple metrics are found with the same prefix and attributes
+				if (result && count.incrementAndGet() > 1) {
+					log.warn(
+						"Hostname {} - Multiple metrics found for the same prefix {} and attributes: {}",
+						hostname,
+						metricNamePrefix,
+						metricAttributes
+					);
+				}
+				return result;
+			})
+			.map(NumberMetric.class::cast)
+			.findFirst();
+	}
+
+	/**
+	 * Checks if all entries of the second map are contained in the first map.
+	 * This method iterates through all entries of the second map and checks if each entry is present
+	 * in the first map with the same key and value.
+	 *
+	 * @param firstMap  the map to be checked for containing all entries of the second map
+	 * @param secondMap the map whose entries are to be checked against the first map
+	 * @return {@code true} if all entries of the second map are contained in the first map,
+	 * {@code false} otherwise
+	 */
+	public static boolean containsAllEntries(Map<String, String> firstMap, Map<String, String> secondMap) {
+		// Checks if the second map entries are all contained within the first map
+		return secondMap
+			.entrySet()
+			.stream()
+			.allMatch(entry -> firstMap.containsKey(entry.getKey()) && firstMap.get(entry.getKey()).equals(entry.getValue()));
 	}
 }

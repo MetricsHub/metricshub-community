@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for physical disk-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PhysicalDiskConstants {
 
 	public static final Pattern PHYSICAL_DISK_TRIM_PATTERN = Pattern.compile("disk|drive", Pattern.CASE_INSENSITIVE);

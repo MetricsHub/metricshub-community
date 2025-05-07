@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for fan-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FanConstants {
 
 	public static final String HW_ENERGY_FAN_METRIC = "hw.energy{hw.type=\"fan\"}";

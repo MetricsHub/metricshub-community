@@ -21,8 +21,13 @@ package org.metricshub.hardware.constants;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for enclosure-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EnclosureConstants {
 
 	public static final String HW_ENCLOSURE_POWER = "hw.enclosure.power";
@@ -31,6 +36,5 @@ public class EnclosureConstants {
 	public static final String COMPUTER = "Computer";
 	public static final String STORAGE = "Storage";
 	public static final String SWITCH = "Switch";
-	public static final Pattern ENCLOSURE_TRIM_PATTERN = null;
 	public static final String ENCLOSURE_TYPE = "type";
 }

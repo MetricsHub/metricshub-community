@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for disk controller-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class DiskControllerConstants {
 
 	public static final String HW_ENERGY_DISK_CONTROLLER_METRIC = "hw.energy{hw.type=\"disk_controller\"}";

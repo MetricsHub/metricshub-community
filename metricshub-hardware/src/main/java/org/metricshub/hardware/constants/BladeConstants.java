@@ -22,9 +22,15 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for blade-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class BladeConstants {
 
-	public static final String BLADE_NAME = "bladeName";
+	public static final String BLADE_NAME = "blade_name";
 	public static final Pattern BLADE_TRIM_PATTERN = Pattern.compile("blade", Pattern.CASE_INSENSITIVE);
 }

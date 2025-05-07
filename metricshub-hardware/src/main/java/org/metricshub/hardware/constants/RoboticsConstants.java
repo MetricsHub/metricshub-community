@@ -22,7 +22,13 @@ package org.metricshub.hardware.constants;
  */
 
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
+/**
+ * Constants for robotics-related metrics.
+ */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class RoboticsConstants {
 
 	public static final String HW_ENERGY_ROBOTICS_METRIC = "hw.energy{hw.type=\"robotics\"}";
