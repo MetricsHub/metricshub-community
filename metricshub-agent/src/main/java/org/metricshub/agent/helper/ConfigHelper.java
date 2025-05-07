@@ -279,9 +279,9 @@ public class ConfigHelper {
 		}
 
 		// Generate the configuration file config/metricshub.yaml if not present
-		generateDefaultConfigurationFileIfAbsent(configDirectory);
+		generateDefaultConfigurationFileIfEmptyDir(configDirectory);
 
-		// Set the configuration file permissions on Windows to allow writing
+		// Set the configuration files write-permissions on Windows to allow writing
 		setUserPermissionsOnWindows(configDirectory);
 
 		return configDirectory;
@@ -324,7 +324,7 @@ public class ConfigHelper {
 	 *                        (e.g. /opt/metricshub/lib/config or %PROGRAMDATA%/metricshub/config)
 	 * @throws IOException if the copy fails
 	 */
-	public static void generateDefaultConfigurationFileIfAbsent(final Path configDirectory) throws IOException {
+	public static void generateDefaultConfigurationFileIfEmptyDir(final Path configDirectory) throws IOException {
 		// Check if the configuration directory is not empty, means there are already configuration files
 		try (Stream<Path> stream = Files.list(configDirectory).filter(Files::isRegularFile)) {
 			// Check if the configuration directory is empty
@@ -418,7 +418,7 @@ public class ConfigHelper {
 			view.setAcl(acl);
 		} catch (Exception e) {
 			log.error("Could not set write permissions to file: {}. Error: {}", configPath.toString(), e.getMessage());
-			log.error("Exception: ", e);
+			log.debug("Exception: ", e);
 		}
 	}
 

@@ -83,8 +83,8 @@ public class AgentContext {
 	/**
 	 * Instantiate the global context
 	 *
-	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
-	 * @param extensionManager    Manages and aggregates various types of extensions used within MetricsHub.
+	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
+	 * @param extensionManager         Manages and aggregates various types of extensions used within MetricsHub.
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
 	public AgentContext(final String alternateConfigDirectory, final ExtensionManager extensionManager)
@@ -95,8 +95,8 @@ public class AgentContext {
 
 	/**
 	 * Builds the agent context
-	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
-	 * @param createConnectorStore Whether we should create a new connector store
+	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
+	 * @param createConnectorStore     Whether we should create a new connector store
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
 	public void build(final String alternateConfigDirectory, final boolean createConnectorStore) throws IOException {

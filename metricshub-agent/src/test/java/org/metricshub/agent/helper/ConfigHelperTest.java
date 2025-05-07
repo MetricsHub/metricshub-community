@@ -136,7 +136,7 @@ class ConfigHelperTest {
 
 			// Generating default config should be a real call
 			mockedConfigHelper
-				.when(() -> ConfigHelper.generateDefaultConfigurationFileIfAbsent(configDir))
+				.when(() -> ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir))
 				.thenCallRealMethod();
 
 			// Setting user permissions should be a real call
@@ -147,7 +147,7 @@ class ConfigHelperTest {
 			mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenReturn(examplePath);
 
 			// Mock getSourceDirectory as it will try to retrieve the example file deployed in production environment
-			ConfigHelper.generateDefaultConfigurationFileIfAbsent(configDir);
+			ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir);
 
 			final File file = configDir.resolve(DEFAULT_CONFIG_FILENAME).toFile();
 

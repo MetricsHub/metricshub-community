@@ -136,7 +136,7 @@ public class MetricsHubAgentApplication implements Runnable {
 	/**
 	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
 	 * @param agentContext The agent context
-	 * @param alternateConfigDirectory Alternation configuration directory passed by the user
+	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
 	 */
 	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigDirectory) {
 		try {
