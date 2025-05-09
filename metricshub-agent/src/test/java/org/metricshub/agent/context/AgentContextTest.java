@@ -19,7 +19,7 @@ import static org.metricshub.agent.helper.TestConstants.PARIS_SITE_VALUE;
 import static org.metricshub.agent.helper.TestConstants.SERVER_1_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.helper.TestConstants.SERVICE_VERSION_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.TestConstants.SITE_ATTRIBUTE_KEY;
-import static org.metricshub.agent.helper.TestConstants.TEST_CONFIG_FILE_PATH;
+import static org.metricshub.agent.helper.TestConstants.TEST_CONFIG_DIRECTORY_PATH;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOST_NAME;
 
@@ -35,6 +35,7 @@ import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
+import org.metricshub.configuration.YamlConfigurationProvider;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.HttpMethod;
@@ -53,33 +54,34 @@ class AgentContextTest {
 	final ExtensionManager extensionManager = ExtensionManager
 		.builder()
 		.withProtocolExtensions(List.of(new SnmpExtension()))
+		.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
 		.build();
 
 	@Test
 	void testInitialize() throws IOException {
-		final AgentContext agentContext = new AgentContext(TEST_CONFIG_FILE_PATH, extensionManager);
+		final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager);
 
-		assertNotNull(agentContext.getAgentInfo());
-		assertNotNull(agentContext.getConfigFile());
-		assertNotNull(agentContext.getPid());
+		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
+		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
+		assertNotNull(agentContext.getPid(), "PID should not be null");
 
 		final AgentConfig agentConfig = agentContext.getAgentConfig();
-		assertNotNull(agentConfig);
+		assertNotNull(agentConfig, "AgentConfig should not be null");
 
 		final Map<String, ResourceGroupConfig> resourceGroupsConfig = agentConfig.getResourceGroups();
-		assertNotNull(resourceGroupsConfig);
+		assertNotNull(resourceGroupsConfig, "ResourceGroupsConfig should not be null");
 		final ResourceGroupConfig resourceGroupConfig = resourceGroupsConfig.get(PARIS_RESOURCE_GROUP_KEY);
-		assertNotNull(resourceGroupConfig);
+		assertNotNull(resourceGroupConfig, "ResourceGroupConfig should not be null");
 		final Map<String, ResourceConfig> resourcesConfigInTheGroup = resourceGroupConfig.getResources();
-		assertNotNull(resourcesConfigInTheGroup);
-		assertNotNull(resourcesConfigInTheGroup.get(SERVER_1_RESOURCE_GROUP_KEY));
+		assertNotNull(resourcesConfigInTheGroup, "ResourcesConfigInTheGroup should not be null");
+		assertNotNull(resourcesConfigInTheGroup.get(SERVER_1_RESOURCE_GROUP_KEY), "ResourceConfig should not be null");
 		final ResourceConfig grafanaServiceResourceConfig = resourcesConfigInTheGroup.get(
 			GRAFANA_SERVICE_RESOURCE_CONFIG_KEY
 		);
-		assertNotNull(grafanaServiceResourceConfig);
+		assertNotNull(grafanaServiceResourceConfig, "GrafanaServiceResourceConfig should not be null");
 		final Map<String, String> attributesConfig = grafanaServiceResourceConfig.getAttributes();
-		assertNotNull(attributesConfig);
-		assertEquals(PARIS_SITE_VALUE, attributesConfig.get(SITE_ATTRIBUTE_KEY));
+		assertNotNull(attributesConfig, "AttributesConfig should not be null");
+		assertEquals(PARIS_SITE_VALUE, attributesConfig.get(SITE_ATTRIBUTE_KEY), "Site attribute should match");
 
 		final Map<String, String> attributes = new LinkedHashMap<>();
 		attributes.put(ID_ATTRIBUTE_KEY, "$1");
@@ -119,20 +121,20 @@ class AgentContextTest {
 			.simple(simple)
 			.build();
 		final Map<String, SimpleMonitorJob> expectedMonitors = Map.of(GRAFANA_MONITOR_JOB_KEY, simpleMonitorJobExpected);
-		assertEquals(expectedMonitors, grafanaServiceResourceConfig.getMonitors());
+		assertEquals(expectedMonitors, grafanaServiceResourceConfig.getMonitors(), "Monitors should match");
 
 		// Multi-hosts checks
 		final ResourceConfig server2ResourceConfig = resourcesConfigInTheGroup.get("snmp-resources-1-server-2");
-		assertNotNull(server2ResourceConfig);
-		assertEquals("server-2", server2ResourceConfig.getAttributes().get(HOST_NAME));
+		assertNotNull(server2ResourceConfig, "Server2ResourceConfig should not be null");
+		assertEquals("server-2", server2ResourceConfig.getAttributes().get(HOST_NAME), "host.name should match");
 		final ResourceConfig server3ResourceConfig = resourcesConfigInTheGroup.get("snmp-resources-2-server-3");
-		assertEquals("server-3", server3ResourceConfig.getAttributes().get(HOST_NAME));
-		assertNotNull(server3ResourceConfig);
+		assertEquals("server-3", server3ResourceConfig.getAttributes().get(HOST_NAME), "host.name should match");
+		assertNotNull(server3ResourceConfig, "Server3ResourceConfig should not be null");
 
 		// Check the TelemetryManager map is correctly created
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		final Map<String, TelemetryManager> parisTelemetryManagers = telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY);
-		assertEquals(4, parisTelemetryManagers.size());
+		assertEquals(4, parisTelemetryManagers.size(), "TelemetryManagers size should match");
 
 		// Check the OpenTelemetry configuration is correctly created
 		final Map<String, String> expectedOtelConfiguration = new HashMap<>();
@@ -152,7 +154,8 @@ class AgentContextTest {
 		// Make sure the engine is notified with configuredConnectorId
 		assertEquals(
 			"MetricsHub-Configured-Connector-paris-grafana-service",
-			parisTelemetryManagers.get(GRAFANA_SERVICE_RESOURCE_CONFIG_KEY).getHostConfiguration().getConfiguredConnectorId()
+			parisTelemetryManagers.get(GRAFANA_SERVICE_RESOURCE_CONFIG_KEY).getHostConfiguration().getConfiguredConnectorId(),
+			"ConfiguredConnectorId should match"
 		);
 	}
 
@@ -160,41 +163,44 @@ class AgentContextTest {
 	void testInitializeWithTopLevelResources() throws IOException {
 		// Create the agent context using the configuration file path
 		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/top-level-resource-agent-context-test.yaml",
+			"src/test/resources/config/top-level-resource-agent-context-test",
 			extensionManager
 		);
 
 		// Check AgentContext fields
-		assertNotNull(agentContext.getAgentInfo());
-		assertNotNull(agentContext.getConfigFile());
-		assertNotNull(agentContext.getPid());
+		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
+		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
+		assertNotNull(agentContext.getPid(), "PID should not be null");
 
 		// Verify that the agent configuration is not null
 		final AgentConfig agentConfig = agentContext.getAgentConfig();
-		assertNotNull(agentConfig);
+		assertNotNull(agentConfig, "AgentConfig should not be null");
 
 		// Check whether top-level resources are included in the telemetry managers
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
-		assertEquals(2, telemetryManagers.size());
+		assertEquals(2, telemetryManagers.size(), "TelemetryManagers size should be 2");
 
 		// Check the presence of the top-level resources and the resources inside resource groups
-		assertNotNull(telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY).get("server-2"));
-		assertNotNull(telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY).get("server-1"));
+		assertNotNull(
+			telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY).get("server-2"),
+			"server-2 should not be null"
+		);
+		assertNotNull(telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY).get("server-1"), "server-1 should not be null");
 	}
 
 	@Test
 	void testInitializeWithConnectorVariables() throws IOException {
 		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/metricshub-connectorVariables.yaml",
+			"src/test/resources/config/metricshub-connectorVariables",
 			extensionManager
 		);
 
-		assertNotNull(agentContext.getAgentInfo());
-		assertNotNull(agentContext.getConfigFile());
-		assertNotNull(agentContext.getPid());
+		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
+		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
+		assertNotNull(agentContext.getPid(), "PID should not be null");
 
 		final AgentConfig agentConfig = agentContext.getAgentConfig();
-		assertNotNull(agentConfig);
+		assertNotNull(agentConfig, "AgentConfig should not be null");
 
 		final ResourceConfig resourceConfig = agentConfig
 			.getResourceGroups()
@@ -204,11 +210,11 @@ class AgentContextTest {
 
 		final Map<String, AdditionalConnector> additionalConnectors = resourceConfig.getAdditionalConnectors();
 		// Check the number of additional connectors
-		assertEquals(5, additionalConnectors.size());
+		assertEquals(5, additionalConnectors.size(), "AdditionalConnectors size should be 5");
 
 		final Map<String, ConnectorVariables> variables = resourceConfig.getConnectorVariables();
 		// Check the number of configured ConnectorVariables
-		assertEquals(3, variables.size());
+		assertEquals(3, variables.size(), "ConnectorVariables size should be 3");
 
 		AdditionalConnector pureStorageREST = AdditionalConnector
 			.builder()
@@ -216,7 +222,7 @@ class AgentContextTest {
 			.variables(Map.of("restQueryPath", "/pure/api/v2"))
 			.force(false)
 			.build();
-		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"));
+		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"), "PureStorageREST should match");
 		AdditionalConnector windows = AdditionalConnector
 			.builder()
 			.variables(Map.of("osType", "windows"))
@@ -237,16 +243,20 @@ class AgentContextTest {
 		expectedAdditionalConnectors.put("Linux", linux);
 		expectedAdditionalConnectors.put("IpmiTool", ipmiTool);
 		expectedAdditionalConnectors.put("LinuxProcess", null);
-		assertEquals(expectedAdditionalConnectors, additionalConnectors);
+		assertEquals(expectedAdditionalConnectors, additionalConnectors, "AdditionalConnectors should match");
 	}
 
 	@Test
 	void testInitializeWithEnvironmentVariables() throws IOException {
 		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/metricshub-environmentVariables.yaml",
+			"src/test/resources/config/metricshub-environmentVariables",
 			extensionManager
 		);
 
-		assertNotEquals("${env::JAVA_HOME}", agentContext.getAgentConfig().getOutputDirectory());
+		assertNotEquals(
+			"${env::JAVA_HOME}",
+			agentContext.getAgentConfig().getOutputDirectory(),
+			"Output directory should not be the same"
+		);
 	}
 }

@@ -133,6 +133,15 @@ public class ExtensionLoader {
 			log.info("Loaded composite source script extension {}.", extension.getClass().getSimpleName())
 		);
 
+		// Load Configuration provider extensions
+		final ServiceLoader<IConfigurationProvider> configurationProviderExtensions = ServiceLoader.load(
+			IConfigurationProvider.class,
+			classLoader
+		);
+		configurationProviderExtensions.forEach(extension ->
+			log.info("Loaded configuration provider extension {}.", extension.getClass().getSimpleName())
+		);
+
 		// Build the extension manager
 		extensionManager =
 			ExtensionManager
@@ -142,6 +151,7 @@ public class ExtensionLoader {
 				.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
 				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
 				.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
+				.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
 				.build();
 
 		return extensionManager;
