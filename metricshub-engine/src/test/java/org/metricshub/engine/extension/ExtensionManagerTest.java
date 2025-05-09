@@ -1,15 +1,15 @@
 package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
-import org.metricshub.engine.connector.model.Connector;
-import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnector;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 
 class ExtensionManagerTest {
 
@@ -19,39 +19,39 @@ class ExtensionManagerTest {
 	@Test
 	void test() {
 		final IConnectorStoreProviderExtension connectorStoreProviderExt1 = new IConnectorStoreProviderExtension() {
-			private ConnectorStore connectorStore;
+			private RawConnectorStore rawConnectorStore;
 
 			@Override
 			public void load() {
-				final Connector connector = Connector.builder().build();
+				final RawConnector rawConnector = new RawConnector();
 
-				final Map<String, Connector> store = Map.of(CONNECTOR_ID_1, connector);
+				final Map<String, RawConnector> store = Map.of(CONNECTOR_ID_1, rawConnector);
 
-				connectorStore = new ConnectorStore();
-				connectorStore.setStore(store);
+				rawConnectorStore = new RawConnectorStore();
+				rawConnectorStore.setStore(store);
 			}
 
 			@Override
-			public ConnectorStore getConnectorStore() {
-				return connectorStore;
+			public RawConnectorStore getRawConnectorStore() {
+				return rawConnectorStore;
 			}
 		};
 		final IConnectorStoreProviderExtension connectorStoreProviderExt2 = new IConnectorStoreProviderExtension() {
-			private ConnectorStore connectorStore;
+			private RawConnectorStore rawConnectorStore;
 
 			@Override
 			public void load() {
-				final Connector connector = Connector.builder().build();
+				final RawConnector rawConnector = new RawConnector();
 
-				final Map<String, Connector> store = Map.of(CONNECTOR_ID_2, connector);
+				final Map<String, RawConnector> store = Map.of(CONNECTOR_ID_2, rawConnector);
 
-				connectorStore = new ConnectorStore();
-				connectorStore.setStore(store);
+				rawConnectorStore = new RawConnectorStore();
+				rawConnectorStore.setStore(store);
 			}
 
 			@Override
-			public ConnectorStore getConnectorStore() {
-				return connectorStore;
+			public RawConnectorStore getRawConnectorStore() {
+				return rawConnectorStore;
 			}
 		};
 
@@ -59,14 +59,14 @@ class ExtensionManagerTest {
 			.builder()
 			.withConnectorStoreProviderExtensions(List.of(connectorStoreProviderExt1, connectorStoreProviderExt2))
 			.build();
-		final ConnectorStore connectorStore = extensionManager.aggregateExtensionConnectorStores();
-		final Map<String, Connector> store = new HashMap<>(
-			Map.of(CONNECTOR_ID_1, Connector.builder().build(), CONNECTOR_ID_2, Connector.builder().build())
+		final RawConnectorStore rawConnectorStore = extensionManager.aggregateExtensionRawConnectorStores();
+		final Map<String, RawConnector> rawStore = new HashMap<>(
+			Map.of(CONNECTOR_ID_1, new RawConnector(), CONNECTOR_ID_2, new RawConnector())
 		);
 
-		final ConnectorStore connectorStoreExpected = new ConnectorStore();
-		connectorStoreExpected.setStore(store);
-		assertTrue(connectorStore.getStore() instanceof TreeMap);
-		assertEquals(connectorStoreExpected, connectorStore);
+		final RawConnectorStore rawConnectorStoreExpected = new RawConnectorStore();
+		rawConnectorStoreExpected.setStore(rawStore);
+		assertInstanceOf(TreeMap.class, rawConnectorStore.getStore());
+		assertEquals(rawConnectorStoreExpected.getStore(), rawConnectorStore.getStore());
 	}
 }

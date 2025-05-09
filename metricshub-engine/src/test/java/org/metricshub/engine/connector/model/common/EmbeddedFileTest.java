@@ -1,6 +1,8 @@
 package org.metricshub.engine.connector.model.common;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -113,6 +115,29 @@ class EmbeddedFileTest {
 				.id(1)
 				.build();
 			assertEquals(MetricsHubConstants.EMPTY, embeddedFile.getBaseName());
+		}
+	}
+
+	@Test
+	void testDeepCopy() {
+		{
+			final EmbeddedFile embeddedFile = EmbeddedFile
+				.builder()
+				.content("value".getBytes(StandardCharsets.UTF_8))
+				.filename("script.bat")
+				.id(1)
+				.build();
+			final EmbeddedFile copyEmbeddedFile = embeddedFile.deepCopy();
+			// the copy does not have the same reference as the original
+			assertNotSame(embeddedFile, copyEmbeddedFile);
+			final byte[] efContent = embeddedFile.getContent();
+			final byte[] efContentCopy = copyEmbeddedFile.getContent();
+			// copy's content does not have the same reference as the original's content
+			assertNotSame(efContent, efContentCopy);
+			// content remains the same
+			assertArrayEquals(efContent, efContentCopy);
+			embeddedFile.setContent(null);
+			assertEquals(null, embeddedFile.deepCopy().getContent());
 		}
 	}
 }

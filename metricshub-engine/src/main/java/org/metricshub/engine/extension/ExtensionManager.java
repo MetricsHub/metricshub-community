@@ -39,7 +39,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -276,23 +276,26 @@ public class ExtensionManager {
 	}
 
 	/**
-	 * Aggregates connector stores from various provider extensions into a single {@link ConnectorStore}.
-	 * This method initializes a new {@link ConnectorStore} and iteratively loads data from each registered
+	 * Aggregates connector stores from various provider extensions into a single {@link RawConnectorStore}.
+	 * This method initializes a new {@link RawConnectorStore} and iteratively loads data from each registered
 	 * connector store provider extension. All connectors from each extension are added to the newly created store.
 	 *
 	 * This centralized store can be used to manage or interpret connectors across different extensions efficiently,
 	 * providing a unified view of all connectors available in MetricsHub.
 	 *
-	 * @return A {@link ConnectorStore} containing all connectors from various extensions combined into one store.
+	 * @return A {@link RawConnectorStore} containing all connectors from various extensions combined into one store.
 	 */
-	public ConnectorStore aggregateExtensionConnectorStores() {
-		final ConnectorStore connectorStore = new ConnectorStore();
-		connectorStore.setStore(new TreeMap<>(String.CASE_INSENSITIVE_ORDER));
+	public RawConnectorStore aggregateExtensionRawConnectorStores() {
+		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
+		rawConnectorStore.setStore(new TreeMap<>(String.CASE_INSENSITIVE_ORDER));
 		connectorStoreProviderExtensions.forEach(connectorStoreProviderExtension -> {
 			connectorStoreProviderExtension.load();
-			connectorStore.addMany(connectorStoreProviderExtension.getConnectorStore().getStore());
+			RawConnectorStore extensionStore = connectorStoreProviderExtension.getRawConnectorStore();
+			rawConnectorStore.addMany(extensionStore.getStore());
+			// Set all the extensions subtypes to use them for the deserialization
+			rawConnectorStore.getSubtypes().addAll(extensionStore.getSubtypes());
 		});
-		return connectorStore;
+		return rawConnectorStore;
 	}
 
 	/**

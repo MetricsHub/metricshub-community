@@ -24,27 +24,23 @@ package org.metricshub.engine.connector.parser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
-import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.RawConnector;
 
 /**
- * Parses connectors from YAML files in a given directory.
+ * Parses connectors from YAML files in a given directory to a
+ * RawConnectorStore.
  */
 @Slf4j
-public class ConnectorLibraryParser {
+public class RawConnectorLibraryParser {
 
 	public static final String CONNECTOR_PARSING_ERROR = "Error while parsing connector {}: {}";
 
@@ -54,24 +50,28 @@ public class ConnectorLibraryParser {
 	public static final ObjectMapper OBJECT_MAPPER = JsonHelper.buildYamlMapper();
 
 	/**
-	 * This inner class allows to visit the files contained within the Yaml directory
+	 * This inner class allows to visit the files contained within the Yaml
+	 * directory
 	 */
 	private class ConnectorFileVisitor extends SimpleFileVisitor<Path> {
 
-		private final Map<String, Connector> connectorsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+		/**
+		 * Case-insensitive map of connector IDs to their {@link RawConnector} definitions.
+		 */
+		private final Map<String, RawConnector> connectorsMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
-		public Map<String, Connector> getConnectorsMap() {
+		/**
+		 * Returns the map of connector IDs and their {@link RawConnector} instances.
+		 *
+		 * @return case-insensitive map of connectors
+		 */
+		public Map<String, RawConnector> getConnectorsMap() {
 			return connectorsMap;
 		}
 
 		@Override
 		public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
 			final String filename = file.getFileName().toString();
-
-			if (isZipFile(filename)) {
-				readZipFile(file);
-				return FileVisitResult.CONTINUE;
-			}
 
 			// Skip this path if it is a directory or not a YAML file
 			if (Files.isDirectory(file) || !isYamlFile(file.toFile().getName())) {
@@ -85,7 +85,7 @@ public class ConnectorLibraryParser {
 			final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(file.getParent());
 
 			try {
-				final Connector connector = connectorParser.parse(file.toFile());
+				final RawConnector connector = connectorParser.parseRaw(file.toFile());
 				connectorsMap.put(filename.substring(0, filename.lastIndexOf('.')), connector);
 			} catch (Exception e) {
 				log.error(CONNECTOR_PARSING_ERROR, filename, e.getMessage());
@@ -96,70 +96,13 @@ public class ConnectorLibraryParser {
 		}
 
 		/**
-		 * Read a Zip file and try to parse its files as connectors.
-		 * @param zipPath The zip file path
-		 * @throws IOException
-		 */
-		private void readZipFile(final Path zipPath) throws IOException {
-			try (FileSystem zipFileSystem = FileSystems.newFileSystem(zipPath)) {
-				final Path root = zipFileSystem.getPath("/");
-
-				Files.walkFileTree(
-					root,
-					new SimpleFileVisitor<Path>() {
-						@Override
-						public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-							final String strPath = path.toString();
-
-							if (!isYamlFile(strPath)) {
-								return FileVisitResult.CONTINUE;
-							}
-							final JsonNode connectorNode = OBJECT_MAPPER.readTree(Files.newInputStream(path));
-
-							if (!isConnector(connectorNode)) {
-								return FileVisitResult.CONTINUE;
-							}
-
-							final Path connectorFolder = path.getParent();
-							final URI connectorFolderUri = connectorFolder.toUri();
-
-							final ConnectorParser connectorParser = ConnectorParser.withNodeProcessorAndUpdateChain(connectorFolder);
-
-							final String fileName = strPath.substring(strPath.lastIndexOf('/') + 1);
-
-							FileHelper.fileSystemTask(
-								connectorFolderUri,
-								Collections.emptyMap(),
-								() -> {
-									final Connector connector;
-									try {
-										connector = connectorParser.parse(Files.newInputStream(path), connectorFolderUri, fileName);
-										connectorsMap.put(fileName.substring(0, fileName.lastIndexOf('.')), connector);
-									} catch (Exception e) {
-										log.error(CONNECTOR_PARSING_ERROR, fileName, e.getMessage());
-										log.debug("Exception: ", e);
-									}
-								}
-							);
-
-							return FileVisitResult.CONTINUE;
-						}
-					}
-				);
-			} catch (IOException exception) {
-				// In case of an IOException, we log it and throw it back
-				log.error("Error while reading zip file {}: {}", zipPath.getFileName().toString(), exception.getMessage());
-				throw exception;
-			}
-		}
-
-		/**
-		 * Whether the JsonNode is a final Connector. It means that this JsonNode defines the displayName section.
-		 * Checks whether the JsonNode is a final Connector.
-		 * It means that this JsonNode defines the displayName section.
+		 * Whether the JsonNode is a final Connector. It means that this JsonNode
+		 * defines the displayName section. Checks whether the JsonNode is a final
+		 * Connector. It means that this JsonNode defines the displayName section.
 		 *
 		 * @param connector JsonNode that contains connector's data.
-		 * @return {@code true} if the {@link JsonNode} is a final connector, otherwise {@code false}.
+		 * @return {@code true} if the {@link JsonNode} is a final connector, otherwise
+		 *         {@code false}.
 		 */
 		private boolean isConnector(final JsonNode connector) {
 			final JsonNode connectorNode = connector.get("connector");
@@ -175,20 +118,11 @@ public class ConnectorLibraryParser {
 		 * Checks whether the connector is a YAML file or not.
 		 *
 		 * @param name Given fileName.
-		 * @return {@code true} if the file has a YAML extension, otherwise {@code false}.
+		 * @return {@code true} if the file has a YAML extension, otherwise
+		 *         {@code false}.
 		 */
 		private boolean isYamlFile(final String name) {
 			return name.toLowerCase().endsWith(".yaml");
-		}
-
-		/**
-		 * Whether the connector is a ZIP file or not
-		 *
-		 * @param name given file name
-		 * @return boolean value
-		 */
-		private boolean isZipFile(final String name) {
-			return name.toLowerCase().endsWith(".zip");
 		}
 	}
 
@@ -196,10 +130,10 @@ public class ConnectorLibraryParser {
 	 * Parses connectors from all YAML files in the given directory.
 	 *
 	 * @param yamlParentDirectory The directory containing connectors YAML files.
-	 * @return Map&lt;String, Connector&gt; (connectors map: key=YAMLFileName, value=Connector).
+	 * @return a RawConnectorStore object.
 	 * @throws IOException If the file does not exist.
 	 */
-	public Map<String, Connector> parseConnectorsFromAllYamlFiles(Path yamlParentDirectory) throws IOException {
+	public Map<String, RawConnector> parseConnectorsFromAllYamlFiles(Path yamlParentDirectory) throws IOException {
 		final long startTime = System.currentTimeMillis();
 		final ConnectorFileVisitor fileVisitor = new ConnectorFileVisitor();
 		Files.walkFileTree(yamlParentDirectory, fileVisitor);

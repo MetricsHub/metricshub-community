@@ -46,7 +46,6 @@ import org.metricshub.engine.connector.model.identity.criterion.CommandLineCrite
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.metric.MetricType;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.connector.parser.ConnectorLibraryParser;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.telemetry.Monitor;
@@ -70,8 +69,7 @@ class DetectionStrategyTest {
 			"connector",
 			"connectorLibraryParser"
 		);
-		final Map<String, Connector> connectors = new ConnectorLibraryParser()
-			.parseConnectorsFromAllYamlFiles(yamlTestPath);
+		final Map<String, Connector> connectors = new ConnectorStore(yamlTestPath).getStore();
 		return connectors.get(AAC_CONNECTOR_ID);
 	}
 

@@ -46,6 +46,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.update.AvailableSourceUpdate;
 import org.metricshub.engine.connector.update.CompiledFilenameUpdater;
@@ -112,6 +113,37 @@ public class ConnectorParser {
 		new CompiledFilenameUpdater(file.getName()).update(connector);
 
 		return connector;
+	}
+
+	/**
+	 * Parses the given connector file into a {@link RawConnector}
+	 * @param file connector file to be parsed
+	 * @return a new {@link RawConnector} Object
+	 * @throws IOException If an error occurs while reading or parsing the file.
+	 */
+	public RawConnector parseRaw(final File file) throws IOException {
+		JsonNode node = deserializer.getMapper().readTree(file);
+
+		Map<Integer, EmbeddedFile> embeddedFiles = null;
+
+		// PRE-Processing
+		if (processor != null) {
+			final Map<URI, JsonNode> parents = new HashMap<>();
+			final Path connectorDirectory = file.toPath().getParent();
+			resolveParents(node, connectorDirectory.toUri(), parents);
+
+			node = processor.process(node);
+
+			final EmbeddedFilesResolver embeddedFilesResolver = new EmbeddedFilesResolver(
+				node,
+				connectorDirectory,
+				parents.keySet()
+			);
+			embeddedFilesResolver.process();
+			embeddedFiles = embeddedFilesResolver.collectEmbeddedFiles();
+		}
+
+		return new RawConnector(node, embeddedFiles);
 	}
 
 	/**
@@ -212,7 +244,7 @@ public class ConnectorParser {
 			.builder()
 			.deserializer(new ConnectorDeserializer(mapper))
 			.processor(
-				NodeProcessorHelper.withExtendsAndTemplateVariableProcessor(connectorDirectory, mapper, connectorVariables)
+				NodeProcessorHelper.withExtendsAndConnectorVariableProcessor(connectorDirectory, mapper, connectorVariables)
 			)
 			.build();
 	}

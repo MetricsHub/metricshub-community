@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 
@@ -16,8 +17,7 @@ class SourceKeyProcessorTest {
 	@Test
 	void testProcess() throws IOException {
 		final Path yamlTestPath = Paths.get("src", "test", "resources", "test-files", "processor");
-		final Map<String, Connector> connectors = new ConnectorLibraryParser()
-			.parseConnectorsFromAllYamlFiles(yamlTestPath);
+		final Map<String, Connector> connectors = new ConnectorStore(yamlTestPath).getStore();
 
 		final Connector connector = connectors.get("Connector");
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("system");

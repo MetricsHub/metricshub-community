@@ -21,23 +21,23 @@ package org.metricshub.engine.extension;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 
 /**
- * Defines the contract for extensions that provide and manage a connector store. A connector store
- * is a collection of connectors that define how to interact with different data sources, services, or protocols.
- * Implementations of this interface are  responsible for loading the connector store and providing access to it.
+ * Defines the contract for extensions that provide and manage a raw connector store. A raw connector store
+ * is a collection of raw connectors that define how to interact with different data sources, services, or protocols.
+ * Implementations of this interface are responsible for loading the raw connector store and providing access to it.
  */
 public interface IConnectorStoreProviderExtension {
 	/**
-	 * Loads the connector store into memory. This method initializes connector store, making it ready for use.
+	 * Loads the raw connector store into memory. This method initializes raw connector store, making it ready for use.
 	 */
 	void load();
 
 	/**
-	 * Retrieves the loaded connector store.
-	 * @return A {@link ConnectorStore} instance containing the connectors to be used by the engine. The returned
+	 * Retrieves the loaded raw connector store.
+	 * @return A {@link RawConnectorStore} instance containing the connectors to be used by the engine. The returned
 	 *         connector store is expected to be fully initialized and ready for use.
 	 */
-	ConnectorStore getConnectorStore();
+	RawConnectorStore getRawConnectorStore();
 }

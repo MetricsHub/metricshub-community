@@ -30,13 +30,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
-import org.metricshub.agent.config.AdditionalConnector;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
+import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -219,6 +219,7 @@ class AgentContextTest {
 		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"));
 		AdditionalConnector windows = AdditionalConnector
 			.builder()
+			.uses("Windows")
 			.variables(Map.of("osType", "windows"))
 			.force(true)
 			.build();
@@ -229,14 +230,19 @@ class AgentContextTest {
 			.variables(Map.of())
 			.force(true)
 			.build();
-
+		AdditionalConnector linuxProcess = AdditionalConnector
+			.builder()
+			.uses("LinuxProcess")
+			.variables(null)
+			.force(true)
+			.build();
 		final Map<String, AdditionalConnector> expectedAdditionalConnectors = new LinkedHashMap<>();
 
 		expectedAdditionalConnectors.put("PureStorageREST", pureStorageREST);
 		expectedAdditionalConnectors.put("Windows", windows);
 		expectedAdditionalConnectors.put("Linux", linux);
 		expectedAdditionalConnectors.put("IpmiTool", ipmiTool);
-		expectedAdditionalConnectors.put("LinuxProcess", null);
+		expectedAdditionalConnectors.put("LinuxProcess", linuxProcess);
 		assertEquals(expectedAdditionalConnectors, additionalConnectors);
 	}
 

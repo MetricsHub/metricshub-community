@@ -44,6 +44,7 @@ import org.metricshub.agent.deserialization.ExtensionProtocolsDeserializer;
 import org.metricshub.agent.deserialization.MonitorJobsDeserializer;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.deserialization.TimeDeserializer;

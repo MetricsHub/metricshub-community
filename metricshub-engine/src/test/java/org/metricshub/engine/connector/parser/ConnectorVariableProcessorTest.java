@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.identity.Detection;
 
-class TemplateVariableProcessorTest {
+class ConnectorVariableProcessorTest {
 
 	@Test
 	void testProcess() throws IOException {
@@ -28,8 +28,8 @@ class TemplateVariableProcessorTest {
 			"resources",
 			"test-files",
 			"connector",
-			"templateVariable",
-			"templateVariable.json"
+			"connectorVariable",
+			"connectorVariable.json"
 		);
 
 		// Create an ObjectMapper
@@ -42,17 +42,17 @@ class TemplateVariableProcessorTest {
 		connectorVariables.put("snmp-get-next", "snmpGetNext");
 		connectorVariables.put("local-connection-type", "local");
 
-		// Init TemplateVariableProcessor with the connector variables map and a node processor
-		final TemplateVariableProcessor templateVariableProcessor = TemplateVariableProcessor
+		// Init ConnectorVariableProcessor with the connector variables map and a node processor
+		final ConnectorVariableProcessor connectorVariableProcessor = ConnectorVariableProcessor
 			.builder()
 			.connectorVariables(connectorVariables)
 			.next(new ConstantsProcessor(new SourceKeyProcessor()))
 			.build();
 
-		assertNotNull(templateVariableProcessor.getNext());
+		assertNotNull(connectorVariableProcessor.getNext());
 
 		// Call the method process
-		final JsonNode nodeProcessingResult = templateVariableProcessor.process(connectorNode);
+		final JsonNode nodeProcessingResult = connectorVariableProcessor.process(connectorNode);
 
 		// Retrieve the processed connector node
 		final Connector customConnector = mapper.treeToValue(nodeProcessingResult, Connector.class);

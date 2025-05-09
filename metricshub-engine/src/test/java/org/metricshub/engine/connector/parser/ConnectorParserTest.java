@@ -731,10 +731,10 @@ class ConnectorParserTest {
 				"Context: Extends, template variable, reference resolver and constants node processors creation. Second processor shouldn't be null"
 		);
 		assertTrue(
-			next instanceof TemplateVariableProcessor,
+			next instanceof ConnectorVariableProcessor,
 			() ->
 				"Context: Extends, template variable, reference resolver and constants node processors creation. Second processor should be: " +
-				TemplateVariableProcessor.class.getSimpleName()
+				ConnectorVariableProcessor.class.getSimpleName()
 		);
 
 		next = next.getNext();

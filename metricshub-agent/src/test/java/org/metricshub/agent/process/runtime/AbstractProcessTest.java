@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import org.awaitility.Awaitility;
 import org.awaitility.Durations;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.process.config.ProcessConfig;
 import org.metricshub.agent.process.config.ProcessOutput;
@@ -23,10 +24,16 @@ import org.metricshub.agent.process.io.CustomInputStream;
 import org.metricshub.agent.process.io.GobblerStreamProcessor;
 import org.metricshub.agent.process.io.LineReaderProcessor;
 import org.metricshub.agent.process.io.ProcessorHelper;
+import org.metricshub.agent.service.TestHelper;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 class AbstractProcessTest {
+
+	@BeforeAll
+	static void initLoggingContext() {
+		TestHelper.configureGlobalLogger();
+	}
 
 	@Test
 	void test() throws IOException {
