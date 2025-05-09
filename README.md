@@ -106,7 +106,7 @@ Add the following configuration inside a new `<profile>` section in your `settin
 
 ### Accessing Snapshots from Maven Central
 
-To access **snapshot artifacts** from [Maven Central Snapshots](https://central.sonatype.com/repository/maven-snapshots), you need to explicitly configure the repository in your Maven `~/.m2/settings.xml`.
+To access **snapshot artifacts** from [Maven Central Snapshots](https://central.sonatype.com/repository/maven-snapshots/), you need to explicitly configure the repository in your Maven `~/.m2/settings.xml`.
 
 Add the following `<repository>` entry:
 
