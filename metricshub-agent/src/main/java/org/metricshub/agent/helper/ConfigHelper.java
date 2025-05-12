@@ -289,7 +289,7 @@ public class ConfigHelper {
 
 	/**
 	 * Get the default configuration file path either in the Windows <em>ProgramData\MetricsHub\config</em>
-	 * directory or under the install directory <em>/opt/metricshub/lib/config</em> on Linux systems.
+	 * directory or under the installation directory <em>/opt/metricshub/lib/config</em> on Linux systems.
 	 *
 	 * @return new {@link Path} instance
 	 */
@@ -342,7 +342,7 @@ public class ConfigHelper {
 		// The actual configuration file
 		final var targetConfigPath = configDirectory.resolve(DEFAULT_CONFIG_FILENAME);
 
-		// User has messed up the install directory and deleted the example file
+		// User has messed up the installation directory and deleted the example file
 		if (!Files.exists(exampleConfigPath)) {
 			throw new IllegalStateException(
 				String.format(

@@ -155,7 +155,7 @@ public class OtelConfigHelper {
 
 	/**
 	 * Get the default configuration file path either in the Windows <em>ProgramData\metricshub\otel\otel-config.yaml</em>
-	 * directory or under the install directory <em>/opt/metricshub/lib/otel/otel-config.yaml</em> on Linux systems.
+	 * directory or under the installation directory <em>/opt/metricshub/lib/otel/otel-config.yaml</em> on Linux systems.
 	 *
 	 * @return new {@link Path} instance
 	 */
@@ -169,7 +169,7 @@ public class OtelConfigHelper {
 	/**
 	 * Get the configuration file under the ProgramData windows directory.<br>
 	 * If the ProgramData path is not valid then the configuration file will be located
-	 * under the install directory.
+	 * under the installation directory.
 	 *
 	 * @return new {@link Path} instance
 	 */
