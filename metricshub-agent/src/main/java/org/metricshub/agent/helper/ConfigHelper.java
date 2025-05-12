@@ -244,7 +244,7 @@ public class ConfigHelper {
 	 *   <li>Else if <em>config/</em> path exists, the resulting directory is the one representing this path</li>
 	 *   <li>
 	 *        In any case we copy <em>config/metricshub-example.yaml</em> to the host file <em>config/metricshub.yaml</em>
-	 *        only if the the configuration directory is empty
+	 *        only if the configuration directory is empty
 	 *    </li>
 	 * </ol>
 	 *
