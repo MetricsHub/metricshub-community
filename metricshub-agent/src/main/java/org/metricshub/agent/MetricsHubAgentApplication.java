@@ -31,6 +31,8 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.service.OtelCollectorProcessService;
+import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import picocli.CommandLine;
