@@ -27,7 +27,7 @@ Before diving into your monitoring setup, take a moment to choose the right conf
 
 Starting from version 2.0.00, you can choose between:
 
-* One single configuration file (ideal for small-scale environment)
+* One single configuration file `metricshub.yaml` (ideal for small-scale environment)
 * Multiple configuration files. Recommended for larger environments with hundreds or thousands of systems, this structure allows you to:
   * separate concerns (e.g., global settings, license, monitored site, monitored resource)
   * dynamically manage configuration through templating or automation scripts.
