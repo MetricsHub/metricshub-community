@@ -7,11 +7,11 @@ description: How to configure MetricsHub for sustainability metrics reporting an
 
 **MetricsHub** enriches hardware data with **energy usage metrics**, such as `hw.host.energy`, `hw.host.heating_margin`, `hw.host.power`, to deliver an accurate assessment of a resource's carbon footprint. Visualized in user-friendly dashboards, these sustainability metrics offer a comprehensive understanding of the environmental impact of the IT infrastructure.
 
-To ensure dashboards are properly populated, you must configure MetricsHub in the `config/metricshub.yaml` configuration file.
+To ensure dashboards are properly populated, you must configure sustainability metrics in the MetricsHub configuration file.
 
 ## Configure the sustainability settings
 
-To obtain the electricity costs and carbon footprint of your sites and the resources within them, follow these steps to configure the `config/metricshub.yaml` file:
+To obtain the electricity costs and carbon footprint of your sites and the resources within them, follow these steps to set up the MetricsHub configuration file:
 
 1. **Configure the Site:** Define the `site` attribute for your infrastructure.
 2. **Configure the Sustainability Metrics:** Set up sustainability metrics, including carbon intensity, electricity cost, and Power Usage Effectiveness (PUE).
