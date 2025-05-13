@@ -66,9 +66,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	// script to AwkTuple
 	private static final Map<String, AwkTuples> AWK_CODE_MAP = new ConcurrentHashMap<>();
 
-	// host to Map<String, JawkExtension>
-	private static final Map<String, Map<String, Map<String, JawkExtension>>> EXTENSIONS_MAP = new ConcurrentHashMap<>();
-
 	@Override
 	public boolean isValidSource(final Source source) {
 		return source instanceof JawkSource;
@@ -154,7 +151,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// we're passing Java strings, where end of lines are simple \n
 		settings.setDefaultRS("\n");
 
-		final String hostId = telemetryManager.getHostConfiguration().getHostId();
 		final MetricsHubExtensionForJawk metricsHubExtensionForJawk = MetricsHubExtensionForJawk
 			.builder()
 			.sourceProcessor(sourceProcessor)
@@ -162,18 +158,9 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			.connectorId(connectorId)
 			.build();
 
-		final Map<String, Map<String, JawkExtension>> connectorMap = EXTENSIONS_MAP.computeIfAbsent(
-			hostId,
-			id -> new ConcurrentHashMap<>()
-		);
-
-		final Map<String, JawkExtension> extensions = connectorMap.computeIfAbsent(
-			connectorId,
-			id ->
-				Arrays
-					.stream(metricsHubExtensionForJawk.extensionKeywords())
-					.collect(Collectors.toMap(key -> key, key -> metricsHubExtensionForJawk))
-		);
+		final Map<String, JawkExtension> extensions = Arrays
+			.stream(metricsHubExtensionForJawk.extensionKeywords())
+			.collect(Collectors.toConcurrentMap(key -> key, key -> metricsHubExtensionForJawk));
 
 		// Interpret
 		final AVM avm = new AVM(settings, extensions);
@@ -184,7 +171,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 			// Result
 			final SourceTable sourceTable = new SourceTable();
-			sourceTable.setRawData(resultBytesStream.toString());
+			sourceTable.setRawData(resultBytesStream.toString(StandardCharsets.UTF_8));
 			sourceTable.setTable(SourceTable.csvToTable(sourceTable.getRawData(), TABLE_SEP));
 			return sourceTable;
 		} catch (Exception e) {
