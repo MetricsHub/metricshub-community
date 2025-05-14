@@ -35,8 +35,8 @@ import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
 import org.metricshub.engine.common.helpers.MapHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.ConnectorVariables;
-import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -207,8 +207,9 @@ class AgentContextTest {
 		assertEquals(5, additionalConnectors.size());
 
 		final Map<String, ConnectorVariables> variables = resourceConfig.getConnectorVariables();
+		System.out.println(variables);
 		// Check the number of configured ConnectorVariables
-		assertEquals(3, variables.size());
+		assertEquals(4, variables.size());
 
 		AdditionalConnector pureStorageREST = AdditionalConnector
 			.builder()
@@ -221,21 +222,10 @@ class AgentContextTest {
 			.builder()
 			.uses("Windows")
 			.variables(Map.of("osType", "windows"))
-			.force(true)
 			.build();
-		AdditionalConnector linux = AdditionalConnector.builder().uses("Linux").variables(null).force(true).build();
-		AdditionalConnector ipmiTool = AdditionalConnector
-			.builder()
-			.uses("IpmiTool")
-			.variables(Map.of())
-			.force(true)
-			.build();
-		AdditionalConnector linuxProcess = AdditionalConnector
-			.builder()
-			.uses("LinuxProcess")
-			.variables(null)
-			.force(true)
-			.build();
+		AdditionalConnector linux = AdditionalConnector.builder().uses("Linux").variables(null).build();
+		AdditionalConnector ipmiTool = AdditionalConnector.builder().uses("IpmiTool").variables(Map.of()).build();
+		AdditionalConnector linuxProcess = AdditionalConnector.builder().uses("LinuxProcess").build();
 		final Map<String, AdditionalConnector> expectedAdditionalConnectors = new LinkedHashMap<>();
 
 		expectedAdditionalConnectors.put("PureStorageREST", pureStorageREST);

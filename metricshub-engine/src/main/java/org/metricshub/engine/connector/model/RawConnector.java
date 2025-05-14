@@ -50,7 +50,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 @AllArgsConstructor
 public class RawConnector implements Serializable {
 
-	private static final long serialVersionUID = 2810L;
+	private static final long serialVersionUID = 1L;
 
 	private static final ObjectMapper MAPPER = JsonHelper.buildYamlMapper();
 
@@ -74,6 +74,8 @@ public class RawConnector implements Serializable {
 	public RawConnector(final JsonNode rawConnectorNode, final Map<Integer, EmbeddedFile> embeddedFiles)
 		throws JsonProcessingException {
 		byteConnector = MAPPER.writeValueAsBytes(rawConnectorNode);
-		this.embeddedFiles.putAll(embeddedFiles);
+		if (embeddedFiles != null) {
+			this.embeddedFiles.putAll(embeddedFiles);
+		}
 	}
 }

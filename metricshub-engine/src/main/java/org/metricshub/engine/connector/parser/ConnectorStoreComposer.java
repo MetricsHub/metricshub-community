@@ -37,9 +37,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
-import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.IntermediateConnector;
@@ -70,19 +70,45 @@ import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 @Builder(setterPrefix = "with")
 public class ConnectorStoreComposer {
 
+	/**
+	 * Regex pattern to match connector variable of the form ${var::...}.
+	 */
+	private static final Pattern CONNECTOR_VARIABLE_PATTERN = Pattern.compile("\\$\\{var\\:\\:([^}]+)}");
+
+	/**
+	 * Error message used when connector deserialization fails.
+	 */
 	private static final String DESERIALIZATION_ERROR_MESSAGE = "Error while deserializing connector {}.";
 
+	/**
+	 * Log message template for printing exceptions.
+	 */
 	private static final String EXCEPTION_MESSAGE = "Exception: {}.";
 
+	/**
+	 * Deserializer used to parse JsonNode connectors into structured connector objects.
+	 */
 	private ConnectorDeserializer deserializer;
 
+	/**
+	 * Store containing raw connectors and their metadata.
+	 */
 	private RawConnectorStore rawConnectorStore;
 
+	/**
+	 * Chain of update actions to apply on connector nodes.
+	 */
 	private ConnectorUpdateChain updateChain;
 
+	/**
+	 * Map of user-defined additional connectors keyed by connector ID.
+	 */
 	@Builder.Default
 	private Map<String, AdditionalConnector> additionalConnectors = new HashMap<>();
 
+	/**
+	 * Object containing the resulting connector store and the list of forced connectors.
+	 */
 	@Builder.Default
 	private AdditionalConnectorsParsingResult connectorsParsingResult = new AdditionalConnectorsParsingResult();
 
@@ -164,7 +190,7 @@ public class ConnectorStoreComposer {
 			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
 		// For each Raw Connector, process variables
-		connectorsWithVariables.forEach((connectorId, rawConnector) ->
+		connectorsWithVariables.forEach((String connectorId, RawConnector rawConnector) ->
 			// Put all the resulting connectors inside the output object.
 			connectorsParsingResult
 				.getCustomConnectorsMap()
@@ -185,7 +211,7 @@ public class ConnectorStoreComposer {
 		final List<IntermediateConnector> processedConnectors = processVariables(intermediateConnector);
 
 		final Map<String, Connector> connectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-		processedConnectors.forEach(processedIntermediateConnector -> {
+		processedConnectors.forEach((IntermediateConnector processedIntermediateConnector) -> {
 			final String connectorId = processedIntermediateConnector.getConnectorId();
 			try {
 				connectors.put(connectorId, parseConnector(processedIntermediateConnector));
@@ -281,7 +307,7 @@ public class ConnectorStoreComposer {
 	 *         containing the description and defaultValue for that variable. If the "variables" section is not present,
 	 *         an empty map is returned.
 	 */
-	public static Map<String, String> getDefaultConnectorVariables(final JsonNode connectorNode) {
+	private static Map<String, String> getDefaultConnectorVariables(final JsonNode connectorNode) {
 		final JsonNode variablesNode = connectorNode.get("connector").get("variables");
 		if (variablesNode == null) {
 			return new HashMap<>();
@@ -292,7 +318,7 @@ public class ConnectorStoreComposer {
 		// Iterate over the variables and extract description and defaultValue
 		variablesNode
 			.fields()
-			.forEachRemaining(entry -> {
+			.forEachRemaining((Entry<String, JsonNode> entry) -> {
 				final String variableName = entry.getKey();
 				final JsonNode variableValue = entry.getValue();
 
@@ -313,9 +339,7 @@ public class ConnectorStoreComposer {
 	 * @return The content with all variables replaced.
 	 */
 	private String replaceEmbeddedFileVariables(final String embeddedFileContent, final Map<String, String> variables) {
-		// Pattern to match connector variables
-		final Pattern pattern = Pattern.compile("\\$\\{var\\:\\:([^}]+)}");
-		final Matcher matcher = pattern.matcher(embeddedFileContent);
+		final Matcher matcher = CONNECTOR_VARIABLE_PATTERN.matcher(embeddedFileContent);
 		final StringBuffer sb = new StringBuffer();
 
 		while (matcher.find()) {
@@ -345,7 +369,7 @@ public class ConnectorStoreComposer {
 		// Iterate on each embedded file of the connector to replace variables
 		intermediateConnector
 			.getEmbeddedFiles()
-			.forEach((embeddedFileId, embeddedFile) -> {
+			.forEach((Integer embeddedFileId, EmbeddedFile embeddedFile) -> {
 				final String newEmbeddedFileContent = replaceEmbeddedFileVariables(
 					embeddedFile.getContentAsString(),
 					connectorVariables
@@ -413,7 +437,7 @@ public class ConnectorStoreComposer {
 	 * @return A fully populated {@link Connector} instance.
 	 * @throws IOException If an error occurs during deserialization.
 	 */
-	private Connector parseConnector(final IntermediateConnector intermediateConnector) throws IOException {
+	public Connector parseConnector(final IntermediateConnector intermediateConnector) throws IOException {
 		// adding post-deserialization support to the deserializer {@link ObjectMapper}
 		PostDeserializeHelper.addPostDeserializeSupport(deserializer.getMapper());
 

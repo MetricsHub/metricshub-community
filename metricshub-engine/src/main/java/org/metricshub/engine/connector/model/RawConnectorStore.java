@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -47,9 +48,9 @@ import org.metricshub.engine.connector.parser.RawConnectorLibraryParser;
 @Data
 public class RawConnectorStore implements Serializable {
 
-	private static final long serialVersionUID = 411L;
+	private static final long serialVersionUID = 1L;
 
-	private Map<String, RawConnector> store;
+	private Map<String, RawConnector> store = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 	@Getter
 	public transient Path connectorDirectory;
@@ -57,7 +58,7 @@ public class RawConnectorStore implements Serializable {
 	/**
 	 * Used to store all subtypes that will be used to deserialize RawConnectors
 	 */
-	public Set<NamedType> subtypes;
+	private Set<NamedType> subtypes = new HashSet<>();
 
 	/**
 	 * Constructs a {@link RawConnectorStore} by loading and deserializing all connector
@@ -70,8 +71,8 @@ public class RawConnectorStore implements Serializable {
 			this.connectorDirectory = connectorDirectory;
 			store = createRawStore();
 		} catch (Exception e) {
-			log.error("Error while deserializing connectors. The ConnectorStore is empty!");
-			log.debug("Error while deserializing connectors. The ConnectorStore is empty!", e);
+			log.error("Error while deserializing connectors. The RawConnectorStore is empty!");
+			log.debug("Error while deserializing connectors. The RawConnectorStore is empty!", e);
 			store = new HashMap<>();
 		}
 	}
@@ -79,8 +80,8 @@ public class RawConnectorStore implements Serializable {
 	/**
 	 * This method retrieves RawConnectors data in a Map from a given connector directory
 	 * The key of the Map will be the connector file name and Value will be the RawConnector JsonNode Object
-	 * @return Map<String, RawConnector>
-	 * @throws IOException
+	 * @return a Map of all RawConnectors where the key is the connector identifier (compiled file name)
+	 * @throws IOException if an error occurs while reading the connector files
 	 */
 	private Map<String, RawConnector> createRawStore() throws IOException {
 		final RawConnectorLibraryParser rawConnectorLibraryParser = new RawConnectorLibraryParser();
@@ -104,19 +105,7 @@ public class RawConnectorStore implements Serializable {
 	 */
 	public ObjectMapper getMapperFromSubtypes() {
 		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
-		getSubtypes().forEach(subtype -> mapper.registerSubtypes(subtype));
+		subtypes.forEach(mapper::registerSubtypes);
 		return mapper;
-	}
-
-	/**
-	 * Returns subtypes set that will be applied to the mapper for deserialization.
-	 *
-	 * @return the subtypes set if not null, a new HashSet otherwise.
-	 */
-	public Set<NamedType> getSubtypes() {
-		if (subtypes == null) {
-			subtypes = new HashSet<>();
-		}
-		return subtypes;
 	}
 }

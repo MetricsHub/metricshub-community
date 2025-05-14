@@ -74,18 +74,18 @@ public class IntermediateConnector {
 	 * Initializes the connector's JSON node and embedded files using a YAML mapper.
 	 *
 	 * @param connectorId The unique identifier for the connector.
-	 * @param connector   The raw connector containing the serialized data and embedded files.
+	 * @param rawConnector   The raw connector containing the serialized data and embedded files.
 	 */
-	public IntermediateConnector(final String connectorId, final RawConnector connector) {
+	public IntermediateConnector(final String connectorId, final RawConnector rawConnector) {
 		this.connectorId = connectorId;
 		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
-		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = connector.getEmbeddedFiles();
+		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = rawConnector.getEmbeddedFiles();
 		if (connectorEmbeddedFiles != null) {
 			this.embeddedFiles.putAll(connectorEmbeddedFiles);
 		}
 
 		try {
-			this.connectorNode = mapper.readTree(connector.getByteConnector());
+			this.connectorNode = mapper.readTree(rawConnector.getByteConnector());
 		} catch (IOException e) {
 			log.error("Error while reading Raw Connector {} from Raw Connector Store.", connectorId);
 			log.debug("Exception: ", e);
@@ -100,7 +100,7 @@ public class IntermediateConnector {
 	 */
 	public IntermediateConnector getDeepCopy(final String newConnectorId) {
 		final Map<Integer, EmbeddedFile> embeddedFilesCopy = new HashMap<>();
-		embeddedFiles.forEach((key, embeddedFile) -> embeddedFilesCopy.put(key, embeddedFile.deepCopy()));
+		embeddedFiles.forEach((key, embeddedFile) -> embeddedFilesCopy.put(key, embeddedFile.copy()));
 		return new IntermediateConnector(newConnectorId, connectorNode.deepCopy(), embeddedFilesCopy);
 	}
 

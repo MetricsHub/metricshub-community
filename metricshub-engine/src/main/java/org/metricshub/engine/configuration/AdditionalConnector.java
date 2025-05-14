@@ -1,4 +1,4 @@
-package org.metricshub.engine.connector.model;
+package org.metricshub.engine.configuration;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -67,7 +67,7 @@ public class AdditionalConnector {
 	 * @param variables Map of variables to set.
 	 */
 	@JsonSetter
-	public void setVariables(Map<String, String> variables) {
+	public void setVariables(final Map<String, String> variables) {
 		this.variables = variables;
 		if (variables != null) {
 			variables.entrySet().removeIf(entry -> entry.getValue() == null);

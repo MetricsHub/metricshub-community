@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -287,8 +286,7 @@ public class ExtensionManager {
 	 */
 	public RawConnectorStore aggregateExtensionRawConnectorStores() {
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
-		rawConnectorStore.setStore(new TreeMap<>(String.CASE_INSENSITIVE_ORDER));
-		connectorStoreProviderExtensions.forEach(connectorStoreProviderExtension -> {
+		connectorStoreProviderExtensions.forEach((IConnectorStoreProviderExtension connectorStoreProviderExtension) -> {
 			connectorStoreProviderExtension.load();
 			RawConnectorStore extensionStore = connectorStoreProviderExtension.getRawConnectorStore();
 			rawConnectorStore.addMany(extensionStore.getStore());

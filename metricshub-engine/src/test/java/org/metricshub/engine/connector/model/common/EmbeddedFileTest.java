@@ -119,7 +119,7 @@ class EmbeddedFileTest {
 	}
 
 	@Test
-	void testDeepCopy() {
+	void testCopy() {
 		{
 			final EmbeddedFile embeddedFile = EmbeddedFile
 				.builder()
@@ -127,7 +127,7 @@ class EmbeddedFileTest {
 				.filename("script.bat")
 				.id(1)
 				.build();
-			final EmbeddedFile copyEmbeddedFile = embeddedFile.deepCopy();
+			final EmbeddedFile copyEmbeddedFile = embeddedFile.copy();
 			// the copy does not have the same reference as the original
 			assertNotSame(embeddedFile, copyEmbeddedFile);
 			final byte[] efContent = embeddedFile.getContent();
@@ -137,7 +137,7 @@ class EmbeddedFileTest {
 			// content remains the same
 			assertArrayEquals(efContent, efContentCopy);
 			embeddedFile.setContent(null);
-			assertEquals(null, embeddedFile.deepCopy().getContent());
+			assertEquals(null, embeddedFile.copy().getContent());
 		}
 	}
 }

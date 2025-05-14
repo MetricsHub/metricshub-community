@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.util.function.Function;
 import org.metricshub.engine.connector.deserializer.DeserializerTest;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.IntermediateConnector;
+import org.metricshub.engine.connector.model.RawConnector;
 
 public abstract class AbstractConnectorParserManagement extends DeserializerTest {
 
@@ -35,6 +37,15 @@ public abstract class AbstractConnectorParserManagement extends DeserializerTest
 	}
 
 	protected Connector parse(String testFile) throws IOException {
-		return parser.parse(connectorDirectory.resolve(testFile + ".yaml").toFile());
+		final ConnectorParser connectorParser = ConnectorParser.withNodeProcessor(
+			connectorDirectory.resolve(testFile + ".yaml").getParent()
+		);
+		final RawConnector rawConnector = connectorParser.parseRaw(connectorDirectory.resolve(testFile + ".yaml").toFile());
+		return ConnectorStoreComposer
+			.builder()
+			.withDeserializer(parser.getDeserializer())
+			.withUpdateChain(parser.getConnectorUpdateChain())
+			.build()
+			.parseConnector(new IntermediateConnector(testFile, rawConnector));
 	}
 }

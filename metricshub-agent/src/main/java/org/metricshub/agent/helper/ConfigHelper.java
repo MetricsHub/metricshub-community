@@ -74,10 +74,10 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.ResourceHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
-import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.RawConnectorStore;
@@ -864,7 +864,7 @@ public class ConfigHelper {
 			addConfiguredConnector(resourceConnectorStore, resourceConfig.getConnector());
 
 			// Retrieve the resource additional connectors configuration
-			Map<String, AdditionalConnector> additionalConnectors = resourceConfig.getAdditionalConnectors();
+			final Map<String, AdditionalConnector> additionalConnectors = resourceConfig.getAdditionalConnectors();
 
 			/*
 				Normalize additionalConnectors configuration. If on or many fields aren't specified, this method will
@@ -926,7 +926,7 @@ public class ConfigHelper {
 					a complete variables configuration for this connector, create a new object with default information.
 				*/
 				if (additionalConnector == null) {
-					entry.setValue(AdditionalConnector.builder().force(true).uses(connectorId).variables(null).build());
+					entry.setValue(AdditionalConnector.builder().uses(connectorId).build());
 					return;
 				}
 
@@ -1216,17 +1216,20 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Constructs and populates a {@link RawConnectorStore} by aggregating connector
-	 * stores from various extensions managed by the provided {@link ExtensionManager}
-	 * and from a specific subdirectory defined for connectors. This method first
-	 * aggregates all extension-based connector stores into one central store and
-	 * then adds additional connectors found in a designated subdirectory.
+	 * Builds a {@link ConnectorStore} by aggregating connectors from multiple sources:
+	 * <ul>
+	 *   <li>Extension-based connector stores managed by the provided {@link ExtensionManager}</li>
+	 *   <li>Connectors located in the default internal subdirectory (e.g., <code>connectors/</code>)</li>
+	 *   <li>Optionally, connectors found in a user-defined path</li>
+	 * </ul>
 	 *
-	 * @param extensionManager       The manager responsible for handling all
-	 *                               extension-based connector stores.
-	 * @param connectorsPatchPath    The connectors Patch Path.
-	 * @return A fully populated {@link RawConnectorStore} containing connectors from
-	 *         various sources.
+	 * The method first aggregates all extension-based connectors into a central {@link RawConnectorStore},
+	 * then supplements it with additional connectors from the connectors subdirectory and optional user path.
+	 * Finally, it generates a {@link ConnectorStore} from the aggregated raw connector store.
+	 *
+	 * @param extensionManager     The manager responsible for discovering and providing connector extensions.
+	 * @param connectorsPatchPath  An optional filesystem path pointing to additional user-defined connectors.
+	 * @return A fully composed {@link ConnectorStore} containing all loaded connectors.
 	 */
 	public static ConnectorStore buildConnectorStore(
 		final ExtensionManager extensionManager,

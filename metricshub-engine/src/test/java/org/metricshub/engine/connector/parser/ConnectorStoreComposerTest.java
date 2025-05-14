@@ -1,4 +1,4 @@
-package org.metricshub.agent.connector;
+package org.metricshub.engine.connector.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -7,22 +7,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
-import org.metricshub.engine.connector.model.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.AbstractMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
-import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
-import org.metricshub.engine.connector.parser.ConnectorParser;
-import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 
 class ConnectorStoreComposerTest {
 
@@ -30,11 +24,11 @@ class ConnectorStoreComposerTest {
 
 	private static ConnectorStoreComposer composer;
 
-	@BeforeAll
-	static void initLogContext() {
-		TestHelper.configureGlobalLogger();
-	}
-
+	/**
+	 * Initializes the {@link ConnectorStoreComposer} using test connectors and the provided additional connector configurations.
+	 *
+	 * @param additionalConnectors a map of additional connector configurations keyed by their connector IDs
+	 */
 	void initComposer(final Map<String, AdditionalConnector> additionalConnectors) {
 		final Path yamlTestPath = Paths.get("src", "test", "resources", "connectorStoreComposer");
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore(yamlTestPath);
@@ -57,7 +51,7 @@ class ConnectorStoreComposerTest {
 	 *
 	 */
 	@Test
-	void testGenerateConnectorStore() {
+	void testGenerateStaticConnectorStore() {
 		final Path yamlTestPath = Paths.get("src", "test", "resources", "connectorStoreComposer");
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore(yamlTestPath);
 
@@ -121,8 +115,6 @@ class ConnectorStoreComposerTest {
 			"WindowsSpecific",
 			windowsSpecific
 		);
-
-		ConfigHelper.normalizeAdditionalConnectors(additionalConnectors);
 
 		initComposer(additionalConnectors);
 
