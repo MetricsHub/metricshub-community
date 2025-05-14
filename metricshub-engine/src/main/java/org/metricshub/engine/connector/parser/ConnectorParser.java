@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,10 +44,9 @@ import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.deserializer.PostDeserializeHelper;
-import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.update.AvailableSourceUpdate;
-import org.metricshub.engine.connector.update.CompiledFilenameUpdater;
 import org.metricshub.engine.connector.update.ConnectorUpdateChain;
 import org.metricshub.engine.connector.update.MonitorTaskSourceDepUpdate;
 import org.metricshub.engine.connector.update.SurroundingSourceDepUpdate;
@@ -69,13 +67,12 @@ public class ConnectorParser {
 	private ConnectorUpdateChain connectorUpdateChain;
 
 	/**
-	 * Parses the given connector file.
-	 *
-	 * @param file Connector file to parse.
-	 * @return New {@link Connector} object.
-	 * @throws IOException If an I/O error occurs during parsing.
+	 * Parses the given connector file into a {@link RawConnector}
+	 * @param file connector file to be parsed
+	 * @return a new {@link RawConnector} Object
+	 * @throws IOException If an error occurs while reading or parsing the file.
 	 */
-	public Connector parse(final File file) throws IOException {
+	public RawConnector parseRaw(final File file) throws IOException {
 		JsonNode node = deserializer.getMapper().readTree(file);
 
 		Map<Integer, EmbeddedFile> embeddedFiles = null;
@@ -97,80 +94,7 @@ public class ConnectorParser {
 			embeddedFiles = embeddedFilesResolver.collectEmbeddedFiles();
 		}
 
-		// POST-Processing
-		final Connector connector = deserializer.deserialize(node);
-
-		// Assigns the map of embedded files to the connector
-		populateEmbeddedFiles(embeddedFiles, connector);
-
-		// Run the update chain
-		if (connectorUpdateChain != null) {
-			connectorUpdateChain.update(connector);
-		}
-
-		// Update the compiled filename
-		new CompiledFilenameUpdater(file.getName()).update(connector);
-
-		return connector;
-	}
-
-	/**
-	 * Parse the given connector file
-	 *
-	 * @param inputStream The {@link InputStream} of the connector we want to parse
-	 * @param connectorFolderUri The URI of the folder containing the connector
-	 * @param fileName The connector file name
-	 * @return new {@link Connector} object
-	 * @throws IOException
-	 */
-	public Connector parse(final InputStream inputStream, final URI connectorFolderUri, final String fileName)
-		throws IOException {
-		JsonNode node = deserializer.getMapper().readTree(inputStream);
-
-		Map<Integer, EmbeddedFile> embeddedFiles = null;
-
-		// PRE-Processing
-		if (processor != null) {
-			final Map<URI, JsonNode> parents = new HashMap<>();
-			resolveParents(node, connectorFolderUri, parents);
-
-			node = processor.process(node);
-			final EmbeddedFilesResolver embeddedFilesResolver = new EmbeddedFilesResolver(
-				node,
-				Paths.get(connectorFolderUri),
-				parents.keySet()
-			);
-			embeddedFilesResolver.process();
-			embeddedFiles = embeddedFilesResolver.collectEmbeddedFiles();
-		}
-
-		// POST-Processing
-		final Connector connector = deserializer.deserialize(node);
-
-		// Assigns the map of embedded files to the connector
-		populateEmbeddedFiles(embeddedFiles, connector);
-
-		// Run the update chain
-		if (connectorUpdateChain != null) {
-			connectorUpdateChain.update(connector);
-		}
-
-		// Update the compiled filename
-		new CompiledFilenameUpdater(fileName).update(connector);
-
-		return connector;
-	}
-
-	/**
-	 * Assigns a map of embedded files to the specified connector, if the map is not null.
-	 *
-	 * @param embeddedFiles A {@link Map} where keys are integers representing embedded file IDs, and values are {@link EmbeddedFile} objects.
-	 * @param connector     The {@link Connector} to which the embedded files will be assigned.
-	 */
-	private void populateEmbeddedFiles(final Map<Integer, EmbeddedFile> embeddedFiles, final Connector connector) {
-		if (embeddedFiles != null) {
-			connector.setEmbeddedFiles(embeddedFiles);
-		}
+		return new RawConnector(node, embeddedFiles);
 	}
 
 	/**
@@ -212,7 +136,7 @@ public class ConnectorParser {
 			.builder()
 			.deserializer(new ConnectorDeserializer(mapper))
 			.processor(
-				NodeProcessorHelper.withExtendsAndTemplateVariableProcessor(connectorDirectory, mapper, connectorVariables)
+				NodeProcessorHelper.withExtendsAndConnectorVariableProcessor(connectorDirectory, mapper, connectorVariables)
 			)
 			.build();
 	}
@@ -226,29 +150,6 @@ public class ConnectorParser {
 	 */
 	public static ConnectorParser withNodeProcessorAndUpdateChain(final Path connectorDirectory) {
 		final ConnectorParser connectorParser = withNodeProcessor(connectorDirectory);
-
-		// Create the update objects
-		final ConnectorUpdateChain updateChain = createUpdateChain();
-
-		// Set the first update chain
-		connectorParser.setConnectorUpdateChain(updateChain);
-
-		return connectorParser;
-	}
-
-	/**
-	 * Creates a new {@link ConnectorParser} with extends and constants
-	 * {@link AbstractNodeProcessor} and with a {@link ConnectorUpdateChain}
-	 *
-	 * @param connectorDirectory The connector files directory.
-	 * @param connectorVariables Map of connector variables.
-	 * @return New instance of {@link ConnectorParser}.
-	 */
-	public static ConnectorParser withNodeProcessorAndUpdateChain(
-		final Path connectorDirectory,
-		final Map<String, String> connectorVariables
-	) {
-		final ConnectorParser connectorParser = withNodeProcessor(connectorDirectory, connectorVariables);
 
 		// Create the update objects
 		final ConnectorUpdateChain updateChain = createUpdateChain();

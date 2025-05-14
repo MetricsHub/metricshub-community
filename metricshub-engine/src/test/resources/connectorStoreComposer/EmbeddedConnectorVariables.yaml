@@ -1,0 +1,283 @@
+extends:
+- ./System/System
+connector:
+  displayName: WindowsOS
+  platforms: Microsoft Windows
+  reliesOn: WMI
+  information: Gives OS specific information and metrics
+  detection:
+    connectionTypes:
+    - remote
+    - local
+    appliesTo:
+    - nt
+    criteria:
+    - type: wmi
+      namespace: root\CIMv2
+      query: ${file::embeddedFile}
+    tags: [ system, windows ]
+  variables:
+    columns:
+      description: columns to select in the criteria query.
+      defaultValue: "*"
+    table:
+      description: table from which the data is selected.
+      defaultValue: Win32_OperatingSystem
+monitors:
+  cpu:
+    simple:
+      sources:
+        processorInformation:
+          # cpuId;user;system;idle;
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT Name,PercentUserTime,PercentPrivilegedTime,PercentIdleTime FROM Win32_PerfRawData_Counters_ProcessorInformation
+          computes:
+          - type: excludeMatchingLines
+            column: 1
+            regExp: _Total
+          - type: extract
+            column: 1
+            subSeparators: ","
+            subColumn: 2
+          # Convert 100ns to s 
+          - type: divide
+            column: 2
+            value: 10000000
+          - type: divide
+            column: 3
+            value: 10000000
+          - type: divide
+            column: 4
+            value: 10000000
+      mapping:
+        source: ${source::processorInformation}
+        attributes:
+          id: $1
+          name: cpu $1
+          system.cpu.logical_number: $1
+        metrics:
+          system.cpu.utilization{system.cpu.state="user"}: rate($2)
+          system.cpu.utilization{system.cpu.state="system"}: rate($3)
+          system.cpu.utilization{system.cpu.state="idle"}: rate($4)
+          system.cpu.time{system.cpu.state="user"}: $2
+          system.cpu.time{system.cpu.state="system"}: $3
+          system.cpu.time{system.cpu.state="idle"}: $4
+  memory:
+    simple:
+      sources:
+        # Free;Free;Cached;Cached
+        memoryInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT AvailableBytes,AvailableBytes,CacheBytes,CacheBytes FROM Win32_PerfRawData_PerfOS_Memory
+        calculatedMemoryInformation:
+        # Free;Free%;Cached;Cached%;Used;Used%;Total
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT TotalVisibleMemorySize FROM Win32_OperatingSystem
+          computes:
+          # Combining both sources for calculations
+          - type: prepend
+            column: 1
+            value: ${source::memoryInformation}
+          # Converting total to bytes and making a copy for used memory
+          - type: multiply
+            column: 5
+            value: 1024
+          - type: duplicateColumn
+            column: 5
+          # Finding used memory and making a copy for utilization
+          - type: subtract
+            column: 5
+            value: $1
+          - type: duplicateColumn
+            column: 5
+          # Calculate utilization by dividing usage by total memory
+          - type: divide
+            column: 2
+            value: $7
+          - type: divide
+            column: 4
+            value: $7
+          - type: divide
+            column: 6
+            value: $7
+      mapping:
+        source: ${source::calculatedMemoryInformation}
+        attributes:
+          id: memory_usage
+        metrics:
+          system.memory.limit: $7
+          system.memory.usage{system.memory.state="free"}: $1
+          system.memory.usage{system.memory.state="used"}: $5
+          system.memory.usage{system.memory.state="cached"}: $3
+          system.memory.utilization{system.memory.state="free"}: $2
+          system.memory.utilization{system.memory.state="used"}: $6
+          system.memory.utilization{system.memory.state="cached"}: $4
+  file_system:
+    simple:
+      sources:
+        # DeviceID;FreeSpace;FreeUtilization,UsedSpace;UsedUtilization;Size;VolumeName
+        fileSystemInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT DeviceID,FreeSpace,FreeSpace,Size,Size,VolumeName,FileSystem FROM Win32_LogicalDisk WHERE DriveType = 3
+          computes:
+          - type: subtract
+            column: 4
+            value: $2
+          - type: duplicateColumn
+            column: 4
+          - type: divide
+            column: 3
+            value: $6
+          - type: divide
+            column: 5
+            value: $6
+      mapping:
+        source: ${source::fileSystemInformation}
+        attributes:
+          id: $1
+          system.device: $1
+          system.filesystem.volumeName: $7
+          system.filesystem.type: $8
+        metrics:
+          system.filesystem.usage{system.filesystem.state="free"}: $2
+          system.filesystem.usage{system.filesystem.state="used"}: $4
+          system.filesystem.utilization{system.filesystem.state="free"}: $3
+          system.filesystem.utilization{system.filesystem.state="used"}: $5
+  paging:
+    simple:
+      sources:
+        # BytesUsed;BytesFree;UtilizationUsed;UtilizationFree;TotalBytes
+        pagingUsageInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT PercentUsage,PercentUsage_Base,PercentUsage,PercentUsage_Base FROM Win32_PerfRawData_PerfOS_PagingFile WHERE Name = '_Total'
+          computes:
+          - type: subtract
+            column: 2
+            value: $1
+          - type: divide
+            column: 3
+            value: $4
+          - type: append
+            column: 3
+            value: ;1
+          - type: subtract
+            column: 4
+            value: $3
+        # BytesUsed;BytesFree;UtilizationUsed;UtilizationFree;TotalBytes;PageOutputPersec;PageInputPersec;PageFaultsPersec;WriteCopiesPersec
+        pagingCombinedInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT PageWritesPersec,PageReadsPersec,PageFaultsPersec,WriteCopiesPersec FROM Win32_PerfRawData_PerfOS_Memory
+          computes:
+          - type: subtract
+            column: 3
+            value: $4
+          - type: prepend
+            column: 1
+            value: ${source::pagingUsageInformation}
+      mapping:
+        source: ${source::pagingCombinedInformation}
+        attributes:
+          id: paging
+        metrics:
+          system.paging.usage{system.paging.state="used"}: $1
+          system.paging.usage{system.paging.state="free"}: $2
+          system.paging.utilization{system.paging.state="used"}: $3
+          system.paging.utilization{system.paging.state="free"}: $4
+          system.paging.operations{system.paging.direction="out"}: $6
+          system.paging.operations{system.paging.direction="in"}: $7
+          system.paging.faults{system.paging.type="soft"}: $8
+          system.paging.faults{system.paging.type="hard"}: $9
+  network:
+    simple:
+      sources:
+        # Name;PacketsOutboundDiscarded;PacketsReceivedDiscarded;PacketsSentPersec;PacketsReceivedPersec;PacketsOutboundErrors;PacketsReceivedErrors
+        networkInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: >
+            SELECT Name,
+              PacketsOutboundDiscarded,
+              PacketsReceivedDiscarded,
+              PacketsSentPersec,
+              PacketsReceivedPersec,
+              PacketsOutboundErrors,
+              PacketsReceivedErrors,
+              BytesSentPerSec,
+              BytesReceivedPerSec
+            FROM Win32_PerfRawData_Tcpip_NetworkInterface
+      mapping:
+        source: ${source::networkInformation}
+        attributes:
+          id: $1
+          network.interface.name: $1
+        metrics:
+          system.network.dropped{network.io.direction="transmit"}: $2
+          system.network.dropped{network.io.direction="receive"}: $3
+          system.network.packets{network.io.direction="transmit"}: $4
+          system.network.packets{network.io.direction="receive"}: $5
+          system.network.errors{network.io.direction="transmit"}: $6
+          system.network.errors{network.io.direction="receive"}: $7
+          system.network.io{network.io.direction="transmit"}: $8
+          system.network.io{network.io.direction="receive"}: $9
+  physical_disk:
+    simple:
+      sources:
+        # Name;DiskReadBytesPersec;DiskWriteBytesPersec;DiskReadsPersec;DiskWritesPersec;PercentDiskTime;PercentDiskReadTime;PercentDiskWriteTime
+        physicalDiskInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: >
+            SELECT Name,
+              DiskReadBytesPersec,
+              DiskWriteBytesPersec,
+              DiskReadsPersec,
+              DiskWritesPersec,
+              PercentDiskTime,
+              PercentDiskReadTime,
+              PercentDiskWriteTime
+            FROM Win32_PerfRawData_PerfDisk_PhysicalDisk WHERE NAME != '_Total'
+      mapping:
+        source: ${source::physicalDiskInformation}
+        attributes:
+          id: $1
+        metrics:
+          system.disk.io{disk.io.direction="read"}: $2
+          system.disk.io{disk.io.direction="write"}: $3
+          system.disk.operations{disk.io.direction="read"}: $4
+          system.disk.operations{disk.io.direction="write"}: $5
+          system.disk.io_time: $6
+          system.disk.operation_time{disk.io.direction="read"}: $7
+          system.disk.operation_time{disk.io.direction="write"}: $8
+  system:
+    simple:
+      sources:
+        # Uptime
+        uptime:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT SystemUpTime FROM Win32_PerfFormattedData_PerfOS_System
+        # SerialNumber;Caption;Version;BuildNumber
+        osInformation:
+          type: wmi
+          namespace: root\CIMv2
+          query: SELECT SerialNumber, Caption, Version, BuildNumber FROM Win32_OperatingSystem
+          computes:
+          - type: prepend
+            column: 5
+            value: ${source::uptime}
+      mapping:
+        source: ${source::osInformation}
+        attributes:
+          id: $1
+          serial_number: $1
+          name: $2
+          version: $4
+          os_version: $3
+        metrics:
+          system.uptime: $5
