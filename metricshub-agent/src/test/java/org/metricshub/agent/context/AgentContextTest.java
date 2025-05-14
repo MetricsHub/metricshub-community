@@ -220,7 +220,7 @@ class AgentContextTest {
 		assertEquals(5, additionalConnectors.size(), "AdditionalConnectors size should be 5");
 
 		final Map<String, ConnectorVariables> variables = resourceConfig.getConnectorVariables();
-		System.out.println(variables);
+
 		// Check the number of configured ConnectorVariables
 		assertEquals(4, variables.size(), "ConnectorVariables size should be 4");
 
