@@ -27,6 +27,7 @@ This is a multi-module project:
 * **metricshub-jawk-extension**: Allows execution of Jawk scripts.
 * **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
+* **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
 * **metricshub-community-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
 * **metricshub-community-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
@@ -103,6 +104,32 @@ Add the following configuration inside a new `<profile>` section in your `settin
 ```
 
 > 📦 Artifacts published here are used to build a custom runtime tailored to MetricsHub’s needs.
+
+### Accessing Snapshots from Maven Central
+
+To access **snapshot artifacts** from [Maven Central Snapshots](https://central.sonatype.com/repository/maven-snapshots/), you need to explicitly configure the repository in your Maven `~/.m2/settings.xml`.
+
+Add the following `<repository>` entry:
+
+```xml
+<repositories>
+    ...
+    <repository>
+        <id>central-snapshots</id>
+        <name>Maven Repository Switchboard</name>
+        <url>https://central.sonatype.com/repository/maven-snapshots</url>
+        <releases>
+            <enabled>false</enabled>
+        </releases>
+        <snapshots>
+            <enabled>true</enabled>
+        </snapshots>
+    </repository>
+    ...
+</repositories>
+```
+
+> 💡 This is required if your build depends on snapshot versions of dependencies hosted on Maven Central’s snapshots repository.
 
 ### Build
 

@@ -2,7 +2,6 @@ package org.metricshub.hardware.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 import static org.metricshub.hardware.constants.BatteryConstants.BATTERY_TYPE;
@@ -53,9 +52,7 @@ import static org.metricshub.hardware.util.MonitorNameBuilder.buildTapeDriveName
 import static org.metricshub.hardware.util.MonitorNameBuilder.buildTemperatureName;
 import static org.metricshub.hardware.util.MonitorNameBuilder.buildVmName;
 import static org.metricshub.hardware.util.MonitorNameBuilder.buildVoltageName;
-import static org.metricshub.hardware.util.MonitorNameBuilder.handleComputerDisplayName;
 import static org.metricshub.hardware.util.MonitorNameBuilder.hasMeaningfulContent;
-import static org.metricshub.hardware.util.MonitorNameBuilder.isLocalhost;
 import static org.metricshub.hardware.util.MonitorNameBuilder.joinWords;
 import static org.metricshub.hardware.util.MonitorNameBuilder.trimUnwantedCharacters;
 import static org.mockito.Mockito.when;
@@ -69,6 +66,7 @@ import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.telemetry.Monitor;
@@ -275,8 +273,16 @@ class MonitorNameBuilderTest {
 			.build();
 		cpuMetrics.put(CPU_MAXIMUM_SPEED, cpuMaxSpeedMetric);
 
-		Monitor cpu = Monitor.builder().attributes(cpuAttributes).metrics(cpuMetrics).build();
-		assertEquals("CPU #1 (Intel - Xeon - 3.60 GHz)", new MonitorNameBuilder(LOCALHOST).buildCpuName(cpu));
+		Monitor cpu = Monitor
+			.builder()
+			.attributes(cpuAttributes)
+			.metrics(cpuMetrics)
+			.type(KnownMonitorType.CPU.getKey())
+			.build();
+		assertEquals(
+			"CPU #1 (Intel - Xeon - 3.60 GHz)",
+			new MonitorNameBuilder(LOCALHOST).buildMonitorNameUsingType(cpu, null)
+		);
 
 		cpuAttributes.clear();
 		cpuAttributes.put(ID_COUNT, "0");

@@ -21,6 +21,8 @@ package org.metricshub.agent;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.nio.file.Path;
+import java.nio.file.WatchEvent;
 import java.util.Locale;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +33,7 @@ import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
-import org.metricshub.agent.service.task.FileWatcherTask;
+import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -46,6 +48,11 @@ public class MetricsHubAgentApplication implements Runnable {
 		Locale.setDefault(Locale.US);
 	}
 
+	/**
+	 * Default milliseconds await delay for the DirectoryWatcherTask.
+	 */
+	private static final long CONFIG_WATCHER_AWAIT_MS = 500L;
+
 	@Option(names = { "-h", "-?", "--help" }, usageHelp = true, description = "Shows this help message and exits")
 	private boolean usageHelpRequested;
 
@@ -53,9 +60,9 @@ public class MetricsHubAgentApplication implements Runnable {
 		names = { "-c", "--config" },
 		usageHelp = false,
 		required = false,
-		description = "Alternate MetricsHub's configuration file"
+		description = "Alternate MetricsHub's configuration directory"
 	)
-	private String alternateConfigFile;
+	private String alternateConfigDirectory;
 
 	/**
 	 * The main entry point for the MetricsHub Agent application.
@@ -72,10 +79,10 @@ public class MetricsHubAgentApplication implements Runnable {
 		try {
 			// Initialize the extension loader to load all the extensions which will be handled
 			// by the ExtensionManager
-			final ExtensionManager extensionManager = ConfigHelper.loadExtensionManager();
+			final var extensionManager = ConfigHelper.loadExtensionManager();
 
 			// Initialize the application context
-			final AgentContext agentContext = new AgentContext(alternateConfigFile, extensionManager);
+			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
 
 			// Start OpenTelemetry Collector process
 			agentContext.getOtelCollectorProcessService().launch();
@@ -83,15 +90,27 @@ public class MetricsHubAgentApplication implements Runnable {
 			// Start the Scheduler
 			agentContext.getTaskSchedulingService().start();
 
-			FileWatcherTask
+			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
+			final Path configDirectory = agentContext.getConfigDirectory();
+
+			DirectoryWatcherTask
 				.builder()
-				.file(agentContext.getConfigFile())
-				.filter(event ->
-					event.context() != null && agentContext.getConfigFile().getName().equals(event.context().toString())
-				)
-				.checksum(ConfigHelper.calculateMD5Checksum(agentContext.getConfigFile()))
-				.await(500)
-				.onChange(() -> resetContext(agentContext, alternateConfigFile))
+				.directory(configDirectory)
+				.filter((WatchEvent<?> event) -> {
+					final Object context = event.context();
+					// CHECKSTYLE:OFF
+					return (
+						context != null &&
+						extensionManager
+							.findConfigurationFileExtensions()
+							.stream()
+							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
+					);
+					// CHECKSTYLE:ON
+				})
+				.await(CONFIG_WATCHER_AWAIT_MS)
+				.checksumSupplier(() -> buildChecksum(extensionManager, configDirectory))
+				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
 				.build()
 				.start();
 		} catch (Exception e) {
@@ -102,17 +121,34 @@ public class MetricsHubAgentApplication implements Runnable {
 	}
 
 	/**
+	 * Builds the checksum of the configuration directory.
+	 *
+	 * @param extensionManager The extension manager
+	 * @param configDirectory  The agent configuration directory
+	 * @return The checksum of the configuration directory
+	 */
+	private static String buildChecksum(final ExtensionManager extensionManager, final Path configDirectory) {
+		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(
+			configDirectory,
+			path ->
+				extensionManager
+					.findConfigurationFileExtensions()
+					.stream()
+					.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
+		);
+	}
+
+	/**
 	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
 	 * @param agentContext The agent context
-	 * @param alternateConfigFile Alternation configuration file passed by the user
+	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
 	 */
-	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigFile) {
+	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigDirectory) {
 		try {
 			agentContext.getTaskSchedulingService().stop();
-			agentContext.getOtelCollectorProcessService().stop();
 
-			agentContext.build(alternateConfigFile, false);
-			agentContext.getOtelCollectorProcessService().launch();
+			agentContext.build(alternateConfigDirectory, false);
+
 			agentContext.getTaskSchedulingService().start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();

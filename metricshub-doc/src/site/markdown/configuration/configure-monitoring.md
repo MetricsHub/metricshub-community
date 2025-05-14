@@ -1287,3 +1287,105 @@ Timeouts, durations and periods are specified with the below format:
 | m    | minutes                       | 90m, 1m15s |
 | h    | hours                         | 1h, 1h30m  |
 | d    | days (based on a 24-hour day) | 1d         |
+
+## Splitting the configuration
+
+Starting from version `2.0.00`, **MetricsHub** supports a **modular configuration** approach. Instead of maintaining all configuration entries in a single `config/metricshub.yaml` file, you can now split your configuration into multiple YAML files located in the configuration directory `config/`.
+
+### How it works
+
+**MetricsHub** scans the configuration directory (typically `./metricshub/lib/config` on Linux or `C:\ProgramData\MetricsHub\config` on Windows) and automatically loads **all `.yaml` or `.yml` files**. These files are **parsed into a single configuration tree**. This behavior is built into the core of **MetricsHub** and requires no additional setup.
+
+> **Supported extensions**: `.yaml`, `.yml`
+
+This capability enables better organization of large configurations and allows teams to:
+
+* Maintain separation of concerns (e.g., one file for global settings, one for license, one for monitored site or one per monitored resource).
+* Dynamically manage configuration through templating or automation scripts.
+
+### Recommended structure
+
+To keep configurations clean and manageable, we recommend structuring your files as follows:
+
+```
+config/
+├── global-settings.yaml         # Collect period, logging, otel settings, etc.
+├── license.yaml                 # License configuration for the Enterprise edition
+├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
+├── <resource-id>-resource.yaml  # Your resource configuration
+├── ...
+```
+
+Each file is expected to contain a valid fragment of the complete configuration. The agent will validate and normalize the final configuration before launching.
+
+### Examples
+
+**`global-settings.yaml`**
+
+```yaml
+collectPeriod: 1m
+loggerLevel: info
+enableSelfMonitoring: true
+...
+```
+
+**`license.yaml`**
+
+```yaml
+license:
+  product: MetricsHub Enterprise
+  organization: YOUR_ORGANIZATION
+  expiresOn: EXPIRATION_DATE
+  resources: NUMBER_OF_RESOURCES
+  key: YOUR_LICENSE_KEY
+```
+
+**`paris-resources.yaml`**
+
+```yaml
+resourceGroups:
+  paris:
+    attributes:
+      site: paris-dc
+    resources:
+      server-1:
+        attributes:
+          host.name: paris-server-1
+          host.type: linux
+        protocols:
+          ssh:
+            username: root
+            password: changeme
+```
+
+**`paris-server-2-resource.yaml`**
+
+```yaml
+resources:
+  server-2:
+    attributes:
+      site: paris-dc
+      host.name: paris-server-2
+      host.type: linux
+    protocols:
+      ssh:
+        username: root
+        password: changeme
+```
+
+### Important warning on migration and co-existing files
+
+If you previously used `metricshub.yaml` as your main configuration file and you add new split files (e.g., `resources.yaml`), **MetricsHub will still load all of them** — including the original `metricshub.yaml`. This behavior may lead to **duplicate resource entries, conflicting settings**, or unexpected overrides.
+
+#### What you should know
+
+* **All YAML files in the directory are parsed and merged** regardless of their names or intended purpose.
+* If you keep example or backup files like `resources-example.yaml` or `old-license.yaml`, and they contain valid YAML structure, they **will be interpreted as part of the configuration**.
+
+#### Best practices
+
+* Move all backup or example YAML files to a subdirectory such as `config/examples/` or `config/backups/`.
+* If you want to disable a file temporarily, **rename it with a non-YAML extension**, such as `.bak`, `.txt`, or `.disabled`.
+* Regularly audit your `config/` folder to avoid loading unintended configuration fragments.
+
+> ⚠️ **Warning**: Failing to isolate backup files may result in MetricsHub loading unintended data, potentially causing connection errors, license conflicts, or duplicated metric collection.

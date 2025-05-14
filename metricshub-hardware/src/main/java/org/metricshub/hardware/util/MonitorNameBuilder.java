@@ -1102,10 +1102,7 @@ public class MonitorNameBuilder {
 	 * @param telemetryManager the {@link TelemetryManager} instance, required for some build functions
 	 * @return the built monitor name, or the monitor type if no match is found.
 	 */
-	public static String buildMonitorNameUsingType(
-		@NonNull final Monitor monitor,
-		final TelemetryManager telemetryManager
-	) {
+	public String buildMonitorNameUsingType(@NonNull final Monitor monitor, final TelemetryManager telemetryManager) {
 		String type = monitor.getType();
 		if (type == null) {
 			return null;

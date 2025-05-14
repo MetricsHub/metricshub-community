@@ -106,6 +106,7 @@
 		<module>metricshub-hardware</module>
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
+		<module>metricshub-yaml-configuration-extension</module>
 	</modules>
 
 	<profiles>
@@ -579,21 +580,5 @@
 
 		</plugins>
 	</build>
-
-	<reporting>
-		<plugins>
-			<plugin>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>javadoc</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-			</plugin>
-		</plugins>
-	</reporting>
-
 
 </project>

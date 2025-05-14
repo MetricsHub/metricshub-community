@@ -97,6 +97,11 @@
 			<artifactId>metricshub-jawk-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-yaml-configuration-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -213,6 +218,11 @@
 									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jdbc-extension</artifactId>
 									<destFileName>metricshub-jdbc-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-yaml-configuration-extension</artifactId>
+									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
 								</artifactItem>
 							</artifactItems>
 						</configuration>
