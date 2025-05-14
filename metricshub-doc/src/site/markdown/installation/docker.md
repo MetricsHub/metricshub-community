@@ -44,7 +44,8 @@ wget -O ./otel/otel-config.yaml https://metricshub.com/docs/latest/resources/con
 wget -O ./config/metricshub.yaml https://metricshub.com/docs/latest/resources/config/linux/metricshub-example.yaml
 ```
 
-* In the **./config/metricshub.yaml** file, configure the [resources to be monitored](../configuration/configure-monitoring.md#step-3-configure-resources).
+* [Structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
+* [Configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
 * In the **./otel/otel-config.yaml** file, specify where the _OpenTelemetry Collector_ should [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
 
 ### Start

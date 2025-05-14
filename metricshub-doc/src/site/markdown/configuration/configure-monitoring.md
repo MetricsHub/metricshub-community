@@ -27,7 +27,7 @@ Before diving into your monitoring setup, take a moment to choose the right conf
 
 Starting from version 2.0.00, you can choose between:
 
-* One single configuration file `metricshub.yaml` (ideal for small-scale environment)
+* One single `metricshub.yaml` configuration file(ideal for small-scale environment)
 * Multiple configuration files. Recommended for larger environments with hundreds or thousands of systems, this structure allows you to:
   * separate concerns (e.g., global settings, license, monitored site, monitored resource)
   * dynamically manage configuration through templating or automation scripts.
@@ -744,7 +744,7 @@ Refer to:
 **MetricsHub** sends collected metrics to an OTLP Receiver using **gRPC** or **HTTP/Protobuf**.
 
 * In the **Enterprise Edition**, telemetry is **automatically sent** to the embedded *OpenTelemetry Collector*. You can also configure it to send metrics directly to observability platforms that support **native OTLP ingestion**. A working example is provided in the `metricshub-example.yaml` file.
-* In the **Community Edition**, you need to manually configure the OTLP Exporter settings in the MetricsHub configuration file under the `otel` section.
+* In the **Community Edition**, you need to manually configure the OTLP Exporter settings in the [MetricsHub configuration file](#step-1-structure-your-configuration) under the `otel` section.
 
 The table below describes the available OTLP Exporter properties:
 
@@ -760,7 +760,7 @@ The table below describes the available OTLP Exporter properties:
 
 #### Example
 
-To send **MetricsHub** metrics via **gRPC** to an `OTLP Receiver` at `https://localhost:4317`, including an *Authorization* header, configure the following in the MetricsHub configuration file:
+To send **MetricsHub** metrics via **gRPC** to an `OTLP Receiver` at `https://localhost:4317`, including an *Authorization* header, configure the following in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
 ```yaml
 otel:
@@ -956,7 +956,7 @@ For more information about the `metricshub` command, refer to [MetricsHub CLI (m
 
 #### Patch Connectors
 
-By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the MetricsHub configuration file.
+By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the [MetricsHub configuration file](#step-1-structure-your-configuration).
 
 To configure an additional connector directory, set the `patchDirectory` property to the path of your custom connectors directory, as shown in the example below:
 
@@ -1023,7 +1023,7 @@ You can apply monitor inclusion or exclusion in data collection for the followin
 * All the resources within a specific resource group. A resource group is a container that holds resources to be monitored and generally refers to a site or a specific location.
 * A specific resource
 
-This is done by  adding the `monitorFilters` parameter in the relevant section of the MetricsHub configuration file as described below:
+This is done by  adding the `monitorFilters` parameter in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Filter monitors                                    | Add monitorFilters                                      |
 |----------------------------------------------------|---------------------------------------------------------|
@@ -1269,7 +1269,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 1. **Global configuration** (applies to all resources):
 
-   Add `stateSetCompression` to the root of the MetricsHub configuration file:
+   Add `stateSetCompression` to the root of the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    stateSetCompression: suppressZeros # set to "none" to disable the StateSet compression
@@ -1278,7 +1278,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 2. **Per resource group** (applies to all resources within a specific group):
 
-   Add `stateSetCompression` within a specific `resourceGroup` in the MetricsHub configuration file:
+   Add `stateSetCompression` within a specific `resourceGroup` in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1289,7 +1289,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 3. **Per resource** (applies to a specific resource):
 
-   Add `stateSetCompression` for an individual resource in the MetricsHub configuration file:
+   Add `stateSetCompression` for an individual resource in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1329,7 +1329,7 @@ In this case, only the `degraded` state is reported, and the zero values for `ok
 
 The self-monitoring feature helps you track **MetricsHub**'s performance by providing metrics like job duration. These metrics offer detailed insights into task execution times, helping identify bottlenecks or inefficiencies and optimizing performance.
 
-To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the MetricsHub configuration file as described below:
+To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Self-Monitoring                                    | Set enableSelfMonitoring to true                        |
 |----------------------------------------------------|---------------------------------------------------------|

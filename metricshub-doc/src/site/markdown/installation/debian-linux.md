@@ -42,8 +42,6 @@ To start the **MetricsHub Enterprise** service, run the command below:
 systemctl start metricshub-enterprise-service
 ```
 
-This will start **MetricsHub** with the default **MetricsHub Enterprise Agent** configuration file, **./lib/config/metricshub.yaml**.
-
 ### Stop
 
 To stop the **MetricsHub Enterprise** service, run the command below:
@@ -100,16 +98,17 @@ sudo tar xzf /tmp/metricshub-community-linux-${communityVersion}.tar.gz
 
 ### Configure
 
-In the `./lib/config/metricshub.yaml` file, located under the `./metricshub` installation directory, configure:
+After installing MetricsHub, you need to:
 
-* the [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
-* the [OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
+* [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
+* [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
+* [define the OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
 
 To assist with the setup process, the configuration example `./lib/config/metricshub-example.yaml` is provided for guidance in the installation directory (`./metricshub`).
 
 ### Start
 
-To start **MetricsHub** in an interactive terminal with the default configuration file `./lib/config/metricshub.yaml`, run the command below:
+To start **MetricsHub** in an interactive terminal, run the command below:
 
 ```shell-session
 cd /opt/metricshub/bin
