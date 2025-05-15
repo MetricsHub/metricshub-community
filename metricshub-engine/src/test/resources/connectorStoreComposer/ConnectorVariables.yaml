@@ -1,0 +1,112 @@
+extends:
+- ./System/System
+connector:
+  displayName: Linux - Processes (ps)
+  platforms: Linux
+  reliesOn: Linux ps command
+  information: Monitors performance metrics (CPU, memory, etc.) of the processes that match the specified criteria in `matchName`, `matchCommand`, and `matchUser`.
+  detection:
+    connectionTypes:
+    - remote
+    - local
+    appliesTo:
+    - linux
+    disableAutoDetection: true
+    criteria:
+    - type: commandLine
+      commandLine: /usr/bin/which ps || /bin/which ps
+      expectedResult: /bin/ps
+      errorMessage: Not a valid Linux host.
+    tags: [ system, linux ]
+  variables:
+    matchName:
+      description: Regular expression pattern to match process names for monitoring.
+      defaultValue: .* 
+    matchCommand:
+      description: Regular expression pattern to match process command lines for monitoring.
+      defaultValue: .*
+    matchUser:
+      description: Regular expression pattern to match process users for inclusion.
+      defaultValue: .*
+monitors:
+  process:
+    simple:
+      sources:
+        process:
+          type: commandLine
+          commandLine: ${file::embeddedFile}
+          computes:
+          - type: awk
+            script: |
+              {
+                pid = $1
+                ppid = $2
+                comm = $3
+                user = $4
+                cpuTime = $5
+                mem = $6
+                rss = $7 * 1024
+                vsz = $8 * 1024
+                thcount= $9
+                elapsedTime = $10
+
+                # Converting cpuTime to seconds
+                cpuElementCount = split(cpuTime, cpuTimeElements, "[-:]");
+                if (cpuElementCount == 3) {
+                  cpuSeconds = cpuTimeElements[1] * 3600 + cpuTimeElements[2] * 60 + cpuTimeElements[3];
+                } else if (cpuElementCount == 4) {
+                  cpuSeconds = cpuTimeElements[1] * 3600 * 24 + cpuTimeElements[2] * 3600 + cpuTimeElements[3] * 60 + cpuTimeElements[4];
+                }
+
+                # Converting elapsedTime to seconds
+                elapsedElementCount = split(elapsedTime, elapsedTimeElements, "[-:]");
+                if (elapsedElementCount == 2) {
+                  elapsedSeconds = elapsedTimeElements[1] * 60 + elapsedTimeElements[2];
+                } else if (elapsedElementCount == 3) {
+                  elapsedSeconds = elapsedTimeElements[1] * 3600 + elapsedTimeElements[2] * 60 + elapsedTimeElements[3];
+                } else if (elapsedElementCount == 4) {
+                  elapsedSeconds = elapsedTimeElements[1] * 3600 * 24 + elapsedTimeElements[2] * 3600 + elapsedTimeElements[3] * 60 + elapsedTimeElements[4];
+                }
+
+                # Concatenate the full command from $11 to $NF
+                command = ""
+                for (i = 11; i <= NF; i++) {
+                  command = command $i " "
+                }
+                # Remove the trailing space
+                command = substr(command, 1, length(command)-1)
+                gsub(";", "", command)
+
+                printf "%s;%s;%s;%s;%s;%s;%s;%s;%s;%s;%s\n", pid,ppid,comm,user,cpuSeconds,mem,rss,vsz,thcount,elapsedSeconds,command
+              }
+          # Filter by process name
+          - type: keepOnlyMatchingLines
+            column: 3
+            regExp: '${var::matchName}'
+          # Filter by process command
+          - type: keepOnlyMatchingLines
+            column: 11
+            regExp: '${var::matchCommand}'
+          # Filter by process user
+          - type: keepOnlyMatchingLines
+            column: 4
+            regExp: '${var::matchUser}'
+      mapping:
+        # pid;ppid;comm;user;cpuSeconds;mem;rss;vsz;thcount;elapsedSeconds;command
+        source: ${source::process}
+        attributes:
+          id: $1
+          process.id: $1
+          process.parent.id: $2
+          process.name: $3
+          process.match.name: ${var::matchName}
+          process.match.command: ${var::matchCommand}
+          process.match.user: ${var::matchUser}
+        metrics:
+          process.cpu.utilization: rate($5)
+          process.cpu.time: $5
+          process.memory.utilization: $6
+          process.memory.usage: $7
+          process.memory.virtual: $8
+          process.thread.count: $9
+          process.time: $10

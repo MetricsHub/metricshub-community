@@ -35,7 +35,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 
 /**
- * Processes template variables within JSON nodes by substituting placeholders
+ * Processes connector variables within JSON nodes by substituting placeholders
  * with actual values from a set of connector variables. This processor extends
  * the {@link AbstractNodeProcessor} to allow for chained node processing in the
  * context of JSON data parsing and manipulation within the MetricsHub Engine.
@@ -47,19 +47,19 @@ import lombok.NonNull;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class TemplateVariableProcessor extends AbstractNodeProcessor {
+public class ConnectorVariableProcessor extends AbstractNodeProcessor {
 
 	@NonNull
 	private Map<String, String> connectorVariables = new HashMap<>();
 
 	/**
-	 * Constructs a new {@code TemplateVariableProcessor} with the specified map of connector
+	 * Constructs a new {@link ConnectorVariableProcessor} with the specified map of connector
 	 * variables and the next processor in the chain. This constructor initializes the processor
 	 * with a set of key-value pairs representing the variables to be substituted within JSON
 	 * templates and optionally, a next {@link AbstractNodeProcessor} for further processing.
 	 */
 	@Builder
-	public TemplateVariableProcessor(@NonNull Map<String, String> connectorVariables, AbstractNodeProcessor next) {
+	public ConnectorVariableProcessor(@NonNull Map<String, String> connectorVariables, AbstractNodeProcessor next) {
 		super(next);
 		this.connectorVariables = connectorVariables;
 	}
@@ -72,10 +72,10 @@ public class TemplateVariableProcessor extends AbstractNodeProcessor {
 	 */
 	@Override
 	public JsonNode processNode(JsonNode node) throws IOException {
-		// Create the unary operator that replaces the template variable pattern by the agent config defined variable value
+		// Create the unary operator that replaces the connector variable pattern by the agent config defined variable value
 		final UnaryOperator<String> variableValueUpdater = value -> performReplacements(connectorVariables, value);
 
-		// Create a predicate to check the matching with the template variable pattern
+		// Create a predicate to check the matching with the connector variable pattern
 		final Predicate<String> isMatchingConnectorVariableRegex = str -> str != null && str.contains("${var::");
 
 		// Call JsonNodeUpdater to replace the placeholder by the variable value

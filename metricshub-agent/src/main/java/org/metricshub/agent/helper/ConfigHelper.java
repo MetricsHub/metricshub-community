@@ -71,8 +71,6 @@ import org.metricshub.agent.config.AlertingSystemConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.config.StateSetMetricCompression;
-import org.metricshub.agent.connector.AdditionalConnectorsParsingResult;
-import org.metricshub.agent.connector.ConnectorVariablesLibraryParser;
 import org.metricshub.agent.context.MetricDefinitions;
 import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -80,13 +78,19 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.ResourceHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
+import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.extension.ExtensionLoader;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.security.SecurityManager;
@@ -861,15 +865,35 @@ public class ConfigHelper {
 			// Read the configured connector for the current resource
 			addConfiguredConnector(resourceConnectorStore, resourceConfig.getConnector());
 
+			// Retrieve the resource additional connectors configuration
+			final Map<String, AdditionalConnector> additionalConnectors = resourceConfig.getAdditionalConnectors();
+
+			/*
+				Normalize additionalConnectors configuration. If on or many fields aren't specified, this method will
+				complete them according to the business logic.
+			 */
+			normalizeAdditionalConnectors(additionalConnectors);
+
+			log.debug("Creating a store for resource {}:", resourceKey);
+
+			// Retrieve the raw connector store
+			final RawConnectorStore rawConnectorStore = resourceConnectorStore.getRawConnectorStore();
+
 			// Read connectors with configuration variables safely
-			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult =
-				readConnectorsWithConfigurationVariablesSafe(resourceGroupKey, resourceKey, resourceConfig);
+			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
+				.builder()
+				.withRawConnectorStore(rawConnectorStore)
+				.withUpdateChain(ConnectorParser.createUpdateChain())
+				.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+				.withAdditionalConnectors(additionalConnectors)
+				.build()
+				.resolveConnectorStoreVariables(resourceConnectorStore);
 
 			// Overwrite resourceConnectorStore
-			updateConnectorStore(resourceConnectorStore, additionalConnectorsParsingResult.getCustomConnectorsMap());
+			resourceConnectorStore.addMany(additionalConnectorsParsingResult.getCustomConnectorsMap());
 
 			// Add custom connectors to the host configuration.
-			hostConfiguration.getConnectors().addAll(additionalConnectorsParsingResult.getHostConnectors());
+			hostConfiguration.getConnectors().addAll(additionalConnectorsParsingResult.getResourceConnectors());
 
 			resourceGroupTelemetryManagers.putIfAbsent(
 				resourceKey,
@@ -888,51 +912,31 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Parse the connectors having configuration variables.
-	 *
-	 * @param resourceGroupKey The resource group key under which the resource is configured for logging purposes.
-	 * @param resourceKey      The resource key for logging purposes.
-	 * @param resourceConfig   The resource configuration.
-	 * @return an AdditionalConnectorsParserResult which contains a map of connectors to force and a map of custom connectors.
+	 * Updates the additional connectors configuration by ensuring that each entry has a valid
+	 * {@code AdditionalConnector} object. If the connector or its {@code uses} field is null, it is set
+	 * to the connector Id.
 	 */
-	private static AdditionalConnectorsParsingResult readConnectorsWithConfigurationVariablesSafe(
-		final String resourceGroupKey,
-		final String resourceKey,
-		final ResourceConfig resourceConfig
-	) {
-		// Call ConnectorVariablesLibraryParser and parse the additional connectors
-		final ConnectorVariablesLibraryParser connectorVariablesLibraryParser = new ConnectorVariablesLibraryParser();
+	public static void normalizeAdditionalConnectors(final Map<String, AdditionalConnector> additionalConnectors) {
+		additionalConnectors
+			.entrySet()
+			.forEach(entry -> {
+				final String connectorId = entry.getKey();
+				final AdditionalConnector additionalConnector = entry.getValue();
 
-		try {
-			return connectorVariablesLibraryParser.parse(
-				ConfigHelper.getSubDirectory("connectors", false),
-				resourceConfig.getAdditionalConnectors()
-			);
-		} catch (Exception e) {
-			log.warn(
-				"Resource {} - Under the resource group configuration {}, the resource configuration {} will not load connectors with configuration variables." +
-				" Reason: {}.",
-				resourceKey,
-				resourceGroupKey,
-				resourceKey,
-				e.getMessage()
-			);
-			return new AdditionalConnectorsParsingResult();
-		}
-	}
+				/*
+					If the user only configures a key referencing the connector identifier, and the user does not provide
+					a complete variables configuration for this connector, create a new object with default information.
+				*/
+				if (additionalConnector == null) {
+					entry.setValue(AdditionalConnector.builder().uses(connectorId).build());
+					return;
+				}
 
-	/**
-	 * Add the custom connectors to the resource's connector store.
-	 *
-	 * @param resourceConnectorStore The connector store of the resource
-	 * @param customConnectors       Map of customized connectors. E.g. Custom connectors that contain template variables
-	 */
-	protected static void updateConnectorStore(
-		final ConnectorStore resourceConnectorStore,
-		final Map<String, Connector> customConnectors
-	) {
-		// Add custom connectors
-		resourceConnectorStore.addMany(customConnectors);
+				// If uses() is null, set it to the connectorId
+				if (additionalConnector.getUses() == null) {
+					additionalConnector.setUses(connectorId);
+				}
+			});
 	}
 
 	/**
@@ -1259,32 +1263,47 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Constructs and populates a {@link ConnectorStore} by aggregating connector
-	 * stores from various extensions managed by the provided {@link ExtensionManager}
-	 * and from a specific subdirectory defined for connectors. This method first
-	 * aggregates all extension-based connector stores into one central store and
-	 * then adds additional connectors found in a designated subdirectory.
+	 * Builds a {@link ConnectorStore} by aggregating connectors from multiple sources:
+	 * <ul>
+	 *   <li>Extension-based connector stores managed by the provided {@link ExtensionManager}</li>
+	 *   <li>Connectors located in the default internal subdirectory (e.g., <code>connectors/</code>)</li>
+	 *   <li>Optionally, connectors found in a user-defined path</li>
+	 * </ul>
 	 *
-	 * @param extensionManager       The manager responsible for handling all
-	 *                               extension-based connector stores.
-	 * @param connectorsPatchPath    The connectors Patch Path.
-	 * @return A fully populated {@link ConnectorStore} containing connectors from
-	 *         various sources.
+	 * The method first aggregates all extension-based connectors into a central {@link RawConnectorStore},
+	 * then supplements it with additional connectors from the connectors subdirectory and optional user path.
+	 * Finally, it generates a {@link ConnectorStore} from the aggregated raw connector store.
+	 *
+	 * @param extensionManager     The manager responsible for discovering and providing connector extensions.
+	 * @param connectorsPatchPath  An optional filesystem path pointing to additional user-defined connectors.
+	 * @return A fully composed {@link ConnectorStore} containing all loaded connectors.
 	 */
 	public static ConnectorStore buildConnectorStore(
 		final ExtensionManager extensionManager,
 		final String connectorsPatchPath
 	) {
-		// Get extension connector stores
-		final ConnectorStore connectorStore = extensionManager.aggregateExtensionConnectorStores();
+		// Get extension raw connector stores
+		final RawConnectorStore rawConnectorStore = extensionManager.aggregateExtensionRawConnectorStores();
 
 		// Parse and add connectors from a specific subdirectory
-		connectorStore.addMany(new ConnectorStore(getSubDirectory("connectors", false)).getStore());
+		rawConnectorStore.addMany(new RawConnectorStore(getSubDirectory("connectors", false)).getStore());
 
 		// Add user's connectors if the connectors patch path is specified.
 		if (connectorsPatchPath != null) {
-			connectorStore.addMany(new ConnectorStore(Path.of(connectorsPatchPath)).getStore());
+			rawConnectorStore.addMany(new RawConnectorStore(Path.of(connectorsPatchPath)).getStore());
 		}
+
+		// Generate the connector store from the raw connector store.
+		final ConnectorStore connectorStore = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+			.build()
+			.generateStaticConnectorStore();
+
+		log.info("Global Connector Store size: {}", connectorStore.getStore().size());
+		log.info("Global Raw Connector Store size: {}", connectorStore.getRawConnectorStore().getStore().size());
 
 		return connectorStore;
 	}
