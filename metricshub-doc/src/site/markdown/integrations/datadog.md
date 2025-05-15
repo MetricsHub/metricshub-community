@@ -1,7 +1,7 @@
 keywords: datadog, integration
 description: How to push the metrics collected by MetricsHub to Datadog
 
-# Datadog integration
+# Datadog Integration
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
