@@ -57,7 +57,7 @@ To start **MetricsHub Enterprise** using the local configuration files, run the 
 docker run -d \
   --name=metricshub-enterprise \
   -p 24375:24375 -p 13133:13133 \
-  -v $(pwd)/config/metricshub.yaml:/opt/metricshub/lib/config/metricshub.yaml \
+  -v $(pwd)/config:/opt/metricshub/lib/config \
   -v $(pwd)/otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml \
   -v $(pwd)/logs:/opt/metricshub/lib/logs \
   --hostname=localhost \
@@ -81,12 +81,12 @@ services:
     container_name: metricshub-enterprise
     hostname: localhost
     ports:
-      - 13133:13133                                                                      # OpenTelemetry Collector HealthCheck
-      - 24375:24375                                                                      # OpenTelemetry Collector Prometheus Exporter
+      - 13133:13133                                                        # OpenTelemetry Collector HealthCheck
+      - 24375:24375                                                        # OpenTelemetry Collector Prometheus Exporter
     volumes:
-      - ./logs:/opt/metricshub/lib/logs                                                  # Mount the volume ./lib/logs into /opt/metricshub/lib/logs in the container
-      - ./config/metricshub.yaml:/opt/metricshub/lib/config/metricshub.yaml              # Inject local config/metricshub.yaml into the container
-      - ./otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml                # Inject local otel/otel-config.yaml into the container
+      - ./logs:/opt/metricshub/lib/logs                                    # Mount the volume ./logs into /opt/metricshub/lib/logs in the container
+      - ./config:/opt/metricshub/lib/config                                # Inject the local ./config directory into the container
+      - ./otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml  # Inject local ./otel/otel-config.yaml into the container
     restart: unless-stopped
 ```
 
@@ -131,7 +131,7 @@ To upgrade to a newer version of **MetricsHub Enterprise**:
    docker run -d \
      --name=metricshub-enterprise \
      -p 24375:24375 -p 13133:13133 \
-     -v $(pwd)/config/metricshub.yaml:/opt/metricshub/lib/config/metricshub.yaml \
+     -v $(pwd)/config:/opt/metricshub/lib/config \
      -v $(pwd)/otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml \
      -v $(pwd)/logs:/opt/metricshub/lib/logs \
      --hostname=localhost \
