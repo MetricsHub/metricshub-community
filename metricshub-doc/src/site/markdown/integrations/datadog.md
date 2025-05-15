@@ -31,7 +31,10 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
       datadog/api:
         api:
           key: <apikey>
-          # site: datadoghq.eu # datadoghq.com for the US (default), datadoghq.eu for Europe, ddog-gov.com for Governement sites. 
+          # site: datadoghq.com
+          # site: datadoghq.eu
+          # site: ddog-gov.com
+          # For further details, refer to https://docs.datadoghq.com/getting_started/site/
         metrics:
           resource_attributes_as_tags: true
     ```
