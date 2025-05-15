@@ -58,12 +58,12 @@ public class EmbeddedFile implements Serializable {
 	private Integer id;
 
 	/**
-	 * Creates a copy of the current embedded file.
+	 * Creates a deep copy of the current embedded file.
 	 *
 	 * @return A new instance of {@link EmbeddedFile} with the same content, filename, and reference.
 	 */
 	public EmbeddedFile copy() {
-		return EmbeddedFile.builder().content(content).filename(filename).id(id).build();
+		return EmbeddedFile.builder().content(content != null ? content.clone() : null).filename(filename).id(id).build();
 	}
 
 	/**

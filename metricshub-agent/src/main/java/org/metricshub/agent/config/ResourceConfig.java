@@ -42,6 +42,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.agent.deserialization.AttributesDeserializer;
 import org.metricshub.agent.deserialization.ExtensionProtocolsDeserializer;
 import org.metricshub.agent.deserialization.MonitorJobsDeserializer;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;

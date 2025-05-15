@@ -1,0 +1,157 @@
+metrics:
+  system.cpu.time:
+    description: Seconds each logical CPU spent on each mode
+    type: Counter
+    unit: s
+  system.cpu.utilization:
+    description: Difference in system.cpu.time since the last measurement, divided by the elapsed time and number of logical CPUs
+    type: Gauge
+    unit: "1"
+  system.cpu.physical.count:
+    description: Reports the number of actual physical processor cores on the hardware
+    type: UpDownCounter
+    unit: "{cpu}"
+  system.cpu.logical.count:
+    description: Reports the number of logical (virtual) processor cores created by the operating system to manage multitasking
+    type: UpDownCounter
+    unit: "{cpu}"
+  system.cpu.frequency:
+    description: Reports the current frequency of the CPU in Hz
+    type: Gauge
+    unit: "{Hz}"
+  system.memory.usage:
+    description: Reports memory in use by state
+    type: UpDownCounter
+    unit: By
+  system.memory.limit:
+    description: Total memory available in the system
+    type: UpDownCounter
+    unit: By
+  system.memory.utilization:
+    description: Memory utilization for each possible state
+    type: Gauge
+    unit: "1"
+  system.paging.usage:
+    description: Unix swap or Windows pagefile usage
+    type: UpDownCounter
+    unit: By
+  system.paging.utilization:
+    description: Memory paging utilization for each possible state
+    type: Gauge
+    unit: "1"
+  system.paging.faults:
+    description: Count of major and minor page faults
+    type: Counter
+    unit: "{fault}"
+  system.paging.operations:
+    description: Count of page-in (swap-in) and page-out (swap-out) operations
+    type: Counter
+    unit: "{operation}"
+  system.disk.io:
+    description: Disk I/O count
+    type: Counter
+    unit: By
+  system.disk.operations:
+    description: Count of read and write operations
+    type: Counter
+    unit: "{operation}"
+  system.disk.io_time:
+    description: Time disk spent activated
+    type: Counter
+    unit: s
+  system.disk.operation_time:
+    description: Sum of the time each operation took to complete
+    type: Counter
+    unit: s
+  system.disk.merged:
+    description: Count of merged read and write operations
+    type: Counter
+    unit: "{operation}"
+  system.disk.io_transactions_per_seconds:
+    description: Disk transactions per seconds
+    type: Gauge
+    unit: tps
+  system.disk.io_average_size:
+    description: Average size in sectors of requests
+    type: Gauge
+    unit: "{sectors}"
+  system.disk.io_average_queue:
+    description: Average number of requests in the queue waiting to be served
+    type: Gauge
+    unit: "{requests}"
+  system.disk.io_average_wait:
+    description: Average time taken for I/O requests to be served
+    type: Gauge
+    unit: s
+  system.filesystem.usage:
+    description: Filesystem usage
+    type: UpDownCounter
+    unit: By
+  system.filesystem.utilization:
+    description: Filesystem utilization for each possible state
+    type: Gauge
+    unit: "1"
+  system.network.dropped:
+    description: Count of dropped packets
+    type: Counter
+    unit: "{packet}"
+  system.network.packets:
+    description: Count of transmitted and received packets
+    type: Counter
+    unit: "{packet}"
+  system.network.errors:
+    description: Count of network errors detected
+    type: Counter
+    unit: "{error}"
+  system.network.io:
+    description: Network I/O count
+    type: Counter
+    unit: By
+  system.network.connections:
+    description: Count of network connections
+    type: UpDownCounter
+    unit: "{connection}"
+  system.processes.count:
+    description: Total number of processes in each state
+    type: UpDownCounter
+    unit: "{process}"
+  system.processes.created:
+    description: Total number of processes created over uptime of the host
+    type: Counter
+    unit: "{process}"
+  process.cpu.utilization:
+    description: CPU utilization of the process
+    type: Gauge
+    unit: "1"
+  process.cpu.time:
+    description: CPU time consumed by the process in seconds during its lifetime.
+    type: Counter
+    unit: s
+  process.memory.utilization:
+    description: Memory utilization of the process
+    type: Gauge
+    unit: "1"
+  process.memory.usage:
+    description: The amount of physical memory in use by the process
+    type: UpDownCounter
+    unit: By
+  process.memory.virtual:
+    description: The amount of committed virtual memory for the process
+    type: UpDownCounter
+    unit: By
+  process.thread.count:
+    description: Process threads count
+    type: UpDownCounter
+    unit: "{thread}"
+  process.time:
+    description: Life time of the process
+    type: UpDownCounter
+    unit: s
+  system.linux.memory.available:
+    description: An estimate of how much memory is available for starting new applications, without causing swapping
+    type: UpDownCounter
+    unit: By
+  system.uptime:
+    description: System uptime in seconds indicates how long the host has been running since its last boot
+    type: Gauge
+    unit: s

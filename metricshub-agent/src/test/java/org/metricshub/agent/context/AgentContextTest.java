@@ -29,14 +29,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.metricshub.agent.config.AdditionalConnector;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
+import org.metricshub.agent.service.TestHelper;
 import org.metricshub.configuration.YamlConfigurationProvider;
 import org.metricshub.engine.common.helpers.MapHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
@@ -49,6 +51,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpExtension;
 
 class AgentContextTest {
+
+	@BeforeAll
+	static void loggingSetup() {
+		TestHelper.configureGlobalLogger();
+	}
 
 	// Initialize the extension manager required by the agent context
 	final ExtensionManager extensionManager = ExtensionManager
@@ -213,8 +220,9 @@ class AgentContextTest {
 		assertEquals(5, additionalConnectors.size(), "AdditionalConnectors size should be 5");
 
 		final Map<String, ConnectorVariables> variables = resourceConfig.getConnectorVariables();
+
 		// Check the number of configured ConnectorVariables
-		assertEquals(3, variables.size(), "ConnectorVariables size should be 3");
+		assertEquals(4, variables.size(), "ConnectorVariables size should be 4");
 
 		AdditionalConnector pureStorageREST = AdditionalConnector
 			.builder()
@@ -225,24 +233,19 @@ class AgentContextTest {
 		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"), "PureStorageREST should match");
 		AdditionalConnector windows = AdditionalConnector
 			.builder()
+			.uses("Windows")
 			.variables(Map.of("osType", "windows"))
-			.force(true)
 			.build();
-		AdditionalConnector linux = AdditionalConnector.builder().uses("Linux").variables(null).force(true).build();
-		AdditionalConnector ipmiTool = AdditionalConnector
-			.builder()
-			.uses("IpmiTool")
-			.variables(Map.of())
-			.force(true)
-			.build();
-
+		AdditionalConnector linux = AdditionalConnector.builder().uses("Linux").variables(null).build();
+		AdditionalConnector ipmiTool = AdditionalConnector.builder().uses("IpmiTool").variables(Map.of()).build();
+		AdditionalConnector linuxProcess = AdditionalConnector.builder().uses("LinuxProcess").build();
 		final Map<String, AdditionalConnector> expectedAdditionalConnectors = new LinkedHashMap<>();
 
 		expectedAdditionalConnectors.put("PureStorageREST", pureStorageREST);
 		expectedAdditionalConnectors.put("Windows", windows);
 		expectedAdditionalConnectors.put("Linux", linux);
 		expectedAdditionalConnectors.put("IpmiTool", ipmiTool);
-		expectedAdditionalConnectors.put("LinuxProcess", null);
+		expectedAdditionalConnectors.put("LinuxProcess", linuxProcess);
 		assertEquals(expectedAdditionalConnectors, additionalConnectors, "AdditionalConnectors should match");
 	}
 
