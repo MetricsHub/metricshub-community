@@ -69,4 +69,5 @@ Creating your own monitors based on the ones listed as recommended allows you to
 |-----------------------|---------------------------------------------------------------------------------------------|
 | **MetricsHub - Main** | Overview of all monitored hosts, with a focus on sustainability                             |
 | **MetricsHub - Site** | Metrics associated to one *site* (a data center or a server room) and its monitored *hosts* |
-| **MetricsHub - Host** | Metrics associated to one *host* and its internal devices                                   |
+| **MetricsHub Hardware Host** | Hardware metrics and alerts associated to one *host* and its internal devices                                   |
+| **MetricsHub System Performance** | System performance and capacity metrics for Linux and Windows *hosts* |
