@@ -41,7 +41,17 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
 
       where `<apikey>` corresponds to your Datadog API key.
 
-2. Declare the exporter in the `pipelines` section as follows:
+3. Declare the receiver, processor, and exporter in a separate pipeline dedicated to Datadog, to avoid affecting other exporters with metrics prefixed with `metricshub.`:
+
+    ```yaml
+    service:
+      extensions: [health_check, basicauth, basicauth/partner]
+      pipelines:
+        # Dedicated pipeline for Datadog
+        metrics/datadog:
+          receivers: [otlp, prometheus/internal]
+          processors: [memory_limiter, batch, transform/datadog]
+          exporters: [prometheus/datadog, datadog/api]
 
     ```yaml
     service:
