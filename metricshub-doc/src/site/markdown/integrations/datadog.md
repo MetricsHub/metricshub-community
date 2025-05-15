@@ -70,12 +70,6 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
           receivers: [otlp, prometheus/internal]
           processors: [memory_limiter, batch, transform/datadog]
           exporters: [prometheus/datadog, datadog/api]
-
-    ```yaml
-    service:
-      pipelines:
-        metrics:
-          exporters: [datadog/api]
     ```
 
 4. Restart **MetricsHub** to apply your changes.
