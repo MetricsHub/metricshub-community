@@ -58,6 +58,7 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
             statements:
               # prefix all metrics by `metricshub.` (except `otelcol` metrics, which come from the OpenTelemetry Collector itself)
               - set(metric.name, Concat(["metricshub", metric.name], ".")) where not IsMatch(metric.name, "^(metricshub\\.|otelcol_)")
+      ```
 
 3. Declare the receiver, processor, and exporter in a separate pipeline dedicated to Datadog, to avoid affecting other exporters with metrics prefixed with `metricshub.`:
 
@@ -69,7 +70,7 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
         metrics/datadog:
           receivers: [otlp, prometheus/internal]
           processors: [memory_limiter, batch, transform/datadog]
-          exporters: [prometheus/datadog, datadog/api]
+          exporters: [datadog/api]
     ```
 
 4. Restart **MetricsHub** to apply your changes.
