@@ -5,13 +5,12 @@ description: How to configure the MetricsHub Agent to collect metrics from a var
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-**MetricsHub** extracts metrics from the resources configured in the `config/metricshub.yaml` file.
-These **resources** can be hosts, applications, or other components running in your IT infrastructure.
+**MetricsHub** extracts metrics from the resources defined in the configuration file(s). These **resources** can be hosts, applications, or any components running in your IT infrastructure.
 Each **resource** is typically associated with a physical location, such as a data center or server room, or a logical location, like a business unit.
 In **MetricsHub**, these locations are referred to as **sites**.
 In highly distributed infrastructures, multiple resources can be organized into **resource groups** to simplify management and monitoring.
 
-To reflect this organization, you are asked to define your **resource group** first, followed by your **site** and its corresponding **resources** in the `config/metricshub.yaml` file stored in:
+To reflect this organization, you are asked to define your **resource group** first, followed by your **site** and its corresponding **resources** in one or multiple `.yaml` or `.yml` configuration file(s) stored in:
 
 > * `C:\ProgramData\MetricsHub\config` on Windows systems
 > * `./metricshub/lib/config` on Linux systems
@@ -22,10 +21,97 @@ To reflect this organization, you are asked to define your **resource group** fi
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
-## Step 1: Configure resource groups
+## Step 1: Structure your configuration
+
+Before diving into your monitoring setup, take a moment to choose the right configuration structure. A thoughtful approach will make ongoing maintenance and updates much easier.
+
+Starting from version 2.0.00, you can choose between:
+
+* One single `metricshub.yaml` configuration file(ideal for small-scale environment)
+* Multiple configuration files. Recommended for larger environments with hundreds or thousands of systems, this structure allows you to:
+  * separate concerns (e.g., global settings, license, monitored site, monitored resource)
+  * dynamically manage configuration through templating or automation scripts.
+
+> Note: If you’re currently using a single configuration file and plan to split it into multiple files, refer to the [Upgrades Notes](../upgrade.md#support-for-multiple-configuration-files) for guidance.
+
+### Recommendations for multiple configuration files
+
+For clear and maintainable configurations, we recommend the following structure:
+
+```
+config/
+├── global-settings.yaml         # Collect period, logging, otel settings, etc.
+├── license.yaml                 # License configuration for the Enterprise edition
+├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
+├── <resource-id>-resource.yaml  # Your resource configuration
+├── ...
+```
+
+Each file must contain a valid fragment of the complete configuration. The **MetricsHub Agent** parses all the `.yaml` or `.yml` files with valid syntax found in the `config/` directory`.
+
+> **To prevent configuration conflicts, duplicates, or unintended overrides**:
+
+* Move backup or example files to a subfolder such as `config/examples/` or `config/backups/`.
+* Disable unused files by renaming them with a non-YAML extension (e.g., `.bak`, `.txt`, or `.disabled`).
+
+#### Examples
+
+**`global-settings.yaml`**
+
+```yaml
+collectPeriod: 1m
+loggerLevel: info
+enableSelfMonitoring: true
+```
+
+**`license.yaml`**
+
+```yaml
+license:
+  product: MetricsHub Enterprise
+  organization: YOUR_ORGANIZATION
+  expiresOn: EXPIRATION_DATE
+  resources: NUMBER_OF_RESOURCES
+  key: YOUR_LICENSE_KEY
+```
+
+**`paris-resources.yaml`**
+
+```yaml
+resourceGroups:
+  paris:
+    attributes:
+      site: paris-dc
+    resources:
+      server-1:
+        attributes:
+          host.name: paris-server-1
+          host.type: linux
+        protocols:
+          ssh:
+            username: root
+            password: changeme
+```
+
+**`paris-server-2-resource.yaml`**
+
+```yaml
+resources:
+  server-2:
+    attributes:
+      site: paris-dc
+      host.name: paris-server-2
+      host.type: linux
+    protocols:
+      ssh:
+        username: root
+        password: changeme
+```
+
+## Step 2: Configure resource groups
 
 > Note: For centralized infrastructures, `resourceGroups` are not required.
- Simply configure resources as explained in [Step 2](./configure-monitoring.html#step-2-configure-resources).
+ Simply configure resources as explained in [Step 3](./configure-monitoring.md#step-3-configure-resources).
 
 Create a resource group for each site to be monitored under the `resourceGroups:` section:
 
@@ -52,11 +138,11 @@ resourceGroups:
 
 At this stage, you can configure sustainability metrics reporting. For more details, refer to the [Sustainability](configure-sustainability-metrics.html) page.
 
-## Step 2: Configure resources
+## Step 3: Configure resources
 
 **Resources** can either be configured:
 
-* under the `resources` section located at the top of the `config/metricshub.yaml` file *(recommended for centralized infrastructures)*
+* under the `resources` section located at the top of the configuration file *(recommended for centralized infrastructures)*
 
     ```yaml
     attribute:
@@ -130,7 +216,7 @@ Whatever the syntax adopted, replace:
  [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
  Refer to [Protocols and Credentials](./configure-monitoring.html#protocols-and-credentials) for more details.
 
-> Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the `config/metricshub.yaml` file to call your environment variables.
+> Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the configuration file to call your environment variables.
 
 **Example**
 
@@ -562,7 +648,7 @@ resourceGroups:
             authentications: [ntlm]
 ```
 
-## Step 3: Configure additional settings
+## Step 4: Configure additional settings
 
 ### Customize resource hostname
 
@@ -658,7 +744,7 @@ Refer to:
 **MetricsHub** sends collected metrics to an OTLP Receiver using **gRPC** or **HTTP/Protobuf**.
 
 * In the **Enterprise Edition**, telemetry is **automatically sent** to the embedded *OpenTelemetry Collector*. You can also configure it to send metrics directly to observability platforms that support **native OTLP ingestion**. A working example is provided in the `metricshub-example.yaml` file.
-* In the **Community Edition**, you need to manually configure the OTLP Exporter settings in `config/metricshub.yaml` under the `otel` section.
+* In the **Community Edition**, you need to manually configure the OTLP Exporter settings in the [MetricsHub configuration file](#step-1-structure-your-configuration) under the `otel` section.
 
 The table below describes the available OTLP Exporter properties:
 
@@ -674,7 +760,7 @@ The table below describes the available OTLP Exporter properties:
 
 #### Example
 
-To send **MetricsHub** metrics via **gRPC** to an `OTLP Receiver` at `https://localhost:4317`, including an *Authorization* header, configure the following in config/metricshub.yaml:
+To send **MetricsHub** metrics via **gRPC** to an `OTLP Receiver` at `https://localhost:4317`, including an *Authorization* header, configure the following in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
 ```yaml
 otel:
@@ -691,7 +777,7 @@ This configuration ensures that metrics are securely transmitted to the specifie
 
 In the Enterprise Edition, the **MetricsHub**'s internal `OTLP Exporter` authenticates itself with the *OpenTelemetry Collector*'s [OTLP gRPC Receiver](send-telemetry.md#otlp-grpc) by including the HTTP `Authorization` request header with the credentials.
 
-These settings are already configured in the `config/metricshub.yaml` file of **MetricsHub Enterprise Edition**. Changing them is **not recommended** unless you are familiar with managing communication between the **MetricsHub** `OTLP Exporter` and the *OpenTelemetry Collector*'s `OTLP Receiver`.
+These settings are already configured in the **MetricsHub Enterprise Edition** configuration file. Changing them is **not recommended** unless you are familiar with managing communication between the **MetricsHub** `OTLP Exporter` and the *OpenTelemetry Collector*'s `OTLP Receiver`.
 
 To override the default value of the *Basic Authentication Header*, configure the `otel.exporter.otlp.metrics.headers` parameter under the `otel` section:
 
@@ -870,7 +956,7 @@ For more information about the `metricshub` command, refer to [MetricsHub CLI (m
 
 #### Patch Connectors
 
-By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the `metricshub.yaml` configuration file.
+By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the [MetricsHub configuration file](#step-1-structure-your-configuration).
 
 To configure an additional connector directory, set the `patchDirectory` property to the path of your custom connectors directory, as shown in the example below:
 
@@ -896,7 +982,7 @@ Refer to the [Connectors directory](../metricshub-connectors-directory.html#) an
 
 ##### Procedure
 
-In the `config/metricshub.yaml` file, locate the resource for which you wish to customize data collection and specify the `variables` attribute available under the `additionalConnectors` section:
+In the MetricsHub configuration file, locate the resource for which you wish to customize data collection and specify the `variables` attribute available under the `additionalConnectors` section:
 
 ```yaml
 resources:
@@ -937,7 +1023,7 @@ You can apply monitor inclusion or exclusion in data collection for the followin
 * All the resources within a specific resource group. A resource group is a container that holds resources to be monitored and generally refers to a site or a specific location.
 * A specific resource
 
-This is done by  adding the `monitorFilters` parameter in the relevant section of the `config/metricshub.yaml` file as described below:
+This is done by  adding the `monitorFilters` parameter in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Filter monitors                                    | Add monitorFilters                                      |
 |----------------------------------------------------|---------------------------------------------------------|
@@ -1183,7 +1269,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 1. **Global configuration** (applies to all resources):
 
-   Add `stateSetCompression` to the root of the `config/metricshub.yaml` file:
+   Add `stateSetCompression` to the root of the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    stateSetCompression: suppressZeros # set to "none" to disable the StateSet compression
@@ -1192,7 +1278,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 2. **Per resource group** (applies to all resources within a specific group):
 
-   Add `stateSetCompression` within a specific `resourceGroup` in `config/metricshub.yaml`:
+   Add `stateSetCompression` within a specific `resourceGroup` in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1203,7 +1289,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 3. **Per resource** (applies to a specific resource):
 
-   Add `stateSetCompression` for an individual resource in `config/metricshub.yaml`:
+   Add `stateSetCompression` for an individual resource in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1243,7 +1329,7 @@ In this case, only the `degraded` state is reported, and the zero values for `ok
 
 The self-monitoring feature helps you track **MetricsHub**'s performance by providing metrics like job duration. These metrics offer detailed insights into task execution times, helping identify bottlenecks or inefficiencies and optimizing performance.
 
-To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the `config/metricshub.yaml` file as described below:
+To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Self-Monitoring                                    | Set enableSelfMonitoring to true                        |
 |----------------------------------------------------|---------------------------------------------------------|
@@ -1288,104 +1374,3 @@ Timeouts, durations and periods are specified with the below format:
 | h    | hours                         | 1h, 1h30m  |
 | d    | days (based on a 24-hour day) | 1d         |
 
-## Splitting the configuration
-
-Starting from version `2.0.00`, **MetricsHub** supports a **modular configuration** approach. Instead of maintaining all configuration entries in a single `config/metricshub.yaml` file, you can now split your configuration into multiple YAML files located in the configuration directory `config/`.
-
-### How it works
-
-**MetricsHub** scans the configuration directory (typically `./metricshub/lib/config` on Linux or `C:\ProgramData\MetricsHub\config` on Windows) and automatically loads **all `.yaml` or `.yml` files**. These files are **parsed into a single configuration tree**. This behavior is built into the core of **MetricsHub** and requires no additional setup.
-
-> **Supported extensions**: `.yaml`, `.yml`
-
-This capability enables better organization of large configurations and allows teams to:
-
-* Maintain separation of concerns (e.g., one file for global settings, one for license, one for monitored site or one per monitored resource).
-* Dynamically manage configuration through templating or automation scripts.
-
-### Recommended structure
-
-To keep configurations clean and manageable, we recommend structuring your files as follows:
-
-```
-config/
-├── global-settings.yaml         # Collect period, logging, otel settings, etc.
-├── license.yaml                 # License configuration for the Enterprise edition
-├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
-├── <resource-id>-resource.yaml  # Your resource configuration
-├── ...
-```
-
-Each file is expected to contain a valid fragment of the complete configuration. The agent will validate and normalize the final configuration before launching.
-
-### Examples
-
-**`global-settings.yaml`**
-
-```yaml
-collectPeriod: 1m
-loggerLevel: info
-enableSelfMonitoring: true
-...
-```
-
-**`license.yaml`**
-
-```yaml
-license:
-  product: MetricsHub Enterprise
-  organization: YOUR_ORGANIZATION
-  expiresOn: EXPIRATION_DATE
-  resources: NUMBER_OF_RESOURCES
-  key: YOUR_LICENSE_KEY
-```
-
-**`paris-resources.yaml`**
-
-```yaml
-resourceGroups:
-  paris:
-    attributes:
-      site: paris-dc
-    resources:
-      server-1:
-        attributes:
-          host.name: paris-server-1
-          host.type: linux
-        protocols:
-          ssh:
-            username: root
-            password: changeme
-```
-
-**`paris-server-2-resource.yaml`**
-
-```yaml
-resources:
-  server-2:
-    attributes:
-      site: paris-dc
-      host.name: paris-server-2
-      host.type: linux
-    protocols:
-      ssh:
-        username: root
-        password: changeme
-```
-
-### Important warning on migration and co-existing files
-
-If you previously used `metricshub.yaml` as your main configuration file and you add new split files (e.g., `resources.yaml`), **MetricsHub will still load all of them** — including the original `metricshub.yaml`. This behavior may lead to **duplicate resource entries, conflicting settings**, or unexpected overrides.
-
-#### What you should know
-
-* **All YAML files in the directory are parsed and merged** regardless of their names or intended purpose.
-* If you keep example or backup files like `resources-example.yaml` or `old-license.yaml`, and they contain valid YAML structure, they **will be interpreted as part of the configuration**.
-
-#### Best practices
-
-* Move all backup or example YAML files to a subdirectory such as `config/examples/` or `config/backups/`.
-* If you want to disable a file temporarily, **rename it with a non-YAML extension**, such as `.bak`, `.txt`, or `.disabled`.
-* Regularly audit your `config/` folder to avoid loading unintended configuration fragments.
-
-> ⚠️ **Warning**: Failing to isolate backup files may result in MetricsHub loading unintended data, potentially causing connection errors, license conflicts, or duplicated metric collection.

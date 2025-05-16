@@ -85,6 +85,10 @@
 			<item name="On Windows" href="installation/windows.html "/>
 		</menu>
 
+		<menu name="Upgrade">
+			<item name="Upgrade Notes" href="upgrade.html" />
+		</menu>
+
 		<menu name="Configuration">
 			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
 			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
