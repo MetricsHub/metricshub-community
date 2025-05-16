@@ -266,7 +266,7 @@ class MonitorNameBuilderTest {
 		final Map<String, AbstractMetric> cpuMetrics = new HashMap<>();
 		NumberMetric cpuMaxSpeedMetric = NumberMetric
 			.builder()
-			.value(3600.0)
+			.value(3_600_000_000.0)
 			.name(CPU_MAXIMUM_SPEED)
 			.attributes(Map.of("limit_type", "max"))
 			.collectTime(System.currentTimeMillis() - 120000)
@@ -291,7 +291,7 @@ class MonitorNameBuilderTest {
 		cpuMaxSpeedMetric =
 			NumberMetric
 				.builder()
-				.value(999.0)
+				.value(999.0 * 1_000_000)
 				.name(CPU_MAXIMUM_SPEED)
 				.attributes(Map.of("limit_type", "max"))
 				.collectTime(System.currentTimeMillis() - 120000)
@@ -443,7 +443,7 @@ class MonitorNameBuilderTest {
 		final Map<String, AbstractMetric> metrics = new HashMap<>();
 		metrics.put(MEMORY_SIZE_METRIC, NumberMetric.builder().value(16384.0).build());
 		memory = Monitor.builder().attributes(memoryAttributes).metrics(metrics).build();
-		assertEquals("1.1 (Hynix Semiconductor (00AD00B300AD) - DDR4 - 16384 MB)", buildMemoryName(memory));
+		assertEquals("1.1 (Hynix Semiconductor (00AD00B300AD) - DDR4 - 16.0 KB)", buildMemoryName(memory));
 	}
 
 	@Test
@@ -629,30 +629,30 @@ class MonitorNameBuilderTest {
 		assertEquals("NVIDIA 1", MonitorNameBuilder.buildGpuName(gpu));
 
 		// vendor is null, model is null, size > 0.0
-		final NumberMetric gpuMemoryLimitMetric = NumberMetric.builder().value(1024.0).build();
+		final NumberMetric gpuMemoryLimitMetric = NumberMetric.builder().value(1024.0 * 1024 * 1024).build();
 		final Map<String, AbstractMetric> gpuMetrics = new HashMap<>();
 		gpuMetrics.put(GPU_MEMORY_LIMIT_METRIC, gpuMemoryLimitMetric);
 		gpu = Monitor.builder().attributes(gpuAttributes).metrics(gpuMetrics).build();
-		assertEquals("NVIDIA 1 - 1.00 GB", MonitorNameBuilder.buildGpuName(gpu));
+		assertEquals("NVIDIA 1 - 1.0 GB", MonitorNameBuilder.buildGpuName(gpu));
 
 		// size > 0.0, vendor is not null, model is not null, vendor is part of model
 		gpuAttributes.put(VENDOR, "NVIDIA_VENDOR");
 		gpuAttributes.put(MODEL, "NVIDIA_VENDOR_MODEL");
-		assertEquals("NVIDIA 1 (NVIDIA_VENDOR_MODEL - 1.00 GB)", MonitorNameBuilder.buildGpuName(gpu));
+		assertEquals("NVIDIA 1 (NVIDIA_VENDOR_MODEL - 1.0 GB)", MonitorNameBuilder.buildGpuName(gpu));
 
 		// size > 0.0, vendor is not null, model is not null, vendor is not part of model
 		gpuAttributes.put(VENDOR, "VENDOR");
 		gpuAttributes.put(MODEL, "MODEL");
-		assertEquals("NVIDIA 1 (VENDOR - MODEL - 1.00 GB)", MonitorNameBuilder.buildGpuName(gpu));
+		assertEquals("NVIDIA 1 (VENDOR - MODEL - 1.0 GB)", MonitorNameBuilder.buildGpuName(gpu));
 
 		// size > 0.0, vendor is not null, model is null
 		gpuAttributes.remove(MODEL);
-		assertEquals("NVIDIA 1 (VENDOR - 1.00 GB)", MonitorNameBuilder.buildGpuName(gpu));
+		assertEquals("NVIDIA 1 (VENDOR - 1.0 GB)", MonitorNameBuilder.buildGpuName(gpu));
 
 		// size > 0.0, vendor is null, model is not null
 		gpuAttributes.remove(VENDOR);
 		gpuAttributes.put(MODEL, "MODEL");
-		assertEquals("NVIDIA 1 (MODEL - 1.00 GB)", MonitorNameBuilder.buildGpuName(gpu));
+		assertEquals("NVIDIA 1 (MODEL - 1.0 GB)", MonitorNameBuilder.buildGpuName(gpu));
 	}
 
 	@Test

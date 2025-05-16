@@ -82,7 +82,6 @@ import static org.metricshub.hardware.constants.VmConstants.VM_TRIM_PATTERN;
 import static org.metricshub.hardware.constants.VoltageConstants.VOLTAGE_SENSOR_LOCATION;
 import static org.metricshub.hardware.constants.VoltageConstants.VOLTAGE_TRIM_PATTERN;
 import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefixAndAttributes;
-import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
 
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -390,6 +389,10 @@ public class MonitorNameBuilder {
 	 * @return a string such as "1.5 MB"
 	 */
 	private static String humanReadableByteCountSI(final Double bytes) {
+		if (bytes == null) {
+			return null;
+		}
+
 		// Treat the ±999 B corner-case first
 		if (-1000 < bytes && bytes < 1000) {
 			return bytes + " B";
@@ -539,21 +542,21 @@ public class MonitorNameBuilder {
 	 */
 	private static String getCpuMaxSpeed(final Monitor monitor) {
 		final String cpuSpeedMetricNamePrefix = "hw.cpu.speed.limit";
-		Optional<NumberMetric> cpuMaxSpeedMetric = null;
-		if (isMetricCollected(monitor, cpuSpeedMetricNamePrefix)) {
-			final Map<String, String> cpuSpeedMetricAttributes = Map.of("limit_type", "max");
-			cpuMaxSpeedMetric =
-				findMetricByNamePrefixAndAttributes(hostname, monitor, cpuSpeedMetricNamePrefix, cpuSpeedMetricAttributes);
-		}
-
+		final Optional<NumberMetric> cpuMaxSpeedMetric = findMetricByNamePrefixAndAttributes(
+			hostname,
+			monitor,
+			cpuSpeedMetricNamePrefix,
+			Map.of("limit_type", "max")
+		);
 		String cpuMaxSpeed = "";
+
 		if (cpuMaxSpeedMetric.isPresent()) {
 			double cpuMaxSpeedDouble = cpuMaxSpeedMetric.get().getValue();
 			try {
-				if (cpuMaxSpeedDouble < 1000D) {
-					cpuMaxSpeed = String.format("%.0f MHz", cpuMaxSpeedDouble);
+				if (cpuMaxSpeedDouble < 1_000_000_000D) {
+					cpuMaxSpeed = String.format("%.0f MHz", cpuMaxSpeedDouble / 1_000_000D);
 				} else {
-					cpuMaxSpeed = String.format("%.2f GHz", (cpuMaxSpeedDouble / 1000D));
+					cpuMaxSpeed = String.format("%.2f GHz", (cpuMaxSpeedDouble / 1_000_000_000D));
 				}
 			} catch (NumberFormatException nfe) {
 				cpuMaxSpeed = null;
@@ -798,20 +801,10 @@ public class MonitorNameBuilder {
 		final AbstractMetric memorySizeMetric = metrics.get(MEMORY_SIZE_METRIC);
 
 		// Format the memory size
-		String memorySize = "";
 		if (memorySizeMetric != null) {
-			try {
-				double memorySizeDoubleValue = memorySizeMetric.getValue();
-				if (memorySizeDoubleValue > 50D) {
-					memorySize = String.format("%.0f MB", memorySizeDoubleValue);
-				} else {
-					memorySize = null;
-				}
-			} catch (NumberFormatException nfe) {
-				memorySize = null;
-			}
+			return humanReadableByteCountBin(memorySizeMetric.getValue());
 		}
-		return memorySize;
+		return "";
 	}
 
 	/**
@@ -1075,7 +1068,7 @@ public class MonitorNameBuilder {
 		final AbstractMetric gpuMemoryLimit = metrics.get(GPU_MEMORY_LIMIT_METRIC);
 
 		final Double size = gpuMemoryLimit != null ? gpuMemoryLimit.getValue() : 0.0;
-		final String formattedSize = size > 0.0 ? String.format(" - %.2f GB", size / 1024.0) : "";
+		final String formattedSize = size > 0.0 ? " - " + humanReadableByteCountBin(size) : "";
 
 		// Append additional information based on vendor/model availability
 		if (vendor != null && model != null) {
