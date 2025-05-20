@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
@@ -47,7 +46,6 @@ import org.metricshub.engine.common.ConnectorMonitorTypeComparator;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.connector.model.Connector;
-import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
@@ -59,6 +57,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.surrounding.AfterAllStrategy;
 import org.metricshub.engine.strategy.surrounding.BeforeAllStrategy;
 import org.metricshub.engine.strategy.utils.MappingProcessor;
+import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
@@ -470,25 +469,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			return;
 		}
 
-		//Filter connectors by their connector_id value (compiled file name) from TelemetryManager's connector store and create a list of Connector instances.
-		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
-
-		// Retrieve the detected connectors file names
-		final Set<String> detectedConnectorFileNames = connectorMonitors
-			.values()
-			.stream()
-			.map(monitor -> monitor.getAttributes().get(MONITOR_ATTRIBUTE_ID))
-			.collect(Collectors.toSet());
-
-		// Keep only detected/selected connectors, in the store they are indexed by the compiled file name
-		// Build the list of the connectors
-		final List<Connector> detectedConnectors = connectorStore
-			.getStore()
-			.entrySet()
-			.stream()
-			.filter(entry -> detectedConnectorFileNames.contains(entry.getKey()))
-			.map(Map.Entry::getValue)
-			.collect(Collectors.toList()); //NOSONAR
+		// Find Connector objects from the connector store using the connector monitors
+		final List<Connector> detectedConnectors = StrategyHelper.getConnectorsFromStoreByMonitorIds(
+			telemetryManager.getConnectorStore(),
+			connectorMonitors.values()
+		);
 
 		// Get only connectors that define monitors
 		final List<Connector> connectorsWithMonitorJobs = detectedConnectors

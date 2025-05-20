@@ -153,6 +153,12 @@ public class Connector implements Serializable {
 	private Map<Integer, EmbeddedFile> embeddedFiles = new HashMap<>();
 
 	/**
+	 * Whether the connector measures power.
+	 */
+	@JsonIgnore
+	private boolean isPowerMeasured;
+
+	/**
 	 * Get the connector identity and create it if it is not created yet.
 	 *
 	 * @return The connector identity.

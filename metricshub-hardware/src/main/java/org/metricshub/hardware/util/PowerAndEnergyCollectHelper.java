@@ -25,17 +25,17 @@ import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATE
 import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_ESTIMATED_POWER;
 import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_ENERGY;
 import static org.metricshub.hardware.constants.CommonConstants.HW_HOST_MEASURED_POWER;
-import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_ENERGY;
-import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_POWER;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
-import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -100,6 +100,7 @@ public class PowerAndEnergyCollectHelper {
 	 * @param monitor the monitor to collect
 	 * @param telemetryManager the telemetry manager {@link TelemetryManager}
 	 * @param hostMonitorEnergyAndPowerEstimator generic estimator class which can used by the different hardware {@link HardwarePowerAndEnergyEstimator}
+	 * @return whether the power and energy are estimated or measured
 	 */
 	public static boolean collectHostPowerAndEnergy(
 		final Monitor monitor,
@@ -107,7 +108,10 @@ public class PowerAndEnergyCollectHelper {
 		final HostMonitorPowerAndEnergyEstimator hostMonitorEnergyAndPowerEstimator
 	) {
 		// Retrieve enclosure monitors
-		final Map<String, Monitor> enclosures = telemetryManager.findMonitorsByType(KnownMonitorType.ENCLOSURE.getKey());
+		final List<Connector> connectors = StrategyHelper.getConnectorsFromStoreByMonitorIds(
+			telemetryManager.getConnectorStore(),
+			telemetryManager.getMonitors().getOrDefault(KnownMonitorType.CONNECTOR.getKey(), Map.of()).values()
+		);
 
 		// Create metricFactory to collect metrics
 		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
@@ -116,7 +120,7 @@ public class PowerAndEnergyCollectHelper {
 		final Double computedPower;
 		final Double computedEnergy;
 
-		if (isPowerMeasured(enclosures)) {
+		if (isPowerMeasured(connectors)) {
 			// Compute measured power
 			computedPower = hostMonitorEnergyAndPowerEstimator.computeMeasuredPower();
 			if (isNullComputedPower(telemetryManager, monitor, HW_HOST_MEASURED_POWER, computedPower)) {
@@ -222,20 +226,12 @@ public class PowerAndEnergyCollectHelper {
 	}
 
 	/**
-	 * Check if at least one monitor in the given map collects the power consumption or the energy
+	 * Check if at least one connector in the given list measures power
 	 *
-	 * @param enclosures map of monitors
-	 * @return boolean value
+	 * @param connectors the list of connectors to check
+	 * @return boolean value indicating if at least one connector measures power
 	 */
-	private static boolean isPowerMeasured(final Map<String, Monitor> enclosures) {
-		return Optional
-			.ofNullable(enclosures)
-			.stream()
-			.map(Map::values)
-			.flatMap(Collection::stream)
-			.anyMatch(monitor ->
-				CollectHelper.getUpdatedNumberMetricValue(monitor, HW_ENCLOSURE_POWER) != null ||
-				CollectHelper.getUpdatedNumberMetricValue(monitor, HW_ENCLOSURE_ENERGY) != null
-			);
+	private static boolean isPowerMeasured(final List<Connector> connectors) {
+		return Optional.ofNullable(connectors).stream().flatMap(Collection::stream).anyMatch(Connector::isPowerMeasured);
 	}
 }
