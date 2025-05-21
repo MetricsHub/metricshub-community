@@ -403,4 +403,9 @@ public class MetricsHubConstants {
 	 * Expected metric name for the enclosure power metric
 	 */
 	public static final String HW_ENCLOSURE_POWER_METRIC = "hw.enclosure.power";
+
+	/**
+	 * Expected metric name for the enclosure energy metric
+	 */
+	public static final String HW_ENCLOSURE_ENERGY_METRIC = "hw.enclosure.energy";
 }

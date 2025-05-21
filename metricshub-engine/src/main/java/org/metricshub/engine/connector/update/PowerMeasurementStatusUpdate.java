@@ -28,56 +28,127 @@ import java.util.stream.Stream;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.PowerMeasurement;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.connector.model.monitor.task.AbstractMonitorTask;
-import org.metricshub.engine.connector.model.monitor.task.Mapping;
+import org.metricshub.engine.strategy.utils.StrategyHelper;
 
 /**
- * Implementation of {@link AbstractConnectorUpdateChain} to update the power measurement status of a connector.
+ * Implementation of {@link AbstractConnectorUpdateChain} to update the power
+ * measurement status of a connector.
  */
 public class PowerMeasurementStatusUpdate extends AbstractConnectorUpdateChain {
 
 	@Override
 	void doUpdate(final Connector connector) {
+		// Check if the connector is a hardware connector
+		if (!StrategyHelper.isHardwareConnector(connector)) {
+			// It is not a hardware connector, so the power measurement will not be updated
+			return;
+		}
+
 		final var monitors = connector.getMonitors();
 
-		if (monitors == null) {
+		if (monitors == null || monitors.isEmpty()) {
 			return;
 		}
 
 		Optional
 			.ofNullable(monitors.get(KnownMonitorType.ENCLOSURE.getKey()))
-			.ifPresent((MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure));
+			.ifPresentOrElse(
+				(MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure),
+				() -> connector.setPowerMeasurement(PowerMeasurement.ESTIMATED)
+			);
 	}
 
 	/**
-	 * Update the isPowerMeasured flag of the connector based on the enclosure job.
+	 * Update the {@link PowerMeasurement} property of the connector based on the enclosure job.
 	 *
-	 * @param connector The connector to update the isPowerMeasured flag for
+	 * @param connector The connector to update the {@link PowerMeasurement} property for
 	 * @param enclosure The enclosure job to check for power metrics
 	 */
 	private static void updatePowerMeasurementStatus(final Connector connector, final MonitorJob enclosure) {
-		final Stream<AbstractMonitorTask> jobStream;
+		// Build a stream of tasks from the enclosure job for processing convenience
+		final Stream<AbstractMonitorTask> taskStream;
 		if (enclosure instanceof StandardMonitorJob standardMonitorJob) {
-			jobStream = Stream.of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
+			taskStream = Stream.of(standardMonitorJob.getDiscovery(), standardMonitorJob.getCollect());
 		} else if (enclosure instanceof SimpleMonitorJob simpleMonitorJob) {
-			jobStream = Stream.ofNullable(simpleMonitorJob.getSimple());
+			taskStream = Stream.ofNullable(simpleMonitorJob.getSimple());
 		} else {
+			// If the enclosure job is not of the expected type, set power measurement to ESTIMATED and return
+			connector.setPowerMeasurement(PowerMeasurement.ESTIMATED);
 			return;
 		}
 
-		// Check if any of the tasks in the job stream have a mapping with power metrics
-		connector.setPowerMeasured(
-			jobStream
-				.filter(Objects::nonNull)
-				.map(AbstractMonitorTask::getMapping)
-				.filter(Objects::nonNull)
-				.map(Mapping::getMetrics)
-				.filter(Objects::nonNull)
-				.flatMap((Map<String, String> metrics) -> metrics.keySet().stream())
-				.anyMatch(key -> key.toLowerCase().startsWith(MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC))
+		var hasPowerMetric = false;
+		var hasConditionalPowerMetric = false;
+
+		// Loop over the tasks and check for power metrics as well as conditional power metrics
+		for (AbstractMonitorTask task : taskStream.filter(Objects::nonNull).toList()) {
+			final var mapping = task.getMapping();
+			// No mapping, skip this task
+			if (mapping == null) {
+				continue;
+			}
+
+			if (!hasConditionalPowerMetric) {
+				hasConditionalPowerMetric = hasPowerMetric(mapping.getConditionalCollection());
+			}
+
+			if (!hasPowerMetric) {
+				hasPowerMetric = hasPowerMetric(mapping.getMetrics());
+			}
+		}
+
+		if (hasPowerMetric) {
+			// Check if the enclosure job has any conditional power metrics
+			if (hasConditionalPowerMetric) {
+				connector.setPowerMeasurement(PowerMeasurement.CONDITIONAL);
+			} else {
+				// If no conditional power metrics are found, set the power measurement to MEASURED
+				connector.setPowerMeasurement(PowerMeasurement.MEASURED);
+			}
+		} else {
+			// If no power metrics are found, set the power measurement to ESTIMATED
+			connector.setPowerMeasurement(PowerMeasurement.ESTIMATED);
+		}
+	}
+
+	/**
+	 * Check if the given map of metrics contains at least one power metric.
+	 *
+	 * @param metrics The map of metrics to check
+	 * @return <code>true</code> if at least one power metric is found, <code>false</code> otherwise
+	 */
+	private static boolean hasPowerMetric(final Map<String, String> metrics) {
+		if (metrics != null) {
+			for (String metricName : metrics.keySet()) {
+				if (isPowerMetric(metricName)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Check if the given key is a power metric.
+	 *
+	 * @param metricName The metric name to check
+	 * @return <code>true</code> if the metric name is a power metric, <code>false</code> otherwise
+	 */
+	private static boolean isPowerMetric(final String metricName) {
+		if (metricName == null) {
+			return false;
+		}
+		final String lowerKey = metricName.toLowerCase();
+		// CHECKSTYLE:OFF
+		return (
+			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC) ||
+			lowerKey.startsWith(MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC)
 		);
+		// CHECKSTYLE:ON
 	}
 }

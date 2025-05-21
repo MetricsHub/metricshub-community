@@ -32,6 +32,8 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.telemetry.Monitor;
 
 /**
@@ -72,5 +74,18 @@ public class StrategyHelper {
 			.filter(entry -> connectorIds.contains(entry.getKey()))
 			.map(Map.Entry::getValue)
 			.toList();
+	}
+
+	/**
+	 * Checks if the connector is a hardware connector.
+	 *
+	 * @param connector The connector to check
+	 * @return true if the connector is a hardware connector, false otherwise
+	 */
+	public static boolean isHardwareConnector(final Connector connector) {
+		final ConnectorIdentity connectorIdentity = connector.getConnectorIdentity();
+		final Detection detection = connectorIdentity != null ? connectorIdentity.getDetection() : null;
+		final Set<String> connectorTags = detection != null ? detection.getTags() : null;
+		return connectorTags != null && connectorTags.stream().anyMatch(tag -> tag.equalsIgnoreCase("hardware"));
 	}
 }

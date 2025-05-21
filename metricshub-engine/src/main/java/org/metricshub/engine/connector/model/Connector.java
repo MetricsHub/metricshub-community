@@ -156,7 +156,7 @@ public class Connector implements Serializable {
 	 * Whether the connector measures power.
 	 */
 	@JsonIgnore
-	private boolean isPowerMeasured;
+	private PowerMeasurement powerMeasurement;
 
 	/**
 	 * Get the connector identity and create it if it is not created yet.

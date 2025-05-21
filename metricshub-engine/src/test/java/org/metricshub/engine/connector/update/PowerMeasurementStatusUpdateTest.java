@@ -1,12 +1,16 @@
 package org.metricshub.engine.connector.update;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.PowerMeasurement;
+import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
@@ -18,8 +22,13 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 
 class PowerMeasurementStatusUpdateTest {
 
+	private ConnectorIdentity connectorIdentity = ConnectorIdentity
+		.builder()
+		.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OTHER)).tags(Set.of("hardware")).build())
+		.build();
+
 	@Test
-	void testDoUpdateReadsEnclosureMultiInstanceCollect() {
+	void testMeasuredWithMultiInstanceCollect() {
 		final Connector connector = new Connector();
 		connector.setMonitors(
 			Map.of(
@@ -36,13 +45,15 @@ class PowerMeasurementStatusUpdateTest {
 					.build()
 			)
 		);
+		connector.setConnectorIdentity(connectorIdentity);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertTrue(connector.isPowerMeasured(), "Power measurement status should be true");
+		assertEquals(PowerMeasurement.MEASURED, connector.getPowerMeasurement(), "Power measurement should be MEASURED");
 	}
 
 	@Test
-	void testDoUpdateReadsEnclosureMonoInstanceCollect() {
+	void testMeasuredWithMonoInstanceCollect() {
 		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
@@ -59,12 +70,13 @@ class PowerMeasurementStatusUpdateTest {
 			)
 		);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertTrue(connector.isPowerMeasured(), "Power measurement status should be true");
+		assertEquals(PowerMeasurement.MEASURED, connector.getPowerMeasurement(), "Power measurement should be MEASURED");
 	}
 
 	@Test
-	void testDoUpdateReadsEnclosureSimpleJob() {
+	void testMeasuredWithSimpleJob() {
 		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
@@ -77,85 +89,35 @@ class PowerMeasurementStatusUpdateTest {
 			)
 		);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertTrue(connector.isPowerMeasured(), "Power measurement status should be true");
+		assertEquals(PowerMeasurement.MEASURED, connector.getPowerMeasurement(), "Power measurement should be MEASURED");
 	}
 
 	@Test
-	void testDoUpdateStandardMonitorJobNoPowerMetric() {
+	void testEstimatedWhenNoPowerMetricPresent() {
 		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
 				StandardMonitorJob
 					.standardBuilder()
-					.discovery(Discovery.builder().build())
 					.collect(
 						MonoInstanceCollect
 							.builder()
-							.mapping(Mapping.builder().metrics(Map.of("hw.enclosure.temperature", "$2")).build())
+							.mapping(Mapping.builder().metrics(Map.of("temperature", "$1")).build())
 							.build()
 					)
 					.build()
 			)
 		);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should be false");
+		assertEquals(PowerMeasurement.ESTIMATED, connector.getPowerMeasurement(), "Power measurement should be ESTIMATED");
 	}
 
 	@Test
-	void testDoUpdateSimpleMonitorJobNoPowerMetric() {
+	void testEstimatedWithNullMetrics() {
 		final Connector connector = new Connector();
-		connector.setMonitors(
-			Map.of(
-				"enclosure",
-				SimpleMonitorJob
-					.simpleBuilder()
-					.simple(
-						Simple.builder().mapping(Mapping.builder().metrics(Map.of("hw.enclosure.status", "$1")).build()).build()
-					)
-					.build()
-			)
-		);
-		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should be false");
-	}
-
-	@Test
-	void testDoUpdateWithNoMonitors() {
-		final Connector connector = new Connector();
-		connector.setMonitors(null);
-		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should default to false");
-	}
-
-	@Test
-	void testDoUpdateWithNoEnclosureMonitor() {
-		final Connector connector = new Connector();
-		connector.setMonitors(Map.of("storage", StandardMonitorJob.standardBuilder().build()));
-		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should default to false");
-	}
-
-	@Test
-	void testDoUpdateWithUnsupportedMonitorType() {
-		final Connector connector = new Connector();
-		// anonymous class to simulate unknown type
-		final MonitorJob unknownMonitorJob = new MonitorJob() {
-			private static final long serialVersionUID = 1L;
-
-			@Override
-			public Set<String> getKeys() {
-				return Set.of();
-			}
-		};
-		connector.setMonitors(Map.of("enclosure", unknownMonitorJob));
-		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should default to false");
-	}
-
-	@Test
-	void testDoUpdateHandlesNullMetricsMap() {
-		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
@@ -166,12 +128,58 @@ class PowerMeasurementStatusUpdateTest {
 			)
 		);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should be false");
+		assertEquals(PowerMeasurement.ESTIMATED, connector.getPowerMeasurement(), "Power measurement should be ESTIMATED");
 	}
 
 	@Test
-	void testDoUpdateWithIrrelevantMetricKeys() {
+	void testNullWithNoMonitors() {
+		{
+			final Connector connector = new Connector();
+			connector.setConnectorIdentity(connectorIdentity);
+			connector.setMonitors(null);
+			new PowerMeasurementStatusUpdate().doUpdate(connector);
+			// The connector should not have 0 monitors
+			assertNull(connector.getPowerMeasurement(), "Power measurement should be null");
+		}
+		{
+			final Connector connector = new Connector();
+			connector.setConnectorIdentity(connectorIdentity);
+			connector.setMonitors(Map.of());
+			new PowerMeasurementStatusUpdate().doUpdate(connector);
+			// The connector should not have 0 monitors
+			assertNull(connector.getPowerMeasurement(), "Power measurement should be null");
+		}
+	}
+
+	@Test
+	void testEstimatedWithNoEnclosureMonitor() {
 		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
+		connector.setMonitors(Map.of("storage", StandardMonitorJob.standardBuilder().build()));
+		new PowerMeasurementStatusUpdate().doUpdate(connector);
+		assertEquals(PowerMeasurement.ESTIMATED, connector.getPowerMeasurement(), "Power measurement should be ESTIMATED");
+	}
+
+	@Test
+	void testEstimatedWithUnsupportedMonitorType() {
+		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
+		final MonitorJob unknown = new MonitorJob() {
+			private static final long serialVersionUID = 1L;
+
+			public Set<String> getKeys() {
+				return Set.of();
+			}
+		};
+		connector.setMonitors(Map.of("enclosure", unknown));
+		new PowerMeasurementStatusUpdate().doUpdate(connector);
+		assertEquals(PowerMeasurement.ESTIMATED, connector.getPowerMeasurement(), "Power measurement should be ESTIMATED");
+	}
+
+	@Test
+	void testConditionalPowerMetric() {
+		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
@@ -180,13 +188,77 @@ class PowerMeasurementStatusUpdateTest {
 					.collect(
 						MonoInstanceCollect
 							.builder()
-							.mapping(Mapping.builder().metrics(Map.of("voltage.input", "$5", "temperature.internal", "$3")).build())
+							.mapping(
+								Mapping
+									.builder()
+									.metrics(Map.of("hw.enclosure.power", "$3"))
+									.conditionalCollection(Map.of("hw.enclosure.energy", "$5"))
+									.build()
+							)
 							.build()
 					)
 					.build()
 			)
 		);
 		new PowerMeasurementStatusUpdate().doUpdate(connector);
-		assertFalse(connector.isPowerMeasured(), "Power measurement status should be false");
+		assertEquals(
+			PowerMeasurement.CONDITIONAL,
+			connector.getPowerMeasurement(),
+			"Power measurement should be CONDITIONAL"
+		);
+	}
+
+	@Test
+	void testOnlyConditionalPowerMetric() {
+		final Connector connector = new Connector();
+		connector.setConnectorIdentity(connectorIdentity);
+		connector.setMonitors(
+			Map.of(
+				"enclosure",
+				StandardMonitorJob
+					.standardBuilder()
+					.collect(
+						MonoInstanceCollect
+							.builder()
+							.mapping(Mapping.builder().conditionalCollection(Map.of("hw.enclosure.power", "$3")).build())
+							.build()
+					)
+					.build()
+			)
+		);
+		new PowerMeasurementStatusUpdate().doUpdate(connector);
+		assertEquals(PowerMeasurement.ESTIMATED, connector.getPowerMeasurement(), "Power measurement should be ESTIMATED");
+	}
+
+	@Test
+	void testPowerMetricNoHardwareConnector() {
+		final Connector connector = new Connector();
+		final ConnectorIdentity connectorIdentity = ConnectorIdentity
+			.builder()
+			.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OTHER)).tags(Set.of("application")).build())
+			.build();
+		connector.setConnectorIdentity(connectorIdentity);
+		connector.setMonitors(
+			Map.of(
+				"enclosure",
+				StandardMonitorJob
+					.standardBuilder()
+					.collect(
+						MonoInstanceCollect
+							.builder()
+							.mapping(
+								Mapping
+									.builder()
+									.metrics(Map.of("hw.enclosure.power", "$3"))
+									.conditionalCollection(Map.of("hw.enclosure.energy", "$5"))
+									.build()
+							)
+							.build()
+					)
+					.build()
+			)
+		);
+		new PowerMeasurementStatusUpdate().doUpdate(connector);
+		assertNull(connector.getPowerMeasurement(), "Power measurement should be null");
 	}
 }
