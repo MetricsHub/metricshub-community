@@ -272,7 +272,9 @@ public class PowerAndEnergyCollectHelper {
 						.anyMatch((Monitor monitor) -> {
 							var isPowerMetricNotDeactivated = isPowerMetricNotDeactivated(monitor);
 							log.debug(
-								"Hostname {} - Power metric {} on enclosure. Additional information: enclosure monitor identified with attributes: {} - conditional collection: {}",
+								"Hostname {} - Power metric {} on enclosure." +
+								" Additional information: enclosure monitor identified with attributes: {}" +
+								" - conditional collection: {}",
 								telemetryManager.getHostname(),
 								isPowerMetricNotDeactivated ? "not deactivated" : "deactivated",
 								monitor.getAttributes(),
