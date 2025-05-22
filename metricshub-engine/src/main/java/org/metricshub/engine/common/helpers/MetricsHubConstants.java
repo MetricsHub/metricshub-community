@@ -398,4 +398,14 @@ public class MetricsHubConstants {
 	 * MetricsHub multi value attribute separator
 	 */
 	public static final String MULTI_VALUE_SEPARATOR = "_@M8B_MULTI_VALUE_SEP@_";
+
+	/**
+	 * Expected metric name for the enclosure power metric
+	 */
+	public static final String HW_ENCLOSURE_POWER_METRIC = "hw.enclosure.power";
+
+	/**
+	 * Expected metric name for the enclosure energy metric
+	 */
+	public static final String HW_ENCLOSURE_ENERGY_METRIC = "hw.enclosure.energy";
 }
