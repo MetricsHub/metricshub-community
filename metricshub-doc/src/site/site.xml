@@ -109,6 +109,16 @@
 			<item name="Health Check (Enterprise Edition)" href="guides/status.html" />
 		</menu>
 
+		<menu name="Custom Monitoring">
+			<item name="Database and Process (Linux)" href="custom/linux-database-process.html"/>
+			<item name="Linux Service" href="custom/linux-service.html"/>
+			<item name="Linux Process" href="custom/linux-process.html"/>
+			<item name="SNMP Polling" href="custom/snmp-polling.html"/>
+			<item name="Web Request" href="custom/web-request.html"/>
+			<item name="Windows Process" href="custom/windows-process.html"/>
+			<item name="Windows Service" href="custom/windows-service.html"/>
+		</menu>
+
 		<menu name="Troubleshooting">
 			<item name="Overview" href="troubleshooting/index.html"/>
 			<item name="Degraded Performance" href="troubleshooting/degraded-performance.html"/>
