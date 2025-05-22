@@ -106,7 +106,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                                                                                                                                     |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**\#203**](https://github.com/MetricsHub/community-connectors/issues/203) | **SmartMon Tools**: Failed to discover physical disks                                                                                                           |
+| [**\#202**](https://github.com/MetricsHub/community-connectors/issues/202) | **SmartMon Tools**: Failed to discover physical disks                                                                                                           |
 | [**\#204**](https://github.com/MetricsHub/community-connectors/issues/204) | **Windows System**: Incorrect values reported for `system.disk.io_time` and `system.disk.operation_time` metrics                                                |
 | [**\#205**](https://github.com/MetricsHub/community-connectors/issues/205) | **Linux System**: Incorrect unit reported for `system.disk.io_time` and `system.disk.operation.time` metrics                                                    |
 | [**\#209**](https://github.com/MetricsHub/community-connectors/issues/209) | Incorrect monitor names reported by various connectors: <ul><li>**IPMI**</li> <li>**SmartMon Tools**</li> <li>**WMI - Disks**</li><li>**lm_sensors**</li> </ul> |
