@@ -73,6 +73,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                                                                             |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [**\#503**](https://github.com/MetricsHub/metricshub-community/issues/503) | `hw.host.power` metric incorrectly reported as both estimated and measured for the same host            |
 | [**\#662**](https://github.com/MetricsHub/metricshub-community/issues/662) | Incorrect conversion of WMI unsigned 32-bit integers caused invalid performance counter values          |
 | [**\#674**](https://github.com/MetricsHub/metricshub-community/issues/674) | NullPointerException in Connector AWK scripts caused by race condition in the MetricsHub JAWK extension |
 
@@ -105,6 +106,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                                                                                                                                     |
 | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#203**](https://github.com/MetricsHub/community-connectors/issues/203) | **SmartMon Tools**: Failed to discover physical disks                                                                                                           |
 | [**\#204**](https://github.com/MetricsHub/community-connectors/issues/204) | **Windows System**: Incorrect values reported for `system.disk.io_time` and `system.disk.operation_time` metrics                                                |
 | [**\#205**](https://github.com/MetricsHub/community-connectors/issues/205) | **Linux System**: Incorrect unit reported for `system.disk.io_time` and `system.disk.operation.time` metrics                                                    |
 | [**\#209**](https://github.com/MetricsHub/community-connectors/issues/209) | Incorrect monitor names reported by various connectors: <ul><li>**IPMI**</li> <li>**SmartMon Tools**</li> <li>**WMI - Disks**</li><li>**lm_sensors**</li> </ul> |
