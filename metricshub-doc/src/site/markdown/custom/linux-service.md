@@ -1,16 +1,75 @@
-keywords: linux, service
-description: How to 
+keywords: linux, service, SSH
+description: How to configure MetricsHub to monitor a Linux Service.
 
 # Linux Service Monitoring
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-## Introduction
+You can configure **MetricsHub** to monitor a Linux service. In the example below, we configured **MetricsHub** to monitor the `httpd` service running on the `prod-web` resource using SSH.
 
 ## Procedure
 
-1. Declare the resource to be monitored (prod-web)​
-2. Define resource attributes (host.name, host.type)​
-3. Configure the SSH protocol with credentials and timeout​
-4. Add an additional connector (httpd) using the LinuxService module​
-5. Set the variable serviceNames to specify the service to monitor (httpd)​
+To achieve this use case, we:
+
+* Declare the resource to be monitored (`prod-web`)​ and its attributes (`host.name`, `host.type`)​
+
+```yaml
+    resources:
+      prod-web:
+        attributes:
+          host.name: prod-web
+          host.type: linux
+```
+
+* Configure the `SSH` protocol with `credentials` and `timeout​`
+
+```yaml
+        protocols:
+          ssh:
+            username: <username>
+            password: <password>
+            timeout: 30
+```
+
+* Add an additional connector (`LinuxServiceHttpd`) using the `LinuxService` module​
+
+```yaml
+        additionalConnectors:
+          LinuxServiceHttpd:
+            uses: LinuxService
+```
+
+* Set the variable `serviceNames` to specify the service to monitor (`httpd`)​
+
+```yaml
+            variables:
+                serviceNames: httpd
+```
+
+Here is the complete YAML configuration:
+
+```yaml
+    resources:
+      prod-web:
+        attributes:
+          host.name: prod-web
+          host.type: linux
+        protocols:
+          ssh:
+            username: <username>
+            password: <password>
+            timeout: 30
+        additionalConnectors:
+          LinuxServiceHttpd:
+            uses: LinuxService
+            variables:
+                serviceNames: httpd
+```
+
+## Supporting Resources
+
+* [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
+* [Resource attributes](../configuration/configure-monitoring.html#resource-attributes)
+* [SSH](../configuration/configure-monitoring.md#ssh)
+* [Customize resource monitoring](../configuration/configure-monitoring.html#customize-resource-monitoring)
+* [Customize data collection](../configuration/configure-monitoring.html#customize-data-collection)

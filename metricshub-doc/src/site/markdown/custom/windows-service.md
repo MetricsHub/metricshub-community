@@ -1,27 +1,74 @@
-keywords: windows, service
-description: How to 
+keywords: windows, service, WMI
+description: How to configure MetricsHub to monitor a Windows service.
 
 # Windows Service Monitoring
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-## Introduction
+You can configure **MetricsHub** to monitor a Windows service. In the example below, we configured **MetricsHub** to monitor the `httpd` service running on the `prod-win-web` resource using WMI.
 
 ## Procedure
 
 To achieve this use case, we:
 
-1. Declare the resource to be monitored (`prod-win-web`)​
-2. Define resource attributes (`host.name`, `host.type`)​
-3. Configure the `WMI` protocol with `credentials` and `timeout​`
-4. Add an additional connector (`httpd`) using the `WindowsService` module​
-5. Set the variable `serviceNames` to specify the service to monitor (`httpd`).
+* Declare the resource to be monitored (`prod-win-web`)​ and its attributes (`host.name`, `host.type`)​
+  
+```yaml
+    resources:
+      prod-win-web:
+        attributes:
+          host.name: prod-win-web
+          host.type: windows
+```
+
+* Configure the `WMI` protocol with `credentials` and `timeout​`
+
+```yaml
+        protocols:
+          wmi:
+            username: <username>
+            password: <password>
+            timeout: 30
+```
+
+* Add an additional connector (`WindowsServiceHttpd`) using the `WindowsService` module​
+
+```yaml
+        additionalConnectors:
+          WindowsServiceHttpd:
+            uses: WindowsService
+```
+
+* Set the variable `serviceNames` to specify the service to be monitored (`httpd`).
+
+```yaml
+            variables:
+                serviceNames: httpd
+```
 
 Here is the complete YAML configuration:
+
+```yaml
+    resources:
+      prod-win-web:
+        attributes:
+          host.name: prod-win-web
+          host.type: windows
+        protocols:
+          wmi:
+            username: <username>
+            password: <password>
+            timeout: 30
+        additionalConnectors:
+          WindowsServiceHttpd:
+            uses: WindowsService
+            variables:
+                serviceNames: httpd
+```
 
 ## Supporting Resources
 
 * [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring#resource-attributes)
+* [Resource attributes](../configuration/configure-monitoring.html#resource-attributes)
 * [WMI](../configuration/configure-monitoring.md#wmi)
-* [Customize data collection][../configuration/configure-monitoring.html#customize-data-collection]
+* [Customize data collection](../configuration/configure-monitoring.html#customize-data-collection)

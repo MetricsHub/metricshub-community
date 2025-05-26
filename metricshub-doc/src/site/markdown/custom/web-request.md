@@ -5,8 +5,6 @@ description: How to configure MetricsHub to monitor the health of a Web service.
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-## Introduction
-
 You can configure **MetricsHub** to send HTTP request against a Web service and analyze the responses.
 
 In the example below, we configured **MetricsHub** to:
@@ -88,7 +86,7 @@ To achieve this use case, we:
                   service.version: ${esc.d}4
 ```
 
-* Extract and expose the `grafana.db.state` metric:
+* Extract and expose the `grafana.db.state` metric
 
 ```yaml
                 metrics:
@@ -144,6 +142,7 @@ Here is the complete YAML configuration:
 ## Supporting Resources
 
 * [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring#resource-attributes)
+* [Resource attributes](../configuration/configure-monitoring.html#resource-attributes)
 * [HTTP](../configuration/configure-monitoring.html#http)
 * [Customize resource monitoring](../configuration/configure-monitoring.html#customize-resource-monitoring)
+* [Customize data collection](../configuration/configure-monitoring.html#customize-data-collection)

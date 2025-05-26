@@ -110,6 +110,7 @@
 		</menu>
 
 		<menu name="Custom Monitoring">
+		    <item name="Overview" href="custom/index.html"/>
 			<item name="Database and Process (Linux)" href="custom/linux-database-process.html"/>
 			<item name="Linux Service" href="custom/linux-service.html"/>
 			<item name="Linux Process" href="custom/linux-process.html"/>
