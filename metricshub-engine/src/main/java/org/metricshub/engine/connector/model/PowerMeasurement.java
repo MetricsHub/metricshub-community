@@ -1,8 +1,8 @@
-package org.metricshub.hardware.constants;
+package org.metricshub.engine.connector.model;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Hardware Energy and Sustainability Module
+ * MetricsHub Engine
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,21 +21,20 @@ package org.metricshub.hardware.constants;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
-import org.metricshub.engine.common.helpers.MetricsHubConstants;
-
 /**
- * Constants for enclosure-related metrics.
+ * Enum representing the power measurement status of a connector.
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class EnclosureConstants {
-
-	public static final String HW_ENCLOSURE_POWER = MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC;
-	public static final String HW_ENCLOSURE_ENERGY = MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC;
-	public static final String BLADE_ENCLOSURE = "Blade Enclosure";
-	public static final String COMPUTER = "Computer";
-	public static final String STORAGE = "Storage";
-	public static final String SWITCH = "Switch";
-	public static final String ENCLOSURE_TYPE = "type";
+public enum PowerMeasurement {
+	/**
+	 * The power measurement is measured directly from the enclosure monitor job
+	 */
+	MEASURED,
+	/**
+	 * The power measurement is estimated as the enclosure monitor job does not collect power
+	 */
+	ESTIMATED,
+	/**
+	 * The power measurement is conditional, meaning it may be measured or estimated
+	 */
+	CONDITIONAL
 }

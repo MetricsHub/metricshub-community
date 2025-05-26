@@ -3,6 +3,120 @@ description: Learn more about the new features, changes and improvements, and bu
 
 # Release Notes
 
+<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+
+## MetricsHub Enterprise Edition v2.0.00
+
+### MetricsHub Enterprise Edition v2.0.00
+
+#### What's New
+
+| ID                                                                        | Description                                                     |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [**\#13**](https://github.com/MetricsHub/metricshub-enterprise/issues/13) | Enabled self-observability through the OpenTelemetry Java Agent |
+| [**\#33**](https://github.com/MetricsHub/metricshub-enterprise/issues/33) | Added support for multiple configuration files                  |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                            |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| [**\#6**](https://github.com/MetricsHub/metricshub-enterprise/issues/6)   | Updated MetricsHub Enterprise EULA                                     |
+| [**\#11**](https://github.com/MetricsHub/metricshub-enterprise/issues/11) | Added the ability to define custom connector variables                 |
+| [**\#23**](https://github.com/MetricsHub/metricshub-enterprise/issues/23) | Added digital signature to MetricsHub Enterprise Windows MSI installer |
+| [**\#37**](https://github.com/MetricsHub/metricshub-enterprise/issues/37) | Cleaned up Datadog pipeline example in `otel-config-example.yaml`      |
+
+### MetricsHub Enterprise Connectors v106
+
+#### What's New
+
+| ID                                                                        | Description                            |
+| ------------------------------------------------------------------------- | -------------------------------------- |
+| [**\#18**](https://github.com/MetricsHub/enterprise-connectors/issues/18) | Added support for Nvidia's DGX servers |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                                                               |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [**\#19**](https://github.com/MetricsHub/enterprise-connectors/issues/19) | **HPE Synergy**: Added the ability to configure login domain through the `authLoginDomain` variable                       |
+| [**\#21**](https://github.com/MetricsHub/enterprise-connectors/issues/21) | **Dell iDRAC9 (REST)**: Added status and firmware version for the iDRAC management interface                              |
+| [**\#26**](https://github.com/MetricsHub/enterprise-connectors/issues/26) | **Brocade SAN Switch**: `hw.network.name` now reported                                                                    |
+| [**\#35**](https://github.com/MetricsHub/enterprise-connectors/issues/35) | **Microsoft SQL Server** and **Oracle**: Renamed metric `db.server.active_connections` to `db.server.current_connections` |
+| [**\#39**](https://github.com/MetricsHub/enterprise-connectors/issues/39) | **Dell OpenManage Server Administrator**: Memory device failure modes now exposed in logs                                 |
+| [**\#40**](https://github.com/MetricsHub/enterprise-connectors/issues/40) | **Microsoft SQL Server** and **Oracle**: Standardized storage metrics under the `db.server.storage` namespace             |
+| [**\#44**](https://github.com/MetricsHub/enterprise-connectors/issues/44) | **Juniper Switch**: Temperatures now monitored                                                                            |
+
+#### Fixed Issues
+
+| ID                                                                        | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#11**](https://github.com/MetricsHub/enterprise-connectors/issues/11) | **Pure Storage FA Series (REST)** and **Pure Storage FA Series v2 (REST)**: Redundant `disk_controller` monitor already reported by the `blade` monitor                                                                                                                                                                                                                                                                                                          |
+| [**\#34**](https://github.com/MetricsHub/enterprise-connectors/issues/34) | Incorrect monitor names reported by various connectors: <ul><li>**Brocade SAN Switch**</li> <li>**Dell EMC PowerStore (REST)**</li> <li>**Dell OpenManage Server Administrator**</li> <li>**EMC SMI-S Agent (ECOM)**</li> <li>**Fibre Alliance SNMP Agent (Switches)**</li> <li>**Hitachi HNAS (SNMP)**</li> <li>**IBM AIX - Common**</li> <li>**IBM AIX - SCSI disks**</li> <li>**NetApp Filer (SNMP)**</li> <li>**MegaCLI Managed RAID Controllers**</li></ul> |
+| [**\#47**](https://github.com/MetricsHub/enterprise-connectors/issues/47) | **Cisco Entity Sensor (SNMP)**: Excessive power consumption values observed on certain Cisco devices                                                                                                                                                                                                                                                                                                                                                             |
+| [**\#52**](https://github.com/MetricsHub/enterprise-connectors/issues/52) | **Cisco UCS B-Series (SNMP)**: CPU frequency incorrectly reported in the `name` attribute                                                                                                                                                                                                                                                                                                                                                                        |
+
+### MetricsHub Community Edition v1.0.03
+
+#### What's New
+
+| ID                                                                         | Description                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------- |
+| [**\#650**](https://github.com/MetricsHub/metricshub-community/issues/650) | Added support for multiple configuration files |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                 |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [**\#628**](https://github.com/MetricsHub/metricshub-community/issues/628) | Enhanced connectors parser to better handle Enterprise Connector variables  |
+| [**\#651**](https://github.com/MetricsHub/metricshub-community/issues/651) | The MetricsHub core engine now dynamically generates Hardware monitor names |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                                             |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [**\#503**](https://github.com/MetricsHub/metricshub-community/issues/503) | `hw.host.power` metric incorrectly reported as both estimated and measured for the same host            |
+| [**\#662**](https://github.com/MetricsHub/metricshub-community/issues/662) | Incorrect conversion of WMI unsigned 32-bit integers caused invalid performance counter values          |
+| [**\#674**](https://github.com/MetricsHub/metricshub-community/issues/674) | NullPointerException in Connector AWK scripts caused by race condition in the MetricsHub JAWK extension |
+
+#### Documentation Updates
+
+| ID                                                                         | Description                             |
+| -------------------------------------------------------------------------- | --------------------------------------- |
+| [**\#486**](https://github.com/MetricsHub/metricshub-community/issues/486) | Documented the Datadog Integration      |
+| [**\#655**](https://github.com/MetricsHub/metricshub-community/issues/655) | Documented the Self-Observability setup |
+
+### MetricsHub Community Connectors v1.0.11
+
+#### What's New
+
+| ID                                                                         | Description                  |
+| -------------------------------------------------------------------------- | ---------------------------- |
+| [**\#200**](https://github.com/MetricsHub/community-connectors/issues/200) | Added support for PostgreSQL |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                  |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#199**](https://github.com/MetricsHub/community-connectors/issues/199) | **lm_sensors**: Connector now acts as fallback when temperatures are unavailable from other connectors                                       |
+| [**\#212**](https://github.com/MetricsHub/community-connectors/issues/212) | **MySQL**: Renamed metric `db.server.active_connections` to `db.server.current_connections`                                                  |
+| [**\#218**](https://github.com/MetricsHub/community-connectors/issues/218) | **Linux System**: Added memory swap metrics                                                                                                  |
+| [**\#221**](https://github.com/MetricsHub/community-connectors/issues/221) | **MySQL**: Standardized storage metrics under the `db.server.storage` namespace                                                              |
+| [**\#224**](https://github.com/MetricsHub/community-connectors/issues/224) | **Windows System** and **Linux System**: Added `system.network.bandwidth.limit` metric and optionally `system.network.bandwidth.utilization` |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                                                                                                     |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#202**](https://github.com/MetricsHub/community-connectors/issues/202) | **SmartMon Tools**: Failed to discover physical disks                                                                                                           |
+| [**\#204**](https://github.com/MetricsHub/community-connectors/issues/204) | **Windows System**: Incorrect values reported for `system.disk.io_time` and `system.disk.operation_time` metrics                                                |
+| [**\#205**](https://github.com/MetricsHub/community-connectors/issues/205) | **Linux System**: Incorrect unit reported for `system.disk.io_time` and `system.disk.operation.time` metrics                                                    |
+| [**\#209**](https://github.com/MetricsHub/community-connectors/issues/209) | Incorrect monitor names reported by various connectors: <ul><li>**IPMI**</li> <li>**SmartMon Tools**</li> <li>**WMI - Disks**</li><li>**lm_sensors**</li> </ul> |
+| [**\#211**](https://github.com/MetricsHub/community-connectors/issues/211) | **Linux System**: `system.memory.utilization{system.memory.state="used"}` is incorrectly calculated                                                             |
+| [**\#215**](https://github.com/MetricsHub/community-connectors/issues/215) | **Linux System**: Metric incorrectly named `system.disk.operation.time` instead of `system.disk.operation_time`                                                 |
+| [**\#220**](https://github.com/MetricsHub/community-connectors/issues/220) | **Windows System**: Inaccurate paging metrics and missing handling for systems without a pagefile                                                               |
+| [**\#229**](https://github.com/MetricsHub/community-connectors/issues/229) | **Windows System**: The `system.paging.type` attribute returned wrong labels (`soft`, `hard` instead of expected `major`, `minor`)                              |
+| [**\#231**](https://github.com/MetricsHub/community-connectors/issues/231) | **Linux System**: Incorrect attribute name `system.paging.type` used instead of `system.paging.direction` for `system.paging.operations` metrics                |
+| [**\#210**](https://github.com/MetricsHub/community-connectors/issues/210) | **Windows - DiskPart**: The connector is tested remotely whereas it should work only locally                                                                    |
+
 ## MetricsHub Enterprise Edition v1.2.00
 
 ### MetricsHub Enterprise Edition v1.2.00
@@ -68,18 +182,18 @@ description: Learn more about the new features, changes and improvements, and bu
 | EC-129 | **IBM Director Agent 6 - Windows**: Enclosures are duplicated                                                    |
 | EC-132 | **HPE iLO 5 (ProLiant Gen10 and Gen10 Plus)**: `hw.network.bandwidth.limit` is reported in bits instead of bytes |
 
-## MetricsHub Community Edition v1.0.02
+### MetricsHub Community Edition v1.0.02
 
 #### What's New
 
-| ID                                                                   | Description                                                          |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ID                                                                         | Description                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | [**\#583**](https://github.com/metricshub/metricshub-community/issues/583) | Added `jawk` CLI, a command-line interface for executing AWK scripts |
 
 #### Changes and Improvements
 
-| ID                                                                   | Description                                                                                            |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| ID                                                                         | Description                                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [**\#339**](https://github.com/metricshub/metricshub-community/issues/339) | **MetricsHub Agent**: Improved OpenTelemetry resource usage                                            |
 | [**\#575**](https://github.com/metricshub/metricshub-community/issues/575) | **Authentication Protocols**: Added support for SNMPv3 HMAC-SHA-2 (SHA224, SHA256, SHA384, and SHA512) |
 | [**\#576**](https://github.com/metricshub/metricshub-community/issues/576) | **Authentication Protocols**: Added support for IPMI-over-LAN (SHA-256 and MD5)                        |
@@ -90,8 +204,8 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Fixed Issues
 
-| ID                                                                   | Description                                                                                                 |
-| -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| ID                                                                         | Description                                                                                                 |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | [**\#572**](https://github.com/metricshub/metricshub-community/issues/572) | **HTTP CLI**: A `NullPointerException` occurs when no password is provided                                  |
 | [**\#574**](https://github.com/metricshub/metricshub-community/issues/574) | Extensions are not updated during upgrade                                                                   |
 | [**\#577**](https://github.com/metricshub/metricshub-community/issues/577) | **IPMI CLI**: An `ArrayIndexOutOfBoundsException` occurs when running the `ipmitool` command                |
@@ -107,40 +221,40 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Documentation Updates
 
-| ID                                                                   | Description                                                      |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ID                                                                         | Description                                                      |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | [**\#631**](https://github.com/metricshub/metricshub-community/issues/631) | Documented the Docker deployment setup for MetricsHub Enterprise |
 | [**\#632**](https://github.com/metricshub/metricshub-community/issues/632) | Listed the supported operating systems                           |
 
-## MetricsHub Community Connectors v1.0.09
+### MetricsHub Community Connectors v1.0.09
 
 #### What's New
 
-| ID                                                                                        | Description                                                                        |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| ID                                                                         | Description                                                                        |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | [**\#188**](https://github.com/metricshub/community-connectors/issues/188) | Defined semantic conventions for Oracle and SQL Server database metrics            |
 | [**\#190**](https://github.com/metricshub/community-connectors/issues/190) | **MySQL:** `db.server.name` attribute is now reported                              |
 | [**\#193**](https://github.com/metricshub/community-connectors/issues/193) | **Generic Ethernet Switch:** `hw.network.name` and `hw.network.alias` now reported |
 
 #### Changes and Improvements
 
-| ID                                                                                        | Description                                                                  |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [**\#177**](https://github.com/metricshub/community-connectors/issues/177) | **Linux OS and Windows OS**: `network.interface.name` attribute now reported |
+| ID                                                                         | Description                                                                          |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| [**\#177**](https://github.com/metricshub/community-connectors/issues/177) | **Linux System and Windows System**: `network.interface.name` attribute now reported |
 
 #### Fixed Issues
 
-| ID                                                                                        | Description                                                                          |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [**\#173**](https://github.com/metricshub/community-connectors/issues/173) | **Generic UPS:** Some voltage sensors are not discovered                             |
-| [**\#176**](https://github.com/metricshub/community-connectors/issues/176) | **Linux and Windows OS**: `system.device` attribute missing from FS and disk metrics |
-| [**\#178**](https://github.com/metricshub/community-connectors/issues/178) | **Linux OS**: Incorrect attribute names and invalid mapping syntax on disk metrics   |
-| [**\#187**](https://github.com/metricshub/community-connectors/issues/187) | **Linux OS**: Docker overlay FS causes inaccurate capacity reporting                 |
+| ID                                                                         | Description                                                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [**\#173**](https://github.com/metricshub/community-connectors/issues/173) | **Generic UPS:** Some voltage sensors are not discovered                                 |
+| [**\#176**](https://github.com/metricshub/community-connectors/issues/176) | **Linux and Windows System**: `system.device` attribute missing from FS and disk metrics |
+| [**\#178**](https://github.com/metricshub/community-connectors/issues/178) | **Linux System**: Incorrect attribute names and invalid mapping syntax on disk metrics   |
+| [**\#187**](https://github.com/metricshub/community-connectors/issues/187) | **Linux System**: Docker overlay FS causes inaccurate capacity reporting                 |
 
 #### Documentation Updates
 
-| ID                                                                                        | Description                                                |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| ID                                                                         | Description                                                |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | [**\#184**](https://github.com/metricshub/community-connectors/issues/184) | Documented `awk` source in the Connector Developer’s Guide |
 
 ## MetricsHub Enterprise Edition v1.1.00
@@ -150,13 +264,13 @@ description: Learn more about the new features, changes and improvements, and bu
 #### What's New
 
 | ID       | Description                                                                                                        |
-|----------|--------------------------------------------------------------------------------------------------------------------|
+| -------- | ------------------------------------------------------------------------------------------------------------------ |
 | M8BEE-37 | Added protocol CLIs to validate configurations, troubleshoot connectivity, and ensure successful metric extraction |
 
 #### Changes and Improvements
 
 | ID       | Description                                                |
-|----------|------------------------------------------------------------|
+| -------- | ---------------------------------------------------------- |
 | M8BEE-38 | Updated OpenTelemetry Collector Contrib to version 0.116.0 |
 
 ### MetricsHub Enterprise Connectors v103
@@ -164,7 +278,7 @@ description: Learn more about the new features, changes and improvements, and bu
 #### What's New
 
 | ID    | Description                                                                                      |
-|-------|--------------------------------------------------------------------------------------------------|
+| ----- | ------------------------------------------------------------------------------------------------ |
 | EC-72 | Added performance and capacity metrics for Pure Storage FlashArray storage systems via REST API  |
 | EC-75 | Added performance and capacity metrics for NetApp FAS and AFF storage systems via ONTAP REST API |
 | EC-86 | Added support for Citrix NetScaler via SNMP                                                      |
@@ -172,7 +286,7 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID     | Description                                                                                                                       |
-|--------|-----------------------------------------------------------------------------------------------------------------------------------|
+| ------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | EC-10  | Enhanced detection criteria in the `EMC VPLEX Version 5`, `EMC VPLEX Version 6`, and `Huawei OceanStor (REST)` connectors         |
 | EC-57  | **Pure Storage FA Series (REST Token Authentication)**: NVRAM modules are now reported as memory monitors                         |
 | EC-88  | Added support for HPE ProLiant Gen 11 servers via iLO 6                                                                           |
@@ -183,7 +297,7 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Fixed Issues
 
 | ID    | Description                                                                                                                    |
-|-------|--------------------------------------------------------------------------------------------------------------------------------|
+| ----- | ------------------------------------------------------------------------------------------------------------------------------ |
 | EC-84 | **Pure Storage FA Series**: The `hw.parent.type` attribute is reported as `DiskController` instead of `disk_controller`        |
 | EC-95 | **Dell EMC PowerStore (REST)**: Metrics are missing for physical disks, network cards, memory modules, fans and power supplies |
 | EC-97 | **Pure Storage FA Series (SSH)**: `hw.temperature` metrics are not collected                                                   |
@@ -194,35 +308,35 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID     | Description                                                                                             |
-|--------|---------------------------------------------------------------------------------------------------------|
+| ------ | ------------------------------------------------------------------------------------------------------- |
 | EC-112 | Reduced high CPU usage caused by internal DB queries in `NetAppRESTv2` and `PureStorageREST` connectors |
 
 ### MetricsHub Community Edition v1.0.00
 
 #### What's New
 
-| ID                                                                   | Description                                                                                                        |
-|----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                        |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | [**\#424**](https://github.com/metricshub/metricshub-community/issues/424) | Added protocol CLIs to validate configurations, troubleshoot connectivity, and ensure successful metric extraction |
 
 #### Changes and Improvements
 
-| ID                                                                   | Description                                                                                                                            |
-|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                                            |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | [**\#519**](https://github.com/metricshub/metricshub-community/issues/519) | Updated connector semantics by replacing `leftConcat` with `prepend`, `rightConcat` with `append`, and `osCommand` with `commandLine`. |
 | [**\#521**](https://github.com/metricshub/metricshub-community/issues/521) | Updated OpenTelemetry Java dependencies to version `1.45.0`                                                                            |
 | [**\#525**](https://github.com/metricshub/metricshub-community/issues/525) | Added the ability to enable or disable self-monitoring                                                                                 |
 
 #### Fixed Issues
 
-| ID                                                                   | Description                                                                                 |
-|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                 |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | [**\#523**](https://github.com/metricshub/metricshub-community/issues/523) | The `hw.network.up` metric is not reported for connectors with `WARN` or `ALARM` link state |
 
 #### Documentation Updates
 
-| ID                                                                   | Description                                                                                       |
-|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                       |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | [**\#546**](https://github.com/metricshub/metricshub-community/issues/546) | Integrated platform icons and enhanced connectors directory page                                  |
 | [**\#541**](https://github.com/metricshub/metricshub-community/issues/541) | Moved use cases from the documentation to [MetricsHub Use Cases](https://metricshub.com/usecases) |
 | [**\#533**](https://github.com/metricshub/metricshub-community/issues/533) | Documented the self-monitoring feature                                                            |
@@ -232,30 +346,30 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                   | Description                                                                        |
-|----------------------------------------------------------------------|------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                        |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | [**\#563**](https://github.com/metricshub/metricshub-community/issues/563) | MetricsHub Engine Internal DB: Improved memory usage and data types identification |
 
 ### MetricsHub Community Connectors v1.0.08
 
 #### What's New
 
-| ID                                                                                        | Description                                    |
-|-------------------------------------------------------------------------------------------|------------------------------------------------|
+| ID                                                                         | Description                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------- |
 | [**\#137**](https://github.com/metricshub/community-connectors/issues/137) | Added support for `MySQL` databases via `JDBC` |
 
 #### Changes and Improvements
 
-| ID                                                                                        | Description                                                                       |
-|-------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                       |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                        |
 | [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                       |
 | [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | `MIB2Switch` and `GenericSwitchEnclosure` connectors now support Arista platforms |
 
 #### Fixed Issues
 
-| ID                                                                                        | Description                                               |
-|-------------------------------------------------------------------------------------------|-----------------------------------------------------------|
+| ID                                                                         | Description                                               |
+| -------------------------------------------------------------------------- | --------------------------------------------------------- |
 | [**\#111**](https://github.com/metricshub/community-connectors/issues/111) | LinuxIPNetwork: Fails to monitor some Ethernet interfaces |
 
 ## MetricsHub Enterprise Edition v1.0.02
@@ -265,7 +379,7 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID       | Description                                                                              |
-|----------|------------------------------------------------------------------------------------------|
+| -------- | ---------------------------------------------------------------------------------------- |
 | M8BEE-35 | Replaced deprecated `loggingexporter` with `debugexporter` in `otel-config-example.yaml` |
 
 ### MetricsHub Enterprise Connectors v102
@@ -273,13 +387,13 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID    | Description                                                                       |
-|-------|-----------------------------------------------------------------------------------|
+| ----- | --------------------------------------------------------------------------------- |
 | EC-87 | The `StatusInformation` of the `led` monitor now reports the `LedIndicator` value |
 
 #### Fixed Issues
 
 | ID    | Description                                                                                                            |
-|-------|------------------------------------------------------------------------------------------------------------------------|
+| ----- | ---------------------------------------------------------------------------------------------------------------------- |
 | EC-74 | **HP Insight Management Agent - Drive Array**: The `disk_controller` status is not reported                            |
 | EC-77 | **Redfish**: Enclosures are duplicated for Dell iDRAC and HP                                                           |
 | EC-78 | **Dell OpenManage Server Administrator**: The `hw.enclosure.energy` metric is not converted to Joules                  |
@@ -290,8 +404,8 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                   | Description                                                                                        |
-|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                        |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | [**\#379**](https://github.com/metricshub/metricshub-community/issues/379) | Added support for escaped macros                                                                   |
 | [**\#422**](https://github.com/metricshub/metricshub-community/issues/422) | Developed a **JDBC** Extension to enable support for SQL-based connectors                          |
 | [**\#432**](https://github.com/metricshub/metricshub-community/issues/432) | Standardized the log messages for all the criteria tests                                           |
@@ -304,8 +418,8 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Fixed Issues
 
-| ID                                                                   | Description                                                             |
-|----------------------------------------------------------------------|-------------------------------------------------------------------------|
+| ID                                                                         | Description                                                             |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | [**\#478**](https://github.com/metricshub/metricshub-community/issues/478) | A NullPointerException occurs when processing `HTTP` detection criteria |
 | [**\#480**](https://github.com/metricshub/metricshub-community/issues/480) | IPMITool criteria and source fail due to invalid `ipmitool` command     |
 | [**\#500**](https://github.com/metricshub/metricshub-community/issues/500) | Only one monitor is processed due to incorrect indexing                 |
@@ -313,8 +427,8 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Documentation Updates
 
-| ID                                                                   | Description                                                                                                                                                                                                                                                                |
-|----------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [**\#462**](https://github.com/metricshub/metricshub-community/issues/462) | Reviewed **Configure Monitoring** documentation                                                                                                                                                                                                                            |
 | [**\#462**](https://github.com/metricshub/metricshub-community/issues/462) | Moved the CLI documentation to the Appendix section                                                                                                                                                                                                                        |
 | [**\#463**](https://github.com/metricshub/metricshub-community/issues/463) | Combined the Linux and Windows Prometheus quick starts into a unique Prometheus quick start                                                                                                                                                                                |
@@ -326,24 +440,24 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                                        | Description                                                                                                      |
-|-------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------|
-| [**\#112**](https://github.com/metricshub/community-connectors/issues/112) | **Windows Process**: The process user name is now retrieved and selectable through configuration variables       |
-| [**\#143**](https://github.com/metricshub/community-connectors/issues/143) | **Linux OS**: The connector no longer reports services, as these are now handled by the `LinuxService` connector |
-| [**\#148**](https://github.com/metricshub/community-connectors/issues/148) | **Linux OS**: Enhanced `filesystem` utilization calculation                                                      |
+| ID                                                                         | Description                                                                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| [**\#112**](https://github.com/metricshub/community-connectors/issues/112) | **Windows Process**: The process user name is now retrieved and selectable through configuration variables           |
+| [**\#143**](https://github.com/metricshub/community-connectors/issues/143) | **Linux System**: The connector no longer reports services, as these are now handled by the `LinuxService` connector |
+| [**\#148**](https://github.com/metricshub/community-connectors/issues/148) | **Linux System**: Enhanced `filesystem` utilization calculation                                                      |
 
 #### Fixed Issues
 
-| ID                                                                                        | Description                                                                                                                                       |
-|-------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                                                       |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [**\#140**](https://github.com/metricshub/community-connectors/issues/140) | `Platform` mispelling in `Linux` & `LinuxService` connectors                                                                                      |
 | [**\#145**](https://github.com/metricshub/community-connectors/issues/145) | **IpmiTool**: The `hw.status` metric is not collected because `enclosure.awk` reports `OK`, `WARN`, `ALARM` instead of `ok`, `degraded`, `failed` |
 | [**\#152**](https://github.com/metricshub/community-connectors/issues/152) | Connectors reporting voltage metrics do not set the `high.critical` threshold                                                                     |
 
 #### Documentation Updates
 
-| ID                                                                                        | Description                                             |
-|-------------------------------------------------------------------------------------------|---------------------------------------------------------|
+| ID                                                                         | Description                                             |
+| -------------------------------------------------------------------------- | ------------------------------------------------------- |
 | [**\#128**](https://github.com/metricshub/community-connectors/issues/128) | Documented default connector `variables`                |
 | [**\#129**](https://github.com/metricshub/community-connectors/issues/129) | Replaced all references to `sql` with `internalDbQuery` |
 
@@ -354,7 +468,7 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID           | Description                                                                                                              |
-|--------------|--------------------------------------------------------------------------------------------------------------------------|
+| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | **M8BEE-29** | Removed Otel collector resourcedetection processor to prevent localhost system resource attributes from being overridden |
 | **M8BEE-32** | Moved the localhost resource configuration to the `data center 1` resource group in `metricshub-example.yaml`            |
 
@@ -363,21 +477,21 @@ description: Learn more about the new features, changes and improvements, and bu
 #### Changes and Improvements
 
 | ID       | Description                                                    |
-|----------|----------------------------------------------------------------|
+| -------- | -------------------------------------------------------------- |
 | **EC-9** | The hw.network.bandwidth.limit metric is now reported in bytes |
 
 #### Fixed Issues
 
 | ID        | Description                                                            |
-|-----------|------------------------------------------------------------------------|
+| --------- | ---------------------------------------------------------------------- |
 | **EC-73** | Dell iDRAC9 (REST): Some network link physical addresses are incorrect |
 
 ### MetricsHub Community Edition v0.9.07
 
 #### Changes and Improvements
 
-| ID                                                                   | Description                                                                                                              |
-|----------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                              |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | [**\#433**](https://github.com/metricshub/metricshub-community/issues/433) | **[BREAKING_CHANGE]** Disabled Automatic Hostname to FQDN resolution                                                     |
 | [**\#427**](https://github.com/metricshub/metricshub-community/issues/427) | BMC Helix Integration: Added the `StatusInformation` internal text parameter to the connector monitor                    |
 | [**\#421**](https://github.com/metricshub/metricshub-community/issues/421) | Reduced Alert noise for `hw.status{state="present"}`                                                                     |
@@ -390,8 +504,8 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Fixed Issues
 
-| ID                                                                   | Description                                                                      |
-|----------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                      |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | [**\#436**](https://github.com/metricshub/metricshub-community/issues/436) | The log message for SNMP v3 credential validation is incorrect                   |
 | [**\#439**](https://github.com/metricshub/metricshub-community/issues/439) | Connector default variables are not serializable                                 |
 | [**\#417**](https://github.com/metricshub/metricshub-community/issues/417) | JavaDoc references are incorrect                                                 |
@@ -403,14 +517,14 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                                        | Description                                                                                                         |
-|-------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| ID                                                                         | Description                                                                                                         |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | [**\#125**](https://github.com/metricshub/community-connectors/issues/125) | Disabled automatic detection for WindowsProcess, WindowsService, and LinuxService                                   |
 | [**\#122**](https://github.com/metricshub/community-connectors/issues/122) | Added default values for connector variables in `WindowsService`, `LinuxService`, `WindowsProcess` & `LinuxProcess` |
 | [**\#114**](https://github.com/metricshub/community-connectors/issues/114) | The `hw.network.bandwidth.limit` metric is now displayed in bytes                                                   |
 
 #### Fixed Issues
 
-| ID                                                                                        | Description                                                              |
-|-------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| ID                                                                         | Description                                                              |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | [**\#120**](https://github.com/metricshub/community-connectors/issues/120) | The `hw.vm.power_ratio` unit is incorrect. It should be 1 instead of Cel |

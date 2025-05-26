@@ -29,13 +29,16 @@ import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_
 import static org.metricshub.hardware.constants.EnclosureConstants.HW_ENCLOSURE_POWER;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
-import org.metricshub.engine.strategy.utils.CollectHelper;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.PowerMeasurement;
+import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -100,6 +103,7 @@ public class PowerAndEnergyCollectHelper {
 	 * @param monitor the monitor to collect
 	 * @param telemetryManager the telemetry manager {@link TelemetryManager}
 	 * @param hostMonitorEnergyAndPowerEstimator generic estimator class which can used by the different hardware {@link HardwarePowerAndEnergyEstimator}
+	 * @return whether the power and energy are estimated or measured
 	 */
 	public static boolean collectHostPowerAndEnergy(
 		final Monitor monitor,
@@ -107,7 +111,10 @@ public class PowerAndEnergyCollectHelper {
 		final HostMonitorPowerAndEnergyEstimator hostMonitorEnergyAndPowerEstimator
 	) {
 		// Retrieve enclosure monitors
-		final Map<String, Monitor> enclosures = telemetryManager.findMonitorsByType(KnownMonitorType.ENCLOSURE.getKey());
+		final List<Connector> connectors = StrategyHelper.getConnectorsFromStoreByMonitorIds(
+			telemetryManager.getConnectorStore(),
+			telemetryManager.getMonitors().getOrDefault(KnownMonitorType.CONNECTOR.getKey(), Map.of()).values()
+		);
 
 		// Create metricFactory to collect metrics
 		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
@@ -116,7 +123,7 @@ public class PowerAndEnergyCollectHelper {
 		final Double computedPower;
 		final Double computedEnergy;
 
-		if (isPowerMeasured(enclosures)) {
+		if (isPowerMeasured(connectors, telemetryManager)) {
 			// Compute measured power
 			computedPower = hostMonitorEnergyAndPowerEstimator.computeMeasuredPower();
 			if (isNullComputedPower(telemetryManager, monitor, HW_HOST_MEASURED_POWER, computedPower)) {
@@ -222,20 +229,85 @@ public class PowerAndEnergyCollectHelper {
 	}
 
 	/**
-	 * Check if at least one monitor in the given map collects the power consumption or the energy
+	 * This method checks if the power is measured
 	 *
-	 * @param enclosures map of monitors
-	 * @return boolean value
+	 * @param connectors       the list of connectors
+	 * @param telemetryManager the telemetry manager wrapping the {@link Monitor} instances
+	 * @return whether the power is measured or not
 	 */
-	private static boolean isPowerMeasured(final Map<String, Monitor> enclosures) {
-		return Optional
-			.ofNullable(enclosures)
+	static boolean isPowerMeasured(final List<Connector> connectors, final TelemetryManager telemetryManager) {
+		final Optional<List<Connector>> maybeConnectors = Optional.ofNullable(connectors);
+		boolean isPowerMeasured = maybeConnectors
 			.stream()
-			.map(Map::values)
 			.flatMap(Collection::stream)
-			.anyMatch(monitor ->
-				CollectHelper.getUpdatedNumberMetricValue(monitor, HW_ENCLOSURE_POWER) != null ||
-				CollectHelper.getUpdatedNumberMetricValue(monitor, HW_ENCLOSURE_ENERGY) != null
-			);
+			.anyMatch((Connector connector) -> {
+				final var powerMeasurement = connector.getPowerMeasurement();
+				log.debug(
+					"Hostname {} - Connector {} power measurement status: {}",
+					telemetryManager.getHostname(),
+					connector.getCompiledFilename(),
+					powerMeasurement
+				);
+				return PowerMeasurement.MEASURED == powerMeasurement;
+			});
+
+		if (!isPowerMeasured) {
+			final boolean isConditionalPower = maybeConnectors
+				.stream()
+				.flatMap(Collection::stream)
+				.anyMatch(connector -> PowerMeasurement.CONDITIONAL == connector.getPowerMeasurement());
+
+			if (isConditionalPower) {
+				log.debug("Hostname {} - Detected CONDITIONAL power measurement.", telemetryManager.getHostname());
+				final Map<String, Monitor> enclosures = telemetryManager.findMonitorsByType(
+					KnownMonitorType.ENCLOSURE.getKey()
+				);
+
+				isPowerMeasured =
+					Optional
+						.ofNullable(enclosures)
+						.stream()
+						.map(Map::values)
+						.flatMap(Collection::stream)
+						.anyMatch((Monitor monitor) -> {
+							var isPowerMetricNotDeactivated = isPowerMetricNotDeactivated(monitor);
+							log.debug(
+								"Hostname {} - Power metric {} on enclosure." +
+								" Additional information: enclosure monitor identified with attributes: {}" +
+								" - conditional collection: {}",
+								telemetryManager.getHostname(),
+								isPowerMetricNotDeactivated ? "not deactivated" : "deactivated",
+								monitor.getAttributes(),
+								monitor.getConditionalCollection()
+							);
+							return isPowerMetricNotDeactivated;
+						});
+			}
+		}
+
+		log.debug(
+			"Hostname {} - Power considered as {}.",
+			telemetryManager.getHostname(),
+			isPowerMeasured ? "MEASURED" : "ESTIMATED"
+		);
+
+		return isPowerMeasured;
+	}
+
+	/**
+	 * This method checks if the power metric is not deactivated
+	 *
+	 * @param monitor the monitor to check
+	 * @return Whether the power metric is not deactivated
+	 */
+	private static boolean isPowerMetricNotDeactivated(final Monitor monitor) {
+		final Map<String, String> conditionalCollection = monitor.getConditionalCollection();
+		// Safely check the metrics as conditionalCollection can never be null
+		// CHECKSTYLE:OFF
+		return (
+			(conditionalCollection.containsKey(HW_ENCLOSURE_ENERGY) && !monitor.isMetricDeactivated(HW_ENCLOSURE_ENERGY)) ||
+			(conditionalCollection.containsKey(HW_ENCLOSURE_POWER) && !monitor.isMetricDeactivated(HW_ENCLOSURE_POWER))
+		);
+		// CHECKSTYLE:ON
 	}
 }
