@@ -5,7 +5,7 @@ description: How to configure MetricsHub to poll the SNMP agent
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-You can configure **MetricsHub** to poll an SNMP agent and retrieve the values of a given OID (object identifier) to know the status of the monitored device and be informed when a problem occurs.
+You can configure **MetricsHub** to periodically poll any system or device through SNMP v1, v2 and v3, retrieve the value of a given OID (object identifier) or an entire SNMP table, and push OpenTelemetry metrics with the extracted values.
 
 In the example below, we configured **MetricsHub** to:
 

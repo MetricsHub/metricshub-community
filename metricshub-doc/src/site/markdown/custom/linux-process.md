@@ -31,11 +31,11 @@ To achieve this use case, we:
             timeout: 30
 ```
 
-* Add an additional connector (`LinuxProcess`) using the `LinuxProcess` module​
+* Add a new instance of the [`LinuxProcess`](https://metricshub.com/docs/latest/connectors/linuxprocess.html) connector for the monitoring of `systemd`. Name this new instance `systemdProcess`, for example:
 
 ```yaml
         additionalConnectors:
-          LinuxProcess: 
+          systemdProcess: 
             uses: LinuxProcess
 ```
 
@@ -60,7 +60,7 @@ Here is the complete YAML configuration:
             password: <username>
             timeout: 30
         additionalConnectors:
-          LinuxProcess: 
+          systemdProcess: 
             uses: LinuxProcess
             variables:
               matchName: systemd
