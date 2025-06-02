@@ -106,7 +106,8 @@
 		<module>metricshub-hardware</module>
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
-	</modules>
+        <module>metricshub-jmx-extension</module>
+    </modules>
 
 	<profiles>
 		<profile>

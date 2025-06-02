@@ -21,12 +21,15 @@ package org.metricshub.engine.strategy.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -41,6 +44,9 @@ import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
  * Implementations of this interface handle specific source types and provide a SourceTable as a result.
  */
 public interface ISourceProcessor {
+	@WithSpan("Source JMX Exec")
+	SourceTable process(@SpanAttribute("source.definition") JmxSource src) throws Exception;
+
 	/**
 	 * Process the CopySource and return a SourceTable.
 	 *
