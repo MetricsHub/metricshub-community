@@ -175,6 +175,8 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 			.stream()
 			.map(Map::values)
 			.flatMap(Collection::stream)
+			.filter(telemetryManager::isConnectorStatusOk)
+			.filter(monitor -> connectorHasHardwareTag(monitor, telemetryManager))
 			.forEach((Monitor monitor) -> {
 				// Look up the true connectorId on the monitor
 				final String connectorId = monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID);
