@@ -130,7 +130,7 @@ public class MonitoringTask implements Runnable {
 			new CollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 			new SimpleStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 			new HardwarePostCollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
-			new HardwareMonitorNameGenerationStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
+			new HardwareMonitorNameGenerationStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager)
 		);
 
 		// Run the hardware strategy

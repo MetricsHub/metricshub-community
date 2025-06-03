@@ -48,6 +48,9 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.hardware.util.MonitorNameBuilder;
 
+/**
+ * Strategy responsible for executing monitor name generation for hardware monitors.
+ */
 @Slf4j
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
