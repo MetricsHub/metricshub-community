@@ -1,5 +1,20 @@
 package org.metricshub.hardware.strategy;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
+import static org.metricshub.hardware.constants.CommonConstants.DISPLAY_ID;
+import static org.metricshub.hardware.constants.CommonConstants.ID_COUNT;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.client.ClientsExecutor;
@@ -15,22 +30,6 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.hardware.util.MonitorNameBuilder;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_KEYS;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
-import static org.metricshub.hardware.constants.CommonConstants.DISPLAY_ID;
-import static org.metricshub.hardware.constants.CommonConstants.ID_COUNT;
 
 /**
  * Test class for {@link HardwareMonitorNameGenerationStrategy}.
@@ -58,26 +57,20 @@ class HardwareMonitorNameGenerationStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-				ConnectorIdentity
-						.builder()
-						.detection(Detection.builder().tags(Set.of("hardware")).appliesTo(Set.of(DeviceKind.WINDOWS)).build())
-						.build()
+			ConnectorIdentity
+				.builder()
+				.detection(Detection.builder().tags(Set.of("hardware")).appliesTo(Set.of(DeviceKind.WINDOWS)).build())
+				.build()
 		);
 		connectorStore.setStore(Map.of(CONNECTOR_ID, connector));
 
 		// 2. Build TelemetryManager with the connector store and a HostConfiguration:
 		telemetryManager =
-				TelemetryManager
-						.builder()
-						.hostConfiguration(
-								HostConfiguration.builder()
-										.hostId(HOST_NAME)
-										.hostname(HOST_NAME)
-										.sequential(false)
-										.build()
-						)
-						.connectorStore(connectorStore)
-						.build();
+			TelemetryManager
+				.builder()
+				.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
+				.connectorStore(connectorStore)
+				.build();
 
 		// 3. Mark the connector status as OK so that isConnectorStatusOk(...) returns true:
 		StrategyTestHelper.setConnectorStatusInNamespace(true, CONNECTOR_ID, telemetryManager);
@@ -101,25 +94,25 @@ class HardwareMonitorNameGenerationStrategyTest {
 		secondMonitorAttributes.put(MONITOR_ATTRIBUTE_NAME, ""); // blank name
 
 		final MonitorFactory factory1 = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(firstMonitorAttributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.ENCLOSURE.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(firstMonitorAttributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.ENCLOSURE.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor monitor1 = factory1.createOrUpdateMonitor();
 
 		final MonitorFactory factory2 = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(secondMonitorAttributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.ENCLOSURE.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(secondMonitorAttributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.ENCLOSURE.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor monitor2 = factory2.createOrUpdateMonitor();
 
 		// Both monitors start with blank MONITOR_ATTRIBUTE_NAME:
@@ -165,14 +158,14 @@ class HardwareMonitorNameGenerationStrategyTest {
 		attributes.put(MONITOR_ATTRIBUTE_NAME, "my-custom-name");
 
 		final MonitorFactory factory = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(attributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.ENCLOSURE.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(attributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.ENCLOSURE.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor monitor = factory.createOrUpdateMonitor();
 
 		// Confirm initial name is what we set:
@@ -183,9 +176,9 @@ class HardwareMonitorNameGenerationStrategyTest {
 
 		// Since it already had a non-blank name, the MONITOR_ATTRIBUTE_NAME should remain unchanged:
 		assertEquals(
-				"my-custom-name",
-				monitor.getAttribute(MONITOR_ATTRIBUTE_NAME),
-				"Existing non-blank name should not be overwritten by the strategy"
+			"my-custom-name",
+			monitor.getAttribute(MONITOR_ATTRIBUTE_NAME),
+			"Existing non-blank name should not be overwritten by the strategy"
 		);
 
 		// It should still receive an ID_COUNT attribute based on its only member in the group (i.e., "1"):
@@ -201,21 +194,21 @@ class HardwareMonitorNameGenerationStrategyTest {
 		// 1. Create a CPU monitor with blank name but with DISPLAY_ID, DEVICE_ID, VENDOR, MODEL:
 		final Map<String, String> cpuAttributes = new HashMap<>();
 		cpuAttributes.put(MONITOR_ATTRIBUTE_ID, "cpu-1");
-		cpuAttributes.put(MONITOR_ATTRIBUTE_NAME, "");                   // blank name so builder runs
-		cpuAttributes.put(DISPLAY_ID, "Core i7");    // displayId to be used as base
-		cpuAttributes.put("device_id", "cpu0");                           // fallback if displayId missing
+		cpuAttributes.put(MONITOR_ATTRIBUTE_NAME, ""); // blank name so builder runs
+		cpuAttributes.put(DISPLAY_ID, "Core i7"); // displayId to be used as base
+		cpuAttributes.put("device_id", "cpu0"); // fallback if displayId missing
 		cpuAttributes.put("vendor", "Intel");
 		cpuAttributes.put("model", "Xeon");
 
 		final MonitorFactory cpuFactory = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(cpuAttributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.CPU.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(cpuAttributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.CPU.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor cpuMonitor = cpuFactory.createOrUpdateMonitor();
 
 		// 2. Run the naming strategy:
@@ -239,21 +232,21 @@ class HardwareMonitorNameGenerationStrategyTest {
 		// 1. Create a PhysicalDisk monitor with blank name, type, DISPLAY_ID, VENDOR:
 		final Map<String, String> diskAttributes = new HashMap<>();
 		diskAttributes.put(MONITOR_ATTRIBUTE_ID, "disk-1");
-		diskAttributes.put(MONITOR_ATTRIBUTE_NAME, "");                             // blank name
-		diskAttributes.put("physical_disk_device_type", "SSD");                      // prefix type
-		diskAttributes.put(DISPLAY_ID, "Disk1");                 // displayId to use
-		diskAttributes.put("device_id", "pd0");                                       // fallback
+		diskAttributes.put(MONITOR_ATTRIBUTE_NAME, ""); // blank name
+		diskAttributes.put("physical_disk_device_type", "SSD"); // prefix type
+		diskAttributes.put(DISPLAY_ID, "Disk1"); // displayId to use
+		diskAttributes.put("device_id", "pd0"); // fallback
 		diskAttributes.put("vendor", "Seagate");
 
 		final MonitorFactory diskFactory = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(diskAttributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.PHYSICAL_DISK.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(diskAttributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.PHYSICAL_DISK.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor diskMonitor = diskFactory.createOrUpdateMonitor();
 
 		// 2. Run the naming strategy:
@@ -276,47 +269,45 @@ class HardwareMonitorNameGenerationStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-				ConnectorIdentity
+			ConnectorIdentity
+				.builder()
+				.detection(
+					Detection
 						.builder()
-						.detection(Detection.builder()
-								// no "hardware" tag here
-								.tags(Set.of())
-								.appliesTo(Set.of(DeviceKind.WINDOWS))
-								.build())
+						// no "hardware" tag here
+						.tags(Set.of())
+						.appliesTo(Set.of(DeviceKind.WINDOWS))
 						.build()
+				)
+				.build()
 		);
 		connectorStore.setStore(Map.of(CONNECTOR_ID, connector));
 
 		// 2. Build TelemetryManager
 		telemetryManager =
-				TelemetryManager
-						.builder()
-						.hostConfiguration(
-								HostConfiguration.builder()
-										.hostId(HOST_NAME)
-										.hostname(HOST_NAME)
-										.sequential(false)
-										.build())
-						.connectorStore(connectorStore)
-						.build();
+			TelemetryManager
+				.builder()
+				.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
+				.connectorStore(connectorStore)
+				.build();
 		StrategyTestHelper.setConnectorStatusInNamespace(true, CONNECTOR_ID, telemetryManager);
 
 		// 3. Create a CPU monitor (type=CPU) under that connector
 		final Map<String, String> cpuAttributes = new HashMap<>();
 		cpuAttributes.put(MONITOR_ATTRIBUTE_ID, "cpu-ignored");
-		cpuAttributes.put(MONITOR_ATTRIBUTE_NAME, "");            // blank name
+		cpuAttributes.put(MONITOR_ATTRIBUTE_NAME, ""); // blank name
 		cpuAttributes.put("vendor", "Intel");
 		cpuAttributes.put("model", "Xeon");
 
 		final MonitorFactory cpuFactory = MonitorFactory
-				.builder()
-				.attributes(new HashMap<>(cpuAttributes))
-				.discoveryTime(discoveryTime)
-				.connectorId(CONNECTOR_ID)
-				.telemetryManager(telemetryManager)
-				.monitorType(KnownMonitorType.CPU.getKey())
-				.keys(DEFAULT_KEYS)
-				.build();
+			.builder()
+			.attributes(new HashMap<>(cpuAttributes))
+			.discoveryTime(discoveryTime)
+			.connectorId(CONNECTOR_ID)
+			.telemetryManager(telemetryManager)
+			.monitorType(KnownMonitorType.CPU.getKey())
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor cpuMonitor = cpuFactory.createOrUpdateMonitor();
 
 		// Sanity check: name is blank initially
