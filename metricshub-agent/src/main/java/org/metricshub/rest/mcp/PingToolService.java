@@ -1,0 +1,109 @@
+package org.metricshub.rest.mcp;
+
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Agent
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.TextNode;
+import java.util.Optional;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * Ping tool for checking the reachability of a host.
+ */
+@Service
+public class PingToolService {
+
+	private static final String PING_EXTENSION_TYPE = "ping";
+
+	private AgentContext agentContext;
+
+	/**
+	 * Constructor for PingToolService.
+	 * @param agentContext the AgentContext to be used by the tool
+	 */
+	@Autowired
+	public PingToolService(AgentContext agentContext) {
+		this.agentContext = agentContext;
+	}
+
+	/**
+	 * Pings a host to check if it is reachable.
+	 * @param hostname the hostname to ping
+	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 */
+	@Tool(
+		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping, and whether it is reachable or not."
+	)
+	public PingResponse pingHost(@ToolParam(description = "The hostname to ping") final String hostname) {
+		final Optional<IProtocolExtension> pingExtention = agentContext
+			.getExtensionManager()
+			.findExtensionByType(PING_EXTENSION_TYPE);
+		return pingExtention
+			.map((IProtocolExtension extension) -> pingHostWithExtensionSafe(hostname, extension))
+			.orElse(PingResponse.builder().hostname(hostname).errorMessage("The extension is not available").build());
+	}
+
+	/**
+	 * Pings a host using the specified protocol extension.
+	 *
+	 * @param hostname  the hostname to ping
+	 * @param extension the protocol extension to use for pinging
+	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 */
+	private static PingResponse pingHostWithExtensionSafe(final String hostname, IProtocolExtension extension) {
+		try {
+			// Create and fill in a configuration ObjectNode
+			final var configurationNode = JsonNodeFactory.instance.objectNode();
+			configurationNode.set("timeout", new TextNode("10"));
+
+			// Build an IConfiguration from the configuration ObjectNode
+			final IConfiguration configuration = extension.buildConfiguration(PING_EXTENSION_TYPE, configurationNode, null);
+			configuration.setHostname(hostname);
+
+			configuration.validateConfiguration(hostname);
+
+			final long startTime = System.currentTimeMillis();
+			final String result = extension.executeQuery(configuration, null);
+			final long duration = (System.currentTimeMillis() - startTime);
+
+			return PingResponse
+				.builder()
+				.hostname(hostname)
+				.duration(duration)
+				.isReachable("true".equalsIgnoreCase(result))
+				.build();
+		} catch (Exception e) {
+			// Error
+			return PingResponse
+				.builder()
+				.hostname(hostname)
+				.errorMessage("Error detected during host check: " + e.getMessage())
+				.build();
+		}
+	}
+}
