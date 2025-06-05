@@ -60,6 +60,7 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.MonitorFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.mockito.InjectMocks;
@@ -145,7 +146,8 @@ class MonitoringTaskTest {
 				any(DetectionStrategy.class),
 				any(DiscoveryStrategy.class),
 				any(SimpleStrategy.class),
-				any(HardwarePostDiscoveryStrategy.class)
+				any(HardwarePostDiscoveryStrategy.class),
+				any(HardwareMonitorNameGenerationStrategy.class)
 			);
 		verify(telemetryManagerMock, times(4))
 			.run(
@@ -153,7 +155,8 @@ class MonitoringTaskTest {
 				any(ProtocolHealthCheckStrategy.class),
 				any(CollectStrategy.class),
 				any(SimpleStrategy.class),
-				any(HardwarePostCollectStrategy.class)
+				any(HardwarePostCollectStrategy.class),
+				any(HardwareMonitorNameGenerationStrategy.class)
 			);
 	}
 
