@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.fusesource.jansi.Ansi;
@@ -66,6 +67,7 @@ import org.metricshub.engine.telemetry.metric.StateSetMetric;
  * </p>
  */
 @Data
+@NoArgsConstructor
 public class PrettyPrinterService {
 
 	/**
@@ -348,7 +350,7 @@ public class PrettyPrinterService {
 	 * @param monitor Monitor instance as defined by the core engine
 	 * @return String value
 	 */
-	private String getMonitorDisplayName(final Monitor monitor) {
+	public String getMonitorDisplayName(final Monitor monitor) {
 		String displayName = monitor.getAttribute(MONITOR_ATTRIBUTE_NAME);
 		displayName = displayName != null ? displayName : monitor.formatIdentifyingAttributes();
 		return displayName != null ? displayName : monitor.getId();

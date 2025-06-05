@@ -403,10 +403,16 @@ public class MetricsHubCliService implements Callable<Integer> {
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 
-			int connectorCount = telemetryManager.findMonitorsByType(KnownMonitorType.CONNECTOR.getKey()).size();
+			final Map<String, Monitor> connectors = telemetryManager.findMonitorsByType(KnownMonitorType.CONNECTOR.getKey());
+			int connectorCount = connectors.size();
 			printWriter.print("Performing discovery with ");
 			printWriter.print(Ansi.ansi().bold().a(connectorCount).boldOff().toString());
 			printWriter.println(connectorCount > 1 ? " connectors..." : " connector...");
+			connectors.forEach((connectorId, monitor) ->
+				printWriter.println(
+					Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
+				)
+			);
 			printWriter.flush();
 		}
 		telemetryManager.run(
