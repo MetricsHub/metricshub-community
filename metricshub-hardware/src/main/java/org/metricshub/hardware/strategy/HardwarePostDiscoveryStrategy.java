@@ -149,23 +149,4 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 				}
 			});
 	}
-
-	/**
-	 * Computes an MD5-based identifier from a monitor’s sorted attributes.
-	 *
-	 * @param monitor the monitor whose attributes will be hashed
-	 * @return lowercase hex MD5 digest of the monitor’s attributes
-	 */
-	private String computeIdCount(final Monitor monitor) {
-		final SortedMap<String, String> sortedAttrs = new TreeMap<>(monitor.getAttributes());
-		final StringBuilder sb = new StringBuilder();
-		sortedAttrs.forEach((k, v) -> sb.append(k).append("=").append(v).append(";"));
-		try {
-			final MessageDigest md = MessageDigest.getInstance("MD5");
-			final byte[] digest = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
-			return HexFormat.of().formatHex(digest);
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException("MD5 not supported", e);
-		}
-	}
 }
