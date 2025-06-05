@@ -1,14 +1,37 @@
 package org.metricshub.extension.jmx;
 
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub JMX Extension
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -19,21 +42,21 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
+import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
-/**
- * Implements IProtocolExtension for JMX.
- */
 @Slf4j
 public class JmxExtension implements IProtocolExtension {
 
 	private static final String IDENTIFIER = "jmx";
 
+	private final JmxRequestExecutor jmxRequestExecutor;
+
 	public JmxExtension() {
-		// No additional state required here
+		this.jmxRequestExecutor = new JmxRequestExecutor();
 	}
 
 	@Override
@@ -42,30 +65,20 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public Set<Class<? extends org.metricshub.engine.connector.model.monitor.task.source.Source>> getSupportedSources() {
+	public Set<Class<? extends Source>> getSupportedSources() {
 		return Set.of(JmxSource.class);
 	}
 
-	// @formatter:off
-	// @CHECKSTYLE:OFF
 	@Override
-	public java.util.Map<
-		Class<? extends IConfiguration>,
-		Set<Class<? extends org.metricshub.engine.connector.model.monitor.task.source.Source>>
-	> getConfigurationToSourceMapping() {
-		return java.util.Map.of(JmxConfiguration.class, Set.of(JmxSource.class));
+	public Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> getConfigurationToSourceMapping() {
+		return Map.of(JmxConfiguration.class, Set.of(JmxSource.class));
 	}
-	// @CHECKSTYLE:ON
-	// @formatter:on
+
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		// Support both JmxCriterion and none
 		return Set.of(JmxCriterion.class);
 	}
 
-	/**
-	 * Opens and immediately closes a JMX connection to verify reachability.
-	 */
 	@Override
 	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
 		HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
@@ -78,6 +91,9 @@ public class JmxExtension implements IProtocolExtension {
 		int port = jmxConfig.getPort();
 		String url = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port);
 
+		log.info("Hostname {} - Performing {} protocol health check.", telemetryManager.getHostname(), getIdentifier());
+		log.info("Hostname {} - Attempting JMX connection to {}.", telemetryManager.getHostname(), url);
+
 		try (JMXConnector jmxc = JMXConnectorFactory.connect(new JMXServiceURL(url))) {
 			return Optional.of(true);
 		} catch (Exception e) {
@@ -87,21 +103,17 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public SourceTable processSource(
-		org.metricshub.engine.connector.model.monitor.task.source.Source source,
-		String connectorId,
-		TelemetryManager telemetryManager
-	) {
-		if (!(source instanceof JmxSource jmxSource)) {
-			throw new IllegalArgumentException(
-				String.format(
-					"Hostname %s - Cannot process source %s under JMX extension.",
-					telemetryManager.getHostname(),
-					source != null ? source.getClass().getSimpleName() : "<null>"
-				)
-			);
+	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+		if (source instanceof JmxSource jmxSource) {
+			return JmxSourceProcessor.process(jmxSource);
 		}
-		return JmxSourceProcessor.process(jmxSource);
+		throw new IllegalArgumentException(
+			String.format(
+				"Hostname %s - Cannot process source %s under JMX extension.",
+				telemetryManager.getHostname(),
+				source != null ? source.getClass().getSimpleName() : "<null>"
+			)
+		);
 	}
 
 	@Override
@@ -128,14 +140,13 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public IConfiguration buildConfiguration(
-		String configurationType,
-		JsonNode jsonNode,
-		java.util.function.UnaryOperator<char[]> decrypt
-	) throws InvalidConfigurationException {
+	public IConfiguration buildConfiguration(String configurationType, JsonNode jsonNode, UnaryOperator<char[]> decrypt)
+		throws InvalidConfigurationException {
 		try {
-			JmxConfiguration cfg = newObjectMapper().treeToValue(jsonNode, JmxConfiguration.class);
-			return cfg;
+			JmxConfiguration jmxConfiguration = newObjectMapper().treeToValue(jsonNode, JmxConfiguration.class);
+
+			// If any credentials are added in future, decrypt them here. Currently JmxConfiguration has no encrypted fields.
+			return jmxConfiguration;
 		} catch (Exception e) {
 			String msg = String.format("Error reading JMX Configuration: %s", e.getMessage());
 			log.error(msg, e);
@@ -167,38 +178,43 @@ public class JmxExtension implements IProtocolExtension {
 	 * }
 	 */
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode query) {
+	public String executeQuery(IConfiguration configuration, JsonNode query) {
 		if (!(configuration instanceof JmxConfiguration jmxConfig)) {
 			throw new IllegalArgumentException("executeQuery requires JmxConfiguration");
 		}
 
+		// Build a HostConfiguration and TelemetryManager similar to HTTP extension
+		HostConfiguration hostConfig = HostConfiguration
+			.builder()
+			.configurations(Map.of(JmxConfiguration.class, configuration))
+			.build();
+		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfig).build();
+
 		String host = jmxConfig.getHost();
 		int port = jmxConfig.getPort();
-
 		String objectName = query.get("objectName").asText();
-		java.util.List<String> attrs = new java.util.ArrayList<>();
+
+		List<String> attrs = new java.util.ArrayList<>();
 		for (JsonNode node : query.withArray("attributes")) {
 			attrs.add(node.asText());
 		}
 
-		// Use JmxRequestExecutor to fetch all attributes at once
 		Map<String, String> fetched;
 		try {
-			fetched =
-				new JmxRequestExecutor()
-					.fetchAttributes(
-						host,
-						port,
-						objectName,
-						attrs,
-						0L // use default timeout
-					);
+			fetched = jmxRequestExecutor.fetchAttributes(host, port, objectName, attrs, 0L);
 		} catch (Exception e) {
+			log.debug(
+				"Hostname {} - Error fetching JMX attributes for {} at {}:{} → {}",
+				telemetryManager.getHostname(),
+				objectName,
+				host,
+				port,
+				e.getMessage()
+			);
 			return "";
 		}
 
-		// Build a semicolon‐separated result
-		java.util.List<String> pairs = new java.util.ArrayList<>();
+		List<String> pairs = new java.util.ArrayList<>();
 		for (String a : attrs) {
 			String v = fetched.get(a);
 			pairs.add(String.format("%s=%s", a, (v == null ? "<null>" : v)));

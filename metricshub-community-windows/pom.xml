@@ -94,6 +94,11 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-jmx-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-jawk-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -213,6 +218,11 @@
 									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jdbc-extension</artifactId>
 									<destFileName>metricshub-jdbc-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-jmx-extension</artifactId>
+									<destFileName>metricshub-jmx-extension.jar</destFileName>
 								</artifactItem>
 							</artifactItems>
 						</configuration>
