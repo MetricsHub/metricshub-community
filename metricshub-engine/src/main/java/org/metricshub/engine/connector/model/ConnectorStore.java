@@ -21,10 +21,10 @@ package org.metricshub.engine.connector.model;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
@@ -32,7 +32,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.connector.parser.ConnectorLibraryParser;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
+import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 
 /**
  * Manages the storage and retrieval of {@link Connector} instances.
@@ -45,36 +48,39 @@ public class ConnectorStore implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-	private Map<String, Connector> store;
+	private Map<String, Connector> store = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
 	@Getter
 	private transient Path connectorDirectory;
 
+	private RawConnectorStore rawConnectorStore;
+
+	private List<String> connectorsWithVariables = new ArrayList<>();
+
 	/**
 	 * Constructs a {@link ConnectorStore} using the specified connector directory.
+	 * This constructor is used for unit tests only. The new approach to create a connector
+	 * Store is to create a {@link RawConnectorStore}, then a {@link ConnectorStoreComposer},
+	 * then generate
 	 *
 	 * @param connectorDirectory The path to the directory containing connector files.
 	 */
 	public ConnectorStore(Path connectorDirectory) {
-		try {
-			this.connectorDirectory = connectorDirectory;
-			store = deserializeConnectors();
-		} catch (Exception e) {
-			log.error("Error while deserializing connectors. The ConnectorStore is empty!");
-			log.debug("Error while deserializing connectors. The ConnectorStore is empty!", e);
-			store = new HashMap<>();
-		}
-	}
+		this.connectorDirectory = connectorDirectory;
+		final RawConnectorStore rawConnectorStore = new RawConnectorStore(connectorDirectory);
+		this.rawConnectorStore = rawConnectorStore;
+		final Map<String, Connector> store = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+			.build()
+			.generateStaticConnectorStore()
+			.getStore();
 
-	/**
-	 * This method retrieves Connectors data in a Map from a given connector directory
-	 * The key of the Map will be the connector file name and Value will be the Connector Object
-	 * @return Map<String, Connector>
-	 * @throws IOException
-	 */
-	private Map<String, Connector> deserializeConnectors() throws IOException {
-		final ConnectorLibraryParser connectorLibraryParser = new ConnectorLibraryParser();
-		return connectorLibraryParser.parseConnectorsFromAllYamlFiles(connectorDirectory);
+		if (store != null) {
+			addMany(store);
+		}
 	}
 
 	/**
@@ -98,6 +104,15 @@ public class ConnectorStore implements Serializable {
 	}
 
 	/**
+	 * Add a connector with variables
+	 *
+	 * @param connectors A list of connectors with variables IDs to be added.
+	 */
+	public void addConnectorsWithVariables(List<String> connectors) {
+		connectorsWithVariables.addAll(connectors);
+	}
+
+	/**
 	 * Creates and returns a new instance of ConnectorStore, initialized with a copy of the current connectors.
 	 *
 	 * This method is useful for creating a snapshot of the current state of the ConnectorStore used for each resource.
@@ -110,6 +125,8 @@ public class ConnectorStore implements Serializable {
 		final Map<String, Connector> originalConnectors = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 		originalConnectors.putAll(store);
 		newConnectorStore.setStore(originalConnectors);
+		newConnectorStore.setRawConnectorStore(rawConnectorStore);
+		newConnectorStore.setConnectorsWithVariables(connectorsWithVariables);
 		return newConnectorStore;
 	}
 }

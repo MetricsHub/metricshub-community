@@ -76,7 +76,7 @@ There is no need to create a specific subdirectory for `metricshub` as the archi
 
 #### On Linux
 
-Run the below command to create your configuration file: 
+Run the below command to create your configuration file:
 
    ```shell
    sudo cp /opt/metricshub/lib/config/metricshub-example.yaml /opt/metricshub/lib/config/metricshub.yaml
@@ -123,8 +123,7 @@ resources:
         timeout: 120
 ```
 
-
-Open the `/opt/metricshub/lib/config/metricshub.yaml` or `C:\ProgramData\MetricsHub\config\metricshub.yaml` file and search for the above section to verify that the configuration is active. 
+Open the `/opt/metricshub/lib/config/metricshub.yaml` or `C:\ProgramData\MetricsHub\config\metricshub.yaml` file and search for the above section to verify that the configuration is active.
 
 If you wish to use a protocol other than `WMI` (such as `HTTP`, `PING`, `SNMP`, `SSH`, `IPMI`, `WBEM`, or `WinRM`), refer to the configuration examples provided in `C:\ProgramData\MetricsHub\config\metricshub.yaml`.
 

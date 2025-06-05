@@ -85,13 +85,18 @@
 			<item name="On Windows" href="installation/windows.html "/>
 		</menu>
 
+		<menu name="Upgrade">
+			<item name="Upgrade Notes" href="upgrade.html" />
+		</menu>
+
 		<menu name="Configuration">
 			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
 			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
 			<item name="Password Encryption" href="security/passwords.html" />
 		</menu>
 
-		<menu name="Integration">
+		<menu name="Integrations">
+			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
 				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />
 				<item name="Grafana Dashboards" href="prometheus/grafana.html" />

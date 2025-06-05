@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.03-SNAPSHOT</version>
+		<version>1.0.04-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-doc</artifactId>
@@ -16,7 +16,7 @@
 
 	<properties>
 		<communityVersion>${project.version}</communityVersion>
-		<enterpriseVersion>1.2.00</enterpriseVersion>
+		<enterpriseVersion>2.0.00</enterpriseVersion>
 		<otelVersion>0.116.0</otelVersion>
 	</properties>
 

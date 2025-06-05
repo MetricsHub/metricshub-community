@@ -23,6 +23,7 @@ package org.metricshub.hardware.constants;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 
 /**
  * Constants for enclosure-related metrics.
@@ -30,8 +31,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class EnclosureConstants {
 
-	public static final String HW_ENCLOSURE_POWER = "hw.enclosure.power";
-	public static final String HW_ENCLOSURE_ENERGY = "hw.enclosure.energy";
+	public static final String HW_ENCLOSURE_POWER = MetricsHubConstants.HW_ENCLOSURE_POWER_METRIC;
+	public static final String HW_ENCLOSURE_ENERGY = MetricsHubConstants.HW_ENCLOSURE_ENERGY_METRIC;
 	public static final String BLADE_ENCLOSURE = "Blade Enclosure";
 	public static final String COMPUTER = "Computer";
 	public static final String STORAGE = "Storage";

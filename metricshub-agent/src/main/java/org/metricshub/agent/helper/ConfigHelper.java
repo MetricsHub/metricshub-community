@@ -35,7 +35,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.io.IOException;
-import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -46,6 +46,8 @@ import java.nio.file.attribute.AclEntryType;
 import java.nio.file.attribute.AclFileAttributeView;
 import java.nio.file.attribute.GroupPrincipal;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -55,7 +57,9 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
@@ -67,8 +71,6 @@ import org.metricshub.agent.config.AlertingSystemConfig;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.config.StateSetMetricCompression;
-import org.metricshub.agent.connector.AdditionalConnectorsParsingResult;
-import org.metricshub.agent.connector.ConnectorVariablesLibraryParser;
 import org.metricshub.agent.context.MetricDefinitions;
 import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -76,13 +78,19 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.ResourceHelper;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
+import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.extension.ExtensionLoader;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.security.SecurityManager;
@@ -202,43 +210,6 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Get the default configuration file path either in the Windows <em>ProgramData\metricshub</em>
-	 * directory or under the install directory <em>/opt/metricshub</em> on Linux systems.
-	 *
-	 * @param directory      Directory of the configuration file. (e.g. config or otel)
-	 * @param configFilename Configuration file name (e.g. metricshub.yaml or otel-config.yaml)
-	 * @return new {@link Path} instance
-	 */
-	public static Path getDefaultConfigFilePath(final String directory, final String configFilename) {
-		if (LocalOsHandler.isWindows()) {
-			return getProgramDataConfigFile(directory, configFilename);
-		}
-		return ConfigHelper.getSubPath(String.format(FILE_PATH_FORMAT, directory, configFilename));
-	}
-
-	/**
-	 * Get the configuration file under the ProgramData windows directory.<br>
-	 * If the ProgramData path is not valid then the configuration file will be located
-	 * under the install directory.
-	 *
-	 * @param directory      Directory of the configuration file. (e.g. config or otel)
-	 * @param configFilename Configuration file name (e.g. metricshub.yaml or otel-config.yaml)
-	 * @return new {@link Path} instance
-	 */
-	static Path getProgramDataConfigFile(final String directory, final String configFilename) {
-		return getProgramDataPath()
-			.stream()
-			.map(path ->
-				Paths.get(
-					createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, directory)).toAbsolutePath().toString(),
-					configFilename
-				)
-			)
-			.findFirst()
-			.orElseGet(() -> ConfigHelper.getSubPath(String.format(FILE_PATH_FORMAT, directory, configFilename)));
-	}
-
-	/**
 	 * Get the <em>%PROGRAMDATA%</em> path. If the ProgramData path is not valid
 	 * then <code>Optional.empty()</code> is returned.
 	 *
@@ -271,109 +242,148 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Find the application's configuration file (metricshub.yaml).<br>
+	 * Find the application's configuration directory (E.g. /config).<br>
 	 * <ol>
-	 *   <li>If the user has configured the configFilePath via <em>--config=$filePath</em> then it is the chosen file</li>
-	 *   <li>Else if <em>config/metricshub.yaml</em> path exists, the resulting File is the one representing this path</li>
-	 *   <li>Else we copy <em>config/metricshub-example.yaml</em> to the host file <em>config/metricshub.yaml</em> then we return the resulting host file</li>
+	 *   <li>If the user has configured the configDirectory via <em>--config=$Dir</em> then it is the chosen directory</li>
+	 *   <li>Else if <em>config/</em> path exists, the resulting directory is the one representing this path</li>
+	 *   <li>
+	 *        In any case we copy <em>config/metricshub-example.yaml</em> to the host file <em>config/metricshub.yaml</em>
+	 *        only if the configuration directory is empty
+	 *    </li>
 	 * </ol>
 	 *
 	 * The program fails if
 	 * <ul>
-	 *   <li>The configured file path doesn't exist</li>
+	 *   <li>The configured directory path doesn't exist</li>
 	 *   <li>config/metricshub-example.yaml is not present</li>
 	 *   <li>If an I/O error occurs</li>
 	 * </ul>
 	 *
-	 * @param configFilePath The configuration file passed by the user. E.g. --config=/opt/PRODUCT-CODE/config/my-metricshub.yaml
-	 * @return {@link File} instance
-	 * @throws IOException  This exception is thrown is the file is not found
+	 * @param userConfigDirectory The configuration directory passed by the user. E.g. --config=/opt/SOME_DIR
+	 * @return {@link Path} instance
+	 * @throws IOException  This exception is thrown is the directory is not found
 	 */
-	public static File findConfigFile(final String configFilePath) throws IOException {
-		// The user has configured a configuration file path
-		if (configFilePath != null && !configFilePath.isBlank()) {
-			final File configFile = new File(configFilePath);
-			if (configFile.exists()) {
-				return configFile;
+	public static Path findConfigDirectory(final String userConfigDirectory) throws IOException {
+		final Path configDirectory;
+		// The user has configured a configuration directory path
+		if (userConfigDirectory != null && !userConfigDirectory.isBlank()) {
+			configDirectory = Path.of(userConfigDirectory);
+			if (!Files.exists(configDirectory)) {
+				throw new IllegalStateException(
+					String.format(
+						"Cannot find %s. Please make sure the configuration directory exists on your system",
+						userConfigDirectory
+					)
+				);
 			}
-			throw new IllegalStateException(
-				String.format("Cannot find %s. Please make sure the file exists on your system", configFilePath)
-			);
+		} else {
+			// The user has not configured a configuration directory path
+			// The solution will start with the default configuration directory
+			configDirectory = getDefaultConfigDirectoryPath();
 		}
 
-		// Get the configuration file config/metricshub.yaml
-		return getDefaultConfigFile(CONFIG_DIRECTORY_NAME, DEFAULT_CONFIG_FILENAME, CONFIG_EXAMPLE_FILENAME);
+		// Generate the configuration file config/metricshub.yaml if not present
+		generateDefaultConfigurationFileIfEmptyDir(configDirectory);
+
+		// Set the configuration files write-permissions on Windows to allow writing
+		setUserPermissionsOnWindows(configDirectory);
+
+		return configDirectory;
 	}
 
 	/**
-	 * Get the default configuration file.
+	 * Get the default configuration file path either in the Windows <em>ProgramData\MetricsHub\config</em>
+	 * directory or under the installation directory <em>/opt/metricshub/lib/config</em> on Linux systems.
 	 *
-	 * @param directory             Directory of the configuration file. (e.g. config or otel)
-	 * @param configFilename        Configuration file name (e.g. metricshub.yaml or otel-config.yaml)
-	 * @param configFilenameExample Configuration file name example (e.g. metricshub-example.yaml)
-	 * @return {@link File} instance
+	 * @return new {@link Path} instance
+	 */
+	public static Path getDefaultConfigDirectoryPath() {
+		if (LocalOsHandler.isWindows()) {
+			return getProgramDataConfigDirectory();
+		}
+		return ConfigHelper.getSubPath(CONFIG_DIRECTORY_NAME);
+	}
+
+	/**
+	 * Get the configuration directory under the ProgramData windows directory.<br>
+	 * If the ProgramData path is not valid then the configuration file will be located
+	 * under the installation directory.
+	 *
+	 * @return new {@link Path} instance
+	 */
+	static Path getProgramDataConfigDirectory() {
+		return getProgramDataPath()
+			.stream()
+			.map(path -> createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, CONFIG_DIRECTORY_NAME)).toAbsolutePath())
+			.findFirst()
+			.orElseGet(() -> ConfigHelper.getSubPath(CONFIG_DIRECTORY_NAME));
+	}
+
+	/**
+	 * Generate the default configuration file if the configuration directory is empty.
+	 * This method copies the example configuration file to the configuration directory
+	 * if the directory is empty.
+	 *
+	 * @param configDirectory Directory of the configuration files.
+	 *                        (e.g. /opt/metricshub/lib/config or %PROGRAMDATA%/metricshub/config)
 	 * @throws IOException if the copy fails
 	 */
-	public static File getDefaultConfigFile(
-		final String directory,
-		final String configFilename,
-		final String configFilenameExample
-	) throws IOException {
-		// Get the configuration file absolute path
-		final Path configPath = getDefaultConfigFilePath(directory, configFilename);
-
-		// If it exists then we are good we can just return the resulting File
-		if (Files.exists(configPath)) {
-			// At this time, we don't know who created the configuration file and what permissions are applied.
-			// So let's skip the error logging to avoid unnecessary noise. That's why we call the method with
-			// logError = false
-			setUserPermissionsOnWindows(configPath, false);
-
-			return configPath.toFile();
+	public static void generateDefaultConfigurationFileIfEmptyDir(final Path configDirectory) throws IOException {
+		// Check if the configuration directory is not empty, means there are already configuration files
+		try (Stream<Path> stream = Files.list(configDirectory).filter(Files::isRegularFile)) {
+			// Check if the configuration directory is empty
+			if (stream.count() > 0) {
+				// The configuration directory is not empty! do nothing
+				return;
+			}
 		}
 
 		// Now we will proceed with a copy of the example file (e.g. metricshub-example.yaml to config/metricshub.yaml)
-		final Path exampleConfigPath = ConfigHelper.getSubPath(
-			String.format(FILE_PATH_FORMAT, directory, configFilenameExample)
+		final var exampleConfigPath = ConfigHelper.getSubPath(
+			String.format(FILE_PATH_FORMAT, CONFIG_DIRECTORY_NAME, CONFIG_EXAMPLE_FILENAME)
 		);
 
-		// Bad configuration
+		// The actual configuration file
+		final var targetConfigPath = configDirectory.resolve(DEFAULT_CONFIG_FILENAME);
+
+		// User has messed up the installation directory and deleted the example file
 		if (!Files.exists(exampleConfigPath)) {
 			throw new IllegalStateException(
 				String.format(
-					"Cannot find '%s' . Please create the configuration file '%s' before starting the MetricsHub Agent.",
+					"Cannot find '%s'. Please create the configuration file '%s' before starting the MetricsHub Agent.",
 					exampleConfigPath.toAbsolutePath(),
-					configPath.toAbsolutePath()
+					targetConfigPath.toAbsolutePath()
 				)
 			);
 		}
 
-		final File configFile = Files.copy(exampleConfigPath, configPath, StandardCopyOption.REPLACE_EXISTING).toFile();
-
-		setUserPermissionsOnWindows(configPath, true);
-
-		return configFile;
+		// Copy the example configuration file to the configuration directory
+		Files.copy(exampleConfigPath, targetConfigPath, StandardCopyOption.REPLACE_EXISTING).toFile();
 	}
 
 	/**
-	 * Set write permissions for metricshub.yaml deployed on a Windows machine running the agent
+	 * Set user write permissions on the configuration files
 	 *
-	 * @param configPath  the configuration file absolute path
-	 * @param logError    whether we should log the error or not. If logError is false, an info message is logged.
+	 * @param configDirectory the configuration directory where all the configuration files are located
+	 *
+	 * @throws IOException if the permissions cannot be set
 	 */
-	private static void setUserPermissionsOnWindows(final Path configPath, boolean logError) {
+	static void setUserPermissionsOnWindows(final Path configDirectory) throws IOException {
 		if (LocalOsHandler.isWindows()) {
-			setUserPermissions(configPath, logError);
+			// Set write permissions configuration files on Windows
+			try (Stream<Path> stream = Files.list(configDirectory).filter(Files::isRegularFile)) {
+				// Set write permissions for all files in the configuration directory
+				stream.forEach(ConfigHelper::setUserPermissions);
+			}
 		}
 	}
 
 	/**
-	 * Set write permission for metricshub.yaml
+	 * Set write permission for this configuration file identified by its path.
 	 *
 	 * @param configPath the configuration file absolute path
-	 * @param logError   whether we should log the error or not. If logError is false, an info message is logged.
 	 */
-	private static void setUserPermissions(final Path configPath, boolean logError) {
+	static void setUserPermissions(final Path configPath) {
 		try {
 			final GroupPrincipal users = configPath
 				.getFileSystem()
@@ -411,12 +421,8 @@ public class ConfigHelper {
 			acl.add(0, entry);
 			view.setAcl(acl);
 		} catch (Exception e) {
-			if (logError) {
-				log.error("Could not set write permissions to file: {}. Error: {}", configPath.toString(), e.getMessage());
-				log.error("Exception: ", e);
-			} else {
-				log.info("Could not set write permissions to file: {}. Message: {}", configPath.toString(), e.getMessage());
-			}
+			log.error("Could not set write permissions to file: {}. Error: {}", configPath.toString(), e.getMessage());
+			log.debug("Exception: ", e);
 		}
 	}
 
@@ -859,15 +865,35 @@ public class ConfigHelper {
 			// Read the configured connector for the current resource
 			addConfiguredConnector(resourceConnectorStore, resourceConfig.getConnector());
 
+			// Retrieve the resource additional connectors configuration
+			final Map<String, AdditionalConnector> additionalConnectors = resourceConfig.getAdditionalConnectors();
+
+			/*
+				Normalize additionalConnectors configuration. If on or many fields aren't specified, this method will
+				complete them according to the business logic.
+			 */
+			normalizeAdditionalConnectors(additionalConnectors);
+
+			log.debug("Creating a store for resource {}:", resourceKey);
+
+			// Retrieve the raw connector store
+			final RawConnectorStore rawConnectorStore = resourceConnectorStore.getRawConnectorStore();
+
 			// Read connectors with configuration variables safely
-			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult =
-				readConnectorsWithConfigurationVariablesSafe(resourceGroupKey, resourceKey, resourceConfig);
+			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
+				.builder()
+				.withRawConnectorStore(rawConnectorStore)
+				.withUpdateChain(ConnectorParser.createUpdateChain())
+				.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+				.withAdditionalConnectors(additionalConnectors)
+				.build()
+				.resolveConnectorStoreVariables(resourceConnectorStore);
 
 			// Overwrite resourceConnectorStore
-			updateConnectorStore(resourceConnectorStore, additionalConnectorsParsingResult.getCustomConnectorsMap());
+			resourceConnectorStore.addMany(additionalConnectorsParsingResult.getCustomConnectorsMap());
 
 			// Add custom connectors to the host configuration.
-			hostConfiguration.getConnectors().addAll(additionalConnectorsParsingResult.getHostConnectors());
+			hostConfiguration.getConnectors().addAll(additionalConnectorsParsingResult.getResourceConnectors());
 
 			resourceGroupTelemetryManagers.putIfAbsent(
 				resourceKey,
@@ -886,51 +912,31 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Parse the connectors having configuration variables.
-	 *
-	 * @param resourceGroupKey The resource group key under which the resource is configured for logging purposes.
-	 * @param resourceKey      The resource key for logging purposes.
-	 * @param resourceConfig   The resource configuration.
-	 * @return an AdditionalConnectorsParserResult which contains a map of connectors to force and a map of custom connectors.
+	 * Updates the additional connectors configuration by ensuring that each entry has a valid
+	 * {@code AdditionalConnector} object. If the connector or its {@code uses} field is null, it is set
+	 * to the connector Id.
 	 */
-	private static AdditionalConnectorsParsingResult readConnectorsWithConfigurationVariablesSafe(
-		final String resourceGroupKey,
-		final String resourceKey,
-		final ResourceConfig resourceConfig
-	) {
-		// Call ConnectorVariablesLibraryParser and parse the additional connectors
-		final ConnectorVariablesLibraryParser connectorVariablesLibraryParser = new ConnectorVariablesLibraryParser();
+	public static void normalizeAdditionalConnectors(final Map<String, AdditionalConnector> additionalConnectors) {
+		additionalConnectors
+			.entrySet()
+			.forEach(entry -> {
+				final String connectorId = entry.getKey();
+				final AdditionalConnector additionalConnector = entry.getValue();
 
-		try {
-			return connectorVariablesLibraryParser.parse(
-				ConfigHelper.getSubDirectory("connectors", false),
-				resourceConfig.getAdditionalConnectors()
-			);
-		} catch (Exception e) {
-			log.warn(
-				"Resource {} - Under the resource group configuration {}, the resource configuration {} will not load connectors with configuration variables." +
-				" Reason: {}.",
-				resourceKey,
-				resourceGroupKey,
-				resourceKey,
-				e.getMessage()
-			);
-			return new AdditionalConnectorsParsingResult();
-		}
-	}
+				/*
+					If the user only configures a key referencing the connector identifier, and the user does not provide
+					a complete variables configuration for this connector, create a new object with default information.
+				*/
+				if (additionalConnector == null) {
+					entry.setValue(AdditionalConnector.builder().uses(connectorId).build());
+					return;
+				}
 
-	/**
-	 * Add the custom connectors to the resource's connector store.
-	 *
-	 * @param resourceConnectorStore The connector store of the resource
-	 * @param customConnectors       Map of customized connectors. E.g. Custom connectors that contain template variables
-	 */
-	protected static void updateConnectorStore(
-		final ConnectorStore resourceConnectorStore,
-		final Map<String, Connector> customConnectors
-	) {
-		// Add custom connectors
-		resourceConnectorStore.addMany(customConnectors);
+				// If uses() is null, set it to the connectorId
+				if (additionalConnector.getUses() == null) {
+					additionalConnector.setUses(connectorId);
+				}
+			});
 	}
 
 	/**
@@ -1183,19 +1189,64 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Calculates the MD5 checksum of the specified file.
+	 * Calculates the MD5 checksum of the specified directory safely.
 	 *
-	 * @param file The file for which the MD5 checksum is to be calculated.
+	 * @param dir         The directory for which the MD5 checksum is to be calculated.
+	 * @param filesFilter A filter to apply to the files in the directory.
 	 * @return The MD5 checksum as a hexadecimal string or <code>null</code> if the calculation has failed.
 	 */
-	public static String calculateMD5Checksum(final File file) {
+	public static String calculateDirectoryMD5ChecksumSafe(final Path dir, final Predicate<Path> filesFilter) {
 		try {
-			byte[] data = Files.readAllBytes(file.toPath());
-			byte[] hash = MessageDigest.getInstance("MD5").digest(data);
-			return new BigInteger(1, hash).toString(16);
+			return calculateDirectoryMD5Checksum(dir, filesFilter);
 		} catch (Exception e) {
+			log.error("Error calculating checksum for directory: {}. Error: {}", dir, e.getMessage());
+			log.debug("Exception: ", e);
 			return null;
 		}
+	}
+
+	/**
+	 * Calculates the MD5 checksum of the specified directory.
+	 *
+	 * @param dir         The directory for which the MD5 checksum is to be calculated.
+	 * @param filesFilter A filter to apply to the files in the directory.
+	 * @return The MD5 checksum as a hexadecimal string.
+	 * @throws NoSuchAlgorithmException if the MD5 algorithm is not available.
+	 * @throws IOException              if an I/O error occurs while reading the directory.
+	 */
+	private static String calculateDirectoryMD5Checksum(final Path dir, final Predicate<Path> filesFilter)
+		throws NoSuchAlgorithmException, IOException {
+		var digest = MessageDigest.getInstance("MD5");
+
+		final List<Path> files = new ArrayList<>();
+		try (var stream = Files.walk(dir)) {
+			files.addAll(stream.filter(Files::isRegularFile).filter(filesFilter).sorted().toList());
+		}
+
+		for (Path file : files) {
+			// Include relative path in digest
+			digest.update(dir.relativize(file).toString().getBytes(StandardCharsets.UTF_8));
+
+			// Read file content and update digest
+			byte[] content = Files.readAllBytes(file);
+			digest.update(content);
+		}
+
+		return toHexString(digest.digest());
+	}
+
+	/**
+	 * Converts a byte array to a hexadecimal string representation.
+	 *
+	 * @param hash The byte array to convert.
+	 * @return The hexadecimal string representation of the byte array.
+	 */
+	private static String toHexString(byte[] hash) {
+		var sb = new StringBuilder();
+		for (byte b : hash) {
+			sb.append(String.format("%02x", b));
+		}
+		return sb.toString();
 	}
 
 	/**
@@ -1212,32 +1263,47 @@ public class ConfigHelper {
 	}
 
 	/**
-	 * Constructs and populates a {@link ConnectorStore} by aggregating connector
-	 * stores from various extensions managed by the provided {@link ExtensionManager}
-	 * and from a specific subdirectory defined for connectors. This method first
-	 * aggregates all extension-based connector stores into one central store and
-	 * then adds additional connectors found in a designated subdirectory.
+	 * Builds a {@link ConnectorStore} by aggregating connectors from multiple sources:
+	 * <ul>
+	 *   <li>Extension-based connector stores managed by the provided {@link ExtensionManager}</li>
+	 *   <li>Connectors located in the default internal subdirectory (e.g., <code>connectors/</code>)</li>
+	 *   <li>Optionally, connectors found in a user-defined path</li>
+	 * </ul>
 	 *
-	 * @param extensionManager       The manager responsible for handling all
-	 *                               extension-based connector stores.
-	 * @param connectorsPatchPath    The connectors Patch Path.
-	 * @return A fully populated {@link ConnectorStore} containing connectors from
-	 *         various sources.
+	 * The method first aggregates all extension-based connectors into a central {@link RawConnectorStore},
+	 * then supplements it with additional connectors from the connectors subdirectory and optional user path.
+	 * Finally, it generates a {@link ConnectorStore} from the aggregated raw connector store.
+	 *
+	 * @param extensionManager     The manager responsible for discovering and providing connector extensions.
+	 * @param connectorsPatchPath  An optional filesystem path pointing to additional user-defined connectors.
+	 * @return A fully composed {@link ConnectorStore} containing all loaded connectors.
 	 */
 	public static ConnectorStore buildConnectorStore(
 		final ExtensionManager extensionManager,
 		final String connectorsPatchPath
 	) {
-		// Get extension connector stores
-		final ConnectorStore connectorStore = extensionManager.aggregateExtensionConnectorStores();
+		// Get extension raw connector stores
+		final RawConnectorStore rawConnectorStore = extensionManager.aggregateExtensionRawConnectorStores();
 
 		// Parse and add connectors from a specific subdirectory
-		connectorStore.addMany(new ConnectorStore(getSubDirectory("connectors", false)).getStore());
+		rawConnectorStore.addMany(new RawConnectorStore(getSubDirectory("connectors", false)).getStore());
 
 		// Add user's connectors if the connectors patch path is specified.
 		if (connectorsPatchPath != null) {
-			connectorStore.addMany(new ConnectorStore(Path.of(connectorsPatchPath)).getStore());
+			rawConnectorStore.addMany(new RawConnectorStore(Path.of(connectorsPatchPath)).getStore());
 		}
+
+		// Generate the connector store from the raw connector store.
+		final ConnectorStore connectorStore = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+			.build()
+			.generateStaticConnectorStore();
+
+		log.info("Global Connector Store size: {}", connectorStore.getStore().size());
+		log.info("Global Raw Connector Store size: {}", connectorStore.getRawConnectorStore().getStore().size());
 
 		return connectorStore;
 	}

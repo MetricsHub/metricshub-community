@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.03-SNAPSHOT</version>
+		<version>1.0.04-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-community-windows</artifactId>
@@ -100,6 +100,11 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-jawk-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-yaml-configuration-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>
@@ -218,6 +223,11 @@
 									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jdbc-extension</artifactId>
 									<destFileName>metricshub-jdbc-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-yaml-configuration-extension</artifactId>
+									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>

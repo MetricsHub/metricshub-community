@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -39,7 +38,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -76,6 +75,9 @@ public class ExtensionManager {
 
 	@Default
 	private List<ICompositeSourceScriptExtension> compositeSourceScriptExtensions = new ArrayList<>();
+
+	@Default
+	private List<IConfigurationProvider> configurationProviderExtensions = new ArrayList<>();
 
 	/**
 	 * Create a new empty instance of the Extension Manager.
@@ -276,23 +278,25 @@ public class ExtensionManager {
 	}
 
 	/**
-	 * Aggregates connector stores from various provider extensions into a single {@link ConnectorStore}.
-	 * This method initializes a new {@link ConnectorStore} and iteratively loads data from each registered
+	 * Aggregates connector stores from various provider extensions into a single {@link RawConnectorStore}.
+	 * This method initializes a new {@link RawConnectorStore} and iteratively loads data from each registered
 	 * connector store provider extension. All connectors from each extension are added to the newly created store.
 	 *
 	 * This centralized store can be used to manage or interpret connectors across different extensions efficiently,
 	 * providing a unified view of all connectors available in MetricsHub.
 	 *
-	 * @return A {@link ConnectorStore} containing all connectors from various extensions combined into one store.
+	 * @return A {@link RawConnectorStore} containing all connectors from various extensions combined into one store.
 	 */
-	public ConnectorStore aggregateExtensionConnectorStores() {
-		final ConnectorStore connectorStore = new ConnectorStore();
-		connectorStore.setStore(new TreeMap<>(String.CASE_INSENSITIVE_ORDER));
-		connectorStoreProviderExtensions.forEach(connectorStoreProviderExtension -> {
+	public RawConnectorStore aggregateExtensionRawConnectorStores() {
+		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
+		connectorStoreProviderExtensions.forEach((IConnectorStoreProviderExtension connectorStoreProviderExtension) -> {
 			connectorStoreProviderExtension.load();
-			connectorStore.addMany(connectorStoreProviderExtension.getConnectorStore().getStore());
+			RawConnectorStore extensionStore = connectorStoreProviderExtension.getRawConnectorStore();
+			rawConnectorStore.addMany(extensionStore.getStore());
+			// Set all the extensions subtypes to use them for the deserialization
+			rawConnectorStore.getSubtypes().addAll(extensionStore.getSubtypes());
 		});
-		return connectorStore;
+		return rawConnectorStore;
 	}
 
 	/**
@@ -313,5 +317,17 @@ public class ExtensionManager {
 	 */
 	public Optional<ICompositeSourceScriptExtension> findCompositeSourceScriptExtension(final Source source) {
 		return compositeSourceScriptExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
+	}
+
+	/**
+	 * Finds the file extensions supported by all configuration providers.
+	 *
+	 * @return A set of supported file extensions.
+	 */
+	public Set<String> findConfigurationFileExtensions() {
+		return configurationProviderExtensions
+			.stream()
+			.flatMap((IConfigurationProvider provider) -> provider.getFileExtensions().stream())
+			.collect(Collectors.toSet());
 	}
 }

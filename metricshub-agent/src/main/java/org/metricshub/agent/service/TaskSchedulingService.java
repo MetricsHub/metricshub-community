@@ -23,7 +23,7 @@ package org.metricshub.agent.service;
 
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ScheduledFuture;
@@ -52,7 +52,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 @Slf4j
 public class TaskSchedulingService {
 
-	private File configFile;
+	private Path configDirectory;
 	private AgentConfig agentConfig;
 	private AgentInfo agentInfo;
 	private ThreadPoolTaskScheduler taskScheduler;

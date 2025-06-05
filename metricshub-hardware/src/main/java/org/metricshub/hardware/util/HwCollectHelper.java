@@ -28,7 +28,6 @@ import static org.metricshub.hardware.constants.VmConstants.HW_VM_POWER_STATE_ME
 
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -36,10 +35,9 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
-import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
-import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.strategy.utils.CollectHelper;
 import org.metricshub.engine.strategy.utils.MathOperationsHelper;
+import org.metricshub.engine.strategy.utils.StrategyHelper;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -282,10 +280,7 @@ public class HwCollectHelper {
 			return false;
 		}
 
-		final ConnectorIdentity connectorIdentity = connector.getConnectorIdentity();
-		final Detection detection = connectorIdentity != null ? connectorIdentity.getDetection() : null;
-		final Set<String> connectorTags = detection != null ? detection.getTags() : null;
-		return connectorTags != null && connectorTags.stream().anyMatch(tag -> tag.equalsIgnoreCase("hardware"));
+		return StrategyHelper.isHardwareConnector(connector);
 	}
 
 	/**

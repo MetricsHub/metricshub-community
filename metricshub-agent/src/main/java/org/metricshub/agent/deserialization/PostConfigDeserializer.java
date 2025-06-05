@@ -239,7 +239,7 @@ public class PostConfigDeserializer extends DelegatingDeserializer {
 	 * @param originalAttributes Original attributes to split
 	 * @return Map of attribute names to lists of values
 	 */
-	private Map<String, List<String>> determineAttributeValues(final Map<String, String> originalAttributes) {
+	private static Map<String, List<String>> determineAttributeValues(final Map<String, String> originalAttributes) {
 		final Map<String, List<String>> attributeValues = new HashMap<>();
 
 		// Iterate over each attribute to split multi-valued attributes

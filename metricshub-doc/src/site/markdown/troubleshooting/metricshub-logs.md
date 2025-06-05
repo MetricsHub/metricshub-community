@@ -15,7 +15,7 @@ If you need more comprehensive details to troubleshoot your issues, you can enab
 
 ## Enabling the logging mode
 
-In the **config/metricshub.yaml** file, add the `loggerLevel` parameter just before the `resourceGroups` section:
+In the **config/<your_configuration_file>**, add the `loggerLevel` parameter just before the `resourceGroups` section:
 
 ```yaml
 loggerLevel: debug
@@ -39,7 +39,7 @@ The output files are saved by default in the **logs** directory located under th
 
 * On Linux, the output files are stored in the installation directory: **/opt/metricshub/logs**.
 
-To specify a different output directory, edit the **metricshub.yaml** file and add the `outputDirectory` parameter before the `resourceGroups` section:
+To specify a different output directory, edit your MetricsHub configuration file and add the `outputDirectory` parameter before the `resourceGroups` section:
 
 ```yaml
 loggerLevel: debug
