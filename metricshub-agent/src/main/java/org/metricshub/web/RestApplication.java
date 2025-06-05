@@ -1,4 +1,4 @@
-package org.metricshub.rest;
+package org.metricshub.web;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,9 +21,11 @@ package org.metricshub.rest;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.HashSet;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
-import org.metricshub.rest.mcp.PingToolService;
+import org.metricshub.web.mcp.PingToolService;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -44,33 +46,23 @@ public class RestApplication {
 	 * Starts the REST API server with the given AgentContext and port number.
 	 *
 	 * @param agentContext the AgentContext to be used by the server
-	 * @param portNumber   the port number on which the server will run
 	 */
-	public static void startServer(final AgentContext agentContext, final int portNumber) {
+	public static void startServer(final AgentContext agentContext) {
 		try {
+			final Set<String> args = new HashSet<>();
+
+			// Fill the args set with the necessary web configuration parameters
+			agentContext.getAgentConfig().getWebConfig().forEach((key, value) -> args.add("--" + key + "=" + value));
+
 			context =
 				new SpringApplicationBuilder()
 					.sources(RestApplication.class)
-					.initializers(applicationContext -> {
-						applicationContext.getBeanFactory().registerSingleton("agentContext", agentContext);
-					})
-					.run(
-						"--server.port=8081",
-						"--spring.ai.mcp.server.enabled=true",
-						"--spring.ai.mcp.server.stdio=false",
-						"--spring.ai.mcp.server.name=metricshub-sse-mcp-server",
-						"--spring.ai.mcp.server.version=1.0.0",
-						"--spring.ai.mcp.server.resource-change-notification=true",
-						"--spring.ai.mcp.server.tool-change-notification=true",
-						"--spring.ai.mcp.server.prompt-change-notification=true",
-						"--spring.ai.mcp.server.sse-endpoint=/sse",
-						"--spring.ai.mcp.server.sse-message-endpoint=/mcp/message",
-						"--spring.ai.mcp.server.type=async",
-						"--spring.ai.mcp.server.capabilities.completion=true",
-						"--spring.ai.mcp.server.capabilities.prompt=true",
-						"--spring.ai.mcp.server.capabilities.resource=true",
-						"--spring.ai.mcp.server.capabilities.tool=true"
-					);
+					.initializers((ConfigurableApplicationContext applicationContext) ->
+						applicationContext
+							.getBeanFactory()
+							.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext))
+					)
+					.run(args.toArray(String[]::new));
 
 			log.info("Application Context Class: {}", context.getClass().getName());
 		} catch (Exception e) {
@@ -88,7 +80,25 @@ public class RestApplication {
 	}
 
 	/**
+	 * Updates the AgentContext in the application context.
+	 * This method retrieves the AgentContextHolder bean from the application context
+	 * and updates its AgentContext with the provided one.
+	 *
+	 * @param agentContext the AgentContext to update
+	 */
+	public static void updateAgentContext(final AgentContext agentContext) {
+		if (context != null) {
+			final AgentContextHolder holder = context.getBean(AgentContextHolder.class);
+			holder.update(agentContext);
+			log.info("Updated AgentContext via AgentContextHolder.");
+		} else {
+			log.warn("Application context is not initialized. Cannot update AgentContext.");
+		}
+	}
+
+	/**
 	 * Provides a ToolCallbackProvider for the PingToolService.
+	 *
 	 * @param pingToolService the PingToolService to be used
 	 * @return a ToolCallbackProvider for the PingToolService
 	 */

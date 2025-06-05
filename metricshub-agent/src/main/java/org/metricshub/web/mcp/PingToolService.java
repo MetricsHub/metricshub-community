@@ -1,4 +1,4 @@
-package org.metricshub.rest.mcp;
+package org.metricshub.web.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -24,9 +24,9 @@ package org.metricshub.rest.mcp;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Optional;
-import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,15 +40,15 @@ public class PingToolService {
 
 	private static final String PING_EXTENSION_TYPE = "ping";
 
-	private AgentContext agentContext;
+	private AgentContextHolder agentContextHolder;
 
 	/**
 	 * Constructor for PingToolService.
 	 * @param agentContext the AgentContext to be used by the tool
 	 */
 	@Autowired
-	public PingToolService(AgentContext agentContext) {
-		this.agentContext = agentContext;
+	public PingToolService(AgentContextHolder agentContextHolder) {
+		this.agentContextHolder = agentContextHolder;
 	}
 
 	/**
@@ -60,7 +60,8 @@ public class PingToolService {
 		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping, and whether it is reachable or not."
 	)
 	public PingResponse pingHost(@ToolParam(description = "The hostname to ping") final String hostname) {
-		final Optional<IProtocolExtension> pingExtention = agentContext
+		final Optional<IProtocolExtension> pingExtention = agentContextHolder
+			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(PING_EXTENSION_TYPE);
 		return pingExtention
@@ -75,7 +76,7 @@ public class PingToolService {
 	 * @param extension the protocol extension to use for pinging
 	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
 	 */
-	private static PingResponse pingHostWithExtensionSafe(final String hostname, IProtocolExtension extension) {
+	private static PingResponse pingHostWithExtensionSafe(final String hostname, final IProtocolExtension extension) {
 		try {
 			// Create and fill in a configuration ObjectNode
 			final var configurationNode = JsonNodeFactory.instance.objectNode();

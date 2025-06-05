@@ -1,4 +1,4 @@
-package org.metricshub.rest.controller;
+package org.metricshub.web.controller;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -25,17 +25,18 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for health check endpoint.
+ * Controller for status check endpoint.
  */
 @RestController
-public class HealthController {
+public class StatusController {
 
 	/**
-	 * Health check endpoint that returns a simple JSON response indicating the service is up.
+	 * Status check endpoint that returns a simple JSON response indicating the service is up.
+	 *
 	 * @return A JSON string indicating the service status.
 	 */
-	@GetMapping("/health")
-	public String health() {
+	@GetMapping("/status")
+	public String status() {
 		return "{ \"status\": \"UP\" }";
 	}
 }

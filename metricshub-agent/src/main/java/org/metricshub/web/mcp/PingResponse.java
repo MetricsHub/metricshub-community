@@ -1,4 +1,4 @@
-package org.metricshub.rest.mcp;
+package org.metricshub.web.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
