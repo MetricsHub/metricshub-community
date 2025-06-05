@@ -1,0 +1,190 @@
+groups:
+- name: MetricsHub-System-CPU-Usage
+  rules:
+  - alert: MetricsHub-System-CPU-High-Utilization-Warning
+    expr: |
+      (1 - sum by (host_name)(rate(system_cpu_time_seconds_total{system_cpu_state="idle"}[5m]))
+       /
+       sum by (host_name)(rate(system_cpu_time_seconds_total[5m]))) * 100 > 90
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — CPU usage above 90%
+      description: |
+        CPU utilization on {{ $labels.host_name }} has remained above 90% for 10 minutes.
+        Current value: {{ printf "%.1f" $value }} %.
+        Consequence: Sustained high CPU usage can degrade application performance, increase latency, or trigger load balancing issues.
+        Recommended Action: Identify processes consuming high CPU. Optimize workloads, adjust configurations, or provision additional CPU resources.
+
+- name: MetricsHub-System-Filesystem-Utilization
+  rules:
+  - alert: MetricsHub-System-Filesystem-High-Utilization-Warning
+    expr: |
+      (
+        sum by (host_name, system_device) (
+          system_filesystem_usage_bytes{system_filesystem_state="used"}
+        )
+        /
+        sum by (host_name, system_device) (
+          system_filesystem_usage_bytes{system_filesystem_state=~"used|free"}
+        )
+      ) * 100 > 80
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Drive {{ $labels.system_device }} usage above 80%
+      description: |
+        Filesystem {{ $labels.system_device }} on {{ $labels.host_name }} has been over 80 % capacity for 15 minutes.
+        Current usage: {{ printf "%.1f" $value }} %.
+        Consequence: If the disk reaches 100% usage, no further data can be written, which may cause system services to crash or fail unexpectedly.
+        Recommended Action: Delete unnecessary files, move data to another volume, or increase disk capacity.
+
+  - alert: MetricsHub-System-Filesystem-High-Utilization-Critical
+    expr: |
+      (
+        sum by (host_name, system_device) (
+          system_filesystem_usage_bytes{system_filesystem_state="used"}
+        )
+        /
+        sum by (host_name, system_device) (
+          system_filesystem_usage_bytes{system_filesystem_state=~"used|free"}
+        )
+      ) * 100 > 90
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Drive {{ $labels.system_device }} usage above 90 %
+      description: |
+        Filesystem {{ $labels.system_device }} on host {{ $labels.host_name }} has exceeded 90% capacity for 15 minutes.
+        Current usage: {{ printf "%.1f" ($value) }}%.
+        Consequence: The disk could become full, leading to data write failures, service crashes, or system instability.
+        Recommended Action: Take immediate action to clean up space or increase capacity. This is critical to prevent service outages.
+
+- name: MetricsHub-System-Memory-Utilization
+  rules:
+  - alert: MetricsHub-System-Memory-High-Utilization-Warning
+    expr: system_memory_utilization_ratio{system_memory_state!="free"} * 100 > 90
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Memory usage above 90%
+      description: |
+        Memory utilization on {{ $labels.host_name }} has remained above 90 % for 10 minutes.
+        Current value: {{ printf "%.1f" ($value) }}%.
+        Consequence: Memory exhaustion may lead to application crashes, system instability, or data corruption.
+        Recommended Action: Take immediate action to reduce memory usage or scale system resources to avoid an out-of-memory crash.
+
+- name: MetricsHub-System-Network-Bandwidth-Utilization
+  rules:
+  - alert: MetricsHub-System-Network-Bandwidth-High-Warning
+    expr: |
+      sum by (host_name, network_interface_name) (rate(system_network_io_bytes_total[5m]))
+      /
+      max by (host_name, network_interface_name) (system_network_bandwidth_limit_bytes)
+      * 100 > 80
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — {{ $labels.network_interface_name }} bandwidth usage above 80%
+      description: |
+        Traffic on interface {{ $labels.network_interface_name }} has exceeded 80 % of its configured bandwidth for at least 10 minutes.
+        Current utilization: {{ printf "%.1f" $value }}%.
+        Consequence: High network bandwidth usage may cause congestion, delays, and dropped packets.
+        Recommended Action: Check for large file transfers, backup operations, or abnormal traffic. Adjust traffic flow or increase interface capacity.
+
+  - alert: MetricsHub-System-Network-Bandwidth-High-Critical
+    expr: |
+      sum by (host_name, network_interface_name) (rate(system_network_io_bytes_total[5m]))
+      /
+      max by (host_name, network_interface_name) (system_network_bandwidth_limit_bytes)
+      * 100 > 90
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — {{ $labels.network_interface_name }} bandwidth usage above 90%
+      description: |
+        Traffic on interface {{ $labels.network_interface_name }} has exceeded 90 % of its configured bandwidth for at least 10 minutes.
+        Current utilization: {{ printf "%.1f" $value }}%.
+        Consequence: Near saturation may severely degrade network performance and result in significant data loss or timeouts.
+        Recommended Action: Investigate root cause immediately. Prioritize traffic or upgrade bandwidth capacity to prevent network failure.
+
+- name: MetricsHub-System-Network-Errors
+  rules:
+  - alert: MetricsHub-System-Network-Errors-Warning
+    expr: rate(system_network_errors_total[5m]) > 0
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Network errors on {{ $labels.network_interface_name }}
+      description: |
+        Network interface {{ $labels.network_interface_name }} on {{ $labels.host_name }} is experiencing errors in the {{ $labels.network_io_direction }} direction.
+        Current rate: {{ printf "%.2f" $value }} errors/sec.
+        Consequence: Persistent network errors may result in degraded communication or intermittent connectivity.
+        Recommended Action: Inspect cabling and interface status. Update drivers or replace failing hardware if necessary.
+
+- name: MetricsHub-System-Network-Packet-Dropped
+  rules:
+  - alert: MetricsHub-System-Network-Packets-Dropped-Warning
+    expr: |
+      (
+      sum by (host_name, network_interface_name, network_io_direction) (
+        delta(system_network_dropped_total[5m])
+      )
+      /
+      sum by (host_name, network_interface_name, network_io_direction) (
+        delta(system_network_dropped_total[5m])
+        + delta(system_network_packets_total[5m])
+      )
+      ) * 100 > 1
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Packet drop rate exceeds 1% on {{ $labels.network_interface_name }}
+      description: |
+        Packet drops detected on network interface {{ $labels.network_interface_name }} in the {{ $labels.network_io_direction }} direction.
+        Current percentage: {{ printf "%.2f" $value }}%.
+        Consequence: Dropped packets lead to retransmissions, degraded throughput, and potential service disruptions.
+        Recommended Action: Analyze interface load, buffer size, and link configuration. Resolve congestion or hardware faults.
+
+- name: MetricsHub-System-Page-Faults
+  rules:
+  - alert: MetricsHub-System-Page-Fault-Rate-Warning
+    expr: rate(system_memory_page_faults_total{system_paging_type="major"}[5m]) > 500
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Elevated page fault rate
+      description: |
+        Host {{ $labels.host_name }} is experiencing over 500 page faults per second for more than 10 minutes.
+        Consequence: High page fault rate can indicate memory pressure, causing performance degradation.
+        Recommended Action: Review memory usage, reduce swapping, and adjust system load or memory allocation.
+
+  - alert: MetricsHub-System-Page-Fault-Rate-Critical
+    expr: rate(system_memory_page_faults_total{system_paging_type="major"}[5m]) > 2000
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Critical page fault rate
+      description: |
+        Host {{ $labels.host_name }} has sustained over 2000 page faults per second for more than 10 minutes.
+        Consequence: Excessive paging can critically degrade performance and indicate imminent system instability.
+        Recommended Action: Take immediate action to reduce memory stress or add more RAM to prevent system crash.
