@@ -1,4 +1,4 @@
-package org.metricshub.web;
+package org.metricshub.web.config;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,17 +21,27 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import org.metricshub.agent.context.AgentContext;
+import org.metricshub.web.mcp.PingToolService;
+import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.ai.tool.method.MethodToolCallbackProvider;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * This object holds the {@link AgentContext} instance that is used by the spring application.
- * It is designed to be a singleton, allowing for thread-safe updates to the context.
+ * Configuration class whic provides {@link ToolCallback} instances for tools defined in different sources.
  */
-@Data
-@AllArgsConstructor
-public class AgentContextHolder {
+@Configuration
+public class ToolCallbackConfiguration {
 
-	private volatile AgentContext agentContext;
+	/**
+	 * Provides a ToolCallbackProvider for the PingToolService.
+	 *
+	 * @param pingToolService the PingToolService to be used
+	 * @return a ToolCallbackProvider for the PingToolService
+	 */
+	@Bean
+	public ToolCallbackProvider metricshubTools(PingToolService pingToolService) {
+		return MethodToolCallbackProvider.builder().toolObjects(pingToolService).build();
+	}
 }

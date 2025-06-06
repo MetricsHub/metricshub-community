@@ -1,4 +1,4 @@
-package org.metricshub.web;
+package org.metricshub.web.config;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,17 +21,27 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import org.metricshub.agent.context.AgentContext;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.bridge.SLF4JBridgeHandler;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * This object holds the {@link AgentContext} instance that is used by the spring application.
- * It is designed to be a singleton, allowing for thread-safe updates to the context.
+ * Configuration class to install the SLF4J bridge for Java Util Logging (JUL).
+ * This class removes the default JUL ConsoleHandlers to prevent double logging
+ * and installs the SLF4JBridgeHandler to redirect JUL logs to SLF4J.
  */
-@Data
-@AllArgsConstructor
-public class AgentContextHolder {
+@Configuration
+public class LoggingBridgeConfiguration {
 
-	private volatile AgentContext agentContext;
+	@PostConstruct
+	public static void installJavaUtilLoggingBridge() {
+		// Remove JUL ConsoleHandlers to avoid double logging
+		java.util.logging.Logger rootLogger = java.util.logging.LogManager.getLogManager().getLogger("");
+		for (java.util.logging.Handler handler : rootLogger.getHandlers()) {
+			if (handler instanceof java.util.logging.ConsoleHandler) {
+				rootLogger.removeHandler(handler);
+			}
+		}
+		SLF4JBridgeHandler.install();
+	}
 }

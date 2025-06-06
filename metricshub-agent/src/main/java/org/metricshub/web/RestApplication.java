@@ -25,13 +25,9 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
-import org.metricshub.web.mcp.PingToolService;
-import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
-import org.springframework.context.annotation.Bean;
 
 /**
  * Main application class for the MetricsHub REST API.
@@ -89,21 +85,10 @@ public class RestApplication {
 	public static void updateAgentContext(final AgentContext agentContext) {
 		if (context != null) {
 			final AgentContextHolder holder = context.getBean(AgentContextHolder.class);
-			holder.update(agentContext);
+			holder.setAgentContext(agentContext);
 			log.info("Updated AgentContext via AgentContextHolder.");
 		} else {
 			log.warn("Application context is not initialized. Cannot update AgentContext.");
 		}
-	}
-
-	/**
-	 * Provides a ToolCallbackProvider for the PingToolService.
-	 *
-	 * @param pingToolService the PingToolService to be used
-	 * @return a ToolCallbackProvider for the PingToolService
-	 */
-	@Bean
-	public ToolCallbackProvider metricshubTools(PingToolService pingToolService) {
-		return MethodToolCallbackProvider.builder().toolObjects(pingToolService).build();
 	}
 }
