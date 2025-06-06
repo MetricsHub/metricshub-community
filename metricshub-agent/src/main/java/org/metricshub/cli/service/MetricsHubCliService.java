@@ -23,6 +23,9 @@ package org.metricshub.cli.service;
 
 import java.io.PrintWriter;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -55,11 +58,18 @@ import org.metricshub.cli.service.protocol.WmiConfigCli;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnector;
+import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
+import org.metricshub.engine.connector.parser.ConnectorParser;
+import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
@@ -171,6 +181,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 	@ArgGroup(exclusive = false, heading = "%n@|bold,underline JDBC Options|@:%n")
 	JdbcConfigCli jdbcConfigCli;
 
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Additional Connectors Options|@:%n", multiplicity = "0..*")
+	List<AdditionalConnectorConfigCli> additionalConnectors;
+
 	@Option(names = { "-u", "--username" }, order = 2, paramLabel = "USER", description = "Username for authentication")
 	String username;
 
@@ -274,10 +287,13 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		// First, process special "list" option
 		if (listConnectors) {
-			return listAllConnectors(
-				ConfigHelper.buildConnectorStore(CliExtensionManager.getExtensionManagerSingleton(), patchDirectory),
-				spec.commandLine().getOut()
-			);
+			// Build a connector store
+			final ConnectorStore connectorStore = buildConnectorStore();
+
+			// Add configured and default connectors with variables
+			connectorStore.addMany(resolveConnectorVariables(connectorStore).getCustomConnectorsMap());
+
+			return listAllConnectors(connectorStore, spec.commandLine().getOut());
 		}
 
 		// Validate inputs
@@ -305,12 +321,32 @@ public class MetricsHubCliService implements Callable<Integer> {
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = buildConfigurations();
 		hostConfiguration.setConfigurations(configurations);
 
+		// Create a connector store
+		// This store will not contain connectors having variables
+		final ConnectorStore connectorStore = buildConnectorStore();
+
+		// resolve connectors with variables.
+		final AdditionalConnectorsParsingResult connectorsParsingResult = resolveConnectorVariables(connectorStore);
+
+		// Add the configured additional connectors with variables
+		connectorStore.addMany(connectorsParsingResult.getCustomConnectorsMap());
+
+		// Retrieve the set of connectors from the host
+		Set<String> hostConnectors = hostConfiguration.getConnectors();
+
+		// Create a new HashSet if the host connectors set is null
+		if (hostConfiguration.getConnectors() == null) {
+			hostConnectors = new HashSet<>();
+			hostConfiguration.setConnectors(hostConnectors);
+		}
+
+		// Add the connectors with variables connectors to the host.
+		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
+
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
-			.connectorStore(
-				ConfigHelper.buildConnectorStore(CliExtensionManager.getExtensionManagerSingleton(), patchDirectory)
-			)
+			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
 			.build();
 
@@ -367,10 +403,16 @@ public class MetricsHubCliService implements Callable<Integer> {
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 
-			int connectorCount = telemetryManager.findMonitorsByType(KnownMonitorType.CONNECTOR.getKey()).size();
+			final Map<String, Monitor> connectors = telemetryManager.findMonitorsByType(KnownMonitorType.CONNECTOR.getKey());
+			int connectorCount = connectors.size();
 			printWriter.print("Performing discovery with ");
 			printWriter.print(Ansi.ansi().bold().a(connectorCount).boldOff().toString());
 			printWriter.println(connectorCount > 1 ? " connectors..." : " connector...");
+			connectors.forEach((connectorId, monitor) ->
+				printWriter.println(
+					Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
+				)
+			);
 			printWriter.flush();
 		}
 		telemetryManager.run(
@@ -477,6 +519,72 @@ public class MetricsHubCliService implements Callable<Integer> {
 	}
 
 	/**
+	 * Resolves additional connector variables defined via the `--AdditionalConnector` flag by validating their existence
+	 * within the raw connector store and integrating them into a fully resolved {@link ConnectorStore}.
+	 * <p>
+	 * If an additional connector references a connector ID not present in the raw store, an error is
+	 * printed to {@link PrintWriter}, and that reference is excluded.
+	 * </p>
+	 * <p>
+	 * The resulting {@link AdditionalConnectorsParsingResult} contains a set of additional connectors to add to the
+	 * static connector store having connectors without variables.
+	 * </p>
+	 * @param connectorStore the initial {@link ConnectorStore} containing raw connector definitions
+	 * @return a parsed result representing the updated connector store with resolved additional connectors
+	 */
+	private AdditionalConnectorsParsingResult resolveConnectorVariables(final ConnectorStore connectorStore) {
+		final RawConnectorStore rawConnectorStore = connectorStore.getRawConnectorStore();
+		final Map<String, RawConnector> rawConnectors = rawConnectorStore.getStore();
+
+		final Map<String, AdditionalConnector> additionalConnectorsConfiguration = getAdditionalConnectorsConfiguration();
+		final PrintWriter printWriter = spec.commandLine().getErr();
+
+		additionalConnectorsConfiguration
+			.values()
+			.forEach((AdditionalConnector additionalConnector) -> {
+				final String uses = additionalConnector.getUses();
+				if (!rawConnectors.containsKey(uses)) {
+					printWriter.println(
+						Ansi
+							.ansi()
+							.fgRed()
+							.a(
+								String.format(
+									"Error: Connector '%s' specified in --uses does not exist in the connector store.%n" +
+									"You can view the list of available connectors using: metricshub --list%n",
+									uses
+								)
+							)
+							.fgBrightBlack()
+							.a("https://metricshub.com/docs/latest/metricshub-connectors-full-listing.html")
+							.reset()
+							.toString()
+					);
+					rawConnectors.remove(uses);
+				}
+			});
+
+		printWriter.flush();
+		return ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+			.withAdditionalConnectors(additionalConnectorsConfiguration)
+			.build()
+			.resolveConnectorStoreVariables(connectorStore);
+	}
+
+	/**
+	 * Builds the {@link ConnectorStore} using the CLI extension manager, the connectors directory and the configured patch directory.
+	 *
+	 * @return the constructed {@link ConnectorStore} instance
+	 */
+	private ConnectorStore buildConnectorStore() {
+		return ConfigHelper.buildConnectorStore(CliExtensionManager.getExtensionManagerSingleton(), patchDirectory);
+	}
+
+	/**
 	 * @return A {@link Map} associating the input protocol type to its input credentials.
 	 */
 	private Map<Class<? extends IConfiguration>, IConfiguration> buildConfigurations() {
@@ -542,6 +650,39 @@ public class MetricsHubCliService implements Callable<Integer> {
 				"At least one protocol must be specified: --http[s], --ipmi, --jdbc, --snmp, --snmpv3, --ssh, --wbem, --winrm, --wmi."
 			);
 		}
+
+		if (additionalConnectors != null) {
+			final boolean connectorIdNotFound = additionalConnectors
+				.stream()
+				.anyMatch(additionalConnector -> additionalConnector.getConnectorId() == null);
+			if (connectorIdNotFound) {
+				throw new ParameterException(
+					spec.commandLine(),
+					"Invalid additional connectors configuration: connectorId is mandatory."
+				);
+			}
+		}
+	}
+
+	/**
+	 * Builds a map of additional connectors from the additional connectors CLI configuration.
+	 * <p>
+	 * If no additional connectors are defined, returns an empty map.
+	 * </p>
+	 * @return a map of connector IDs to {@link AdditionalConnector} instances
+	 */
+	public Map<String, AdditionalConnector> getAdditionalConnectorsConfiguration() {
+		if (additionalConnectors != null) {
+			return additionalConnectors
+				.stream()
+				.collect(
+					Collectors.toMap(
+						AdditionalConnectorConfigCli::getConnectorId,
+						AdditionalConnectorConfigCli::toAdditionalConnector
+					)
+				);
+		}
+		return new HashMap<>();
 	}
 
 	/**

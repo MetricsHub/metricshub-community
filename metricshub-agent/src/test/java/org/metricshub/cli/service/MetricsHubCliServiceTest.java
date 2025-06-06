@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.metricshub.cli.service.protocol.SshConfigCli;
 import org.metricshub.cli.service.protocol.WbemConfigCli;
 import org.metricshub.cli.service.protocol.WinRmConfigCli;
 import org.metricshub.cli.service.protocol.WmiConfigCli;
+import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -451,5 +453,47 @@ class MetricsHubCliServiceTest {
 		// This confirms that tryInteractiveWbemPassword hasn't triggered the password reader
 		// because both username and password are already present in wbemConfigCli
 		assertTrue(builder.isEmpty());
+	}
+
+	@Test
+	void testGetAdditionalConnectors() {
+		final AdditionalConnectorConfigCli connector1 = new AdditionalConnectorConfigCli();
+		connector1.setConnectorId("id1");
+		connector1.setUses("usedConnector1");
+		connector1.setVariables(Map.of("var11", "val11", "var12", "val12"));
+
+		final AdditionalConnectorConfigCli connector2 = new AdditionalConnectorConfigCli();
+		connector2.setConnectorId("id2");
+		connector2.setUses("usedConnector2");
+		connector2.setVariables(Map.of("var21", "val21", "var22", "val22"));
+
+		//
+		final Map<String, AdditionalConnector> expectedAdditionalConnectors = Map.of(
+			"id1",
+			AdditionalConnector
+				.builder()
+				.force(true)
+				.uses("usedConnector1")
+				.variables(Map.of("var11", "val11", "var12", "val12"))
+				.build(),
+			"id2",
+			AdditionalConnector
+				.builder()
+				.force(true)
+				.uses("usedConnector2")
+				.variables(Map.of("var21", "val21", "var22", "val22"))
+				.build()
+		);
+
+		final MetricsHubCliService cli = new MetricsHubCliService();
+		cli.setAdditionalConnectors(List.of(connector1, connector2));
+		assertEquals(expectedAdditionalConnectors, cli.getAdditionalConnectorsConfiguration());
+
+		connector1.setUses(null);
+		connector2.setUses(null);
+
+		expectedAdditionalConnectors.get("id1").setUses("id1");
+		expectedAdditionalConnectors.get("id2").setUses("id2");
+		assertEquals(expectedAdditionalConnectors, cli.getAdditionalConnectorsConfiguration());
 	}
 }
