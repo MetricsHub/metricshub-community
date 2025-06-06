@@ -26,18 +26,31 @@ import lombok.Data;
 import org.metricshub.engine.configuration.AdditionalConnector;
 import picocli.CommandLine.Option;
 
+/**
+ * Represents the CLI configuration for an additional connector.
+ * <p>
+ * Includes the connector ID, an optional reference to another connector via {@code --uses},
+ * and optional variables passed with {@code -F key=value}.
+ */
 @Data
 public class AdditionalConnectorConfigCli {
 
 	@Option(names = { "--additionalConnector", "--additional-connector" }, required = true)
-	String connectorId;
+	private String connectorId;
 
 	@Option(names = "--uses")
-	String uses;
+	private String uses;
 
 	@Option(names = { "-F", "--variable" }, description = "Connector variable in key=value format")
 	Map<String, String> variables;
 
+	/**
+	 * Converts this CLI configuration to an {@link AdditionalConnector} instance.
+	 *
+	 * If {@code uses} is not specified, defaults to {@code connectorId}.
+	 *
+	 * @return the constructed {@link AdditionalConnector}
+	 */
 	AdditionalConnector toAdditionalConnector() {
 		return AdditionalConnector
 			.builder()

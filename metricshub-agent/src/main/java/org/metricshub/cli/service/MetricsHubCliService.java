@@ -518,6 +518,19 @@ public class MetricsHubCliService implements Callable<Integer> {
 		}
 	}
 
+	/**
+	 * Resolves additional connector variables defined via the `--AdditionalConnector` flag by validating their existence
+	 * within the raw connector store and integrating them into a fully resolved {@link ConnectorStore}.
+	 * <p>
+	 * If an additional connector references a connector ID not present in the raw store, an error is
+	 * printed to {@link PrintWriter}, and that reference is excluded.
+	 * <p>
+	 * The resulting {@link AdditionalConnectorsParsingResult} contains a set of additional connectors to add to the
+	 * static connector store having connectors without variables.
+	 *
+	 * @param connectorStore the initial {@link ConnectorStore} containing raw connector definitions
+	 * @return a parsed result representing the updated connector store with resolved additional connectors
+	 */
 	private AdditionalConnectorsParsingResult resolveConnectorVariables(final ConnectorStore connectorStore) {
 		final RawConnectorStore rawConnectorStore = connectorStore.getRawConnectorStore();
 		final Map<String, RawConnector> rawConnectors = rawConnectorStore.getStore();
@@ -561,6 +574,11 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.resolveConnectorStoreVariables(connectorStore);
 	}
 
+	/**
+	 * Builds the {@link ConnectorStore} using the CLI extension manager, the connectors directory and the configured patch directory.
+	 *
+	 * @return the constructed {@link ConnectorStore} instance
+	 */
 	private ConnectorStore buildConnectorStore() {
 		return ConfigHelper.buildConnectorStore(CliExtensionManager.getExtensionManagerSingleton(), patchDirectory);
 	}
@@ -645,6 +663,13 @@ public class MetricsHubCliService implements Callable<Integer> {
 		}
 	}
 
+	/**
+	 * Builds a map of additional connectors from the additional connectors CLI configuration.
+	 * <p>
+	 * If no additional connectors are defined, returns an empty map.
+	 *
+	 * @return a map of connector IDs to {@link AdditionalConnector} instances
+	 */
 	public Map<String, AdditionalConnector> getAdditionalConnectorsConfiguration() {
 		if (additionalConnectors != null) {
 			return additionalConnectors
