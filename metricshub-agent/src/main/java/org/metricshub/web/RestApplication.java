@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -45,6 +46,9 @@ public class RestApplication {
 	 */
 	public static void startServer(final AgentContext agentContext) {
 		try {
+			// Install the SLF4J bridge for Java Util Logging (JUL)
+			installJavaUtilLoggingBridge();
+
 			final Set<String> args = new HashSet<>();
 
 			// Fill the args set with the necessary web configuration parameters
@@ -60,10 +64,21 @@ public class RestApplication {
 					)
 					.run(args.toArray(String[]::new));
 
-			log.info("Application Context Class: {}", context.getClass().getName());
+			log.info("Started Spring application with context class: {}", context.getClass().getName());
 		} catch (Exception e) {
 			log.error("Failed to start REST API server", e);
 		}
+	}
+
+	/**
+	 * Installs the SLF4J bridge for Java Util Logging (JUL).
+	 */
+	public static void installJavaUtilLoggingBridge() {
+		// Remove existing handlers
+		SLF4JBridgeHandler.removeHandlersForRootLogger();
+
+		// Install SLF4J bridge
+		SLF4JBridgeHandler.install();
 	}
 
 	/**

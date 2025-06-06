@@ -80,7 +80,7 @@ public class PingToolService {
 		try {
 			// Create and fill in a configuration ObjectNode
 			final var configurationNode = JsonNodeFactory.instance.objectNode();
-			configurationNode.set("timeout", new TextNode("10"));
+			configurationNode.set("timeout", new TextNode("4"));
 
 			// Build an IConfiguration from the configuration ObjectNode
 			final IConfiguration configuration = extension.buildConfiguration(PING_EXTENSION_TYPE, configurationNode, null);
