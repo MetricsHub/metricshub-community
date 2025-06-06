@@ -31,6 +31,7 @@ import picocli.CommandLine.Option;
  * <p>
  * Includes the connector ID, an optional reference to another connector via {@code --uses},
  * and optional variables passed with {@code -F key=value}.
+ * </p>
  */
 @Data
 public class AdditionalConnectorConfigCli {

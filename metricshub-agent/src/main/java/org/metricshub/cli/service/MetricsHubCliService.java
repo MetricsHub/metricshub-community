@@ -524,10 +524,11 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 * <p>
 	 * If an additional connector references a connector ID not present in the raw store, an error is
 	 * printed to {@link PrintWriter}, and that reference is excluded.
+	 * </p>
 	 * <p>
 	 * The resulting {@link AdditionalConnectorsParsingResult} contains a set of additional connectors to add to the
 	 * static connector store having connectors without variables.
-	 *
+	 * </p>
 	 * @param connectorStore the initial {@link ConnectorStore} containing raw connector definitions
 	 * @return a parsed result representing the updated connector store with resolved additional connectors
 	 */
@@ -540,7 +541,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		additionalConnectorsConfiguration
 			.values()
-			.forEach(additionalConnector -> {
+			.forEach((AdditionalConnector additionalConnector) -> {
 				final String uses = additionalConnector.getUses();
 				if (!rawConnectors.containsKey(uses)) {
 					printWriter.println(
@@ -667,7 +668,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 * Builds a map of additional connectors from the additional connectors CLI configuration.
 	 * <p>
 	 * If no additional connectors are defined, returns an empty map.
-	 *
+	 * </p>
 	 * @return a map of connector IDs to {@link AdditionalConnector} instances
 	 */
 	public Map<String, AdditionalConnector> getAdditionalConnectorsConfiguration() {
