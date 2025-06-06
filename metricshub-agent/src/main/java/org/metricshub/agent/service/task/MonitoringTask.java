@@ -55,6 +55,7 @@ import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
+import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.hardware.strategy.HardwareStrategy;
@@ -100,7 +101,8 @@ public class MonitoringTask implements Runnable {
 				new DetectionStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
 				new DiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
 				new SimpleStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
-				new HardwarePostDiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
+				new HardwarePostDiscoveryStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager),
+				new HardwareMonitorNameGenerationStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
 			);
 
 			/*
@@ -127,7 +129,8 @@ public class MonitoringTask implements Runnable {
 			new ProtocolHealthCheckStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 			new CollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 			new SimpleStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
-			new HardwarePostCollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager)
+			new HardwarePostCollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
+			new HardwareMonitorNameGenerationStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager)
 		);
 
 		// Run the hardware strategy
