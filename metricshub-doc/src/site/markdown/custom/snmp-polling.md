@@ -12,7 +12,6 @@ In the example below, we configured **MetricsHub** to:
 * monitor the `power-cooling-prod` resource using SNMP
 * track power-related metrics
 * retrieve values of a given OID
-* map the SNMP response to resource attributes
 * extract and expose the `cooling.power` metric.
 
 ## Procedure
@@ -57,19 +56,10 @@ To achieve this use case, we:
                   oid: 1.3.6.1.4.1.4555.10.20.30.1.80031.5.1
 ```
 
-* Map the SNMP response to resource attributes (`id`)​
-
-```yaml
-
-              mapping:
-                source: ${esc.d}{source::PowerCooling}
-                attributes:
-                  id: power-cooling-prod
-```
-
 * Extract and expose the metric (`cooling.power`) from the SNMP response.
 
 ```yaml
+              mapping:
                 metrics:
                   cooling.power: ${esc.d}1
 ```
@@ -96,9 +86,6 @@ Here is the complete YAML configuration:
                   type: snmpGet
                   oid: 1.3.6.1.4.1.4555.10.20.30.1.80031.5.1
               mapping:
-                source: ${esc.d}{source::PowerCooling}
-                attributes:
-                  id: power-cooling-prod
                 metrics:
                   cooling.power: ${esc.d}1
 ```
