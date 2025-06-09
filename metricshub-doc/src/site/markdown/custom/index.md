@@ -13,7 +13,6 @@ To help you get started and make the most out of **MetricsHub**, this section pr
   * [SNMP Polling](./snmp-polling.md)
   * [Web Request](./web-request.md)
 * **Linux-related use cases**:
-  * [Database & Process Monitoring](./linux-database-process.md)
   * [Linux Process Monitoring](./linux-process.md)
   * [Linux Service Monitoring](./linux-service.md)
 * **Windows-related use cases**:
