@@ -2,7 +2,7 @@ package org.metricshub.extension.jmx;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub OsCommand Extension
+ * MetricsHub JMX Extension
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,13 +21,12 @@ package org.metricshub.extension.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import javax.management.MBeanAttributeInfo;
-import javax.management.MBeanInfo;
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
@@ -41,24 +40,16 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JmxRequestExecutor {
 
-	/**
-	 * @param host              JMX host (e.g. "localhost")
-	 * @param port              JMX port (e.g. 7199)
-	 * @param objectNamePattern ObjectName pattern; must match exactly one MBean
-	 * @param attributes        List of attributes to fetch; may be empty/null
-	 * @param timeoutSeconds    Seconds to wait for connect; ≤0 → default
-	 * @return Map from attribute name → its string value (null if unreadable)
-	 * @throws Exception on no match, multiple matches, or missing attribute
-	 */
-	public Map<String, String> fetchAttributes(
-		String host,
-		int port,
+	public List<List<String>> fetchBeanInfo(
+		JmxConfiguration jmxConfiguration,
 		String objectNamePattern,
 		List<String> attributes,
-		long timeoutSeconds
+		List<String> keyAttributes
 	) throws Exception {
+		final List<List<String>> results = new ArrayList<>();
+		String host = jmxConfiguration.getHostname();
+		int port = jmxConfiguration.getPort();
 		String url = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port);
-
 		try (JMXConnector jmxc = JMXConnectorFactory.connect(new JMXServiceURL(url))) {
 			MBeanServerConnection mbsc = jmxc.getMBeanServerConnection();
 
@@ -66,45 +57,40 @@ public class JmxRequestExecutor {
 			Set<ObjectName> matches = mbsc.queryNames(pattern, null);
 
 			if (matches.isEmpty()) {
-				throw new IllegalArgumentException(String.format("No MBeans matched pattern \"%s\"", objectNamePattern));
-			}
-			if (matches.size() > 1) {
-				throw new IllegalArgumentException(
-					String.format("Multiple MBeans matched pattern \"%s\": %s", objectNamePattern, matches)
-				);
+				return results;
 			}
 
-			ObjectName resolved = matches.iterator().next();
+			for (ObjectName objectName : matches) {
+				List<String> keyAttributesValues = keyAttributes
+					.stream()
+					.map(objectName::getKeyProperty)
+					.map(value -> value == null ? EMPTY : value)
+					.toList();
 
-			if (attributes == null || attributes.isEmpty()) {
-				return Map.of();
-			}
+				List<String> row = new ArrayList<>(keyAttributesValues);
 
-			MBeanInfo info = mbsc.getMBeanInfo(resolved);
-			Map<String, MBeanAttributeInfo> attrInfoMap = new HashMap<>();
-			for (MBeanAttributeInfo ai : info.getAttributes()) {
-				attrInfoMap.put(ai.getName(), ai);
-			}
-
-			Map<String, String> results = new HashMap<>();
-			for (String attr : attributes) {
-				MBeanAttributeInfo ai = attrInfoMap.get(attr);
-				if (ai == null || !ai.isReadable()) {
-					results.put(attr, null);
-				} else {
+				attributes.forEach(requestedAttribute -> {
+					Object value = null;
 					try {
-						Object value = mbsc.getAttribute(resolved, attr);
-						results.put(attr, (value == null) ? null : value.toString());
+						value = mbsc.getAttribute(objectName, requestedAttribute);
 					} catch (Exception e) {
-						log.warn("Failed reading attribute \"{}\" from {}: {}", attr, resolved, e.getMessage());
-						results.put(attr, null);
+						log.error(
+							"Hostname {} - Error fetching attribute {} for MBean {}: {}",
+							host,
+							requestedAttribute,
+							objectName,
+							e.getMessage()
+						);
 					}
-				}
+					row.add(value == null ? EMPTY : value.toString());
+				});
+				results.add(row);
 			}
+
 			return results;
 		} catch (IOException e) {
-			log.error("I/O error connecting to JMX {}:{} → {}", host, port, e.getMessage());
-			return Map.of();
+			log.error("Hostname {} - I/O error connecting to JMX:{} → {}", host, port, e.getMessage());
+			return results;
 		}
 	}
 }

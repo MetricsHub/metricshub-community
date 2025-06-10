@@ -14,7 +14,7 @@ package org.metricshub.extension.jmx;
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
+ * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
@@ -27,11 +27,13 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
+import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -87,7 +89,7 @@ public class JmxExtension implements IProtocolExtension {
 		}
 
 		JmxConfiguration jmxConfig = (JmxConfiguration) hostConfiguration.getConfigurations().get(JmxConfiguration.class);
-		String host = jmxConfig.getHost();
+		String host = jmxConfig.getHostname();
 		int port = jmxConfig.getPort();
 		String url = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port);
 
@@ -105,7 +107,7 @@ public class JmxExtension implements IProtocolExtension {
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof JmxSource jmxSource) {
-			return JmxSourceProcessor.process(jmxSource);
+			return new JmxSourceProcessor(jmxRequestExecutor).process(jmxSource, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -154,7 +156,7 @@ public class JmxExtension implements IProtocolExtension {
 		}
 	}
 
-	public static JsonMapper newObjectMapper() {
+	public JsonMapper newObjectMapper() {
 		return JsonMapper
 			.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
@@ -178,47 +180,48 @@ public class JmxExtension implements IProtocolExtension {
 	 * }
 	 */
 	@Override
-	public String executeQuery(IConfiguration configuration, JsonNode query) {
+	public String executeQuery(IConfiguration configuration, JsonNode query) throws Exception {
 		if (!(configuration instanceof JmxConfiguration jmxConfig)) {
 			throw new IllegalArgumentException("executeQuery requires JmxConfiguration");
 		}
 
-		// Build a HostConfiguration and TelemetryManager similar to HTTP extension
+		// Build the telemetry context
 		HostConfiguration hostConfig = HostConfiguration
 			.builder()
 			.configurations(Map.of(JmxConfiguration.class, configuration))
 			.build();
 		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfig).build();
 
-		String host = jmxConfig.getHost();
-		int port = jmxConfig.getPort();
 		String objectName = query.get("objectName").asText();
+		ObjectName parsedName = new ObjectName(objectName);
 
-		List<String> attrs = new java.util.ArrayList<>();
+		// Collect the list of attributes to fetch
+		List<String> attrs = new ArrayList<>();
 		for (JsonNode node : query.withArray("attributes")) {
 			attrs.add(node.asText());
 		}
 
-		Map<String, String> fetched;
-		try {
-			fetched = jmxRequestExecutor.fetchAttributes(host, port, objectName, attrs, 0L);
-		} catch (Exception e) {
-			log.debug(
-				"Hostname {} - Error fetching JMX attributes for {} at {}:{} → {}",
-				telemetryManager.getHostname(),
-				objectName,
-				host,
-				port,
-				e.getMessage()
-			);
-			return "";
+		// fetchBeanInfo returns List<List<String>>, each inner List is assumed [name, value]
+		List<List<String>> fetched = jmxRequestExecutor.fetchBeanInfo(
+			jmxConfig,
+			objectName,
+			attrs,
+			parsedName.getKeyPropertyList().keySet().stream().toList()
+		);
+
+		// Build the "attr=value" pairs
+		List<String> pairs = new ArrayList<>();
+		for (List<String> entry : fetched) {
+			if (entry.size() >= 2) {
+				String name = entry.get(0);
+				String value = entry.get(1);
+				pairs.add(name + "=" + (value == null ? "<null>" : value));
+			} else {
+				// Guard against unexpected shape
+				pairs.add(entry.toString());
+			}
 		}
 
-		List<String> pairs = new java.util.ArrayList<>();
-		for (String a : attrs) {
-			String v = fetched.get(a);
-			pairs.add(String.format("%s=%s", a, (v == null ? "<null>" : v)));
-		}
 		return String.join("; ", pairs);
 	}
 }

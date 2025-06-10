@@ -2,7 +2,7 @@ package org.metricshub.extension.jmx;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub OsCommand Extension
+ * MetricsHub JMX Extension
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -46,30 +46,22 @@ public class JmxConfiguration implements IConfiguration {
 
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = MultiValueDeserializer.class)
-	private String host;
+	private String hostname;
 
 	@Builder.Default
 	@JsonSetter(nulls = SKIP)
 	private Integer port = 1099;
 
 	@Override
-	public String getHostname() {
-		return "";
-	}
-
-	@Override
-	public void setHostname(String hostname) {}
-
-	@Override
 	public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {
 		StringHelper.validateConfigurationAttribute(
-			host,
+			hostname,
 			h -> (h == null || h.isBlank()),
 			() ->
 				String.format(
 					"Resource %s - Invalid JMX host configured. Host: %s. Please verify host value.",
 					resourceKey,
-					host
+					hostname
 				)
 		);
 
@@ -87,11 +79,11 @@ public class JmxConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return JmxConfiguration.builder().host(host).port(port).build();
+		return JmxConfiguration.builder().hostname(hostname).port(port).build();
 	}
 
 	@Override
 	public String toString() {
-		return String.format("JMX/%s:%d", host, port);
+		return String.format("JMX/%s:%d", hostname, port);
 	}
 }

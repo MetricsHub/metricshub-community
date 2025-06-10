@@ -477,7 +477,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				if (columnIndex < row.size()) {
 					final String value = row.get(columnIndex).replace("0x", EMPTY).replace(":", EMPTY).replaceAll("\\s*", EMPTY);
 					if (HEXA_PATTERN.matcher(value).matches()) {
-						row.set(columnIndex, String.valueOf(Long.parseLong(value, 16)));
+						row.set(columnIndex, String.valueOf(Long.parseUnsignedLong(value, 16)));
 						return;
 					}
 				}

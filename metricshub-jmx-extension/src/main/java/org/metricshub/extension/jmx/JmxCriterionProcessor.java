@@ -2,7 +2,7 @@ package org.metricshub.extension.jmx;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub OsCommand Extension
+ * MetricsHub JMX Extension
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -23,8 +23,8 @@ package org.metricshub.extension.jmx;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Pattern;
+import javax.management.ObjectName;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
@@ -57,83 +57,85 @@ public class JmxCriterionProcessor {
 		}
 
 		HostConfiguration hostConfig = telemetryManager.getHostConfiguration();
-		if (hostConfig == null) {
-			log.debug("No HostConfiguration; cannot process JMX criterion {}.", jmxCriterion);
-			return CriterionTestResult.empty();
-		}
-
-		if (!hostConfig.getConfigurations().containsKey(JmxConfiguration.class)) {
-			log.debug("JMX not configured on this host; cannot process criterion {}.", jmxCriterion);
+		if (hostConfig == null || !hostConfig.getConfigurations().containsKey(JmxConfiguration.class)) {
+			log.debug("JMX not configured; cannot process criterion {}.", jmxCriterion);
 			return CriterionTestResult.empty();
 		}
 		JmxConfiguration jmxConfig = (JmxConfiguration) hostConfig.getConfigurations().get(JmxConfiguration.class);
-		String host = jmxConfig.getHost();
-		int port = jmxConfig.getPort();
-		long timeout = (jmxCriterion.getTimeoutSeconds() == null || jmxCriterion.getTimeoutSeconds() <= 0)
-			? jmxCriterion.getTimeoutSeconds()
-			: jmxCriterion.getTimeoutSeconds();
 
-		Map<String, String> fetched;
+		List<List<String>> fetched;
+		ObjectName parsedName;
 		try {
+			parsedName = new ObjectName(jmxCriterion.getObjectName());
 			fetched =
-				jmxExecutor.fetchAttributes(host, port, jmxCriterion.getObjectName(), jmxCriterion.getAttributes(), timeout);
+				jmxExecutor.fetchBeanInfo(
+					jmxConfig,
+					jmxCriterion.getObjectName(),
+					jmxCriterion.getAttributes(),
+					parsedName.getKeyPropertyList().keySet().stream().toList()
+				);
 		} catch (Exception e) {
-			String errMsg = String.format(
+			String err = String.format(
 				"Connector %s - error fetching attributes %s from MBean \"%s\" on %s:%d: %s",
 				connectorId,
 				jmxCriterion.getAttributes(),
 				jmxCriterion.getObjectName(),
-				host,
-				port,
+				jmxConfig.getHostname(),
+				jmxConfig.getPort(),
 				e.getMessage()
 			);
-			log.warn(errMsg, e);
+			log.warn(err, e);
 			return CriterionTestResult.error(jmxCriterion, e);
 		}
+
+		int keyCount = parsedName.getKeyPropertyList().size();
+		List<String> attrs = jmxCriterion.getAttributes() == null ? List.of() : jmxCriterion.getAttributes();
+		List<String> patterns = jmxCriterion.getExpectedPatterns() == null ? List.of() : jmxCriterion.getExpectedPatterns();
 
 		List<String> messages = new ArrayList<>();
 		boolean overallSuccess = true;
 
-		List<String> attrList = jmxCriterion.getAttributes() == null ? List.of() : jmxCriterion.getAttributes();
-		List<String> patterns = jmxCriterion.getExpectedPatterns() == null ? List.of() : jmxCriterion.getExpectedPatterns();
-
-		for (int i = 0; i < attrList.size(); i++) {
-			String attr = attrList.get(i);
-			String value = fetched.get(attr); // may be null
+		// Evaluate each attribute against its pattern
+		for (int i = 0; i < attrs.size(); i++) {
+			String attrName = attrs.get(i);
+			String value = (fetched.size() > i && fetched.get(i).size() > keyCount + i)
+				? fetched.get(i).get(keyCount + i)
+				: null;
 			String pattern = (i < patterns.size()) ? patterns.get(i) : null;
 
 			if (pattern == null || pattern.isBlank()) {
 				if (value == null) {
 					overallSuccess = false;
-					messages.add(String.format("Attribute \"%s\" was not fetched (null).", attr));
+					messages.add(String.format("Attribute \"%s\" was not fetched (null).", attrName));
 				} else {
-					messages.add(String.format("Attribute \"%s\" fetched: %s", attr, value));
+					messages.add(String.format("Attribute \"%s\" fetched: %s", attrName, value));
 				}
+			} else if (value == null) {
+				overallSuccess = false;
+				messages.add(String.format("Attribute \"%s\" is null; cannot match pattern \"%s\".", attrName, pattern));
 			} else {
-				if (value == null) {
-					overallSuccess = false;
-					messages.add(String.format("Attribute \"%s\" is null; cannot match pattern \"%s\".", attr, pattern));
+				Pattern regex = Pattern.compile(PslUtils.psl2JavaRegex(pattern), Pattern.CASE_INSENSITIVE);
+				if (regex.matcher(value).find()) {
+					messages.add(String.format("Attribute \"%s\" matched pattern \"%s\" → value: %s", attrName, pattern, value));
 				} else {
-					Pattern javaRegex = Pattern.compile(PslUtils.psl2JavaRegex(pattern), Pattern.CASE_INSENSITIVE);
-					if (javaRegex.matcher(value).find()) {
-						messages.add(String.format("Attribute \"%s\" matched pattern \"%s\" → value: %s", attr, pattern, value));
-					} else {
-						overallSuccess = false;
-						messages.add(
-							String.format("Attribute \"%s\" did NOT match pattern \"%s\" → value: %s", attr, pattern, value)
-						);
-					}
+					overallSuccess = false;
+					messages.add(
+						String.format("Attribute \"%s\" did NOT match pattern \"%s\" → value: %s", attrName, pattern, value)
+					);
 				}
 			}
 		}
 
+		// Build result string of name=value pairs
 		List<String> resultPairs = new ArrayList<>();
-		for (String attr : attrList) {
-			String v = fetched.get(attr);
-			resultPairs.add(String.format("%s=%s", attr, (v == null ? "<null>" : v)));
+		for (int i = 0; i < attrs.size(); i++) {
+			String a = attrs.get(i);
+			String v = (fetched.size() > i && fetched.get(i).size() > keyCount + i)
+				? fetched.get(i).get(keyCount + i)
+				: "<null>";
+			resultPairs.add(String.format("%s=%s", a, v));
 		}
 		String resultString = String.join("; ", resultPairs);
-
 		String humanMessage = String.join(" | ", messages);
 
 		return CriterionTestResult.builder().result(resultString).message(humanMessage).success(overallSuccess).build();

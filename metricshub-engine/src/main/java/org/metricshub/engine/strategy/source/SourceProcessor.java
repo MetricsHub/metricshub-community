@@ -29,13 +29,11 @@ import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.management.MBeanServerConnection;
-import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -88,39 +86,7 @@ public class SourceProcessor implements ISourceProcessor {
 	@WithSpan("Source JMX Exec")
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") JmxSource src) throws Exception {
-		String host = src.getHost(); // you’ll add host/port fields to JmxSource
-		int port = src.getPort();
-		MBeanServerConnection mbsc = connectViaJmx(host, port);
-
-		SourceTable table = new SourceTable();
-		List<List<String>> rows = new ArrayList<>();
-
-		// normalize singular→list
-		List<JmxSource.MBeanConfig> configs = src.getMbeans() != null
-			? src.getMbeans()
-			: Collections.singletonList(src.getMbean());
-
-		for (JmxSource.MBeanConfig cfg : configs) {
-			ObjectName pattern = new ObjectName(cfg.getObjectName());
-			for (ObjectName name : mbsc.queryNames(pattern, null)) {
-				// fetch each attribute
-				List<String> row = new ArrayList<>();
-				// extract keys if requested
-				if (cfg.getKeysAsAttributes() != null) {
-					for (String key : cfg.getKeysAsAttributes()) {
-						row.add(name.getKeyProperty(key));
-					}
-				}
-				for (String attr : cfg.getAttributes()) {
-					Object v = mbsc.getAttribute(name, attr);
-					row.add(v == null ? "" : v.toString());
-				}
-				rows.add(row);
-			}
-		}
-
-		table.setTable(rows);
-		return table;
+		return processSourceThroughExtension(src);
 	}
 
 	private MBeanServerConnection connectViaJmx(String host, int port) throws IOException {

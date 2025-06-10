@@ -22,14 +22,11 @@ package org.metricshub.engine.connector.model.monitor.task.source;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.FAIL;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
@@ -38,7 +35,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -46,6 +43,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * Represents a JMX source task that fetches metrics via JMX.
+ * Supports a single MBean ("mbean") with its "attributes" and optional "keysAsAttributes".
  */
 @Data
 @NoArgsConstructor
@@ -54,40 +52,50 @@ public class JmxSource extends Source {
 
 	private static final long serialVersionUID = 1L;
 
-	/** JMX host */
+	/**
+	 * The MBean ObjectName pattern to query.
+	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
-	@JsonDeserialize(using = NonBlankDeserializer.class)
-	private String host;
+	private String mbean;
 
-	/** JMX port */
-	private int port;
-
-	/** Multiple MBean configurations */
+	/**
+	 * The list of attributes to fetch from the MBean.
+	 */
 	@JsonSetter(nulls = FAIL)
-	private List<MBeanConfig> mbeans;
+	private List<String> attributes;
 
-	/** Single MBean configuration */
-	private MBeanConfig mbean;
+	/**
+	 * Optional list of key‐property names (e.g. "scope", "name") to include as extra columns.
+	 */
+	@JsonSetter(nulls = FAIL)
+	private List<String> keysAsAttributes;
 
 	@Builder
 	@JsonCreator
 	public JmxSource(
-		@JsonProperty("type") String type,
-		@JsonProperty("computes") List<Compute> computes,
-		@JsonProperty("forceSerialization") boolean forceSerialization,
-		@JsonProperty(value = "host", required = true) @NonNull String host,
-		@JsonProperty("port") int port,
-		@JsonProperty("mbeans") List<MBeanConfig> mbeans,
-		@JsonProperty("mbean") MBeanConfig mbean,
-		@JsonProperty("key") String key,
-		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
+		@JsonProperty(value = "type") String type,
+		@JsonProperty(value = "computes") List<Compute> computes,
+		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
+		@JsonProperty(value = "mbean") String mbean,
+		@JsonProperty(value = "attributes") List<String> attributes,
+		@JsonProperty(value = "keysAsAttributes") List<String> keysAsAttributes,
+		@JsonProperty(value = "key") String key,
+		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
-		this.host = host;
-		this.port = port;
-		this.mbeans = mbeans;
+		if (mbean == null || mbean.isBlank()) {
+			throw new IllegalArgumentException("A JmxSource must specify a non‐blank 'mbean' field");
+		}
 		this.mbean = mbean;
+
+		@SuppressWarnings("unchecked")
+		List<String> attrs = (attributes != null) ? attributes : List.of();
+		this.attributes = attrs;
+
+		@SuppressWarnings("unchecked")
+		List<String> keys = (keysAsAttributes != null) ? keysAsAttributes : List.of();
+		this.keysAsAttributes = keys;
 	}
 
 	@Override
@@ -97,37 +105,29 @@ public class JmxSource extends Source {
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.host(host)
-			.port(port)
-			.mbeans(mbeans != null ? new ArrayList<>(mbeans) : null)
+			.computes(getComputes() != null ? List.copyOf(getComputes()) : null)
 			.mbean(mbean)
+			.attributes(List.copyOf(attributes))
+			.keysAsAttributes(keysAsAttributes != null ? List.copyOf(keysAsAttributes) : null)
+			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
 			.build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		host = updater.apply(host);
-		if (mbeans != null) {
-			mbeans.forEach(cfg -> cfg.update(updater));
-		}
-		if (mbean != null) {
-			mbean.update(updater);
-		}
+		this.mbean = updater.apply(this.mbean);
+		// attributes and keysAsAttributes are literals; no update needed
 	}
 
 	@Override
 	public String toString() {
-		StringJoiner sj = new StringJoiner(NEW_LINE);
+		StringJoiner sj = new StringJoiner(MetricsHubConstants.NEW_LINE);
 		sj.add(super.toString());
-		addNonNull(sj, "- host=", host);
-		addNonNull(sj, "- port=", String.valueOf(port));
-		if (mbeans != null) {
-			addNonNull(sj, "- mbeans=", mbeans.toString());
-		}
-		if (mbean != null) {
-			addNonNull(sj, "- mbean=", mbean.toString());
+
+		addNonNull(sj, "- mbean=", mbean);
+		addNonNull(sj, "- attributes=", attributes.toString());
+		if (keysAsAttributes != null && !keysAsAttributes.isEmpty()) {
+			addNonNull(sj, "- keysAsAttributes=", keysAsAttributes.toString());
 		}
 		return sj.toString();
 	}
@@ -138,45 +138,6 @@ public class JmxSource extends Source {
 			return sourceProcessor.process(this);
 		} catch (Exception e) {
 			throw new RuntimeException("Error processing JmxSource: " + e.getMessage(), e);
-		}
-	}
-
-	/**
-	 * Configuration for a single MBean query.
-	 */
-	@Data
-	@Builder
-	@NoArgsConstructor
-	@EqualsAndHashCode
-	public static class MBeanConfig {
-
-		@NonNull
-		@JsonSetter(nulls = FAIL)
-		@JsonDeserialize(using = NonBlankDeserializer.class)
-		private String objectName;
-
-		@JsonSetter(nulls = FAIL)
-		private List<String> attributes;
-
-		private List<String> keysAsAttributes;
-
-		public MBeanConfig(@NonNull String objectName, List<String> attributes, List<String> keysAsAttributes) {
-			this.objectName = objectName;
-			this.attributes = attributes;
-			this.keysAsAttributes = keysAsAttributes;
-		}
-
-		public void update(UnaryOperator<String> updater) {
-			objectName = updater.apply(objectName);
-		}
-
-		@Override
-		public String toString() {
-			return new StringJoiner(", ")
-				.add("objectName=" + objectName)
-				.add("attributes=" + attributes)
-				.add("keysAsAttributes=" + keysAsAttributes)
-				.toString();
 		}
 	}
 }

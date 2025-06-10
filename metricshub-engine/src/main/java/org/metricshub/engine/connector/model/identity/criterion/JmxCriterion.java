@@ -21,40 +21,101 @@ package org.metricshub.engine.connector.model.identity.criterion;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import java.util.List;
-import lombok.AllArgsConstructor;
+import java.util.StringJoiner;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 /**
- * A “criterion” that fetches zero or more attributes from a single MBean
- * and optionally compares each value to a PSL regex.
+ * Connector detection criterion using JMX protocol.
  */
 @Data
-@Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 public class JmxCriterion extends Criterion {
 
+	private static final long serialVersionUID = 1L;
+
 	/**
-	 * MBean ObjectName pattern (wildcards allowed).
+	 * ObjectName pattern for the JMX criterion.
 	 */
+	@JsonSetter(nulls = SKIP)
 	private String objectName;
 
 	/**
-	 * List of attribute names to fetch. May be empty or null.
+	 * List of attributes to fetch from the MBean.
 	 */
+	@JsonSetter(nulls = SKIP)
 	private List<String> attributes;
 
 	/**
-	 * One PSL regex per attribute, or null/shorter list to skip comparison for some.
+	 * Expected result patterns (regexes) for the fetched attribute values.
 	 */
+	@JsonSetter(nulls = SKIP)
 	private List<String> expectedPatterns;
 
 	/**
-	 * Seconds to wait for JMX connect; ≤0 means “use default.”
+	 * Optional error message if the criterion fails.
 	 */
-	@Builder.Default
-	private Long timeoutSeconds = 10L;
+	private String errorMessage;
+
+	/**
+	 * Constructor with builder for creating an instance of JmxCriterion.
+	 *
+	 * @param type              Type of the criterion.
+	 * @param forceSerialization Whether serialization should be forced.
+	 * @param objectName        ObjectName pattern to query.
+	 * @param attributes        Attributes to fetch from the MBean.
+	 * @param expectedPatterns  Regex patterns that the attribute values must match.
+	 * @param errorMessage      Error message to use if the criterion fails.
+	 */
+	@Builder
+	@JsonCreator
+	public JmxCriterion(
+		@JsonProperty(value = "type") String type,
+		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
+		@JsonProperty(value = "objectName") String objectName,
+		@JsonProperty(value = "attributes") List<String> attributes,
+		@JsonProperty(value = "expectedPatterns") List<String> expectedPatterns,
+		@JsonProperty(value = "errorMessage") String errorMessage
+	) {
+		super(type, forceSerialization);
+		this.objectName = objectName;
+
+		@SuppressWarnings("unchecked")
+		List<String> attrs = (attributes != null) ? attributes : List.of();
+		this.attributes = attrs;
+
+		@SuppressWarnings("unchecked")
+		List<String> patterns = (expectedPatterns != null) ? expectedPatterns : List.of();
+		this.expectedPatterns = patterns;
+
+		this.errorMessage = errorMessage;
+	}
+
+	@Override
+	public String toString() {
+		StringJoiner sj = new StringJoiner(NEW_LINE);
+		if (objectName != null) {
+			sj.add(new StringBuilder("- ObjectName: ").append(objectName));
+		}
+		if (attributes != null && !attributes.isEmpty()) {
+			sj.add(new StringBuilder("- Attributes: ").append(attributes));
+		}
+		if (expectedPatterns != null && !expectedPatterns.isEmpty()) {
+			sj.add(new StringBuilder("- ExpectedPatterns: ").append(expectedPatterns));
+		}
+		if (errorMessage != null) {
+			sj.add(new StringBuilder("- ErrorMessage: ").append(errorMessage));
+		}
+		return sj.toString();
+	}
 }
