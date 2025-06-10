@@ -41,7 +41,7 @@ public class MetricsHubAgentServer {
 	private static ConfigurableApplicationContext context;
 
 	/**
-	 * Starts the REST API server with the given AgentContext and port number.
+	 * Starts the server with the given AgentContext.
 	 *
 	 * @param agentContext the AgentContext to be used by the server
 	 */
@@ -57,7 +57,7 @@ public class MetricsHubAgentServer {
 			webConfig.forEach((key, value) -> args.add("--" + key + "=" + value));
 
 			// Get the application port number
-			var applicationPort = webConfig.getOrDefault("server.port", "8080");
+			final var applicationPort = webConfig.getOrDefault("server.port", "8080");
 
 			// Build the Spring application context with the provided AgentContextHolder
 			// and the application arguments then run it
@@ -110,7 +110,7 @@ public class MetricsHubAgentServer {
 			// Retrieve the AgentContextHolder bean from the spring application context
 			final AgentContextHolder holder = context.getBean(AgentContextHolder.class);
 			holder.setAgentContext(agentContext);
-			log.info("Updated AgentContext via AgentContextHolder.");
+			log.info("Updated AgentContext through the AgentContextHolder.");
 		} else {
 			log.warn("Application context is not initialized. Cannot update AgentContext.");
 		}

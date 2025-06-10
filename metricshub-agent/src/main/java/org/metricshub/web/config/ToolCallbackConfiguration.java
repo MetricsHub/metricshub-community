@@ -29,7 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration class whic provides {@link ToolCallback} instances for tools defined in different sources.
+ * Configuration class providing {@link ToolCallback} instances for tools defined in different sources.
  */
 @Configuration
 public class ToolCallbackConfiguration {

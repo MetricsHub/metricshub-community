@@ -88,7 +88,7 @@
 			<artifactId>protobuf-java</artifactId>
 		</dependency>
 
-		<!-- Spring Boot -->
+		<!-- Spring framework -->
 
 		<dependency>
 			<groupId>org.springframework.ai</groupId>

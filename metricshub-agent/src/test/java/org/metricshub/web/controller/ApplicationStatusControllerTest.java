@@ -22,7 +22,7 @@ class ApplicationStatusControllerTest {
 	@BeforeEach
 	void setup() {
 		applicationStatusService = Mockito.mock(ApplicationStatusService.class);
-		ApplicationStatusController controller = new ApplicationStatusController(applicationStatusService);
+		final ApplicationStatusController controller = new ApplicationStatusController(applicationStatusService);
 		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
 	}
 

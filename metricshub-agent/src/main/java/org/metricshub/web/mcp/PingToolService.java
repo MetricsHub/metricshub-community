@@ -67,7 +67,7 @@ public class PingToolService {
 	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
 	 */
 	@Tool(
-		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping, and whether it is reachable or not.",
+		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping in milliseconds, and whether it is reachable or not.",
 		name = "PingHost"
 	)
 	public PingResponse pingHost(
