@@ -101,6 +101,7 @@
 				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />
 				<item name="Grafana Dashboards" href="prometheus/grafana.html" />
 			</item>
+			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
 		</menu>
 
 		<menu name="Guides">
