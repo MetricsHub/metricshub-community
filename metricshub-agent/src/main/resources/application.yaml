@@ -21,6 +21,3 @@ web:
   spring.ai.mcp.server.capabilities.prompt: true
   spring.ai.mcp.server.capabilities.resource: true
   spring.ai.mcp.server.capabilities.tool: true
-  logging.level.org.apache.coyote: OFF
-  logging.level.org.apache.catalina: OFF
-  logging.level.org.springframework.boot.web.embedded.tomcat: OFF

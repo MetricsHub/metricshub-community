@@ -22,6 +22,7 @@ package org.metricshub.web;
  */
 
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
@@ -31,11 +32,11 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
 /**
- * Main application class for the MetricsHub REST API.
+ * Main application class for the MetricsHub Agent Server.
  */
 @SpringBootApplication
 @Slf4j
-public class RestApplication {
+public class MetricsHubAgentServer {
 
 	private static ConfigurableApplicationContext context;
 
@@ -52,11 +53,17 @@ public class RestApplication {
 			final Set<String> args = new HashSet<>();
 
 			// Fill the args set with the necessary web configuration parameters
-			agentContext.getAgentConfig().getWebConfig().forEach((key, value) -> args.add("--" + key + "=" + value));
+			final Map<String, String> webConfig = agentContext.getAgentConfig().getWebConfig();
+			webConfig.forEach((key, value) -> args.add("--" + key + "=" + value));
 
+			// Get the application port number
+			var applicationPort = webConfig.getOrDefault("server.port", "8080");
+
+			// Build the Spring application context with the provided AgentContextHolder
+			// and the application arguments then run it
 			context =
 				new SpringApplicationBuilder()
-					.sources(RestApplication.class)
+					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) ->
 						applicationContext
 							.getBeanFactory()
@@ -64,7 +71,7 @@ public class RestApplication {
 					)
 					.run(args.toArray(String[]::new));
 
-			log.info("Started Spring application with context class: {}", context.getClass().getName());
+			log.info("Started Spring application - Tomcat started on port: {}", applicationPort);
 		} catch (Exception e) {
 			log.error("Failed to start REST API server", e);
 		}
@@ -86,6 +93,7 @@ public class RestApplication {
 	 */
 	public void stopServer() {
 		if (context != null) {
+			// Close the application context to stop the server
 			context.close();
 		}
 	}
@@ -99,6 +107,7 @@ public class RestApplication {
 	 */
 	public static void updateAgentContext(final AgentContext agentContext) {
 		if (context != null) {
+			// Retrieve the AgentContextHolder bean from the spring application context
 			final AgentContextHolder holder = context.getBean(AgentContextHolder.class);
 			holder.setAgentContext(agentContext);
 			log.info("Updated AgentContext via AgentContextHolder.");

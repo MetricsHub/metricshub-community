@@ -21,14 +21,30 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.web.dto.ApplicationStatus;
+import org.metricshub.web.service.ApplicationStatusService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for status check endpoint.
+ * Controller for status of the MetricsHub Agent service.
  */
 @RestController
-public class StatusController {
+@RequestMapping("/api")
+public class ApplicationStatusController {
+
+	private ApplicationStatusService applicationStatusService;
+
+	/**
+	 * Constructor for ApplicationStatusController.
+	 * @param applicationStatusService the ApplicationStatusService to handle status requests.
+	 */
+	@Autowired
+	public ApplicationStatusController(final ApplicationStatusService applicationStatusService) {
+		this.applicationStatusService = applicationStatusService;
+	}
 
 	/**
 	 * Status check endpoint that returns a simple JSON response indicating the service is up.
@@ -36,7 +52,7 @@ public class StatusController {
 	 * @return A JSON string indicating the service status.
 	 */
 	@GetMapping("/status")
-	public String status() {
-		return "{ \"status\": \"UP\" }";
+	public ApplicationStatus status() {
+		return applicationStatusService.reportApplicationStatus();
 	}
 }

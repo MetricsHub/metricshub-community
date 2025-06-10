@@ -33,5 +33,8 @@ import org.metricshub.agent.context.AgentContext;
 @AllArgsConstructor
 public class AgentContextHolder {
 
+	/**
+	 * Returns the current {@link AgentContext} instance.
+	 */
 	private volatile AgentContext agentContext;
 }

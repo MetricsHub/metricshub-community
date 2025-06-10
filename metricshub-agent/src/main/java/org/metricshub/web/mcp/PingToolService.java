@@ -22,8 +22,7 @@ package org.metricshub.web.mcp;
  */
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.TextNode;
-import java.util.Optional;
+import com.fasterxml.jackson.databind.node.LongNode;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -38,12 +37,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class PingToolService {
 
+	/**
+	 * Default timeout for ping operations in seconds.
+	 */
+	private static final long DEFAULT_PING_TIMEOUT = 4L;
+
+	/**
+	 * The type of the ping extension.
+	 */
 	private static final String PING_EXTENSION_TYPE = "ping";
 
 	private AgentContextHolder agentContextHolder;
 
 	/**
 	 * Constructor for PingToolService.
+	 *
 	 * @param agentContext the AgentContext to be used by the tool
 	 */
 	@Autowired
@@ -52,20 +60,36 @@ public class PingToolService {
 	}
 
 	/**
-	 * Pings a host to check if it is reachable.
+	 * Pings a host with a specified timeout to check if it is reachable.
+	 *
 	 * @param hostname the hostname to ping
+	 * @param timeout  the timeout for the ping operation in seconds
 	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
 	 */
 	@Tool(
-		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping, and whether it is reachable or not."
+		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping, and whether it is reachable or not.",
+		name = "PingHost"
 	)
-	public PingResponse pingHost(@ToolParam(description = "The hostname to ping") final String hostname) {
-		final Optional<IProtocolExtension> pingExtention = agentContextHolder
+	public PingResponse pingHost(
+		@ToolParam(description = "The hostname to ping") final String hostname,
+		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout
+	) {
+		return runPing(hostname, timeout != null ? timeout : DEFAULT_PING_TIMEOUT);
+	}
+
+	/**
+	 * Pings a host with a specified timeout.
+	 *
+	 * @param hostname the hostname to ping
+	 * @param timeout  the timeout for the ping operation in seconds
+	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 */
+	private PingResponse runPing(final String hostname, final long timeout) {
+		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
-			.findExtensionByType(PING_EXTENSION_TYPE);
-		return pingExtention
-			.map((IProtocolExtension extension) -> pingHostWithExtensionSafe(hostname, extension))
+			.findExtensionByType(PING_EXTENSION_TYPE)
+			.map((IProtocolExtension extension) -> pingHostWithExtensionSafe(hostname, timeout, extension))
 			.orElse(PingResponse.builder().hostname(hostname).errorMessage("The extension is not available").build());
 	}
 
@@ -73,14 +97,19 @@ public class PingToolService {
 	 * Pings a host using the specified protocol extension.
 	 *
 	 * @param hostname  the hostname to ping
+	 * @param timeout   the timeout for the ping operation in seconds
 	 * @param extension the protocol extension to use for pinging
 	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
 	 */
-	private static PingResponse pingHostWithExtensionSafe(final String hostname, final IProtocolExtension extension) {
+	private static PingResponse pingHostWithExtensionSafe(
+		final String hostname,
+		final long timeout,
+		final IProtocolExtension extension
+	) {
 		try {
 			// Create and fill in a configuration ObjectNode
 			final var configurationNode = JsonNodeFactory.instance.objectNode();
-			configurationNode.set("timeout", new TextNode("4"));
+			configurationNode.set("timeout", new LongNode(timeout));
 
 			// Build an IConfiguration from the configuration ObjectNode
 			final IConfiguration configuration = extension.buildConfiguration(PING_EXTENSION_TYPE, configurationNode, null);

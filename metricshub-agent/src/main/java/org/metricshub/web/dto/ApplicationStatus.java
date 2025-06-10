@@ -1,4 +1,4 @@
-package org.metricshub.web.config;
+package org.metricshub.web.dto;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,27 +21,32 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.metricshub.web.mcp.PingToolService;
-import org.springframework.ai.tool.ToolCallback;
-import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Configuration class whic provides {@link ToolCallback} instances for tools defined in different sources.
+ * Represents the status of the application.
  */
-@Configuration
-public class ToolCallbackConfiguration {
+@NoArgsConstructor
+@Data
+@Builder
+@AllArgsConstructor
+public class ApplicationStatus {
+
+	private Status status;
+	private Map<String, String> agentInfo;
+	private boolean isOtelCollectorRunning;
+	private long numberOfObservedResources;
+	private long numberOfConfiguredResources;
 
 	/**
-	 * Provides a ToolCallbackProvider for the PingToolService.
-	 *
-	 * @param pingToolService the PingToolService to be used
-	 * @return a ToolCallbackProvider for the PingToolService
+	 * Enumeration representing the status of the application.
 	 */
-	@Bean
-	public ToolCallbackProvider metricshubTools(final PingToolService pingToolService) {
-		return MethodToolCallbackProvider.builder().toolObjects(pingToolService).build();
+	public enum Status {
+		UP,
+		DOWN
 	}
 }
