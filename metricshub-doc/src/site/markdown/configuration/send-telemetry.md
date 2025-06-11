@@ -26,7 +26,7 @@ This version of **MetricsHub Enterprise** leverages **version ${otelVersion}** o
 
 To configure the OpenTelemetry Collector of **MetricsHub Enterprise**, edit the `otel/otel-config.yaml` file.
 
-> **Important**: We recommend using an editor supporting the [Schemastore](https://www.schemastore.org/json#editors) to edit **MetricsHub**'s configuration YAML files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and [vscode.dev](https://vscode.dev), with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
+> **Important**: We recommend using an editor supporting the [Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and [vscode.dev](https://vscode.dev), with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
 ### Receivers
 
