@@ -7,11 +7,13 @@ description: How to configure AI assistants such as Claude or OpenAI to connect 
 
 You can configure AI-based assistants that support the MCP SSE transport, such as [Claude](https://claude.ai/) or [OpenAI](https://openai.com/), to interact in real time with **MetricsHub**'s internal knowledge and tools.
 
+![OpenAI Prompt - MetricsHub MCP](../images/metricshub-mcp-openai.png)
+
 The following tool is currently available:
 
-| Tool Name  | Parameters                                                                    | Description                                                                      |
-| ---------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `PingHost` | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, *optional*, default: 4s)</li></ul> | Checks if a host is reachable via ping and returns its response time and status. |
+| Tool Name  | Parameters                                                                                                | Description                                                                      |
+| ---------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `PingHost` | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li></ul> | Checks if a host is reachable via ping and returns its response time and status. |
 
 To get started, simply connect your AI assistant to the **MetricsHub MCP Server** using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Once the connection is established, the available tools will be automatically published and ready for use.
 
