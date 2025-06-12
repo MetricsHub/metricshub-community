@@ -112,6 +112,7 @@
 
 		<menu name="Custom Monitoring">
 		    <item name="Overview" href="custom/index.html"/>
+		    <item name="Database Query" href="custom/database-query.html"/>
 			<item name="Linux Service" href="custom/linux-service.html"/>
 			<item name="Linux Process" href="custom/linux-process.html"/>
 			<item name="SNMP Polling" href="custom/snmp-polling.html"/>

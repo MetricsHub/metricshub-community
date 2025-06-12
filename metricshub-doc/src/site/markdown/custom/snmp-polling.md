@@ -60,6 +60,9 @@ To achieve this use case, we:
 
 ```yaml
               mapping:
+                source: ${esc.d}{source::PowerCooling}
+                attributes:
+                  id: power-cooling-prod
                 metrics:
                   cooling.power: ${esc.d}1
 ```
@@ -86,6 +89,9 @@ Here is the complete YAML configuration:
                   type: snmpGet
                   oid: 1.3.6.1.4.1.4555.10.20.30.1.80031.5.1
               mapping:
+                source: ${esc.d}{source::PowerCooling}
+                attributes:
+                  id: power-cooling-prod
                 metrics:
                   cooling.power: ${esc.d}1
 ```
