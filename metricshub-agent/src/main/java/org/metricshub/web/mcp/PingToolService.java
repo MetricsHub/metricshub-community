@@ -52,7 +52,7 @@ public class PingToolService {
 	/**
 	 * Constructor for PingToolService.
 	 *
-	 * @param agentContext the AgentContext to be used by the tool
+	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
 	 */
 	@Autowired
 	public PingToolService(AgentContextHolder agentContextHolder) {
