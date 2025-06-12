@@ -79,7 +79,7 @@ To achieve this use case, we:
 
 ```yaml
               mapping:
-                source: ${esc.d}{source::monitors.grafana.simple.sources.grafanaHealth}
+                source: ${esc.d}{source::grafanaHealth}
                 attributes:
                   id: ${esc.d}2
                   service.instance.id: ${esc.d}2
@@ -130,7 +130,7 @@ Here is the complete YAML configuration:
                       ok: 1
                       default: 0
               mapping:
-                source: ${esc.d}{source::monitors.grafana.simple.sources.grafanaHealth}
+                source: ${esc.d}{source::grafanaHealth}
                 attributes:
                   id: ${esc.d}2
                   service.instance.id: ${esc.d}2
