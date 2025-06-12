@@ -96,6 +96,7 @@
 		</menu>
 
 		<menu name="Integrations">
+			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
 			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
 				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />

@@ -35,6 +35,7 @@ import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.web.MetricsHubAgentServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -89,6 +90,8 @@ public class MetricsHubAgentApplication implements Runnable {
 
 			// Start the Scheduler
 			agentContext.getTaskSchedulingService().start();
+
+			new Thread(() -> MetricsHubAgentServer.startServer(agentContext)).start();
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = agentContext.getConfigDirectory();
@@ -150,6 +153,8 @@ public class MetricsHubAgentApplication implements Runnable {
 			agentContext.build(alternateConfigDirectory, false);
 
 			agentContext.getTaskSchedulingService().start();
+
+			MetricsHubAgentServer.updateAgentContext(agentContext);
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
