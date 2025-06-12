@@ -1,5 +1,5 @@
 keywords: custom, database, sql, jdbc
-description: How to configure MetricsHub to poll a SQL-compatible database using JDBC.
+description: How to configure MetricsHub to poll SQL-compatible databases using JDBC.
 
 # Database Query
 
