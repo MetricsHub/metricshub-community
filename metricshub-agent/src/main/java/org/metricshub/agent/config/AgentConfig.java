@@ -22,6 +22,8 @@ package org.metricshub.agent.config;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+import static org.metricshub.agent.helper.AgentConstants.APPLICATION_YAML_FILE_NAME;
+import static org.metricshub.agent.helper.AgentConstants.OBJECT_MAPPER;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
@@ -38,8 +40,10 @@ import org.metricshub.agent.config.otel.OtelCollectorConfig;
 import org.metricshub.agent.deserialization.AttributesDeserializer;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.opentelemetry.OtelConfigConstants;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.deserialization.TimeDeserializer;
+import org.springframework.core.io.ClassPathResource;
 
 /**
  * AgentConfig represents the configuration for the MetricsHub agent. It includes settings for
@@ -141,6 +145,11 @@ public class AgentConfig {
 	@JsonSetter(nulls = SKIP)
 	private String patchDirectory;
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	@JsonProperty("web")
+	private Map<String, String> webConfig = loadWebConfig();
+
 	/**
 	 * Build a new empty instance
 	 *
@@ -149,4 +158,24 @@ public class AgentConfig {
 	public static AgentConfig empty() {
 		return AgentConfig.builder().build();
 	}
+
+	/**
+	 * Load the web configuration from the application.yaml file.
+	 *
+	 * @return Map containing the web configuration properties.
+	 */
+	private static Map<String, String> loadWebConfig() {
+		// Read the application.yaml file
+		final var classPathResource = new ClassPathResource(APPLICATION_YAML_FILE_NAME);
+		try {
+			return JsonHelper.deserialize(OBJECT_MAPPER, classPathResource.getInputStream(), WebConfig.class).web();
+		} catch (Exception e) {
+			throw new IllegalStateException("Cannot read application.yaml file.", e);
+		}
+	}
+
+	/**
+	 * Record representing the web configuration section of the {@value APPLICATION_YAML_FILE_NAME}
+	 */
+	private record WebConfig(Map<String, String> web) {}
 }

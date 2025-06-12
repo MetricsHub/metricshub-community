@@ -51,6 +51,14 @@
 				</ThreadContextMapFilter>
 			</appender-ref>
 		</logger>
+		<!--	Requests handling logger	-->
+		<logger name="org.springframework" level="off">
+			<appender-ref ref="Routing">
+				<ThreadContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
+					<KeyValuePair key="loggerLevel" value="OFF" />
+				</ThreadContextMapFilter>
+			</appender-ref>
+		</logger>
 		<!--	Agent logger	-->
 		<logger name="org.metricshub.agent" level="trace">
 			<appender-ref ref="Console" />

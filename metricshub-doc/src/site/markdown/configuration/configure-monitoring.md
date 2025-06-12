@@ -16,7 +16,7 @@ To reflect this organization, you are asked to define your **resource group** fi
 > * `./metricshub/lib/config` on Linux systems
 
 > **Important**: We recommend using an editor supporting the
-[Schemastore](https://www.schemastore.org/json#editors) to edit **MetricsHub**'s configuration YAML
+[Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML
  files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
