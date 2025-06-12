@@ -3,21 +3,49 @@ description: How to configure MetricsHub to poll SQL-compatible databases using 
 
 # Database Query
 
-<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=3|id=toc} -->
 
-You can configure **MetricsHub** to periodically poll any SQL-compatible database using JDBC, execute queries, retrieve tabular results, and push OpenTelemetry metrics with the extracted values.
+You can configure **MetricsHub** to periodically poll any SQL-compatible database using JDBC, execute custom queries, retrieve tabular results, and push OpenTelemetry metrics with the extracted values.
+
+> If the datatabase to be monitored is not currently supported by [MetricsHub](https://metricshub.com/docs/latest/connectors/tags/database.html) (e.g., **ClickHouse**, **Sybase**, etc.), you need to download and install the appropriate JDBC driver.
 
 In the example below, we configured **MetricsHub** to:
 
 * monitor the [`clickhouse-server`](https://clickhouse.com/) resource using JDBC
 * connect to a ClickHouse database
 * execute a custom SQL query
-* extract and expose database server metrics
+* extract and expose database server metrics.
 
 ## Procedure
 
-To achieve this use case, we:
+### Install the ClickHouse JDBC driver
 
+1. **Download** the ClickHouse JDBC driver:
+   [`clickhouse-jdbc-0.8.6-shaded-all.jar`](https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.8.6/clickhouse-jdbc-0.8.6-shaded-all.jar)
+2. **Copy** the downloaded `.jar` file in the `extensions/` directory of your **MetricsHub** installation.
+3. **Update** the service configuration file to include the driver in the classpath:
+
+    * **Community Edition**:
+
+      * Windows: `MetricsHub/app/MetricsHubServiceManager.cfg`
+      * Linux: `metricshub/lib/app/service.cfg`
+    * **Enterprise Edition**:
+
+      * Windows: `MetricsHub/app/MetricsHubEnterpriseService.cfg`
+      * Linux: `metricshub/lib/app/enterprise-service.cfg`
+
+    Example:
+
+    ```ini
+    [Application]
+    ...
+    app.classpath=$APPDIR\..\extensions\clickhouse-jdbc-0.8.6-shaded-all.jar
+    ```
+
+### Configure MetricsHub
+
+To achieve this use case, we:
+  
 * Declare the resource to be monitored (`clickhouse-server`) and its attributes (`host.name`, `host.type`)
 
 ```yaml
@@ -133,38 +161,6 @@ resources:
               db.server.storage.files: ${esc.d}5
               db.server.cache.usage: ${esc.d}6
 ```
-
-> **Note: JDBC Driver Requirement**
->
-> **MetricsHub** embeds JDBC drivers for the supported connectors listed in the [database connectors catalog](https://metricshub.com/docs/latest/connectors/tags/database.html).
->
-> When using a database outside of those supported connectors (e.g., **ClickHouse**, **Sybase**, etc.), you may need to download and install the appropriate JDBC driver.
->
-> For example, to monitor a **ClickHouse** database:
->
-> 1. **Download** the ClickHouse JDBC driver:
->    [`clickhouse-jdbc-0.8.6-shaded-all.jar`](https://repo1.maven.org/maven2/com/clickhouse/clickhouse-jdbc/0.8.6/clickhouse-jdbc-0.8.6-shaded-all.jar)
->
-> 2. **Copy** the downloaded `.jar` file in the `extensions/` directory of your **MetricsHub** installation.
->
-> 3. **Update** the service configuration file to include the driver in the classpath:
->
->    * **Community Edition**:
->
->      * Windows: `MetricsHub/app/MetricsHubServiceManager.cfg`
->      * Linux: `metricshub/lib/app/service.cfg`
->    * **Enterprise Edition**:
->
->      * Windows: `MetricsHub/app/MetricsHubEnterpriseService.cfg`
->      * Linux: `metricshub/lib/app/enterprise-service.cfg`
->
->    Example entry:
->
->    ```ini
->    [Application]
->    ...
->    app.classpath=$APPDIR\..\extensions\clickhouse-jdbc-0.8.6-shaded-all.jar
->    ```
 
 ## Supporting Resources
 
