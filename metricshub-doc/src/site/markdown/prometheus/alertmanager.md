@@ -5,13 +5,13 @@ description: MetricsHub ships with pre-made alert rules for Prometheus AlertMana
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-If your Prometheus server is configured to send alerts to an [AlertManager](https://prometheus.io/docs/alerting/latest/alertmanager/), you need to configure *Alert Rules* to be notified when issues occur. To simplify this process, **MetricsHub** provides the following alert rules that you can tailor to your specific needs:
+If your Prometheus server is configured to send alerts to [AlertManager](https://prometheus.io/docs/alerting/latest/alertmanager/), you need to configure *Alert Rules* to be notified when issues occur. To simplify this process, **MetricsHub** provides the following alert rules that you can tailor to your specific needs:
 
-| **Alert Rules** | **When to Use** | **Alerts Triggered When** |
-|-----------------|------------------|----------------------------|
-| **MetricsHub** | Always | <ul><li>A host cannot be reached</li><li>A connector has failed</li><li>The protocol has failed</li><li>The <strong>MetricsHub Agent</strong> is not sending metrics</li></ul>for more than 5 minutes. |
-| **Hardware** | Only when hardware monitoring is performed | <ul>  <li>Battery charge is critically or abnormally low</li>  <li>Devices report high error rates (e.g. CPU, memory, disks, network)</li>  <li>Fan speed is too low</li>  <li>LUN has too few or no available paths</li>  <li>Network card error ratio is high</li>  <li>Physical disk endurance is low</li>  <li>Power supply usage is abnormally high</li>  <li>Temperature or voltage is out of range</li>  <li>Hardware is degraded, failed, missing, or predicted to fail.</li> </ul> |
-| **System** | Only when system monitoring is performed | <ul><li>CPU usage, file system utilization, memory usage, and bandwidth usage are abnormally high</li><li>Too many network errors are detected</li><li>An excessive number of page faults occur per second over an extended period.</li></ul> |
+| **Alert Rules** | **When to Use**                       | **Alerts Triggered When**                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+|-----------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **MetricsHub**  | Always                                | <ul><li>A host cannot be reached</li><li>A connector has failed</li><li>A protocol has failed</li><li>The <strong>MetricsHub Agent</strong> is not sending metrics.</li>                                                                                                                                                                                                                                                                                                                           |
+| **Hardware**    | When hardware monitoring is performed | <ul>  <li>Battery charge is critically or abnormally low</li>  <li>Devices report high error rates (e.g. CPU, memory, disks, network)</li>  <li>Fan speed is too low</li>  <li>LUN has too few or no available paths</li>  <li>Network card error ratio is high</li>  <li>Physical disk endurance is low</li>  <li>Power supply usage is abnormally high</li>  <li>Temperature or voltage is out of range</li>  <li>A hardware device is missing, degraded, predicted to fail or failing.</li> </ul> |
+| **System**      | When system monitoring is performed   | <ul><li>CPU usage, file system utilization, memory usage, or bandwidth usage is abnormally high</li><li>Too many network errors are detected</li><li>A high page faults rate occurs over an extended period of time.</li></ul>                                                                                                                                                                                                                                                                       |
 
 > **Notes:**
 > 
@@ -19,9 +19,9 @@ If your Prometheus server is configured to send alerts to an [AlertManager](http
 > 
 > - To see alert descriptions, you must use the full **Prometheus Alertmanager** interface (usually available on port `9093`). The simple web UI bundled with Prometheus **does not display this additional alert information.**
 
-## Thresholds in Hardware Alert Rules
+## Alert Rules Thresholds
 
-The hardware alert rules rely on two types of thresholds:
+The alert rules rely on two types of thresholds:
 
 * **Static thresholds**: Used when the same threshold applies to all devices (e.g., battery charge). The alert rule compares the metric to a fixed, hardcoded value.
 * **Dynamic thresholds**: Used when thresholds vary across devices (e.g., temperature or fan speed). In this case, two additional metrics define the *warning* and *critical* thresholds. The alert rules compare the *base metric* to the corresponding *threshold metrics*.
