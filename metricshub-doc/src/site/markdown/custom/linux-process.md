@@ -69,7 +69,7 @@ Here is the complete YAML configuration:
 ## Supporting Resources
 
 * [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring.html#resource-attributes)
+* [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
 * [SSH](../configuration/configure-monitoring.md#ssh)
-* [Customize resource monitoring](../configuration/configure-monitoring.html#customize-resource-monitoring)
-* [Customize data collection](../configuration/configure-monitoring.html#customize-data-collection)
+* [Customize resource monitoring](../configuration/configure-monitoring.md#customize-resource-monitoring)
+* [Customize data collection](../configuration/configure-monitoring.md#customize-data-collection)

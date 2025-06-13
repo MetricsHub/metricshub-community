@@ -2,7 +2,7 @@ package org.metricshub.agent.service;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -72,7 +72,7 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.stop();
 
-			assertTrue(otelProcess.isStopped());
+			assertFalse(otelProcess.isStarted(), "Process should not be started after stop");
 		}
 	}
 
@@ -105,11 +105,11 @@ class OtelCollectorProcessServiceTest {
 
 			final OtelCollectorProcessService otelProcess = new OtelCollectorProcessService(agentConfig);
 
-			assertDoesNotThrow(() -> otelProcess.start());
+			assertDoesNotThrow(otelProcess::start);
 
 			otelProcess.stop();
 
-			assertTrue(otelProcess.isStopped());
+			assertFalse(otelProcess.isStarted(), "Process should not be started after stop");
 		}
 	}
 
@@ -154,7 +154,7 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.stop();
 
-			assertTrue(otelProcess.isStopped());
+			assertFalse(otelProcess.isStarted(), "Process should not be started after stop");
 		}
 	}
 
@@ -165,7 +165,10 @@ class OtelCollectorProcessServiceTest {
 		doReturn(true).when(otelCollectorConfigMock).isDisabled();
 		final OtelCollectorProcessService otelCollectorProcessService = new OtelCollectorProcessService(agentConfig);
 
-		assertDoesNotThrow(() -> otelCollectorProcessService.launch());
+		assertDoesNotThrow(
+			otelCollectorProcessService::launch,
+			"The collector is disabled, so it should not throw an exception"
+		);
 	}
 
 	@Test
@@ -177,7 +180,10 @@ class OtelCollectorProcessServiceTest {
 			.toProcessConfig();
 		final OtelCollectorProcessService otelCollectorProcessService = new OtelCollectorProcessService(agentConfig);
 
-		assertDoesNotThrow(() -> otelCollectorProcessService.launch());
+		assertDoesNotThrow(
+			otelCollectorProcessService::launch,
+			"The collector executable does not exist, so it should not throw an exception"
+		);
 	}
 
 	@Test
@@ -187,6 +193,9 @@ class OtelCollectorProcessServiceTest {
 		doReturn(ProcessConfig.builder().commandLine(List.of()).build()).when(otelCollectorConfigMock).toProcessConfig();
 		final OtelCollectorProcessService otelCollectorProcessService = new OtelCollectorProcessService(agentConfig);
 
-		assertDoesNotThrow(() -> otelCollectorProcessService.launch());
+		assertDoesNotThrow(
+			otelCollectorProcessService::launch,
+			"The collector executable is missing, so it should not throw an exception"
+		);
 	}
 }
