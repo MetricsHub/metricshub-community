@@ -42,7 +42,7 @@ groups:
       summary: >
         {{ $labels.host_name }} — Protocol {{ $labels.protocol }} is down
       description: |
-        The {{ $labels.protocol }} protocol on host {{ $labels.host_name }} has been reporting a down status  for at least 5 minutes.
+        The {{ $labels.protocol }} protocol on host {{ $labels.host_name }} has been reporting a down status for at least 5 minutes.
         Consequence: If a protocol fails, monitoring and communication with the host may be interrupted.
         Recommended Action: Verify the protocol configuration and service health. Check firewall or network routes.
 
