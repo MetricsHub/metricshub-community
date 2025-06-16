@@ -94,12 +94,12 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>metricshub-jmx-extension</artifactId>
+			<artifactId>metricshub-jawk-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
-			<artifactId>metricshub-jawk-extension</artifactId>
+			<artifactId>metricshub-jmx-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
@@ -216,23 +216,23 @@
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
-									<artifactId>metricshub-jawk-extension</artifactId>
-									<destFileName>metricshub-jawk-extension.jar</destFileName>
-								</artifactItem>
-								<artifactItem>
-									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jdbc-extension</artifactId>
 									<destFileName>metricshub-jdbc-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
-									<artifactId>metricshub-yaml-configuration-extension</artifactId>
-									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
+									<artifactId>metricshub-jawk-extension</artifactId>
+									<destFileName>metricshub-jawk-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jmx-extension</artifactId>
 									<destFileName>metricshub-jmx-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-yaml-configuration-extension</artifactId>
+									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
 								</artifactItem>
 							</artifactItems>
 						</configuration>

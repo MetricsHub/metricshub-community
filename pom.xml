@@ -103,10 +103,10 @@
 		<module>metricshub-internaldb-extension</module>
 		<module>metricshub-jawk-extension</module>
 		<module>metricshub-jdbc-extension</module>
+        <module>metricshub-jmx-extension</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
-        <module>metricshub-jmx-extension</module>
 		<module>metricshub-yaml-configuration-extension</module>
 	</modules>
 
