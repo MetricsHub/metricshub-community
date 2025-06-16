@@ -3122,4 +3122,33 @@ class ComputeProcessorTest {
 			"Expected the method to return false for an index equal to the collection size."
 		);
 	}
+
+	@Test
+	void testConvertHex2Dec() {
+		// Prepare the sourceTable table with hex values
+		final List<List<String>> table = Arrays.asList(
+			Arrays.asList("ID1", "FFFFFFFFFFFFFFE7"), // Large negative-like hex for unsigned conversion
+			Arrays.asList("ID2", "7FFFFFFFFFFFFFFE"), // Large positive hex
+			Arrays.asList("ID3", "123ABCD") // A smaller hex value
+		);
+
+		// Set up the source table with our input data
+		sourceTable.setTable(table);
+
+		// Build a conversion operation: convert the 2nd column (index 2) from HEX to DEC
+		final Convert convert = Convert.builder().column(2).conversion(ConversionType.HEX_2_DEC).build();
+
+		// Execute the conversion on the source table
+		computeProcessor.process(convert);
+
+		// Define the expected results: the decimal equivalents of the hex values
+		final List<List<String>> expected = Arrays.asList(
+			Arrays.asList("ID1", "18446744073709551591"),
+			Arrays.asList("ID2", "9223372036854775806"),
+			Arrays.asList("ID3", "19114957")
+		);
+
+		// Verify the converted table matches our expected values
+		assertEquals(expected, sourceTable.getTable());
+	}
 }

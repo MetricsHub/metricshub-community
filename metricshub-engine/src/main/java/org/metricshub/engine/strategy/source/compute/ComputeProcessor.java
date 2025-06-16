@@ -37,6 +37,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -477,7 +478,16 @@ public class ComputeProcessor implements IComputeProcessor {
 				if (columnIndex < row.size()) {
 					final String value = row.get(columnIndex).replace("0x", EMPTY).replace(":", EMPTY).replaceAll("\\s*", EMPTY);
 					if (HEXA_PATTERN.matcher(value).matches()) {
-						row.set(columnIndex, String.valueOf(Long.parseUnsignedLong(value, 16)));
+						try {
+							row.set(columnIndex, new BigInteger(value, 16).toString());
+						} catch (NumberFormatException exception) {
+							log.warn(
+								"Hostname {} - Data is not correctly formatted for Hex2Dec conversion: {} at index {}.",
+								hostname,
+								value,
+								columnIndex
+							);
+						}
 						return;
 					}
 				}

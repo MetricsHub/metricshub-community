@@ -2,6 +2,7 @@ package org.metricshub.agent.process.runtime;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -83,11 +84,11 @@ class AbstractProcessTest {
 
 				testProcess.stop();
 
-				assertTrue(testProcess.stopped);
+				assertFalse(testProcess.started);
 				assertTrue(testProcess.onBeforeProcessStop);
 				assertTrue(testProcess.onAfterProcessStop);
 
-				assertDoesNotThrow(() -> testProcess.stop());
+				assertDoesNotThrow(testProcess::stop);
 			}
 		}
 
@@ -134,11 +135,11 @@ class AbstractProcessTest {
 
 				testProcess.stop();
 
-				assertTrue(testProcess.stopped);
+				assertFalse(testProcess.started);
 				assertTrue(testProcess.onBeforeProcessStop);
 				assertTrue(testProcess.onAfterProcessStop);
 
-				assertDoesNotThrow(() -> testProcess.stop());
+				assertDoesNotThrow(testProcess::stop);
 			}
 		}
 	}
