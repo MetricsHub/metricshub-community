@@ -21,123 +21,116 @@ package org.metricshub.extension.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.ArrayList;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import java.util.List;
 import java.util.regex.Pattern;
-import javax.management.ObjectName;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.configuration.HostConfiguration;
-import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
+import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Reads zero or more attributes from one MBean and compares each against an optional PSL regex.
+ * Reads zero or more attributes from one MBean and compares each against an optional expected result.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class JmxCriterionProcessor {
 
-	private final JmxRequestExecutor jmxExecutor;
+	protected static final String JMX_TEST_SUCCESS = "Hostname %s - JMX test succeeded. Returned result: %s.";
 
-	public JmxCriterionProcessor() {
-		this.jmxExecutor = new JmxRequestExecutor();
-	}
+	@NonNull
+	private JmxRequestExecutor jmxRequestExecutor;
 
+	/**
+	 * Processes a JMX criterion by executing an JMX query.
+	 *
+	 * @param jmxCriterion     The criterion including the JMX query.
+	 * @param connectorId      The ID of the connector used for the JMX request.
+	 * @param telemetryManager The telemetry manager providing access to host configuration
+	 * @return {@link CriterionTestResult} instance.
+	 */
 	public CriterionTestResult process(
-		final Criterion criterion,
+		final JmxCriterion jmxCriterion,
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
-		if (!(criterion instanceof JmxCriterion jmxCriterion)) {
-			throw new IllegalArgumentException(
-				"Expected JmxCriterion, got " + (criterion == null ? "<null>" : criterion.getClass().getSimpleName())
+		if (jmxCriterion == null) {
+			return CriterionTestResult.error(
+				jmxCriterion,
+				"Malformed criterion. Cannot perform detection. Connector ID: " + connectorId
 			);
 		}
 
-		HostConfiguration hostConfig = telemetryManager.getHostConfiguration();
-		if (hostConfig == null || !hostConfig.getConfigurations().containsKey(JmxConfiguration.class)) {
-			log.debug("JMX not configured; cannot process criterion {}.", jmxCriterion);
-			return CriterionTestResult.empty();
-		}
-		JmxConfiguration jmxConfig = (JmxConfiguration) hostConfig.getConfigurations().get(JmxConfiguration.class);
+		final var jmxConfiguration = (JmxConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(JmxConfiguration.class);
 
-		List<List<String>> fetched;
-		ObjectName parsedName;
+		if (jmxConfiguration == null) {
+			return CriterionTestResult.error(jmxCriterion, "The JMX credentials are not configured for this host.");
+		}
+
 		try {
-			parsedName = new ObjectName(jmxCriterion.getObjectName());
-			fetched =
-				jmxExecutor.fetchBeanInfo(
-					jmxConfig,
-					jmxCriterion.getObjectName(),
-					jmxCriterion.getAttributes(),
-					parsedName.getKeyPropertyList().keySet().stream().toList()
-				);
-		} catch (Exception e) {
-			String err = String.format(
-				"Connector %s - error fetching attributes %s from MBean \"%s\" on %s:%d: %s",
-				connectorId,
-				jmxCriterion.getAttributes(),
+			final List<List<String>> queryResult = jmxRequestExecutor.fetchBeanInfo(
+				jmxConfiguration,
 				jmxCriterion.getObjectName(),
-				jmxConfig.getHostname(),
-				jmxConfig.getPort(),
-				e.getMessage()
+				jmxCriterion.getAttributes(),
+				List.of()
 			);
-			log.warn(err, e);
+
+			// Serialize the result as a CSV
+			final String result = SourceTable.tableToCsv(queryResult, TABLE_SEP, true);
+
+			return checkJmxResult(jmxConfiguration.getHostname(), result, jmxCriterion.getExpectedResult());
+		} catch (Exception e) {
 			return CriterionTestResult.error(jmxCriterion, e);
 		}
+	}
 
-		int keyCount = parsedName.getKeyPropertyList().size();
-		List<String> attrs = jmxCriterion.getAttributes() == null ? List.of() : jmxCriterion.getAttributes();
-		List<String> patterns = jmxCriterion.getExpectedPatterns() == null ? List.of() : jmxCriterion.getExpectedPatterns();
+	/**
+	 * Checks the result of an JMX test against the expected result.
+	 *
+	 * @param hostname       The hostname against which the JMX test has been carried out.
+	 * @param result         The actual result of the JMX test.
+	 * @param expectedResult The expected result of the JMX test.
+	 * @return A {@link CriterionTestResult} summarizing the outcome of the JMX test.
+	 */
+	private CriterionTestResult checkJmxResult(final String hostname, final String result, final String expectedResult) {
+		String message;
+		var success = false;
 
-		List<String> messages = new ArrayList<>();
-		boolean overallSuccess = true;
-
-		// Evaluate each attribute against its pattern
-		for (int i = 0; i < attrs.size(); i++) {
-			String attrName = attrs.get(i);
-			String value = (fetched.size() > i && fetched.get(i).size() > keyCount + i)
-				? fetched.get(i).get(keyCount + i)
-				: null;
-			String pattern = (i < patterns.size()) ? patterns.get(i) : null;
-
-			if (pattern == null || pattern.isBlank()) {
-				if (value == null) {
-					overallSuccess = false;
-					messages.add(String.format("Attribute \"%s\" was not fetched (null).", attrName));
-				} else {
-					messages.add(String.format("Attribute \"%s\" fetched: %s", attrName, value));
-				}
-			} else if (value == null) {
-				overallSuccess = false;
-				messages.add(String.format("Attribute \"%s\" is null; cannot match pattern \"%s\".", attrName, pattern));
+		if (expectedResult == null) {
+			if (result == null || result.isEmpty()) {
+				message = String.format("Hostname %s - JMX test failed - The JMX test did not return any result.", hostname);
 			} else {
-				Pattern regex = Pattern.compile(PslUtils.psl2JavaRegex(pattern), Pattern.CASE_INSENSITIVE);
-				if (regex.matcher(value).find()) {
-					messages.add(String.format("Attribute \"%s\" matched pattern \"%s\" → value: %s", attrName, pattern, value));
-				} else {
-					overallSuccess = false;
-					messages.add(
-						String.format("Attribute \"%s\" did NOT match pattern \"%s\" → value: %s", attrName, pattern, value)
+				message = String.format(JMX_TEST_SUCCESS, hostname, result);
+				success = true;
+			}
+		} else {
+			// We convert the PSL regex from the expected result into a Java regex to be able to compile and test it
+			final var pattern = Pattern.compile(PslUtils.psl2JavaRegex(expectedResult), Pattern.CASE_INSENSITIVE);
+			if (result != null && pattern.matcher(result).find()) {
+				message = String.format(JMX_TEST_SUCCESS, hostname, result);
+				success = true;
+			} else {
+				message =
+					String.format(
+						"Hostname %s - JMX test failed - The result (%s) returned by the JMX test did not match the expected result (%s).",
+						hostname,
+						result,
+						expectedResult
 					);
-				}
+				message += String.format("Expected value: %s - returned value %s.", expectedResult, result);
 			}
 		}
 
-		// Build result string of name=value pairs
-		List<String> resultPairs = new ArrayList<>();
-		for (int i = 0; i < attrs.size(); i++) {
-			String a = attrs.get(i);
-			String v = (fetched.size() > i && fetched.get(i).size() > keyCount + i)
-				? fetched.get(i).get(keyCount + i)
-				: "<null>";
-			resultPairs.add(String.format("%s=%s", a, v));
-		}
-		String resultString = String.join("; ", resultPairs);
-		String humanMessage = String.join(" | ", messages);
+		log.debug(message);
 
-		return CriterionTestResult.builder().result(resultString).message(humanMessage).success(overallSuccess).build();
+		return CriterionTestResult.builder().result(result).message(message).success(success).build();
 	}
 }

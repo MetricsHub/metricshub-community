@@ -100,7 +100,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	@Override
-	public SourceTable process(JmxSource jmxSource) throws Exception {
+	public SourceTable process(JmxSource jmxSource) {
 		return processSource(jmxSource.copy());
 	}
 

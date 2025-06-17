@@ -26,17 +26,12 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javax.management.MBeanServerConnection;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -82,18 +77,6 @@ public class SourceProcessor implements ISourceProcessor {
 	private String connectorId;
 	private ClientsExecutor clientsExecutor;
 	private ExtensionManager extensionManager;
-
-	@WithSpan("Source JMX Exec")
-	@Override
-	public SourceTable process(@SpanAttribute("source.definition") JmxSource src) throws Exception {
-		return processSourceThroughExtension(src);
-	}
-
-	private MBeanServerConnection connectViaJmx(String host, int port) throws IOException {
-		String url = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port);
-		JMXConnector jmxc = JMXConnectorFactory.connect(new JMXServiceURL(url));
-		return jmxc.getMBeanServerConnection();
-	}
 
 	@WithSpan("Source Copy Exec")
 	@Override
@@ -593,5 +576,17 @@ public class SourceProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") final SqlSource sqlSource) {
 		return processSourceThroughExtension(sqlSource);
+	}
+
+	/**
+	 * This method processes {@link JmxSource} source
+	 *
+	 * @param jmxSource {@link JmxSource} source instance
+	 * @return {@link SourceTable} instance
+	 */
+	@WithSpan("Source JMX Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") JmxSource jmxSource) {
+		return processSourceThroughExtension(jmxSource);
 	}
 }

@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ProductRequirementsCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
@@ -415,6 +416,17 @@ public class CriterionProcessor {
 	@WithSpan("Criterion SQL Exec")
 	public CriterionTestResult process(@SpanAttribute("criterion.definition") SqlCriterion sqlCriterion) {
 		return processCriterionThroughExtension(sqlCriterion);
+	}
+
+	/**
+	 * Process the given {@link JmxCriterion} through Client and return the {@link CriterionTestResult}
+	 *
+	 * @param jmxCriterion The JMX criterion to process.
+	 * @return The result of the criterion test processing.
+	 */
+	@WithSpan("Criterion JMX Exec")
+	public CriterionTestResult process(@SpanAttribute("criterion.definition") JmxCriterion jmxCriterion) {
+		return processCriterionThroughExtension(jmxCriterion);
 	}
 
 	/**

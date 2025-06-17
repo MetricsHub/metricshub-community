@@ -22,20 +22,25 @@ package org.metricshub.engine.connector.model.monitor.task.source;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.FAIL;
+import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
@@ -43,7 +48,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * Represents a JMX source task that fetches metrics via JMX.
- * Supports a single MBean ("mbean") with its "attributes" and optional "keysAsAttributes".
+ * Supports a single MBean ("mbean") with its "attributes" and optional "keyProperties".
  */
 @Data
 @NoArgsConstructor
@@ -53,23 +58,24 @@ public class JmxSource extends Source {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The MBean ObjectName pattern to query.
+	 * The ObjectName pattern to query.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
-	private String mbean;
+	@JsonDeserialize(using = NonBlankDeserializer.class)
+	private String objectName;
 
 	/**
 	 * The list of attributes to fetch from the MBean.
 	 */
-	@JsonSetter(nulls = FAIL)
-	private List<String> attributes;
+	@JsonSetter(nulls = SKIP)
+	private List<String> attributes = new ArrayList<>();
 
 	/**
 	 * Optional list of key‐property names (e.g. "scope", "name") to include as extra columns.
 	 */
-	@JsonSetter(nulls = FAIL)
-	private List<String> keysAsAttributes;
+	@JsonSetter(nulls = SKIP)
+	private List<String> keyProperties = new ArrayList<>();
 
 	@Builder
 	@JsonCreator
@@ -77,67 +83,65 @@ public class JmxSource extends Source {
 		@JsonProperty(value = "type") String type,
 		@JsonProperty(value = "computes") List<Compute> computes,
 		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
-		@JsonProperty(value = "mbean") String mbean,
+		@JsonProperty(value = "objectName") @NonNull String objectName,
 		@JsonProperty(value = "attributes") List<String> attributes,
-		@JsonProperty(value = "keysAsAttributes") List<String> keysAsAttributes,
+		@JsonProperty(value = "keyProperties") List<String> keyProperties,
 		@JsonProperty(value = "key") String key,
 		@JsonProperty(value = "executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
-		if (mbean == null || mbean.isBlank()) {
-			throw new IllegalArgumentException("A JmxSource must specify a non‐blank 'mbean' field");
+		this.objectName = objectName;
+		this.attributes = (attributes != null) ? attributes : new ArrayList<>();
+		this.keyProperties = (keyProperties != null) ? keyProperties : new ArrayList<>();
+
+		if (this.attributes.isEmpty() && this.keyProperties.isEmpty()) {
+			throw new IllegalArgumentException("At least one attribute or key property must be specified for JMX source.");
 		}
-		this.mbean = mbean;
-
-		@SuppressWarnings("unchecked")
-		List<String> attrs = (attributes != null) ? attributes : List.of();
-		this.attributes = attrs;
-
-		@SuppressWarnings("unchecked")
-		List<String> keys = (keysAsAttributes != null) ? keysAsAttributes : List.of();
-		this.keysAsAttributes = keys;
 	}
 
 	@Override
 	public JmxSource copy() {
+		final List<Compute> computesCopy = getComputes() != null ? new ArrayList<>(getComputes()) : null;
+		final List<String> attributesCopy = attributes != null ? new ArrayList<>(attributes) : null;
+		final List<String> keyPropertiesCopy = keyProperties != null ? new ArrayList<>(keyProperties) : null;
+		final ExecuteForEachEntryOf executeForEachEntryOfCopy = executeForEachEntryOf != null
+			? executeForEachEntryOf.copy()
+			: null;
+
 		return JmxSource
 			.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
-			.computes(getComputes() != null ? List.copyOf(getComputes()) : null)
-			.mbean(mbean)
-			.attributes(List.copyOf(attributes))
-			.keysAsAttributes(keysAsAttributes != null ? List.copyOf(keysAsAttributes) : null)
-			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+			.computes(computesCopy)
+			.objectName(objectName)
+			.attributes(attributesCopy)
+			.keyProperties(keyPropertiesCopy)
+			.executeForEachEntryOf(executeForEachEntryOfCopy)
 			.build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		this.mbean = updater.apply(this.mbean);
-		// attributes and keysAsAttributes are literals; no update needed
+		this.objectName = updater.apply(this.objectName);
+		this.attributes = this.attributes.stream().map(updater).collect(Collectors.toCollection(ArrayList::new));
+		this.keyProperties = this.keyProperties.stream().map(updater).collect(Collectors.toCollection(ArrayList::new));
 	}
 
 	@Override
 	public String toString() {
-		StringJoiner sj = new StringJoiner(MetricsHubConstants.NEW_LINE);
-		sj.add(super.toString());
+		final StringJoiner stringJoiner = new StringJoiner(MetricsHubConstants.NEW_LINE);
+		stringJoiner.add(super.toString());
 
-		addNonNull(sj, "- mbean=", mbean);
-		addNonNull(sj, "- attributes=", attributes.toString());
-		if (keysAsAttributes != null && !keysAsAttributes.isEmpty()) {
-			addNonNull(sj, "- keysAsAttributes=", keysAsAttributes.toString());
-		}
-		return sj.toString();
+		addNonNull(stringJoiner, "- objectName=", objectName);
+		addNonNull(stringJoiner, "- attributes=", attributes);
+		addNonNull(stringJoiner, "- keyProperties=", keyProperties);
+
+		return stringJoiner.toString();
 	}
 
 	@Override
-	public SourceTable accept(ISourceProcessor sourceProcessor) {
-		try {
-			return sourceProcessor.process(this);
-		} catch (Exception e) {
-			throw new RuntimeException("Error processing JmxSource: " + e.getMessage(), e);
-		}
+	public SourceTable accept(final ISourceProcessor sourceProcessor) {
+		return sourceProcessor.process(this);
 	}
 }

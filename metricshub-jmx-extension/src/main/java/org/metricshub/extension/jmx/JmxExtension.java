@@ -20,7 +20,6 @@ package org.metricshub.extension.jmx;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
@@ -33,13 +32,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.UnaryOperator;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
@@ -50,19 +45,25 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * This class implements the {@link IProtocolExtension} contract for JMX protocol
+ */
 @Slf4j
 public class JmxExtension implements IProtocolExtension {
 
 	private static final String IDENTIFIER = "jmx";
 
-	private final JmxRequestExecutor jmxRequestExecutor;
+	private JmxRequestExecutor jmxRequestExecutor;
 
+	/**
+	 * Default constructor initializing the JmxRequestExecutor.
+	 */
 	public JmxExtension() {
 		this.jmxRequestExecutor = new JmxRequestExecutor();
 	}
 
 	@Override
-	public boolean isValidConfiguration(IConfiguration configuration) {
+	public boolean isValidConfiguration(final IConfiguration configuration) {
 		return configuration instanceof JmxConfiguration;
 	}
 
@@ -82,30 +83,28 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public Optional<Boolean> checkProtocol(TelemetryManager telemetryManager) {
-		HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
-		if (hostConfiguration == null || !hostConfiguration.getConfigurations().containsKey(JmxConfiguration.class)) {
+	public Optional<Boolean> checkProtocol(final TelemetryManager telemetryManager) {
+		final JmxConfiguration configuration = (JmxConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(JmxConfiguration.class);
+
+		// Stop the health check if there is not an JMX configuration
+		if (configuration == null) {
 			return Optional.empty();
 		}
 
-		JmxConfiguration jmxConfig = (JmxConfiguration) hostConfiguration.getConfigurations().get(JmxConfiguration.class);
-		String host = jmxConfig.getHostname();
-		int port = jmxConfig.getPort();
-		String url = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", host, port);
+		log.info("Hostname {} - Performing {} protocol health check.", configuration.getHostname(), getIdentifier());
 
-		log.info("Hostname {} - Performing {} protocol health check.", telemetryManager.getHostname(), getIdentifier());
-		log.info("Hostname {} - Attempting JMX connection to {}.", telemetryManager.getHostname(), url);
-
-		try (JMXConnector jmxc = JMXConnectorFactory.connect(new JMXServiceURL(url))) {
-			return Optional.of(true);
-		} catch (Exception e) {
-			log.debug("JMX health check failed for {}:{} → {}", host, port, e.getMessage());
-			return Optional.of(false);
-		}
+		return Optional.of(jmxRequestExecutor.checkConnection(configuration));
 	}
 
 	@Override
-	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
+	public SourceTable processSource(
+		final Source source,
+		final String connectorId,
+		final TelemetryManager telemetryManager
+	) {
 		if (source instanceof JmxSource jmxSource) {
 			return new JmxSourceProcessor(jmxRequestExecutor).process(jmxSource, telemetryManager);
 		}
@@ -120,12 +119,12 @@ public class JmxExtension implements IProtocolExtension {
 
 	@Override
 	public CriterionTestResult processCriterion(
-		Criterion criterion,
-		String connectorId,
-		TelemetryManager telemetryManager
+		final Criterion criterion,
+		final String connectorId,
+		final TelemetryManager telemetryManager
 	) {
-		if (criterion instanceof JmxCriterion) {
-			return new JmxCriterionProcessor().process(criterion, connectorId, telemetryManager);
+		if (criterion instanceof JmxCriterion jmxCriterion) {
+			return new JmxCriterionProcessor(jmxRequestExecutor).process(jmxCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -137,25 +136,36 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public boolean isSupportedConfigurationType(String configurationType) {
+	public boolean isSupportedConfigurationType(final String configurationType) {
 		return IDENTIFIER.equalsIgnoreCase(configurationType);
 	}
 
 	@Override
-	public IConfiguration buildConfiguration(String configurationType, JsonNode jsonNode, UnaryOperator<char[]> decrypt)
-		throws InvalidConfigurationException {
+	public IConfiguration buildConfiguration(
+		final String configurationType,
+		final JsonNode jsonNode,
+		final UnaryOperator<char[]> decrypt
+	) throws InvalidConfigurationException {
 		try {
-			JmxConfiguration jmxConfiguration = newObjectMapper().treeToValue(jsonNode, JmxConfiguration.class);
-
-			// If any credentials are added in future, decrypt them here. Currently JmxConfiguration has no encrypted fields.
+			final JmxConfiguration jmxConfiguration = newObjectMapper().treeToValue(jsonNode, JmxConfiguration.class);
+			char[] password = jmxConfiguration.getPassword();
+			if (password != null) {
+				jmxConfiguration.setPassword(decrypt.apply(password));
+			}
 			return jmxConfiguration;
 		} catch (Exception e) {
-			String msg = String.format("Error reading JMX Configuration: %s", e.getMessage());
-			log.error(msg, e);
-			throw new InvalidConfigurationException(msg, e);
+			final var message = String.format("Error reading JMX Configuration: %s", e.getMessage());
+			log.error(message, e);
+			throw new InvalidConfigurationException(message, e);
 		}
 	}
 
+	/**
+	 * Creates a new instance of JsonMapper configured for YAML processing. This
+	 * mapper is used to deserialize YAML configurations into Java objects.
+	 *
+	 * @return a configured JsonMapper instance
+	 */
 	public JsonMapper newObjectMapper() {
 		return JsonMapper
 			.builder(new YAMLFactory())
@@ -172,56 +182,52 @@ public class JmxExtension implements IProtocolExtension {
 		return IDENTIFIER;
 	}
 
-	/**
-	 * Executes a single‐MBean lookup + attribute fetch. Expects JSON like:
-	 * {
-	 *   "objectName": "...",
-	 *   "attributes": ["attr1", "attr2"]
-	 * }
-	 */
 	@Override
-	public String executeQuery(IConfiguration configuration, JsonNode query) throws Exception {
-		if (!(configuration instanceof JmxConfiguration jmxConfig)) {
-			throw new IllegalArgumentException("executeQuery requires JmxConfiguration");
+	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
+		if (!(configuration instanceof JmxConfiguration)) {
+			throw new IllegalArgumentException("Invalid configuration type for JMX query execution.");
+		}
+		// Expected JSON structure:
+		// {
+		//   "objectName": "com.example:type=Example,scope=*,name=*",
+		//   "attributes": ["Attribute1", "Attribute2"],
+		//   "keyProperties": ["scope", "name"]
+		// }
+
+		final var objectNameNode = query.get("objectName");
+		if (objectNameNode == null || objectNameNode.isNull()) {
+			throw new IllegalArgumentException("Object name must be specified for JMX query.");
+		}
+		final String objectName = objectNameNode.asText();
+		if (objectName.isBlank()) {
+			throw new IllegalArgumentException("Object name cannot be blank for JMX query.");
 		}
 
-		// Build the telemetry context
-		HostConfiguration hostConfig = HostConfiguration
-			.builder()
-			.configurations(Map.of(JmxConfiguration.class, configuration))
-			.build();
-		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfig).build();
-
-		String objectName = query.get("objectName").asText();
-		ObjectName parsedName = new ObjectName(objectName);
-
-		// Collect the list of attributes to fetch
-		List<String> attrs = new ArrayList<>();
-		for (JsonNode node : query.withArray("attributes")) {
-			attrs.add(node.asText());
+		final JsonNode attributesNodes = query.get("attributes");
+		final List<String> attributes = new ArrayList<>();
+		if (attributesNodes != null && !attributesNodes.isNull()) {
+			attributesNodes.forEach(node -> attributes.add(node.asText()));
+		}
+		final JsonNode keyPropertiesNode = query.get("keyProperties");
+		final List<String> keyProperties = new ArrayList<>();
+		if (keyPropertiesNode != null && !keyPropertiesNode.isNull()) {
+			keyPropertiesNode.forEach(node -> keyProperties.add(node.asText()));
 		}
 
-		// fetchBeanInfo returns List<List<String>>, each inner List is assumed [name, value]
-		List<List<String>> fetched = jmxRequestExecutor.fetchBeanInfo(
-			jmxConfig,
+		if (attributes.isEmpty() && keyProperties.isEmpty()) {
+			throw new IllegalArgumentException("At least one attribute or key property must be specified for JMX query.");
+		}
+
+		final List<List<String>> result = jmxRequestExecutor.fetchBeanInfo(
+			(JmxConfiguration) configuration,
 			objectName,
-			attrs,
-			parsedName.getKeyPropertyList().keySet().stream().toList()
+			attributes,
+			keyProperties
 		);
+		final List<String> columns = new ArrayList<>();
+		columns.addAll(keyProperties);
+		columns.addAll(attributes);
 
-		// Build the "attr=value" pairs
-		List<String> pairs = new ArrayList<>();
-		for (List<String> entry : fetched) {
-			if (entry.size() >= 2) {
-				String name = entry.get(0);
-				String value = entry.get(1);
-				pairs.add(name + "=" + (value == null ? "<null>" : value));
-			} else {
-				// Guard against unexpected shape
-				pairs.add(entry.toString());
-			}
-		}
-
-		return String.join("; ", pairs);
+		return TextTableHelper.generateTextTable(columns, result);
 	}
 }

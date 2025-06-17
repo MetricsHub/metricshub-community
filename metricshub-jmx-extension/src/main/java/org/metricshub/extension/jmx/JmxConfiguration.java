@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -44,16 +45,24 @@ import org.metricshub.engine.deserialization.MultiValueDeserializer;
 @NoArgsConstructor
 public class JmxConfiguration implements IConfiguration {
 
+	/**
+	 * JMX default port.
+	 */
+	public static final int DEFAULT_JMX_PORT = 1099;
+
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = MultiValueDeserializer.class)
 	private String hostname;
 
-	@Builder.Default
+	@Default
 	@JsonSetter(nulls = SKIP)
-	private Integer port = 1099;
+	private Integer port = DEFAULT_JMX_PORT;
+
+	private String username;
+	private char[] password;
 
 	@Override
-	public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {
+	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		StringHelper.validateConfigurationAttribute(
 			hostname,
 			h -> (h == null || h.isBlank()),
@@ -79,11 +88,11 @@ public class JmxConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return JmxConfiguration.builder().hostname(hostname).port(port).build();
+		return JmxConfiguration.builder().hostname(hostname).port(port).username(username).password(password).build();
 	}
 
 	@Override
 	public String toString() {
-		return String.format("JMX/%s:%d", hostname, port);
+		return String.format("JMX/%s:%d%s", hostname, port, username != null ? " as " + username : "");
 	}
 }

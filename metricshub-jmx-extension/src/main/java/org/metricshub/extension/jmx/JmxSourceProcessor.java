@@ -41,40 +41,47 @@ public class JmxSourceProcessor {
 	@NonNull
 	private final JmxRequestExecutor jmxExecutor;
 
-	public SourceTable process(JmxSource src, TelemetryManager telemetryManager) {
+	/**
+	 * Processes a JmxSource by fetching its attributes and returning a SourceTable.
+	 *
+	 * @param jmxSource        The JmxSource defining the JMX object and attributes to fetch.
+	 * @param telemetryManager The TelemetryManager to access host configuration and log errors.
+	 * @return SourceTable containing the fetched attributes.
+	 */
+	public SourceTable process(final JmxSource jmxSource, final TelemetryManager telemetryManager) {
 		final JmxConfiguration jmxConfig = (JmxConfiguration) telemetryManager
 			.getHostConfiguration()
 			.getConfigurations()
 			.get(JmxConfiguration.class);
 
-		String pattern = src.getMbean();
-		List<String> attributes = src.getAttributes();
-		List<String> keysAsAttributes = src.getKeysAsAttributes();
+		final String objectName = jmxSource.getObjectName();
+		List<String> attributes = jmxSource.getAttributes();
+		List<String> keyProperties = jmxSource.getKeyProperties();
 
 		if (attributes == null) {
 			attributes = new ArrayList<>();
 		}
 
-		if (keysAsAttributes == null) {
-			keysAsAttributes = new ArrayList<>();
+		if (keyProperties == null) {
+			keyProperties = new ArrayList<>();
 		}
 
-		List<List<String>> rows = new ArrayList<>();
+		final List<List<String>> rows = new ArrayList<>();
 
 		try {
 			// Fetch attributes; this also validates exactly one match
-			rows = jmxExecutor.fetchBeanInfo(jmxConfig, pattern, attributes, keysAsAttributes);
+			rows.addAll(jmxExecutor.fetchBeanInfo(jmxConfig, objectName, attributes, keyProperties));
 		} catch (Exception e) {
+			String hostname = jmxConfig.getHostname();
 			log.error(
-				"Hostname {} - Error processing JMX source for pattern '{}': {}",
-				jmxConfig.getHostname(),
-				pattern,
+				"Hostname {} - Error processing JMX source for objectName '{}': {}",
+				hostname,
+				objectName,
 				e.getMessage()
 			);
+			log.debug("Hostname {} - Error processing JMX source for objectName '{}'", hostname, objectName, e);
 		}
 
-		SourceTable table = new SourceTable();
-		table.setTable(rows);
-		return table;
+		return SourceTable.builder().table(rows).build();
 	}
 }

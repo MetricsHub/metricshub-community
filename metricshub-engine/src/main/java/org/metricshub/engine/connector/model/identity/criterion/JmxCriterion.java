@@ -21,18 +21,22 @@ package org.metricshub.engine.connector.model.identity.criterion;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+import static com.fasterxml.jackson.annotation.Nulls.FAIL;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 import java.util.StringJoiner;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import org.metricshub.engine.connector.deserializer.custom.NonBlankDeserializer;
 
 /**
  * Connector detection criterion using JMX protocol.
@@ -47,20 +51,22 @@ public class JmxCriterion extends Criterion {
 	/**
 	 * ObjectName pattern for the JMX criterion.
 	 */
-	@JsonSetter(nulls = SKIP)
+	@NonNull
+	@JsonSetter(nulls = FAIL)
+	@JsonDeserialize(using = NonBlankDeserializer.class)
 	private String objectName;
 
 	/**
 	 * List of attributes to fetch from the MBean.
 	 */
-	@JsonSetter(nulls = SKIP)
+	@NonNull
+	@JsonSetter(nulls = FAIL)
 	private List<String> attributes;
 
 	/**
-	 * Expected result patterns (regexes) for the fetched attribute values.
+	 * Expected result (RegExp) for the fetched attribute values.
 	 */
-	@JsonSetter(nulls = SKIP)
-	private List<String> expectedPatterns;
+	private String expectedResult;
 
 	/**
 	 * Optional error message if the criterion fails.
@@ -74,7 +80,7 @@ public class JmxCriterion extends Criterion {
 	 * @param forceSerialization Whether serialization should be forced.
 	 * @param objectName        ObjectName pattern to query.
 	 * @param attributes        Attributes to fetch from the MBean.
-	 * @param expectedPatterns  Regex patterns that the attribute values must match.
+	 * @param expectedResult    The expected result for the criterion, or null if no specific result is expected.
 	 * @param errorMessage      Error message to use if the criterion fails.
 	 */
 	@Builder
@@ -82,40 +88,25 @@ public class JmxCriterion extends Criterion {
 	public JmxCriterion(
 		@JsonProperty(value = "type") String type,
 		@JsonProperty(value = "forceSerialization") boolean forceSerialization,
-		@JsonProperty(value = "objectName") String objectName,
-		@JsonProperty(value = "attributes") List<String> attributes,
-		@JsonProperty(value = "expectedPatterns") List<String> expectedPatterns,
+		@JsonProperty(value = "objectName") @NonNull String objectName,
+		@JsonProperty(value = "attributes") @NonNull List<String> attributes,
+		@JsonProperty(value = "expectedResult") String expectedResult,
 		@JsonProperty(value = "errorMessage") String errorMessage
 	) {
 		super(type, forceSerialization);
 		this.objectName = objectName;
-
-		@SuppressWarnings("unchecked")
-		List<String> attrs = (attributes != null) ? attributes : List.of();
-		this.attributes = attrs;
-
-		@SuppressWarnings("unchecked")
-		List<String> patterns = (expectedPatterns != null) ? expectedPatterns : List.of();
-		this.expectedPatterns = patterns;
-
+		this.attributes = attributes;
+		this.expectedResult = expectedResult;
 		this.errorMessage = errorMessage;
 	}
 
 	@Override
 	public String toString() {
-		StringJoiner sj = new StringJoiner(NEW_LINE);
-		if (objectName != null) {
-			sj.add(new StringBuilder("- ObjectName: ").append(objectName));
-		}
-		if (attributes != null && !attributes.isEmpty()) {
-			sj.add(new StringBuilder("- Attributes: ").append(attributes));
-		}
-		if (expectedPatterns != null && !expectedPatterns.isEmpty()) {
-			sj.add(new StringBuilder("- ExpectedPatterns: ").append(expectedPatterns));
-		}
-		if (errorMessage != null) {
-			sj.add(new StringBuilder("- ErrorMessage: ").append(errorMessage));
-		}
-		return sj.toString();
+		final var stringJoiner = new StringJoiner(NEW_LINE);
+		addNonNull(stringJoiner, "- ObjectName=", objectName);
+		addNonNull(stringJoiner, "- Attributes=", attributes);
+		addNonNull(stringJoiner, "- ExpectedResult=", expectedResult);
+		addNonNull(stringJoiner, "- ErrorMessage=", errorMessage);
+		return stringJoiner.toString();
 	}
 }
