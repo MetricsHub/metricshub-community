@@ -96,7 +96,7 @@ class JmxExtensionTest {
 	}
 
 	@Test
-	void testShouldReturnTrueOnValidJmxConfiguration() {
+	void testShouldReturnTrueOnValidJmxConfiguration() throws Exception {
 		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
 		when(telemetryManager.getHostConfiguration()).thenReturn(mock(HostConfiguration.class));
 		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("localhost").port(1099).build();

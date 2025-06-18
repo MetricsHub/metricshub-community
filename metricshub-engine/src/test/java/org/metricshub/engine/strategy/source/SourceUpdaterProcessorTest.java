@@ -31,6 +31,7 @@ import static org.mockito.Mockito.doReturn;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSour
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -619,5 +621,32 @@ class SourceUpdaterProcessorTest {
 			);
 			assertEquals("vendorvendor value", result);
 		}
+	}
+
+	@Test
+	void testProcessJmxSource() {
+		final JmxSource source = JmxSource
+			.builder()
+			.type("jmx")
+			.objectName("org.metricshub.extension.jmx:type=JmxMBean,scope=*")
+			.attributes(new LinkedList<>(List.of("Name")))
+			.key("${source::beforeAll.jmxSource}")
+			.forceSerialization(false)
+			.keyProperties(new LinkedList<>(List.of("scope")))
+			.build();
+
+		final SourceTable sourceTable = SourceTable.builder().table(List.of(List.of("12345"))).build();
+		doReturn(sourceTable).when(sourceProcessor).process(any(JmxSource.class));
+		assertEquals(
+			sourceTable,
+			new SourceUpdaterProcessor(
+				sourceProcessor,
+				TelemetryManager.builder().build(),
+				MY_CONNECTOR_1_NAME,
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+			)
+				.process(source),
+			"Processing JMX source did not return expected result."
+		);
 	}
 }

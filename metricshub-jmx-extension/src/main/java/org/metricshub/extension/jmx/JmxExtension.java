@@ -96,7 +96,13 @@ public class JmxExtension implements IProtocolExtension {
 
 		log.info("Hostname {} - Performing {} protocol health check.", configuration.getHostname(), getIdentifier());
 
-		return Optional.of(jmxRequestExecutor.checkConnection(configuration));
+		try {
+			return Optional.of(jmxRequestExecutor.checkConnection(configuration));
+		} catch (Exception e) {
+			log.error("Hostname {} - JMX protocol check failed: {}", configuration.getHostname(), e.getMessage());
+			log.debug("Hostname {} - JMX protocol check failed.", configuration.getHostname(), e);
+			return Optional.of(false);
+		}
 	}
 
 	@Override
@@ -148,9 +154,12 @@ public class JmxExtension implements IProtocolExtension {
 	) throws InvalidConfigurationException {
 		try {
 			final JmxConfiguration jmxConfiguration = newObjectMapper().treeToValue(jsonNode, JmxConfiguration.class);
-			char[] password = jmxConfiguration.getPassword();
-			if (password != null) {
-				jmxConfiguration.setPassword(decrypt.apply(password));
+
+			if (decrypt != null) {
+				char[] password = jmxConfiguration.getPassword();
+				if (password != null) {
+					jmxConfiguration.setPassword(decrypt.apply(password));
+				}
 			}
 			return jmxConfiguration;
 		} catch (Exception e) {

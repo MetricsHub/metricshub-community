@@ -35,6 +35,7 @@ import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 
 /**
  * Helper that connects to JMX, resolves exactly one MBean, and reads zero or more attributes in one call.
@@ -43,7 +44,8 @@ import lombok.extern.slf4j.Slf4j;
 public class JmxRequestExecutor {
 
 	/**
-	 * Fetches information about JMX beans matching the specified object name pattern and attributes.
+	 * Fetches information about JMX beans matching the specified object name pattern and attributes.<br>
+	 * This entry point is used to run JMX requests in a separate thread, allowing for timeout handling.
 	 *
 	 * @param jmxConfiguration  the JMX configuration containing hostname, port, username, and password
 	 * @param objectNamePattern the pattern for matching MBean object names
@@ -58,6 +60,26 @@ public class JmxRequestExecutor {
 		final Iterable<String> attributes,
 		final Collection<String> keyProperties
 	) throws Exception {
+		return ThreadHelper.execute(
+			() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+			jmxConfiguration.getTimeout()
+		);
+	}
+
+	/**
+	 * Executes a JMX request to fetch information about MBeans matching the specified object name pattern and attributes.
+	 * @param jmxConfiguration  the JMX configuration containing hostname, port, username, and password
+	 * @param objectNamePattern the pattern for matching MBean object names
+	 * @param attributes        the list of attributes to fetch from the MBeans
+	 * @param keyProperties     the list of key properties to include in the result set, used for identifying MBeans uniquely
+	 * @return
+	 */
+	private List<List<String>> runJmxRequest(
+		final JmxConfiguration jmxConfiguration,
+		final String objectNamePattern,
+		final Iterable<String> attributes,
+		final Collection<String> keyProperties
+	) {
 		final List<List<String>> results = new ArrayList<>();
 
 		final String hostname = jmxConfiguration.getHostname();
@@ -133,8 +155,21 @@ public class JmxRequestExecutor {
 	 *
 	 * @param configuration the JMX configuration containing hostname, port, username, and password
 	 * @return true if the connection is successful, false otherwise
+	 * @throws Exception if an error occurs while connecting to the JMX server or if the connection times out
 	 */
-	public boolean checkConnection(final JmxConfiguration configuration) {
+	public boolean checkConnection(final JmxConfiguration configuration) throws Exception {
+		return ThreadHelper.execute(() -> runConnectionCheck(configuration), configuration.getTimeout());
+	}
+
+	/**
+	 * Runs a connection check to verify if the JMX server is reachable and the
+	 * credentials are correct.
+	 *
+	 * @param configuration the JMX configuration containing hostname, port,
+	 *                      username, and password
+	 * @return true if the connection is successful, false otherwise
+	 */
+	private boolean runConnectionCheck(final JmxConfiguration configuration) {
 		final String hostname = configuration.getHostname();
 		final int port = configuration.getPort();
 

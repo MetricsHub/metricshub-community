@@ -34,6 +34,7 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
  * The JmxConfiguration class represents the host/protocol configuration for JMX connections.
@@ -61,6 +62,11 @@ public class JmxConfiguration implements IConfiguration {
 	private String username;
 	private char[] password;
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	@JsonDeserialize(using = TimeDeserializer.class)
+	private final Long timeout = 30L;
+
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		StringHelper.validateConfigurationAttribute(
@@ -83,6 +89,17 @@ public class JmxConfiguration implements IConfiguration {
 					resourceKey,
 					port
 				)
+		);
+
+		StringHelper.validateConfigurationAttribute(
+			timeout,
+			attr -> attr == null || attr < 0L,
+			() ->
+				"""
+				Resource %s - Timeout value is invalid for JMX. \
+				Timeout value returned: %s. This resource will not be monitored. \
+				Please verify the configured timeout value.\
+				""".formatted(resourceKey, timeout)
 		);
 	}
 

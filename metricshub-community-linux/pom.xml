@@ -298,6 +298,8 @@
 								<argument>pingcli=metricshub-pingcli.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>jawk=metricshub-jawk.properties</argument>
+								<argument>--add-launcher</argument>
+								<argument>jawk=metricshub-jmxcli.properties</argument>
 								<argument>@jpackage.txt</argument>
 							</arguments>
 							<workingDirectory>${project.build.directory}/jpackage</workingDirectory>

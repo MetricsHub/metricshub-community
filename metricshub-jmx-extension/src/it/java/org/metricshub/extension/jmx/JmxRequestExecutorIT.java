@@ -72,7 +72,7 @@ class JmxRequestExecutorIT {
 	}
 
 	@Test
-	void testShouldSucceedHealthCheck() {
+	void testShouldSucceedHealthCheck() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("localhost").port(jmxPort).build();
 
 		final boolean isAlive = new JmxRequestExecutor().checkConnection(config);
