@@ -622,7 +622,7 @@ public class IpmiHelper {
 				fruDevice = findFirstFruDevice.isPresent() ? findFirstFruDevice.get() : "";
 				if (!fruDevice.isEmpty() && fruDevice.contains(":")) {
 					// example : Logical FRU Device     : 09h which corresponds to FRU device ID = 9
-					int fruId = Integer.parseUnsignedInt(fruDevice.split(":")[1].trim().replace("h", ""), 16); // convert
+					int fruId = Integer.parseInt(fruDevice.split(":")[1].trim().replace("h", ""), 16); // convert
 					// to
 					// hexadecimal
 					// Retrieve the vendor/model/serial from the corresponding FRU
@@ -719,7 +719,7 @@ public class IpmiHelper {
 			// => sensorEntry = " States Asserted : 0x181 OEM Specific\r\n"
 			String oemSpecific = oemLine.split(": 0x")[1].trim().split("\\s")[0].trim();
 			// convert to decimal, check the last bit and then re-convert to hex
-			oemSpecific = Integer.toHexString((Integer.parseUnsignedInt(oemSpecific, 16) | 32768));
+			oemSpecific = Integer.toHexString((Integer.parseInt(oemSpecific, 16) | 32768));
 			// complete with 0 in the left in order to reach 4 characters
 			oemSpecific = String.format("%1$4s", oemSpecific).replace(' ', '0');
 			return sensorName + "=0x" + oemSpecific;

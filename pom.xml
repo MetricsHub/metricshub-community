@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>oss-parent</artifactId>
-		<version>3-SNAPSHOT</version>
+		<version>3</version>
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
@@ -586,21 +586,5 @@
 
 		</plugins>
 	</build>
-
-	<reporting>
-		<plugins>
-			<plugin>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>javadoc</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-			</plugin>
-		</plugins>
-	</reporting>
-
 
 </project>
