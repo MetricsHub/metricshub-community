@@ -75,7 +75,7 @@ public class JmxRequestExecutor {
 	 * @param objectNamePattern the pattern for matching MBean object names
 	 * @param attributes        the list of attributes to fetch from the MBeans
 	 * @param keyProperties     the list of key properties to include in the result set, used for identifying MBeans uniquely
-	 * @return
+	 * @return a list of lists, where each inner list contains the values of the key attributes followed by the requested attributes
 	 */
 	private List<List<String>> runJmxRequest(
 		final JmxConfiguration jmxConfiguration,
@@ -161,7 +161,7 @@ public class JmxRequestExecutor {
 	 * @throws Exception if an error occurs while connecting to the JMX server or if the connection times out
 	 */
 	@WithSpan("JMX Connection Check")
-	public boolean checkConnection(@SpanAttribute("jmx.config") JmxConfiguration configuration) throws Exception {
+	public boolean checkConnection(@SpanAttribute("jmx.config") final JmxConfiguration configuration) throws Exception {
 		return ThreadHelper.execute(() -> runConnectionCheck(configuration), configuration.getTimeout());
 	}
 
@@ -179,7 +179,7 @@ public class JmxRequestExecutor {
 
 		final var url = buildJmxRmiUrl(hostname, port);
 
-		try (JMXConnector jmxConnector = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
+		try (var jmxConnector = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
 			return true;
 		} catch (Exception e) {
 			log.debug("Hostname {} - JMX health check failed. {} → ", hostname, url, e);

@@ -44,7 +44,7 @@ public class PingRequestExecutor {
 	 * @throws UnknownHostException if the host cannot be determined from the given hostname.
 	 */
 	@WithSpan("Ping")
-	boolean ping(@SpanAttribute("host.hostname") final String hostname, @SpanAttribute("ping.timeout") int timeout)
+	boolean ping(@SpanAttribute("host.hostname") final String hostname, @SpanAttribute("ping.timeout") final int timeout)
 		throws UnknownHostException {
 		final var pingAddress = InetAddress.getByName(hostname);
 
