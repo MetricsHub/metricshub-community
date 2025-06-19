@@ -1,4 +1,4 @@
-keywords: agent, configuration, protocols, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
+keywords: agent, configuration, protocols, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, jmx, sites
 description: How to configure the MetricsHub Agent to collect metrics from a variety of resources with various protocols.
 
 # Monitoring Configuration
@@ -213,7 +213,7 @@ Whatever the syntax adopted, replace:
   * [`vms`](https://metricshub.com/docs/latest/connectors/tags/hpe.html) for HP Open VMS systems.
   Check out the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html) to find out which type corresponds to your system.
 * `<protocol-configuration>` with the protocol(s) **MetricsHub** will use to communicate with the resources:
- [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
+ [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`jmx`](./configure-monitoring.md#jmx), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
  Refer to [Protocols and Credentials](./configure-monitoring.html#protocols-and-credentials) for more details.
 
 > Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the configuration file to call your environment variables.
@@ -381,6 +381,37 @@ resourceGroups:
             timeout: 120s
             type: mysql
             port: 3306
+```
+
+#### JMX
+
+Use the parameters below to configure the JMX protocol:
+
+| Parameter | Description                                                                                       |
+|-----------|---------------------------------------------------------------------------------------------------|
+| jmx       | JMX configuration used to access the host                                                         |
+| hostname  | The name or IP address of the resource. If not specified, the `host.name` attribute will be used. |
+| timeout   | How long until the JMX query times out (Default: 30s).                                            |
+| username  | Name used to authenticate against the JMX service.                                                |
+| password  | Password used to authenticate against the JMX service.                                            |
+| port      | The port number used to connect to the JMX service. (Default: 1099).                              |
+
+**Example**
+
+```yaml
+resourceGroups:
+  boston:
+    attributes:
+      site: boston
+    resources:
+      db-host:
+        attributes:
+          host.name: cassandra-01
+          host.type: linux
+        protocols:
+          jmx:
+            timeout: 30s
+            port: 7199
 ```
 
 #### OS commands

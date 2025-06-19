@@ -23,11 +23,11 @@ Because it is recommended to use an OpenTelemetry Collector in a production envi
 
 **MetricsHub Enterprise** provides out-of-the box support for hundreds of  [servers, storage systems, network devices, and databases](metricshub-connectors-directory.html) through its built-in library of connectors.
 
-Fully customizable, **MetricsHub** can also be configured to **cover new use cases in no time**, such as the monitoring of systems or applications not covered out-of-the-box through protocols like `HTTP`, `IPMI`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
+Fully customizable, **MetricsHub** can also be configured to **cover new use cases in no time**, such as the monitoring of systems or applications not covered out-of-the-box through protocols like `HTTP`, `IPMI`, `JMX`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
 
 ## Main Features
 
-* **Remote Monitoring**: Gathers metrics from remote systems using various protocols like `HTTP`, `IPMI`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
+* **Remote Monitoring**: Gathers metrics from remote systems using various protocols like `HTTP`, `IPMI`, `JMX`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
 * **OpenTelemetry native**: Pulls metrics from diverse systems and applications while strictly adhering to OpenTelemetry's semantic conventions.
 * **Out-of-the-box support for 200+ systems and apps**.
 * **Extensible**: Adds support for new systems, platforms, or applications with just a few lines of YAML.
