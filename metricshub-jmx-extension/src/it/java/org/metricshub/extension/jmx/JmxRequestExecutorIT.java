@@ -64,7 +64,7 @@ class JmxRequestExecutorIT {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("localhost").port(jmxPort).build();
 
 		final List<List<String>> result = new JmxRequestExecutor()
-			.fetchBeanInfo(config, "org.metricshub.extension.jmx:type=TestJmx", List.of("Name"), List.of());
+			.fetchMBean(config, "org.metricshub.extension.jmx:type=TestJmx", List.of("Name"), List.of());
 
 		assertNotNull(result, "Result should not be null");
 		assertEquals(1, result.size(), "Should return one row");

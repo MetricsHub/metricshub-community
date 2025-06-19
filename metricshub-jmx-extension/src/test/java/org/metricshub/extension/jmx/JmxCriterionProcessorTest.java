@@ -65,7 +65,7 @@ class JmxCriterionProcessorTest {
 		criterion.setAttributes(List.of("attr"));
 		criterion.setObjectName("myObj");
 
-		when(jmxRequestExecutor.fetchBeanInfo(config, "myObj", List.of("attr"), List.of())).thenReturn(response);
+		when(jmxRequestExecutor.fetchMBean(config, "myObj", List.of("attr"), List.of())).thenReturn(response);
 
 		final CriterionTestResult result = processor.process(criterion, "connector123", telemetryManager);
 
@@ -88,7 +88,7 @@ class JmxCriterionProcessorTest {
 		criterion.setAttributes(List.of("attr"));
 		criterion.setObjectName("myObj");
 
-		when(jmxRequestExecutor.fetchBeanInfo(config, "myObj", List.of("attr"), List.of())).thenReturn(response);
+		when(jmxRequestExecutor.fetchMBean(config, "myObj", List.of("attr"), List.of())).thenReturn(response);
 
 		final CriterionTestResult result = processor.process(criterion, "connector123", telemetryManager);
 
@@ -114,7 +114,7 @@ class JmxCriterionProcessorTest {
 		criterion.setAttributes(List.of("status"));
 		criterion.setExpectedResult(".*uptime.*");
 
-		when(jmxRequestExecutor.fetchBeanInfo(any(), any(), any(), any())).thenReturn(response);
+		when(jmxRequestExecutor.fetchMBean(any(), any(), any(), any())).thenReturn(response);
 
 		final CriterionTestResult result = processor.process(criterion, "connector321", telemetryManager);
 
@@ -136,7 +136,7 @@ class JmxCriterionProcessorTest {
 		criterion.setAttributes(List.of("status"));
 		criterion.setExpectedResult(".*OK.*");
 
-		when(jmxRequestExecutor.fetchBeanInfo(any(), any(), any(), any())).thenReturn(response);
+		when(jmxRequestExecutor.fetchMBean(any(), any(), any(), any())).thenReturn(response);
 
 		final CriterionTestResult result = processor.process(criterion, "connectorXYZ", telemetryManager);
 
@@ -156,7 +156,7 @@ class JmxCriterionProcessorTest {
 		criterion.setObjectName("obj");
 		criterion.setAttributes(List.of("attr"));
 
-		when(jmxRequestExecutor.fetchBeanInfo(any(), any(), any(), any()))
+		when(jmxRequestExecutor.fetchMBean(any(), any(), any(), any()))
 			.thenThrow(new RuntimeException("Simulated failure"));
 
 		final CriterionTestResult result = processor.process(criterion, "connectorERR", telemetryManager);

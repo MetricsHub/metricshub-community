@@ -227,7 +227,7 @@ public class JmxExtension implements IProtocolExtension {
 			throw new IllegalArgumentException("At least one attribute or key property must be specified for JMX query.");
 		}
 
-		final List<List<String>> result = jmxRequestExecutor.fetchBeanInfo(
+		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
 			(JmxConfiguration) configuration,
 			objectName,
 			attributes,

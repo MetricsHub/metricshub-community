@@ -23,6 +23,8 @@ package org.metricshub.extension.jmx;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -54,11 +56,12 @@ public class JmxRequestExecutor {
 	 * @return a list of lists, where each inner list contains the values of the key attributes followed by the requested attributes
 	 * @throws Exception if an error occurs while connecting to the JMX server or fetching attributes
 	 */
-	public List<List<String>> fetchBeanInfo(
-		final JmxConfiguration jmxConfiguration,
-		final String objectNamePattern,
-		final Iterable<String> attributes,
-		final Collection<String> keyProperties
+	@WithSpan("JMX Fetch MBean")
+	public List<List<String>> fetchMBean(
+		@SpanAttribute("jmx.config") final JmxConfiguration jmxConfiguration,
+		@SpanAttribute("jmx.objectName") final String objectNamePattern,
+		@SpanAttribute("jmx.attributes") final Iterable<String> attributes,
+		@SpanAttribute("jmx.keyProperties") final Collection<String> keyProperties
 	) throws Exception {
 		return ThreadHelper.execute(
 			() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
@@ -157,7 +160,8 @@ public class JmxRequestExecutor {
 	 * @return true if the connection is successful, false otherwise
 	 * @throws Exception if an error occurs while connecting to the JMX server or if the connection times out
 	 */
-	public boolean checkConnection(final JmxConfiguration configuration) throws Exception {
+	@WithSpan("JMX Connection Check")
+	public boolean checkConnection(@SpanAttribute("jmx.config") JmxConfiguration configuration) throws Exception {
 		return ThreadHelper.execute(() -> runConnectionCheck(configuration), configuration.getTimeout());
 	}
 

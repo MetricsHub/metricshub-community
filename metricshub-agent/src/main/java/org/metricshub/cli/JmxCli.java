@@ -77,7 +77,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 
 		jmxcli cassandra-01 --port 7199 --timeout 60 \
 		--object-name org.apache.cassandra.metrics:type=Table,keyspace=system,scope=*,name=TotalDiskSpaceUsed \
-		--key-properties scope --attributes Count,Type
+		--key-properties scope --attributes Count
 
 		Note: If --password is not provided, you will be prompted interactively.
 		""";

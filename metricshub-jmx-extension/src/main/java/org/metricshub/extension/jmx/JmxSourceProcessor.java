@@ -70,7 +70,7 @@ public class JmxSourceProcessor {
 
 		try {
 			// Fetch attributes; this also validates exactly one match
-			rows.addAll(jmxExecutor.fetchBeanInfo(jmxConfig, objectName, attributes, keyProperties));
+			rows.addAll(jmxExecutor.fetchMBean(jmxConfig, objectName, attributes, keyProperties));
 		} catch (Exception e) {
 			String hostname = jmxConfig.getHostname();
 			log.error(

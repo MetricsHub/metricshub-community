@@ -105,7 +105,14 @@ public class JmxConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return JmxConfiguration.builder().hostname(hostname).port(port).username(username).password(password).build();
+		return JmxConfiguration
+			.builder()
+			.hostname(hostname)
+			.port(port)
+			.username(username)
+			.password(password)
+			.timeout(timeout)
+			.build();
 	}
 
 	@Override

@@ -76,7 +76,7 @@ public class JmxCriterionProcessor {
 		}
 
 		try {
-			final List<List<String>> queryResult = jmxRequestExecutor.fetchBeanInfo(
+			final List<List<String>> queryResult = jmxRequestExecutor.fetchMBean(
 				jmxConfiguration,
 				jmxCriterion.getObjectName(),
 				jmxCriterion.getAttributes(),
