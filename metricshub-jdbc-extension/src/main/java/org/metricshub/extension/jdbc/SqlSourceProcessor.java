@@ -70,13 +70,16 @@ public class SqlSourceProcessor {
 		}
 
 		final String hostname = jdbcConfiguration.getHostname();
+
+		final JdbcConfiguration cfg = (JdbcConfiguration) jdbcConfiguration.copy();
+
+		if ((cfg.getDatabase() == null) && sqlSource.getDatabase() != null) {
+			cfg.setDatabase(sqlSource.getDatabase());
+			cfg.setUrl(cfg.generateUrl());
+		}
+
 		try {
-			final List<List<String>> results = sqlRequestExecutor.executeSql(
-				hostname,
-				jdbcConfiguration,
-				sqlSource.getQuery(),
-				false
-			);
+			final List<List<String>> results = sqlRequestExecutor.executeSql(hostname, cfg, sqlSource.getQuery(), false);
 
 			return SourceTable.builder().table(results).build();
 		} catch (Exception e) {

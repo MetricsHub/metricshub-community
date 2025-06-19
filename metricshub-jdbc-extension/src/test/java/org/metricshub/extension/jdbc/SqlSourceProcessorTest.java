@@ -18,6 +18,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,12 +35,12 @@ class SqlSourceProcessorTest {
 	@BeforeEach
 	void setUp() {
 		sqlSourceProcessor = new SqlSourceProcessor(sqlRequestExecutor, "connectorId");
+		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
 	}
 
 	@Test
 	void testProcessWhenConfigurationIsNullReturnsEmptySourceTable() {
 		// Test case when jdbcConfiguration is null
-
 		Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(JdbcConfiguration.class, null);
 		SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
@@ -52,7 +53,6 @@ class SqlSourceProcessorTest {
 	@Test
 	void testProcessWhenRequestExecutorThrowsExceptionReturnsEmptySourceTable() throws Exception {
 		// Test case when the requestExecutor throws an exception
-
 		SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
@@ -75,6 +75,7 @@ class SqlSourceProcessorTest {
 		when(sqlRequestExecutor.executeSql("hostname", jdbcConfiguration, "SELECT * FROM test_table", false))
 			.thenReturn(ExpectedResults);
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
+
 		SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
 		assertNotNull(result);

@@ -203,4 +203,17 @@ class JdbcConfigurationTest {
 		// Ensure that the copied configuration is a distinct object
 		assert (jdbcConfiguration != jdbcConfigurationCopy);
 	}
+
+	@Test
+	void testGenerateUrlPostgreSql() {
+		JdbcConfiguration cfg = JdbcConfiguration
+			.builder()
+			.type("postgresql")
+			.hostname("localhost")
+			.port(5432)
+			.database("mydb")
+			.build();
+		String url = String.valueOf(cfg.generateUrl());
+		assertEquals("jdbc:postgresql://localhost:5432/mydb", url);
+	}
 }
