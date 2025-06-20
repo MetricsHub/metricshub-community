@@ -69,9 +69,17 @@ public class SqlCriterionProcessor {
 		}
 
 		final String hostname = jdbcConfiguration.getHostname();
+
+		final JdbcConfiguration cfg = (JdbcConfiguration) jdbcConfiguration.copy();
+
+		if ((cfg.getDatabase() == null) && sqlCriterion.getDatabase() != null) {
+			cfg.setDatabase(sqlCriterion.getDatabase());
+			cfg.setUrl(cfg.generateUrl());
+		}
+
 		final List<List<String>> queryResult;
 		try {
-			queryResult = sqlRequestExecutor.executeSql(hostname, jdbcConfiguration, sqlCriterion.getQuery(), false);
+			queryResult = sqlRequestExecutor.executeSql(hostname, cfg, sqlCriterion.getQuery(), false);
 		} catch (Exception e) {
 			log.error("Hostname {} - Error executing SQL criterion: {}", hostname, e.getMessage());
 			log.debug("Hostname {} - An exception occurred while executing SQL criterion.", hostname, e);

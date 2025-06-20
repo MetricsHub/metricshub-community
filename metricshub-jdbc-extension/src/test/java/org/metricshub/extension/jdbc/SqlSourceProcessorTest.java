@@ -34,6 +34,7 @@ class SqlSourceProcessorTest {
 	@BeforeEach
 	void setUp() {
 		sqlSourceProcessor = new SqlSourceProcessor(sqlRequestExecutor, "connectorId");
+		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
 	}
 
 	@Test
