@@ -36,7 +36,7 @@ jmxcli <HOSTNAME> --object-name <OBJECT_NAME> [--port <PORT>] [--username <USERN
 jmxcli cassandra-01 --port 7199 --timeout 60s \
   --object-name org.apache.cassandra.metrics:type=Table,keyspace=system,scope=*,name=TotalDiskSpaceUsed \
   --key-properties scope \
-  --attributes Count,Type
+  --attributes Count
 ```
 
 ### Example 2: Querying a JVM's Runtime Attributes
