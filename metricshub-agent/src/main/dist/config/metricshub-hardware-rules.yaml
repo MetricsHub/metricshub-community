@@ -1,0 +1,780 @@
+groups:
+- name:  MetricsHub-Hardware-Battery-Charge
+  rules:
+  - alert:  MetricsHub-Hardware-Battery-Charge-Critical
+    expr: hw_battery_charge_ratio >= 0 AND hw_battery_charge_ratio * 100 < 30
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} charge is critically low
+      description: |
+        The battery charge is very low and will soon run out of charge ({{ printf "%.1f" ($value) }}%)
+        Consequence: A low charge battery may lead to data loss in case of a power outage.
+        Recommended Action: Check why the battery is not fully charged (it may be due to a power outage or an unplugged power cable) and fully recharge the battery when possible.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+        Charge: {{ $value }}%
+  - alert:  MetricsHub-Hardware-Battery-Charge-Warning
+    expr: hw_battery_charge_ratio >= 0 AND hw_battery_charge_ratio * 100 <= 50
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} charge is abnormally low
+      description: |
+        Although not yet critical, the battery charge is abnormally low ({{ printf "%.1f" ($value) }}%)
+        Consequence: A low charge battery may lead to data loss in case of a power outage.
+        Recommended Action: Check why the battery is not fully charged (it may be due to a power outage or an unplugged power cable) and fully recharge the battery when possible.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+        Charge: {{ $value }}%
+
+- name: MetricsHub-Hardware-Device-Errors
+  rules:
+  - alert: MetricsHub-Hardware-Device-Errors-Warning
+    expr: rate(hw_errors_total[1h]) >= ignoring(limit_type) hw_errors_limit{limit_type="degraded"}
+    labels:
+      severity: warning
+    annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} has encountered a high number of errors
+        description: |
+          {{- if eq $labels.hw_type "cpu" }}
+            The processor encountered and fixed a few internal errors
+            Consequence: The stability of the system may be affected. A system crash is likely to occur soon.
+            Recommended Action: Check as soon as possible whether the processor environment is normal (voltage levels and temperature). If so, the processor may be defective and needs to be replaced quickly.
+          {{- else if eq $labels.hw_type "logical_disk" }}
+            The logical disk encountered errors.
+            Consequence: The integrity of the data stored on this logical disk may be in jeopardy.
+            Recommended Action: Check whether a physical disk is in degraded state or predicts failure, and if so, replace it.
+          {{- else if eq $labels.hw_type "memory" }}
+            This memory module has encountered one or several errors.
+            Consequence: This strongly impacts the network performance.
+            Recommended Action: Replace this memory module as soon as possible to prevent a system crash or data corruption.
+          {{- else if eq $labels.hw_type "network" }}
+            This network card is encountering or generating a high number of errors.
+            Consequence: The network traffic handled by this adapter may be slowed down and this may affect other systems communicating with this computer.
+            Recommended Action: Check the network cable, the driver settings, the speed and duplex mode of the link. If everything seems normal, you may have to replace this network adapter.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            The physical disk encountered an abnormal number of errors.
+            Consequence: The integrity of the data stored on this physical disk is not assured.
+            Recommended Action: Replace this physical disk as soon as possible to avoid data corruption.
+          {{- else if eq $labels.hw_type "tape_drive" }}
+            The tape drive encountered an abnormal number of errors.
+            Consequence: The tape drive may not be able to read or write data to the tape.
+            Recommended Action: Check what is causing these errors on the tape drive, whether it is caused by the tape itself, the drive needing to be cleaned, or a data transport error.
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          Error Rate: {{ printf "%.2f" $value }} errors/sec
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
+  - alert: MetricsHub-Hardware-Device-Errors-Critical
+    expr: rate(hw_errors_total[1h]) >= ignoring(limit_type) hw_errors_limit{limit_type="critical"}
+    labels:
+      severity: critical
+    annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} has encountered a high number of errors
+        description: |
+          {{- if eq $labels.hw_type "cpu" }}
+            The processor encountered and fixed a high number of internal errors.
+            Consequence: The stability of the system may be critically affected. A system crash is very likely to occur soon.
+            Recommended Action: Check as soon as possible if the processor environment is normal (voltage levels and temperature). If so, the processor may be defective and needs to be replaced quickly.
+          {{- else if eq $labels.hw_type "logical_disk" }}
+            The logical disk encountered too many errors.
+            Consequence: The integrity of the data stored on this logical disk is affected (possible data corruption).
+            Recommended Action: CCheck whether a physical disk is in degraded state or predicts failure, and if so, replace it.
+          {{- else if eq $labels.hw_type "memory" }}
+            This memory module has encountered too many errors.
+            Consequence: This memory module is unstable and will probably cause a system crash or data corruption.
+            Recommended Action: Replace this memory module as soon as possible to prevent a system crash or data corruption.
+          {{- else if eq $labels.hw_type "network" }}
+            This network card is encountering or generating a critically high number of errors.
+            Consequence: This strongly impacts the network performance.
+            Recommended Action: Check the network cable, the driver settings, the speed and duplex mode of the link. If everything seems normal, you may have to replace this network adapter.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            The physical disk encountered too many errors.
+            Consequence: The integrity of the data stored on this physical disk may be in jeopardy.
+            Recommended Action: Replace this physical disk as soon as possible to avoid data corruption.
+          {{- else if eq $labels.hw_type "tape_drive" }}
+            The tape drive encountered too many errors.
+            Consequence: The tape drive may not be able to read or write data to the tape.
+            Recommended Action: Check what is causing these errors on the tape drive, whether it is caused by the tape itself, the drive needing to be cleaned, or a data transport error.
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          Error Rate: {{ printf "%.2f" $value }} errors/sec
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
+
+- name:  MetricsHub-Hardware-Fan-Speed
+  rules:
+  - alert:  MetricsHub-Hardware-Fan-Speed-Warning
+    expr: |
+      hw_fan_speed_rpm >= 0 AND hw_fan_speed_rpm <= ignoring(limit_type) hw_fan_speed_limit_rpm{limit_type="low.degraded"}
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s speed is abnormally low
+      description: |
+        The speed of this fan is insufficient.
+        Consequence: The temperature of the chip, component or device that was cooled down by this fan, may increase slightly. This could lead to system crashes.";
+        Recommended Action: Check why the fan is running slow. This may be caused by dust or wear and tear. Replace the fan if needed.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Speed: {{ $value }} RPM
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-Fan-Speed-Critical
+    expr: |
+      hw_fan_speed_rpm >= 0 AND hw_fan_speed_rpm <= ignoring(limit_type) hw_fan_speed_limit_rpm{limit_type="low.critical"}
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s speed is critically low
+      description: |
+        The speed of this fan is critically low.
+        Consequence: The temperature of the chip, component or device that was cooled down by this fan, may rise rapidly. This could lead to severe hardware damage and system crashes.
+        Recommended Action: Check if the fan no longer cools down the system. If so, replace the fan.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Speed: {{ $value }} RPM
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-Fan-Speed-Percentage
+  rules:
+  - alert: MetricsHub-Hardware-Fan-Speed-Percentage-Warning
+    expr: hw_fan_speed_ratio >= 0 AND hw_fan_speed_ratio * 100 <= ignoring(limit_type) hw_fan_speed_ratio_limit{limit_type="low.degraded"} * 100
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s speed is abnormally low
+      description: |
+        The speed of this fan is insufficient.
+        Consequence: The temperature of the chip, component or device that was cooled down by this fan, may increase slightly. This could lead to system crashes.";
+        Recommended Action: Check why the fan is running slow. This may be caused by dust or wear and tear. Replace the fan if needed.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Speed Percentage: {{ $value }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-Fan-Speed-Percentage-Critical
+    expr: hw_fan_speed_ratio >= 0 AND hw_fan_speed_ratio * 100 <= ignoring(limit_type) hw_fan_speed_ratio_limit{limit_type="low.critical"} * 100
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s speed is critically low
+      description: |-
+        The speed of this fan is critically low.
+        Consequence: The temperature of the chip, component or device that was cooled down by this fan, may rise rapidly. This could lead to severe hardware damage and system crashes.
+        Recommended Action: Check if the fan no longer cools down the system. If so, replace the fan.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Speed Percentage: {{ $value }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-LUN-AvailablePaths
+  rules:
+  - alert: MetricsHub-Hardware-LUN-AvailablePaths-Warning
+    expr: hw_lun_paths{type="available"} >= 0 AND hw_lun_paths{type="available"} <= ignoring(limit_type) hw_lun_paths_limit{limit_type="low.degraded"}
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s number of available paths is low
+      description: |
+        Although the LUN is still working and available, the number of paths to the LUN is lower than previously detected
+        Consequence: The performance of the system may be affected and redundancy could be lost.
+        Recommended Action: Verify on the SAN switches which links are broken (link down, or zone exclusion, etc.). Check the mapping and masking configuration of the corresponding storage volume in the storage system.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Available Paths: {{ $value }} path(s)
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-LUN-AvailablePaths-Critical
+    expr: hw_lun_paths{type="available"} == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} has no available paths
+      description: |
+        The LUN cannot be accessed anymore because no path is available.
+        Consequence: One or more filesystems are no longer available (possible data loss).
+        Recommended Action: Verify on the SAN switches which links are broken (link down, or zone exclusion, etc.). Check the mapping and masking configuration of the corresponding storage volume in the storage system.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Available Paths: 0
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-NetworkCard-ErrorRatio
+  rules:
+  - alert: MetricsHub-Hardware-NetworkCard-ErrorRatio-Warning
+    expr: hw_network_error_ratio * 100 >= ignoring(limit_type) hw_network_error_ratio_limit{limit_type="degraded"} * 100
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is encountering or generating a high number of errors
+      description: |
+        This network card is encountering or generating a high number of errors
+        Consequence: This strongly impacts the network performance.
+        Recommended Action: Check the network cable, the driver settings, the speed and duplex mode of the link. If everything seems normal, you may have to replace this network adapter.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Error Percentage: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-NetworkCard-ErrorRatio-Critical
+    expr: hw_network_error_ratio * 100 >= ignoring(limit_type) hw_network_error_ratio_limit{limit_type="critical"} * 100
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is encountering or generating a high number of errors
+      description: |
+        This network card is encountering or generating a critically high number of errors.
+        Consequence: This strongly impacts the network performance.
+        Recommended Action: Check the network cable, the driver settings, the speed and duplex mode of the link. If everything seems normal, you may have to replace this network adapter..
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Error Percentage: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-OtherDevice-UsageCount
+  rules:
+  - alert: MetricsHub-Hardware-OtherDevice-UsageCount-Warning
+    expr: hw_other_device_uses_total >= ignoring(limit_type) hw_other_device_uses_limit{limit_type="degraded"}
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — Device {{ $labels.name }} usage count exceeds degraded threshold
+      description: |
+        This device is being used more frequently than expected.
+        Consequence: Excessive usage may indicate a misconfiguration or heavy load.
+        Recommended Action: Identify the device type and verify that its usage is within normal operational parameters.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-OtherDevice-UsageCount-Critical
+    expr: hw_other_device_uses_total >= ignoring(limit_type) hw_other_device_uses_limit{limit_type="critical"}
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — Device {{ $labels.name }} usage count exceeds critical threshold
+      description: |
+        This device is being used more frequently than expected.
+        Consequence: Excessive usage may indicate a misconfiguration or heavy load.
+        Recommended Action: Identify the device type and verify that its usage is within normal operational parameters.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-OtherDevice-Value
+  rules:
+  - alert: MetricsHub-Hardware-OtherDevice-Value-Warning
+    expr:  hw_other_device_value >= ignoring(limit_type) hw_other_device_value_limit{limit_type="degraded"}
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+         { $labels.host_name }} — Device {{ $labels.name }} value exceeds degraded threshold
+      description: |
+        A monitored metric from this device is outside of its expected range.
+        Consequence: This could indicate abnormal behavior or a warning condition.
+        Recommended Action: Investigate the meaning of the reported metric and confirm the device's health.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-OtherDevice-Value-Critical
+    expr:  hw_other_device_value >= ignoring(limit_type) hw_other_device_value_limit{limit_type="critical"}
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+         { $labels.host_name }} — Device {{ $labels.name }} value exceeds critical threshold
+      description: |
+        A monitored metric from this device is outside of its expected range.
+        Consequence: This could indicate abnormal behavior or a critical condition.
+        Recommended Action: Investigate the meaning of the reported metric and confirm the device's health.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-PhysicalDisk-EnduranceRemaining
+  rules:
+  - alert: MetricsHub-Hardware-PhysicalDisk-EnduranceRemaining-Critical
+    expr: hw_physical_disk_endurance_utilization_ratio >= 0 AND hw_physical_disk_endurance_utilization_ratio * 100 < 2
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s endurance remaining is critically low
+      description: |
+        The physical disk is reaching its maximum usage rating and is to be considered worn out.
+        Consequence: The disk will soon stop responding and may become incapable of writing data.
+        Recommended Action: Replace the physical disk as soon as possible.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Endurance Remaining: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-PhysicalDisk-EnduranceRemaining-Warning
+    expr: hw_physical_disk_endurance_utilization_ratio >= 0 AND hw_physical_disk_endurance_utilization_ratio * 100 <= 5
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s endurance remaining is low
+      description: |
+        The physical disk is nearing wearing out and getting to its end of life.
+        Consequence: As the disk reaches its maximum usage limit, it may become incapable of writing data.
+        Recommended Action: Consider replacing the physical disk.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Endurance Remaining: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-PowerSupply-UsedCapacity
+  rules:
+  - alert: MetricsHub-Hardware-PowerSupply-UsedCapacity-Warning
+    expr: hw_power_supply_utilization_ratio * 100 >= 90 AND hw_power_supply_utilization_ratio * 100 < 99
+    for: 15m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} high power usage
+      description: |
+        The power used by the system is abnormally high for the capacity of the power supply
+        Consequence: Overloading a power supply may lead to voltage instability and system crashes. It can also cause severe damage to the power supply.
+        Recommended Action: Find out why the power used by the system has risen that high (typically: new hard-drives). Upgrade to a power supply that can support such a power demand.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Current Power Usage: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-PowerSupply-UsedCapacity-Critical
+    expr: hw_power_supply_utilization_ratio * 100 >= 99 AND hw_power_supply_utilization_ratio * 100 <= 100
+    for: 15m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} critically high power usage
+      description: |
+        The power used by the system is critically high for the capacity of the power supply
+        Consequence: Overloading a power supply may lead to voltage instability and system crashes. It can also cause severe damage to the power supply.
+        Recommended Action: Find out why the power used by the system has risen that high (typically: new hard-drives). Upgrade to a power supply that can support such a power demand.
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Current Power Usage: {{ printf "%.1f" ($value) }}%
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Hardware-Temperature
+  rules:
+  - alert: MetricsHub-Hardware-Temperature-High-Warning
+    expr: hw_temperature_celsius >= ignoring(limit_type) hw_temperature_limit_celsius{limit_type="high.degraded"}
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s temperature is out of the normal range
+      description: |
+        Although not yet critical, the temperature is out of the normal range.
+        Consequence: An out-of-range temperature may lead to a system crash or even damaged hardware.
+        Recommended Action: Check why the temperature is out of the normal range (it may be due to a fan failure, a severe system overload or a failure in the data center cooling system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Temperature: {{ $value }}°C
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-Temperature-High-Critical
+    expr: hw_temperature_celsius >= ignoring(limit_type) hw_temperature_limit_celsius{limit_type="high.critical"}
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}'s temperature is critically out of the normal range
+      description: |
+        The temperature is critically out of the normal range.
+        Consequence: An out-of-range temperature may lead to a system crash or even damaged hardware.
+        Recommended Action: Check why the temperature is out of the normal range (it may be due to a fan failure, a severe system overload or a failure in the data center cooling system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Temperature: {{ $value }}°C
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name:  MetricsHub-Hardware-Voltage
+  rules:
+  - alert: MetricsHub-Hardware-Voltage-Low-Critical
+    expr:  hw_voltage_volts <= ignoring(limit_type) hw_voltage_limit_volts{limit_type="low.critical"}
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}. The voltage has reached a critically low level
+      description: |
+        The voltage has reached an abnormal level
+        Consequence: An out-of-range voltage may lead to a system crash.
+        Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Voltage: {{ $value }} volts
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert: MetricsHub-Hardware-Voltage-High-Critical
+    expr:  hw_voltage_volts >= ignoring(limit_type) hw_voltage_limit_volts{limit_type="high.critical"}
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}. The voltage has reached a critically high level
+      description: |
+        The voltage has reached an abnormal level
+        Consequence: An out-of-range voltage may lead to a system crash.
+        Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Voltage: {{ $value }} volts
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert:  MetricsHub-Hardware-Voltage-Low-Warning
+    expr:  hw_voltage_volts <= ignoring(limit_type) hw_voltage_limit_volts{limit_type="low.degraded"}
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}. The voltage has reached an abnormally low level
+      description: |
+        The voltage level is out of the normal range.
+        Consequence: An out-of-range voltage may lead to a system crash.
+        Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Voltage: {{ $value }} volts
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+  - alert:  MetricsHub-Hardware-Voltage-High-Warning
+    expr:  hw_voltage_volts >= ignoring(limit_type) hw_voltage_limit_volts{limit_type="high.degraded"}
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: |
+        {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }}. The voltage has reached an abnormally high level
+      description: |
+        The voltage level is out of the normal range.
+        Consequence: An out-of-range voltage may lead to a system crash.
+        Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+        Name: {{ $labels.name }}
+        ID: {{ $labels.id }}
+        Voltage: {{ $value }} volts
+        {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+
+- name: MetricsHub-Device-Status
+  rules:
+    - alert: MetricsHub-Hardware-Device-Status-Warning
+      expr: |
+       hw_status{state="degraded"} == 1
+       OR hw_status{battery_state="degraded"} == 1
+       OR hw_status{state="needs_cleaning"} == 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is in warning state
+        description: |
+          {{- if eq $labels.hw_type "battery" }}
+            The battery is degraded or nearing end-of-life.
+            Consequence: Check that number of allowed recharges has not been exceeded and that the current full charge capacity (FCC) is close to the full charge capacity of initial battery.
+            Recommended Action: The battery needs to be replaced or reconditioned.
+          {{- else if eq $labels.hw_type "blade" }}
+            This blade is degraded and is not fully available for normal operations.
+            Consequence: If this blade is part of a distributed server farm, it may be unable to handle the load and may affect the performance of other blades.
+            Recommended Action: Check why this blade is degraded and try to bring it fully online. Otherwise, try distributing the load to other blades.
+          {{- else if eq $labels.hw_type "cpu" }}
+            This processor is degraded or is about to fail.
+            Consequence: If degraded, this processor may not be fully operational. This could adversely impact the overall performance of the system. If it is about to fail, this processor is likely to crash very soon.
+            Recommended Action: Replace this processor as soon as possible to prevent a system crash.
+          {{- else if eq $labels.hw_type "disk_controller" }}
+            This disk controller is degraded or about to fail.
+            Consequence: A degraded disk controller could have a serious performance impact on its attached disks. A controller about to fail means that its attached disks will no longer be available to the operating system. This may lead to data loss and/or corruption.
+            Recommended Action: Replace this disk controller as soon as possible to avoid performance issues and possible data loss and corruption
+          {{- else if eq $labels.hw_type "fan" }}
+            The fan is degraded or about to fail.
+            Consequence: This may lead to a temperature increase of the device cooled by this fan and therefore, to a system crash or damaged hardware.
+            Recommended Action: Check if the fan is no longer cooling the system. If so, replace the fan.
+          {{- else if eq $labels.hw_type "gpu" }}
+            This GPU is degraded or is about to fail.
+            Consequence: This GPU may not be fully operational. If the GPU is part of a cluster, this could adversely impact the cluster's performance. If it is used as passthrough, it may crash the virtual machines that use this GPU.
+            Recommended Action: Replace this GPU as soon as possible.
+          {{- else if eq $labels.hw_type "logical_disk" }}
+            Although still working and available, this logical disk is degraded.
+            Consequence: The performance of the system may be affected.
+            Recommended Action: If the RAID controller is not already handling this problem, check if you need to replace a physical disk or assign a hot spare to this logical disk.
+          {{- else if eq $labels.hw_type "memory" }}
+            This memory module is degraded or about to fail.
+            Consequence: If degraded, this memory module may not be fully operational and may impact the overall performance of the system. If about to fail, this may soon lead to a system crash or data corruption.
+            Recommended Action: Replace this memory module as soon as possible to prevent a system crash or data corruption.
+          {{- else if eq $labels.hw_type "network" }}
+            This network adapter is degraded.
+            Consequence: The network traffic handled by this adapter may be slowed down and this may affect other systems communicating with this computer.
+            Recommended Action: If possible, try to fix the problem through the network driver settings. Otherwise, replace the network adapter.
+          {{- else if eq $labels.hw_type "other_device" }}
+            This device is degraded.
+            Consequence: Unknown: depends on the device type.
+            Recommended Action: Unknown: depends on the device type.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            Although still working and available, this physical disk is degraded or about to fail.
+            Consequence: If degraded, the performance of the system may be affected. If about to fail, the disk may crash soon, possibly causing a loss of data.
+            Recommended Action: You may need to replace this physical disk.
+          {{- else if eq $labels.hw_type "power_supply" }}
+            This power supply is in degraded state, or is about to fail.
+            Consequence: If this is the only power supply in the enclosure and it is about to fail, the server is about to be turned off. A degraded power supply may also lead to an unstable power conversion and thus to severe system crashes or hardware damages.
+            Recommended Action: Quickly replace the faulty power supply.
+          {{- else if eq $labels.hw_type "robotics" }}
+            These robotics are degraded.
+            Consequence: The robotics may be failing.
+            Recommended Action: Check the robotics for any visible problems and replace it if necessary.
+          {{- else if eq $labels.hw_type "tape_drive" }}
+            This tape drive may be running slowly, dirty or has encountered too many errors.
+            Consequence: The tape library may no longer be able to perform backups.
+            Recommended Action: Check the faulty tape drive for any visible problems and replace it if necessary.
+          {{- else if eq $labels.hw_type "temperature" }}
+            Although not yet critical, the temperature is out of the normal range.
+            Consequence: An out-of-range temperature may lead to a system crash or even damaged hardware.
+            Recommended Action: Check why the temperature is out of the normal range (it may be due to a fan failure, a severe system overload or a failure in the data center cooling system).
+          {{- else if eq $labels.hw_type "voltage" }}
+            Although still not critical, the voltage level is out of the normal range.
+            Consequence: An out-of-range voltage may lead to a system crash.
+            Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
+    - alert: MetricsHub-Hardware-Device-Status-Critical
+      expr:  |
+        hw_status{state="failed"} == 1
+        OR hw_status{battery_state="failed"} == 1
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is in critical state
+        description: |
+          {{- if eq $labels.hw_type "battery" }}
+            This battery has failed.
+            Consequence: This battery in unoperational and a power outage will certainly lead to data loss and/or corruption.
+            Recommended Action: Replace the battery.
+          {{- else if eq $labels.hw_type "blade" }}
+            This blade has failed.
+            Consequence: If this blade is part of a distributed server farm, it may be unable to handle the load and probably affects the performance of other blades.
+            Recommended Action: Check why this blade is not working and try to bring it online. Otherwise, try distributing the load to other blades.
+          {{- else if eq $labels.hw_type "cpu" }}
+            This processor has failed.
+            Consequence: This processor is not operational. This will impact the overall performance of the system. If it is about to fail, this processor may crash very soon.
+            Recommended Action: Replace this processor as soon as possible to prevent a system overload.
+          {{- else if eq $labels.hw_type "disk_controller" }}
+            This disk controller has failed.
+            Consequence: This disk controller is no longer working. Its attached disks are probably no longer available to the operating system which means data loss or even corruption.
+            Recommended Action: Replace this disk controller immediately to have a chance to recover the data on the attached disks.
+          {{- else if eq $labels.hw_type "fan" }}
+            The fan has failed and no longer cools down the system.
+            Consequence: This may lead to a temperature increase of the device cooled by this fan and therefore, to a system crash or damaged hardware.
+            Recommended Action: Check if the fan is no longer cooling the system. If so, replace the fan.
+          {{- else if eq $labels.hw_type "gpu" }}
+            This GPU has failed.
+            Consequence: This GPU is not operational. This will impact the overall performance of the system or the GPU cluster it is part of.
+            Recommended Action: Replace this GPU. If used as passthrough, make sure the virtual machines that were using this GPU are still up and running.
+          {{- else if eq $labels.hw_type "logical_disk" }}
+            This logical disk is in critical state.
+            Consequence: This means that one or more filesystems are no longer available (possible data loss).
+            Recommended Action: Check whether the RAID controller is able to repair the logical disk. If not, you may have to re-create this logical disk and restore its data from a backup image.
+          {{- else if eq $labels.hw_type "memory" }}
+            This memory module has failed.
+            Consequence: This memory module is not operational. This probably impacts the overall performance of the system.
+            Recommended Action: Replace this memory module as soon as possible to prevent a system overload.
+          {{- else if eq $labels.hw_type "network" }}
+            This network adapter has failed.
+            Consequence: The network traffic (if any) that was processed by this adapter is no longer being handled, or is overloading another network adapter.
+            Recommended Action: Replace this network adapter as soon as possible.
+          {{- else if eq $labels.hw_type "other_device" }}
+            This device has failed.
+            Consequence: Unknown: depends on the device type.
+            Recommended Action: Unknown: depends on the device type.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            This physical disk is in critical/unrecoverable state.
+            Consequence: If part of a RAID subsystem, a missing disk affects the performance but filesystems should still be up and running. Otherwise, the filesystems of this disk are no longer available (data loss).
+            Recommended Action: Replace this physical disk as soon as possible.
+          {{- else if eq $labels.hw_type "power_supply" }}
+            The power supply is in a critical state.
+            Consequence: A failing power supply will turn off the server soon.
+            Recommended Action: Quickly replace the faulty power supply.
+          {{- else if eq $labels.hw_type "robotics" }}
+            These robotics may be mechanically failed or broken.
+            Consequence: The robotics may no longer be operating.
+            Recommended Action: Replace or repair the faulty robotics.
+          {{- else if eq $labels.hw_type "tape_drive" }}
+            This tape drive may be jammed, dirty, mechanically failed or broken.
+            Consequence: The tape library may no longer be able to perform backups.
+            Recommended Action: Quickly replace the faulty tape drive.
+          {{- else if eq $labels.hw_type "temperature" }}
+            The temperature is critically out of the normal range.
+            Consequence: An out-of-range temperature may lead to a system crash or even damaged hardware.
+            Recommended Action: Check why the temperature is out of the normal range (it may be due to a fan failure, a severe system overload or a failure in the data center cooling system).
+          {{- else if eq $labels.hw_type "voltage" }}
+            The voltage is critically out of the normal range.
+            Consequence: An out-of-range voltage may lead to a system crash.
+            Recommended Action: Check why the voltage is out of the normal range (a feeble power supply unit, an unstable power converter, or a severe power overload owing to too many devices within the system).
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
+
+- name: MetricsHub-Device-Predicted-Failure
+  rules:
+    - alert: MetricsHub-Hardware-Device-Predicted-Failure-Warning
+      expr: hw_status{state="predicted_failure"} == 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is predicted to fail soon
+        description: |
+          {{- if eq $labels.hw_type "cpu" }}
+            An imminent failure is predicted for this processor.
+            Consequence: A system crash is very likely to occur soon.
+            Recommended Action: Replace this processor or disable it as soon as possible, if disabling it will not affect the performance of the system.
+          {{- else if eq $labels.hw_type "gpu" }}
+            An imminent failure is predicted for this GPU.
+            Consequence: If part of a cluster of GPUs, this will impact the cluster's overall performance. If used in a system or as passthrough, a system crash is very likely to occur soon.
+            Recommended Action: Replace this GPU as soon as possible.
+          {{- else if eq $labels.hw_type "memory" }}
+            An imminent failure is predicted on this memory module.
+            Consequence: A system crash or data corruption is very likely to occur soon.
+            Recommended Action: Replace this memory module as soon as possible to prevent a system crash.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            An imminent failure is predicted on this physical disk (SMART report).
+            Consequence: A disk crash or data corruption is very likely to occur soon.
+            Recommended Action: Replace this physical disk as soon as possible to prevent a disk crash or data corruption.
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
+
+- name: MetricsHub-Device-Missing
+  rules:
+    - alert: MetricsHub-Hardware-Device-Missing-Critical
+      expr: hw_status{state="present"} == 0
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: |
+          {{ $labels.host_name }} — {{ $labels.hw_type }} {{ $labels.name }} is missing
+        description: |
+          {{- if eq $labels.hw_type "blade" }}
+            This blade is not detected anymore.
+            Consequence: This could mean that the blade has been pulled off the main chassis and is no longer available.
+            Recommended Action: Check if the blade has been removed by an administrator and that it does not impact the other blades in the enclosure.
+          {{- else if eq $labels.hw_type "battery" }}
+            This battery is not detected anymore.
+            Consequence: This could mean that the battery has been removed and is no longer available.
+            Recommended Action: Check whether the battery was intentionally removed from the system or if it not responding.
+          {{- else if eq $labels.hw_type "cpu" }}
+            This processor is not detected anymore.
+            Consequence: This could mean that the processor has been disabled by BIOS, or that it has been deallocated for this system (in case of a dynamically reconfigurable machine). The computing capabilities have been reduced and this may impact the overall performance of this computer.
+            Recommended Action: Check whether the processor has been intentionally removed by authorized personnel or whether it has failed. In the latter case, replace the faulty processor.
+          {{- else if eq $labels.hw_type "disk_controller" }}
+            This disk controller is not detected anymore.
+            Consequence: The disks attached to this controller are no longer available to the operating system. This will certainly cause serious problems to applications that were using these disks.
+            Recommended Action: Check whether the controller was intentionally removed from the system or whether it has been automatically disabled by the BIOS of the computer.
+          {{- else if eq $labels.hw_type "enclosure" }}
+            This enclosure is not detected anymore.
+            Consequence: This is probably a problem between MetricsHub and the hardware agent.
+            Recommended Action: Check that the connectors are running properly.
+          {{- else if eq $labels.hw_type "fan" }}
+            This fan is not detected anymore.
+            Consequence: This could either mean that the fan is no longer powered or that the sensor has failed. If the fan is turned off, it may lead to a temperature increase on the device cooled by this fan, could hence result in a system crash or damaged hardware.
+            Recommended Action: Check if the fan is no longer cooling the system. If so, replace the fan.
+          {{- else if eq $labels.hw_type "logical_disk" }}
+            This logical disk is not detected anymore.
+            Consequence: A missing logical disk could mean that one or more filesystems are no longer available (possible data loss).
+            Recommended Action: Verify that the logical disk has not been unconfigured on the RAID controller and that the controller is still functioning properly.
+          {{- else if eq $labels.hw_type "network" }}
+            This network adapter is not detected anymore.
+            Consequence: The network traffic (if any) that was processed by this adapter is no longer being handled, or is overloading another network adapter.
+            Recommended Action: Check whether this network adapter has been intentionally uninstalled by an administrator, or whether the adapter is out of order.
+          {{- else if eq $labels.hw_type "other_device" }}
+            This device is not detected anymore.
+            Consequence: Unknown.
+            Recommended Action: Check if this device is really missing.
+          {{- else if eq $labels.hw_type "physical_disk" }}
+            This physical disk is not detected anymore.
+            Consequence: If part of a RAID subsystem, a missing disk will affect the overall performance, but filesystems should still be up and running. If not part of a RAID, the filesystems of this disk will no longer be available (data loss).
+            Recommended Action: Check if the physical disk is really missing. The non-detection may be due to a dead disk or an unplugged cable.
+          {{- else if eq $labels.hw_type "power_supply" }}
+            This power supply is no longer detected.
+            Consequence: This could mean that this power supply unit is dead or has been removed. Power redundancy may not be available anymore.
+            Recommended Action: Verify that the power supply is actually out of order or has been removed by an administrator. In either case, please add a new power supply unit in the system to ensure power redundancy.
+          {{- else if eq $labels.hw_type "robotics" }}
+            These robotics are no longer detected.
+            Consequence: The robotics are no longer operating.
+            Recommended Action: Check that the robotics are still present, online and responding.
+          {{- else if eq $labels.hw_type "tape_drive" }}
+            This tape drive is no longer detected.
+            Consequence: The tape library may no longer be able to perform backups.
+            Recommended Action: Check that the tape drive is still present and online.
+          {{- else }}
+            No recommended actions available for devices of type "{{ $labels.hw_type }}".
+          {{- end }}
+
+          Type: {{ $labels.hw_type }}
+          Name: {{ $labels.name }}
+          ID: {{ $labels.id }}
+          {{- if $labels.info }}Information: {{ $labels.info }} {{ end }}
+          {{- if $labels.serial_number }}Serial number: {{ $labels.serial_number }} {{ end }}
