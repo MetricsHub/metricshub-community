@@ -1,4 +1,4 @@
-keywords: agent, configuration, protocols, jmx, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, jmx, sites
+keywords: agent, configuration, protocols, jmx, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
 description: How to configure the MetricsHub Agent to collect metrics from a variety of resources with various protocols.
 
 # Monitoring Configuration
