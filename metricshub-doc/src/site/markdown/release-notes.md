@@ -135,7 +135,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID       | Description                                                                                       |
 | -------- | ------------------------------------------------------------------------------------------------- |
-| M8BEE-46 | Prometheus AlertManager: Alerts are now triggered for degraded voltage levels (both low and high) |
+| M8BEE-46 | Prometheus Alertmanager: Alerts are now triggered for degraded voltage levels (both low and high) |
 | M8BEE-48 | Added SNMPv3 authentication examples to `metricshub-example.yaml`                                 |
 
 #### Fixed Issues
