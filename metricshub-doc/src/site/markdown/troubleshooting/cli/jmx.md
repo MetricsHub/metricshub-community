@@ -5,7 +5,7 @@ description: How to execute JMX queries with MetricsHub JMX CLI.
 
 [JMX](https://www.oracle.com/technical-resources/articles/javase/jmx.html) (Java Management Extensions) is a standard API for monitoring and managing resources such as applications, devices, and services. It is widely used for accessing Java Virtual Machine (JVM) metrics and MBeans (Managed Beans).
 
-The **MetricsHub JMX CLI** allows users query MBeans from a JMX server to fetch attributes, filter key properties, and extract JVM metrics.
+The **MetricsHub JMX CLI** allows users to query MBeans from a JMX server to fetch attributes, filter key properties, and extract JVM metrics.
 
 ## Syntax
 

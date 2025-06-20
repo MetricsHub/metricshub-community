@@ -1,4 +1,4 @@
-keywords: agent, configuration, protocols, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, jmx, sites
+keywords: agent, configuration, protocols, jmx, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, jmx, sites
 description: How to configure the MetricsHub Agent to collect metrics from a variety of resources with various protocols.
 
 # Monitoring Configuration
@@ -389,12 +389,12 @@ Use the parameters below to configure the JMX protocol:
 
 | Parameter | Description                                                                                       |
 |-----------|---------------------------------------------------------------------------------------------------|
-| jmx       | JMX configuration used to access the host                                                         |
+| jmx       | JMX configuration used to access the host.                                                        |
 | hostname  | The name or IP address of the resource. If not specified, the `host.name` attribute will be used. |
 | timeout   | How long until the JMX query times out (Default: 30s).                                            |
 | username  | Name used to authenticate against the JMX service.                                                |
 | password  | Password used to authenticate against the JMX service.                                            |
-| port      | The port number used to connect to the JMX service. (Default: 1099).                              |
+| port      | The port number used to connect to the JMX service (Default: 1099).                               |
 
 **Example**
 
