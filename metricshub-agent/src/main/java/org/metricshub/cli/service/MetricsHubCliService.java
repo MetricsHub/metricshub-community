@@ -49,6 +49,7 @@ import org.metricshub.cli.service.converter.DeviceKindConverter;
 import org.metricshub.cli.service.protocol.HttpConfigCli;
 import org.metricshub.cli.service.protocol.IpmiConfigCli;
 import org.metricshub.cli.service.protocol.JdbcConfigCli;
+import org.metricshub.cli.service.protocol.JmxConfigCli;
 import org.metricshub.cli.service.protocol.SnmpConfigCli;
 import org.metricshub.cli.service.protocol.SnmpV3ConfigCli;
 import org.metricshub.cli.service.protocol.SshConfigCli;
@@ -180,6 +181,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 	@ArgGroup(exclusive = false, heading = "%n@|bold,underline JDBC Options|@:%n")
 	JdbcConfigCli jdbcConfigCli;
+
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline JMX Options|@:%n")
+	JmxConfigCli jmxConfigCli;
 
 	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Additional Connectors Options|@:%n", multiplicity = "0..*")
 	List<AdditionalConnectorConfigCli> additionalConnectors;
@@ -598,7 +602,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				wmiConfigCli,
 				winRmConfigCli,
 				wbemConfigCli,
-				jdbcConfigCli
+				jdbcConfigCli,
+				jmxConfigCli
 			)
 			.filter(Objects::nonNull)
 			.map(protocolConfig -> {
@@ -640,7 +645,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				wmiConfigCli,
 				winRmConfigCli,
 				wbemConfigCli,
-				jdbcConfigCli
+				jdbcConfigCli,
+				jmxConfigCli
 			)
 			.allMatch(Objects::isNull);
 
@@ -746,6 +752,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 		tryInteractiveSnmpV3Password(passwordReader);
 
 		tryInteractiveJdbcPassword(passwordReader);
+
+		tryInteractiveJmxPassword(passwordReader);
 	}
 
 	/**
@@ -844,6 +852,17 @@ public class MetricsHubCliService implements Callable<Integer> {
 	void tryInteractiveJdbcPassword(final CliPasswordReader<char[]> passwordReader) {
 		if (jdbcConfigCli != null && jdbcConfigCli.getUsername() != null && jdbcConfigCli.getPassword() == null) {
 			jdbcConfigCli.setPassword(passwordReader.read("%s password for JDBC connection: ", jdbcConfigCli.getUsername()));
+		}
+	}
+
+	/**
+	 * Try to start the interactive mode to request and set JMX password
+	 *
+	 * @param passwordReader password reader which displays the prompt text and wait for user's input
+	 */
+	void tryInteractiveJmxPassword(CliPasswordReader<char[]> passwordReader) {
+		if (jmxConfigCli != null && jmxConfigCli.getUsername() != null && jmxConfigCli.getPassword() == null) {
+			jmxConfigCli.setPassword(passwordReader.read("%s password for JMX connection: ", jmxConfigCli.getUsername()));
 		}
 	}
 

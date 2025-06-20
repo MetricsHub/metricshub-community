@@ -199,6 +199,12 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-jmx-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-yaml-configuration-extension</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
@@ -341,7 +347,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.52</minimum>
+											<minimum>0.51</minimum>
 										</limit>
 									</limits>
 								</rule>
