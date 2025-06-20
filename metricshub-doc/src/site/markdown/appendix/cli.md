@@ -79,6 +79,14 @@ To get additional details about the operations performed by the *MetricsHub Engi
 
 ## Examples
 
+### Java Application, JMX
+
+```batch
+$ metricshub CASSANDRA-01 -t linux --jmx --jmx-port 7199
+```
+
+This command will connect to the `CASSANDRA-01` database server using the `JMX` protocol on port `7199`. If a known JMX server is running on this host, `metricshub` will leverage it to discover database components and collect various metrics.
+
 ### Linux, SNMP v1
 
 ```batch

@@ -27,6 +27,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -151,4 +152,12 @@ public interface ISourceProcessor {
 	 * @return {@link SourceTable} instance
 	 */
 	SourceTable process(SqlSource sqlSource);
+
+	/**
+	 * Processes a JmxSource and returns a SourceTable.
+	 *
+	 * @param jmxSource The JmxSource to process.
+	 * @return The SourceTable result.
+	 */
+	SourceTable process(JmxSource jmxSource);
 }

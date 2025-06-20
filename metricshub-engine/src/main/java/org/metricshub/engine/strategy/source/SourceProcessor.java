@@ -46,6 +46,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -575,5 +576,17 @@ public class SourceProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") final SqlSource sqlSource) {
 		return processSourceThroughExtension(sqlSource);
+	}
+
+	/**
+	 * This method processes {@link JmxSource} source
+	 *
+	 * @param jmxSource {@link JmxSource} source instance
+	 * @return {@link SourceTable} instance
+	 */
+	@WithSpan("Source JMX Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") JmxSource jmxSource) {
+		return processSourceThroughExtension(jmxSource);
 	}
 }

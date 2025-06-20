@@ -59,7 +59,7 @@ class SqlCriterionProcessorTest {
 
 		String expectedResult = List.of(List.of("row1_col1", "row1_col2")).toString();
 		SqlCriterion sqlCriterion = SqlCriterion.builder().query(query).expectedResult(expectedResult).build();
-
+		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
 		when(sqlRequestExecutor.executeSql(any(), eq(jdbcConfiguration), eq(query), eq(false)))
 			.thenReturn(List.of(List.of("row1_col1", "row1_col2")));
 
@@ -98,7 +98,7 @@ class SqlCriterionProcessorTest {
 	@Test
 	void testProcessSqlRequestException() throws Exception {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
-
+		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
 		when(
 			sqlRequestExecutor.executeSql(
 				any(String.class),
@@ -121,7 +121,7 @@ class SqlCriterionProcessorTest {
 	void testProcessNullResult() throws Exception {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		SqlCriterion sqlCriterion = SqlCriterion.builder().query("SELECT * FROM test_table").build();
-
+		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
 		when(
 			sqlRequestExecutor.executeSql(
 				any(String.class),

@@ -56,6 +56,12 @@ public class SqlCriterion extends Criterion {
 	private String query;
 
 	/**
+	 * Optional database name to connect to.
+	 */
+	@JsonDeserialize(using = NonBlankDeserializer.class)
+	private String database;
+
+	/**
 	 * Expected result for the SQL criterion.
 	 */
 	private String expectedResult;
@@ -77,12 +83,14 @@ public class SqlCriterion extends Criterion {
 	public SqlCriterion(
 		@JsonProperty("type") String type,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
+		@JsonProperty("database") String database,
 		@JsonProperty("query") @NonNull String query,
 		@JsonProperty("expectedResult") String expectedResult,
 		@JsonProperty("errorMessage") String errorMessage
 	) {
 		super(type, forceSerialization);
 		this.query = query;
+		this.database = database;
 		this.expectedResult = expectedResult;
 		this.errorMessage = errorMessage;
 	}

@@ -63,6 +63,12 @@ public class SqlSource extends Source {
 	private String query;
 
 	/**
+	 * Optional database name to connect to.
+	 */
+	@JsonDeserialize(using = NonBlankDeserializer.class)
+	private String database;
+
+	/**
 	 * Builder for creating instances of {@code SqlSource}.
 	 *
 	 * @param type                 The type of the source (should be "sql").
@@ -76,6 +82,7 @@ public class SqlSource extends Source {
 	@JsonCreator
 	public SqlSource(
 		@JsonProperty("type") String type,
+		@JsonProperty("databse") String database,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
 		@JsonProperty(value = "query", required = true) @NonNull String query,
@@ -84,6 +91,7 @@ public class SqlSource extends Source {
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
 		this.query = query;
+		this.database = database;
 	}
 
 	@Override
@@ -95,6 +103,7 @@ public class SqlSource extends Source {
 			.forceSerialization(forceSerialization)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
+			.database(database)
 			.query(query)
 			.build();
 	}

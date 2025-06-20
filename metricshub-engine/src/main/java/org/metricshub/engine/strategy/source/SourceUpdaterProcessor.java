@@ -51,6 +51,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -96,6 +97,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		);
 
 		return processSource(copy);
+	}
+
+	@Override
+	public SourceTable process(JmxSource jmxSource) {
+		return processSource(jmxSource.copy());
 	}
 
 	@Override
