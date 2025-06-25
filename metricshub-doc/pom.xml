@@ -119,7 +119,7 @@
 			<plugin>
 				<groupId>org.metricshub.maven</groupId>
 				<artifactId>metricshub-connector-maven-plugin</artifactId>
-				<version>1.0.11</version>
+				<version>1.0.12</version>
 				<configuration>
 					<sourceDirectory>${project.basedir}/../metricshub-agent/target/connectors</sourceDirectory>
 					<defaultPlatformIconFilename>default.png</defaultPlatformIconFilename>
