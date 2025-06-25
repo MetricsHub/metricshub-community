@@ -54,6 +54,23 @@ Before integrating **MetricsHub** with BMC Helix:
 
     > For more details, refer to the [Exporter Helper](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/exporterhelper#configuration)
 
+4. Configure the [transform processor](#transformer-example-for-hardware-metrics) to ensure metrics are properly formatted for BMC Helix.
+
+5. Declare the **BMC Helix Exporter** and the **transform processor** in a separate pipeline dedicated to BMC Helix, to avoid affecting other exporters with metrics formatted for BMC Helix:
+
+    ```yaml
+    service:
+      extensions: [health_check, basicauth, basicauth/partner]
+      pipelines:
+        # Dedicated pipeline for BMC Helix
+        metrics/bmchelix:
+          receivers: [otlp, prometheus/internal]
+          processors: [memory_limiter, batch, transform/hardware_for_helix]
+          exporters: [bmchelix/helix1]
+    ```
+
+6. Restart the **MetricsHub** service to apply the changes.
+
 ### Transforming metrics
 
 To ensure metrics are properly ingested by BMC Helix, the following attributes must be set either at the *Resource* level, or  *Metric* level:  
@@ -73,22 +90,35 @@ A typical pipeline structure looks like: `OTEL metrics --> (batch/memory limit) 
 The following example shows how to assign `entityName`, `instanceName`, and `entityTypeId` dynamically:
 
 ```yaml
-  transform/hw_to_helix:
-   # Apply transformations to all metrics
+processors:
+
+  # ...
+
+  transform/hardware_for_helix:
+    # Apply transformations to all metrics
     metric_statements:
+
       - context: datapoint
         statements:
           # Create a new attribute 'entityName' with the value of 'id'
-          - set(attributes["entityName"], attributes["id"]) where attributes["id"] != nil
-          # Create a new attribute 'instanceName' with the value of 'name'
-          - set(attributes["instanceName"], attributes["name"]) where attributes["name"] != nil
+          - set(attributes["entityName"], resource.attributes["id"]) where resource.attributes["id"] != nil
+          - set(attributes["instanceName"], resource.attributes["name"]) where resource.attributes["name"] != nil
+
       - context: datapoint
         conditions:
-          - IsMatch(metric.name, ".*\\.agent\\..*")
+          - IsMatch(metric.name, ".*\\.agent\\..*") or IsMatch(metric.name, "metricshub\\.license\\..*")
         statements:
-          - set(attributes["entityName"], attributes["host.id"]) where attributes["host.id"] != nil
-          - set(attributes["instanceName"], attributes["service.name"]) where attributes["service.name"] != nil
+          - set(attributes["entityName"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
+          - set(attributes["instanceName"], resource.attributes["service.name"]) where resource.attributes["service.name"] != nil
           - set(attributes["entityTypeId"], "agent")
+
+      - context: datapoint
+        conditions:
+          - IsMatch(metric.name, ".*\\.host\\..*")
+        statements:
+          - set(attributes["entityName"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
+          - set(attributes["instanceName"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
+
       - context: datapoint
         statements:
           # Mapping entityTypeId based on metric names and attributes
@@ -114,6 +144,16 @@ The following example shows how to assign `entityName`, `instanceName`, and `ent
           - set(attributes["entityTypeId"], "temperature") where IsMatch(metric.name, "hw\\.temperature.*") or attributes["hw.type"] == "temperature"
           - set(attributes["entityTypeId"], "vm") where IsMatch(metric.name, "hw\\.vm\\..*") or attributes["hw.type"] == "vm"
           - set(attributes["entityTypeId"], "voltage") where IsMatch(metric.name, "hw\\.voltage.*") or attributes["hw.type"] == "voltage"
+
+      - context: datapoint
+        statements:
+          # Rename based on the attribute presence "state", "direction", "hw.error.type", "limit_type", "task"
+          - set(metric.name, Concat([metric.name, attributes["state"]], ".")) where attributes["state"] != nil
+          - set(metric.name, Concat([metric.name, attributes["direction"]], ".")) where attributes["direction"] != nil
+          - set(metric.name, Concat([metric.name, attributes["hw.error.type"]], ".")) where attributes["hw.error.type"] != nil
+          - set(metric.name, Concat([metric.name, attributes["limit_type"]], ".")) where attributes["limit_type"] != nil
+          - set(metric.name, Concat([metric.name, attributes["task"]], ".")) where attributes["task"] != nil
+          - set(metric.name, Concat([metric.name, attributes["protocol"]], ".")) where attributes["protocol"] != nil
 ```
 
 This configuration ensures that required attributes are automatically mapped based on metric names and resource metadata.
