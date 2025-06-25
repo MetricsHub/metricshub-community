@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.mcp.PingToolService;
+import org.metricshub.web.mcp.ProtocolCheckService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,11 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public PingToolService pingToolService() {
 			return mock(PingToolService.class);
+		}
+
+		@Bean
+		public ProtocolCheckService protocolCheckService() {
+			return mock(ProtocolCheckService.class);
 		}
 	}
 }

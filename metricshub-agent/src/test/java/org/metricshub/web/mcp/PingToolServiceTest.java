@@ -38,12 +38,12 @@ class PingToolServiceTest {
 	void testShouldReturnSuccessfulPingResponse() {
 		final String hostname = "localhost";
 
-		final PingResponse response = pingToolService.pingHost(hostname, 3L);
+		final ProtocolCheckResponse response = pingToolService.pingHost(hostname, 3L);
 
 		assertNotNull(response, "Ping response should not be null");
 		assertEquals(hostname, response.getHostname(), "Hostname should match the requested hostname");
 		assertTrue(response.isReachable(), "Host should be reachable");
 		assertNull(response.getErrorMessage(), "Error message should be null for successful ping");
-		assertTrue(response.getDuration() >= 0, "Duration should be non-negative");
+		assertTrue(response.getResponseTime() >= 0, "Duration should be non-negative");
 	}
 }

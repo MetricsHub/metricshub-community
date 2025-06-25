@@ -22,6 +22,7 @@ package org.metricshub.web.config;
  */
 
 import org.metricshub.web.mcp.PingToolService;
+import org.metricshub.web.mcp.ProtocolCheckService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -37,11 +38,15 @@ public class ToolCallbackConfiguration {
 	/**
 	 * Provides a ToolCallbackProvider for the PingToolService.
 	 *
-	 * @param pingToolService the PingToolService to be used
+	 * @param pingToolService      the PingToolService to be used
+	 * @param protocolCheckService the protocolCheckService to be used
 	 * @return a ToolCallbackProvider for the PingToolService
 	 */
 	@Bean
-	public ToolCallbackProvider metricshubTools(final PingToolService pingToolService) {
-		return MethodToolCallbackProvider.builder().toolObjects(pingToolService).build();
+	public ToolCallbackProvider metricshubTools(
+		final PingToolService pingToolService,
+		final ProtocolCheckService protocolCheckService
+	) {
+		return MethodToolCallbackProvider.builder().toolObjects(pingToolService, protocolCheckService).build();
 	}
 }
