@@ -1,0 +1,63 @@
+groups:
+
+- name: MetricsHub-Host-Availability
+  rules:
+  - alert: MetricsHub-Host-Unreachable-Critical
+    expr: absent(metricshub_host_up)
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Host is unreachable
+      description: |
+        No monitored protocol has reported from host {{ $labels.host_name }} for at least 5 minutes.
+        The host or network path is likely down.
+        Consequence: The host monitoring is probably interrupted and no metrics are being collected.
+        Recommended Action: Verify the status of the protocols configured to monitor the host. Ensure the host is running and reachable.
+
+- name: MetricsHub-Connector-Status
+  rules:
+  - alert: MetricsHub-Connector-Failed-Critical
+    expr: metricshub_connector_status{state="failed"} == 1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Connector {{ $labels.name }} has failed
+      description: |
+        The connector {{ $labels.name }} on host {{ $labels.host_name }} has been in a failed state for at least 5 minutes.
+        Consequence: This connector is no longer reporting its expected metrics.
+        Recommended Action: Check the status of the protocol used by the connector, review the logs.
+
+- name: MetricsHub-Protocol-Availability
+  rules:
+  - alert: MetricsHub-Protocol-Down-Critical
+    expr: metricshub_host_up == 0
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        {{ $labels.host_name }} — Protocol {{ $labels.protocol }} is down
+      description: |
+        The {{ $labels.protocol }} protocol on host {{ $labels.host_name }} has been reporting a down status for at least 5 minutes.
+        Consequence: If a protocol fails, monitoring and communication with the host may be interrupted.
+        Recommended Action: Verify the protocol configuration and service health. Check firewall or network routes.
+
+- name: MetricsHub-Availability
+  rules:
+  - alert: MetricsHub-Agent-Critical
+    expr: absent(metricshub_agent_info)
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: >
+        MetricsHub agent is not sending any metrics
+      description: |
+        The MetricsHub agent has not reported {{ $labels.host_name }} for at least 5 minutes.
+        The agent may be down and not collecting data anymore.
+        Consequence: The monitoring is probably interrupted and no metrics are being collected.
+        Recommended Action: Check that MetricsHub is still running. Review the logs.
