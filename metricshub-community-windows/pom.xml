@@ -99,6 +99,11 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-jmx-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-yaml-configuration-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -211,13 +216,18 @@
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-jdbc-extension</artifactId>
+									<destFileName>metricshub-jdbc-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-jawk-extension</artifactId>
 									<destFileName>metricshub-jawk-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
-									<artifactId>metricshub-jdbc-extension</artifactId>
-									<destFileName>metricshub-jdbc-extension.jar</destFileName>
+									<artifactId>metricshub-jmx-extension</artifactId>
+									<destFileName>metricshub-jmx-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
@@ -308,6 +318,8 @@
 								<argument>sshcli=metricshub-sshcli.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>pingcli=metricshub-pingcli.properties</argument>
+								<argument>--add-launcher</argument>
+								<argument>jmxcli=metricshub-jmxcli.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>jawk=metricshub-jawk.properties</argument>
 								<argument>@jpackage.txt</argument>

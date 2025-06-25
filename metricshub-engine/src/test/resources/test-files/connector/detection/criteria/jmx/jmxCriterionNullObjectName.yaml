@@ -1,0 +1,9 @@
+---
+connector:
+  detection:
+    appliesTo: [ linux ]
+    criteria:
+    - type: jmx
+      attributes: [ Name ]
+      expectedResult: MetricsHub
+      forceSerialization: true

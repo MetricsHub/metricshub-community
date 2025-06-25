@@ -31,6 +31,7 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ProcessCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ProductRequirementsCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
@@ -62,6 +63,7 @@ public class CriterionProcessorRegistry {
 		registerProcessor(WmiCriterion.class, (criterion, processor) -> processor.process((WmiCriterion) criterion));
 		registerProcessor(WbemCriterion.class, (criterion, processor) -> processor.process((WbemCriterion) criterion));
 		registerProcessor(SqlCriterion.class, (criterion, processor) -> processor.process((SqlCriterion) criterion));
+		registerProcessor(JmxCriterion.class, (criterion, processor) -> processor.process((JmxCriterion) criterion));
 	}
 
 	// @formatter:on

@@ -21,6 +21,8 @@ package org.metricshub.extension.ping;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.opentelemetry.instrumentation.annotations.SpanAttribute;
+import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -41,8 +43,10 @@ public class PingRequestExecutor {
 	 * @return true if the host is reachable within the specified timeout; false otherwise.
 	 * @throws UnknownHostException if the host cannot be determined from the given hostname.
 	 */
-	boolean ping(String hostname, int timeout) throws UnknownHostException {
-		final InetAddress pingAddress = InetAddress.getByName(hostname);
+	@WithSpan("Ping")
+	boolean ping(@SpanAttribute("host.hostname") final String hostname, @SpanAttribute("ping.timeout") final int timeout)
+		throws UnknownHostException {
+		final var pingAddress = InetAddress.getByName(hostname);
 
 		try {
 			return pingAddress.isReachable(timeout);
