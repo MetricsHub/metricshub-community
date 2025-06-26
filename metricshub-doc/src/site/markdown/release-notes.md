@@ -42,10 +42,10 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                         | Description                                                                              |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [**\#692**](https://github.com/MetricsHub/metricshub-community/issues/692) | MetricsHub Server now supports [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
-| [**\#694**](https://github.com/MetricsHub/metricshub-community/issues/694) | Added support for Java Management Extensions (JMX)                                       |
+| ID                                                                         | Description                                                                 |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [**\#692**](https://github.com/MetricsHub/metricshub-community/issues/692) | Added support for [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
+| [**\#694**](https://github.com/MetricsHub/metricshub-community/issues/694) | Added support for Java Management Extensions (JMX)                          |
 
 #### Changes and Improvements
 
