@@ -11,11 +11,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                                       |
-| ------------------------------------------------------------------------- | ------------------------------------------------- |
-| [**\#60**](https://github.com/MetricsHub/metricshub-enterprise/issues/60) | Included the **IBM Informix** JDBC driver         |
-| [**\#68**](https://github.com/MetricsHub/metricshub-enterprise/issues/68) | Added support for Java Management Extension (JMX) |
-| [**\#69**](https://github.com/MetricsHub/metricshub-enterprise/issues/69) | Added support for REST API and remote MCP         |
+| ID                                                                        | Description                                                                 |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [**\#60**](https://github.com/MetricsHub/metricshub-enterprise/issues/60) | Included the **IBM Informix** JDBC driver                                   |
+| [**\#68**](https://github.com/MetricsHub/metricshub-enterprise/issues/68) | Added support for Java Management Extension (JMX)                           |
+| [**\#69**](https://github.com/MetricsHub/metricshub-enterprise/issues/69) | Added support for [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
 
 #### Changes and Improvements
 
@@ -27,10 +27,10 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                                           |
-| ------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [**\#27**](https://github.com/MetricsHub/enterprise-connectors/issues/27) | Added support for **IBM Informix** databases via JDBC |
-| [**\#32**](https://github.com/MetricsHub/enterprise-connectors/issues/32) | Added support for **Palo Alto** firewalls via SNMP    |
+| ID                                                                        | Description                                                                              |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [**\#27**](https://github.com/MetricsHub/enterprise-connectors/issues/27) | Added support for [**IBM Informix**](./connectors/informix.html) databases via JDBC      |
+| [**\#32**](https://github.com/MetricsHub/enterprise-connectors/issues/32) | Added support for [**Palo Alto**](./connectors/paloaltofirewall.html) firewalls via SNMP |
 
 #### Changes and Improvements
 
@@ -42,19 +42,19 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                         | Description                                            |
-| -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [**\#692**](https://github.com/MetricsHub/metricshub-community/issues/692) | MetricsHub Server now supports REST API and Remote MCP |
-| [**\#694**](https://github.com/MetricsHub/metricshub-community/issues/694) | Added support for Java Management Extensions (JMX)     |
+| ID                                                                         | Description                                                                              |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [**\#692**](https://github.com/MetricsHub/metricshub-community/issues/692) | MetricsHub Server now supports [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
+| [**\#694**](https://github.com/MetricsHub/metricshub-community/issues/694) | Added support for Java Management Extensions (JMX)                                       |
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                    |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| [**\#357**](https://github.com/MetricsHub/metricshub-community/issues/357) | MetricsHub CLI: Added the ability to specify connector variables               |
-| [**\#658**](https://github.com/MetricsHub/metricshub-community/issues/658) | The `database` property is no longer required under the `jdbc` configuration   |
-| [**\#698**](https://github.com/MetricsHub/metricshub-community/issues/698) | Updated Prometheus Alert Rules                                                 |
-| [**\#726**](https://github.com/MetricsHub/metricshub-community/issues/726) | MetricsHub CLI: The `--list` option now shows connectors that define variables |
+| ID                                                                         | Description                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#357**](https://github.com/MetricsHub/metricshub-community/issues/357) | **MetricsHub CLI**: Added the ability to specify connector variables                                                                                                                                                       |
+| [**\#658**](https://github.com/MetricsHub/metricshub-community/issues/658) | The `database` property is no longer required under the `jdbc` configuration                                                                                                                                               |
+| [**\#698**](https://github.com/MetricsHub/metricshub-community/issues/698) | **Prometheus Alert Rules**: Three categories of [alert rules](./prometheus/alertmanager.md#prometheus-alertmanager) are provided to inform you of MetricsHub issues, hardware failures, and system performance degradation |
+| [**\#726**](https://github.com/MetricsHub/metricshub-community/issues/726) | **MetricsHub CLI**: The `--list` option now shows connectors that define variables                                                                                                                                         |
 
 #### Fixed Issues
 
@@ -66,20 +66,20 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Documentation Updates
 
-| ID                                                                         | Description                                                      |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| [**\#684**](https://github.com/MetricsHub/metricshub-community/issues/684) | Documented custom monitoring examples                            |
-| [**\#702**](https://github.com/MetricsHub/metricshub-community/issues/702) | Explained how to implement custom monitoring through SQL queries |
-| [**\#704**](https://github.com/MetricsHub/metricshub-community/issues/704) | Documented Prometheus Alert Rules                                |
-| [**\#705**](https://github.com/MetricsHub/metricshub-community/issues/705) | Documented BMC Helix integration                                 |
+| ID                                                                         | Description                                                                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [**\#684**](https://github.com/MetricsHub/metricshub-community/issues/684) | Documented [custom monitoring](./custom/index.md) examples                                     |
+| [**\#702**](https://github.com/MetricsHub/metricshub-community/issues/702) | Explained how to implement [custom monitoring through SQL queries](./custom/database-query.md) |
+| [**\#704**](https://github.com/MetricsHub/metricshub-community/issues/704) | Documented [Prometheus Alert Rules](./prometheus/alertmanager.md)                              |
+| [**\#705**](https://github.com/MetricsHub/metricshub-community/issues/705) | Documented [BMC Helix integration](./integrations/bmc-helix.md)                                |
 
 ### MetricsHub Community Connectors v1.0.12
 
 #### What's New
 
-| ID                                                                         | Description                                              |
-| -------------------------------------------------------------------------- | -------------------------------------------------------- |
-| [**\#162**](https://github.com/MetricsHub/community-connectors/issues/162) | Added support for **Apache Cassandra** databases via JMX |
+| ID                                                                         | Description                                                                             |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [**\#162**](https://github.com/MetricsHub/community-connectors/issues/162) | Added support for [**Apache Cassandra**](./connectors/cassandra.html) databases via JMX |
 
 #### Changes and Improvements
 

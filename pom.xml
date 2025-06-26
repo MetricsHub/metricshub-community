@@ -79,7 +79,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.11</community-connectors.version>
+		<community-connectors.version>1.0.12-SNAPSHOT</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
 		<project.build.outputTimestamp>2025-05-22T12:35:55Z</project.build.outputTimestamp>
