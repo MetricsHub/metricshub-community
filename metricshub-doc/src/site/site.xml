@@ -97,9 +97,10 @@
 
 		<menu name="Integrations">
 			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
+			<item name="BMC Helix" href="integrations/bmc-helix.html" />
 			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
-				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />
+				<item name="Prometheus Alertmanager" href="prometheus/alertmanager.html" />
 				<item name="Grafana Dashboards" href="prometheus/grafana.html" />
 			</item>
 		</menu>
