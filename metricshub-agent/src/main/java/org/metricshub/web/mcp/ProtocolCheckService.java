@@ -89,7 +89,11 @@ public class ProtocolCheckService {
 			"You may specify multiple protocols using a comma-separated list.",
 			required = false
 		) final String protocol,
-		@ToolParam(description = "The hostname to check") final String hostname
+		@ToolParam(description = "The hostname to check") final String hostname,
+		@ToolParam(
+			description = "The timeout for the protocol check operation in seconds",
+			required = false
+		) final Long timeout
 	) {
 		final ExtensionManager extensionManager = agentContextHolder.getAgentContext().getExtensionManager();
 
@@ -105,7 +109,7 @@ public class ProtocolCheckService {
 					p ->
 						extensionManager
 							.findExtensionByType(p)
-							.map(ext -> checkProtocolWithExtensionSafe(hostname, p, ext))
+							.map(ext -> checkProtocolWithExtensionSafe(hostname, p, timeout, ext))
 							.orElse(
 								ProtocolCheckResponse
 									.builder()
@@ -123,12 +127,14 @@ public class ProtocolCheckService {
 	 *
 	 * @param hostname  the host to check
 	 * @param protocol  the protocol type used (e.g., "ssh", "snmp", etc.)
+	 * @param timeout  the timeout for the protocol check operation in seconds
 	 * @param extension the resolved protocol extension responsible for performing the check
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long it took
 	 */
 	private ProtocolCheckResponse checkProtocolWithExtensionSafe(
 		final String hostname,
 		final String protocol,
+		final Long timeout,
 		final IProtocolExtension extension
 	) {
 		// Fetch the available configurations for the host
@@ -138,15 +144,15 @@ public class ProtocolCheckService {
 		);
 
 		// Iterate through each configuration until one succeeds
-		for (final IConfiguration configuration : configurations) {
+		for (IConfiguration configuration : configurations) {
 			IConfiguration validConfiguration;
 
 			if (extension.isValidConfiguration(configuration)) {
 				// Use the original configuration if it's valid for the extension
-				validConfiguration = configuration;
+				validConfiguration = configuration.copy();
 			} else {
 				// Attempt to build a compatible configuration using shared fields
-				validConfiguration = convertConfigurationForProtocol(configuration, protocol, extension);
+				validConfiguration = convertConfigurationForProtocol(configuration, protocol, timeout, extension);
 				// If building failed, skip or continue depending on the context
 				if (validConfiguration == null) {
 					continue;
@@ -154,6 +160,7 @@ public class ProtocolCheckService {
 			}
 
 			validConfiguration.setHostname(hostname);
+			validConfiguration.setTimeout(timeout != null ? timeout : 10L);
 
 			// Build the telemetry manager based on this configuration
 			final TelemetryManager telemetryManager = TelemetryManager
@@ -207,6 +214,7 @@ public class ProtocolCheckService {
 	public IConfiguration convertConfigurationForProtocol(
 		final IConfiguration configuration,
 		final String protocol,
+		final Long timeout,
 		final IProtocolExtension extension
 	) {
 		// Convert the source configuration to a JsonNode tree
@@ -215,10 +223,9 @@ public class ProtocolCheckService {
 
 		// Create a new configuration node with only the required shared fields
 		final ObjectNode newConfigurationNode = JsonNodeFactory.instance.objectNode();
-		final JsonNode timeout = configurationNode.get("timeout");
 		newConfigurationNode.set("username", configurationNode.get("username"));
 		newConfigurationNode.set("password", configurationNode.get("password"));
-		newConfigurationNode.set("timeout", timeout != null && !timeout.isNull() ? timeout : new LongNode(30L));
+		newConfigurationNode.set("timeout", new LongNode(timeout != null ? timeout : 10L));
 
 		// Build the new configuration using the extracted credentials
 		try {

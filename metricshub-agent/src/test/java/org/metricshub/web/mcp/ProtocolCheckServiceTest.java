@@ -12,11 +12,13 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -28,6 +30,7 @@ import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpRequestExecutor;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.ipmi.IpmiExtension;
+import org.metricshub.extension.jdbc.JdbcExtension;
 import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
@@ -50,6 +53,8 @@ class ProtocolCheckServiceTest {
 	private static final String USERNAME = "username";
 
 	private static final String PASSWORD = "password";
+
+	private static final Long TIMEOUT = 10L;
 
 	@Mock
 	private HttpExtension httpExtension;
@@ -155,7 +160,11 @@ class ProtocolCheckServiceTest {
 		setup(List.of(httpExtension, snmpExtension), Map.of("host-id", telemetryManager));
 
 		// Call check protocol method
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http,snmp,snmpv3", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol(
+			"http,snmp,snmpv3",
+			HOSTNAME,
+			TIMEOUT
+		);
 
 		// Tests
 		assertEquals(3, responses.size());
@@ -195,7 +204,7 @@ class ProtocolCheckServiceTest {
 
 		protocolCheckService = new ProtocolCheckService(contextHolder);
 
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME, TIMEOUT);
 
 		assertEquals(1, responses.size());
 		ProtocolCheckResponse response = responses.get("http");
@@ -213,12 +222,12 @@ class ProtocolCheckServiceTest {
 		doCallRealMethod().when(osCommandExtension).buildConfiguration(eq("ssh"), any(), any());
 
 		SshConfiguration sshConfiguration = (SshConfiguration) new ProtocolCheckService(mock(AgentContextHolder.class))
-			.convertConfigurationForProtocol(httpConfig, "ssh", osCommandExtension);
+			.convertConfigurationForProtocol(httpConfig, "ssh", TIMEOUT, osCommandExtension);
 
 		assertNotNull(sshConfiguration);
 		assertEquals(USERNAME, sshConfiguration.getUsername());
 		assertNull(sshConfiguration.getPassword());
-		assertEquals(30, sshConfiguration.getTimeout());
+		assertEquals(10, sshConfiguration.getTimeout());
 	}
 
 	@Test
@@ -239,7 +248,7 @@ class ProtocolCheckServiceTest {
 		setup(List.of(httpExtension), Map.of("host-id", telemetryManager));
 
 		// Call check protocol method
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME, TIMEOUT);
 
 		// Tests
 		assertEquals(1, responses.size());
@@ -265,7 +274,7 @@ class ProtocolCheckServiceTest {
 		setup(List.of(httpExtension), Map.of("host-id", telemetryManager));
 
 		// Call check protocol method
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("http", HOSTNAME, TIMEOUT);
 
 		// Tests
 		ProtocolCheckResponse response = responses.get("http");
@@ -300,7 +309,7 @@ class ProtocolCheckServiceTest {
 		setup(List.of(winrmExtension), Map.of("host-id", telemetryManager));
 
 		// Call check protocol method
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("winrm", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("winrm", HOSTNAME, TIMEOUT);
 
 		// Tests
 		ProtocolCheckResponse response = responses.get("winrm");
@@ -377,7 +386,7 @@ class ProtocolCheckServiceTest {
 		);
 
 		// Call check protocol method
-		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("", HOSTNAME);
+		Map<String, ProtocolCheckResponse> responses = protocolCheckService.checkProtocol("", HOSTNAME, TIMEOUT);
 
 		// Tests
 		assertEquals(7, responses.size());
@@ -388,5 +397,33 @@ class ProtocolCheckServiceTest {
 				assertNull(response.getErrorMessage());
 				assertTrue(response.isReachable());
 			});
+	}
+
+	public static void main(String[] args) throws IOException {
+		TestHelper.configureGlobalLogger();
+		ExtensionManager extensionManager = new ExtensionManager();
+		extensionManager.setProtocolExtensions(List.of(new JdbcExtension()));
+		SshConfiguration sshConfiguration = SshConfiguration
+			.sshConfigurationBuilder()
+			.hostname("ucs-manager")
+			.username("admin")
+			.password("nationale".toCharArray())
+			.build();
+		TelemetryManager telemetryManager = TelemetryManager
+			.builder()
+			.hostConfiguration(
+				HostConfiguration
+					.builder()
+					.configurations(Map.of(SshConfiguration.class, sshConfiguration))
+					.hostname("ucs-manager")
+					.build()
+			)
+			.build();
+		AgentContext agentContext = new AgentContext(null, extensionManager);
+		agentContext.setTelemetryManagers(Map.of("topLevelResources", Map.of("ucs-manager-id", telemetryManager)));
+		AgentContextHolder contextHolder = new AgentContextHolder(agentContext);
+		ProtocolCheckService service = new ProtocolCheckService(contextHolder);
+		final Map<String, ProtocolCheckResponse> response = service.checkProtocol("jdbc", "ucs-manager", 5L);
+		System.out.println(response);
 	}
 }

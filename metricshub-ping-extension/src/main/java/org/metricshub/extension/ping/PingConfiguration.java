@@ -51,7 +51,7 @@ public class PingConfiguration implements IConfiguration {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private final Long timeout = 5L;
+	private Long timeout = 5L;
 
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = MultiValueDeserializer.class)
