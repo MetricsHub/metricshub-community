@@ -10,6 +10,8 @@ description: Examples of custom monitoring.
 To help you get started and make the most out of **MetricsHub**, this section provides practical, ready-to-use examples across a variety of scenarios:
 
 * **Cross-platform use cases**:
+  * [Database Query](./database-query.md)
+  * [JMX Query](./jmx-query.md)
   * [SNMP Polling](./snmp-polling.md)
   * [Web Request](./web-request.md)
 * **Linux-related use cases**:

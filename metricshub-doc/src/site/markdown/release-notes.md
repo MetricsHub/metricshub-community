@@ -5,6 +5,88 @@ description: Learn more about the new features, changes and improvements, and bu
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+## MetricsHub Enterprise Edition v2.1.00
+
+### MetricsHub Enterprise Edition v2.1.00
+
+#### What's New
+
+| ID                                                                        | Description                                                                 |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [**\#60**](https://github.com/MetricsHub/metricshub-enterprise/issues/60) | Included the **IBM Informix** JDBC driver                                   |
+| [**\#68**](https://github.com/MetricsHub/metricshub-enterprise/issues/68) | Added support for Java Management Extension (JMX)                           |
+| [**\#69**](https://github.com/MetricsHub/metricshub-enterprise/issues/69) | Added support for [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                         |
+| ------------------------------------------------------------------------- | --------------------------------------------------- |
+| [**\#57**](https://github.com/MetricsHub/metricshub-enterprise/issues/57) | Upgraded OpenTelemetry Collector Contrib to 0.127.0 |
+
+### MetricsHub Enterprise Connectors v107
+
+#### What's New
+
+| ID                                                                        | Description                                                                              |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [**\#27**](https://github.com/MetricsHub/enterprise-connectors/issues/27) | Added support for [**IBM Informix**](./connectors/informix.html) databases via JDBC      |
+| [**\#32**](https://github.com/MetricsHub/enterprise-connectors/issues/32) | Added support for [**Palo Alto**](./connectors/paloaltofirewall.html) firewalls via SNMP |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                     |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [**\#57**](https://github.com/MetricsHub/enterprise-connectors/issues/57) | **Nvidia DGX Server (REST)**: Improved HTTP requests initiated by the connector |
+
+### MetricsHub Community Edition v1.0.04
+
+#### What's New
+
+| ID                                                                         | Description                                                                 |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| [**\#692**](https://github.com/MetricsHub/metricshub-community/issues/692) | Added support for [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
+| [**\#694**](https://github.com/MetricsHub/metricshub-community/issues/694) | Added support for Java Management Extensions (JMX)                          |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#357**](https://github.com/MetricsHub/metricshub-community/issues/357) | **MetricsHub CLI**: Added the ability to specify connector variables                                                                                                                                                       |
+| [**\#658**](https://github.com/MetricsHub/metricshub-community/issues/658) | The `database` property is no longer required under the `jdbc` configuration                                                                                                                                               |
+| [**\#698**](https://github.com/MetricsHub/metricshub-community/issues/698) | **Prometheus Alert Rules**: Three categories of [alert rules](./prometheus/alertmanager.md#prometheus-alertmanager) are provided to inform you of MetricsHub issues, hardware failures, and system performance degradation |
+| [**\#726**](https://github.com/MetricsHub/metricshub-community/issues/726) | **MetricsHub CLI**: The `--list` option now shows connectors that define variables                                                                                                                                         |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                               |
+| -------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [**\#693**](https://github.com/MetricsHub/metricshub-community/issues/693) | Monitor names are generated for non-hardware monitors     |
+| [**\#703**](https://github.com/MetricsHub/metricshub-community/issues/703) | Metrics processing failure due to `NumberFormatException` |
+| [**\#708**](https://github.com/MetricsHub/metricshub-community/issues/708) | Incorrect SchemaStore link in the documentation           |
+
+#### Documentation Updates
+
+| ID                                                                         | Description                                                                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [**\#684**](https://github.com/MetricsHub/metricshub-community/issues/684) | Documented [custom monitoring](./custom/index.md) examples                                     |
+| [**\#702**](https://github.com/MetricsHub/metricshub-community/issues/702) | Explained how to implement [custom monitoring through SQL queries](./custom/database-query.md) |
+| [**\#704**](https://github.com/MetricsHub/metricshub-community/issues/704) | Documented [Prometheus Alert Rules](./prometheus/alertmanager.md)                              |
+| [**\#705**](https://github.com/MetricsHub/metricshub-community/issues/705) | Documented [BMC Helix integration](./integrations/bmc-helix.md)                                |
+
+### MetricsHub Community Connectors v1.0.12
+
+#### What's New
+
+| ID                                                                         | Description                                                                             |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [**\#162**](https://github.com/MetricsHub/community-connectors/issues/162) | Added support for [**Apache Cassandra**](./connectors/cassandra.html) databases via JMX |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                              |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [**\#233**](https://github.com/MetricsHub/community-connectors/issues/233) | **MIB-2 Standard SNMP Agent - Network Interfaces**: Added discarded inbound and outbound packets metrics |
+
 ## MetricsHub Enterprise Edition v2.0.00
 
 ### MetricsHub Enterprise Edition v2.0.00
