@@ -21,4 +21,3 @@ web:
   spring.ai.mcp.server.capabilities.prompt: true
   spring.ai.mcp.server.capabilities.resource: true
   spring.ai.mcp.server.capabilities.tool: true
-  spring.ai.mcp.server.request-timeout: 600

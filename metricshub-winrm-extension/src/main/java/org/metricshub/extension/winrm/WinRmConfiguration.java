@@ -132,7 +132,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 	public IConfiguration copy() {
 		return WinRmConfiguration
 			.builder()
-			.authentications(new ArrayList<>(authentications))
+			.authentications(authentications != null ? new ArrayList<>(authentications) : new ArrayList<>())
 			.namespace(namespace)
 			.password(password)
 			.port(port)

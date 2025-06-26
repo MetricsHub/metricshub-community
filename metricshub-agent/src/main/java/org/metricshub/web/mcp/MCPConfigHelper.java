@@ -21,14 +21,20 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
 
@@ -90,5 +96,38 @@ public class MCPConfigHelper {
 			})
 			// Collect all configurations into a Set
 			.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Builds a new configuration for the specified protocol by extracting shared values
+	 * (such as username, password, and timeout) from an existing configuration of a different type.
+	 *
+	 * This is useful when switching protocols (e.g., HTTP → SSH) but wanting to reuse common credentials.
+	 *
+	 * @param configuration the source configuration to extract credentials and timeout from
+	 * @param protocol      the target protocol for the new configuration
+	 * @param extension     the extension responsible for creating the new configuration
+	 * @return a new {@link IConfiguration} instance populated with extracted values
+	 */
+	public static IConfiguration convertConfigurationForProtocol(
+		final IConfiguration configuration,
+		final String protocol,
+		final IProtocolExtension extension
+	) {
+		// Convert the source configuration to a JsonNode tree
+		final ObjectMapper mapper = new ObjectMapper();
+		final JsonNode configurationNode = mapper.valueToTree(configuration);
+
+		// Create a new configuration node with only the required shared fields
+		final ObjectNode newConfigurationNode = JsonNodeFactory.instance.objectNode();
+		newConfigurationNode.set("username", configurationNode.get("username"));
+		newConfigurationNode.set("password", configurationNode.get("password"));
+
+		// Build the new configuration using the extracted credentials
+		try {
+			return extension.buildConfiguration(protocol, newConfigurationNode, null);
+		} catch (InvalidConfigurationException e) {
+			return null;
+		}
 	}
 }

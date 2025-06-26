@@ -21,27 +21,15 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.LongNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -56,6 +44,11 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class ProtocolCheckService {
+
+	/**
+	 * Default timeout to be used for protocol check
+	 */
+	private static final long DEFAULT_PROTOCOL_CHECK_TIMEOUT = 10L;
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -73,55 +66,6 @@ public class ProtocolCheckService {
 	}
 
 	/**
-	 * Checks whether the specified host is reachable using the given protocol and credentials.
-	 *
-	 * @param protocol the protocol type to use for the check (e.g., "http", "ssh")
-	 * @param hostname the target host to check
-	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
-	 */
-	@Tool(
-		name = "CheckHostProtocol",
-		description = "Checks if a host is reachable using a specified protocol such as SSH or WMI."
-	)
-	public Map<String, ProtocolCheckResponse> checkProtocol(
-		@ToolParam(
-			description = "The protocol(s) to use for checking host availability (e.g., http, ipmi, jmx, snmp, ssh, wbem, wmi, winrm). " +
-			"You may specify multiple protocols using a comma-separated list.",
-			required = false
-		) final String protocol,
-		@ToolParam(description = "The hostname to check") final String hostname,
-		@ToolParam(
-			description = "The timeout for the protocol check operation in seconds",
-			required = false
-		) final Long timeout
-	) {
-		final ExtensionManager extensionManager = agentContextHolder.getAgentContext().getExtensionManager();
-
-		final List<String> protocolList = (protocol == null || protocol.isBlank())
-			? extensionManager.getProtocolExtensions().stream().map(IProtocolExtension::getIdentifier).toList()
-			: Arrays.stream(protocol.split(",")).map(String::trim).filter(p -> !p.isEmpty()).toList();
-
-		return protocolList
-			.stream()
-			.collect(
-				Collectors.toMap(
-					p -> p,
-					p ->
-						extensionManager
-							.findExtensionByType(p)
-							.map(ext -> checkProtocolWithExtensionSafe(hostname, p, timeout, ext))
-							.orElse(
-								ProtocolCheckResponse
-									.builder()
-									.hostname(hostname)
-									.errorMessage("No extension is available for the protocol " + p)
-									.build()
-							)
-				)
-			);
-	}
-
-	/**
 	 * Executes a protocol check using all available configurations for the given host.
 	 * Returns as soon as one configuration reports the host as reachable.
 	 *
@@ -131,7 +75,7 @@ public class ProtocolCheckService {
 	 * @param extension the resolved protocol extension responsible for performing the check
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long it took
 	 */
-	private ProtocolCheckResponse checkProtocolWithExtensionSafe(
+	public ProtocolCheckResponse checkProtocolWithExtensionSafe(
 		final String hostname,
 		final String protocol,
 		final Long timeout,
@@ -152,7 +96,7 @@ public class ProtocolCheckService {
 				validConfiguration = configuration.copy();
 			} else {
 				// Attempt to build a compatible configuration using shared fields
-				validConfiguration = convertConfigurationForProtocol(configuration, protocol, timeout, extension);
+				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
 				// If building failed, skip or continue depending on the context
 				if (validConfiguration == null) {
 					continue;
@@ -160,7 +104,7 @@ public class ProtocolCheckService {
 			}
 
 			validConfiguration.setHostname(hostname);
-			validConfiguration.setTimeout(timeout != null ? timeout : 10L);
+			validConfiguration.setTimeout(timeout != null ? timeout : DEFAULT_PROTOCOL_CHECK_TIMEOUT);
 
 			// Build the telemetry manager based on this configuration
 			final TelemetryManager telemetryManager = TelemetryManager
@@ -198,40 +142,5 @@ public class ProtocolCheckService {
 
 		// No configuration succeeded: host is considered unreachable
 		return ProtocolCheckResponse.builder().hostname(hostname).isReachable(false).build();
-	}
-
-	/**
-	 * Builds a new configuration for the specified protocol by extracting shared values
-	 * (such as username, password, and timeout) from an existing configuration of a different type.
-	 *
-	 * This is useful when switching protocols (e.g., HTTP → SSH) but wanting to reuse common credentials.
-	 *
-	 * @param configuration the source configuration to extract credentials and timeout from
-	 * @param protocol      the target protocol for the new configuration
-	 * @param extension     the extension responsible for creating the new configuration
-	 * @return a new {@link IConfiguration} instance populated with extracted values
-	 */
-	public IConfiguration convertConfigurationForProtocol(
-		final IConfiguration configuration,
-		final String protocol,
-		final Long timeout,
-		final IProtocolExtension extension
-	) {
-		// Convert the source configuration to a JsonNode tree
-		final ObjectMapper mapper = new ObjectMapper();
-		final JsonNode configurationNode = mapper.valueToTree(configuration);
-
-		// Create a new configuration node with only the required shared fields
-		final ObjectNode newConfigurationNode = JsonNodeFactory.instance.objectNode();
-		newConfigurationNode.set("username", configurationNode.get("username"));
-		newConfigurationNode.set("password", configurationNode.get("password"));
-		newConfigurationNode.set("timeout", new LongNode(timeout != null ? timeout : 10L));
-
-		// Build the new configuration using the extracted credentials
-		try {
-			return extension.buildConfiguration(protocol, newConfigurationNode, null);
-		} catch (InvalidConfigurationException e) {
-			return null;
-		}
 	}
 }

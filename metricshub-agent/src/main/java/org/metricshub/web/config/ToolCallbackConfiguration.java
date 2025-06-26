@@ -21,8 +21,17 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.web.mcp.HttpProtocolCheckService;
+import org.metricshub.web.mcp.IpmiProtocolCheckService;
+import org.metricshub.web.mcp.JdbcProtocolCheckService;
+import org.metricshub.web.mcp.JmxProtocolCheckService;
 import org.metricshub.web.mcp.PingToolService;
-import org.metricshub.web.mcp.ProtocolCheckService;
+import org.metricshub.web.mcp.SnmpProtocolCheckService;
+import org.metricshub.web.mcp.SnmpV3ProtocolCheckService;
+import org.metricshub.web.mcp.SshProtocolCheckService;
+import org.metricshub.web.mcp.WbemProtocolCheckService;
+import org.metricshub.web.mcp.WinrmProtocolCheckService;
+import org.metricshub.web.mcp.WmiProtocolCheckService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -45,8 +54,32 @@ public class ToolCallbackConfiguration {
 	@Bean
 	public ToolCallbackProvider metricshubTools(
 		final PingToolService pingToolService,
-		final ProtocolCheckService protocolCheckService
+		final HttpProtocolCheckService httpProtocolCheckService,
+		final IpmiProtocolCheckService ipmiProtocolCheckService,
+		final JdbcProtocolCheckService jdbcProtocolCheckService,
+		final JmxProtocolCheckService jmxProtocolCheckService,
+		final SnmpProtocolCheckService snmpProtocolCheckService,
+		final SnmpV3ProtocolCheckService snmpV3ProtocolCheckService,
+		final SshProtocolCheckService sshProtocolCheckService,
+		final WbemProtocolCheckService wbemProtocolCheckService,
+		final WinrmProtocolCheckService winrmProtocolCheckService,
+		final WmiProtocolCheckService wmiProtocolCheckService
 	) {
-		return MethodToolCallbackProvider.builder().toolObjects(pingToolService, protocolCheckService).build();
+		return MethodToolCallbackProvider
+			.builder()
+			.toolObjects(
+				pingToolService,
+				httpProtocolCheckService,
+				ipmiProtocolCheckService,
+				jdbcProtocolCheckService,
+				jmxProtocolCheckService,
+				snmpProtocolCheckService,
+				snmpV3ProtocolCheckService,
+				sshProtocolCheckService,
+				wbemProtocolCheckService,
+				winrmProtocolCheckService,
+				wmiProtocolCheckService
+			)
+			.build();
 	}
 }
