@@ -129,7 +129,7 @@ public class ProtocolCheckService {
 			if (response.isPresent()) {
 				final boolean isUp = response.get();
 				if (isUp) {
-					final double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
+					final double responseTime = (System.currentTimeMillis() - startTime);
 					return ProtocolCheckResponse
 						.builder()
 						.hostname(hostname)
