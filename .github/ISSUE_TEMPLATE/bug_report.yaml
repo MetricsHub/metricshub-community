@@ -58,6 +58,29 @@ body:
 
     validations:
       required: true
+
+  - type: textarea
+    attributes:
+      label: Documentation updates
+      description: Please provide which part of the documentation needs to be updated, or if you think the documentation is correct as is.
+      value: |
+        ## Documentation section(s)
+        1. Introduction
+        2. Release Notes
+        3. Installation
+        4. Upgrade
+        5. Configuration
+        6. Integration
+        7. Datadog
+        8. Prometheus
+        9. Grafana
+        10. BMC Helix
+        11. AI Agents Integration
+        11. Troubleshooting
+        12. CLI
+
+    validations:
+      required: true
   - type: input
     attributes:
       label: MetricsHub version
