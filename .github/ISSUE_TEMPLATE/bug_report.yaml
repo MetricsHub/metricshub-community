@@ -97,7 +97,7 @@ body:
 
   - type: textarea
     attributes:
-      label: MetricsHub Agent confgiuration
+      label: MetricsHub Agent configuration
       description: Please provide the configuration you are using (e.g. the YAML config file).
       placeholder: | # Empty Agent config
         # Default logger level
