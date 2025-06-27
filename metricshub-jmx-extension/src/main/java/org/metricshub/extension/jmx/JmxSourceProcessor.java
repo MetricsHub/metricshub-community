@@ -21,6 +21,8 @@ package org.metricshub.extension.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import java.util.ArrayList;
 import java.util.List;
 import lombok.NonNull;
@@ -82,6 +84,6 @@ public class JmxSourceProcessor {
 			log.debug("Hostname {} - Error processing JMX source for objectName '{}'", hostname, objectName, e);
 		}
 
-		return SourceTable.builder().table(rows).build();
+		return SourceTable.builder().table(rows).rawData(SourceTable.tableToCsv(rows, TABLE_SEP, true)).build();
 	}
 }
