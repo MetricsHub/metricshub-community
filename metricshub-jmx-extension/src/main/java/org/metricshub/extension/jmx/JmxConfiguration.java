@@ -65,7 +65,7 @@ public class JmxConfiguration implements IConfiguration {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private final Long timeout = 30L;
+	private Long timeout = 30L;
 
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {

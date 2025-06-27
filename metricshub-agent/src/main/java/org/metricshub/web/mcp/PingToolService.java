@@ -64,13 +64,13 @@ public class PingToolService {
 	 *
 	 * @param hostname the hostname to ping
 	 * @param timeout  the timeout for the ping operation in seconds
-	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 * @return a ProtocolCheckResponse containing the hostname, response time, and whether it is reachable or not
 	 */
 	@Tool(
-		description = "Ping a host to check if it is reachable. Returns a PingResponse with the hostname, duration of the ping in milliseconds, and whether it is reachable or not.",
+		description = "Ping a host to check if it is reachable. Returns a ProtocolCheckResponse with the hostname, duration of the ping in milliseconds, and whether it is reachable or not.",
 		name = "PingHost"
 	)
-	public PingResponse pingHost(
+	public ProtocolCheckResponse pingHost(
 		@ToolParam(description = "The hostname to ping") final String hostname,
 		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout
 	) {
@@ -82,15 +82,17 @@ public class PingToolService {
 	 *
 	 * @param hostname the hostname to ping
 	 * @param timeout  the timeout for the ping operation in seconds
-	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 * @return a ProtocolCheckResponse containing the hostname, response time, and whether it is reachable or not
 	 */
-	private PingResponse runPing(final String hostname, final long timeout) {
+	private ProtocolCheckResponse runPing(final String hostname, final long timeout) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(PING_EXTENSION_TYPE)
 			.map((IProtocolExtension extension) -> pingHostWithExtensionSafe(hostname, timeout, extension))
-			.orElse(PingResponse.builder().hostname(hostname).errorMessage("The extension is not available").build());
+			.orElse(
+				ProtocolCheckResponse.builder().hostname(hostname).errorMessage("The extension is not available").build()
+			);
 	}
 
 	/**
@@ -99,9 +101,9 @@ public class PingToolService {
 	 * @param hostname  the hostname to ping
 	 * @param timeout   the timeout for the ping operation in seconds
 	 * @param extension the protocol extension to use for pinging
-	 * @return a PingResponse containing the hostname, duration of the ping, and whether it is reachable or not
+	 * @return a ProtocolCheckResponse containing the hostname, response time, and whether it is reachable or not
 	 */
-	private static PingResponse pingHostWithExtensionSafe(
+	private static ProtocolCheckResponse pingHostWithExtensionSafe(
 		final String hostname,
 		final long timeout,
 		final IProtocolExtension extension
@@ -121,15 +123,15 @@ public class PingToolService {
 			final String result = extension.executeQuery(configuration, null);
 			final long duration = (System.currentTimeMillis() - startTime);
 
-			return PingResponse
+			return ProtocolCheckResponse
 				.builder()
 				.hostname(hostname)
-				.duration(duration)
+				.responseTime(duration)
 				.isReachable("true".equalsIgnoreCase(result))
 				.build();
 		} catch (Exception e) {
 			// Error
-			return PingResponse
+			return ProtocolCheckResponse
 				.builder()
 				.hostname(hostname)
 				.errorMessage("Error detected during host check: " + e.getMessage())

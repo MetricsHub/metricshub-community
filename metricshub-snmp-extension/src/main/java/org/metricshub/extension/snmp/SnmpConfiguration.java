@@ -69,7 +69,7 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private final Long timeout = 120L;
+	private Long timeout = 120L;
 
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = MultiValueDeserializer.class)

@@ -117,6 +117,18 @@ class JdbcExtensionTest {
 	}
 
 	@Test
+	void testCheckSqlDownHealthNullUrl() throws Exception {
+		initSql("jdbc:h2:invalidUrl");
+		final JdbcConfiguration configuration = (JdbcConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(JdbcConfiguration.class);
+		configuration.setUrl(null);
+		final Optional<Boolean> result = jdbcExtension.checkProtocol(telemetryManager);
+		assertFalse(result.get());
+	}
+
+	@Test
 	void testIsValidConfiguration() {
 		assertTrue(jdbcExtension.isValidConfiguration(JdbcConfiguration.builder().build()));
 
@@ -138,6 +150,9 @@ class JdbcExtensionTest {
 					public IConfiguration copy() {
 						return null;
 					}
+
+					@Override
+					public void setTimeout(Long timeout) {}
 				}
 			)
 		);
