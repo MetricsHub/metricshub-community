@@ -71,7 +71,8 @@ public class WinRmConfiguration implements IWinConfiguration {
 	@JsonSetter(nulls = SKIP)
 	private TransportProtocols protocol = TransportProtocols.HTTP;
 
-	private List<AuthenticationEnum> authentications;
+	@Default
+	private List<AuthenticationEnum> authentications = new ArrayList<>(List.of(AuthenticationEnum.NTLM));
 
 	@Default
 	@JsonSetter(nulls = SKIP)
@@ -132,7 +133,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 	public IConfiguration copy() {
 		return WinRmConfiguration
 			.builder()
-			.authentications(authentications != null ? new ArrayList<>(authentications) : new ArrayList<>())
+			.authentications(new ArrayList<>(authentications))
 			.namespace(namespace)
 			.password(password)
 			.port(port)

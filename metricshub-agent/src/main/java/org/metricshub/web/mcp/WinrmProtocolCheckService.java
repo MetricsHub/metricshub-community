@@ -71,11 +71,39 @@ public class WinrmProtocolCheckService {
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(WINRM_EXTENSION_TYPE)
-			.map((IProtocolExtension extension) ->
-				protocolCheckService.checkProtocolWithExtensionSafe(hostname, extension.getIdentifier(), timeout, extension)
-			)
+			.map((IProtocolExtension extension) -> checkWinrmWithExtension(hostname, timeout, extension))
 			.orElse(
 				ProtocolCheckResponse.builder().hostname(hostname).errorMessage("WinRM extension is not available").build()
 			);
+	}
+
+	/**
+	 * Performs a safe WinRm protocol check using the provided extension.
+	 *
+	 * @param hostname the target host to check
+	 * @param timeout optional timeout for the protocol check in seconds
+	 * @param extension the WinRm protocol extension to use
+	 * @return a {@link ProtocolCheckResponse} indicating the reachability status or an error message if an exception occurs
+	 */
+	private ProtocolCheckResponse checkWinrmWithExtension(
+		final String hostname,
+		final Long timeout,
+		final IProtocolExtension extension
+	) {
+		try {
+			return protocolCheckService.checkProtocolWithExtensionSafe(
+				hostname,
+				extension.getIdentifier(),
+				timeout,
+				extension
+			);
+		} catch (Exception e) {
+			// Error
+			return ProtocolCheckResponse
+				.builder()
+				.hostname(hostname)
+				.errorMessage("Error detected during protocol check: " + e.getMessage())
+				.build();
+		}
 	}
 }
