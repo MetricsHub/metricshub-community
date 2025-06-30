@@ -38,6 +38,14 @@ description: Learn more about the new features, changes and improvements, and bu
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | [**\#57**](https://github.com/MetricsHub/enterprise-connectors/issues/57) | **Nvidia DGX Server (REST)**: Improved HTTP requests initiated by the connector |
 
+### MetricsHub Community Edition v1.0.05
+
+#### What's New
+
+| ID                                                                         | Description                                                                                                         |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| [**\#718**](https://github.com/MetricsHub/metricshub-community/issues/718) | **AI Agents**: A new set of [MCP Tools](./integrations/ai-agent-mcp.md) is now available to perform protocol checks |
+
 ### MetricsHub Community Edition v1.0.04
 
 #### What's New
