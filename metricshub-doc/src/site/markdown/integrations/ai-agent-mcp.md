@@ -11,9 +11,19 @@ You can configure AI-based assistants that support the MCP SSE transport, such a
 
 The following tool is currently available:
 
-| Tool Name  | Parameters                                                                                                | Description                                                                      |
-| ---------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `PingHost` | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li></ul> | Checks if a host is reachable via ping and returns its response time and status. |
+| Tool Name             | Parameters                                                                                                 | Description                                                                      |
+| --------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `CheckHttpProtocol`   | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the HTTP protocol.                           |
+| `CheckIpmiProtocol`   | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the IPMI protocol.                           |
+| `CheckJdbcProtocol`   | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the JDBC protocol.                           |
+| `CheckJmxProtocol`    | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the JMX protocol.                            |
+| `CheckSnmpProtocol`   | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the SNMP protocol.                           |
+| `CheckSnmpV3Protocol` | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the SNMPv3 protocol.                         |
+| `CheckSshProtocol`    | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the SSH protocol.                            |
+| `CheckWbemProtocol`   | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the WBEM protocol.                           |
+| `CheckWinrmProtocol`  | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the WinRM protocol.                          |
+| `CheckWmiProtocol`    | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Checks if a host is reachable using the WMI protocol.                            |
+| `PingHost`            | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li></ul>  | Checks if a host is reachable via ping and returns its response time and status. |
 
 To get started, simply connect your AI assistant to the **MetricsHub MCP Server** using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Once the connection is established, the available tools will be automatically published and ready for use.
 
@@ -53,7 +63,7 @@ The command will return this type of response:
 ```
 {
   "hostname": "server-01",
-  "duration": 27,
+  "responseTime": 27,
   "reachable": true
 }
 ```
