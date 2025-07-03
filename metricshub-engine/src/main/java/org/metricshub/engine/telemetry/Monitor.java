@@ -197,4 +197,13 @@ public class Monitor {
 			.map(key -> Optional.ofNullable(attributes.get(key)).orElse(""))
 			.collect(Collectors.joining("_"));
 	}
+
+	/**
+	 * Checks if the monitor is a connector type.
+	 *
+	 * @return {@code true} if the monitor type is a connector, {@code false} otherwise.
+	 */
+	public boolean isConnector() {
+		return KnownMonitorType.isConnector(type);
+	}
 }
