@@ -9,7 +9,7 @@ You can configure AI-based assistants that support the MCP SSE transport, such a
 
 ![OpenAI Prompt - MetricsHub MCP](../images/metricshub-mcp-openai.png)
 
-The following tool is currently available:
+The following tools are currently available:
 
 | Tool Name             | Parameters                                                                                                 | Description                                                                      |
 | --------------------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
