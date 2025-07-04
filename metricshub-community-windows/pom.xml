@@ -107,6 +107,11 @@
 			<artifactId>metricshub-yaml-configuration-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-programmable-configuration-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -233,6 +238,11 @@
 									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-yaml-configuration-extension</artifactId>
 									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-programmable-configuration-extension</artifactId>
+									<destFileName>metricshub-programmable-configuration-extension.jar</destFileName>
 								</artifactItem>
 							</artifactItems>
 						</configuration>
