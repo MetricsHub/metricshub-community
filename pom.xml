@@ -108,6 +108,7 @@
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
 		<module>metricshub-yaml-configuration-extension</module>
+		<module>metricshub-programmable-configuration-extension</module>
 	</modules>
 
 	<profiles>
