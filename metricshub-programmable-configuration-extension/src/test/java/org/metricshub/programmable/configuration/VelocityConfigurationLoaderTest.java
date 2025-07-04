@@ -53,7 +53,7 @@ class VelocityConfigurationLoaderTest {
 			        password: pass
 			    connectors: ["#system"]
 			""",
-			yaml,
+			yaml.replaceAll("\r\n", "\n"),
 			"Generated YAML should match expected output"
 		);
 	}
