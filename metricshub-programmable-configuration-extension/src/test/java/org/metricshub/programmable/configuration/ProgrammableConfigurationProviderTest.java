@@ -3,10 +3,15 @@ package org.metricshub.programmable.configuration;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Paths;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.http.HttpClient;
+import org.metricshub.http.HttpResponse;
+import org.mockito.MockedStatic;
 
 class ProgrammableConfigurationProviderTest {
 
@@ -43,5 +48,76 @@ class ProgrammableConfigurationProviderTest {
 		assertTrue(protocols.get("ssh").has("password"), resourceName + " ssh should have password");
 		assertTrue(resource.has("connectors"), resourceName + " should have connectors");
 		assertTrue(resource.get("connectors").isArray(), resourceName + " connectors should be an array");
+	}
+
+	@Test
+	void testLoadUsingHttpTool() {
+		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
+			final HttpResponse httpResponseList = new HttpResponse();
+			httpResponseList.setStatusCode(200);
+			httpResponseList.appendBody(
+				"""
+				  [
+				    {"hostname":"winhost1","OSType":"Windows","adminUsername":"admin1"}
+				  ]
+				"""
+			);
+			httpClientMock
+				.when(() ->
+					HttpClient.sendRequest(
+						"https://cmdb/servers",
+						"GET",
+						null,
+						null,
+						null,
+						null,
+						0,
+						null,
+						null,
+						null,
+						Map.of(),
+						null,
+						HttpTool.DEFAULT_HTTP_TIMEOUT,
+						null
+					)
+				)
+				.thenReturn(httpResponseList);
+
+			httpClientMock.clearInvocations();
+
+			final HttpResponse passwordResponse = new HttpResponse();
+			passwordResponse.setStatusCode(200);
+			passwordResponse.appendBody("password");
+			httpClientMock
+				.when(() ->
+					HttpClient.sendRequest(
+						"https://passwords/servers/winhost1/password",
+						"GET",
+						null,
+						null,
+						null,
+						null,
+						0,
+						null,
+						null,
+						null,
+						Map.of(),
+						null,
+						HttpTool.DEFAULT_HTTP_TIMEOUT,
+						null
+					)
+				)
+				.thenReturn(passwordResponse);
+
+			var pcp = new ProgrammableConfigurationProvider();
+			var nodes = pcp.load(Paths.get("src/test/resources/http"));
+
+			assertEquals(
+				"""
+				[{"resources":{"winhost1":{"attributes":{"host.name":"winhost1","host.type":"windows"},"protocols":{"ping":null,"wmi":{"timeout":120,"username":"admin1","password":"password"}}}}}]""",
+				nodes.toString(),
+				"Should load one configuration fragment with HTTP tool"
+			);
+		}
 	}
 }

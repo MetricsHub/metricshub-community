@@ -24,6 +24,8 @@ package org.metricshub.programmable.configuration;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,8 @@ import org.apache.velocity.app.VelocityEngine;
 public class VelocityConfigurationLoader {
 
 	private final Path vmPath;
+
+	private Map<String, Object> tools = new HashMap<>();
 
 	/**
 	 * Generates a YAML configuration from the Velocity template file.
@@ -61,6 +65,9 @@ public class VelocityConfigurationLoader {
 
 			// Prepare context
 			var context = new VelocityContext();
+
+			// Add tools to context
+			tools.forEach(context::put);
 
 			// Render template
 			var writer = new StringWriter();

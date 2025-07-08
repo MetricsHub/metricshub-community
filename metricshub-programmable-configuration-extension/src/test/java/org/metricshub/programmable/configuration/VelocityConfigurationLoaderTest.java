@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 class VelocityConfigurationLoaderTest {
@@ -17,7 +18,7 @@ class VelocityConfigurationLoaderTest {
 		assertTrue(templatePath.toFile().exists(), "Template file should exist");
 
 		// Load and generate YAML
-		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath);
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(templatePath, Map.of());
 		final String yaml = loader.generateYaml();
 
 		// Validate

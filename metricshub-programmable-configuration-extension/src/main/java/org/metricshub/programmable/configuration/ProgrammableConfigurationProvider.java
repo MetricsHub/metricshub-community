@@ -28,12 +28,18 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.velocity.tools.generic.DateTool;
+import org.apache.velocity.tools.generic.JsonTool;
+import org.apache.velocity.tools.generic.MathTool;
+import org.apache.velocity.tools.generic.XmlTool;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.extension.IConfigurationProvider;
 
@@ -45,6 +51,16 @@ import org.metricshub.engine.extension.IConfigurationProvider;
 public class ProgrammableConfigurationProvider implements IConfigurationProvider {
 
 	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
+
+	private static final Map<String, Object> TOOLS = new HashMap<>();
+
+	static {
+		TOOLS.put("http", new HttpTool());
+		TOOLS.put("json", new JsonTool());
+		TOOLS.put("xml", new XmlTool());
+		TOOLS.put("date", new DateTool());
+		TOOLS.put("math", new MathTool());
+	}
 
 	@Override
 	public Collection<JsonNode> load(final Path configDirectory) {
@@ -84,7 +100,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	 */
 	private Optional<JsonNode> readVmFragment(final Path path) {
 		try {
-			var loader = new VelocityConfigurationLoader(path);
+			var loader = new VelocityConfigurationLoader(path, TOOLS);
 			final String yaml = loader.generateYaml();
 			if (yaml != null) {
 				return Optional.of(YAML_MAPPER.readTree(yaml));
