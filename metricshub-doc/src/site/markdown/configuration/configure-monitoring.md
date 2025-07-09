@@ -760,7 +760,7 @@ Use this Velocity template to generate the resource block:
 ${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
 ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
-  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line, ","))
+  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line))
   ${esc.h}set(${esc.d}hostname = ${esc.d}fields.get(0))
   ${esc.h}set(${esc.d}hostType = ${esc.d}fields.get(1))
   ${esc.h}set(${esc.d}protocol = ${esc.d}fields.get(2))
