@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
 
@@ -51,9 +50,8 @@ public class HttpTool {
 	 * @param arguments A map containing the following keys: url, method, username, password, header, body, timeout, resultContent.
 	 * @return A string response from the HTTP request, or null if not applicable.
 	 * @throws IOException If an I/O error occurs during the request execution.
-	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public HttpResponse execute(final Map<String, String> arguments) throws IOException, ClientException {
+	public HttpResponse execute(final Map<String, String> arguments) throws IOException {
 		final String url = arguments.get("url");
 		final String method = arguments.get("method");
 		final String username = arguments.get("username");
@@ -90,9 +88,8 @@ public class HttpTool {
 	 * @param arguments A map containing the following keys: url, username, password, header, timeout, resultContent.
 	 * @return A string response from the HTTP GET request, or null if not applicable.
 	 * @throws IOException     If an I/O error occurs during the request execution.
-	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public HttpResponse get(final Map<String, String> arguments) throws IOException, ClientException {
+	public HttpResponse get(final Map<String, String> arguments) throws IOException {
 		var args = new HashMap<>(arguments);
 		args.put("method", "GET");
 		return execute(args);
@@ -104,9 +101,8 @@ public class HttpTool {
 	 * @param arguments A map containing the following keys: url, username, password, header, body, timeout, resultContent.
 	 * @return A string response from the HTTP POST request, or null if not applicable.
 	 * @throws IOException     If an I/O error occurs during the request execution.
-	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public HttpResponse post(final Map<String, String> arguments) throws IOException, ClientException {
+	public HttpResponse post(final Map<String, String> arguments) throws IOException {
 		var args = new HashMap<>(arguments);
 		args.put("method", "POST");
 		return execute(args);
