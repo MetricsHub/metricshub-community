@@ -684,7 +684,7 @@ resourceGroups:
 
 **MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
 
-You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` templates to fetch and transform external data into valid resource configuration blocks.
+You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` template files located under the `/config` directory to fetch and transform external data into valid resource configuration blocks.
 
 These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
 
@@ -702,8 +702,8 @@ The `${esc.d}http` tool allows you to execute HTTP requests directly from templa
 | ---------- | ---------------------------------------------------------------------- |
 | `url`      | (Required) The HTTP(S) endpoint to call.                               |
 | `method`   | HTTP method (`GET`, `POST`, etc.). Defaults to `GET` if not specified. |
-| `username` | Username used for authentication.                                |
-| `password` | Password used for authentication.                                |
+| `username` | Username used for authentication.                                      |
+| `password` | Password used for authentication.                                      |
 | `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs.         |
 | `body`     | Payload to send with the request (e.g., for `POST`).                   |
 | `timeout`  | Request timeout in seconds. Defaults to `60`.                          |
