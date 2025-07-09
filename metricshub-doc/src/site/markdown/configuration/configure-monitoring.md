@@ -44,6 +44,7 @@ config/
 ├── license.yaml                 # License configuration for the Enterprise edition
 ├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
 ├── <resource-id>-resource.yaml  # Your resource configuration
+├── resources.vm                 # Your programmatic resources configuration (.vm extension)
 ├── ...
 ```
 
@@ -677,6 +678,85 @@ resourceGroups:
             password: mypwd
             timeout: 120s
             authentications: [ntlm]
+```
+
+### Programmable Configuration
+
+**MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
+
+You can now use tools like `$http.execute(...)` or `$file.readAllLines(...)` in the `.vm` templates to fetch and transform external data into valid resource configuration blocks.
+
+These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
+
+- `$http`: for making HTTP requests
+- `$file`: for reading local files
+- `$json`: for parsing JSON data
+- `$collection`: for splitting strings or manipulating collections
+- `$date`, `$number`, `$esc`, and many others.
+
+#### Example 1: Load resources from an HTTP API
+
+Suppose your API endpoint at `https://cmdb/servers` returns:
+
+```json
+[
+  {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
+  {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
+]
+```
+
+You can dynamically create resource blocks using:
+
+```
+resources:
+#set($hostList = $json.parse($http.get({ "url": "https://cmdb/servers" }).body).root())
+
+#foreach($host in $hostList)
+  #if($host.OSType == "win")
+  $host.hostname:
+    attributes:
+      host.name: $host.hostname
+      host.type: windows
+    protocols:
+      ping:
+      wmi:
+        timeout: 120
+        username: $host.adminUsername
+        password: $http.get({ "url": "https://passwords/servers/${host.hostname}/password" }).body
+  #end
+#end
+```
+
+#### Example 2: Load resources from a local file
+
+Assume a CSV file contains:
+
+```
+host1,win,wmi,user1,pass1
+host2,linux,ssh,user2,pass2
+```
+
+Use this Velocity template to generate the resource block:
+
+```
+#set($lines = $file.readAllLines("/opt/data/resources.csv"))
+resources:
+#foreach($line in $lines)
+  #set($fields = $collection.split($line, ","))
+  #set($hostname = $fields.get(0))
+  #set($hostType = $fields.get(1))
+  #set($protocol = $fields.get(2))
+  #set($username = $fields.get(3))
+  #set($password = $fields.get(4))
+  $hostname:
+    attributes:
+      host.name: $hostname
+      host.type: $hostType
+    protocols:
+      $protocol:
+        username: $username
+        password: $password
+#end
 ```
 
 ## Step 4: Configure additional settings
