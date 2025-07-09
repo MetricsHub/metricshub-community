@@ -94,20 +94,22 @@ public class HardwareMonitorNameGenerationStrategy extends AbstractStrategy {
 			.stream()
 			.map(Map::values)
 			.flatMap(Collection::stream)
+			.filter((Monitor monitor) -> !monitor.isEndpointHost())
+			.filter((Monitor monitor) -> !monitor.isConnector())
 			.filter(telemetryManager::isConnectorStatusOk)
 			.filter(monitor -> connectorHasHardwareTag(monitor, telemetryManager))
 			.forEach((Monitor monitor) -> {
 				// Look up the true connectorId on the monitor
 				final String connectorId = monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID);
 
-				// Get or create the per‑connector map<type, map<hash,monitor>>
+				// Get or create the per-connector map<type, map<hash,monitor>>
 				if (connectorId != null) {
 					final Map<String, Map<String, Monitor>> hashesPerType = hashesByConnector.computeIfAbsent(
 						connectorId,
 						k -> new HashMap<>()
 					);
 
-					// Get or create—the per‑type map<hash,monitor>
+					// Get or create the per-type map<hash, monitor>
 					final Map<String, Monitor> hashMap = hashesPerType.computeIfAbsent(monitor.getType(), t -> new HashMap<>());
 
 					// Compute & store
@@ -149,12 +151,12 @@ public class HardwareMonitorNameGenerationStrategy extends AbstractStrategy {
 	 * @param monitor the monitor whose attributes will be hashed
 	 * @return lowercase hex MD5 digest of the monitor’s attributes
 	 */
-	private String computeIdCount(final Monitor monitor) {
+	private static String computeIdCount(final Monitor monitor) {
 		final SortedMap<String, String> sortedAttrs = new TreeMap<>(monitor.getAttributes());
-		final StringBuilder sb = new StringBuilder();
+		final var sb = new StringBuilder();
 		sortedAttrs.forEach((k, v) -> sb.append(k).append("=").append(v).append(";"));
 		try {
-			final MessageDigest md = MessageDigest.getInstance("MD5");
+			final var md = MessageDigest.getInstance("MD5");
 			final byte[] digest = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
 			return HexFormat.of().formatHex(digest);
 		} catch (NoSuchAlgorithmException e) {
