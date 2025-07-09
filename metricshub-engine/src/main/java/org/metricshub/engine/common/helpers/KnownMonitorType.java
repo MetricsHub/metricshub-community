@@ -144,4 +144,14 @@ public enum KnownMonitorType {
 	public static Optional<KnownMonitorType> fromString(final String monitorType) {
 		return Stream.of(KnownMonitorType.values()).filter(type -> type.key.equalsIgnoreCase(monitorType)).findFirst();
 	}
+
+	/**
+	 * Checks if the given monitor type is a connector type.
+	 *
+	 * @param monitorType the monitor type to check
+	 * @return true if the monitor type is a connector, false otherwise
+	 */
+	public static boolean isConnector(final String monitorType) {
+		return CONNECTOR.key.equalsIgnoreCase(monitorType);
+	}
 }
