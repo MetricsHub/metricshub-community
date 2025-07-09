@@ -108,6 +108,7 @@
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
 		<module>metricshub-yaml-configuration-extension</module>
+		<module>metricshub-programmable-configuration-extension</module>
 	</modules>
 
 	<profiles>
@@ -340,7 +341,7 @@
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-lang3</artifactId>
-				<version>3.12.0</version>
+				<version>3.17.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>

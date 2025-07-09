@@ -44,6 +44,7 @@ config/
 ├── license.yaml                 # License configuration for the Enterprise edition
 ├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
 ├── <resource-id>-resource.yaml  # Your resource configuration
+├── resources.vm                 # Your programmatic resources configuration (.vm extension)
 ├── ...
 ```
 
@@ -677,6 +678,103 @@ resourceGroups:
             password: mypwd
             timeout: 120s
             authentications: [ntlm]
+```
+
+### Programmable Configuration
+
+**MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
+
+You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` template files located under the `/config` directory to fetch and transform external data into valid resource configuration blocks.
+
+These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
+
+- `${esc.d}http`: for making HTTP requests
+- `${esc.d}file`: for reading local files
+- `${esc.d}json`: for parsing JSON data
+- `${esc.d}collection`: for splitting strings or manipulating collections
+- `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
+
+#### `${esc.d}http.execute` tool arguments
+
+The `${esc.d}http` tool allows you to execute HTTP requests directly from templates using the `execute` function (`${esc.d}http.execute({ ...args })`). The following arguments are supported:
+
+| Argument   | Description                                                            |
+| ---------- | ---------------------------------------------------------------------- |
+| `url`      | (Required) The HTTP(S) endpoint to call.                               |
+| `method`   | HTTP method (`GET`, `POST`, etc.). Defaults to `GET` if not specified. |
+| `username` | Username used for authentication.                                      |
+| `password` | Password used for authentication.                                      |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs.         |
+| `body`     | Payload to send with the request (e.g., for `POST`).                   |
+| `timeout`  | Request timeout in seconds. Defaults to `60`.                          |
+
+Two convenience functions are also available:
+- `${esc.d}http.get(...)`: Executes a `GET` request without requiring a `method` argument.
+- `${esc.d}http.post(...)`: Executes a `POST` request without requiring a `method` argument.
+
+#### Example 1: Load resources from an HTTP API
+
+Suppose your API endpoint at `https://cmdb/servers` returns:
+
+```
+[
+  {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
+  {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
+]
+```
+
+You can dynamically create resource blocks using:
+
+```
+resources:
+${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
+
+${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
+  ${esc.h}if(${esc.d}host.OSType == "win")
+  ${esc.d}host.hostname:
+    attributes:
+      host.name: ${esc.d}host.hostname
+      host.type: windows
+    protocols:
+      ping:
+      wmi:
+        timeout: 120
+        username: ${esc.d}host.adminUsername
+        password: ${esc.d}http.get({ "url": "https://passwords/servers/${esc.d}{host.hostname}/password" }).body
+  ${esc.h}end
+${esc.h}end
+```
+
+#### Example 2: Load resources from a local file
+
+Assume a CSV file contains:
+
+```
+host1,win,wmi,user1,pass1
+host2,linux,ssh,user2,pass2
+```
+
+Use this Velocity template to generate the resource block:
+
+```
+${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
+resources:
+${esc.h}foreach(${esc.d}line in ${esc.d}lines)
+  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line, ","))
+  ${esc.h}set(${esc.d}hostname = ${esc.d}fields.get(0))
+  ${esc.h}set(${esc.d}hostType = ${esc.d}fields.get(1))
+  ${esc.h}set(${esc.d}protocol = ${esc.d}fields.get(2))
+  ${esc.h}set(${esc.d}username = ${esc.d}fields.get(3))
+  ${esc.h}set(${esc.d}password = ${esc.d}fields.get(4))
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}hostType
+    protocols:
+      ${esc.d}protocol:
+        username: ${esc.d}username
+        password: ${esc.d}password
+${esc.h}end
 ```
 
 ## Step 4: Configure additional settings
