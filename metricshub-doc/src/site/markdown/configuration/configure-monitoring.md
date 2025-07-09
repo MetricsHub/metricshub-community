@@ -684,15 +684,15 @@ resourceGroups:
 
 **MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
 
-You can now use tools like `$http.execute(...)` or `$file.readAllLines(...)` in the `.vm` templates to fetch and transform external data into valid resource configuration blocks.
+You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` templates to fetch and transform external data into valid resource configuration blocks.
 
 These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
 
-- `$http`: for making HTTP requests
-- `$file`: for reading local files
-- `$json`: for parsing JSON data
-- `$collection`: for splitting strings or manipulating collections
-- `$date`, `$number`, `$esc`, and many others.
+- `${esc.d}http`: for making HTTP requests
+- `${esc.d}file`: for reading local files
+- `${esc.d}json`: for parsing JSON data
+- `${esc.d}collection`: for splitting strings or manipulating collections
+- `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
 #### Example 1: Load resources from an HTTP API
 
@@ -709,22 +709,22 @@ You can dynamically create resource blocks using:
 
 ```
 resources:
-#set($hostList = $json.parse($http.get({ "url": "https://cmdb/servers" }).body).root())
+${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
 
-#foreach($host in $hostList)
-  #if($host.OSType == "win")
-  $host.hostname:
+${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
+  ${esc.h}if(${esc.d}host.OSType == "win")
+  ${esc.d}host.hostname:
     attributes:
-      host.name: $host.hostname
+      host.name: ${esc.d}host.hostname
       host.type: windows
     protocols:
       ping:
       wmi:
         timeout: 120
-        username: $host.adminUsername
-        password: $http.get({ "url": "https://passwords/servers/${host.hostname}/password" }).body
-  #end
-#end
+        username: ${esc.d}host.adminUsername
+        password: ${esc.d}http.get({ "url": "https://passwords/servers/${esc.d}{host.hostname}/password" }).body
+  ${esc.h}end
+${esc.h}end
 ```
 
 #### Example 2: Load resources from a local file
@@ -739,24 +739,24 @@ host2,linux,ssh,user2,pass2
 Use this Velocity template to generate the resource block:
 
 ```
-#set($lines = $file.readAllLines("/opt/data/resources.csv"))
+${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
-#foreach($line in $lines)
-  #set($fields = $collection.split($line, ","))
-  #set($hostname = $fields.get(0))
-  #set($hostType = $fields.get(1))
-  #set($protocol = $fields.get(2))
-  #set($username = $fields.get(3))
-  #set($password = $fields.get(4))
-  $hostname:
+${esc.h}foreach(${esc.d}line in ${esc.d}lines)
+  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line, ","))
+  ${esc.h}set(${esc.d}hostname = ${esc.d}fields.get(0))
+  ${esc.h}set(${esc.d}hostType = ${esc.d}fields.get(1))
+  ${esc.h}set(${esc.d}protocol = ${esc.d}fields.get(2))
+  ${esc.h}set(${esc.d}username = ${esc.d}fields.get(3))
+  ${esc.h}set(${esc.d}password = ${esc.d}fields.get(4))
+  ${esc.d}hostname:
     attributes:
-      host.name: $hostname
-      host.type: $hostType
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}hostType
     protocols:
-      $protocol:
-        username: $username
-        password: $password
-#end
+      ${esc.d}protocol:
+        username: ${esc.d}username
+        password: ${esc.d}password
+${esc.h}end
 ```
 
 ## Step 4: Configure additional settings
