@@ -120,4 +120,16 @@ class ProgrammableConfigurationProviderTest {
 			);
 		}
 	}
+
+	@Test
+	void testLoadUsingFileTool() {
+		var pcp = new ProgrammableConfigurationProvider();
+		var nodes = pcp.load(Paths.get("src/test/resources/file"));
+		assertEquals(
+			"""
+			[{"resources":{"host1":{"attributes":{"host.name":"host1","host.type":"win"},"protocols":{"wmi":{"username":"user","password":"pass"}}},"host2":{"attributes":{"host.name":"host2","host.type":"linux"},"protocols":{"ssh":{"username":"user","password":"pass"}}}}}]""",
+			nodes.toString(),
+			"Should load correct configuration fragment using file tool"
+		);
+	}
 }

@@ -36,9 +36,21 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.velocity.tools.generic.DateTool;
+import org.apache.velocity.tools.generic.Alternator;
+import org.apache.velocity.tools.generic.CollectionTool;
+import org.apache.velocity.tools.generic.ComparisonDateTool;
+import org.apache.velocity.tools.generic.ContextTool;
+import org.apache.velocity.tools.generic.DisplayTool;
+import org.apache.velocity.tools.generic.EscapeTool;
+import org.apache.velocity.tools.generic.FieldTool;
+import org.apache.velocity.tools.generic.FormatConfig;
 import org.apache.velocity.tools.generic.JsonTool;
+import org.apache.velocity.tools.generic.LinkTool;
+import org.apache.velocity.tools.generic.LogTool;
+import org.apache.velocity.tools.generic.LoopTool;
 import org.apache.velocity.tools.generic.MathTool;
+import org.apache.velocity.tools.generic.RenderTool;
+import org.apache.velocity.tools.generic.ValueParser;
 import org.apache.velocity.tools.generic.XmlTool;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.extension.IConfigurationProvider;
@@ -58,8 +70,21 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		TOOLS.put("http", new HttpTool());
 		TOOLS.put("json", new JsonTool());
 		TOOLS.put("xml", new XmlTool());
-		TOOLS.put("date", new DateTool());
+		TOOLS.put("date", new ComparisonDateTool());
 		TOOLS.put("math", new MathTool());
+		TOOLS.put("esc", new EscapeTool());
+		TOOLS.put("collection", new CollectionTool());
+		TOOLS.put("parser", new ValueParser());
+		TOOLS.put("context", new ContextTool());
+		TOOLS.put("alternator", new Alternator());
+		TOOLS.put("display", new DisplayTool());
+		TOOLS.put("field", new FieldTool());
+		TOOLS.put("format", new FormatConfig());
+		TOOLS.put("link", new LinkTool());
+		TOOLS.put("log", new LogTool());
+		TOOLS.put("loop", new LoopTool());
+		TOOLS.put("render", new RenderTool());
+		TOOLS.put("file", new FileTool());
 	}
 
 	@Override

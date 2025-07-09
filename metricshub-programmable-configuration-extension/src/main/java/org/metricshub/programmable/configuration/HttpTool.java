@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
 
@@ -54,7 +53,7 @@ public class HttpTool {
 	 * @throws IOException If an I/O error occurs during the request execution.
 	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public String execute(final Map<String, String> arguments) throws IOException, ClientException {
+	public HttpResponse execute(final Map<String, String> arguments) throws IOException, ClientException {
 		final String url = arguments.get("url");
 		final String method = arguments.get("method");
 		final String username = arguments.get("username");
@@ -66,13 +65,8 @@ public class HttpTool {
 		if (timeoutString != null && !timeoutString.isBlank()) {
 			timeout = Integer.valueOf(timeoutString);
 		}
-		final var resultContentString = arguments.get("resultContent");
-		var resultContent = ResultContent.detect(resultContentString);
-		if (resultContent == null) {
-			resultContent = ResultContent.BODY;
-		}
 
-		final HttpResponse response = HttpClient.sendRequest(
+		return HttpClient.sendRequest(
 			url,
 			method == null ? "GET" : method,
 			null,
@@ -88,32 +82,6 @@ public class HttpTool {
 			timeout,
 			null
 		);
-
-		// The request returned an error
-		final int statusCode = response.getStatusCode();
-		if (statusCode >= BAD_REQUEST) {
-			// If the status code is 4xx or 5xx, we throw an IOException
-			// to indicate that the request failed.
-			throw new ClientException("HTTP request %s %s failed with status code: %s".formatted(method, url, statusCode));
-		}
-
-		// The request has been successful
-		String result;
-		switch (resultContent) {
-			case BODY:
-				result = response.getBody();
-				break;
-			case HEADER:
-				result = response.getHeader();
-				break;
-			case HTTP_STATUS:
-				result = String.valueOf(statusCode);
-				break;
-			default:
-				throw new IllegalArgumentException("Unsupported ResultContent: " + resultContent);
-		}
-
-		return result;
 	}
 
 	/**
@@ -124,10 +92,10 @@ public class HttpTool {
 	 * @throws IOException     If an I/O error occurs during the request execution.
 	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public String get(final Map<String, String> arguments) throws IOException, ClientException {
-		arguments.put("method", "GET");
-		arguments.remove("body");
-		return execute(arguments);
+	public HttpResponse get(final Map<String, String> arguments) throws IOException, ClientException {
+		var args = new HashMap<>(arguments);
+		args.put("method", "GET");
+		return execute(args);
 	}
 
 	/**
@@ -138,9 +106,10 @@ public class HttpTool {
 	 * @throws IOException     If an I/O error occurs during the request execution.
 	 * @throws ClientException If the HTTP request fails with a status code of 4xx or 5xx.
 	 */
-	public String post(final Map<String, String> arguments) throws IOException, ClientException {
-		arguments.put("method", "POST");
-		return execute(arguments);
+	public HttpResponse post(final Map<String, String> arguments) throws IOException, ClientException {
+		var args = new HashMap<>(arguments);
+		args.put("method", "POST");
+		return execute(args);
 	}
 
 	/**

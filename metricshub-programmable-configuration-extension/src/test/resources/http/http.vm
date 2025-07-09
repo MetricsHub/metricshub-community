@@ -1,5 +1,5 @@
 resources:
-#set($hostList = $json.parse($http.get({ "url": "https://cmdb/servers" })).root())
+#set($hostList = $json.parse($http.get({ "url": "https://cmdb/servers" }).body).root())
 
 #foreach($host in $hostList)
   #if($host.OSType == "Windows")
@@ -12,6 +12,6 @@ resources:
       wmi:
         timeout: 120
         username: $host.adminUsername
-        password: $http.get({ "url": "https://passwords/servers/${host.hostname}/password" })
+        password: $http.get({ "url": "https://passwords/servers/${host.hostname}/password" }).body
   #end
 #end
