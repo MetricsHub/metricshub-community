@@ -60,9 +60,9 @@
 			<artifactId>simple-http-java</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.maven.doxia</groupId>
-			<artifactId>doxia-site-renderer</artifactId>
-			<version>2.0.0</version>
+			<groupId>org.codehaus.plexus</groupId>
+			<artifactId>plexus-utils</artifactId>
+			<version>4.0.1</version>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
@@ -179,7 +179,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.apache.maven.doxia:doxia-site-renderer</include>
+									<include>org.codehaus.plexus:plexus-utils</include>
 									<include>org.apache.velocity.tools:velocity-engine-core</include>
 									<include>org.apache.velocity.tools:velocity-tools-generic</include>
 									<include>org.apache.commons:commons-lang3</include>
