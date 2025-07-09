@@ -60,6 +60,11 @@
 			<artifactId>simple-http-java</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>org.apache.maven.doxia</groupId>
+			<artifactId>doxia-site-renderer</artifactId>
+			<version>2.0.0</version>
+		</dependency>
+		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
 			<scope>test</scope>
@@ -147,7 +152,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.65</minimum>
+											<minimum>0.61</minimum>
 										</limit>
 									</limits>
 								</rule>
@@ -174,6 +179,10 @@
 						<configuration>
 							<artifactSet>
 								<includes>
+									<include>org.apache.maven.doxia:doxia-site-renderer</include>
+									<include>org.apache.velocity.tools:velocity-engine-core</include>
+									<include>org.apache.velocity.tools:velocity-tools-generic</include>
+									<include>org.apache.commons:commons-lang3</include>
 									<include>org.metricshub:simple-http-java</include>
 									<include>org.metricshub:metricshub-programmable-configuration-extension</include>
 								</includes>

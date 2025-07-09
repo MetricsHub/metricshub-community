@@ -52,6 +52,7 @@ import org.apache.velocity.tools.generic.MathTool;
 import org.apache.velocity.tools.generic.RenderTool;
 import org.apache.velocity.tools.generic.ValueParser;
 import org.apache.velocity.tools.generic.XmlTool;
+import org.codehaus.plexus.util.StringUtils;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.extension.IConfigurationProvider;
 
@@ -85,6 +86,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		TOOLS.put("loop", new LoopTool());
 		TOOLS.put("render", new RenderTool());
 		TOOLS.put("file", new FileTool());
+		TOOLS.put("stringUtils", new StringUtils());
 	}
 
 	@Override
