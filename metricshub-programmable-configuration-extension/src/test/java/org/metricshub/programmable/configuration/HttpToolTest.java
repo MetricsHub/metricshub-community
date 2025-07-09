@@ -125,7 +125,7 @@ class HttpToolTest {
 	void testShouldThrowOnInvalidHeaderFormat() {
 		final IllegalArgumentException ex = assertThrows(
 			IllegalArgumentException.class,
-			() -> httpTool.execute(Map.of("url", "https://badheaders.com", "hearders", "InvalidHeaderWithoutColon")),
+			() -> httpTool.execute(Map.of("url", "https://badheaders.com", "headers", "InvalidHeaderWithoutColon")),
 			"Expected IllegalArgumentException for invalid header format"
 		);
 

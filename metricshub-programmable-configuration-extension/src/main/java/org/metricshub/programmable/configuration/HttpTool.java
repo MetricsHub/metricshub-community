@@ -58,7 +58,7 @@ public class HttpTool {
 		final String method = arguments.get("method");
 		final String username = arguments.get("username");
 		final String password = arguments.get("password");
-		final Map<String, String> headers = parseHeader(arguments.get("hearders"));
+		final Map<String, String> headers = parseHeader(arguments.get("headers"));
 		final String body = arguments.get("body");
 		final var timeoutString = arguments.get("timeout");
 		var timeout = DEFAULT_HTTP_TIMEOUT;

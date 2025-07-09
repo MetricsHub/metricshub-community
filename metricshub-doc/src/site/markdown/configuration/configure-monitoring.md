@@ -694,11 +694,29 @@ These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/
 - `${esc.d}collection`: for splitting strings or manipulating collections
 - `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
+#### `${esc.d}http.execute` tool arguments
+
+The `${esc.d}http` tool allows you to execute HTTP requests directly from templates using the `execute` function (`${esc.d}http.execute({ ...args })`). The following arguments are supported:
+
+| Argument   | Description                                                            |
+| ---------- | ---------------------------------------------------------------------- |
+| `url`      | (Required) The HTTP(S) endpoint to call.                               |
+| `method`   | HTTP method (`GET`, `POST`, etc.). Defaults to `GET` if not specified. |
+| `username` | Username used for authentication.                                |
+| `password` | Password used for authentication.                                |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs.         |
+| `body`     | Payload to send with the request (e.g., for `POST`).                   |
+| `timeout`  | Request timeout in seconds. Defaults to `60`.                          |
+
+Two convenience functions are also available:
+- `${esc.d}http.get(...)`: Executes a `GET` request without requiring a `method` argument.
+- `${esc.d}http.post(...)`: Executes a `POST` request without requiring a `method` argument.
+
 #### Example 1: Load resources from an HTTP API
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
-```json
+```
 [
   {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
   {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
