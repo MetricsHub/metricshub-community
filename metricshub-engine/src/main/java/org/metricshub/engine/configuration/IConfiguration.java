@@ -41,6 +41,13 @@ public interface IConfiguration {
 	 * @param hostname the hostname of the local or remote device.
 	 */
 	void setHostname(String hostname);
+
+	/**
+	 * Sets the timeout in seconds
+	 *
+	 * @param timeout configuration timeout in seconds.
+	 */
+	void setTimeout(Long timeout);
 	/**
 	 * Validates the current configuration for the given configured resource key. This method ensures that
 	 * the configuration meets all required criteria.

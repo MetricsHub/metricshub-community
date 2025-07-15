@@ -34,6 +34,7 @@ import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.web.MetricsHubAgentServer;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -88,6 +89,8 @@ public class MetricsHubAgentApplication implements Runnable {
 
 			// Start the Scheduler
 			agentContext.getTaskSchedulingService().start();
+
+			new Thread(() -> MetricsHubAgentServer.startServer(agentContext)).start();
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = agentContext.getConfigDirectory();

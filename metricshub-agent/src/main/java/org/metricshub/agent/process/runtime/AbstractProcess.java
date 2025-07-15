@@ -53,7 +53,7 @@ public abstract class AbstractProcess implements IStoppable {
 	protected ProcessControl processControl;
 
 	@Getter
-	protected boolean stopped;
+	protected boolean started;
 
 	protected AbstractProcess(final ProcessConfig processConfig) {
 		this.processConfig = processConfig;
@@ -89,7 +89,7 @@ public abstract class AbstractProcess implements IStoppable {
 
 			onAfterProcessStart();
 
-			stopped = false;
+			started = true;
 
 			log.info("Started process with command line: {}", processConfig.getCommandLine());
 		} catch (Exception e) {
@@ -102,12 +102,12 @@ public abstract class AbstractProcess implements IStoppable {
 
 	@Override
 	public void stop() {
-		if (!stopped) {
+		if (started) {
 			onBeforeProcessStop();
 
 			stopInternal();
 
-			stopped = true;
+			started = false;
 
 			onAfterProcessStop();
 

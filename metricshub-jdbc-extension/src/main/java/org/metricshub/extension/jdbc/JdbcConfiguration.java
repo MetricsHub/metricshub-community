@@ -59,7 +59,7 @@ public class JdbcConfiguration implements IConfiguration {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private final Long timeout = 120L;
+	private Long timeout = 120L;
 
 	private String type;
 
@@ -176,9 +176,11 @@ public class JdbcConfiguration implements IConfiguration {
 	 */
 	char[] generateUrl() {
 		return switch (type.toLowerCase()) {
-			case "postgresql" -> String.format("jdbc:postgresql://%s:%d/%s", hostname, port, database).toCharArray();
 			case "mysql" -> String
 				.format("jdbc:mysql://%s:%d/%s", hostname, port, database != null ? database : "")
+				.toCharArray();
+			case "postgresql" -> String
+				.format("jdbc:postgresql://%s:%d/%s", hostname, port, database != null ? database : "postgres")
 				.toCharArray();
 			case "mssql" -> String
 				.format("jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true", hostname, port)

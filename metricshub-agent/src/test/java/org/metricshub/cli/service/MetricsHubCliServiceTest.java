@@ -14,6 +14,7 @@ import org.metricshub.cli.helper.StringBuilderWriter;
 import org.metricshub.cli.service.MetricsHubCliService.CliPasswordReader;
 import org.metricshub.cli.service.protocol.HttpConfigCli;
 import org.metricshub.cli.service.protocol.IpmiConfigCli;
+import org.metricshub.cli.service.protocol.JmxConfigCli;
 import org.metricshub.cli.service.protocol.SshConfigCli;
 import org.metricshub.cli.service.protocol.WbemConfigCli;
 import org.metricshub.cli.service.protocol.WinRmConfigCli;
@@ -495,5 +496,57 @@ class MetricsHubCliServiceTest {
 		expectedAdditionalConnectors.get("id1").setUses("id1");
 		expectedAdditionalConnectors.get("id2").setUses("id2");
 		assertEquals(expectedAdditionalConnectors, cli.getAdditionalConnectorsConfiguration());
+	}
+
+	@Test
+	void testInteractiveJmxPassword() {
+		final MetricsHubCliService metricsHubCliService = new MetricsHubCliService();
+
+		// Initialize a StringBuilder to capture the input password
+		final StringBuilder builder = new StringBuilder();
+
+		// Define a CliPasswordReader that appends the password to the StringBuilder
+		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+			builder.append(PASSWORD, 0, PASSWORD.length);
+			return PASSWORD;
+		};
+
+		// Test tryInteractiveJmxPassword method with the CliPasswordReader
+		metricsHubCliService.tryInteractiveJmxPassword(cliPasswordReader);
+
+		// Make sure the StringBuilder is blank
+		// This confirms that tryInteractiveJmxPassword hasn't triggered the password
+		// reader
+		assertTrue(builder.isEmpty(), "StringBuilder should be empty before setting jmxConfigCli");
+
+		// Set a new jmxConfigCli in MetricsHubCliService
+		metricsHubCliService.jmxConfigCli = new JmxConfigCli();
+
+		// Make sure the StringBuilder is blank
+		assertTrue(builder.isEmpty(), "StringBuilder should be empty after setting jmxConfigCli");
+
+		// Set a username in jmxConfigCli
+		metricsHubCliService.jmxConfigCli.setUsername("user");
+
+		// Test tryInteractiveJmxPassword method with the CliPasswordReader
+		metricsHubCliService.tryInteractiveJmxPassword(cliPasswordReader);
+
+		// Assert that the captured password in the StringBuilder matches the expected
+		// value
+		assertEquals(
+			new String(PASSWORD),
+			builder.toString(),
+			"StringBuilder should contain the password after setting username in jmxConfigCli"
+		);
+
+		// Set a password in jmxConfigCli
+		metricsHubCliService.jmxConfigCli.setPassword(PASSWORD);
+
+		builder.delete(0, PASSWORD.length);
+
+		// Test tryInteractiveJmxPassword method with the CliPasswordReader again
+		metricsHubCliService.tryInteractiveJmxPassword(cliPasswordReader);
+
+		assertTrue(builder.isEmpty(), "StringBuilder should be empty after setting password in jmxConfigCli");
 	}
 }

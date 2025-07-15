@@ -108,7 +108,8 @@ public class JdbcExtension implements IProtocolExtension {
 		log.info("Hostname {} - Performing {} health check.", hostname, getIdentifier());
 
 		// Retrieve connection details
-		final String jdbcUrl = String.valueOf(jdbcConfiguration.getUrl());
+		final char[] url = jdbcConfiguration.getUrl();
+		final String jdbcUrl = url != null ? String.valueOf(url) : null;
 		final String username = jdbcConfiguration.getUsername();
 		final char[] password = jdbcConfiguration.getPassword();
 		final long timeout = jdbcConfiguration.getTimeout();

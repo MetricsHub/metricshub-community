@@ -49,7 +49,7 @@ public class IpmiConfiguration implements IConfiguration {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = TimeDeserializer.class)
-	private final Long timeout = 120L;
+	private Long timeout = 120L;
 
 	private String username;
 	private char[] password;

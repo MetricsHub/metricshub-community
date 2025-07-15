@@ -544,6 +544,9 @@ class SnmpV3ExtensionTest {
 					public IConfiguration copy() {
 						return null;
 					}
+
+					@Override
+					public void setTimeout(Long timeout) {}
 				}
 			)
 		);

@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -40,6 +41,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.StaticSource;
@@ -863,5 +865,54 @@ class SourceProcessorTest {
 			.processSource(internalDbQuery, CONNECTOR_ID, telemetryManager);
 
 		assertEquals(result, sourceProcessor.process(internalDbQuery).getTable());
+	}
+
+	@Test
+	void testProcessJmxSource() {
+		final TestConfiguration jmxConfiguration = TestConfiguration.builder().build();
+		final HostConfiguration hostConfiguration = HostConfiguration
+			.builder()
+			.hostname(ECS1_01)
+			.hostId(ECS1_01)
+			.hostType(DeviceKind.LINUX)
+			.configurations(Collections.singletonMap(TestConfiguration.class, jmxConfiguration))
+			.build();
+
+		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+
+		final ExtensionManager extensionManager = ExtensionManager
+			.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock))
+			.build();
+
+		final SourceProcessor sourceProcessor = SourceProcessor
+			.builder()
+			.telemetryManager(telemetryManager)
+			.clientsExecutor(clientsExecutorMock)
+			.extensionManager(extensionManager)
+			.connectorId(CONNECTOR_ID)
+			.build();
+
+		doReturn(true).when(protocolExtensionMock).isValidConfiguration(jmxConfiguration);
+
+		doReturn(Set.of(JmxSource.class)).when(protocolExtensionMock).getSupportedSources();
+
+		final SourceTable expected = SourceTable.builder().rawData("data").build();
+
+		final JmxSource source = JmxSource
+			.builder()
+			.type("jmx")
+			.objectName("org.metricshub.extension.jmx:type=JmxMBean,scope=*")
+			.attributes(new LinkedList<>(List.of("Name")))
+			.key("${source::beforeAll.jmxSource}")
+			.forceSerialization(false)
+			.keyProperties(new LinkedList<>(List.of("scope")))
+			.build();
+
+		doReturn(expected).when(protocolExtensionMock).processSource(eq(source), anyString(), any(TelemetryManager.class));
+
+		final SourceTable actual = sourceProcessor.process(source);
+
+		assertEquals(expected, actual, "Processed JMX source should match expected output");
 	}
 }

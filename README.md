@@ -26,8 +26,10 @@ This is a multi-module project:
 * **metricshub-ping-extension**: Enables testing the reachability of hosts using ICMP-based ping commands.
 * **metricshub-jawk-extension**: Allows execution of Jawk scripts.
 * **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
+* **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
 * **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory.
+* **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
 * **metricshub-community-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
 * **metricshub-community-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.

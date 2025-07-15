@@ -170,7 +170,12 @@ public abstract class AbstractStrategy implements IStrategy {
 					monitorType
 				);
 				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained
-				sourceTable = SourceTable.builder().rawData(sourceTable.getRawData()).table(new ArrayList<>()).build();
+				sourceTable =
+					SourceTable
+						.builder()
+						.rawData(sourceTable != null ? sourceTable.getRawData() : null)
+						.table(new ArrayList<>())
+						.build();
 			}
 
 			// log the source table

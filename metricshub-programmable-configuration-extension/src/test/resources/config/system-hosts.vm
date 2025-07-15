@@ -1,0 +1,12 @@
+resources:
+#foreach($i in [1..3])
+  host-0${i}-system:
+    attributes:
+      host.name: host-0${i}
+      host.type: linux
+    protocols:
+      ssh:
+        username: user
+        password: pass
+    connectors: ["#system"]
+#end

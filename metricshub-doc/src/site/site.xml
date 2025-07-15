@@ -96,9 +96,11 @@
 		</menu>
 
 		<menu name="Integrations">
+			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
+			<item name="BMC Helix" href="integrations/bmc-helix.html" />
 			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
-				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />
+				<item name="Prometheus Alertmanager" href="prometheus/alertmanager.html" />
 				<item name="Grafana Dashboards" href="prometheus/grafana.html" />
 			</item>
 		</menu>
@@ -107,6 +109,18 @@
 			<item name="Quick Start (Community Edition)" href="guides/quick-start-community-prometheus.html"/>
 			<item name="Sustainability " href="guides/configure-sustainability-metrics.html" />
 			<item name="Health Check (Enterprise Edition)" href="guides/status.html" />
+		</menu>
+
+		<menu name="Custom Monitoring">
+			<item name="Overview" href="custom/index.html"/>
+			<item name="Database Query" href="custom/database-query.html"/>
+			<item name="JMX Query" href="custom/jmx-query.html"/>
+			<item name="Linux Service" href="custom/linux-service.html"/>
+			<item name="Linux Process" href="custom/linux-process.html"/>
+			<item name="SNMP Polling" href="custom/snmp-polling.html"/>
+			<item name="Web Request" href="custom/web-request.html"/>
+			<item name="Windows Process" href="custom/windows-process.html"/>
+			<item name="Windows Service" href="custom/windows-service.html"/>
 		</menu>
 
 		<menu name="Troubleshooting">
@@ -121,6 +135,7 @@
 				<item name="HTTP CLI" href="troubleshooting/cli/http.html"/>
 				<item name="IPMI CLI" href="troubleshooting/cli/ipmi.html"/>
 				<item name="JDBC CLI" href="troubleshooting/cli/jdbc.html"/>
+				<item name="JMX CLI" href="troubleshooting/cli/jmx.html"/>
 				<item name="Ping CLI" href="troubleshooting/cli/ping.html"/>
 				<item name="SNMP CLI" href="troubleshooting/cli/snmp.html"/>
 				<item name="SNMPv3 CLI" href="troubleshooting/cli/snmpv3.html"/>

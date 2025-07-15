@@ -1,4 +1,4 @@
-keywords: agent, configuration, protocols, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
+keywords: agent, configuration, protocols, jmx, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
 description: How to configure the MetricsHub Agent to collect metrics from a variety of resources with various protocols.
 
 # Monitoring Configuration
@@ -16,7 +16,7 @@ To reflect this organization, you are asked to define your **resource group** fi
 > * `./metricshub/lib/config` on Linux systems
 
 > **Important**: We recommend using an editor supporting the
-[Schemastore](https://www.schemastore.org/json#editors) to edit **MetricsHub**'s configuration YAML
+[Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML
  files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
@@ -44,6 +44,7 @@ config/
 ├── license.yaml                 # License configuration for the Enterprise edition
 ├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
 ├── <resource-id>-resource.yaml  # Your resource configuration
+├── resources.vm                 # Your programmatic resources configuration (.vm extension)
 ├── ...
 ```
 
@@ -213,7 +214,7 @@ Whatever the syntax adopted, replace:
   * [`vms`](https://metricshub.com/docs/latest/connectors/tags/hpe.html) for HP Open VMS systems.
   Check out the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html) to find out which type corresponds to your system.
 * `<protocol-configuration>` with the protocol(s) **MetricsHub** will use to communicate with the resources:
- [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
+ [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`jmx`](./configure-monitoring.md#jmx), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
  Refer to [Protocols and Credentials](./configure-monitoring.html#protocols-and-credentials) for more details.
 
 > Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the configuration file to call your environment variables.
@@ -381,6 +382,37 @@ resourceGroups:
             timeout: 120s
             type: mysql
             port: 3306
+```
+
+#### JMX
+
+Use the parameters below to configure the JMX protocol:
+
+| Parameter | Description                                                                                       |
+|-----------|---------------------------------------------------------------------------------------------------|
+| jmx       | JMX configuration used to access the host.                                                        |
+| hostname  | The name or IP address of the resource. If not specified, the `host.name` attribute will be used. |
+| timeout   | How long until the JMX query times out (Default: 30s).                                            |
+| username  | Name used to authenticate against the JMX service.                                                |
+| password  | Password used to authenticate against the JMX service.                                            |
+| port      | The port number used to connect to the JMX service (Default: 1099).                               |
+
+**Example**
+
+```yaml
+resourceGroups:
+  boston:
+    attributes:
+      site: boston
+    resources:
+      db-host:
+        attributes:
+          host.name: cassandra-01
+          host.type: linux
+        protocols:
+          jmx:
+            timeout: 30s
+            port: 7199
 ```
 
 #### OS commands
@@ -646,6 +678,103 @@ resourceGroups:
             password: mypwd
             timeout: 120s
             authentications: [ntlm]
+```
+
+### Programmable Configuration
+
+**MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
+
+You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` template files located under the `/config` directory to fetch and transform external data into valid resource configuration blocks.
+
+These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
+
+- `${esc.d}http`: for making HTTP requests
+- `${esc.d}file`: for reading local files
+- `${esc.d}json`: for parsing JSON data
+- `${esc.d}collection`: for splitting strings or manipulating collections
+- `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
+
+#### `${esc.d}http.execute` tool arguments
+
+The `${esc.d}http` tool allows you to execute HTTP requests directly from templates using the `execute` function (`${esc.d}http.execute({ ...args })`). The following arguments are supported:
+
+| Argument   | Description                                                            |
+| ---------- | ---------------------------------------------------------------------- |
+| `url`      | (Required) The HTTP(S) endpoint to call.                               |
+| `method`   | HTTP method (`GET`, `POST`, etc.). Defaults to `GET` if not specified. |
+| `username` | Username used for authentication.                                      |
+| `password` | Password used for authentication.                                      |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs.         |
+| `body`     | Payload to send with the request (e.g., for `POST`).                   |
+| `timeout`  | Request timeout in seconds. Defaults to `60`.                          |
+
+Two convenience functions are also available:
+- `${esc.d}http.get(...)`: Executes a `GET` request without requiring a `method` argument.
+- `${esc.d}http.post(...)`: Executes a `POST` request without requiring a `method` argument.
+
+#### Example 1: Load resources from an HTTP API
+
+Suppose your API endpoint at `https://cmdb/servers` returns:
+
+```
+[
+  {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
+  {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
+]
+```
+
+You can dynamically create resource blocks using:
+
+```
+resources:
+${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
+
+${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
+  ${esc.h}if(${esc.d}host.OSType == "win")
+  ${esc.d}host.hostname:
+    attributes:
+      host.name: ${esc.d}host.hostname
+      host.type: windows
+    protocols:
+      ping:
+      wmi:
+        timeout: 120
+        username: ${esc.d}host.adminUsername
+        password: ${esc.d}http.get({ "url": "https://passwords/servers/${esc.d}{host.hostname}/password" }).body
+  ${esc.h}end
+${esc.h}end
+```
+
+#### Example 2: Load resources from a local file
+
+Assume a CSV file contains:
+
+```
+host1,win,wmi,user1,pass1
+host2,linux,ssh,user2,pass2
+```
+
+Use this Velocity template to generate the resource block:
+
+```
+${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
+resources:
+${esc.h}foreach(${esc.d}line in ${esc.d}lines)
+  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line))
+  ${esc.h}set(${esc.d}hostname = ${esc.d}fields.get(0))
+  ${esc.h}set(${esc.d}hostType = ${esc.d}fields.get(1))
+  ${esc.h}set(${esc.d}protocol = ${esc.d}fields.get(2))
+  ${esc.h}set(${esc.d}username = ${esc.d}fields.get(3))
+  ${esc.h}set(${esc.d}password = ${esc.d}fields.get(4))
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}hostType
+    protocols:
+      ${esc.d}protocol:
+        username: ${esc.d}username
+        password: ${esc.d}password
+${esc.h}end
 ```
 
 ## Step 4: Configure additional settings

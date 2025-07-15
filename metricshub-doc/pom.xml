@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.04-SNAPSHOT</version>
+		<version>1.0.06-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-doc</artifactId>
@@ -16,8 +16,8 @@
 
 	<properties>
 		<communityVersion>${project.version}</communityVersion>
-		<enterpriseVersion>2.0.00</enterpriseVersion>
-		<otelVersion>0.116.0</otelVersion>
+		<enterpriseVersion>2.1.00</enterpriseVersion>
+		<otelVersion>0.127.0</otelVersion>
 	</properties>
 
 	<dependencies>
@@ -119,7 +119,7 @@
 			<plugin>
 				<groupId>org.metricshub.maven</groupId>
 				<artifactId>metricshub-connector-maven-plugin</artifactId>
-				<version>1.0.11</version>
+				<version>1.0.12</version>
 				<configuration>
 					<sourceDirectory>${project.basedir}/../metricshub-agent/target/connectors</sourceDirectory>
 					<defaultPlatformIconFilename>default.png</defaultPlatformIconFilename>

@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.04-SNAPSHOT</version>
+		<version>1.0.06-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-community-linux</artifactId>
@@ -93,7 +93,17 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-jmx-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-yaml-configuration-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-programmable-configuration-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 	</dependencies>
@@ -215,8 +225,18 @@
 								</artifactItem>
 								<artifactItem>
 									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-jmx-extension</artifactId>
+									<destFileName>metricshub-jmx-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
 									<artifactId>metricshub-yaml-configuration-extension</artifactId>
 									<destFileName>metricshub-yaml-configuration-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>${project.groupId}</groupId>
+									<artifactId>metricshub-programmable-configuration-extension</artifactId>
+									<destFileName>metricshub-programmable-configuration-extension.jar</destFileName>
 								</artifactItem>
 							</artifactItems>
 						</configuration>
@@ -286,6 +306,8 @@
 								<argument>sshcli=metricshub-sshcli.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>pingcli=metricshub-pingcli.properties</argument>
+								<argument>--add-launcher</argument>
+								<argument>jmxcli=metricshub-jmxcli.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>jawk=metricshub-jawk.properties</argument>
 								<argument>@jpackage.txt</argument>
