@@ -66,7 +66,7 @@ class AgentContextTest {
 
 	@Test
 	void testInitialize() throws IOException {
-		final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager, false);
+		final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager);
 
 		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
 		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
@@ -171,8 +171,7 @@ class AgentContextTest {
 		// Create the agent context using the configuration file path
 		final AgentContext agentContext = new AgentContext(
 			"src/test/resources/config/top-level-resource-agent-context-test",
-			extensionManager,
-			false
+			extensionManager
 		);
 
 		// Check AgentContext fields
@@ -200,8 +199,7 @@ class AgentContextTest {
 	void testInitializeWithConnectorVariables() throws IOException {
 		final AgentContext agentContext = new AgentContext(
 			"src/test/resources/config/metricshub-connectorVariables",
-			extensionManager,
-			false
+			extensionManager
 		);
 
 		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
@@ -255,8 +253,7 @@ class AgentContextTest {
 	void testInitializeWithEnvironmentVariables() throws IOException {
 		final AgentContext agentContext = new AgentContext(
 			"src/test/resources/config/metricshub-environmentVariables",
-			extensionManager,
-			false
+			extensionManager
 		);
 
 		assertNotEquals(

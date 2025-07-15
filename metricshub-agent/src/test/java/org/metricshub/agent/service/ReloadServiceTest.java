@@ -31,8 +31,8 @@ class ReloadServiceTest {
 	private ReloadService createReloadServiceWithConfigs(AgentConfig oldConfig, AgentConfig newConfig)
 		throws IOException {
 		TestHelper.configureGlobalLogger();
-		final AgentContext oldContext = new AgentContext(null, new ExtensionManager(), false);
-		final AgentContext newContext = new AgentContext(null, new ExtensionManager(), false);
+		final AgentContext oldContext = new AgentContext(null, new ExtensionManager());
+		final AgentContext newContext = new AgentContext(null, new ExtensionManager());
 		return ReloadService.builder().withRunningAgentContext(oldContext).withReloadedAgentContext(newContext).build();
 	}
 
@@ -218,8 +218,7 @@ class ReloadServiceTest {
 				.builder()
 				.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
 				.withProtocolExtensions(List.of(new HttpExtension()))
-				.build(),
-			false
+				.build()
 		);
 	}
 

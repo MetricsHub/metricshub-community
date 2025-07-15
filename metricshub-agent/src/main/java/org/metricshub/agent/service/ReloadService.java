@@ -326,11 +326,7 @@ public class ReloadService {
 				runningTaskSchedulingService.scheduleResourceGroup(resourceGroupKey, newGroup);
 
 				// Schedule all the resources
-				newGroup
-					.getResources()
-					.forEach((String resourceKey, ResourceConfig resourceConfig) ->
-						runningTaskSchedulingService.scheduleResource(resourceGroupKey, resourceKey, resourceConfig)
-					);
+				runningTaskSchedulingService.scheduleResourcesInResourceGroups(resourceGroupKey, newGroup);
 			} else if (newGroup == null) {
 				// A Resource group has been removed from the configuration
 				log.info("The Resource Group {} is removed from the configuration.", resourceGroupKey);
@@ -347,7 +343,11 @@ public class ReloadService {
 				runningGroup
 					.getResources()
 					.forEach((String resourceKey, ResourceConfig resourceConfig) ->
-						schedules.get(String.format(METRICSHUB_RESOURCE_KEY_FORMAT, resourceGroupKey, resourceKey)).cancel(true)
+						removeResourceFromTaskSchedulingService(
+							resourceGroupKey,
+							resourceKey,
+							String.format(METRICSHUB_RESOURCE_KEY_FORMAT, resourceGroupKey, resourceKey)
+						)
 					);
 
 				// Remove the Telemetry Managers

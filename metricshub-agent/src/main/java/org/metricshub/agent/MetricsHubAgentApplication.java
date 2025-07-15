@@ -43,9 +43,6 @@ import picocli.CommandLine.Option;
 @Data
 @Slf4j
 public class MetricsHubAgentApplication implements Runnable {
-
-	private static final String LOGGER_LEVEL = "loggerLevel";
-
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -84,7 +81,7 @@ public class MetricsHubAgentApplication implements Runnable {
 			final var extensionManager = ConfigHelper.loadExtensionManager();
 
 			// Initialize the application context
-			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager, true);
+			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
 
 			// Start OpenTelemetry Collector process
 			agentContext.getOtelCollectorProcessService().launch();
@@ -118,12 +115,12 @@ public class MetricsHubAgentApplication implements Runnable {
 					final AgentContext newAgentContext = loadNewAgentContext();
 
 					// Reload the agent according to the new Agent Context
-					final ReloadService reloadService = ReloadService
+					ReloadService
 						.builder()
 						.withRunningAgentContext(agentContext)
 						.withReloadedAgentContext(newAgentContext)
-						.build();
-					reloadService.reload();
+						.build()
+						.reload();
 				})
 				.build()
 				.start();
@@ -140,7 +137,7 @@ public class MetricsHubAgentApplication implements Runnable {
 	private synchronized AgentContext loadNewAgentContext() {
 		try {
 			// Initialize the application context
-			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager(), false);
+			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager());
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to reload the Agent.", e);
@@ -172,7 +169,7 @@ public class MetricsHubAgentApplication implements Runnable {
 	 */
 	static void configureGlobalErrorLogger() {
 		ThreadContext.put("logId", "metricshub-agent-global-error");
-		ThreadContext.put(LOGGER_LEVEL, Level.ERROR.toString());
+		ThreadContext.put("loggerLevel", Level.ERROR.toString());
 		ThreadContext.put("outputDirectory", AgentConstants.DEFAULT_OUTPUT_DIRECTORY.toString());
 	}
 }
