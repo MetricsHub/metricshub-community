@@ -33,6 +33,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.alert.AlertRule;
@@ -47,6 +48,7 @@ import org.metricshub.engine.telemetry.metric.AbstractMetric;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode
 public class Monitor {
 
 	@Default

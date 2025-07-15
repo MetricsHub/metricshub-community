@@ -31,8 +31,7 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.service.OtelCollectorProcessService;
-import org.metricshub.agent.service.TaskSchedulingService;
+import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import picocli.CommandLine;
@@ -44,6 +43,9 @@ import picocli.CommandLine.Option;
 @Data
 @Slf4j
 public class MetricsHubAgentApplication implements Runnable {
+
+	private static final String LOGGER_LEVEL = "loggerLevel";
+
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -82,7 +84,7 @@ public class MetricsHubAgentApplication implements Runnable {
 			final var extensionManager = ConfigHelper.loadExtensionManager();
 
 			// Initialize the application context
-			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
+			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager, true);
 
 			// Start OpenTelemetry Collector process
 			agentContext.getOtelCollectorProcessService().launch();
@@ -98,6 +100,7 @@ public class MetricsHubAgentApplication implements Runnable {
 				.directory(configDirectory)
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
+					log.info("RELOAD - Directory Watcher Task event triggered.\nContext: " + context.toString());
 					// CHECKSTYLE:OFF
 					return (
 						context != null &&
@@ -110,13 +113,38 @@ public class MetricsHubAgentApplication implements Runnable {
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
 				.checksumSupplier(() -> buildChecksum(extensionManager, configDirectory))
-				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
+				.onChange(() -> {
+					// Create a new Agent Context to use in the reload service
+					final AgentContext newAgentContext = loadNewAgentContext();
+
+					// Reload the agent according to the new Agent Context
+					final ReloadService reloadService = ReloadService
+						.builder()
+						.withRunningAgentContext(agentContext)
+						.withReloadedAgentContext(newAgentContext)
+						.build();
+					reloadService.reload();
+				})
 				.build()
 				.start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
+		}
+	}
+
+	/**
+	 * Loads a new AgentContext which will be used in the reload service
+	 */
+	private synchronized AgentContext loadNewAgentContext() {
+		try {
+			// Initialize the application context
+			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager(), false);
+		} catch (Exception e) {
+			configureGlobalErrorLogger();
+			log.error("Failed to reload the Agent.", e);
+			throw new IllegalStateException("Error dectected during MetricsHub agent reloading.", e);
 		}
 	}
 
@@ -139,31 +167,12 @@ public class MetricsHubAgentApplication implements Runnable {
 	}
 
 	/**
-	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
-	 * @param agentContext The agent context
-	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
-	 */
-	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigDirectory) {
-		try {
-			agentContext.getTaskSchedulingService().stop();
-
-			agentContext.build(alternateConfigDirectory, false);
-
-			agentContext.getTaskSchedulingService().start();
-		} catch (Exception e) {
-			configureGlobalErrorLogger();
-			log.error("Failed to start MetricsHub Agent.", e);
-			throw new IllegalStateException("Error detected during MetricsHub agent startup.", e);
-		}
-	}
-
-	/**
 	 * Configure the global error logger to be able to log startup fatal errors
 	 * preventing the application from starting
 	 */
 	static void configureGlobalErrorLogger() {
 		ThreadContext.put("logId", "metricshub-agent-global-error");
-		ThreadContext.put("loggerLevel", Level.ERROR.toString());
+		ThreadContext.put(LOGGER_LEVEL, Level.ERROR.toString());
 		ThreadContext.put("outputDirectory", AgentConstants.DEFAULT_OUTPUT_DIRECTORY.toString());
 	}
 }

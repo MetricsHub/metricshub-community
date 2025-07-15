@@ -87,19 +87,27 @@ public class AgentContext {
 	 * @param extensionManager         Manages and aggregates various types of extensions used within MetricsHub.
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
-	public AgentContext(final String alternateConfigDirectory, final ExtensionManager extensionManager)
-		throws IOException {
+	public AgentContext(
+		final String alternateConfigDirectory,
+		final ExtensionManager extensionManager,
+		final boolean configureLogger
+	) throws IOException {
 		this.extensionManager = extensionManager;
-		build(alternateConfigDirectory, true);
+		build(alternateConfigDirectory, true, configureLogger);
 	}
 
 	/**
 	 * Builds the agent context
 	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
 	 * @param createConnectorStore     Whether we should create a new connector store
+	 * @param configureLogger          Whether we should configure the logger
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
-	public void build(final String alternateConfigDirectory, final boolean createConnectorStore) throws IOException {
+	public void build(
+		final String alternateConfigDirectory,
+		final boolean createConnectorStore,
+		final boolean configureLogger
+	) throws IOException {
 		final long startTime = System.nanoTime();
 
 		// Find the configuration directory
@@ -114,8 +122,10 @@ public class AgentContext {
 		// at the start up of the application.
 		final var preConfig = loadPreConfig(configNode);
 
-		// Configure the global logger
-		ConfigHelper.configureGlobalLogger(preConfig.getLoggerLevel(), preConfig.getOutputDirectory());
+		if (configureLogger) {
+			// Configure the global logger
+			ConfigHelper.configureGlobalLogger(preConfig.getLoggerLevel(), preConfig.getOutputDirectory());
+		}
 
 		log.info("Starting MetricsHub Agent...");
 
