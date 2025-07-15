@@ -29,11 +29,19 @@ import org.metricshub.extension.http.HttpExtension;
 
 class ReloadServiceTest {
 
+	private static String RESOURCES_PATH = "src/test/resources/service/reload/%s";
+
 	private ReloadService createReloadServiceWithConfigs(AgentConfig oldConfig, AgentConfig newConfig)
 		throws IOException {
 		TestHelper.configureGlobalLogger();
-		final AgentContext oldContext = new AgentContext(null, new ExtensionManager());
-		final AgentContext newContext = new AgentContext(null, new ExtensionManager());
+		final AgentContext oldContext = new AgentContext(
+			RESOURCES_PATH.formatted("default-config"),
+			new ExtensionManager()
+		);
+		final AgentContext newContext = new AgentContext(
+			RESOURCES_PATH.formatted("default-config"),
+			new ExtensionManager()
+		);
 		return ReloadService.builder().withRunningAgentContext(oldContext).withReloadedAgentContext(newContext).build();
 	}
 
@@ -214,7 +222,7 @@ class ReloadServiceTest {
 
 	AgentContext loadAgentContext(final String fileName) throws IOException {
 		return new AgentContext(
-			"src/test/resources/service/reload/" + fileName,
+			RESOURCES_PATH.formatted(fileName),
 			ExtensionManager
 				.builder()
 				.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
