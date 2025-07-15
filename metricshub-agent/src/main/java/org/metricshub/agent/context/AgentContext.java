@@ -97,7 +97,6 @@ public class AgentContext {
 	 * Builds the agent context
 	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
 	 * @param createConnectorStore     Whether we should create a new connector store
-	 * @param configureLogger          Whether we should configure the logger
 	 * @throws IOException Signals that an I/O exception has occurred
 	 */
 	public void build(final String alternateConfigDirectory, final boolean createConnectorStore) throws IOException {

@@ -201,9 +201,11 @@ public class ReloadService {
 	}
 
 	/**
-	 * Stops and removes a scheduled resource from the running agent context.
+	 * Stops and removes a scheduled resource and its telemetry manager.
 	 *
-	 * @param resourceSchedulingName the full internal name of the resource to remove
+	 * @param resourceGroupKey       group the resource belongs to
+	 * @param resourceKey            unique resource identifier
+	 * @param resourceSchedulingName full internal name used for scheduling
 	 */
 	public void removeResourceFromTaskSchedulingService(
 		final String resourceGroupKey,
@@ -367,7 +369,9 @@ public class ReloadService {
 	 * If any of the high-level settings (like timeouts, directories, filters, etc.) differ, this method returns {@code true}.
 	 * </p>
 	 *
-	 * @return {@code true} if a global configuration change is detected, otherwise {@code false}
+	 * @param runningConf current agent configuration
+	 * @param newConf reloaded agent configuration
+	 * @return {@code true} if global settings have changed, otherwise {@code false}
 	 */
 	public boolean globalConfigurationHasChanged(final AgentConfig runningConf, final AgentConfig newConf) {
 		// CHECKSTYLE:OFF
