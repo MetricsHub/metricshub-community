@@ -3,6 +3,7 @@ package org.metricshub.agent.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 import static org.metricshub.agent.service.scheduling.ResourceGroupScheduling.METRICSHUB_RESOURCE_GROUP_KEY_FORMAT;
@@ -507,18 +508,12 @@ class ReloadServiceTest {
 		// Assert group is removed
 		assertFalse(defaultContext.getAgentConfig().getResourceGroups().containsKey("paris"));
 		assertFalse(defaultTelemetryManagers.containsKey("paris"));
-		assertTrue(defaultSchedules.get(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted("paris")).isCancelled());
+		assertNull(defaultSchedules.get(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted("paris")));
 
 		parisResources
 			.keySet()
 			.forEach(id ->
-				assertTrue(
-					defaultContext
-						.getTaskSchedulingService()
-						.getSchedules()
-						.get(getScheduleResourceName("paris", id))
-						.isCancelled()
-				)
+				assertNull(defaultContext.getTaskSchedulingService().getSchedules().get(getScheduleResourceName("paris", id)))
 			);
 
 		shutdownAgents(reloadService);

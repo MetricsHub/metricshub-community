@@ -336,8 +336,13 @@ public class ReloadService {
 
 				final Map<String, ScheduledFuture<?>> schedules = runningAgentContext.getTaskSchedulingService().getSchedules();
 
+				final String resourceSchedulingName = METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey);
+
 				// Stop the scheduled Resource Group
-				schedules.get(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey)).cancel(true);
+				schedules.get(resourceSchedulingName).cancel(true);
+
+				// Remove the resource from the scheduling map
+				schedules.remove(resourceSchedulingName);
 
 				// Stop the scheduled Resource Group Resources
 				runningGroup
