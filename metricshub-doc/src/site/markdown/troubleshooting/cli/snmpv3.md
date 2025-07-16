@@ -12,25 +12,25 @@ The **MetricsHub SNMPv3 CLI** allows users to interact with SNMPv3-enabled devic
 ### SNMPv3 Get Request
 
 ```bash
-snmpv3cli <HOSTNAME> --get <OID> --privacy <DES|AES> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
+snmpv3cli <HOSTNAME> --get <OID> --privacy <DES|AES|AES192|AES256> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
 ```
 
 ### SNMPv3 Get Next Request
 
 ```bash
-snmpv3cli <HOSTNAME> --getNext <OID> --privacy <DES|AES> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
+snmpv3cli <HOSTNAME> --getNext <OID> --privacy <DES|AES|AES192|AES256> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
 ```
 
 ### SNMPv3 Walk Request
 
 ```bash
-snmpv3cli <HOSTNAME> --walk <OID> --privacy <DES|AES> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
+snmpv3cli <HOSTNAME> --walk <OID> --privacy <DES|AES|AES192|AES256> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
 ```
 
 ### SNMPv3 Table Request
 
 ```bash
-snmpv3cli <HOSTNAME> --table <OID> --columns <COLUMN,COLUMN,...> --privacy <DES|AES> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
+snmpv3cli <HOSTNAME> --table <OID> --columns <COLUMN,COLUMN,...> --privacy <DES|AES|AES192|AES256> --privacy-password <PASSWORD> --auth <SHA|SHA256|SHA512|SHA384|SHA224|MD5> --username <USERNAME> --password <PASSWORD> --context-name <CONTEXT> --timeout <TIMEOUT> --retry <INTERVAL1>,<INTERVAL2>,...
 ```
 
 ## Options
@@ -38,7 +38,7 @@ snmpv3cli <HOSTNAME> --table <OID> --columns <COLUMN,COLUMN,...> --privacy <DES|
 | Option               | Description                                                                                               | Default Value |
 | -------------------- |-----------------------------------------------------------------------------------------------------------| ------------- |
 | `HOSTNAME`           | Hostname or IP address of the SNMPv3-enabled device. **This option is required.**                         | None          |
-| `--privacy`          | Encryption type. Possible values: `DES`, `AES`, or `none`.                                                | None          |
+| `--privacy`          | Encryption type. Possible values: `DES`, `AES`, `AES192`, `AES256`, or `none`.                            | None          |
 | `--privacy-password` | Password for SNMPv3 encryption.                                                                           | None          |
 | `--auth`             | Authentication type. Possible values: `SHA`, `SHA256`, `SHA512`, `SHA224`, `SHA384`, `MD5`, or `NO_AUTH`. | None          |
 | `--username`         | Username for SNMPv3 authentication.                                                                       | None          |
