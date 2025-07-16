@@ -129,7 +129,7 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 	@Option(
 		names = "--privacy",
 		order = 1,
-		paramLabel = "DES|AES",
+		paramLabel = "DES|AES|AES192|AESS256",
 		description = "Privacy (encryption type) for SNMP version 3 (DES, AES, or none)"
 	)
 	private String privacy;

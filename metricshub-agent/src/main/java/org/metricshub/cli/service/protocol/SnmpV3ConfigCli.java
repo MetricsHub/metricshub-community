@@ -52,7 +52,7 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 	@Option(
 		names = "--snmpv3-privacy",
 		order = 2,
-		paramLabel = "DES|AES",
+		paramLabel = "DES|AES|AES192|AES256",
 		description = "Privacy (encryption type) for SNMP version 3 (DES, AES, or none)"
 	)
 	private String privacy;
