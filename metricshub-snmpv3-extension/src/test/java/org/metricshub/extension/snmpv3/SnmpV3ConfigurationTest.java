@@ -141,7 +141,10 @@ class SnmpV3ConfigurationTest {
 	void testPrivacyInterpretValueOfValidValues() {
 		assertEquals(Privacy.NO_ENCRYPTION, Privacy.interpretValueOf("no"));
 		assertEquals(Privacy.AES, Privacy.interpretValueOf("AES"));
+		assertEquals(Privacy.AES192, Privacy.interpretValueOf("AES192"));
+		assertEquals(Privacy.AES256, Privacy.interpretValueOf("AES256"));
 		assertEquals(Privacy.DES, Privacy.interpretValueOf("DES"));
+		assertEquals(Privacy.AES256, Privacy.interpretValueOf("Aes256"));
 	}
 
 	@Test

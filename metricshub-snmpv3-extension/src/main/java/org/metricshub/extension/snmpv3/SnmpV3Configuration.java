@@ -196,6 +196,8 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 	public enum Privacy {
 		NO_ENCRYPTION,
 		AES,
+		AES192,
+		AES256,
 		DES;
 
 		/**
@@ -211,6 +213,10 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 				return NO_ENCRYPTION;
 			} else if (lowerCasePrivacy.equals("aes")) {
 				return AES;
+			} else if (lowerCasePrivacy.equals("aes192")) {
+				return AES192;
+			} else if (lowerCasePrivacy.equals("aes256")) {
+				return AES256;
 			} else if (lowerCasePrivacy.equals("des")) {
 				return DES;
 			}
