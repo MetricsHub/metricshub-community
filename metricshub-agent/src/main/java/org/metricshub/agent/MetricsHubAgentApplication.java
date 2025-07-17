@@ -31,8 +31,7 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.service.OtelCollectorProcessService;
-import org.metricshub.agent.service.TaskSchedulingService;
+import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.MetricsHubAgentServer;
@@ -101,6 +100,7 @@ public class MetricsHubAgentApplication implements Runnable {
 				.directory(configDirectory)
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
+					log.info("RELOAD - Directory Watcher Task event triggered.\nContext: " + context.toString());
 					// CHECKSTYLE:OFF
 					return (
 						context != null &&
@@ -113,13 +113,38 @@ public class MetricsHubAgentApplication implements Runnable {
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
 				.checksumSupplier(() -> buildChecksum(extensionManager, configDirectory))
-				.onChange(() -> resetContext(agentContext, alternateConfigDirectory))
+				.onChange(() -> {
+					// Create a new Agent Context to use in the reload service
+					final AgentContext newAgentContext = loadNewAgentContext();
+
+					// Reload the agent according to the new Agent Context
+					ReloadService
+						.builder()
+						.withRunningAgentContext(agentContext)
+						.withReloadedAgentContext(newAgentContext)
+						.build()
+						.reload();
+				})
 				.build()
 				.start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
+		}
+	}
+
+	/**
+	 * Loads a new AgentContext which will be used in the reload service
+	 */
+	private synchronized AgentContext loadNewAgentContext() {
+		try {
+			// Initialize the application context
+			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager());
+		} catch (Exception e) {
+			configureGlobalErrorLogger();
+			log.error("Failed to reload the Agent.", e);
+			throw new IllegalStateException("Error dectected during MetricsHub agent reloading.", e);
 		}
 	}
 
@@ -139,27 +164,6 @@ public class MetricsHubAgentApplication implements Runnable {
 					.stream()
 					.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
 		);
-	}
-
-	/**
-	 * Resets the agent context by restarting {@link TaskSchedulingService} and {@link OtelCollectorProcessService}:
-	 * @param agentContext The agent context
-	 * @param alternateConfigDirectory Alternative configuration directory provided by the user
-	 */
-	private synchronized void resetContext(final AgentContext agentContext, String alternateConfigDirectory) {
-		try {
-			agentContext.getTaskSchedulingService().stop();
-
-			agentContext.build(alternateConfigDirectory, false);
-
-			agentContext.getTaskSchedulingService().start();
-
-			MetricsHubAgentServer.updateAgentContext(agentContext);
-		} catch (Exception e) {
-			configureGlobalErrorLogger();
-			log.error("Failed to start MetricsHub Agent.", e);
-			throw new IllegalStateException("Error detected during MetricsHub agent startup.", e);
-		}
 	}
 
 	/**

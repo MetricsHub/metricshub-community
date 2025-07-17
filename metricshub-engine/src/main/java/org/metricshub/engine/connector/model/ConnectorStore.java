@@ -28,10 +28,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.parser.ConnectorParser;
@@ -41,9 +41,9 @@ import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
  * Manages the storage and retrieval of {@link Connector} instances.
  * The instances are stored in a map where the key is the connector file name, and the value is the corresponding {@link Connector} object.
  */
-@Slf4j
 @NoArgsConstructor
 @Data
+@EqualsAndHashCode
 public class ConnectorStore implements Serializable {
 
 	private static final long serialVersionUID = 1L;

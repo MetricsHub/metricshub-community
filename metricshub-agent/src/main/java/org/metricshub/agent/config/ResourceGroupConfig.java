@@ -32,6 +32,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.agent.deserialization.AttributesDeserializer;
 import org.metricshub.engine.deserialization.TimeDeserializer;
@@ -47,6 +48,7 @@ import org.metricshub.engine.deserialization.TimeDeserializer;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
+@EqualsAndHashCode
 public class ResourceGroupConfig {
 
 	private String loggerLevel;

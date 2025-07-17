@@ -32,6 +32,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.alert.AlertInfo;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -48,6 +49,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@EqualsAndHashCode
 public class HostConfiguration {
 
 	private String hostname;
