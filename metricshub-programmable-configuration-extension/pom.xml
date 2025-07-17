@@ -179,6 +179,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
+								    <include>com.github.cliftonlabs:json-simple</include>
 									<include>org.codehaus.plexus:plexus-utils</include>
 									<include>org.apache.velocity:velocity-engine-core</include>
 									<include>org.apache.velocity.tools:velocity-tools-generic</include>
