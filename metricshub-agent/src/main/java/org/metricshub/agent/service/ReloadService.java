@@ -64,6 +64,24 @@ public class ReloadService {
 	private AgentContext reloadedAgentContext;
 
 	/**
+	 * Callback to execute before restarting the agent
+	 */
+	@Builder.Default
+	private Runnable beforeRestartCallback = () -> {};
+
+	/**
+	 * Callback to execute after global restarting of the agent
+	 */
+	@Builder.Default
+	private Runnable afterGlobalRestartCallback = () -> {};
+
+	/**
+	 * Callback to execute after restarting the agent
+	 */
+	@Builder.Default
+	private Runnable afterResourcesUpdateCallback = () -> {};
+
+	/**
 	 * Reloads the running agent context by comparing it with the reloaded configuration.
 	 * <p>
 	 * Applies resource-level changes dynamically, and triggers a full restart if global configuration changes are detected.
@@ -77,12 +95,20 @@ public class ReloadService {
 			return;
 		}
 
+		// Execute the callback
+		beforeRestartCallback.run();
+
 		// Compare global configurations
 		if (globalConfigurationHasChanged(runningAgentContext.getAgentConfig(), reloadedAgentContext.getAgentConfig())) {
 			log.info("Global configuration has changed. Restarting MetricsHub Agent...");
+
 			runningAgentContext.getTaskSchedulingService().stop();
 			runningAgentContext = reloadedAgentContext;
 			runningAgentContext.getTaskSchedulingService().start();
+
+			// Execute the Global restart callback
+			afterGlobalRestartCallback.run();
+
 			log.info("MetricsHub Agent restarted with updated global configuration.");
 			return;
 		}
@@ -102,8 +128,8 @@ public class ReloadService {
 			reloadedAgentContext.getAgentConfig().getResourceGroups()
 		);
 
-		// Make sure the new Agent Context is stopped.
-		reloadedAgentContext.getTaskSchedulingService().stop();
+		// Execute the restart callback
+		afterResourcesUpdateCallback.run();
 	}
 
 	/**
