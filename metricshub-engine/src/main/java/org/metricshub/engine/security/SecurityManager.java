@@ -24,6 +24,7 @@ package org.metricshub.engine.security;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
 import javax.crypto.SecretKey;
@@ -257,5 +258,14 @@ public class SecurityManager {
 		} catch (Exception e) {
 			throw new MetricsHubSecurityException("Error detected when generating the master key", e);
 		}
+	}
+
+	/**
+	 * Stores the given key in the KeyStore under
+	 * @param ks The KeyStore to store the key in.
+	 * @param fos The output stream to write the KeyStore to.
+	 */
+	public static void store(final KeyStore ks, final OutputStream fos) throws Exception {
+		ks.store(fos, KEY_STORE_PASSWORD);
 	}
 }
