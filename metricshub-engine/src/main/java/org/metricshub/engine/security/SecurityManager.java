@@ -261,9 +261,10 @@ public class SecurityManager {
 	}
 
 	/**
-	 * Stores the given key in the KeyStore under
-	 * @param ks The KeyStore to store the key in.
-	 * @param fos The output stream to write the KeyStore to.
+	 * Stores this keystore to the given output stream.
+	 *
+	 * @param ks  The KeyStore to store.
+	 * @param fos The output stream to which this keystore is written.
 	 */
 	public static void store(final KeyStore ks, final OutputStream fos) throws Exception {
 		ks.store(fos, KEY_STORE_PASSWORD);
