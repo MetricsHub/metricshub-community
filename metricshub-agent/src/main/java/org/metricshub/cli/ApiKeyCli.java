@@ -36,8 +36,7 @@ public class ApiKeyCli {
 	}
 
 	/**
-	 * Entry point for the MetricsHub CLI application. Initializes necessary configurations,
-	 * processes command line arguments, and executes the CLI.
+	 * Entry point for the MetricsHub API Key CLI application.
 	 *
 	 * @param args The command line arguments passed to the application.
 	 */
