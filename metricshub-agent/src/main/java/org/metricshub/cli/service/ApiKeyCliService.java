@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.fusesource.jansi.Ansi;
 import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.engine.security.SecurityManager;
 import picocli.CommandLine;
@@ -80,10 +81,16 @@ public class ApiKeyCliService {
 			final var printWriter = spec.commandLine().getOut();
 			try {
 				final var apiKey = createApiKey(alias);
-				printWriter.printf("API key created for alias '%s': %s%n", alias, apiKey);
+				printWriter.println(Ansi.ansi().a("API key created for alias '").a(alias).a("': ").fgGreen().a(apiKey).reset());
 				printWriter.println("Please store this key securely, as it will not be shown again.");
 			} catch (Exception e) {
-				printWriter.printf("Error creating API key with alias '%s': %s%n", alias, e.getMessage());
+				printWriter.println(
+					Ansi
+						.ansi()
+						.fgRed()
+						.a(String.format("Error creating API key with alias '%s': %s", alias, e.getMessage()))
+						.reset()
+				);
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 
@@ -179,7 +186,7 @@ public class ApiKeyCliService {
 						final var apiKeyId = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
 						final var apiKeyName = alias.substring(API_KEY_PREFIX.length());
 						final var maskedId = mask(apiKeyId);
-						printWriter.printf("%s %s%n", apiKeyName, maskedId);
+						printWriter.println(Ansi.ansi().fgGreen().a(apiKeyName).reset().a(" ").a(maskedId).reset());
 						hasEntries = true;
 					}
 				}
@@ -190,8 +197,9 @@ public class ApiKeyCliService {
 
 				return CommandLine.ExitCode.OK;
 			} catch (Exception e) {
-				printWriter.printf("Error listing API keys: %s%n", e.getMessage());
-				e.printStackTrace(printWriter);
+				printWriter.println(
+					Ansi.ansi().fgRed().a(String.format("Error listing API keys: %s%n", e.getMessage())).reset()
+				);
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 		}
@@ -228,7 +236,7 @@ public class ApiKeyCliService {
 				final var apiKeyAlias = API_KEY_PREFIX + alias;
 
 				if (!ks.containsAlias(apiKeyAlias)) {
-					printWriter.printf("No API key found with alias '%s'.%n", alias);
+					printWriter.println(Ansi.ansi().fgRed().a(String.format("No API key found with alias '%s'.", alias)).reset());
 					return CommandLine.ExitCode.SOFTWARE;
 				}
 
@@ -238,10 +246,12 @@ public class ApiKeyCliService {
 					SecurityManager.store(ks, fos);
 				}
 
-				printWriter.printf("API key '%s' has been revoked.%n", alias);
+				printWriter.println(Ansi.ansi().a("API key '").fgGreen().a(alias).reset().a("' has been revoked.").reset());
 				return CommandLine.ExitCode.OK;
 			} catch (Exception e) {
-				printWriter.printf("Error revoking API key '%s': %s%n", alias, e.getMessage());
+				printWriter.println(
+					Ansi.ansi().fgRed().a(String.format("Error revoking API key '%s': %s%n", alias, e.getMessage())).reset()
+				);
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 		}
