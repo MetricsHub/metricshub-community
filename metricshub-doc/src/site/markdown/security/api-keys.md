@@ -1,5 +1,5 @@
 keywords: api, key, security
-description: MetricsHub lets you generate API keys to interact with its internal Web Server.
+description: MetricsHub lets you generate API keys to securely access its services. This document explains how to create, list, and revoke API keys.
 
 # API Keys
 
