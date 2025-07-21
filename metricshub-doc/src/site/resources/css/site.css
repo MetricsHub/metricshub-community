@@ -146,11 +146,14 @@ body.metricshub .site-logo ul.nav.navbar-nav>li>a[href="https://support.metricsh
 	border-width: 1px;
 	height: 40px;
 	margin-top: 5px;
-	padding-top: 10px;}
+	padding-top: 10px;
+	transition: background-color .2s ease-in-out, color .2s ease-in-out, border-color .2s ease-in-out;
+}
 
 body.metricshub .site-logo ul.nav.navbar-nav>li>a[href="https://support.metricshub.com"]:hover {
-	background-color: var(--main-fgcolor);
-	color: var(--main-bgcolor);
+	background-color: var(--alternate-bgcolor);
+	color: var(--alternate-fgcolor);
+	border-color: var(--alternate-bgcolor);
 }
 
 body.metricshub .site-logo ul.nav.navbar-nav.navbar-right>li>a
@@ -267,52 +270,53 @@ body.metricshub .toc-inline-container #toc::after {
 }
 
 body.metricshub .main-content .document-footer .keywords .label::after {
-	background-color: var(--alternate-bgcolor);
-	opacity: 1;
-	border-radius: 14px;
-}
-
-body.metricshub .main-content .document-footer .keywords .label:hover::after {
-	background-color: var(--main-fgcolor);
+	display: none;
 }
 
 body.metricshub .main-content .document-footer .keywords .label {
-	color: var(--alternate-fgcolor);
+	background-color: inherit;
+	color: inherit;
 	letter-spacing: normal;
 	font-weight: 400;
-	padding-left: 10px;
-	padding-right: 10px;
 }
 
 body.metricshub .main-content .document-footer .keywords .label:hover {
-	color: var(--main-bgcolor);
+	color: inherit;
 }
 
 /** Various stuff in the main content */
+
+/* Labels */
 body.metricshub .main-content .label-default {
-	background-color: var(--medium-bgcolor);
+	background-color: inherit;
 }
 body.metricshub .main-content .label {
-	border-radius: 1em;
+	color: var(--main-fgcolor);
 	padding-left: 1em;
 	padding-right: 1em;
 	font-weight: 400;
-}
-
-body.metricshub .main-content .label-default.metricshub-tag {
-	background-color: var(--alternate-bgcolor);
-	color: var(--alternate-fgcolor);
+	border-radius: 1em;
+	border-style: solid;
+	border-color: var(--main-fgcolor);
+	border-width: 1px;
 	transition: background-color .2s ease-in-out, color .2s ease-in-out;
 }
+
+/* Tags (produced by the MetricsHub connectors report)*/
+body.metricshub .main-content .label-default.metricshub-tag {
+	transition: background-color .2s ease-in-out, color .2s ease-in-out, border-color .2s ease-in-out;
+}
 body.metricshub .main-content .label-default.metricshub-tag:hover {
-	background-color: var(--main-fgcolor);
-	color: var(--main-bgcolor);
+	background-color: var(--alternate-bgcolor);
+	color: var(--alternate-fgcolor);
+	border-color: var(--alternate-bgcolor);
 }
 body.metricshub .main-content .label-default.metricshub-tag a {
 	color: inherit;
 	text-decoration: none;
 }
 
+/* Tables */
 body.sentry-site.metricshub .table>tbody>tr {
 	position: unset;
 	z-index: unset;
@@ -326,6 +330,11 @@ body.sentry-site.metricshub:not(.dark) .table-striped>tbody>tr:nth-of-type(odd) 
 }
 body.sentry-site.metricshub.dark .table-striped>tbody>tr:nth-of-type(odd) {
 	background-color: var(--medium-bgcolor);
+}
+
+/* Bullets in metrics tables */
+body.metricshub #metrics+table ul {
+	padding-left: 20px;
 }
 
 /**
@@ -434,6 +443,34 @@ body.sentry-site.metricshub pre ::selection,
 body.sentry-site.metricshub code::selection,
 body.sentry-site.metricshub code ::selection {
 	background: var(--alternate-bgcolor);
+}
+
+/* Fix an issue with token "label", which inherits Bootstrap's "label" properties! */
+body.metricshub .token.label {
+	display: inherit;
+	padding: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	text-align: inherit;
+	white-space: inherit;
+	vertical-align: inherit;
+	border-radius: inherit;
+}
+
+/* Copy-paste button */
+body.metricshub .copy-to-clipboard>button {
+	border-radius: 20px;
+	top: -17px;
+	right: 5px;
+}
+body.metricshub .copy-to-clipboard>button.btn-default {
+	background-color: var(--main-bgcolor);
+	border-color: var(--main-fgcolor);
+}
+body.metricshub .copy-to-clipboard>button:hover.btn-default {
+	background-color: var(--main-fgcolor);
+	color: var(--main-bgcolor);
 }
 
 /* Light theme */
@@ -585,7 +622,7 @@ body.metricshub.dark .platform-tile .platform-title {
 	width: 100%;
 }
 
-.metricshub .platform-tile {
+.metricshub a.platform-tile {
 	display: flex;
 	flex-direction: column;
 	justify-content: space-between;
@@ -600,13 +637,13 @@ body.metricshub.dark .platform-tile .platform-title {
 	color: var(--main-fgcolor);
 }
 
-.metricshub .platform-tile:hover {
+.metricshub a.platform-tile:hover {
 	transform: translateY(-5px);
 	box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
 	cursor: pointer;
 }
 
-.metricshub .platform-tile .platform-title {
+.metricshub a.platform-tile .platform-title {
 	font-size: 18px;
 	color: var(--main-fgcolor);
 	text-align: center;
@@ -616,7 +653,7 @@ body.metricshub.dark .platform-tile .platform-title {
 	justify-content: center;
 }
 
-.metricshub .platform-tile .platform-title .connectors-badge {
+.metricshub a.platform-tile .platform-title .connectors-badge {
 	margin-top: 0px;
 	padding-left: 10px;
 	padding-bottom: 5px;
@@ -639,12 +676,20 @@ body.metricshub.dark .platform-tile .platform-title {
 	width: 100%;
 }
 
+.metricshub .platform-tile .badge {
+	background-color: var(--main-fgcolor);
+	color: var(--main-bgcolor);
+}
+
 .metricshub .platform-tile .badge,
 .metricshub .platform-tile .label {
-	font-size: 10px;
 	padding: 5px 10px;
-	text-align: center;
+	margin-bottom: -4px;
 	white-space: nowrap;
+}
+
+.metricshub .platform-tile .technology-label {
+	width: 100%;
 }
 
 .metricshub .platform-tile div:last-child {
