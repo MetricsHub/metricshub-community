@@ -24,16 +24,19 @@ package org.metricshub.web;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.engine.security.SecurityManager;
 import org.metricshub.web.security.ApiKeyRegistry;
+import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -45,6 +48,9 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 @Slf4j
 public class MetricsHubAgentServer {
+	static {
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+	}
 
 	private static ConfigurableApplicationContext context;
 
@@ -93,8 +99,8 @@ public class MetricsHubAgentServer {
 	 *
 	 * @return a map of API key names to their corresponding IDs
 	 */
-	private static Map<String, String> resolveApiKeys() {
-		final Map<String, String> apiKeys = new HashMap<>();
+	private static Map<String, ApiKey> resolveApiKeys() {
+		final Map<String, ApiKey> apiKeys = new HashMap<>();
 		try {
 			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
 			final var ks = SecurityManager.loadKeyStore(keyStoreFile);
@@ -110,8 +116,15 @@ public class MetricsHubAgentServer {
 				if (entry instanceof KeyStore.SecretKeyEntry secreKeyEntry) {
 					final var secretKey = secreKeyEntry.getSecretKey();
 					final var apiKeyId = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
-					final var apiKeyName = alias.substring(AgentConstants.API_KEY_PREFIX.length());
-					apiKeys.put(apiKeyName, apiKeyId);
+
+					final var parts = apiKeyId.split("__");
+					final var key = parts[0];
+					LocalDateTime expirationDateTime = null;
+					if (parts.length > 1) {
+						expirationDateTime = LocalDateTime.parse(parts[1]);
+					}
+					final var apiKeyAlias = alias.substring(AgentConstants.API_KEY_PREFIX.length());
+					apiKeys.put(apiKeyAlias, new ApiKey(apiKeyAlias, key, expirationDateTime));
 				}
 			}
 		} catch (Exception e) {

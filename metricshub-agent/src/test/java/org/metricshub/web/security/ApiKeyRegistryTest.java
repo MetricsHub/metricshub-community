@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
 
 class ApiKeyRegistryTest {
 
@@ -19,9 +21,19 @@ class ApiKeyRegistryTest {
 	private static final String PRINCIPAL_2 = "client-openai-2";
 	private static final String TOKEN_2 = "token-456";
 
+	private static final LocalDateTime EXPIRATION_DATE_TIME = LocalDateTime.now().plusDays(1);
+
 	@BeforeEach
 	void setUp() {
-		registry = new ApiKeyRegistry(Map.of(PRINCIPAL_1, TOKEN_1, PRINCIPAL_2, TOKEN_2));
+		registry =
+			new ApiKeyRegistry(
+				Map.of(
+					PRINCIPAL_1,
+					new ApiKey(PRINCIPAL_1, TOKEN_1, null),
+					PRINCIPAL_2,
+					new ApiKey(PRINCIPAL_2, TOKEN_2, EXPIRATION_DATE_TIME)
+				)
+			);
 	}
 
 	@Test
@@ -37,13 +49,21 @@ class ApiKeyRegistryTest {
 
 	@Test
 	void testGetPrincipalWithValidToken() {
-		assertEquals(PRINCIPAL_1, registry.getPrincipal(TOKEN_1), "Expected principal for TOKEN_1 to be user1");
-		assertEquals(PRINCIPAL_2, registry.getPrincipal(TOKEN_2), "Expected principal for TOKEN_2 to be user2");
+		assertEquals(
+			new ApiKey(PRINCIPAL_1, TOKEN_1, null),
+			registry.getApiKeyByToken(TOKEN_1),
+			"Expiected API key for TOKEN_1 to match principal 1"
+		);
+		assertEquals(
+			new ApiKey(PRINCIPAL_2, TOKEN_2, EXPIRATION_DATE_TIME),
+			registry.getApiKeyByToken(TOKEN_2),
+			"Expected API key for TOKEN_2 to match principal 2"
+		);
 	}
 
 	@Test
 	void testGetPrincipalWithInvalidToken() {
-		assertNull(registry.getPrincipal("nonexistent-token"), "Expected principal to be null for unknown token");
+		assertNull(registry.getApiKeyByToken("nonexistent-token"), "Expected API key to be null for unknown token");
 	}
 
 	@Test
@@ -55,6 +75,6 @@ class ApiKeyRegistryTest {
 	@Test
 	void testGetPrincipalWithEmptyRegistry() {
 		ApiKeyRegistry emptyRegistry = new ApiKeyRegistry(Map.of());
-		assertNull(emptyRegistry.getPrincipal(TOKEN_1), "Expected principal to be null in empty registry");
+		assertNull(emptyRegistry.getApiKeyByToken(TOKEN_1), "Expected API key to be null in empty registry");
 	}
 }

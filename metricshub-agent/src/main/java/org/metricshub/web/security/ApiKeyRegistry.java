@@ -21,6 +21,7 @@ package org.metricshub.web.security;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
@@ -29,13 +30,14 @@ import java.util.Map;
  */
 public class ApiKeyRegistry {
 
-	private final Map<String, String> apiKeys;
+	private final Map<String, ApiKey> apiKeys;
 
 	/**
 	 * Constructor for ApiKeyRegistry.
+	 *
 	 * @param apiKeys a map of API keys where the key is the identifier and the value is the actual API key.
 	 */
-	public ApiKeyRegistry(Map<String, String> apiKeys) {
+	public ApiKeyRegistry(Map<String, ApiKey> apiKeys) {
 		this.apiKeys = apiKeys;
 	}
 
@@ -46,7 +48,7 @@ public class ApiKeyRegistry {
 	 * @return true if the API key is valid, false otherwise.
 	 */
 	public boolean isValid(final String token) {
-		return apiKeys.containsValue(token);
+		return apiKeys.values().stream().anyMatch(apiKey -> apiKey.key.equals(token));
 	}
 
 	/**
@@ -55,13 +57,18 @@ public class ApiKeyRegistry {
 	 * @param token the API token to look up.
 	 * @return the principal associated with the token, or null if not found.
 	 */
-	public String getPrincipal(final String token) {
+	public ApiKey getApiKeyByToken(final String token) {
 		return apiKeys
 			.entrySet()
 			.stream()
-			.filter(entry -> entry.getValue().equals(token))
-			.map(Map.Entry::getKey)
+			.filter(entry -> entry.getValue().key.equals(token))
+			.map(Map.Entry::getValue)
 			.findFirst()
 			.orElse(null);
 	}
+
+	/**
+	 * Represents an API key with its associated properties.
+	 */
+	public record ApiKey(String alias, String key, LocalDateTime expiresOn) {}
 }

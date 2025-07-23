@@ -16,8 +16,10 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -46,7 +48,8 @@ class ApiKeyAuthFilterTest {
 	void testValidApiKey() throws ServletException, IOException {
 		when(request.getHeader("Authorization")).thenReturn("Bearer " + validToken);
 		when(apiKeyRegistry.isValid(validToken)).thenReturn(true);
-		when(apiKeyRegistry.getPrincipal(validToken)).thenReturn(principalName);
+		final ApiKey apiKey = new ApiKeyRegistry.ApiKey(principalName, validToken, LocalDateTime.now().plusDays(1));
+		when(apiKeyRegistry.getApiKeyByToken(validToken)).thenReturn(apiKey);
 
 		filter.doFilterInternal(request, response, filterChain);
 
