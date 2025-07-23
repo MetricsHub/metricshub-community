@@ -24,8 +24,16 @@ package org.metricshub.engine.strategy.source;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -38,6 +46,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -148,9 +157,63 @@ public class SourceProcessor implements ISourceProcessor {
 	 */
 	private SourceTable processSourceThroughExtension(final Source source) {
 		final Optional<IProtocolExtension> maybeExtension = extensionManager.findSourceExtension(source, telemetryManager);
-		return maybeExtension
-			.map(extension -> extension.processSource(source, connectorId, telemetryManager))
+		SourceTable table = maybeExtension
+			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);
+		if (telemetryManager.isEmulationMode()) {
+			persist(table, connectorId, source);
+		}
+		return table;
+	}
+
+	private static final Path LOG_DIR = Paths.get("log");
+	// put one mapper in your class (or inject it)
+	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
+
+	private void persist(SourceTable sourceTable, String connectorId, Source source) {
+		try {
+			Files.createDirectories(LOG_DIR);
+
+			String cleanKey = source.getKey().replaceAll("[\\{\\}$$:/\\\\]", "-");
+			Path file = LOG_DIR.resolve(connectorId + "__" + cleanKey + ".csv"); // keep extension if you wish
+
+			try (
+				BufferedWriter out = Files.newBufferedWriter(
+					file,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING
+				)
+			) {
+				for (List<String> row : sourceTable.getTable()) {
+					/* CSV line (semicolon-separated) */
+					String csvLine = row.stream().map(this::escapeCsv).collect(Collectors.joining(";"));
+
+					/* 1️⃣ rawResult line */
+					out.write("rawResult: " + csvLine);
+					out.newLine();
+
+					/* 2️⃣ 🔥 full SourceTable as YAML */
+					YAML_MAPPER.writeValue(out, sourceTable); // Jackson YAMLFactory handles it
+					out.newLine(); // blank line between blocks if desired
+				}
+			}
+		} catch (IOException e) {
+			log.warn("Could not write SourceTable to {}", LOG_DIR, e);
+		}
+	}
+
+	private String escapeCsv(Object cell) {
+		if (cell == null) {
+			return "";
+		}
+		String s = cell.toString();
+		boolean mustQuote = s.indexOf(';') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0;
+		if (mustQuote) {
+			s = s.replace("\"", "\"\"");
+			return '"' + s + '"';
+		}
+		return s;
 	}
 
 	/**
