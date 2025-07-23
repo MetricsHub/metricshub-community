@@ -41,6 +41,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
 /**
@@ -78,7 +79,7 @@ public class ApiKeyCliService {
 	@Command(name = "create", description = "Generate a new API key for a given alias.")
 	public static class CreateCommand implements Callable<Integer> {
 
-		@Option(names = { "--alias" }, required = true, description = "The alias associated with the API key.")
+		@Parameters(index = "0", paramLabel = "ALIAS", description = "The alias associated with the API key.")
 		String alias;
 
 		@Option(
@@ -244,11 +245,19 @@ public class ApiKeyCliService {
 						final var parts = apiKeyId.split("__");
 						final var apiKeyName = alias.substring(API_KEY_PREFIX.length());
 						final var maskedId = mask(parts[0]);
-						final var expirationDate = parts.length > 1
-							? String.format(" (Expires on %s)", parts[1])
-							: " (No expiration)";
+						String expirationMessage = " (No expiration)";
+						if (parts.length > 1) {
+							final var expirationDateTime = LocalDateTime.parse(parts[1]);
+							expirationMessage =
+								String.format(
+									" (Expire%s on %s)",
+									expirationDateTime.isBefore(LocalDateTime.now()) ? "d" : "s",
+									expirationDateTime.toString()
+								);
+						}
+
 						printWriter.println(
-							Ansi.ansi().fgGreen().a(apiKeyName).reset().a(" ").a(maskedId).reset().a(expirationDate).reset()
+							Ansi.ansi().fgGreen().a(apiKeyName).reset().a(" ").a(maskedId).reset().a(expirationMessage).reset()
 						);
 						hasEntries = true;
 					}
@@ -285,7 +294,7 @@ public class ApiKeyCliService {
 	@Command(name = "revoke", description = "Revoke an existing API key by alias.")
 	public static class RevokeCommand implements Callable<Integer> {
 
-		@Option(names = { "--alias" }, required = true, description = "The alias of the API key to revoke.")
+		@Parameters(index = "0", paramLabel = "ALIAS", description = "The alias of the API key to revoke.")
 		String alias;
 
 		@Override

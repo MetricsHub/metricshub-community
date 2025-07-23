@@ -15,7 +15,10 @@ description: MetricsHub lets you generate API keys to securely access its servic
 Each API key is associated with a human-readable alias and stored securely within the encrypted keystore **metricshub-keystore.p12** on the local system. Keys can be easily created, listed, and revoked via the `apikey` CLI tool.
 
 > API keys should be treated as secrets. Anyone with access to an API key can perform the actions to the MetricsHub Web server that the key is authorized for.
-> User must have Administrator privileges to create, list, or revoke API keys.
+
+> On **Windows**, the **metricshub-keystore.p12** file is located under `C:\ProgramData\MetricsHub\security`, which is typically accessible **only to Administrator users**. As a result, non-admin users may encounter **access denied** errors when attempting to create, list, or revoke API keys.
+
+> On **Linux**, the **metricshub-keystore.p12** file resides under the MetricsHub installation path (e.g., `/opt/metricshub/security`), and access depends on the file system permissions set during installation.
 
 ## Generating an API Key
 
@@ -23,7 +26,7 @@ To generate an API key, run the `apikey create` command:
 
 ```shell-session
 /$ cd /opt/metricshub/bin
-/opt/metricshub/bin$ ./apikey create --alias mcp-openai
+/opt/metricshub/bin$ ./apikey create mcp-openai
 API key created for alias 'mcp-openai': eb47c2be-927f-495f-aa97-0ba0f60b8986 (No expiration)
 Please store this key securely, as it will not be shown again.
 ```
@@ -33,7 +36,7 @@ This command creates a new API key with the alias `mcp-openai`. The key is displ
 To specify an expiration date for the API key, you can use the `--expires-on` option:
 
 ```shell-session
-/opt/metricshub/bin$ ./apikey create --alias mcp-claude --expires-on 2025-12-31T23:59:59
+/opt/metricshub/bin$ ./apikey create mcp-claude --expires-on 2025-12-31T23:59:59
 API key created for alias 'mcp-claude': 3f2b1c4d-8e5f-4a2b-bc15-0ba0f60b15f3 (Expires on 2025-12-31T23:59:59)
 Please store this key securely, as it will not be shown again.
 ```
@@ -55,7 +58,7 @@ This command shows the alias and a masked portion of the API key ID.
 To revoke (delete) an existing API key, use the `apikey revoke` command with the corresponding alias:
 
 ```shell-session
-/opt/metricshub/bin$ ./apikey revoke --alias mcp-openai
+/opt/metricshub/bin$ ./apikey revoke mcp-openai
 API key 'mcp-openai' has been revoked.
 ```
 
