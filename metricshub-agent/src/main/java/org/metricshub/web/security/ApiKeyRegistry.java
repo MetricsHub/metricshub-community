@@ -48,7 +48,12 @@ public class ApiKeyRegistry {
 	 * @return true if the API key is valid, false otherwise.
 	 */
 	public boolean isValid(final String token) {
-		return apiKeys.values().stream().anyMatch(apiKey -> apiKey.key.equals(token));
+		return apiKeys
+			.values()
+			.stream()
+			.anyMatch(apiKey ->
+				apiKey.key.equals(token) && (apiKey.expiresOn == null || apiKey.expiresOn.isAfter(LocalDateTime.now()))
+			);
 	}
 
 	/**

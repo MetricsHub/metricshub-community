@@ -26,7 +26,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -64,14 +63,6 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 			final var token = requestApiKey.replace("Bearer ", "");
 			if (apiKeyRegistry.isValid(token)) {
 				final var apiKey = apiKeyRegistry.getApiKeyByToken(token);
-				final var expirationDateTime = apiKey.expiresOn();
-				// Expired API keys are not allowed
-				if (expirationDateTime != null && expirationDateTime.isBefore(LocalDateTime.now())) {
-					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-					response.getWriter().write("Unauthorized - API key expired");
-					return;
-				}
-
 				final var authentication = new UsernamePasswordAuthenticationToken(
 					apiKey.alias(),
 					token,
