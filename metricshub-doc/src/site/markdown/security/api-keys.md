@@ -18,7 +18,7 @@ Each API key is associated with a human-readable alias and stored securely withi
 
 > On **Windows**, the **metricshub-keystore.p12** file is located under `C:\ProgramData\MetricsHub\security`, which is typically accessible **only to Administrator users**. As a result, non-admin users may encounter **access denied** errors when attempting to create, list, or revoke API keys.
 
-> On **Linux**, the **metricshub-keystore.p12** file resides under the MetricsHub installation path (e.g., `/opt/metricshub/security`), and access depends on the file system permissions set during installation.
+> On **Linux**, the **metricshub-keystore.p12** file resides under the MetricsHub installation path (e.g., `/opt/metricshub/security`), and access depends on the file system permissions.
 
 ## Generating an API Key
 
