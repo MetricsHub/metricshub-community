@@ -71,10 +71,7 @@ class ApiKeyAuthFilterTest {
 		filter.doFilterInternal(request, response, filterChain);
 
 		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		assertTrue(
-			responseWriter.toString().contains("Unauthorized - Invalid API Key"),
-			"Response should indicate unauthorized access"
-		);
+		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
 
 		verify(filterChain, never()).doFilter(request, response);
 		assertNull(
@@ -94,10 +91,7 @@ class ApiKeyAuthFilterTest {
 		filter.doFilterInternal(request, response, filterChain);
 
 		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		assertTrue(
-			responseWriter.toString().contains("Unauthorized - Invalid API Key"),
-			"Response should indicate unauthorized access"
-		);
+		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
 		verify(filterChain, never()).doFilter(request, response);
 		assertNull(
 			SecurityContextHolder.getContext().getAuthentication(),
@@ -117,10 +111,7 @@ class ApiKeyAuthFilterTest {
 		filter.doFilterInternal(request, response, filterChain);
 
 		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		assertTrue(
-			responseWriter.toString().contains("Unauthorized - Invalid API Key"),
-			"Response should indicate unauthorized access"
-		);
+		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
 		verify(filterChain, never()).doFilter(request, response);
 		assertNull(
 			SecurityContextHolder.getContext().getAuthentication(),
