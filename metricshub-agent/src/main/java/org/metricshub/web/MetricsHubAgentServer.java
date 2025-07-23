@@ -97,7 +97,7 @@ public class MetricsHubAgentServer {
 	/**
 	 * Resolves API keys from the KeyStore.
 	 *
-	 * @return a map of API key names to their corresponding IDs
+	 * @return a map of API key names to their corresponding {@link ApiKey} objects
 	 */
 	private static Map<String, ApiKey> resolveApiKeys() {
 		final Map<String, ApiKey> apiKeys = new HashMap<>();

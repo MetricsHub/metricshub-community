@@ -51,10 +51,10 @@ public class SecurityConfig {
 	 */
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-		http
+		return http
 			.csrf(csrf -> csrf.disable())
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
-			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated());
-		return http.build();
+			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
+			.build();
 	}
 }
