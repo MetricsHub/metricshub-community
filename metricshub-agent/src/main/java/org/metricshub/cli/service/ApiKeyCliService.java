@@ -27,6 +27,8 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
+import java.time.LocalDateTime;
+import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.crypto.spec.SecretKeySpec;
@@ -64,6 +66,9 @@ import picocli.CommandLine.Spec;
 @NoArgsConstructor
 @Data
 public class ApiKeyCliService {
+	static {
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
+	}
 
 	@Spec
 	static CommandSpec spec;
@@ -76,12 +81,35 @@ public class ApiKeyCliService {
 		@Option(names = { "--alias" }, required = true, description = "The alias associated with the API key.")
 		String alias;
 
+		@Option(
+			names = { "--expires-on" },
+			required = false,
+			description = "The expiration date time for the API key in ISO-8601 format 'YYYY-MM-DDThh:mm:ss' (optional)." +
+			"%nExample: 2025-07-23T08:42:45."
+		)
+		String expiresOn;
+
 		@Override
 		public Integer call() throws Exception {
 			final var printWriter = spec.commandLine().getOut();
 			try {
-				final var apiKey = createApiKey(alias);
-				printWriter.println(Ansi.ansi().a("API key created for alias '").a(alias).a("': ").fgGreen().a(apiKey).reset());
+				final LocalDateTime expirationDateTime = resolveExpirationDateTime(expiresOn);
+				final String expirationMessage = expirationDateTime != null
+					? String.format(" (Expires on %s)", expirationDateTime)
+					: " (No expiration)";
+				final var apiKey = createApiKey(alias, expirationDateTime);
+				printWriter.println(
+					Ansi
+						.ansi()
+						.a("API key created for alias '")
+						.a(alias)
+						.a("': ")
+						.fgGreen()
+						.a(apiKey)
+						.reset()
+						.a(expirationMessage)
+						.reset()
+				);
 				printWriter.println("Please store this key securely, as it will not be shown again.");
 			} catch (Exception e) {
 				printWriter.println(
@@ -98,13 +126,33 @@ public class ApiKeyCliService {
 		}
 
 		/**
+		 * Resolve the expiration date time based on the provided expiration date.
+		 *
+		 * @param expiresOn the expiration date in the format 'YYYY-MM-DDThh:mm:ss'.
+		 * @return The expiration date time as a {@link LocalDateTime}.
+		 */
+		private static LocalDateTime resolveExpirationDateTime(final String expiresOn) {
+			if (expiresOn != null) {
+				final var expirationDateTime = LocalDateTime.parse(expiresOn);
+				if (expirationDateTime != null && expirationDateTime.isBefore(LocalDateTime.now())) {
+					throw new IllegalArgumentException("Expiration date time must be in the future");
+				}
+				return expirationDateTime;
+			}
+
+			return null;
+		}
+
+		/**
 		 * Creates a new API key with the specified alias.
 		 *
-		 * @param apiKeyAlias the alias of the API key to create
+		 * @param apiKeyAlias        the alias of the API key to create
+		 * @param expirationDateTime the expiration date and time for the API key, or null for no expiration
 		 * @return the generated API key as a string
 		 * @throws Exception if an error occurs while creating the API key
 		 */
-		private static String createApiKey(String apiKeyAlias) throws Exception {
+		private static String createApiKey(final String apiKeyAlias, final LocalDateTime expirationDateTime)
+			throws Exception {
 			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
 			// Load the keyStore.
 			final var ks = SecurityManager.loadKeyStore(keyStoreFile);
@@ -118,7 +166,7 @@ public class ApiKeyCliService {
 				throw new IllegalStateException("An API key with alias '" + apiKeyAlias + "' already exists.");
 			}
 
-			return createApiKey(apiKeyAlias, ks, keyStoreFile);
+			return createApiKey(apiKeyAlias, expirationDateTime, ks, keyStoreFile);
 		}
 
 		/**
@@ -133,16 +181,25 @@ public class ApiKeyCliService {
 		/**
 		 * Creates a new API key and stores it in the KeyStore.
 		 *
-		 * @param apiKeyAlias   the name of the API key to create
-		 * @param ks           the KeyStore where the API key will be stored
-		 * @param keyStoreFile the file where the KeyStore is stored
+		 * @param apiKeyAlias        the name of the API key to create
+		 * @param expirationDateTime the expiration date and time for the API key, or null for no expiration
+		 * @param ks                 the KeyStore where the API key will be stored
+		 * @param keyStoreFile       the file where the KeyStore is stored
 		 * @return the generated API key as a string
 		 * @throws Exception if an error occurs while creating or storing the API key
 		 */
-		private static String createApiKey(final String apiKeyAlias, final KeyStore ks, final File keyStoreFile)
-			throws Exception {
+		private static String createApiKey(
+			final String apiKeyAlias,
+			final LocalDateTime expirationDateTime,
+			final KeyStore ks,
+			final File keyStoreFile
+		) throws Exception {
 			final var apiKey = UUID.randomUUID().toString();
-			final byte[] apiKeyBytes = apiKey.getBytes(StandardCharsets.UTF_8);
+			var keyToStore = apiKey;
+			if (expirationDateTime != null) {
+				keyToStore += "__" + expirationDateTime.toString();
+			}
+			final byte[] apiKeyBytes = keyToStore.getBytes(StandardCharsets.UTF_8);
 
 			try (OutputStream fos = new FileOutputStream(keyStoreFile)) {
 				// Generate a SecretKeySpec with a valid algorithm.
@@ -184,9 +241,15 @@ public class ApiKeyCliService {
 					if (entry instanceof KeyStore.SecretKeyEntry secreKeyEntry) {
 						final var secretKey = secreKeyEntry.getSecretKey();
 						final var apiKeyId = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
+						final var parts = apiKeyId.split("__");
 						final var apiKeyName = alias.substring(API_KEY_PREFIX.length());
-						final var maskedId = mask(apiKeyId);
-						printWriter.println(Ansi.ansi().fgGreen().a(apiKeyName).reset().a(" ").a(maskedId).reset());
+						final var maskedId = mask(parts[0]);
+						final var expirationDate = parts.length > 1
+							? String.format(" (Expires on %s)", parts[1])
+							: " (No expiration)";
+						printWriter.println(
+							Ansi.ansi().fgGreen().a(apiKeyName).reset().a(" ").a(maskedId).reset().a(expirationDate).reset()
+						);
 						hasEntries = true;
 					}
 				}

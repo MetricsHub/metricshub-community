@@ -24,11 +24,19 @@ To generate an API key, run the `apikey create` command:
 ```shell-session
 /$ cd /opt/metricshub/bin
 /opt/metricshub/bin$ ./apikey create --alias mcp-openai
-API key created for alias 'mcp-openai': eb47c2be-927f-495f-aa97-0ba0f60b8986
+API key created for alias 'mcp-openai': eb47c2be-927f-495f-aa97-0ba0f60b8986 (No expiration)
 Please store this key securely, as it will not be shown again.
 ```
 
 This command creates a new API key with the alias `mcp-openai`. The key is displayed once in the terminal. Be sure to store it securely, as it will not be shown again.
+
+To specify an expiration date for the API key, you can use the `--expires-on` option:
+
+```shell-session
+/opt/metricshub/bin$ ./apikey create --alias mcp-claude --expires-on 2025-12-31T23:59:59
+API key created for alias 'mcp-claude': 3f2b1c4d-8e5f-4a2b-bc15-0ba0f60b15f3 (Expires on 2025-12-31T23:59:59)
+Please store this key securely, as it will not be shown again.
+```
 
 ## Listing API Keys
 
@@ -36,8 +44,8 @@ To display the list of stored API key aliases, use the `apikey list` command:
 
 ```shell-session
 /opt/metricshub/bin$ ./apikey list
-mcp-openai ********************8986
-mcp-claude ********************15f3
+mcp-openai ********************8986 (No expiration)
+mcp-claude ********************15f3 (Expires on 2025-12-31T23:59:59)
 ```
 
 This command shows the alias and a masked portion of the API key ID.
