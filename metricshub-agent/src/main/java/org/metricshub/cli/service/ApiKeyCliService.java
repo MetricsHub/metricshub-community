@@ -21,6 +21,8 @@ package org.metricshub.cli.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.agent.helper.AgentConstants.API_KEY_PREFIX;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -73,8 +75,6 @@ public class ApiKeyCliService {
 
 	@Spec
 	static CommandSpec spec;
-
-	private static final String API_KEY_PREFIX = "api_key:";
 
 	@Command(name = "create", description = "Generate a new API key for a given alias.")
 	public static class CreateCommand implements Callable<Integer> {
