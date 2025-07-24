@@ -24,7 +24,7 @@ Before integrating **MetricsHub** with BMC Helix:
     
     ```yaml
     exporters:
-    bmchelix/helix1:
+      bmchelix/helix1:
         endpoint: https://company.onbmc.com
         api_key: <api-key>
         timeout: 20s
