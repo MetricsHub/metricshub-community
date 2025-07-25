@@ -87,6 +87,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		TOOLS.put("render", new RenderTool());
 		TOOLS.put("file", new FileTool());
 		TOOLS.put("stringUtils", new StringUtils());
+		TOOLS.put("env", new EnvTool());
 	}
 
 	@Override
