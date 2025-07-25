@@ -26,7 +26,6 @@ import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURC
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
@@ -71,13 +70,13 @@ public class ListResourcesService {
 		Map<String, ResourceDetails> result = new HashMap<>();
 
 		// List all the resources from the resource groups
-		for (Map.Entry<String, ResourceGroupConfig> groupEntry : agentContextHolder
+		agentContextHolder
 			.getAgentContext()
 			.getAgentConfig()
 			.getResourceGroups()
-			.entrySet()) {
-			result.putAll(listResourceGroupConfiguredResources(groupEntry.getKey(), groupEntry.getValue().getResources()));
-		}
+			.forEach((String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) ->
+				listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources())
+			);
 
 		// Add all the top level resources
 		result.putAll(
@@ -128,9 +127,9 @@ public class ListResourcesService {
 		final Set<ProtocolHostname> protocolNames = new HashSet<>();
 
 		// Retrieve all the protocols hostnames
-		for (Entry<String, IConfiguration> configuration : configurations.entrySet()) {
-			protocolNames.add(new ProtocolHostname(configuration.getKey(), configuration.getValue().getHostname()));
-		}
+		configurations.forEach((String protocolName, IConfiguration configuration) -> {
+			protocolNames.add(new ProtocolHostname(protocolName, configuration.getHostname()));
+		});
 
 		return protocolNames;
 	}
