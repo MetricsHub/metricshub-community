@@ -75,7 +75,7 @@ public class ListResourcesService {
 			.getAgentConfig()
 			.getResourceGroups()
 			.forEach((String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) ->
-				listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources())
+				result.putAll(listResourceGroupConfiguredResources(resourceGroupKey, resourceGroupConfig.getResources()))
 			);
 
 		// Add all the top level resources
