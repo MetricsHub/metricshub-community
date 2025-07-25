@@ -9,6 +9,7 @@ import org.metricshub.web.mcp.HttpProtocolCheckService;
 import org.metricshub.web.mcp.IpmiProtocolCheckService;
 import org.metricshub.web.mcp.JdbcProtocolCheckService;
 import org.metricshub.web.mcp.JmxProtocolCheckService;
+import org.metricshub.web.mcp.ListResourcesService;
 import org.metricshub.web.mcp.PingToolService;
 import org.metricshub.web.mcp.SnmpProtocolCheckService;
 import org.metricshub.web.mcp.SnmpV3ProtocolCheckService;
@@ -94,6 +95,11 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public WmiProtocolCheckService wmiProtocolCheckService() {
 			return mock(WmiProtocolCheckService.class);
+		}
+
+		@Bean
+		public ListResourcesService listResourcesService() {
+			return mock(ListResourcesService.class);
 		}
 	}
 }
