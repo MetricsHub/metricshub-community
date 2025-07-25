@@ -36,6 +36,13 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service that retrieves all configured hosts from both resource groups and top-level resources.
+ * <p>
+ * It compiles host details including protocols and attributes, and is exposed as a tool
+ * for listing resources in the current agent context.
+ * </p>
+ */
 @Service
 public class ListResourcesService {
 
@@ -45,16 +52,20 @@ public class ListResourcesService {
 	private AgentContextHolder agentContextHolder;
 
 	/**
-	 * Constructor for PingToolService.
+	 * Creates a new instance of {@link ListResourcesService}.
 	 *
-	 * @param agentContextHolder the {@link AgentContextHolder} instance to access
-	 *                           the agent context
+	 * @param agentContextHolder the {@link AgentContextHolder} used to access the current agent context
 	 */
 	@Autowired
 	public ListResourcesService(AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
 	}
 
+	/**
+	 * Retrieves all configured hosts, including both top-level and resource group hosts.
+	 *
+	 * @return a map where the key is the resource identifier and the value contains its details
+	 */
 	@Tool(name = "ListHosts", description = "Lists all the configured hosts.")
 	public Map<String, ResourceDetails> listConfiguredHosts() {
 		Map<String, ResourceDetails> result = new HashMap<>();
@@ -79,27 +90,44 @@ public class ListResourcesService {
 		return result;
 	}
 
+	/**
+	 * Builds a map of resource details for all resources in the specified resource group.
+	 *
+	 * @param resourceGroupKey the key identifying the resource group
+	 * @param resources the resources in the group to process
+	 * @return a map where the key is the resource ID and the value contains its details
+	 */
 	private Map<String, ResourceDetails> listResourceGroupConfiguredResources(
 		final String resourceGroupKey,
 		Map<String, ResourceConfig> resources
 	) {
 		final Map<String, ResourceDetails> result = new HashMap<>();
+
 		resources.forEach((String resourceKey, ResourceConfig resourceConfig) -> {
-			final ResourceDetails resourceInfos = ResourceDetails
+			// Create a resource details object for the host
+			final ResourceDetails resourceDetails = ResourceDetails
 				.builder()
 				.resourceGroupKey(resourceGroupKey)
 				.protocols(resolveHostConfigurations(resourceConfig.getProtocols()))
 				.attributes(resourceConfig.getAttributes())
 				.build();
 
-			result.put(resourceKey, resourceInfos);
+			result.put(resourceKey, resourceDetails);
 		});
 		return result;
 	}
 
+	/**
+	 * Converts protocol configurations into a set of {@link ProtocolHostname} objects.
+	 *
+	 * @param configurations the map of protocol names to their configurations
+	 * @return a set of protocol and hostname pairs extracted from the configurations
+	 */
 	private Set<ProtocolHostname> resolveHostConfigurations(Map<String, IConfiguration> configurations) {
+		// Initialize a set for the protocol hostnames
 		final Set<ProtocolHostname> protocolNames = new HashSet<>();
 
+		// Retrieve all the protocols hostnames
 		for (Entry<String, IConfiguration> configuration : configurations.entrySet()) {
 			protocolNames.add(new ProtocolHostname(configuration.getKey(), configuration.getValue().getHostname()));
 		}
