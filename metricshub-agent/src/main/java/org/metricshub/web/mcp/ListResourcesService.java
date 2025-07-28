@@ -65,7 +65,7 @@ public class ListResourcesService {
 	 *
 	 * @return a map where the key is the resource identifier and the value contains its details
 	 */
-	@Tool(name = "ListHosts", description = "Lists all the configured hosts.")
+	@Tool(name = "ListHosts", description = "Lists all the configured hosts, including their resource groups, protocols, and attributes.")
 	public Map<String, ResourceDetails> listConfiguredHosts() {
 		Map<String, ResourceDetails> result = new HashMap<>();
 
@@ -127,9 +127,9 @@ public class ListResourcesService {
 		final Set<ProtocolHostname> protocolNames = new HashSet<>();
 
 		// Retrieve all the protocols hostnames
-		configurations.forEach((String protocolName, IConfiguration configuration) -> {
-			protocolNames.add(new ProtocolHostname(protocolName, configuration.getHostname()));
-		});
+		configurations.forEach((String protocolName, IConfiguration configuration) -> 
+			protocolNames.add(new ProtocolHostname(protocolName, configuration.getHostname()))
+		);
 
 		return protocolNames;
 	}
