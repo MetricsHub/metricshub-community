@@ -35,6 +35,7 @@ import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +43,7 @@ import org.springframework.stereotype.Service;
  * Service that triggers the resource metrics collection for a specified hostname.
  */
 @Service
-public class TriggerResourceCollectService {
+public class TroubleshootHostService {
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -50,12 +51,12 @@ public class TriggerResourceCollectService {
 	private AgentContextHolder agentContextHolder;
 
 	/**
-	 * Creates a new instance of {@link TriggerResourceCollectService}.
+	 * Creates a new instance of {@link TroubleshootHostService}.
 	 *
 	 * @param agentContextHolder the {@link AgentContextHolder} used to access the current agent context
 	 */
 	@Autowired
-	public TriggerResourceCollectService(AgentContextHolder agentContextHolder) {
+	public TroubleshootHostService(AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
 	}
 
@@ -67,10 +68,15 @@ public class TriggerResourceCollectService {
 	 * @return a message indicating the result of the operation
 	 */
 	@Tool(
-		name = "TriggerResourceMetricCollection",
-		description = "Triggers the collection of resource metrics on the specified host."
+		name = "CollectMetricsForHost",
+		description = """
+		Fetch and collect metrics for the specified host using using the configured protocols and credentials,
+		and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.).
+		Returns the collected metrics and all attributes.
+		Metrics follow OpenTelemetry semantic conventions.
+		"""
 	)
-	public String triggerResourceMetricCollection(final String hostname) {
+	public String collectMetricsForHost(final String hostname) {
 		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
 			hostname,
 			agentContextHolder
@@ -109,6 +115,49 @@ public class TriggerResourceCollectService {
 			new SimpleStrategy(newTelemetryManager, collectTime, clientsExecutor, extensionManager),
 			new HardwarePostCollectStrategy(newTelemetryManager, collectTime, clientsExecutor, extensionManager),
 			new HardwareMonitorNameGenerationStrategy(newTelemetryManager, collectTime, clientsExecutor, extensionManager)
+		);
+
+		return newTelemetryManager.toJson();
+	}
+
+	/**
+	 * Triggers resource detection for a specified hostname.
+	 *
+	 * @param hostname   the hostname for which to trigger resource detection
+	 * @return a message indicating the result of the operation
+	 */
+	@Tool(
+		name = "TestAvailableConnectorsForHost",
+		description = """
+		Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host
+		using the configured credentials and return the list of connectors that work with this host.
+		"""
+	)
+	public String testAvailableConnectorsForHost(
+		@ToolParam(description = "The hostname of the resource we are interested in") final String hostname
+	) {
+		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
+			hostname,
+			agentContextHolder
+		);
+		if (maybeTelemetryManager.isEmpty()) {
+			return "The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.".formatted(
+					hostname
+				);
+		}
+
+		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get());
+
+		// Instantiate a new ClientsExecutor
+		final var clientsExecutor = new ClientsExecutor(newTelemetryManager);
+
+		newTelemetryManager.run(
+			new DetectionStrategy(
+				newTelemetryManager,
+				System.currentTimeMillis(),
+				clientsExecutor,
+				agentContextHolder.getAgentContext().getExtensionManager()
+			)
 		);
 
 		return newTelemetryManager.toJson();

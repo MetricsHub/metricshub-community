@@ -34,11 +34,11 @@ import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
 import org.mockito.MockedStatic;
 
-class TriggerResourceCollectServiceTest {
+class TroubleshootHostServiceTest {
 
 	private static final String HOSTNAME = "test.domain.net";
 
-	private TriggerResourceCollectService service;
+	private TroubleshootHostService service;
 	private AgentContextHolder agentContextHolder;
 	private TelemetryManager telemetryManager;
 
@@ -67,16 +67,16 @@ class TriggerResourceCollectServiceTest {
 		telemetryManager =
 			TelemetryManager.builder().connectorStore(connectorStore).hostConfiguration(hostConfiguration).build();
 
-		service = new TriggerResourceCollectService(agentContextHolder);
+		service = new TroubleshootHostService(agentContextHolder);
 	}
 
 	@Test
-	void testTriggerResourceMetricCollectionNoTelemetryManager() {
+	void testCollectMetricsForHostNoTelemetryManager() {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			String result = service.triggerResourceMetricCollection(HOSTNAME);
+			String result = service.collectMetricsForHost(HOSTNAME);
 
 			assertEquals(
 				"The hostname " +
@@ -89,7 +89,7 @@ class TriggerResourceCollectServiceTest {
 	}
 
 	@Test
-	void testTriggerResourceMetricCollection() {
+	void testCollectMetricsForHost() {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
@@ -123,7 +123,7 @@ class TriggerResourceCollectServiceTest {
 
 			assertEquals(
 				expected,
-				service.triggerResourceMetricCollection(HOSTNAME),
+				service.collectMetricsForHost(HOSTNAME),
 				"Unexpected result when triggering resource detection."
 			);
 
@@ -145,6 +145,47 @@ class TriggerResourceCollectServiceTest {
 					any(HardwarePostCollectStrategy.class),
 					any(HardwareMonitorNameGenerationStrategy.class)
 				);
+		}
+	}
+
+	@Test
+	void testTestAvailableConnectorsForHostNoTelemetryManager() {
+		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
+				.thenReturn(Optional.empty());
+			String result = service.testAvailableConnectorsForHost(HOSTNAME);
+
+			assertEquals(
+				"The hostname " +
+				HOSTNAME +
+				" is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.",
+				result,
+				"Unexpected result when no telemetry manager is found for the hostname."
+			);
+		}
+	}
+
+	@Test
+	void testTestAvailableConnectorsForHost() {
+		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
+				.thenReturn(Optional.of(telemetryManager));
+			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
+			mockedMCPConfigHelper.when(() -> MCPConfigHelper.newFrom(telemetryManager)).thenReturn(telemetryManagerMock);
+
+			doNothing().when(telemetryManagerMock).run(any(DetectionStrategy.class));
+
+			final String expected = "{\"status\":\"success\"}";
+			when(telemetryManagerMock.toJson()).thenReturn(expected);
+
+			assertEquals(
+				expected,
+				service.testAvailableConnectorsForHost(HOSTNAME),
+				"Unexpected result when triggering resource detection."
+			);
+			verify(telemetryManagerMock, times(1)).run(any(DetectionStrategy.class));
 		}
 	}
 }

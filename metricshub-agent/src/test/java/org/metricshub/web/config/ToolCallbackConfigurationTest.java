@@ -14,8 +14,7 @@ import org.metricshub.web.mcp.PingToolService;
 import org.metricshub.web.mcp.SnmpProtocolCheckService;
 import org.metricshub.web.mcp.SnmpV3ProtocolCheckService;
 import org.metricshub.web.mcp.SshProtocolCheckService;
-import org.metricshub.web.mcp.TriggerResourceCollectService;
-import org.metricshub.web.mcp.TriggerResourceDetectionService;
+import org.metricshub.web.mcp.TroubleshootHostService;
 import org.metricshub.web.mcp.WbemProtocolCheckService;
 import org.metricshub.web.mcp.WinrmProtocolCheckService;
 import org.metricshub.web.mcp.WmiProtocolCheckService;
@@ -105,13 +104,8 @@ class ToolCallbackConfigurationTest {
 		}
 
 		@Bean
-		public TriggerResourceDetectionService triggerResourceDetectionService() {
-			return mock(TriggerResourceDetectionService.class);
-		}
-
-		@Bean
-		public TriggerResourceCollectService triggerResourceCollectService() {
-			return mock(TriggerResourceCollectService.class);
+		public TroubleshootHostService troubleshootHostService() {
+			return mock(TroubleshootHostService.class);
 		}
 	}
 }

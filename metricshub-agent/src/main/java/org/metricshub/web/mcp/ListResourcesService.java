@@ -67,7 +67,11 @@ public class ListResourcesService {
 	 */
 	@Tool(
 		name = "ListHosts",
-		description = "Lists all the configured hosts, including their resource groups, protocols, and attributes."
+		description = """
+		Retrieves all configured hosts (Resources) in this MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics
+		(hardware, system, storage, database, etc.).
+		Returns the list of resources with their protocols and attributes.
+		"""
 	)
 	public Map<String, ResourceDetails> listConfiguredHosts() {
 		Map<String, ResourceDetails> result = new HashMap<>();
