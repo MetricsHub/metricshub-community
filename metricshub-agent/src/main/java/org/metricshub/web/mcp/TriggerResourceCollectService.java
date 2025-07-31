@@ -63,7 +63,7 @@ public class TriggerResourceCollectService {
 	 * Triggers resource collect for a specified hostname with optional connector
 	 * configuration.
 	 *
-	 * @param hostname   the hostname for which to trigger resource detection
+	 * @param hostname   the hostname for which to trigger resource collection
 	 * @return a message indicating the result of the operation
 	 */
 	@Tool(
