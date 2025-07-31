@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -96,6 +97,40 @@ public class MCPConfigHelper {
 			})
 			// Collect all configurations into a Set
 			.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Finds a {@link TelemetryManager} by its hostname within the provided agent context.
+	 * @param hostname      the hostname to search for
+	 * @param contextHolder the agent context holder containing telemetry managers
+	 * @return an {@link Optional} containing the found {@link TelemetryManager}, or empty if not found
+	 */
+	public static Optional<TelemetryManager> findTelemetryManagerByHostname(
+		final String hostname,
+		final AgentContextHolder contextHolder
+	) {
+		return contextHolder
+			.getAgentContext()
+			.getTelemetryManagers()
+			.values()
+			.stream()
+			.flatMap((Map<String, TelemetryManager> innerMap) -> innerMap.values().stream())
+			.filter((TelemetryManager telemetryManager) -> hostname.equalsIgnoreCase(telemetryManager.getHostname()))
+			.findFirst();
+	}
+
+	/**
+	 * Creates a new {@link TelemetryManager} instance by copying the connector store and host configuration
+	 * from an existing telemetry manager.
+	 * @param telemetryManager the existing telemetry manager to copy from
+	 * @return a new {@link TelemetryManager} instance with the same connector store and host configuration
+	 */
+	public static TelemetryManager newFrom(final TelemetryManager telemetryManager) {
+		return TelemetryManager
+			.builder()
+			.connectorStore(telemetryManager.getConnectorStore())
+			.hostConfiguration(telemetryManager.getHostConfiguration())
+			.build();
 	}
 
 	/**
