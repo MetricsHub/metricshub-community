@@ -34,6 +34,7 @@ import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.TelemetryResult;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ public class TroubleshootHostService {
 	/**
 	 * Message to be returned when the hostname is not configured in MetricsHub.
 	 */
-	private static final String HOSTNAME_NOT_CONFIGURED_MSG =
+	protected static final String HOSTNAME_NOT_CONFIGURED_MSG =
 		"The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.";
 
 	/**
@@ -83,7 +84,7 @@ public class TroubleshootHostService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public String collectMetricsForHost(
+	public TelemetryResult collectMetricsForHost(
 		@ToolParam(
 			description = "The hostname of the resource we are interested in",
 			required = true
@@ -101,7 +102,7 @@ public class TroubleshootHostService {
 			agentContextHolder
 		);
 		if (maybeTelemetryManager.isEmpty()) {
-			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
+			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
 		}
 
 		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
@@ -134,7 +135,7 @@ public class TroubleshootHostService {
 			new HardwareMonitorNameGenerationStrategy(newTelemetryManager, collectTime, clientsExecutor, extensionManager)
 		);
 
-		return newTelemetryManager.toJson();
+		return new TelemetryResult(newTelemetryManager.getVo());
 	}
 
 	/**
@@ -151,7 +152,7 @@ public class TroubleshootHostService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public String getMetricsFromCacheForHost(
+	public TelemetryResult getMetricsFromCacheForHost(
 		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final String hostname
 	) {
 		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
@@ -159,10 +160,10 @@ public class TroubleshootHostService {
 			agentContextHolder
 		);
 		if (maybeTelemetryManager.isEmpty()) {
-			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
+			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
 		}
 
-		return maybeTelemetryManager.get().toJson();
+		return new TelemetryResult(maybeTelemetryManager.get().getVo());
 	}
 
 	/**
@@ -179,7 +180,7 @@ public class TroubleshootHostService {
 		using the configured credentials and return the list of connectors that work with this host.
 		"""
 	)
-	public String testAvailableConnectorsForHost(
+	public TelemetryResult testAvailableConnectorsForHost(
 		@ToolParam(description = "The hostname of the resource we are interested in") final String hostname,
 		@ToolParam(
 			description = """
@@ -194,7 +195,7 @@ public class TroubleshootHostService {
 			agentContextHolder
 		);
 		if (maybeTelemetryManager.isEmpty()) {
-			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
+			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
 		}
 
 		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
@@ -211,6 +212,6 @@ public class TroubleshootHostService {
 			)
 		);
 
-		return newTelemetryManager.toJson();
+		return new TelemetryResult(newTelemetryManager.getVo());
 	}
 }

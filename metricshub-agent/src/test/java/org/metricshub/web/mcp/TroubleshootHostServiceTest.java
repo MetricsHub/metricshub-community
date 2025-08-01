@@ -26,6 +26,7 @@ import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
 import org.metricshub.engine.strategy.detection.DetectionStrategy;
 import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
 import org.metricshub.engine.strategy.simple.SimpleStrategy;
+import org.metricshub.engine.telemetry.MonitorsVo;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpExtension;
@@ -33,6 +34,7 @@ import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.TelemetryResult;
 import org.mockito.MockedStatic;
 
 class TroubleshootHostServiceTest {
@@ -77,12 +79,10 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final String result = service.collectMetricsForHost(HOSTNAME, null);
+			final var result = service.collectMetricsForHost(HOSTNAME, null);
 
 			assertEquals(
-				"The hostname " +
-				HOSTNAME +
-				" is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.",
+				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
 				result,
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
@@ -121,11 +121,11 @@ class TroubleshootHostServiceTest {
 					any(HardwareMonitorNameGenerationStrategy.class)
 				);
 
-			final String expected = "{\"status\":\"success\"}";
-			when(telemetryManagerMock.toJson()).thenReturn(expected);
+			final var expected = new MonitorsVo();
+			when(telemetryManagerMock.getVo()).thenReturn(expected);
 
 			assertEquals(
-				expected,
+				new TelemetryResult(expected),
 				service.collectMetricsForHost(HOSTNAME, null),
 				"Unexpected result when triggering resource detection."
 			);
@@ -157,12 +157,10 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final String result = service.testAvailableConnectorsForHost(HOSTNAME, null);
+			final var result = service.testAvailableConnectorsForHost(HOSTNAME, null);
 
 			assertEquals(
-				"The hostname " +
-				HOSTNAME +
-				" is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.",
+				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
 				result,
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
@@ -175,12 +173,10 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final String result = service.getMetricsFromCacheForHost(HOSTNAME);
+			final var result = service.getMetricsFromCacheForHost(HOSTNAME);
 
 			assertEquals(
-				"The hostname " +
-				HOSTNAME +
-				" is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.",
+				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
 				result,
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
@@ -192,8 +188,8 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
-			final String result = service.getMetricsFromCacheForHost(HOSTNAME);
+				.thenReturn(Optional.of(telemetryManager));
+			final var result = service.getMetricsFromCacheForHost(HOSTNAME);
 
 			assertNotNull(result, "Result should not be null when telemetry manager is found.");
 		}
@@ -212,11 +208,11 @@ class TroubleshootHostServiceTest {
 
 			doNothing().when(telemetryManagerMock).run(any(DetectionStrategy.class));
 
-			final String expected = "{\"status\":\"success\"}";
-			when(telemetryManagerMock.toJson()).thenReturn(expected);
+			final var expected = new MonitorsVo();
+			when(telemetryManagerMock.getVo()).thenReturn(expected);
 
 			assertEquals(
-				expected,
+				new TelemetryResult(expected),
 				service.testAvailableConnectorsForHost(HOSTNAME, null),
 				"Unexpected result when triggering resource detection."
 			);

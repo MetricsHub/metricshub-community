@@ -56,7 +56,8 @@ public class ListConnectorsService {
 		name = "ListConnectors",
 		description = """
 		Lists all connectors supported by MetricsHub.
-		Returns a list of connector IDs along with their details such as displayName, information, platforms, tags and detection criteria.
+		You can ask for supported platforms, available tags or categories, connector IDs, display names, detection criteria, or general connector information.
+		This tool returns all of that in a structured list.
 		"""
 	)
 	public Map<String, ConnectorInfo> listConnectors() {

@@ -131,7 +131,7 @@ public class MCPConfigHelper {
 		var hostConfiguration = telemetryManager.getHostConfiguration();
 
 		// if the connectorId is not null, create a new HostConfiguration with the specified connector
-		if (connectorId != null) {
+		if (connectorId != null && !connectorId.isBlank()) {
 			hostConfiguration = hostConfiguration.copy();
 			hostConfiguration.setConnectors(new HashSet<>(Set.of("+" + connectorId)));
 		}
