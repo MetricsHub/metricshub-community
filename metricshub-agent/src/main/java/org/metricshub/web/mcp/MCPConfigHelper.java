@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -123,13 +124,22 @@ public class MCPConfigHelper {
 	 * Creates a new {@link TelemetryManager} instance by copying the connector store and host configuration
 	 * from an existing telemetry manager.
 	 * @param telemetryManager the existing telemetry manager to copy from
+	 * @param connectorId      the identifier of the connector to be used in the new instance
 	 * @return a new {@link TelemetryManager} instance with the same connector store and host configuration
 	 */
-	public static TelemetryManager newFrom(final TelemetryManager telemetryManager) {
+	public static TelemetryManager newFrom(final TelemetryManager telemetryManager, final String connectorId) {
+		var hostConfiguration = telemetryManager.getHostConfiguration();
+
+		// if the connectorId is not null, create a new HostConfiguration with the specified connector
+		if (connectorId != null) {
+			hostConfiguration = hostConfiguration.copy();
+			hostConfiguration.setConnectors(new HashSet<>(Set.of("+" + connectorId)));
+		}
+
 		return TelemetryManager
 			.builder()
 			.connectorStore(telemetryManager.getConnectorStore())
-			.hostConfiguration(telemetryManager.getHostConfiguration())
+			.hostConfiguration(hostConfiguration)
 			.build();
 	}
 

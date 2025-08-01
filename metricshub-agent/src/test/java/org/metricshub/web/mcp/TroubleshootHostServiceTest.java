@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
@@ -76,7 +77,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			String result = service.collectMetricsForHost(HOSTNAME);
+			final String result = service.collectMetricsForHost(HOSTNAME, null);
 
 			assertEquals(
 				"The hostname " +
@@ -95,7 +96,9 @@ class TroubleshootHostServiceTest {
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
-			mockedMCPConfigHelper.when(() -> MCPConfigHelper.newFrom(telemetryManager)).thenReturn(telemetryManagerMock);
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
+				.thenReturn(telemetryManagerMock);
 
 			doNothing()
 				.when(telemetryManagerMock)
@@ -123,7 +126,7 @@ class TroubleshootHostServiceTest {
 
 			assertEquals(
 				expected,
-				service.collectMetricsForHost(HOSTNAME),
+				service.collectMetricsForHost(HOSTNAME, null),
 				"Unexpected result when triggering resource detection."
 			);
 
@@ -154,7 +157,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			String result = service.testAvailableConnectorsForHost(HOSTNAME);
+			final String result = service.testAvailableConnectorsForHost(HOSTNAME, null);
 
 			assertEquals(
 				"The hostname " +
@@ -167,13 +170,45 @@ class TroubleshootHostServiceTest {
 	}
 
 	@Test
+	void testGetMetricsFromCacheForHostNoTelemetryManager() {
+		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
+				.thenReturn(Optional.empty());
+			final String result = service.getMetricsFromCacheForHost(HOSTNAME);
+
+			assertEquals(
+				"The hostname " +
+				HOSTNAME +
+				" is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.",
+				result,
+				"Unexpected result when no telemetry manager is found for the hostname."
+			);
+		}
+	}
+
+	@Test
+	void testGetMetricsFromCacheForHost() {
+		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
+				.thenReturn(Optional.empty());
+			final String result = service.getMetricsFromCacheForHost(HOSTNAME);
+
+			assertNotNull(result, "Result should not be null when telemetry manager is found.");
+		}
+	}
+
+	@Test
 	void testTestAvailableConnectorsForHost() {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
-			mockedMCPConfigHelper.when(() -> MCPConfigHelper.newFrom(telemetryManager)).thenReturn(telemetryManagerMock);
+			mockedMCPConfigHelper
+				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
+				.thenReturn(telemetryManagerMock);
 
 			doNothing().when(telemetryManagerMock).run(any(DetectionStrategy.class));
 
@@ -182,7 +217,7 @@ class TroubleshootHostServiceTest {
 
 			assertEquals(
 				expected,
-				service.testAvailableConnectorsForHost(HOSTNAME),
+				service.testAvailableConnectorsForHost(HOSTNAME, null),
 				"Unexpected result when triggering resource detection."
 			);
 			verify(telemetryManagerMock, times(1)).run(any(DetectionStrategy.class));

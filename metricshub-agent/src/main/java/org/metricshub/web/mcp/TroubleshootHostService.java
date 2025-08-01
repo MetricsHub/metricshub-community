@@ -46,6 +46,12 @@ import org.springframework.stereotype.Service;
 public class TroubleshootHostService {
 
 	/**
+	 * Message to be returned when the hostname is not configured in MetricsHub.
+	 */
+	private static final String HOSTNAME_NOT_CONFIGURED_MSG =
+		"The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.";
+
+	/**
 	 * Holds contextual information about the current agent instance.
 	 */
 	private AgentContextHolder agentContextHolder;
@@ -64,30 +70,41 @@ public class TroubleshootHostService {
 	 * Triggers resource collect for a specified hostname with optional connector
 	 * configuration.
 	 *
-	 * @param hostname   the hostname for which to trigger resource collection
+	 * @param hostname    the hostname for which to trigger resource collection
+	 * @param connectorId the identifier of a specific connector to use for collecting metrics.
 	 * @return a message indicating the result of the operation
 	 */
 	@Tool(
 		name = "CollectMetricsForHost",
 		description = """
-		Fetch and collect metrics for the specified host using using the configured protocols and credentials,
+		Fetch and collect metrics for the specified host using the configured protocols and credentials,
 		and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.).
 		Returns the collected metrics and all attributes.
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public String collectMetricsForHost(final String hostname) {
+	public String collectMetricsForHost(
+		@ToolParam(
+			description = "The hostname of the resource we are interested in",
+			required = true
+		) final String hostname,
+		@ToolParam(
+			description = """
+			Optional: The identifier of a specific connector to use for collecting metrics.
+			If not specified, the system will attempt to select an appropriate connector automatically.
+			""",
+			required = false
+		) final String connectorId
+	) {
 		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
 			hostname,
 			agentContextHolder
 		);
 		if (maybeTelemetryManager.isEmpty()) {
-			return "The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.".formatted(
-					hostname
-				);
+			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
 		}
 
-		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get());
+		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
 
 		// Instantiate a new ClientsExecutor
 		final var clientsExecutor = new ClientsExecutor(newTelemetryManager);
@@ -121,9 +138,38 @@ public class TroubleshootHostService {
 	}
 
 	/**
+	 * Retrieves metrics from the MetricsHub cache for a specified hostname.
+	 *
+	 * @param hostname    the hostname for which to trigger resource collection
+	 * @return a message indicating the result of the operation
+	 */
+	@Tool(
+		name = "GetMetricsFromCacheForHost",
+		description = """
+		Retrieves metrics from the MetricsHub cache for a specified hostname.
+		Returns the collected metrics and all attributes.
+		Metrics follow OpenTelemetry semantic conventions.
+		"""
+	)
+	public String getMetricsFromCacheForHost(
+		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final String hostname
+	) {
+		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
+			hostname,
+			agentContextHolder
+		);
+		if (maybeTelemetryManager.isEmpty()) {
+			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
+		}
+
+		return maybeTelemetryManager.get().toJson();
+	}
+
+	/**
 	 * Triggers resource detection for a specified hostname.
 	 *
-	 * @param hostname   the hostname for which to trigger resource detection
+	 * @param hostname    the hostname for which to trigger resource detection
+	 * @param connectorId the identifier of a specific connector to use for detection.
 	 * @return a message indicating the result of the operation
 	 */
 	@Tool(
@@ -134,19 +180,24 @@ public class TroubleshootHostService {
 		"""
 	)
 	public String testAvailableConnectorsForHost(
-		@ToolParam(description = "The hostname of the resource we are interested in") final String hostname
+		@ToolParam(description = "The hostname of the resource we are interested in") final String hostname,
+		@ToolParam(
+			description = """
+			Optional: The identifier of a specific connector to use for the test.
+			If not specified, the system will attempt to select an appropriate connector automatically.
+			""",
+			required = false
+		) final String connectorId
 	) {
 		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
 			hostname,
 			agentContextHolder
 		);
 		if (maybeTelemetryManager.isEmpty()) {
-			return "The hostname %s is not currently monitored by MetricsHub. Please configure a new resource for this host to begin monitoring.".formatted(
-					hostname
-				);
+			return HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname);
 		}
 
-		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get());
+		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
 
 		// Instantiate a new ClientsExecutor
 		final var clientsExecutor = new ClientsExecutor(newTelemetryManager);
