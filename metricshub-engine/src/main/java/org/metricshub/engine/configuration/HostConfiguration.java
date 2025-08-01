@@ -144,4 +144,30 @@ public class HostConfiguration {
 
 		return sources;
 	}
+
+	/**
+	 * Creates a copy of the current HostConfiguration instance.
+	 *
+	 * @return a new HostConfiguration instance with the same properties as this one
+	 */
+	public HostConfiguration copy() {
+		return HostConfiguration
+			.builder()
+			.hostname(hostname)
+			.hostId(hostId)
+			.hostType(hostType)
+			.resolveHostnameToFqdn(resolveHostnameToFqdn)
+			.strategyTimeout(strategyTimeout)
+			.connectors(connectors)
+			.sequential(sequential)
+			.enableSelfMonitoring(enableSelfMonitoring)
+			.alertTrigger(alertTrigger)
+			.retryDelay(retryDelay)
+			.includedMonitors(includedMonitors)
+			.excludedMonitors(excludedMonitors)
+			.connectorVariables(connectorVariables != null ? new HashMap<>(connectorVariables) : null)
+			.configurations(configurations != null ? new HashMap<>(configurations) : null)
+			.configuredConnectorId(configuredConnectorId)
+			.build();
+	}
 }

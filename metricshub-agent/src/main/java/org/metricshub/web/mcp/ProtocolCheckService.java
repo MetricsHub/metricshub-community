@@ -30,6 +30,8 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -63,6 +65,69 @@ public class ProtocolCheckService {
 	@Autowired
 	public ProtocolCheckService(AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
+	}
+
+	/**
+	 * Checks whether the specified host is reachable using the specified protocol.
+	 *
+	 * @param hostname the target host to check
+	 * @param protocol the name of the protocol to check (e.g., http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, wmi)
+	 * @param timeout optional timeout for the HTTP check in seconds
+	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
+	 */
+	@Tool(
+		name = "CheckProtocol",
+		description = """
+		Determines if the specified host is accessible using a given protocol.
+		Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+		Provides a response detailing the host reachability status along with the response time.
+		"""
+	)
+	public ProtocolCheckResponse checkProtocol(
+		@ToolParam(description = "The hostname to check") final String hostname,
+		@ToolParam(
+			description = "The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi",
+			required = true
+		) final String protocol,
+		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout
+	) {
+		return agentContextHolder
+			.getAgentContext()
+			.getExtensionManager()
+			.findExtensionByType(protocol)
+			.map((IProtocolExtension extension) -> checkWithExtension(hostname, timeout, extension))
+			.orElse(
+				ProtocolCheckResponse
+					.builder()
+					.hostname(hostname)
+					.errorMessage(protocol + " extension is not available")
+					.build()
+			);
+	}
+
+	/**
+	 * Performs a safe protocol check using the provided extension.
+	 *
+	 * @param hostname the target host to check
+	 * @param timeout optional timeout for the protocol check in seconds
+	 * @param extension the protocol extension to use
+	 * @return a {@link ProtocolCheckResponse} indicating the reachability status or an error message if an exception occurs
+	 */
+	private ProtocolCheckResponse checkWithExtension(
+		final String hostname,
+		final Long timeout,
+		final IProtocolExtension extension
+	) {
+		try {
+			return checkProtocolWithExtensionSafe(hostname, extension.getIdentifier(), timeout, extension);
+		} catch (Exception e) {
+			// Error
+			return ProtocolCheckResponse
+				.builder()
+				.hostname(hostname)
+				.errorMessage("Error detected during protocol check: " + e.getMessage())
+				.build();
+		}
 	}
 
 	/**

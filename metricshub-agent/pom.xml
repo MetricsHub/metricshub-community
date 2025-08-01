@@ -351,7 +351,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.51</minimum>
+											<minimum>0.54</minimum>
 										</limit>
 									</limits>
 								</rule>
