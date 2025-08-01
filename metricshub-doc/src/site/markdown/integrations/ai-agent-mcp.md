@@ -21,8 +21,6 @@ The following tools are currently available:
 | `PingHost`                       | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li></ul>                                             | Checks if a host is reachable via ping and returns its response time and status.                                                                                                                              |
 | `TestAvailableConnectorsForHost` | <ul><li>`hostname` (string, **required**)</li> <li>`connectorId` (string, _optional_)</li></ul>                                                       | Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host using the configured credentials and return the list of connectors that work with this host. |
 
-
-
 ## Prerequisites
 To get started, simply connect your AI assistant to the **MetricsHub MCP Server** using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Once the connection is established, the available tools will be automatically published and ready for use.
 
