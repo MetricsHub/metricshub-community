@@ -5,6 +5,93 @@ description: Learn more about the new features, changes and improvements, and bu
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+## MetricsHub Enterprise Edition v3.0.00
+
+### MetricsHub Enterprise Edition v3.0.00
+
+#### What's New
+
+| ID                                                                        | Description                                                          |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [**\#83**](https://github.com/MetricsHub/metricshub-enterprise/issues/83) | **`apikey`**: New CLI executable is now available to manage API keys |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                              |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [**\#75**](https://github.com/MetricsHub/metricshub-enterprise/issues/75) | Added `JDBC` and `JMX` configuration examples to `metricshub-example.yaml`               |
+| [**\#78**](https://github.com/MetricsHub/metricshub-enterprise/issues/78) | Dynamic configuration reloading has been enhanced allowing settings to update on the fly |
+
+### MetricsHub Enterprise Connectors v108
+
+#### What's New
+
+| ID                                                                        | Description                                                                                                                         |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#56**](https://github.com/MetricsHub/enterprise-connectors/issues/56) | Added support for [**Citrix NetScaler**](./connectors/citrixnetscalerrest.html) via REST API                                        |
+| [**\#61**](https://github.com/MetricsHub/enterprise-connectors/issues/61) | Added support for [**Cisco ASA Firewall**](./connectors/ciscosecurefirewallasa.html) via SNMP                                       |
+| [**\#62**](https://github.com/MetricsHub/enterprise-connectors/issues/62) | Added support for [**Arista Switch**](./connectors/aristabgpswitch.html) via SNMP to report `Border Gateway Protocol` (BGP) metrics |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                  |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [**\#55**](https://github.com/MetricsHub/enterprise-connectors/issues/55) | **NetApp Filer (REST)**: Added QoS latency metrics                           |
+| [**\#59**](https://github.com/MetricsHub/enterprise-connectors/issues/59) | **EMC SMI-S Agent (ECOM)**: Fan names now use `+` instead of `-+-`           |
+| [**\#71**](https://github.com/MetricsHub/enterprise-connectors/issues/71) | **Dell XtremIO - REST**: Added performance and capacity metrics via REST API |
+
+#### Fixed Issues
+
+| ID                                                                        | Description                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#73**](https://github.com/MetricsHub/enterprise-connectors/issues/73) | The storage array connectors report `direction` and `storage.direction` attributes instead of `storage.io.direction` attributes: <ul><li>**Dell EMC PowerMax Storage (REST)**</li><li>**NetApp Filer (REST)**</li><li>**Pure Storage FA Series (REST)**</li><li>**Pure Storage FA Series v2 (REST)**</li><li>**Dot Hill System (REST)**</li></ul> |
+| [**\#76**](https://github.com/MetricsHub/enterprise-connectors/issues/76) | **Dell EMC PowerMax Storage (REST)**: Incorrect unit for the `storage.size` metric                                                                                                                                                                                                                                                                |
+| [**\#80**](https://github.com/MetricsHub/enterprise-connectors/issues/80) | **NetApp Filer (REST)**: <ul><li>Storage pools are missing</li><li>Volume capacities are incorrectly calculated</li><li>Disk discovery is inaccurate</li></ul>                                                                                                                                                                                    |
+| [**\#83**](https://github.com/MetricsHub/enterprise-connectors/issues/83) | **Dell EMC PowerMax Storage (REST)**: <ul><li>Incorrect subscribed and configured capacities for storage pools</li><li>Configured capacity reported incorrectly</li><li>Missing volume consumed and available capacity metrics</li><li>`Thin pools` are not detected</li></ul>                                                                    |
+| [**\#84**](https://github.com/MetricsHub/enterprise-connectors/issues/84) | **Pure Storage FA Series (REST)** and **Pure Storage FA Series v2 (REST)**: <ul><li>Incorrect mapping of storage pool metrics</li><li>Missing `storage.volume.type` attribute</li></ul>                                                                                                                                                           |
+| [**\#86**](https://github.com/MetricsHub/enterprise-connectors/issues/86) | **Dot Hill System (REST)**: Missing `storage.size` metric on the storage system and physical disks                                                                                                                                                                                                                                                |
+
+### MetricsHub Community Edition v1.0.06
+
+#### What's New
+
+| ID                                                                         | Description                                                                                                                                                                  |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#438**](https://github.com/MetricsHub/metricshub-community/issues/438) | Added support for [programmable configurations](./configuration/configure-monitoring.md#programmable-configuration) to generate the list of resources to monitor dynamically |
+| [**\#746**](https://github.com/MetricsHub/metricshub-community/issues/746) | **`apikey`**: New CLI executable is now available to manage API keys                                                                                                         |
+| [**\#749**](https://github.com/MetricsHub/metricshub-community/issues/749) | Added API key-based authentication                                                                                                                                           |
+| [**\#750**](https://github.com/MetricsHub/metricshub-community/issues/750) | Added [MCP tool](./integrations/ai-agent-mcp.md) to list configured hosts                                                                                                    |
+| [**\#756**](https://github.com/MetricsHub/metricshub-community/issues/756) | Added [MCP tool](./integrations/ai-agent-mcp.md) to detect hosts and collect metrics                                                                                         |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                 |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [**\#671**](https://github.com/MetricsHub/metricshub-community/issues/671) | Dynamic configuration reloading has been enhanced allowing settings to update on the fly    |
+| [**\#739**](https://github.com/MetricsHub/metricshub-community/issues/739) | Redesigned documentation to look more like the [MetricsHub](https://metricshub.com) website |
+| [**\#741**](https://github.com/MetricsHub/metricshub-community/issues/741) | **SNMP v3**: Added support for `AES192` and `AES256` encryptions                            |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                                                                                                    |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#734**](https://github.com/MetricsHub/metricshub-community/issues/734) | The logs incorrectly report that the `connector_id` attribute is missing on `host` monitors, although the `connector_id` attribute is not applicable to hosts. |
+| [**\#754**](https://github.com/MetricsHub/metricshub-community/issues/754) | `UserPrincipalNotFoundException` is thrown when **MetricsHub** starts on Windows and cannot find the `Users` group.                                            |
+
+### MetricsHub Community Connectors v1.0.13
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [**\#253**](https://github.com/MetricsHub/metricshub-community/issues/240) | Added `storage.latency` metric to semantic conventions |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                          |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [**\#250**](https://github.com/MetricsHub/metricshub-community/issues/250) | Updated unit for `hw.network.dropped` from `{packet}` to `{packets}` |
+
 ## MetricsHub Enterprise Edition v2.1.00
 
 ### MetricsHub Enterprise Edition v2.1.00
