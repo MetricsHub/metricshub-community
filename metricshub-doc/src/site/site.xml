@@ -99,7 +99,7 @@
 		</menu>
 
 		<menu name="Integrations">
-			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
+			<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />
 			<item name="BMC Helix" href="integrations/bmc-helix.html" />
 			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
