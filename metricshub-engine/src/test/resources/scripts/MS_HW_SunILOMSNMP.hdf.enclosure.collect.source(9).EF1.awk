@@ -1,4 +1,4 @@
-BEGIN {FS="[;]";ChassisFound=0}
+BEGIN {FS=";";ChassisFound=0}
 function AppendStatus(StatusID)
 	{ if (Status != "") {PrintArray[StatusID] = 1
 	      StatusArray[StatusID] = StatusArray[StatusID] "|" Status

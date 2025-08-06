@@ -1,4 +1,4 @@
-BEGIN {FS="[;]"}
+BEGIN {FS=";"}
 { if ($1 in tags2) {
 	                  if (tags3[$1] < $3) {tags3[$1] = ($3);}
 	                  if ($3 > 5) {if (tags2[$1]=="") {tags2[$1] = $2}

@@ -1,4 +1,4 @@
-BEGIN {FS="[;]"}
+BEGIN {FS=";"}
 NF==6 { ElementName = $1
 	      IdentifyingDescriptions = $2
 	      Name = $3
