@@ -1,7 +1,7 @@
 keywords: ai, mcp, integration
 description: How to configure AI assistants such as Claude or OpenAI to connect to the MetricsHub MCP Server to interact in real-time with its internal knowledge and tools.
 
-# AI Agents Integration
+# AI Agent Integration
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
