@@ -18,7 +18,7 @@ import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.extension.wmi.WmiConfiguration;
 import org.metricshub.web.AgentContextHolder;
 
-public class ListResourcesServiceTest {
+class ListResourcesServiceTest {
 
 	private ListResourcesService listResourcesService;
 
