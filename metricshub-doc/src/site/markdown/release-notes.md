@@ -58,9 +58,9 @@ description: Learn more about the new features, changes and improvements, and bu
 | ID                                                                         | Description                                                                                                                                                                  |
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [**\#438**](https://github.com/MetricsHub/metricshub-community/issues/438) | Added support for [programmable configurations](./configuration/configure-monitoring.md#programmable-configuration) to generate the list of resources to monitor dynamically |
+| [**\#744**](https://github.com/MetricsHub/metricshub-community/issues/744) | Added [MCP tool](./integrations/ai-agent-mcp.md) to list configured hosts                                                                                                    |
 | [**\#746**](https://github.com/MetricsHub/metricshub-community/issues/746) | **`apikey`**: New CLI executable is now available to manage API keys                                                                                                         |
 | [**\#749**](https://github.com/MetricsHub/metricshub-community/issues/749) | Added API key-based authentication                                                                                                                                           |
-| [**\#750**](https://github.com/MetricsHub/metricshub-community/issues/750) | Added [MCP tool](./integrations/ai-agent-mcp.md) to list configured hosts                                                                                                    |
 | [**\#756**](https://github.com/MetricsHub/metricshub-community/issues/756) | Added [MCP tool](./integrations/ai-agent-mcp.md) to detect hosts and collect metrics                                                                                         |
 
 #### Changes and Improvements
@@ -84,13 +84,13 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                            |
 | -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [**\#253**](https://github.com/MetricsHub/metricshub-community/issues/240) | Added `storage.latency` metric to semantic conventions |
+| [**\#253**](https://github.com/MetricsHub/community-connectors/issues/253) | Added `storage.latency` metric to semantic conventions |
 
 #### Fixed Issues
 
 | ID                                                                         | Description                                                          |
 | -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [**\#250**](https://github.com/MetricsHub/metricshub-community/issues/250) | Updated unit for `hw.network.dropped` from `{packet}` to `{packets}` |
+| [**\#250**](https://github.com/MetricsHub/community-connectors/issues/250) | Updated unit for `hw.network.dropped` from `{packet}` to `{packets}` |
 
 ## MetricsHub Enterprise Edition v2.1.00
 
