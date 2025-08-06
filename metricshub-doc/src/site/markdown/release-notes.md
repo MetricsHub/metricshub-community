@@ -11,16 +11,16 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                                                          |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [**\#83**](https://github.com/MetricsHub/metricshub-enterprise/issues/83) | **`apikey`**: New CLI executable is now available to manage API keys |
+| ID                                                                        | Description                                                           |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [**\#83**](https://github.com/MetricsHub/metricshub-enterprise/issues/83) | New CLI executable (**`apikey`**) is now available to manage API keys |
 
 #### Changes and Improvements
 
-| ID                                                                        | Description                                                                              |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [**\#75**](https://github.com/MetricsHub/metricshub-enterprise/issues/75) | Added `JDBC` and `JMX` configuration examples to `metricshub-example.yaml`               |
-| [**\#78**](https://github.com/MetricsHub/metricshub-enterprise/issues/78) | Dynamic configuration reloading has been enhanced allowing settings to update on the fly |
+| ID                                                                        | Description                                                                |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [**\#75**](https://github.com/MetricsHub/metricshub-enterprise/issues/75) | Added `JDBC` and `JMX` configuration examples to `metricshub-example.yaml` |
+| [**\#78**](https://github.com/MetricsHub/metricshub-enterprise/issues/78) | Dynamic configuration reloading has been enhanced                          |
 
 ### MetricsHub Enterprise Connectors v108
 
@@ -38,7 +38,7 @@ description: Learn more about the new features, changes and improvements, and bu
 | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | [**\#55**](https://github.com/MetricsHub/enterprise-connectors/issues/55) | **NetApp Filer (REST)**: Added QoS latency metrics                           |
 | [**\#59**](https://github.com/MetricsHub/enterprise-connectors/issues/59) | **EMC SMI-S Agent (ECOM)**: Fan names now use `+` instead of `-+-`           |
-| [**\#71**](https://github.com/MetricsHub/enterprise-connectors/issues/71) | **Dell XtremIO - REST**: Added performance and capacity metrics via REST API |
+| [**\#71**](https://github.com/MetricsHub/enterprise-connectors/issues/71) | **Dell XtremIO (REST)**: Added performance and capacity metrics via REST API |
 
 #### Fixed Issues
 
@@ -47,7 +47,7 @@ description: Learn more about the new features, changes and improvements, and bu
 | [**\#73**](https://github.com/MetricsHub/enterprise-connectors/issues/73) | The storage array connectors report `direction` and `storage.direction` attributes instead of `storage.io.direction` attributes: <ul><li>**Dell EMC PowerMax Storage (REST)**</li><li>**NetApp Filer (REST)**</li><li>**Pure Storage FA Series (REST)**</li><li>**Pure Storage FA Series v2 (REST)**</li><li>**Dot Hill System (REST)**</li></ul> |
 | [**\#76**](https://github.com/MetricsHub/enterprise-connectors/issues/76) | **Dell EMC PowerMax Storage (REST)**: Incorrect unit for the `storage.size` metric                                                                                                                                                                                                                                                                |
 | [**\#80**](https://github.com/MetricsHub/enterprise-connectors/issues/80) | **NetApp Filer (REST)**: <ul><li>Storage pools are missing</li><li>Volume capacities are incorrectly calculated</li><li>Disk discovery is inaccurate</li></ul>                                                                                                                                                                                    |
-| [**\#82**](https://github.com/MetricsHub/enterprise-connectors/issues/82) | **Dell EMC PowerMax Storage (REST)**: <ul><li>Incorrect subscribed and configured capacities for storage pools</li><li>Configured capacity reported incorrectly</li><li>Missing volume consumed and available capacity metrics</li><li>`Thin pools` are not detected</li></ul>                                                                    |
+| [**\#82**](https://github.com/MetricsHub/enterprise-connectors/issues/82) | **Dell EMC PowerMax Storage (REST)**: <ul><li>Storage pool subscribed and configured capacity metrics are incorrect</li><li>Volume consumed and available capacity metrics are missing</li><li>Thin pools are not detected</li></ul>                                                                                                              |
 | [**\#84**](https://github.com/MetricsHub/enterprise-connectors/issues/84) | **Pure Storage FA Series (REST)** and **Pure Storage FA Series v2 (REST)**: <ul><li>Incorrect mapping of storage pool metrics</li><li>Missing `storage.volume.type` attribute</li></ul>                                                                                                                                                           |
 | [**\#86**](https://github.com/MetricsHub/enterprise-connectors/issues/86) | **Dot Hill System (REST)**: Missing `storage.size` metric on the storage system and physical disks                                                                                                                                                                                                                                                |
 
@@ -59,7 +59,7 @@ description: Learn more about the new features, changes and improvements, and bu
 | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [**\#438**](https://github.com/MetricsHub/metricshub-community/issues/438) | Added support for [programmable configurations](./configuration/configure-monitoring.md#programmable-configuration) to generate the list of resources to monitor dynamically |
 | [**\#744**](https://github.com/MetricsHub/metricshub-community/issues/744) | Added [MCP tool](./integrations/ai-agent-mcp.md) to list configured hosts                                                                                                    |
-| [**\#746**](https://github.com/MetricsHub/metricshub-community/issues/746) | **`apikey`**: New CLI executable is now available to manage API keys                                                                                                         |
+| [**\#746**](https://github.com/MetricsHub/metricshub-community/issues/746) | New CLI executable (**`apikey`**) is now available to manage API keys                                                                                                        |
 | [**\#749**](https://github.com/MetricsHub/metricshub-community/issues/749) | Added API key-based authentication                                                                                                                                           |
 | [**\#756**](https://github.com/MetricsHub/metricshub-community/issues/756) | Added [MCP tool](./integrations/ai-agent-mcp.md) to detect hosts and collect metrics                                                                                         |
 
@@ -67,9 +67,9 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                                                                 |
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| [**\#671**](https://github.com/MetricsHub/metricshub-community/issues/671) | Dynamic configuration reloading has been enhanced allowing settings to update on the fly    |
+| [**\#671**](https://github.com/MetricsHub/metricshub-community/issues/671) | Dynamic configuration reloading has been enhanced                                           |
 | [**\#739**](https://github.com/MetricsHub/metricshub-community/issues/739) | Redesigned documentation to look more like the [MetricsHub](https://metricshub.com) website |
-| [**\#741**](https://github.com/MetricsHub/metricshub-community/issues/741) | **SNMP v3**: Added support for `AES192` and `AES256` encryptions                            |
+| [**\#741**](https://github.com/MetricsHub/metricshub-community/issues/741) | Added support for **SNMP v3** `AES192` and `AES256` encryptions                             |
 
 #### Fixed Issues
 
@@ -82,15 +82,15 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                            |
-| -------------------------------------------------------------------------- | ------------------------------------------------------ |
-| [**\#253**](https://github.com/MetricsHub/community-connectors/issues/253) | Added `storage.latency` metric to semantic conventions |
+| ID                                                                         | Description                                                |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [**\#253**](https://github.com/MetricsHub/community-connectors/issues/253) | Added `storage.latency` metric to the semantic conventions |
 
 #### Fixed Issues
 
-| ID                                                                         | Description                                                          |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [**\#250**](https://github.com/MetricsHub/community-connectors/issues/250) | Updated unit for `hw.network.dropped` from `{packet}` to `{packets}` |
+| ID                                                                         | Description                                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [**\#250**](https://github.com/MetricsHub/community-connectors/issues/250) | The `hw.network.dropped` metric reports `{packet}` instead of `{packets}` unit |
 
 ## MetricsHub Enterprise Edition v2.1.00
 
