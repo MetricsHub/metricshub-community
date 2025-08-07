@@ -51,6 +51,14 @@ description: Learn more about the new features, changes and improvements, and bu
 | [**\#84**](https://github.com/MetricsHub/enterprise-connectors/issues/84) | **Pure Storage FA Series (REST)** and **Pure Storage FA Series v2 (REST)**: <ul><li>Incorrect mapping of storage pool metrics</li><li>Missing `storage.volume.type` attribute</li></ul>                                                                                                                                                                            |
 | [**\#86**](https://github.com/MetricsHub/enterprise-connectors/issues/86) | **Dot Hill System (REST)**: Missing `storage.size` metric on the storage system and physical disks                                                                                                                                                                                                                                                                 |
 
+### MetricsHub Community Edition v1.0.07
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                                    |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| [**\#762**](https://github.com/MetricsHub/metricshub-community/issues/762) | Devices configured with SNMPv3 AES cannot be monitored in MetricsHub Community Edition v1.0.06 |
+
 ### MetricsHub Community Edition v1.0.06
 
 #### What's New
