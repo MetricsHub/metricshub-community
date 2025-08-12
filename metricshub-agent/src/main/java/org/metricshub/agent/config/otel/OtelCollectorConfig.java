@@ -115,14 +115,11 @@ public class OtelCollectorConfig {
 		commandLine.add("--config");
 
 		// Get the default configuration file path located under the otel directory
-		final String defaultConfigFilePath = OtelConfigHelper.getDefaultOtelConfigFilePath().toString();
+		final var defaultConfigFilePath = OtelConfigHelper.getDefaultOtelConfigFilePath().toString();
 
 		commandLine.add(
 			LocalOsHandler.isWindows() ? String.format("\"%s\"", defaultConfigFilePath) : defaultConfigFilePath
 		);
-
-		// Default feature gate is enabled to normalize Prometheus metrics
-		commandLine.add("--feature-gates=pkg.translator.prometheus.NormalizeName");
 
 		return commandLine;
 	}
