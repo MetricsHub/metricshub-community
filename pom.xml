@@ -301,7 +301,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>3.3.05</version>
+				<version>4.0.01</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>

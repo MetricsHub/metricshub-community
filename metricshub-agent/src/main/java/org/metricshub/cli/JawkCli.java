@@ -53,7 +53,7 @@ public class JawkCli {
 	public static void main(final String[] args, final InputStream in, final PrintStream out, final PrintStream err)
 		throws Exception {
 		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
-		new Main(args, in, new ReplacingPrintStream(out), err);
+		Main.create(args, in, new ReplacingPrintStream(out), err);
 	}
 
 	/**
