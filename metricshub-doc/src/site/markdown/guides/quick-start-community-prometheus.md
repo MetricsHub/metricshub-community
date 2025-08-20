@@ -209,7 +209,8 @@ Several log files are created as soon as the MetricsHub Agent is started:
 
 They are stored under:
 * `makefile /opt/metricshub/lib/logs` (Linux environments)
-* or `C:\Users\{Username}\AppData\Local\metricshub\logs` (Windows environments). 
+* or `./logs` (Windows environments, if writable, relative to the working directory)  
+* `%LOCALAPPDATA%\MetricsHub\logs` (Windows environments, if `./logs` is not writable)  
 
 You can configure the log level in the `metricshub.yaml` file by setting the `loggerLevel` parameter to:
 

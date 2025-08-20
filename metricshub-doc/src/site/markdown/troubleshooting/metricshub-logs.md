@@ -33,7 +33,8 @@ Set the `loggerLevel` parameter to:
 
 The output files are saved by default in the **logs** directory located under the **MetricsHub** directory:
 
-* On Windows, the output files are stored in the **%LOCALAPPDATA%\MetricsHub** folder of the account running the application:
+* On Windows, the output files are stored in the local **logs** folder (relative to the working directory) if it exists and is writable.
+If this folder does not exist or is not writable, the files are instead stored in the  **%LOCALAPPDATA%\MetricsHub** folder of the account running the application:
   * When the Local System account starts the MetricsHub Agent service, the output files are stored under **C:\Windows\System32\config\systemprofile\AppData\Local\MetricsHub\logs**.
   * When a specific user starts the MetricsHub Agent service, the output files are stored under **C:\Users\\<username\>\AppData\Local\MetricsHub\logs**.
 
