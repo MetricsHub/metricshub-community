@@ -114,7 +114,8 @@ public class ConfigHelper {
 
 	/**
 	 * Get the default output directory for logging.<br>
-	 * On Windows, if the LOCALAPPDATA path is not valid then the output directory will be located
+	 * On Windows, the output directory is the local logs folder (relative to the working directory)
+	 * if it is writable. If not, and if the LOCALAPPDATA path is not valid, then the output directory will be located
 	 * under the installation directory.<br>
 	 * On Linux, the output directory is located under the installation directory.
 	 *
@@ -122,11 +123,19 @@ public class ConfigHelper {
 	 */
 	public static Path getDefaultOutputDirectory() {
 		if (LocalOsHandler.isWindows()) {
+			try {
+				Path cwdLogs = Paths.get(LOG_DIRECTORY_NAME).toAbsolutePath();
+				Path created = createDirectories(cwdLogs);
+				if (Files.isWritable(created)) {
+					return created;
+				}
+			} catch (IllegalStateException | SecurityException ignored) {}
+
 			final String localAppDataPath = System.getenv("LOCALAPPDATA");
 
 			// Make sure the LOCALAPPDATA path is valid
 			if (localAppDataPath != null && !localAppDataPath.isBlank()) {
-				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, "logs"));
+				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, LOG_DIRECTORY_NAME));
 			}
 		}
 
