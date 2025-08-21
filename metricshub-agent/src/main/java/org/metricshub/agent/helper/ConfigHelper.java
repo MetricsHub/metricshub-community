@@ -114,7 +114,8 @@ public class ConfigHelper {
 
 	/**
 	 * Get the default output directory for logging.<br>
-	 * On Windows, if the LOCALAPPDATA path is not valid then the output directory will be located
+	 * On Windows, the output directory is the local logs folder (relative to the working directory)
+	 * if it is writable. If not, and if the LOCALAPPDATA path is not valid, then the output directory will be located
 	 * under the installation directory.<br>
 	 * On Linux, the output directory is located under the installation directory.
 	 *
