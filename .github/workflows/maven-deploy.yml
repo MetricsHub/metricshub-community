@@ -20,12 +20,12 @@ jobs:
 
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-24.04, windows-2025 ]
 
     steps:
 
     - name: Install gcc-multilib
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-multilib
@@ -78,28 +78,28 @@ jobs:
 
     - name: Upload Linux Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-community-linux-package-${{ env.metricshub_version }}
         path: ./metricshub-community-linux/target/metricshub-community-linux-${{ env.metricshub_version }}.tar.gz
 
     - name: Upload Windows Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'windows-latest' }}
+      if: ${{ matrix.os == 'windows-2025' }}
       with:
         name: metricshub-community-windows-package-${{ env.metricshub_version }}
         path: ./metricshub-community-windows/target/metricshub-community-windows-${{ env.metricshub_version }}.zip
 
     - name: Upload Site Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-site-${{ env.metricshub_version }}
         path: ./metricshub-doc/target/metricshub-doc-${{ env.metricshub_version }}-site.jar
 
     - name: Upload Docker Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-community-docker-package-${{ env.metricshub_version }}
         path: ./metricshub-community-linux/target/metricshub-community-linux-${{ env.metricshub_version }}-docker.tar.gz

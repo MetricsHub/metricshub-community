@@ -42,7 +42,7 @@ jobs:
   prepare:
     name:  Prepare Release v${{ inputs.releaseVersion }}
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     outputs:
       branchName: ${{ env.branchName }}
@@ -118,7 +118,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
+        os: [ ubuntu-24.04, windows-2025 ]
     
     steps:
 
@@ -180,13 +180,13 @@ jobs:
 
     - name: Upload Maven Site to GitHub Pages
       uses: actions/upload-pages-artifact@v3
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         path: ./metricshub-doc/target/site
 
     - name: Upload Linux Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-community-linux-package-${{ inputs.releaseVersion }}
         path: |
@@ -195,7 +195,7 @@ jobs:
 
     - name: Upload Windows Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'windows-latest' }}
+      if: ${{ matrix.os == 'windows-2025' }}
       with:
         name: metricshub-community-windows-package-${{ inputs.releaseVersion }}
         path: |
@@ -204,7 +204,7 @@ jobs:
 
     - name: Upload Site Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-site-${{ inputs.releaseVersion }}
         path: |
@@ -213,7 +213,7 @@ jobs:
 
     - name: Upload Docker Artifact
       uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
       with:
         name: metricshub-community-docker-package-${{ inputs.releaseVersion }}
         path: ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}-docker.tar.gz
@@ -224,7 +224,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: release
     steps:
     - name: Deploy to GitHub Pages
@@ -234,7 +234,7 @@ jobs:
   # Finalize job
   finalize:
     name: Finalize release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [ prepare, release, deploy ]
     steps:
 
