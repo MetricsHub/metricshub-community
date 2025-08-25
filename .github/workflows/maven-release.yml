@@ -179,7 +179,7 @@ jobs:
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
     - name: Upload Maven Site to GitHub Pages
-      uses: actions/upload-pages-artifact@v3
+      uses: actions/upload-pages-artifact@v4
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
         path: ./metricshub-doc/target/site
