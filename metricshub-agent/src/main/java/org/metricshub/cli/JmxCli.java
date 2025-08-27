@@ -297,7 +297,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 			displayQuery();
 
 			// Execute the JMX query
-			final String result = extension.executeQuery(configuration, getQuery());
+			final String result = extension.executeQuery(configuration, getQuery(), null);
 
 			// display the returned result
 			displayResult(result);

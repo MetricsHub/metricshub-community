@@ -529,7 +529,7 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.namespace(WINRM_TEST_NAMESPACE)
 			.build();
-		final String result = winRmExtension.executeQuery(configuration, queryNode);
+		final String result = winRmExtension.executeQuery(configuration, queryNode, null);
 		final String expectedResult = TextTableHelper.generateTextTable(
 			StringHelper.extractColumns(WQL),
 			WQL_SUCCESS_RESPONSE
@@ -555,6 +555,6 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.namespace(WINRM_TEST_NAMESPACE)
 			.build();
-		assertThrows(ClientException.class, () -> winRmExtension.executeQuery(configuration, queryNode));
+		assertThrows(ClientException.class, () -> winRmExtension.executeQuery(configuration, queryNode, null));
 	}
 }

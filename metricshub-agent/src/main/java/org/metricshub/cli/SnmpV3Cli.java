@@ -22,6 +22,7 @@ package org.metricshub.cli;
  */
 
 import static org.metricshub.cli.service.protocol.SnmpConfigCli.DEFAULT_TIMEOUT;
+import static org.metricshub.cli.util.SnmpCliHelper.saveSnmpResultToFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -233,6 +234,15 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 	@Option(names = "-v", order = 16, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
+	@Option(
+		names = { "-rec", "--record" },
+		order = 17,
+		defaultValue = "",
+		description = "Enables/disables recording of SNMP query result",
+		help = true
+	)
+	String snmpResultRecordPath;
+
 	PrintWriter printWriter;
 
 	@Override
@@ -375,9 +385,12 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 
 					// display the request
 					final JsonNode queryNode = getQuery();
-					displayQuery(queryNode.get("action").asText(), queryNode.get("oid").asText());
 					// Execute the SNMPv3 query
-					final String result = extension.executeQuery(configuration, queryNode);
+					final String result = extension.executeQuery(configuration, queryNode, null);
+					// Save the snmp result to a file if the filename is provided when the record option is enabled
+					if (snmpResultRecordPath != null && !snmpResultRecordPath.isBlank()) {
+						saveSnmpResultToFile(result, snmpResultRecordPath + "out.walk", printWriter);
+					}
 					// display the result
 					displayResult(result);
 				} catch (Exception e) {
@@ -385,18 +398,6 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 				}
 			});
 		return CommandLine.ExitCode.OK;
-	}
-
-	/**
-	 * Prints query details.
-	 *
-	 * @param action the action being performed, such as "GET" or "GETNEXT".
-	 * @param oid the Object Identifier being queried.
-	 */
-	void displayQuery(final String action, final String oid) {
-		printWriter.println(String.format("Hostname %s - Executing SNMPv3 %s query:", hostname, action));
-		printWriter.println(Ansi.ansi().a("OID: ").fgBrightBlack().a(oid).reset().toString());
-		printWriter.flush();
 	}
 
 	/**

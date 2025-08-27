@@ -72,6 +72,10 @@ public class TelemetryManager {
 	private HostConfiguration hostConfiguration;
 	private ConnectorStore connectorStore;
 	private Long strategyTime;
+	private boolean isEmulationMode;
+	private String emulationModeSourceOutputDirectory;
+	private String emulationModeSnmpInputDirectory;
+	private boolean isCalledFromMetricsHubCli;
 
 	/**
 	 * Executes the given {@link IStrategy} instances.

@@ -199,7 +199,7 @@ class JmxExtensionTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> jmxExtension.executeQuery(configuration, jsonNode),
+			() -> jmxExtension.executeQuery(configuration, jsonNode, null),
 			"Should throw for missing objectName"
 		);
 	}
@@ -226,7 +226,7 @@ class JmxExtensionTest {
 		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList())).thenReturn(rows);
 
 		// Run executeQuery
-		final String table = jmxExtension.executeQuery(config, query);
+		final String table = jmxExtension.executeQuery(config, query, null);
 
 		assertNotNull(table, "Table output should not be null");
 		assertTrue(

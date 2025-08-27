@@ -106,7 +106,8 @@ public class SnmpTableSourceProcessor {
 				selectedColumnArray,
 				snmpConfiguration,
 				hostname,
-				true
+				true,
+				telemetryManager.getEmulationModeSnmpInputDirectory()
 			);
 
 			sourceTable.setHeaders(Arrays.asList(selectedColumnArray));

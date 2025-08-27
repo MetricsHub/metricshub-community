@@ -515,7 +515,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 					displayRequest();
 
 					// Execute the HTTP query
-					final String result = extension.executeQuery(configuration, getQuery());
+					final String result = extension.executeQuery(configuration, getQuery(), null);
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {

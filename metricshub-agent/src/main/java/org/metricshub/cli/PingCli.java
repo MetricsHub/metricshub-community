@@ -176,7 +176,7 @@ public class PingCli implements IQuery, Callable<Integer> {
 					displayQuery();
 					// Execute ICMP Ping query and calculate response time
 					final long startTime = System.currentTimeMillis();
-					final String result = extension.executeQuery(configuration, getQuery());
+					final String result = extension.executeQuery(configuration, getQuery(), null);
 					final long responseTime = (System.currentTimeMillis() - startTime);
 					// display the returned result
 					displayResult(result, responseTime);

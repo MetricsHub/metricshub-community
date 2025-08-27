@@ -528,7 +528,7 @@ class WmiExtensionTest {
 			.timeout(120L)
 			.namespace(WMI_TEST_NAMESPACE)
 			.build();
-		final String result = wmiExtension.executeQuery(configuration, queryNode);
+		final String result = wmiExtension.executeQuery(configuration, queryNode, null);
 		final String expectedResult = TextTableHelper.generateTextTable(
 			StringHelper.extractColumns(WQL),
 			EXECUTE_WMI_RESULT
@@ -554,6 +554,6 @@ class WmiExtensionTest {
 			.timeout(120L)
 			.namespace(WMI_TEST_NAMESPACE)
 			.build();
-		assertThrows(ClientException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
+		assertThrows(ClientException.class, () -> wmiExtension.executeQuery(configuration, queryNode, null));
 	}
 }

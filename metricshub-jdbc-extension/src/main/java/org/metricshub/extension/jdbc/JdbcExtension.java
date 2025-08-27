@@ -213,7 +213,11 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
+	public String executeQuery(
+		final IConfiguration configuration,
+		final JsonNode queryNode,
+		final String emulationInputPath
+	) throws Exception {
 		final String hostname = configuration.getHostname();
 		final String sqlQuery = queryNode.get("query").asText();
 		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) configuration;
