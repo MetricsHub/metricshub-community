@@ -239,7 +239,11 @@ public class WbemExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
+	public String executeQuery(
+		final IConfiguration configuration,
+		final JsonNode queryNode,
+		final String emulationInputFilePath
+	) throws Exception {
 		final WbemConfiguration wbemConfiguration = (WbemConfiguration) configuration;
 		final String query = queryNode.get("query").asText();
 		// execute Wbem query

@@ -379,7 +379,7 @@ class IpmiExtensionTest {
 			.skipAuth(false)
 			.bmcKey(BMC_KEY)
 			.build();
-		assertEquals(message, ipmiExtension.executeQuery(ipmiConfiguration, null));
+		assertEquals(message, ipmiExtension.executeQuery(ipmiConfiguration, null, null));
 	}
 
 	@Test
@@ -397,6 +397,6 @@ class IpmiExtensionTest {
 			.skipAuth(false)
 			.bmcKey(BMC_KEY)
 			.build();
-		assertThrows(Exception.class, () -> ipmiExtension.executeQuery(ipmiConfiguration, null));
+		assertThrows(Exception.class, () -> ipmiExtension.executeQuery(ipmiConfiguration, null, null));
 	}
 }

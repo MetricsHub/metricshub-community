@@ -197,13 +197,13 @@ class PingExtensionTest {
 	void testExecuteQuery() throws Exception {
 		doReturn(Boolean.TRUE).when(pingRequestExecutorMock).ping(anyString(), anyInt());
 		PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).timeout(5L).build();
-		assertTrue(Boolean.valueOf(pingExtension.executeQuery(pingConfiguration, null)));
+		assertTrue(Boolean.valueOf(pingExtension.executeQuery(pingConfiguration, null, null)));
 	}
 
 	@Test
 	void testExecuteQueryExecuteThrowsException() throws UnknownHostException {
 		doThrow(UnknownHostException.class).when(pingRequestExecutorMock).ping(anyString(), anyInt());
 		PingConfiguration pingConfiguration = PingConfiguration.builder().hostname(HOST_NAME).timeout(5L).build();
-		assertThrows(UnknownHostException.class, () -> pingExtension.executeQuery(pingConfiguration, null));
+		assertThrows(UnknownHostException.class, () -> pingExtension.executeQuery(pingConfiguration, null, null));
 	}
 }

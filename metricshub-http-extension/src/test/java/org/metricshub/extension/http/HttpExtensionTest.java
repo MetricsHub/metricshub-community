@@ -568,7 +568,7 @@ class HttpExtensionTest {
 			.when(httpRequestExecutorMock)
 			.executeHttp(eq(httpRequest), anyBoolean(), any(TelemetryManager.class));
 
-		final String result = httpExtension.executeQuery(httpConfiguration, httpQueryConfiguration);
+		final String result = httpExtension.executeQuery(httpConfiguration, httpQueryConfiguration, null);
 		assertEquals(HTTP_SUCCESSFUL_RESPONSE, result);
 	}
 }

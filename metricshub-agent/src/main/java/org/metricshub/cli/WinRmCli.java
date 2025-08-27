@@ -312,7 +312,7 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 					// display the request
 					displayQuery();
 					// Execute the WinRm query
-					final String result = extension.executeQuery(configuration, getQuery());
+					final String result = extension.executeQuery(configuration, getQuery(), null);
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {

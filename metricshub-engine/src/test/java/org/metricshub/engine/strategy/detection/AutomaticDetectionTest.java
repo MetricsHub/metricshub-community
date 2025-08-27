@@ -117,6 +117,9 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
+			false,
+			"",
+			"",
 			false
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
@@ -180,6 +183,9 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
+			false,
+			"",
+			"",
 			false
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
@@ -243,6 +249,9 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
+			false,
+			"",
+			"",
 			false
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
@@ -306,6 +315,9 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
+			false,
+			"",
+			"",
 			false
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
@@ -369,6 +381,9 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
+			false,
+			"",
+			"",
 			false
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);

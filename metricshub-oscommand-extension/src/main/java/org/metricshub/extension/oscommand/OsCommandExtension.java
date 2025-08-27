@@ -308,7 +308,11 @@ public class OsCommandExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
+	public String executeQuery(
+		final IConfiguration configuration,
+		final JsonNode queryNode,
+		final String emulationInputFilePath
+	) throws Exception {
 		final String commandLine = queryNode.get("commandLine").asText();
 		final SshConfiguration sshConfiguration = (SshConfiguration) configuration;
 		final String hostname = configuration.getHostname();

@@ -117,7 +117,15 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 
 		// Execute SNMP test command
 		try {
-			result = getRequestExecutor().executeSNMPGetNext(SNMP_OID, configuration, hostname, true);
+			result =
+				getRequestExecutor()
+					.executeSNMPGetNext(
+						SNMP_OID,
+						configuration,
+						hostname,
+						true,
+						telemetryManager.getEmulationModeSnmpInputDirectory()
+					);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking SNMP protocol status. SNMP exception when performing a SNMP Get Next query on {}: ",
@@ -141,6 +149,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 			return new SnmpGetSourceProcessor(getRequestExecutor(), configurationRetriever)
 				.process(snmpGetSource, connectorId, telemetryManager);
 		}
+
 		throw new IllegalArgumentException(
 			String.format(
 				"Hostname %s - Cannot process source %s.",
@@ -186,7 +195,11 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) {
+	public String executeQuery(
+		final IConfiguration configuration,
+		final JsonNode queryNode,
+		final String emulationInputFilePath
+	) {
 		final ISnmpConfiguration snmpConfiguration = (ISnmpConfiguration) configuration;
 		final String hostname = configuration.getHostname();
 		String result = "Failed Executing SNMP query";
@@ -197,13 +210,13 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			switch (action) {
 				case GET:
-					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false);
+					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
 					break;
 				case GET_NEXT:
-					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false);
+					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
 					break;
 				case WALK:
-					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false);
+					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
 					break;
 				case TABLE:
 					final String[] columns = new ObjectMapper().convertValue(queryNode.get("columns"), String[].class);
@@ -212,7 +225,8 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 						columns,
 						snmpConfiguration,
 						hostname,
-						false
+						false,
+						emulationInputFilePath
 					);
 					result = TextTableHelper.generateTextTable(columns, resultList);
 					break;

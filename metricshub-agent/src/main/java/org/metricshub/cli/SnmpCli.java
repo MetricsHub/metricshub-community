@@ -22,6 +22,7 @@ package org.metricshub.cli;
  */
 
 import static org.metricshub.cli.service.protocol.SnmpConfigCli.DEFAULT_TIMEOUT;
+import static org.metricshub.cli.util.SnmpCliHelper.saveSnmpResultToFile;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -170,6 +171,15 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 	@Option(names = "-v", order = 12, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
+	@Option(
+		names = { "-rec", "--record" },
+		order = 13,
+		defaultValue = "",
+		description = "Enables/disables recording of SNMP query result",
+		help = true
+	)
+	String snmpResultRecordPath;
+
 	PrintWriter printWriter;
 
 	@Override
@@ -304,9 +314,18 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 
 					// display the request
 					final JsonNode queryNode = getQuery();
-					displayQuery(queryNode.get("action").asText(), queryNode.get("oid").asText());
 					// Execute the SNMP query
-					final String result = extension.executeQuery(configuration, queryNode);
+					String result = extension.executeQuery(configuration, queryNode, snmpResultRecordPath);
+					// Save the snmp result to a file if the filename is provided
+					// CHECKSTYLE:OFF
+					if (
+						"WALK".equalsIgnoreCase(queryNode.get("action").asText()) &&
+						snmpResultRecordPath != null &&
+						!snmpResultRecordPath.isBlank()
+					) {
+						saveSnmpResultToFile(result, snmpResultRecordPath, printWriter);
+					}
+					// CHECKSTYLE:ON
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {
@@ -314,18 +333,6 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 				}
 			});
 		return CommandLine.ExitCode.OK;
-	}
-
-	/**
-	 * Prints query details.
-	 *
-	 * @param action the action being performed, such as "GET" or "GETNEXT".
-	 * @param oid the Object Identifier being queried.
-	 */
-	void displayQuery(final String action, final String oid) {
-		printWriter.println(String.format("Hostname %s - Executing SNMP %s query:", hostname, action));
-		printWriter.println(Ansi.ansi().a("OID: ").fgBrightBlack().a(oid).reset().toString());
-		printWriter.flush();
 	}
 
 	/**

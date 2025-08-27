@@ -287,11 +287,11 @@ public class MetricsHubCliService implements Callable<Integer> {
 	@Option(
 		names = { "-rec", "--record" },
 		order = 14,
-		defaultValue = "false",
+		defaultValue = "",
 		description = "Enables/disables recording of sources execution results",
 		help = true
 	)
-	boolean isRecordEnabled;
+	String sourceResultRecordPath;
 
 	@Override
 	public Integer call() throws Exception {
@@ -356,12 +356,16 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Add the connectors with variables connectors to the host.
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
+		boolean isEmulationModeEnabled = !sourceResultRecordPath.isBlank();
+
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
-			.isEmulationMode(isRecordEnabled)
+			.isEmulationMode(isEmulationModeEnabled)
+			.emulationModeSourceOutputDirectory(isEmulationModeEnabled ? sourceResultRecordPath : "")
+			.isCalledFromMetricsHubCli(true)
 			.build();
 
 		// Instantiate a new ClientsExecutor

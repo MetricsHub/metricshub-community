@@ -165,7 +165,11 @@ public class PingExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
+	public String executeQuery(
+		final IConfiguration configuration,
+		final JsonNode queryfinal,
+		final String emulationInputFilePath
+	) throws Exception {
 		final PingConfiguration pingConfiguration = (PingConfiguration) configuration;
 		return String.valueOf(
 			pingRequestExecutor.ping(pingConfiguration.getHostname(), (int) pingConfiguration.getTimeout().longValue() * 1000)

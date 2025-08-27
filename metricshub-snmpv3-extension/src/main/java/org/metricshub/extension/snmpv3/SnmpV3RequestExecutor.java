@@ -34,7 +34,12 @@ import org.metricshub.snmp.client.SnmpClient;
 public class SnmpV3RequestExecutor extends AbstractSnmpRequestExecutor {
 
 	@Override
-	protected SnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname) throws IOException {
+	protected SnmpClient createSnmpClient(
+		ISnmpConfiguration protocol,
+		String hostname,
+		String emulationInputFilePath,
+		String action
+	) throws IOException {
 		final SnmpV3Configuration snmpConfig = (SnmpV3Configuration) protocol;
 		final String password = Optional.ofNullable(snmpConfig.getPassword()).map(String::valueOf).orElse(null);
 		final String privacyPassword = Optional

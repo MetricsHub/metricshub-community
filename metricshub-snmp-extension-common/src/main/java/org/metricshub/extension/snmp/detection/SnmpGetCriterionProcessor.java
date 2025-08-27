@@ -96,7 +96,8 @@ public class SnmpGetCriterionProcessor {
 				snmpGetCriterion.getOid(),
 				snmpConfiguration,
 				hostname,
-				false
+				false,
+				telemetryManager.getEmulationModeSnmpInputDirectory()
 			);
 
 			final CriterionTestResult criterionTestResult = checkSNMPGetResult(
