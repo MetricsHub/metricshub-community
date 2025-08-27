@@ -125,6 +125,16 @@ class ConfigHelperTest {
 
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
+	void testFindUserGroup_onWindows() {
+		String group = ConfigHelper.findUserGroup();
+
+		// Assert we got a group name
+		assertNotNull(group, "The Users group should be found on Windows");
+		assertFalse(group.isBlank(), "The Users group name should not be blank");
+	}
+
+	@Test
+	@EnabledOnOs(OS.WINDOWS)
 	void testGenerateDefaultConfigFileWithWritePermissions() throws IOException {
 		try (final MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class)) {
 			// Build a config directory

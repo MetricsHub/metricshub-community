@@ -149,4 +149,9 @@ public class AgentConstants {
 	 * Jackson Databind ObjectMapper
 	 */
 	public static final ObjectMapper OBJECT_MAPPER = ConfigHelper.newObjectMapper();
+
+	/**
+	 * Prefix for API keys stored in the KeyStore.
+	 */
+	public static final String API_KEY_PREFIX = "api_key:";
 }

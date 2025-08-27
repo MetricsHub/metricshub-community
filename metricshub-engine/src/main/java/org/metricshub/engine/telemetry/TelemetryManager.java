@@ -39,6 +39,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +60,7 @@ import org.metricshub.engine.strategy.IStrategy;
 @AllArgsConstructor
 @NoArgsConstructor
 @Slf4j
+@EqualsAndHashCode
 public class TelemetryManager {
 
 	@Default

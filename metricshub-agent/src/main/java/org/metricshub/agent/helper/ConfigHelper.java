@@ -33,8 +33,10 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -379,6 +381,46 @@ public class ConfigHelper {
 	}
 
 	/**
+	 * Finds the Windows "Users" group name for the current user by executing
+	 * the {@code whoami /groups} command and searching for the well-known
+	 * SID {@code S-1-5-32-545}.
+	 *
+	 * @return the localized "Users" group name if found, or {@code null} if not found or on error
+	 */
+	static String findUserGroup() {
+		Process process = null;
+		try {
+			// Run the Windows "whoami /groups" command
+			process = Runtime.getRuntime().exec("whoami /groups");
+
+			try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+				// Filter for the "Users" group SID and extract the group name
+				String group = reader
+					.lines()
+					.filter(line -> line.contains("S-1-5-32-545")) // SID for "Users"
+					.map(line -> line.split("\\s+")[0]) // extract localized group name
+					.findFirst()
+					.orElse(null);
+
+				process.waitFor();
+				return group;
+			}
+		} catch (IOException e) {
+			log.error("Failed to execute 'whoami /groups' command", e);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt(); // restore interrupted status
+			log.error("Process was interrupted while waiting for completion", e);
+		} catch (Exception e) {
+			log.error("Unexpected error while finding user group", e);
+		} finally {
+			if (process != null) {
+				process.destroy();
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Set write permission for this configuration file identified by its path.
 	 *
 	 * @param configPath the configuration file absolute path
@@ -388,7 +430,7 @@ public class ConfigHelper {
 			final GroupPrincipal users = configPath
 				.getFileSystem()
 				.getUserPrincipalLookupService()
-				.lookupPrincipalByGroupName("Users");
+				.lookupPrincipalByGroupName(findUserGroup());
 
 			// get view
 			final AclFileAttributeView view = Files.getFileAttributeView(configPath, AclFileAttributeView.class);

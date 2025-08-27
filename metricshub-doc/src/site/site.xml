@@ -8,7 +8,7 @@
 	</skin>
 
 	<bannerLeft>
-		<name>MetricsHub</name>
+		<name>MetricsHub&reg;</name>
 		<src>images/metricshub-logo.png</src>
 		<href>https://metricshub.com</href>
 		<alt>MetricsHub Official Website</alt>
@@ -21,6 +21,11 @@
 		<keywords>monitoring, observability, opentelemetry, otel</keywords>
 
 		<social>
+			<custom>
+				<title>Contribute on GitHub</title>
+				<href>https://github.com/metricshub</href>
+				<icon>fa-brands fa-github</icon>
+			</custom>
 			<linkedin>metricshub</linkedin>
 			<custom>
 				<title>Join us on Slack!</title>
@@ -61,14 +66,11 @@
 	<body>
 
 		<links>
-			<item name="Open MetricsHub" href="https://metricshub.org" />
-			<item name="&lt;i class='fa-brands fa-github'&gt;&lt;/i&gt; GitHub" href="https://github.com/metricshub/metricshub-community" />
-			<item name="OpenTelemetry" href="https://opentelemetry.io" />
+			<item name="MetricsHub" href="https://metricshub.com" />
+			<item name="Pricing" href="https://metricshub.com/pricing" />
+			<item name="Download" href="https://metricshub.com/download" />
+			<item name="Support Desk" href="https://support.metricshub.com" />
 		</links>
-
-		<breadcrumbs>
-			<item name="MetricsHub&lt;sup&gt;&reg;&lt;/sup&gt;" href="https://metricshub.com" />
-		</breadcrumbs>
 
 		<menu name="Introduction">
 			<item name="Overview" href="index.html" />
@@ -93,10 +95,11 @@
 			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
 			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
 			<item name="Password Encryption" href="security/passwords.html" />
+			<item name="API Keys" href="security/api-keys.html" />
 		</menu>
 
 		<menu name="Integrations">
-			<item name="AI Agents (MCP)" href="integrations/ai-agent-mcp.html" />
+			<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />
 			<item name="BMC Helix" href="integrations/bmc-helix.html" />
 			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">

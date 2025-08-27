@@ -21,17 +21,11 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.metricshub.web.mcp.HttpProtocolCheckService;
-import org.metricshub.web.mcp.IpmiProtocolCheckService;
-import org.metricshub.web.mcp.JdbcProtocolCheckService;
-import org.metricshub.web.mcp.JmxProtocolCheckService;
+import org.metricshub.web.mcp.ListConnectorsService;
+import org.metricshub.web.mcp.ListResourcesService;
 import org.metricshub.web.mcp.PingToolService;
-import org.metricshub.web.mcp.SnmpProtocolCheckService;
-import org.metricshub.web.mcp.SnmpV3ProtocolCheckService;
-import org.metricshub.web.mcp.SshProtocolCheckService;
-import org.metricshub.web.mcp.WbemProtocolCheckService;
-import org.metricshub.web.mcp.WinrmProtocolCheckService;
-import org.metricshub.web.mcp.WmiProtocolCheckService;
+import org.metricshub.web.mcp.ProtocolCheckService;
+import org.metricshub.web.mcp.TroubleshootHostService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.ai.tool.method.MethodToolCallbackProvider;
@@ -48,47 +42,29 @@ public class ToolCallbackConfiguration {
 	 * Registers a {@link ToolCallbackProvider} that exposes all protocol-specific services
 	 * and the {@link PingToolService} for use with AI tools or external integrations.
 	 *
-	 * @param pingToolService the service handling ICMP ping checks
-	 * @param httpProtocolCheckService the service for checking HTTP protocol availability
-	 * @param ipmiProtocolCheckService the service for checking IPMI protocol availability
-	 * @param jdbcProtocolCheckService the service for checking JDBC protocol availability
-	 * @param jmxProtocolCheckService the service for checking JMX protocol availability
-	 * @param snmpProtocolCheckService the service for checking SNMP protocol availability
-	 * @param snmpV3ProtocolCheckService the service for checking SNMPv3 protocol availability
-	 * @param sshProtocolCheckService the service for checking SSH protocol availability
-	 * @param wbemProtocolCheckService the service for checking WBEM protocol availability
-	 * @param winrmProtocolCheckService the service for checking WinRM protocol availability
-	 * @param wmiProtocolCheckService the service for checking WMI protocol availability
+	 * @param pingToolService            the service handling ICMP ping checks
+	 * @param protocolCheckService       the service for checking protocol availability
+	 * @param listResourcesService       the service that returns all the configured hosts
+	 * @param troubleshootHostService    the service to trigger resource detection
+	 * @param listConnectorsService      the service that lists all connectors supported by MetricsHub
 	 * @return a {@link ToolCallbackProvider} exposing all registered protocol services as tools
 	 */
 	@Bean
 	public ToolCallbackProvider metricshubTools(
 		final PingToolService pingToolService,
-		final HttpProtocolCheckService httpProtocolCheckService,
-		final IpmiProtocolCheckService ipmiProtocolCheckService,
-		final JdbcProtocolCheckService jdbcProtocolCheckService,
-		final JmxProtocolCheckService jmxProtocolCheckService,
-		final SnmpProtocolCheckService snmpProtocolCheckService,
-		final SnmpV3ProtocolCheckService snmpV3ProtocolCheckService,
-		final SshProtocolCheckService sshProtocolCheckService,
-		final WbemProtocolCheckService wbemProtocolCheckService,
-		final WinrmProtocolCheckService winrmProtocolCheckService,
-		final WmiProtocolCheckService wmiProtocolCheckService
+		final ProtocolCheckService protocolCheckService,
+		final ListResourcesService listResourcesService,
+		final TroubleshootHostService troubleshootHostService,
+		final ListConnectorsService listConnectorsService
 	) {
 		return MethodToolCallbackProvider
 			.builder()
 			.toolObjects(
 				pingToolService,
-				httpProtocolCheckService,
-				ipmiProtocolCheckService,
-				jdbcProtocolCheckService,
-				jmxProtocolCheckService,
-				snmpProtocolCheckService,
-				snmpV3ProtocolCheckService,
-				sshProtocolCheckService,
-				wbemProtocolCheckService,
-				winrmProtocolCheckService,
-				wmiProtocolCheckService
+				protocolCheckService,
+				listResourcesService,
+				troubleshootHostService,
+				listConnectorsService
 			)
 			.build();
 	}

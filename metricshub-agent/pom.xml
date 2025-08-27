@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.06-SNAPSHOT</version>
+		<version>1.0.08-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -101,7 +101,11 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+			<version>3.4.5</version>
+		</dependency>
 		<!-- Test -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
@@ -347,7 +351,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.51</minimum>
+											<minimum>0.54</minimum>
 										</limit>
 									</limits>
 								</rule>
