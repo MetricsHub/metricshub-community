@@ -38,11 +38,11 @@ public class SnmpCliHelper {
 	 * @param filename the name of the file to save the result to
 	 * @param out the PrintWriter to print messages to the console
 	 */
-	public static void saveSnmpResultToFile(String result, String filename, PrintWriter out) {
-		Path outPath = Paths.get(filename);
+	public static void saveSnmpResultToFile(final String result, final String filename, final PrintWriter out) {
+		final Path outPath = Paths.get(filename);
 		try {
 			// Ensure parent directory exists
-			Path parentDir = outPath.getParent();
+			final Path parentDir = outPath.getParent();
 			if (parentDir != null && Files.notExists(parentDir)) {
 				Files.createDirectories(parentDir);
 			}

@@ -21,8 +21,6 @@ package org.metricshub.extension.snmp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.extension.snmp.AbstractSnmpExtension.WALK;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import org.metricshub.snmp.client.ISnmpClient;
@@ -36,31 +34,11 @@ import org.metricshub.snmp.client.SnmpClient;
 public class SnmpRequestExecutor extends AbstractSnmpRequestExecutor {
 
 	@Override
-	protected ISnmpClient createSnmpClient(
-		ISnmpConfiguration protocol,
-		String hostname,
-		String emulationInputFilePath,
-		String action
-	) throws IOException {
+	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname, String emulationInputFilePath)
+		throws IOException {
 		final SnmpConfiguration snmpConfig = (SnmpConfiguration) protocol;
 
-		if (WALK.equalsIgnoreCase(action)) {
-			return new SnmpClient(
-				hostname,
-				snmpConfig.getPort(),
-				snmpConfig.getIntVersion(),
-				snmpConfig.getRetryIntervals(),
-				String.valueOf(snmpConfig.getCommunity()),
-				null,
-				null,
-				null,
-				null,
-				null,
-				null,
-				null
-			);
-		}
-
+		// If an emulation input file path is provided, use the OfflineSnmpFileClient for testing purposes.
 		if (emulationInputFilePath != null && !emulationInputFilePath.isBlank()) {
 			return new OfflineSnmpFileClient(Path.of(emulationInputFilePath));
 		}

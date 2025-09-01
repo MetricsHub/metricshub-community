@@ -356,7 +356,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Add the connectors with variables connectors to the host.
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
-		boolean isEmulationModeEnabled = !sourceResultRecordPath.isBlank();
+		boolean isEmulationModeEnabled = sourceResultRecordPath != null && !sourceResultRecordPath.isBlank();
 
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager

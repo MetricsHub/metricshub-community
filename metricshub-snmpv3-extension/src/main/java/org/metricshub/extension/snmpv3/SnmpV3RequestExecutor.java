@@ -22,9 +22,12 @@ package org.metricshub.extension.snmpv3;
  */
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 import org.metricshub.extension.snmp.AbstractSnmpRequestExecutor;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
+import org.metricshub.snmp.client.ISnmpClient;
+import org.metricshub.snmp.client.OfflineSnmpFileClient;
 import org.metricshub.snmp.client.SnmpClient;
 
 /**
@@ -34,12 +37,13 @@ import org.metricshub.snmp.client.SnmpClient;
 public class SnmpV3RequestExecutor extends AbstractSnmpRequestExecutor {
 
 	@Override
-	protected SnmpClient createSnmpClient(
-		ISnmpConfiguration protocol,
-		String hostname,
-		String emulationInputFilePath,
-		String action
-	) throws IOException {
+	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname, String emulationInputFilePath)
+		throws IOException {
+		// If an emulation input file path is provided, use the OfflineSnmpFileClient for testing purposes.
+		if (emulationInputFilePath != null && !emulationInputFilePath.isBlank()) {
+			return new OfflineSnmpFileClient(Path.of(emulationInputFilePath));
+		}
+
 		final SnmpV3Configuration snmpConfig = (SnmpV3Configuration) protocol;
 		final String password = Optional.ofNullable(snmpConfig.getPassword()).map(String::valueOf).orElse(null);
 		final String privacyPassword = Optional
