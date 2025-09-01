@@ -149,6 +149,13 @@ public class SourceProcessor implements ISourceProcessor {
 		return processSourceThroughExtension(httpSource);
 	}
 
+	/**
+	 * Returns the emulation mode source output directory.
+	 * Tries to read the source_emulation_path from the connector
+	 * variables. If not found, falls back to the default directory from {@link TelemetryManager}.
+	 *
+	 * @return the emulation mode source output directory path
+	 */
 	private String getEmulationModeSourceOutputDirectory() {
 		final Map<String, ConnectorVariables> allConnectorsVariables = telemetryManager
 			.getHostConfiguration()
@@ -221,8 +228,8 @@ public class SourceProcessor implements ISourceProcessor {
 		try {
 			Files.createDirectories(sourceResultOutputDirectory);
 
-			String cleanKey = source.getKey().replaceAll("[\\{\\}$$:/\\\\]", "-");
-			Path file = sourceResultOutputDirectory.resolve(connectorId + cleanKey + ".csv"); // keep extension if you wish
+			final String cleanKey = source.getKey().replaceAll("[\\{\\}$$:/\\\\]", "-");
+			final Path file = sourceResultOutputDirectory.resolve(connectorId + cleanKey + ".csv"); // keep extension if you wish
 
 			try (
 				BufferedWriter out = Files.newBufferedWriter(
@@ -249,6 +256,7 @@ public class SourceProcessor implements ISourceProcessor {
 	 *
 	 * @param connectorId The identifier of the connector defining the source.
 	 * @param source      The source for which to read the {@link SourceTable}.
+	 * @param emulationModeSourceOutputDirectory Source emulation input files directory
 	 * @return An {@link Optional} containing the {@link SourceTable} if it exists, or empty if not found.
 	 */
 	private Optional<SourceTable> readEmulatedSourceTable(
@@ -256,17 +264,17 @@ public class SourceProcessor implements ISourceProcessor {
 		Source source,
 		String emulationModeSourceOutputDirectory
 	) {
-		Path outDir = Paths.get(emulationModeSourceOutputDirectory);
+		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
 		// Keep the same cleaning as persist()
-		String cleanKey = source.getKey().replaceAll("[\\{\\}\\$\\$:/\\\\]", "-");
-		Path file = outDir.resolve(connectorId + cleanKey + ".csv"); // content is YAML
+		final String cleanKey = source.getKey().replaceAll("[\\{\\}\\$\\$:/\\\\]", "-");
+		final Path file = outDir.resolve(connectorId + cleanKey + ".csv"); // content is YAML
 
 		if (!Files.exists(file)) {
 			throw new IllegalStateException("The path " + emulationModeSourceOutputDirectory + " does not exist!");
 		}
 
 		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-			SourceTable table = YAML_MAPPER.readValue(in, SourceTable.class);
+			final SourceTable table = YAML_MAPPER.readValue(in, SourceTable.class);
 			return Optional.of(table);
 		} catch (IOException e) {
 			log.warn("Could not read SourceTable from {}", file, e);
@@ -285,14 +293,17 @@ public class SourceProcessor implements ISourceProcessor {
 		if (cell == null) {
 			return "";
 		}
-		String s = cell.toString();
+		String cellValue = cell.toString();
 		final boolean mustQuote =
-			s.indexOf(';') >= 0 || s.indexOf('"') >= 0 || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0;
+			cellValue.indexOf(';') >= 0 ||
+			cellValue.indexOf('"') >= 0 ||
+			cellValue.indexOf('\n') >= 0 ||
+			cellValue.indexOf('\r') >= 0;
 		if (mustQuote) {
-			s = s.replace("\"", "\"\"");
-			return '"' + s + '"';
+			cellValue = cellValue.replace("\"", "\"\"");
+			return '"' + cellValue + '"';
 		}
-		return s;
+		return cellValue;
 	}
 
 	/**
