@@ -122,14 +122,13 @@ public class ConfigHelper {
 	 * @return {@link Path} instance
 	 */
 	public static Path getDefaultOutputDirectory() {
+		var subDirectory = getSubDirectory(LOG_DIRECTORY_NAME, true);
 		if (LocalOsHandler.isWindows()) {
 			try {
-				Path cwdLogs = Paths.get(LOG_DIRECTORY_NAME).toAbsolutePath();
-				Path created = createDirectories(cwdLogs);
-				if (Files.isWritable(created)) {
-					return created;
+				if (Files.isWritable(subDirectory)) {
+					return subDirectory;
 				}
-			} catch (IllegalStateException | SecurityException ignored) {}
+			} catch (Exception ignored) {}
 
 			final String localAppDataPath = System.getenv("LOCALAPPDATA");
 
@@ -139,7 +138,7 @@ public class ConfigHelper {
 			}
 		}
 
-		return getSubDirectory(LOG_DIRECTORY_NAME, true);
+		return subDirectory;
 	}
 
 	/**
