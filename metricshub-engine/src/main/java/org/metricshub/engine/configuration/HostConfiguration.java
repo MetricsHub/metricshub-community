@@ -57,6 +57,8 @@ public class HostConfiguration {
 	private DeviceKind hostType;
 	private boolean resolveHostnameToFqdn;
 
+	private Map<String, String> attributes;
+
 	@Default
 	private long strategyTimeout = DEFAULT_JOB_TIMEOUT;
 
@@ -168,6 +170,7 @@ public class HostConfiguration {
 			.connectorVariables(connectorVariables != null ? new HashMap<>(connectorVariables) : null)
 			.configurations(configurations != null ? new HashMap<>(configurations) : null)
 			.configuredConnectorId(configuredConnectorId)
+			.attributes(attributes != null ? new HashMap<>(attributes) : null)
 			.build();
 	}
 }
