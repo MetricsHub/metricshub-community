@@ -56,7 +56,6 @@ public class HostConfiguration {
 	private String hostId;
 	private DeviceKind hostType;
 	private boolean resolveHostnameToFqdn;
-
 	private Map<String, String> attributes;
 
 	@Default
