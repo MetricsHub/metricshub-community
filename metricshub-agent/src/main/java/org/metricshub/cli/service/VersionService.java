@@ -24,8 +24,10 @@ package org.metricshub.cli.service;
 import static org.metricshub.agent.helper.AgentConstants.APPLICATION_YAML_FILE_NAME;
 import static org.metricshub.agent.helper.AgentConstants.OBJECT_MAPPER;
 
+import java.nio.file.Path;
 import org.metricshub.agent.context.ApplicationProperties;
 import org.metricshub.agent.context.ApplicationProperties.Project;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.springframework.core.io.ClassPathResource;
 import picocli.CommandLine.IVersionProvider;
@@ -58,6 +60,8 @@ public class VersionService implements IVersionProvider {
 		final String buildNumber = applicationProperties.buildNumber();
 		final String buildDate = applicationProperties.buildDate();
 		final String ccVersion = applicationProperties.ccVersion();
+		final Path configDir = ConfigHelper.getDefaultConfigDirectoryPath().toAbsolutePath();
+		final Path logsDir = ConfigHelper.getDefaultOutputDirectory().toAbsolutePath();
 
 		return new String[] {
 			" __  __          _            _                _    _           _      ®  ",
@@ -71,6 +75,8 @@ public class VersionService implements IVersionProvider {
 			String.format("@|bold %s|@ version @|bold,magenta %s|@", projectName, projectVersion),
 			String.format("@|faint - Build Number:|@ @|magenta %s (on %s)|@", buildNumber, buildDate),
 			String.format("- Community Connector Library version @|green,bold %s|@", ccVersion),
+			String.format("- Default config directory:   @|magenta %s|@", configDir),
+			String.format("- Default logs directory:     @|magenta %s|@", logsDir),
 			"",
 			"Java version @|magenta,bold ${java.version}|@ @|faint (${java.vendor} ${java.vm.name} ${java.vm.version})|@",
 			"@|faint - Java Home:|@ @|magenta ${java.home}|@",
