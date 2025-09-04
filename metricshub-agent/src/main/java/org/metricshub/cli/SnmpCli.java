@@ -181,15 +181,6 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 	)
 	boolean record;
 
-	@Option(
-			names = { "-e", "--emulate" },
-			order = 15,
-			defaultValue = "",
-			description = "Enables/disables reading the recorded sources execution results",
-			help = true
-	)
-	String emulate;
-
 	PrintWriter printWriter;
 
 	@Override
@@ -330,10 +321,9 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 					// CHECKSTYLE:OFF
 					if (
 						"WALK".equalsIgnoreCase(queryNode.get("action").asText()) &&
-						record &&
-						(emulate == null || emulate.isBlank())
+						record
 					) {
-						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory().toString(), printWriter);
+						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter);
 					}
 					// CHECKSTYLE:ON
 					// display the returned result

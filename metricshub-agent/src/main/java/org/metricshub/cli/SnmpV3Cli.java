@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import lombok.Data;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.cli.service.CliExtensionManager;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
@@ -235,13 +236,14 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 	boolean[] verbose;
 
 	@Option(
-		names = { "-rec", "--record" },
-		order = 17,
-		defaultValue = "",
-		description = "Enables/disables recording of SNMP query result",
-		help = true
+			names = { "-rec", "--record" },
+			order = 17,
+			defaultValue = "false",
+			description = "Enables/disables recording of sources execution results",
+			help = true
 	)
-	String snmpResultRecordPath;
+	boolean record;
+
 
 	PrintWriter printWriter;
 
@@ -386,11 +388,16 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 					// display the request
 					final JsonNode queryNode = getQuery();
 					// Execute the SNMPv3 query
-					final String result = extension.executeQuery(configuration, queryNode, null);
+					final String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided when the record option is enabled
-					if (snmpResultRecordPath != null && !snmpResultRecordPath.isBlank()) {
-						saveSnmpResultToFile(result, snmpResultRecordPath + "out.walk", printWriter);
+					// CHECKSTYLE:OFF
+					if (
+						"WALK".equalsIgnoreCase(queryNode.get("action").asText()) &&
+						record
+					) {
+						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter);
 					}
+					// CHECKSTYLE:ON
 					// display the result
 					displayResult(result);
 				} catch (Exception e) {

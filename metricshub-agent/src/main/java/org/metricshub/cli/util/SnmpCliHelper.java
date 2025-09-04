@@ -27,7 +27,6 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 public class SnmpCliHelper {
@@ -35,11 +34,11 @@ public class SnmpCliHelper {
 	/**
 	 * Saves the SNMP result to a file if the filename is provided.
 	 * @param result the SNMP result to save
-	 * @param filename the name of the file to save the result to
+	 * @param directory the name of the directory to save the result to
 	 * @param out the PrintWriter to print messages to the console
 	 */
-	public static void saveSnmpResultToFile(final String result, final String filename, final PrintWriter out) {
-		final Path outPath = Paths.get(filename + "out.walk");
+	public static void saveSnmpResultToFile(final String result, final Path directory, final PrintWriter out) {
+		final var outPath = directory.resolve("out.walk");
 		try {
 			// Ensure parent directory exists
 			final Path parentDir = outPath.getParent();
