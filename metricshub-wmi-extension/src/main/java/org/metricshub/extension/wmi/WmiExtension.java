@@ -275,11 +275,7 @@ public class WmiExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(
-		final IConfiguration configuration,
-		final JsonNode queryNode,
-		final String emulationInputFilePath
-	) throws Exception {
+	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String query = queryNode.get("query").asText();
 		final WmiConfiguration wmiConfiguration = (WmiConfiguration) configuration;
 		final String namespace = wmiConfiguration.getNamespace();

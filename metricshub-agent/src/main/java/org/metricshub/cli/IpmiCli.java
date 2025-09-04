@@ -234,7 +234,7 @@ public class IpmiCli implements IQuery, Callable<Integer> {
 					// display the request
 					displayRequest();
 					// Execute the IPMI query
-					final String result = extension.executeQuery(configuration, null, null);
+					final String result = extension.executeQuery(configuration, null);
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {

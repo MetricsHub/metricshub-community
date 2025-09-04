@@ -1367,7 +1367,7 @@ class OsCommandExtensionTest {
 				.thenReturn(SUCCESS_RESPONSE);
 
 			// Start the SSH Health Check strategy
-			final String result = osCommandExtension.executeQuery(sshConfiguration, queryNode, null);
+			final String result = osCommandExtension.executeQuery(sshConfiguration, queryNode);
 
 			// Assert the result
 			assertEquals(SUCCESS_RESPONSE, result);
@@ -1396,7 +1396,7 @@ class OsCommandExtensionTest {
 				.thenThrow(ClientException.class);
 
 			// Assert the result
-			assertThrows(ClientException.class, () -> osCommandExtension.executeQuery(sshConfiguration, queryNode, null));
+			assertThrows(ClientException.class, () -> osCommandExtension.executeQuery(sshConfiguration, queryNode));
 		}
 	}
 }

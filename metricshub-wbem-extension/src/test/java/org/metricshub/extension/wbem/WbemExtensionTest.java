@@ -719,7 +719,7 @@ class WbemExtensionTest {
 			.vCenter("vcenter")
 			.protocol(TransportProtocols.HTTPS)
 			.build();
-		final String result = wbemExtension.executeQuery(configuration, queryNode, null);
+		final String result = wbemExtension.executeQuery(configuration, queryNode);
 		final String expectedResult = TextTableHelper.generateTextTable(
 			StringHelper.extractColumns(WBEM_TEST_QUERY),
 			EXECUTE_WBEM_RESULT
@@ -747,6 +747,6 @@ class WbemExtensionTest {
 			.vCenter("vcenter")
 			.protocol(TransportProtocols.HTTPS)
 			.build();
-		assertThrows(ClientException.class, () -> wbemExtension.executeQuery(configuration, queryNode, null));
+		assertThrows(ClientException.class, () -> wbemExtension.executeQuery(configuration, queryNode));
 	}
 }

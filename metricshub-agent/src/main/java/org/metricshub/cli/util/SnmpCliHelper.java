@@ -39,7 +39,7 @@ public class SnmpCliHelper {
 	 * @param out the PrintWriter to print messages to the console
 	 */
 	public static void saveSnmpResultToFile(final String result, final String filename, final PrintWriter out) {
-		final Path outPath = Paths.get(filename);
+		final Path outPath = Paths.get(filename + "out.walk");
 		try {
 			// Ensure parent directory exists
 			final Path parentDir = outPath.getParent();

@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -115,7 +114,7 @@ class JmxCliTest {
 
 		// Mock expected behavior
 		when(mockExtension.buildConfiguration(any(), any(), any())).thenReturn(mockConfig);
-		when(mockExtension.executeQuery(any(), any(), isNull())).thenReturn("mocked result");
+		when(mockExtension.executeQuery(any(), any())).thenReturn("mocked result");
 
 		// Call the private method through reflection or by temporarily making it package-private
 		jmxCli.runQuery(mockExtension);

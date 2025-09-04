@@ -218,11 +218,7 @@ public class HttpExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(
-		final IConfiguration configuration,
-		final JsonNode query,
-		final String emulationFileInputPath
-	) {
+	public String executeQuery(final IConfiguration configuration, final JsonNode query) {
 		final String hostname = configuration.getHostname();
 		final String method = query.get("method").asText();
 		final JsonNode url = query.get("url");

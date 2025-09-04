@@ -257,11 +257,7 @@ public class IpmiExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(
-		final IConfiguration configuration,
-		final JsonNode query,
-		final String emulationInputFilePath
-	) throws Exception {
+	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
 		final String hostname = configuration.getHostname();
 		return ipmiRequestExecutor.executeIpmiGetSensors(hostname, (IpmiConfiguration) configuration);
 	}

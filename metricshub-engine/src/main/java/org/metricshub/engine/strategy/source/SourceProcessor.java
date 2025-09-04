@@ -38,7 +38,6 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,7 +49,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
-import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
@@ -150,26 +148,6 @@ public class SourceProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Returns the emulation mode source output directory.
-	 * Tries to read the source_emulation_path from the connector
-	 * variables. If not found, falls back to the default directory from {@link TelemetryManager}.
-	 *
-	 * @return the emulation mode source output directory path
-	 */
-	private String getEmulationModeSourceOutputDirectory() {
-		final Map<String, ConnectorVariables> allConnectorsVariables = telemetryManager
-			.getHostConfiguration()
-			.getConnectorVariables();
-		if (allConnectorsVariables != null) {
-			final ConnectorVariables connectorVariables = allConnectorsVariables.get(connectorId);
-			if (connectorVariables != null) {
-				return connectorVariables.getVariableValues().get("source_emulation_path");
-			}
-		}
-		return telemetryManager.getEmulationModeSourceOutputDirectory();
-	}
-
-	/**
 	 * Processes a given {@link Source} by using an appropriate {@link IProtocolExtension} found through
 	 * an {@link ExtensionManager}. This method delegates the processing of the source to the protocol extension
 	 * if available, or returns an empty {@link SourceTable} if no suitable extension is found.
@@ -179,18 +157,19 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
-		final String emulationModeSourceOutputDirectory = getEmulationModeSourceOutputDirectory();
+		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+
 		// CHECKSTYLE:OFF
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			emulationModeSourceOutputDirectory != null &&
-			!emulationModeSourceOutputDirectory.isBlank() &&
-			!telemetryManager.isCalledFromMetricsHubCli()
+					emulationInputDirectory != null && !emulationInputDirectory.isBlank()
+
 		) {
 			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(
 				connectorId,
 				source,
-				emulationModeSourceOutputDirectory
+				emulationInputDirectory
 			);
 			return emulatedSourceTable.orElse(null);
 		}
@@ -202,11 +181,8 @@ public class SourceProcessor implements ISourceProcessor {
 
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			emulationModeSourceOutputDirectory != null &&
-			!emulationModeSourceOutputDirectory.isBlank() &&
-			telemetryManager.isCalledFromMetricsHubCli()
-		) {
-			persist(table, connectorId, source);
+			recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			persist(table, connectorId, source, recordOutputDirectory);
 		}
 		return table;
 		//CHECKSTYLE:ON
@@ -221,15 +197,15 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @param connectorId the identifier of the connector defining the source
 	 * @param source the {@link Source} that was processed
 	 */
-	private void persist(SourceTable sourceTable, String connectorId, Source source) {
+	private void persist(final SourceTable sourceTable, final String connectorId, final Source source, final String recordOutputDirectory) {
 		// Directory where we will store the sources results files
-		// We will store 1 file per source, named as <connectorId>__<sourceKey>.csv
-		final Path sourceResultOutputDirectory = Paths.get(telemetryManager.getEmulationModeSourceOutputDirectory());
+		// We will store 1 file per source, named as <connectorId><sourceKey>.yaml
+		final Path sourceResultOutputDirectory = Paths.get(recordOutputDirectory);
 		try {
 			Files.createDirectories(sourceResultOutputDirectory);
 
-			final String cleanKey = source.getKey().replaceAll("[\\{\\}$$:/\\\\]", "-");
-			final Path file = sourceResultOutputDirectory.resolve(connectorId + cleanKey + ".csv"); // keep extension if you wish
+			final String cleanKey = source.getKey().replace(":", "-");
+			final Path file = sourceResultOutputDirectory.resolve(connectorId + cleanKey + ".yaml"); // keep extension if you wish
 
 			try (
 				BufferedWriter out = Files.newBufferedWriter(
@@ -239,10 +215,6 @@ public class SourceProcessor implements ISourceProcessor {
 					StandardOpenOption.TRUNCATE_EXISTING
 				)
 			) {
-				for (List<String> row : sourceTable.getTable()) {
-					/* CSV line (semicolon-separated) */
-					final String csvLine = row.stream().map(this::escapeCsv).collect(Collectors.joining(";"));
-				}
 				YAML_MAPPER.writeValue(out, sourceTable); // Jackson YAMLFactory handles it
 				out.newLine();
 			}
@@ -265,9 +237,8 @@ public class SourceProcessor implements ISourceProcessor {
 		String emulationModeSourceOutputDirectory
 	) {
 		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
-		// Keep the same cleaning as persist()
-		final String cleanKey = source.getKey().replaceAll("[\\{\\}\\$\\$:/\\\\]", "-");
-		final Path file = outDir.resolve(connectorId + cleanKey + ".csv"); // content is YAML
+		final String cleanKey = source.getKey().replace(":", "-");
+		final Path file = outDir.resolve(connectorId + cleanKey + ".yaml"); // content is YAML
 
 		if (!Files.exists(file)) {
 			throw new IllegalStateException("The path " + emulationModeSourceOutputDirectory + " does not exist!");
@@ -280,30 +251,6 @@ public class SourceProcessor implements ISourceProcessor {
 			log.warn("Could not read SourceTable from {}", file, e);
 			return Optional.empty();
 		}
-	}
-
-	/**
-	 * Escapes a cell value for CSV output. If the cell contains special characters such as semicolons, quotes,
-	 * or newlines, it will be enclosed in quotes and any quotes within the value will be doubled.
-	 *
-	 * @param cell The cell value to escape.
-	 * @return The escaped cell value suitable for CSV output.
-	 */
-	private String escapeCsv(Object cell) {
-		if (cell == null) {
-			return "";
-		}
-		String cellValue = cell.toString();
-		final boolean mustQuote =
-			cellValue.indexOf(';') >= 0 ||
-			cellValue.indexOf('"') >= 0 ||
-			cellValue.indexOf('\n') >= 0 ||
-			cellValue.indexOf('\r') >= 0;
-		if (mustQuote) {
-			cellValue = cellValue.replace("\"", "\"\"");
-			return '"' + cellValue + '"';
-		}
-		return cellValue;
 	}
 
 	/**

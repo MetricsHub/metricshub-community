@@ -38,6 +38,7 @@ import java.util.stream.Stream;
 import lombok.Data;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.cli.service.CliExtensionManager;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
@@ -172,13 +173,22 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 	boolean[] verbose;
 
 	@Option(
-		names = { "-rec", "--record" },
-		order = 13,
-		defaultValue = "",
-		description = "Enables/disables recording of SNMP query result",
-		help = true
+			names = { "-rec", "--record" },
+			order = 14,
+			defaultValue = "false",
+			description = "Enables/disables recording of sources execution results",
+			help = true
 	)
-	String snmpResultRecordPath;
+	boolean record;
+
+	@Option(
+			names = { "-e", "--emulate" },
+			order = 15,
+			defaultValue = "",
+			description = "Enables/disables reading the recorded sources execution results",
+			help = true
+	)
+	String emulate;
 
 	PrintWriter printWriter;
 
@@ -315,15 +325,15 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 					// display the request
 					final JsonNode queryNode = getQuery();
 					// Execute the SNMP query
-					String result = extension.executeQuery(configuration, queryNode, snmpResultRecordPath);
+					String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided
 					// CHECKSTYLE:OFF
 					if (
 						"WALK".equalsIgnoreCase(queryNode.get("action").asText()) &&
-						snmpResultRecordPath != null &&
-						!snmpResultRecordPath.isBlank()
+						record &&
+						(emulate == null || emulate.isBlank())
 					) {
-						saveSnmpResultToFile(result, snmpResultRecordPath, printWriter);
+						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory().toString(), printWriter);
 					}
 					// CHECKSTYLE:ON
 					// display the returned result

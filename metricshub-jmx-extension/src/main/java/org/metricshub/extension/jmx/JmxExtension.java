@@ -192,11 +192,7 @@ public class JmxExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(
-		final IConfiguration configuration,
-		final JsonNode query,
-		final String emulationInputFilePath
-	) throws Exception {
+	public String executeQuery(final IConfiguration configuration, final JsonNode query) throws Exception {
 		if (!(configuration instanceof JmxConfiguration)) {
 			throw new IllegalArgumentException("Invalid configuration type for JMX query execution.");
 		}

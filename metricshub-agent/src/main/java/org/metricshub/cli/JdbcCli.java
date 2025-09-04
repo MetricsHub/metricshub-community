@@ -251,7 +251,7 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 					// display the query
 					displayQuery();
 					// Execute the SQL query
-					final String result = extension.executeQuery(configuration, getQuery(), null);
+					final String result = extension.executeQuery(configuration, getQuery());
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {

@@ -120,7 +120,7 @@ public class PingToolService {
 			configuration.validateConfiguration(hostname);
 
 			final long startTime = System.currentTimeMillis();
-			final String result = extension.executeQuery(configuration, null, null);
+			final String result = extension.executeQuery(configuration, null);
 			final long duration = (System.currentTimeMillis() - startTime);
 
 			return ProtocolCheckResponse

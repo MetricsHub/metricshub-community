@@ -157,5 +157,5 @@ public interface IProtocolExtension {
 	 * @param queryNode     a JsonNode representing the query to be executed.
 	 * @throws Exception if the query execution fails due to an error or unexpected condition.
 	 */
-	String executeQuery(IConfiguration configuration, JsonNode queryNode, String emulationInputFilePath) throws Exception;
+	String executeQuery(IConfiguration configuration, JsonNode queryNode) throws Exception;
 }

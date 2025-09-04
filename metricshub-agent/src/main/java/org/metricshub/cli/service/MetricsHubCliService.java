@@ -22,6 +22,7 @@ package org.metricshub.cli.service;
  */
 
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -287,11 +288,20 @@ public class MetricsHubCliService implements Callable<Integer> {
 	@Option(
 		names = { "-rec", "--record" },
 		order = 14,
-		defaultValue = "",
+		defaultValue = "false",
 		description = "Enables/disables recording of sources execution results",
 		help = true
 	)
-	String sourceResultRecordPath;
+	boolean record;
+
+	@Option(
+		names = { "-e", "--emulate" },
+		order = 15,
+		defaultValue = "",
+		description = "Enables/disables reading the recorded sources execution results",
+		help = true
+	)
+	String emulate;
 
 	@Override
 	public Integer call() throws Exception {
@@ -356,16 +366,15 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Add the connectors with variables connectors to the host.
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
-		boolean isEmulationModeEnabled = sourceResultRecordPath != null && !sourceResultRecordPath.isBlank();
+		final Path defaultLogDirectory = ConfigHelper.getDefaultOutputDirectory();
 
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
-			.isEmulationMode(isEmulationModeEnabled)
-			.emulationModeSourceOutputDirectory(isEmulationModeEnabled ? sourceResultRecordPath : "")
-			.isCalledFromMetricsHubCli(true)
+			.recordOutputDirectory(defaultLogDirectory.toString())
+			.emulationInputDirectory(emulate)
 			.build();
 
 		// Instantiate a new ClientsExecutor

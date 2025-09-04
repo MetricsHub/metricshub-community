@@ -347,7 +347,7 @@ class JdbcExtensionTest {
 			.password(PASSWORD)
 			.timeout(120L)
 			.build();
-		final String result = jdbcExtension.executeQuery(configuration, queryNode, null);
+		final String result = jdbcExtension.executeQuery(configuration, queryNode);
 		final String expectedResult = TextTableHelper.generateTextTable(StringHelper.extractColumns(SQL_QUERY), SQL_RESULT);
 		assertEquals(expectedResult, result);
 	}
@@ -367,6 +367,6 @@ class JdbcExtensionTest {
 			.password(PASSWORD)
 			.timeout(120L)
 			.build();
-		assertThrows(ClientException.class, () -> jdbcExtension.executeQuery(configuration, queryNode, null));
+		assertThrows(ClientException.class, () -> jdbcExtension.executeQuery(configuration, queryNode));
 	}
 }

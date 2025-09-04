@@ -124,7 +124,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 						configuration,
 						hostname,
 						true,
-						telemetryManager.getEmulationModeSnmpInputDirectory()
+						telemetryManager.getEmulationInputDirectory()
 					);
 		} catch (Exception e) {
 			log.debug(
@@ -197,8 +197,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	@Override
 	public String executeQuery(
 		final IConfiguration configuration,
-		final JsonNode queryNode,
-		final String emulationInputFilePath
+		final JsonNode queryNode
 	) {
 		final ISnmpConfiguration snmpConfiguration = (ISnmpConfiguration) configuration;
 		final String hostname = configuration.getHostname();
@@ -210,13 +209,13 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			switch (action) {
 				case GET:
-					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
+					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, null);
 					break;
 				case GET_NEXT:
-					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
+					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, null);
 					break;
 				case WALK:
-					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, emulationInputFilePath);
+					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, null);
 					break;
 				case TABLE:
 					final String[] columns = new ObjectMapper().convertValue(queryNode.get("columns"), String[].class);
@@ -226,7 +225,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 						snmpConfiguration,
 						hostname,
 						false,
-						emulationInputFilePath
+						null
 					);
 					result = TextTableHelper.generateTextTable(columns, resultList);
 					break;

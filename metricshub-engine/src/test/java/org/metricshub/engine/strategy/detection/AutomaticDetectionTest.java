@@ -117,10 +117,8 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			false,
-			"",
-			"",
-			false
+			null,
+			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
@@ -183,10 +181,7 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			false,
-			"",
-			"",
-			false
+			null, null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
@@ -249,10 +244,7 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			false,
-			"",
-			"",
-			false
+null,  null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
@@ -315,10 +307,7 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			false,
-			"",
-			"",
-			false
+null, null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
@@ -381,10 +370,7 @@ class AutomaticDetectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			false,
-			"",
-			"",
-			false
+null, null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)

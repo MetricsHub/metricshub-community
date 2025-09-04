@@ -41,7 +41,6 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.configuration.ConnectorVariables;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
@@ -396,20 +395,6 @@ public abstract class AbstractConnectorProcessor {
 				connector.getConnectorIdentity().getCompiledFilename()
 			);
 			return connectorTestResult;
-		}
-
-		// Set the emulation mode input directory if defined in the connector variables
-		// This will override the global emulation mode input directory if defined
-		final Map<String, ConnectorVariables> allConnectorsVariables = telemetryManager
-			.getHostConfiguration()
-			.getConnectorVariables();
-		if (allConnectorsVariables != null) {
-			final ConnectorVariables connectorVariables = allConnectorsVariables.get(connector.getCompiledFilename());
-			if (connectorVariables != null) {
-				telemetryManager.setEmulationModeSnmpInputDirectory(
-					connectorVariables.getVariableValues().get("snmp_emulation_path")
-				);
-			}
 		}
 
 		for (final Criterion criterion : criteria) {
