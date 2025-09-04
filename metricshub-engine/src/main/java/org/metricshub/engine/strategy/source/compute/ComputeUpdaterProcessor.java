@@ -35,6 +35,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
@@ -104,6 +105,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	@Override
 	public void process(final DuplicateColumn duplicateColumn) {
 		processCompute(duplicateColumn);
+	}
+
+	@Override
+	public void process(final Encode encode) {
+		processCompute(encode);
 	}
 
 	@Override
