@@ -22,19 +22,17 @@ package org.metricshub.web.security.jwt;
  */
 
 import java.util.Collection;
-
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
  * Custom authentication token that includes a JWT token and its expiration time.
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class JwtAuthenticationToken extends UsernamePasswordAuthenticationToken {
+public class JwtAuthToken extends UsernamePasswordAuthenticationToken {
 
 	private static final long serialVersionUID = 1L;
 
@@ -42,20 +40,20 @@ public class JwtAuthenticationToken extends UsernamePasswordAuthenticationToken 
 	private long expiresIn;
 
 	/**
-	 * Constructor to create a JwtAuthenticationToken with principal, credentials, token, and expiration time.
+	 * Constructor to create a JwtAuthToken with principal, credentials, token, and expiration time.
 	 * @param principal   The principal (usually the username or user details).
 	 * @param credentials The credentials (usually the password).
 	 * @param token       The JWT token.
 	 * @param expiresIn   The expiration time in seconds.
 	 */
-	public JwtAuthenticationToken(Object principal, Object credentials, String token, long expiresIn) {
+	public JwtAuthToken(Object principal, Object credentials, String token, long expiresIn) {
 		super(principal, credentials);
 		this.token = token;
 		this.expiresIn = expiresIn;
 	}
 
 	/**
-	 * Constructor to create a JwtAuthenticationToken with principal, credentials, token, authorities, and expiration time.
+	 * Constructor to create a JwtAuthToken with principal, credentials, token, authorities, and expiration time.
 	 *
 	 * @param principal   The principal (usually the username or user details).
 	 * @param credentials The credentials (usually the password).
@@ -63,8 +61,13 @@ public class JwtAuthenticationToken extends UsernamePasswordAuthenticationToken 
 	 * @param authorities The granted authorities for the user.
 	 * @param expiresIn   The expiration time in seconds.
 	 */
-	public JwtAuthenticationToken(Object principal, Object credentials, String token,
-			Collection<? extends GrantedAuthority> authorities, long expiresIn) {
+	public JwtAuthToken(
+		Object principal,
+		Object credentials,
+		String token,
+		Collection<? extends GrantedAuthority> authorities,
+		long expiresIn
+	) {
 		super(principal, credentials, authorities);
 		this.token = token;
 		this.expiresIn = expiresIn;

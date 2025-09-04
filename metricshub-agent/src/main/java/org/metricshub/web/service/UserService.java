@@ -1,9 +1,29 @@
 package org.metricshub.web.service;
 
-import java.util.Optional;
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Agent
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
 
+import java.util.Optional;
 import org.metricshub.web.security.User;
-import org.metricshub.web.security.jwt.JwtAuthenticationToken;
+import org.metricshub.web.security.jwt.JwtAuthToken;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.security.login.LoginAuthenticationProvider;
 import org.metricshub.web.security.login.LoginAuthenticationRequest;
@@ -23,7 +43,7 @@ public class UserService {
 		this.jwtComponent = jwtComponent;
 		this.passwordEncoder = passwordEncoder;
 	}
-	
+
 	public static final String DEFAULT_USERNAME = "admin";
 
 	public static final User DEFAULT_USER = User
@@ -34,7 +54,7 @@ public class UserService {
 
 	/**
 	 * Find user by username
-	 * 
+	 *
 	 * @param username The user name
 	 * @return {@link Optional} of user instance
 	 */
@@ -47,15 +67,16 @@ public class UserService {
 
 	/**
 	 * Perform security and authenticate the user with the given
-	 * authenticationRequest and generate {@link JwtAuthenticationToken} instance
-	 * 
+	 * authenticationRequest and generate {@link JwtAuthToken} instance
+	 *
 	 * @param authenticationRequest Login request defining username and password
-	 * @return {@link JwtAuthenticationToken} instance
+	 * @return {@link JwtAuthToken} instance
 	 */
-	public JwtAuthenticationToken performSecurity(LoginAuthenticationRequest authenticationRequest) {
-
+	public JwtAuthToken performSecurity(LoginAuthenticationRequest authenticationRequest) {
 		final var usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
-				authenticationRequest.getUsername(), authenticationRequest.getPassword());
+			authenticationRequest.getUsername(),
+			authenticationRequest.getPassword()
+		);
 
 		return setDetailsAndAuthenticate(authenticationRequest, usernamePasswordAuthenticationToken);
 	}
@@ -63,15 +84,16 @@ public class UserService {
 	/**
 	 * Set the given {@link LoginAuthenticationRequest} in the spring security
 	 * {@link UsernamePasswordAuthenticationToken} then authenticate
-	 * 
+	 *
 	 * @param request                             Login request defining username and password
 	 * @param usernamePasswordAuthenticationToken Instance designed for simple presentation of a username and password
-	 * @return The {@link JwtAuthenticationToken} returned after calling
+	 * @return The {@link JwtAuthToken} returned after calling
 	 *         <code>LoginAuthenticationProvider.authenticate</code>
 	 */
-	private JwtAuthenticationToken setDetailsAndAuthenticate(LoginAuthenticationRequest request,
-			final UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken) {
-
+	private JwtAuthToken setDetailsAndAuthenticate(
+		LoginAuthenticationRequest request,
+		final UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken
+	) {
 		// Set the request in the instance's details
 		usernamePasswordAuthenticationToken.setDetails(request);
 
@@ -79,6 +101,6 @@ public class UserService {
 		final var loginAuthenticationProvider = new LoginAuthenticationProvider(jwtComponent, this, passwordEncoder);
 
 		// Perform the authentication
-		return (JwtAuthenticationToken) loginAuthenticationProvider.authenticate(usernamePasswordAuthenticationToken);
+		return (JwtAuthToken) loginAuthenticationProvider.authenticate(usernamePasswordAuthenticationToken);
 	}
 }

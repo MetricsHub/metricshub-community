@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -93,9 +95,8 @@ class ApiKeyAuthFilterTest {
 
 		filter.doFilterInternal(request, response, filterChain);
 
-		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
-		verify(filterChain, never()).doFilter(request, response);
+		verify(response, never()).setStatus(HttpStatus.UNAUTHORIZED.value());
+		verify(filterChain, times(1)).doFilter(request, response);
 		assertNull(
 			SecurityContextHolder.getContext().getAuthentication(),
 			"Authentication should be null when no Authorization header is present"
@@ -113,7 +114,7 @@ class ApiKeyAuthFilterTest {
 
 		filter.doFilterInternal(request, response, filterChain);
 
-		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		verify(response).setStatus(HttpStatus.UNAUTHORIZED.value());
 		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
 		verify(filterChain, never()).doFilter(request, response);
 		assertNull(

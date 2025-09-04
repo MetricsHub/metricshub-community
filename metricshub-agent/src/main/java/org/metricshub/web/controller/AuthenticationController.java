@@ -22,8 +22,8 @@ package org.metricshub.web.controller;
  */
 
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
-import org.metricshub.web.security.SecurityConstants;
-import org.metricshub.web.security.jwt.JwtAuthenticationToken;
+import org.metricshub.web.security.SecurityHelper;
+import org.metricshub.web.security.jwt.JwtAuthToken;
 import org.metricshub.web.security.login.LoginAuthenticationRequest;
 import org.metricshub.web.security.login.LoginAuthenticationResponse;
 import org.metricshub.web.service.UserService;
@@ -39,13 +39,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
+/**
+ * Controller to handle authentication requests such as login and logout.
+ */
 @RestController
 @RequestMapping(value = "/auth", produces = MediaType.APPLICATION_JSON_VALUE)
 public class AuthenticationController {
 
 	private UserService userService;
-
 
 	@Autowired
 	public AuthenticationController(final UserService userService) {
@@ -54,10 +55,10 @@ public class AuthenticationController {
 
 	@PostMapping
 	public ResponseEntity<LoginAuthenticationResponse> login(
-			@RequestBody final LoginAuthenticationRequest loginAuthenticationRequest) {
-
+		@RequestBody final LoginAuthenticationRequest loginAuthenticationRequest
+	) {
 		// Perform the security
-		final JwtAuthenticationToken authentication = userService.performSecurity(loginAuthenticationRequest);
+		final JwtAuthToken authentication = userService.performSecurity(loginAuthenticationRequest);
 
 		// Inject into security context
 		SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -71,32 +72,25 @@ public class AuthenticationController {
 
 		// Build the cookie
 		final ResponseCookie cookie = ResponseCookie
-			.from(SecurityConstants.TOKEN_KEY, authentication.getToken())
+			.from(SecurityHelper.TOKEN_KEY, authentication.getToken())
 			.path("/")
 			.maxAge(authentication.getExpiresIn())
 			.build();
 
-		return ResponseEntity
-			.ok()
-			.header(HttpHeaders.SET_COOKIE, cookie.toString())
-			.body(response);
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
 	}
 
 	@DeleteMapping
 	public ResponseEntity<Object> logout() {
-
 		// Remove authentication details from the current security context
 		SecurityContextHolder.getContext().setAuthentication(null);
 
 		// Remove the cookie
 		final ResponseCookie cookie = ResponseCookie
-			.from(SecurityConstants.TOKEN_KEY, MetricsHubConstants.EMPTY)
+			.from(SecurityHelper.TOKEN_KEY, MetricsHubConstants.EMPTY)
 			.maxAge(0)
 			.build();
 
-		return ResponseEntity
-			.ok()
-			.header(HttpHeaders.SET_COOKIE, cookie.toString())
-			.build();
+		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
 	}
 }

@@ -23,11 +23,12 @@ package org.metricshub.web.security.login;
 
 import java.util.Collections;
 import java.util.Optional;
-
+import lombok.Builder;
+import lombok.Data;
 import org.metricshub.web.exception.UnauthorizedException;
-import org.metricshub.web.security.SecurityConstants;
+import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.User;
-import org.metricshub.web.security.jwt.JwtAuthenticationToken;
+import org.metricshub.web.security.jwt.JwtAuthToken;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.service.UserService;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -36,16 +37,20 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import lombok.Builder;
-import lombok.Data;
-
+/**
+ * Authentication provider for login requests using username and password.
+ */
 public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 
 	private final JwtComponent jwtComponent;
 	private final UserService userService;
 	private final PasswordEncoder passwordEncoder;
 
-	public LoginAuthenticationProvider(JwtComponent jwtComponent, UserService userService, PasswordEncoder passwordEncoder) {
+	public LoginAuthenticationProvider(
+		JwtComponent jwtComponent,
+		UserService userService,
+		PasswordEncoder passwordEncoder
+	) {
 		super();
 		this.jwtComponent = jwtComponent;
 		this.userService = userService;
@@ -54,28 +59,25 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 
 	@Override
 	public Authentication authenticate(Authentication authentication) {
-
 		// The application supports only LoginAuthenticationRequest
 		if (!(authentication.getDetails() instanceof LoginAuthenticationRequest)) {
 			throw new UnauthorizedException("Unsuported authentication method.");
 		}
 
 		// Perform authentication and get the User instance with the generated JWT
-		final UserAndJwt userAndJwt = doAuth((LoginAuthenticationRequest) authentication.getDetails());
+		final var userAndJwt = doAuth((LoginAuthenticationRequest) authentication.getDetails());
 
 		final User user = userAndJwt.getUser();
 		final String jwt = userAndJwt.getJwt();
 
 		// Create the granted authority as application user
-		final GrantedAuthority authority = new SimpleGrantedAuthority(
-			SecurityConstants.ROLE_APP_USER
-		);
+		final GrantedAuthority authority = new SimpleGrantedAuthority(SecurityHelper.ROLE_APP_USER);
 
 		// Erase password
 		user.setPassword(null);
 
-		// Return the JWT authentication token wrapping user details, JWT, authority and JWT expiration time 
-		return new JwtAuthenticationToken(user, null, jwt, Collections.singleton(authority), jwtComponent.getShortExpire());
+		// Return the JWT authentication token wrapping user details, JWT, authority and JWT expiration time
+		return new JwtAuthToken(user, null, jwt, Collections.singleton(authority), jwtComponent.getShortExpire());
 	}
 
 	@Override
@@ -86,14 +88,13 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	/**
 	 * Perform authentication using the given {@link LoginAuthenticationRequest}
 	 * having the username and password
-	 * 
+	 *
 	 * @param request login query containing username and password
 	 * @return {@link UserAndJwt} instance
 	 */
 	private UserAndJwt doAuth(final LoginAuthenticationRequest request) {
-
 		// Get the user and check if submitted password matches the stored password
-		final User user = getUserAndCheckPassword(request);
+		final var user = getUserAndCheckPassword(request);
 
 		// We have a user, let's generate a JWT
 		final String jwt = jwtComponent.generateJwt(user);
@@ -104,12 +105,11 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 
 	/**
 	 * Retrieve the user instance and check the password
-	 * 
+	 *
 	 * @param request login query containing username and password
 	 * @return {@link User} instance
 	 */
 	User getUserAndCheckPassword(final LoginAuthenticationRequest request) {
-
 		// Find user by username
 		final Optional<User> userOptional = userService.find(request.getUsername());
 
@@ -118,7 +118,7 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 			throw new UnauthorizedException("User not found.");
 		}
 
-		final User user = userOptional.get();
+		final var user = userOptional.get();
 
 		// Verify the encoded user password obtained from storage matches the submitted raw password
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
@@ -131,6 +131,7 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	@Data
 	@Builder
 	private static class UserAndJwt {
+
 		private User user;
 		private String jwt;
 	}

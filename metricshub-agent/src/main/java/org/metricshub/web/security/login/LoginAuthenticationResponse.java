@@ -27,7 +27,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * This class defines the token 
+ * This class defines the token
  */
 @Data
 @NoArgsConstructor

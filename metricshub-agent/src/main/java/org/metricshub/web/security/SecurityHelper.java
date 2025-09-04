@@ -21,11 +21,18 @@ package org.metricshub.web.security;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
+/**
+ * Security Helper class defining constants and utilities
+ */
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class SecurityConstants {
+public class SecurityHelper {
 
 	/**
 	 * The key used for storing the JWT token in cookies and headers.
@@ -37,4 +44,27 @@ public class SecurityConstants {
 	 */
 	public static final String ROLE_APP_USER = "ROLE_APP_USER";
 
+	/**
+	 * Write unauthorized response in the given {@link HttpServletResponse}
+	 *
+	 * @param response   HTTP response
+	 * @throws IOException if an input or output exception occurred
+	 */
+	public static void writeUnauthorizedResponse(final HttpServletResponse response) throws IOException {
+		response.setStatus(HttpStatus.UNAUTHORIZED.value());
+		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.getWriter().write("{\"message\":\"Unauthorized\"}");
+	}
+
+	/**
+	 * Write forbidden response in the given {@link HttpServletResponse}
+	 *
+	 * @param response   HTTP response
+	 * @throws IOException if an input or output exception occurred
+	 */
+	public static void writeForbiddenResponse(final HttpServletResponse response) throws IOException {
+		response.setStatus(HttpStatus.FORBIDDEN.value());
+		response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+		response.getWriter().write("{\"message\":\"Forbidden\"}");
+	}
 }

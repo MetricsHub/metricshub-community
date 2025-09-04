@@ -21,25 +21,24 @@ package org.metricshub.web.security.jwt;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
-
-import javax.crypto.SecretKey;
-
-import org.metricshub.web.exception.UnauthorizedException;
-import org.metricshub.web.security.SecurityConstants;
-import org.metricshub.web.security.User;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.util.WebUtils;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import javax.crypto.SecretKey;
 import lombok.Getter;
+import org.metricshub.web.exception.UnauthorizedException;
+import org.metricshub.web.security.SecurityHelper;
+import org.metricshub.web.security.User;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.util.WebUtils;
 
 /**
  * Component for handling JWT operations such as creation, parsing, and validation.
@@ -47,16 +46,12 @@ import lombok.Getter;
 @Component
 public class JwtComponent {
 
-
 	@Value("${jwt.secret}")
-	public String secret;
-
-	@Value("${project.name}")
-	private String appName;
+	String secret;
 
 	@Value("${jwt.short_expire}")
 	@Getter
-	private int shortExpire;
+	long shortExpire;
 
 	private SecretKey key;
 
@@ -71,31 +66,35 @@ public class JwtComponent {
 	/**
 	 * Compute the expiration date by adding the number of seconds passed in the
 	 * <code>expirationTime</code> argument
-	 * 
+	 *
 	 * @param date           the date we wish to use to start computing the
 	 *                       expiration date
-	 * @param expirationTime the amount of time we wish to add to given date
+	 * @param expirationTimeSeconds the amount of time we wish to add to given date
 	 * @return {@link Date}
 	 */
-	private static Date computeExpirationDate(final Date date, final int expirationTime) {
-		return new Date(date.getTime() + expirationTime * 1000L);
+	private static Date computeExpirationDate(final Date date, final long expirationTimeSeconds) {
+		final var localDateTime = date
+			.toInstant()
+			.atZone(ZoneId.systemDefault())
+			.toLocalDateTime()
+			.plusSeconds(expirationTimeSeconds);
+		return Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
 	}
 
 	/**
 	 * Create a {@link JwtBuilder} for the given {@link User}
-	 * 
+	 *
 	 * @param user           User which requests the REST API access
 	 * @param expirationTime The JWT Claims <a href=
 	 *                       "https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-25#section-4.1.4">
 	 *                       <code>exp</code></a> (expiration) value. The JWT obtained after this timestamp should not be used.
 	 * @return {@link JwtBuilder} object
 	 */
-	public JwtBuilder createAuthorizationJwtBuilder(final User user, final int expirationTime) {
-
-		final var date = new Date();
+	public JwtBuilder createAuthorizationJwtBuilder(final User user, final long expirationTime) {
+		final var date = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
 		return Jwts
 			.builder()
-			.issuer(appName)
+			.issuer("MetricsHub")
 			.subject(user.getUsername())
 			.issuedAt(date)
 			.expiration(computeExpirationDate(date, expirationTime))
@@ -104,7 +103,7 @@ public class JwtComponent {
 
 	/**
 	 * Generate a JWT token for the {@link User}
-	 * 
+	 *
 	 * @param user User which requests the REST API access
 	 * @return JWT as {@link String}
 	 */
@@ -113,15 +112,15 @@ public class JwtComponent {
 	}
 
 	/**
-	 * Get authorization token ({@value SecurityConstants#HWS_TOKEN_KEY}) from the
+	 * Get authorization token ({@value SecurityHelper#TOKEN_KEY}) from the
 	 * cookie of the given {@link HttpServletRequest}
-	 * 
+	 *
 	 * @param request The HTTP request which provides request information for HTTP
 	 *                servlets.
 	 * @return String value or <code>null</code> if the cookie is null
 	 */
 	public String getTokenFromRequestCookie(final HttpServletRequest request) {
-		final var cookie = WebUtils.getCookie(request, SecurityConstants.TOKEN_KEY);
+		final var cookie = WebUtils.getCookie(request, SecurityHelper.TOKEN_KEY);
 		if (cookie != null) {
 			return cookie.getValue();
 		}
@@ -130,22 +129,15 @@ public class JwtComponent {
 
 	/**
 	 * Get All the claims from the given authentication token
-	 * 
+	 *
 	 * @param token The JWT token
 	 * @return {@link Claims} instance
 	 */
 	public Claims getAllClaimsFromToken(final String token) {
 		try {
-			return Jwts.parser()
-               .verifyWith(key)
-               .build()
-               .parseSignedClaims(token)
-               .getPayload();
+			return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
 		} catch (final Exception e) {
 			throw new UnauthorizedException(e.getMessage(), e);
 		}
-		
 	}
-
 }
-
