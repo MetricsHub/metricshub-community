@@ -33,6 +33,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -108,5 +109,12 @@ public class SecurityConfig {
 		return (HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) -> {
 			SecurityHelper.writeForbiddenResponse(response);
 		};
+	}
+
+	@Bean
+	public WebSecurityCustomizer webSecurityCustomizer() {
+		final var allowedPatterns = new String[] { "/", "/assets/**", "/index.html" };
+
+		return web -> web.ignoring().requestMatchers(allowedPatterns);
 	}
 }
