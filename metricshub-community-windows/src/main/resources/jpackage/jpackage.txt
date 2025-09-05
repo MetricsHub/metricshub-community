@@ -8,7 +8,7 @@
 --vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
 --dest "${project.build.directory}"
---app-content metricshub\connectors,metricshub\config,metricshub\LICENSE,metricshub\site,metricshub\service-installer.exe,metricshub\extensions
+--app-content metricshub\connectors,metricshub\config,metricshub\LICENSE,metricshub\site,metricshub\service-installer.exe,metricshub\extensions,metricshub\web
 --win-console
 --main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
