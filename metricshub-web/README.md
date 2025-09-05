@@ -21,4 +21,4 @@ The web application is built using node.js and is packaged into a JAR file using
    ```bash
    mvn clean package
    ```
-   This command will install the necessary Node.js version, build the React application, and package it into a JAR file.
+   This command will install the necessary Node.js version, build the React application, and package it into a zip file under the `target` directory.
