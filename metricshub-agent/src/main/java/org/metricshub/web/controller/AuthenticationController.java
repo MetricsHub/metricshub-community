@@ -53,6 +53,11 @@ public class AuthenticationController {
 		this.userService = userService;
 	}
 
+	/**
+	 * Login endpoint that authenticates a user and returns a JWT token in a cookie.
+	 * @param loginAuthenticationRequest the login request containing user credentials
+	 * @return a ResponseEntity containing the JWT token and its expiration time
+	 */
 	@PostMapping
 	public ResponseEntity<LoginAuthenticationResponse> login(
 		@RequestBody final LoginAuthenticationRequest loginAuthenticationRequest
@@ -80,6 +85,10 @@ public class AuthenticationController {
 		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
 	}
 
+	/**
+	 * Logout endpoint that clears the authentication and removes the JWT cookie.
+	 * @return a ResponseEntity indicating successful logout
+	 */
 	@DeleteMapping
 	public ResponseEntity<Object> logout() {
 		// Remove authentication details from the current security context

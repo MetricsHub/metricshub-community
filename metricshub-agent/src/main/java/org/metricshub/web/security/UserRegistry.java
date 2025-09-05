@@ -21,26 +21,31 @@ package org.metricshub.web.security;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.Map;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class User {
+/**
+ * Registry for managing users. This class provides a method to retrieve users by their username.
+ */
+public class UserRegistry {
 
-	private String username;
-	private String password;
-	private String role;
+	private final Map<String, User> users;
 
 	/**
-	 * Copy the current user instance
-	 * @return new {@link User} instance
+	 * Constructor for UserRegistry.
+	 *
+	 * @param users a map of users where the key is the username and the value is the User object.
 	 */
-	public User copy() {
-		return User.builder().username(username).password(password).role(role).build();
+	public UserRegistry(final Map<String, User> users) {
+		this.users = users;
+	}
+
+	/**
+	 * Retrieves a user by their username.
+	 *
+	 * @param username the username of the user to retrieve
+	 * @return the User object if found, otherwise null
+	 */
+	public User getUserByUsername(final String username) {
+		return users.get(username);
 	}
 }

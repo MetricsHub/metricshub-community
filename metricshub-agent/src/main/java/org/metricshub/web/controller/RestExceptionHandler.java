@@ -32,7 +32,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
- * Middleware handling all the exceptions that can be thrown by the REST Controllers.
+ * Global exception handler for REST controllers.
  */
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ControllerAdvice

@@ -24,7 +24,7 @@ package org.metricshub.web.exception;
 import org.springframework.security.core.AuthenticationException;
 
 /**
- * Exception used to for unauthorized access (Security)
+ * Exception used to for unauthorized access attempts.
  */
 public class UnauthorizedException extends AuthenticationException {
 

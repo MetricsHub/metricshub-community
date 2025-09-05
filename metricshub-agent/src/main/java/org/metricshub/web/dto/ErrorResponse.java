@@ -28,7 +28,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 /**
- * DTO to handle REST error responses.
+ * DTO to defining REST error responses.
  */
 @Data
 @Builder

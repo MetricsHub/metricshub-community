@@ -46,6 +46,13 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	private final UserService userService;
 	private final PasswordEncoder passwordEncoder;
 
+	/**
+	 * Constructor to initialize the authentication provider with necessary components.
+	 *
+	 * @param jwtComponent    JWT handling component
+	 * @param userService     User service to retrieve user details
+	 * @param passwordEncoder Password encoder to verify user passwords
+	 */
 	public LoginAuthenticationProvider(
 		JwtComponent jwtComponent,
 		UserService userService,

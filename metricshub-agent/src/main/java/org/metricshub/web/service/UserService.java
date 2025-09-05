@@ -23,6 +23,7 @@ package org.metricshub.web.service;
 
 import java.util.Optional;
 import org.metricshub.web.security.User;
+import org.metricshub.web.security.UserRegistry;
 import org.metricshub.web.security.jwt.JwtAuthToken;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.security.login.LoginAuthenticationProvider;
@@ -32,25 +33,32 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service class for managing user authentication and retrieval.
+ */
 @Service
 public class UserService {
 
 	private JwtComponent jwtComponent;
 	private PasswordEncoder passwordEncoder;
+	private UserRegistry userRegistry;
 
+	/**
+	 * Constructor for UserService.
+	 * @param jwtComponent    The JWT component for token generation and validation
+	 * @param passwordEncoder The password encoder for hashing and verifying passwords
+	 * @param userRegistry    The user registry for managing user information
+	 */
 	@Autowired
-	public UserService(final JwtComponent jwtComponent, final PasswordEncoder passwordEncoder) {
+	public UserService(
+		final JwtComponent jwtComponent,
+		final PasswordEncoder passwordEncoder,
+		final UserRegistry userRegistry
+	) {
 		this.jwtComponent = jwtComponent;
 		this.passwordEncoder = passwordEncoder;
+		this.userRegistry = userRegistry;
 	}
-
-	public static final String DEFAULT_USERNAME = "admin";
-
-	public static final User DEFAULT_USER = User
-		.builder()
-		.username(DEFAULT_USERNAME)
-		.password("$2a$10$4dj5/Yw6N1Y1iZ4SY0DTHecPpUrACeK1nMWOXSTFg.21Xj7Z5Lgru")
-		.build();
 
 	/**
 	 * Find user by username
@@ -59,10 +67,7 @@ public class UserService {
 	 * @return {@link Optional} of user instance
 	 */
 	public Optional<User> find(final String username) {
-		if (username.equals(DEFAULT_USERNAME)) {
-			return Optional.of(DEFAULT_USER.copy());
-		}
-		return Optional.empty();
+		return Optional.ofNullable(userRegistry.getUserByUsername(username));
 	}
 
 	/**

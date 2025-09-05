@@ -111,6 +111,11 @@ public class SecurityConfig {
 		};
 	}
 
+	/**
+	 * Configures web security to ignore specific URL patterns, allowing unrestricted access to them.
+	 *
+	 * @return the configured WebSecurityCustomizer
+	 */
 	@Bean
 	public WebSecurityCustomizer webSecurityCustomizer() {
 		final var allowedPatterns = new String[] { "/", "/assets/**", "/index.html" };

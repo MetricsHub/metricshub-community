@@ -41,6 +41,7 @@ public class JwtAuthToken extends UsernamePasswordAuthenticationToken {
 
 	/**
 	 * Constructor to create a JwtAuthToken with principal, credentials, token, and expiration time.
+	 *
 	 * @param principal   The principal (usually the username or user details).
 	 * @param credentials The credentials (usually the password).
 	 * @param token       The JWT token.

@@ -33,11 +33,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class UiConfig implements WebMvcConfigurer {
 
+	/**
+	 * Configures view controllers to redirect the root URL ("/") to "index.html".
+	 */
 	@Override
 	public void addViewControllers(ViewControllerRegistry registry) {
 		registry.addViewController("/").setViewName("forward:/index.html");
 	}
 
+	/**
+	 * Configures resource handlers to serve static resources from a specific file location.
+	 */
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 		registry.addResourceHandler("/**").addResourceLocations("file:" + ConfigHelper.getSubPath("web").toString() + "/");
