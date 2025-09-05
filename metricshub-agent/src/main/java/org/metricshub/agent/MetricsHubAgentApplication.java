@@ -24,6 +24,7 @@ package org.metricshub.agent;
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
 import java.util.Locale;
+import java.util.TimeZone;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
@@ -46,6 +47,7 @@ import picocli.CommandLine.Option;
 public class MetricsHubAgentApplication implements Runnable {
 	static {
 		Locale.setDefault(Locale.US);
+		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
 	}
 
 	/**
