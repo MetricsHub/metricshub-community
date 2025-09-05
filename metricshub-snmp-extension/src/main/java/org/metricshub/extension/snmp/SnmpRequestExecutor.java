@@ -22,6 +22,9 @@ package org.metricshub.extension.snmp;
  */
 
 import java.io.IOException;
+import java.nio.file.Path;
+import org.metricshub.snmp.client.ISnmpClient;
+import org.metricshub.snmp.client.OfflineSnmpFileClient;
 import org.metricshub.snmp.client.SnmpClient;
 
 /**
@@ -31,8 +34,14 @@ import org.metricshub.snmp.client.SnmpClient;
 public class SnmpRequestExecutor extends AbstractSnmpRequestExecutor {
 
 	@Override
-	protected SnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname) throws IOException {
+	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname, String emulationInputFilePath)
+		throws IOException {
 		final SnmpConfiguration snmpConfig = (SnmpConfiguration) protocol;
+
+		// If an emulation input file path is provided, use the OfflineSnmpFileClient for testing purposes.
+		if (emulationInputFilePath != null && !emulationInputFilePath.isBlank()) {
+			return new OfflineSnmpFileClient(Path.of(emulationInputFilePath));
+		}
 
 		return new SnmpClient(
 			hostname,

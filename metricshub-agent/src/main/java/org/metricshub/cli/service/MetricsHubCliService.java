@@ -22,6 +22,7 @@ package org.metricshub.cli.service;
  */
 
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -284,6 +285,24 @@ public class MetricsHubCliService implements Callable<Integer> {
 	)
 	long jobTimeout;
 
+	@Option(
+		names = { "-rec", "--record" },
+		order = 14,
+		defaultValue = "false",
+		description = "Enables/disables recording of sources execution results",
+		help = true
+	)
+	boolean record;
+
+	@Option(
+		names = { "-e", "--emulate" },
+		order = 15,
+		defaultValue = "",
+		description = "Enables/disables reading the recorded sources execution results",
+		help = true
+	)
+	String emulate;
+
 	@Override
 	public Integer call() throws Exception {
 		// Check whether iterations is greater than 0. If it's not the case, throw a ParameterException
@@ -347,11 +366,15 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Add the connectors with variables connectors to the host.
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
+		final Path defaultLogDirectory = ConfigHelper.getDefaultOutputDirectory();
+
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
+			.recordOutputDirectory(record ? defaultLogDirectory.toString() : null)
+			.emulationInputDirectory(emulate)
 			.build();
 
 		// Instantiate a new ClientsExecutor
