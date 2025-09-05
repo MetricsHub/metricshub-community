@@ -80,9 +80,6 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 		// Create the granted authority as application user
 		final GrantedAuthority authority = new SimpleGrantedAuthority(SecurityHelper.ROLE_APP_USER);
 
-		// Erase password
-		user.setPassword(null);
-
 		// Return the JWT authentication token wrapping user details, JWT, authority and JWT expiration time
 		return new JwtAuthToken(user, null, jwt, Collections.singleton(authority), jwtComponent.getShortExpire());
 	}

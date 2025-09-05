@@ -50,7 +50,7 @@ import picocli.CommandLine.Spec;
 
 /**
  * Manage users via CLI.
- * Stored payload: username <SEP> bcrypt(password) <SEP> role
+ * Stored payload: username &lt;SEP&gt; bcrypt(password) &lt;SEP&gt; role
  */
 //CHECKSTYLE:OFF
 @Command(
@@ -116,7 +116,6 @@ public class UserCliService {
 	 * @return the encoder instance
 	 */
 	private static BCryptPasswordEncoder encoder() {
-		// strength 12 to match your previous choice; adjust if needed
 		return new BCryptPasswordEncoder();
 	}
 

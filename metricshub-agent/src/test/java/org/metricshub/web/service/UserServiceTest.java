@@ -2,7 +2,6 @@ package org.metricshub.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -89,7 +88,6 @@ class UserServiceTest {
 
 		final User principal = (User) token.getPrincipal();
 		assertEquals("alice", principal.getUsername(), "Username should match");
-		assertNull(principal.getPassword(), "Password should be erased (set to null)");
 
 		final Set<String> authorities = token
 			.getAuthorities()

@@ -3,7 +3,6 @@ package org.metricshub.web.security.login;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -134,7 +133,6 @@ class LoginAuthenticationProviderTest {
 			() -> assertEquals(jwt, ((JwtAuthToken) out).getToken(), "JWT token should match"),
 			() -> assertEquals(1800L, ((JwtAuthToken) out).getExpiresIn(), "ExpiresIn should come from jwtComponent"),
 			() -> assertEquals("alice", ((User) out.getPrincipal()).getUsername(), "Principal username should match"),
-			() -> assertNull(((User) out.getPrincipal()).getPassword(), "Password should be erased (set to null)"),
 			() ->
 				assertEquals(
 					Collections.singleton(SecurityHelper.ROLE_APP_USER),
