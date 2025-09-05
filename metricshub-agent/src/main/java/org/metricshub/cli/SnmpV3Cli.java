@@ -236,14 +236,13 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 	boolean[] verbose;
 
 	@Option(
-			names = { "-rec", "--record" },
-			order = 17,
-			defaultValue = "false",
-			description = "Enables/disables recording of sources execution results",
-			help = true
+		names = { "-rec", "--record" },
+		order = 17,
+		defaultValue = "false",
+		description = "Enables/disables recording of sources execution results",
+		help = true
 	)
 	boolean record;
-
 
 	PrintWriter printWriter;
 
@@ -391,10 +390,7 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 					final String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided when the record option is enabled
 					// CHECKSTYLE:OFF
-					if (
-						"WALK".equalsIgnoreCase(queryNode.get("action").asText()) &&
-						record
-					) {
+					if ("WALK".equalsIgnoreCase(queryNode.get("action").asText()) && record) {
 						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter);
 					}
 					// CHECKSTYLE:ON

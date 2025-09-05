@@ -119,13 +119,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			result =
 				getRequestExecutor()
-					.executeSNMPGetNext(
-						SNMP_OID,
-						configuration,
-						hostname,
-						true,
-						telemetryManager.getEmulationInputDirectory()
-					);
+					.executeSNMPGetNext(SNMP_OID, configuration, hostname, true, telemetryManager.getEmulationInputDirectory());
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking SNMP protocol status. SNMP exception when performing a SNMP Get Next query on {}: ",
@@ -195,10 +189,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public String executeQuery(
-		final IConfiguration configuration,
-		final JsonNode queryNode
-	) {
+	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) {
 		final ISnmpConfiguration snmpConfiguration = (ISnmpConfiguration) configuration;
 		final String hostname = configuration.getHostname();
 		String result = "Failed Executing SNMP query";

@@ -639,7 +639,7 @@ class SnmpV3ExtensionTest {
 		snmpV3QueryConfiguration.set("action", new TextNode(GET));
 		snmpV3QueryConfiguration.set("oid", new TextNode(SnmpV3Extension.SNMP_OID));
 
-		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration, null));
+		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration));
 	}
 
 	@Test
@@ -655,7 +655,7 @@ class SnmpV3ExtensionTest {
 		snmpV3QueryConfiguration.set("action", new TextNode(GET_NEXT));
 		snmpV3QueryConfiguration.set("oid", new TextNode(SnmpV3Extension.SNMP_OID));
 
-		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration, null));
+		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration));
 	}
 
 	@Test
@@ -671,7 +671,7 @@ class SnmpV3ExtensionTest {
 		snmpV3QueryConfiguration.set("action", new TextNode(WALK));
 		snmpV3QueryConfiguration.set("oid", new TextNode(SnmpV3Extension.SNMP_OID));
 
-		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration, null));
+		assertEquals(message, snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration));
 	}
 
 	@Test
@@ -698,7 +698,7 @@ class SnmpV3ExtensionTest {
 
 		assertEquals(
 			TextTableHelper.generateTextTable(columnsArray, SNMP_TABLE_RESULT),
-			snmpV3Extension.executeQuery(snmpV3Configuration, snmpv3QueryConfiguration, null)
+			snmpV3Extension.executeQuery(snmpV3Configuration, snmpv3QueryConfiguration)
 		);
 	}
 
@@ -716,7 +716,7 @@ class SnmpV3ExtensionTest {
 
 		assertEquals(
 			"Failed Executing SNMP query",
-			snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration, null)
+			snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration)
 		);
 	}
 
@@ -731,7 +731,7 @@ class SnmpV3ExtensionTest {
 
 		assertEquals(
 			"Failed Executing SNMP query",
-			snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration, null)
+			snmpV3Extension.executeQuery(snmpV3Configuration, snmpV3QueryConfiguration)
 		);
 	}
 }

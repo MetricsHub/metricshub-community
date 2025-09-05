@@ -642,7 +642,7 @@ class SnmpExtensionTest {
 		snmpQueryConfiguration.set("action", new TextNode(GET));
 		snmpQueryConfiguration.set("oid", new TextNode(SnmpExtension.SNMP_OID));
 
-		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null));
+		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration));
 	}
 
 	@Test
@@ -658,7 +658,7 @@ class SnmpExtensionTest {
 		snmpQueryConfiguration.set("action", new TextNode(GET_NEXT));
 		snmpQueryConfiguration.set("oid", new TextNode(SnmpExtension.SNMP_OID));
 
-		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null));
+		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration));
 	}
 
 	@Test
@@ -674,7 +674,7 @@ class SnmpExtensionTest {
 		snmpQueryConfiguration.set("action", new TextNode(WALK));
 		snmpQueryConfiguration.set("oid", new TextNode(SnmpExtension.SNMP_OID));
 
-		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null));
+		assertEquals(message, snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration));
 	}
 
 	@Test
@@ -701,7 +701,7 @@ class SnmpExtensionTest {
 
 		assertEquals(
 			TextTableHelper.generateTextTable(COLUMNS_ARRAY, SNMP_TABLE_RESULT),
-			snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null)
+			snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration)
 		);
 	}
 
@@ -717,10 +717,7 @@ class SnmpExtensionTest {
 		snmpQueryConfiguration.set("action", new TextNode(WALK));
 		snmpQueryConfiguration.set("oid", new TextNode(SnmpExtension.SNMP_OID));
 
-		assertEquals(
-			"Failed Executing SNMP query",
-			snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null)
-		);
+		assertEquals("Failed Executing SNMP query", snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration));
 	}
 
 	@Test
@@ -732,9 +729,6 @@ class SnmpExtensionTest {
 		snmpQueryConfiguration.set("action", new TextNode(""));
 		snmpQueryConfiguration.set("oid", new TextNode(SnmpExtension.SNMP_OID));
 
-		assertEquals(
-			"Failed Executing SNMP query",
-			snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration, null)
-		);
+		assertEquals("Failed Executing SNMP query", snmpExtension.executeQuery(snmpConfiguration, snmpQueryConfiguration));
 	}
 }

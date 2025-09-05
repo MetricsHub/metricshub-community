@@ -373,7 +373,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
-			.recordOutputDirectory(defaultLogDirectory.toString())
+			.recordOutputDirectory(record ? defaultLogDirectory.toString() : null)
 			.emulationInputDirectory(emulate)
 			.build();
 

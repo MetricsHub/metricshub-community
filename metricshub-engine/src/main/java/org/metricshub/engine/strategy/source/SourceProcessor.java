@@ -163,14 +163,10 @@ public class SourceProcessor implements ISourceProcessor {
 		// CHECKSTYLE:OFF
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-					emulationInputDirectory != null && !emulationInputDirectory.isBlank()
-
+			emulationInputDirectory != null &&
+			!emulationInputDirectory.isBlank()
 		) {
-			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(
-				connectorId,
-				source,
-				emulationInputDirectory
-			);
+			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(connectorId, source, emulationInputDirectory);
 			return emulatedSourceTable.orElse(null);
 		}
 
@@ -181,7 +177,9 @@ public class SourceProcessor implements ISourceProcessor {
 
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			recordOutputDirectory != null &&
+			!recordOutputDirectory.isBlank()
+		) {
 			persist(table, connectorId, source, recordOutputDirectory);
 		}
 		return table;
@@ -197,7 +195,12 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @param connectorId the identifier of the connector defining the source
 	 * @param source the {@link Source} that was processed
 	 */
-	private void persist(final SourceTable sourceTable, final String connectorId, final Source source, final String recordOutputDirectory) {
+	private void persist(
+		final SourceTable sourceTable,
+		final String connectorId,
+		final Source source,
+		final String recordOutputDirectory
+	) {
 		// Directory where we will store the sources results files
 		// We will store 1 file per source, named as <connectorId><sourceKey>.yaml
 		final Path sourceResultOutputDirectory = Paths.get(recordOutputDirectory);
@@ -205,7 +208,9 @@ public class SourceProcessor implements ISourceProcessor {
 			Files.createDirectories(sourceResultOutputDirectory);
 
 			final String cleanKey = source.getKey().replace(":", "-");
-			final Path file = sourceResultOutputDirectory.resolve(connectorId + cleanKey + ".yaml"); // keep extension if you wish
+			final Path file = sourceResultOutputDirectory.resolve(
+				telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"
+			); // keep extension if you wish
 
 			try (
 				BufferedWriter out = Files.newBufferedWriter(
@@ -238,10 +243,10 @@ public class SourceProcessor implements ISourceProcessor {
 	) {
 		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
 		final String cleanKey = source.getKey().replace(":", "-");
-		final Path file = outDir.resolve(connectorId + cleanKey + ".yaml"); // content is YAML
+		final Path file = outDir.resolve(telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"); // content is YAML
 
 		if (!Files.exists(file)) {
-			throw new IllegalStateException("The path " + emulationModeSourceOutputDirectory + " does not exist!");
+			throw new IllegalStateException("The file " + file.getFileName() + " does not exist!");
 		}
 
 		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
