@@ -59,23 +59,27 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		throws ServletException, IOException {
 		final var requestApiKey = request.getHeader(API_KEY_HEADER);
 
-		if (requestApiKey != null) {
-			final var token = requestApiKey.replace("Bearer ", "");
-			if (apiKeyRegistry.isValid(token)) {
-				final var apiKey = apiKeyRegistry.getApiKeyByToken(token);
-				final var authentication = new UsernamePasswordAuthenticationToken(
-					apiKey.alias(),
-					token,
-					Collections.emptyList()
-				);
-
-				SecurityContextHolder.getContext().setAuthentication(authentication);
-
-				filterChain.doFilter(request, response);
-				return;
-			}
+		// If no header -> let other filters try (e.g., JWT)
+		if (requestApiKey == null) {
+			filterChain.doFilter(request, response);
+			return;
 		}
-		response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		response.getWriter().write("Unauthorized");
+
+		final var token = requestApiKey.replace("Bearer ", "");
+		if (apiKeyRegistry.isValid(token)) {
+			final var apiKey = apiKeyRegistry.getApiKeyByToken(token);
+			final var authentication = new UsernamePasswordAuthenticationToken(
+				apiKey.alias(),
+				token,
+				Collections.emptyList()
+			);
+
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+
+			filterChain.doFilter(request, response);
+			return;
+		}
+
+		SecurityHelper.writeUnauthorizedResponse(response);
 	}
 }
