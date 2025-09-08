@@ -23,8 +23,6 @@ package org.metricshub.web.security.login;
 
 import java.util.Collections;
 import java.util.Optional;
-import lombok.Builder;
-import lombok.Data;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.User;
@@ -74,8 +72,8 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 		// Perform authentication and get the User instance with the generated JWT
 		final var userAndJwt = doAuth((LoginAuthenticationRequest) authentication.getDetails());
 
-		final User user = userAndJwt.getUser();
-		final String jwt = userAndJwt.getJwt();
+		final User user = userAndJwt.user();
+		final String jwt = userAndJwt.jwt();
 
 		// Create the granted authority as application user
 		final GrantedAuthority authority = new SimpleGrantedAuthority(SecurityHelper.ROLE_APP_USER);
@@ -104,7 +102,7 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 		final String jwt = jwtComponent.generateJwt(user);
 
 		// Build User and JWT
-		return UserAndJwt.builder().jwt(jwt).user(user).build();
+		return new UserAndJwt(user, jwt);
 	}
 
 	/**
@@ -132,11 +130,9 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 		return user;
 	}
 
-	@Data
-	@Builder
-	private static class UserAndJwt {
-
-		private User user;
-		private String jwt;
+	/**
+	 * Helper record to wrap user and JWT
+	 */
+	private record UserAndJwt(User user, String jwt) {
 	}
 }
