@@ -114,23 +114,31 @@ public class ConfigHelper {
 
 	/**
 	 * Get the default output directory for logging.<br>
-	 * On Windows, if the LOCALAPPDATA path is not valid then the output directory will be located
+	 * On Windows, the output directory is the local logs folder (relative to the working directory)
+	 * if it is writable. If not, and if the LOCALAPPDATA path is not valid, then the output directory will be located
 	 * under the installation directory.<br>
 	 * On Linux, the output directory is located under the installation directory.
 	 *
 	 * @return {@link Path} instance
 	 */
 	public static Path getDefaultOutputDirectory() {
+		var subDirectory = getSubDirectory(LOG_DIRECTORY_NAME, true);
 		if (LocalOsHandler.isWindows()) {
+			try {
+				if (Files.isWritable(subDirectory)) {
+					return subDirectory;
+				}
+			} catch (Exception ignored) {}
+
 			final String localAppDataPath = System.getenv("LOCALAPPDATA");
 
 			// Make sure the LOCALAPPDATA path is valid
 			if (localAppDataPath != null && !localAppDataPath.isBlank()) {
-				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, "logs"));
+				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, LOG_DIRECTORY_NAME));
 			}
 		}
 
-		return getSubDirectory(LOG_DIRECTORY_NAME, true);
+		return subDirectory;
 	}
 
 	/**
@@ -1151,6 +1159,7 @@ public class ConfigHelper {
 			.configuredConnectorId(configuredConnectorId)
 			.connectorVariables(resourceConfig.getConnectorVariables())
 			.resolveHostnameToFqdn(resourceConfig.getResolveHostnameToFqdn())
+			.attributes(attributes)
 			.build();
 	}
 
