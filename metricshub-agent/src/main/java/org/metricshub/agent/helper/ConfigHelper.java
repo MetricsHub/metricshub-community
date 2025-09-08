@@ -1159,7 +1159,6 @@ public class ConfigHelper {
 			.configuredConnectorId(configuredConnectorId)
 			.connectorVariables(resourceConfig.getConnectorVariables())
 			.resolveHostnameToFqdn(resourceConfig.getResolveHostnameToFqdn())
-			.attributes(attributes)
 			.build();
 	}
 

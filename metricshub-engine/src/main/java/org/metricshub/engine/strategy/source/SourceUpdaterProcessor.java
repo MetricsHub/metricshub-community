@@ -77,12 +77,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class SourceUpdaterProcessor implements ISourceProcessor {
 
 	private static final Pattern MONO_INSTANCE_REPLACEMENT_PATTERN = Pattern.compile(
-		"\\$\\{attribute::([^}]+)\\}",
-		Pattern.CASE_INSENSITIVE
-	);
-
-	private static final Pattern RESOURCE_ATTRIBUTE_REFERENCE_PATTERN = Pattern.compile(
-		"\\$\\{resource\\.attribute::([^}]+)\\}",
+		"\\$\\{attribute::(\\w+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
 
@@ -195,9 +190,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			return runExecuteForEachEntryOf(copy);
 		}
 
-		copy.update(value ->
-			replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
-		);
 		copy.update(value -> replaceAttributeReferences(value, attributes));
 
 		copy.update(value -> replaceSourceReference(value, copy));
@@ -305,60 +297,30 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	}
 
 	/**
-	 * Replace the attribute identifiers referenced in the key with the attribute
-	 * values that need to be retrieved from the given attributes lookup.
+	 * Replace the attribute identifiers referenced in the key
+	 * with the attribute values that need to be retrieved from the given attributes lookup.
 	 *
-	 * @param key        the input string where replacements occur
-	 * @param attributes attribute map
-	 * @param pattern    regex with group 1 capturing the key
+	 * @param key        The key where to replace the deviceId.
+	 * @param attributes Key-value pairs of the monitor's attributes
 	 * @return String value
 	 */
-	private static String replaceReferencesWithPattern(
-		final String key,
-		final Map<String, String> attributes,
-		final Pattern pattern
-	) {
-		if (key == null || attributes == null) {
+	public static String replaceAttributeReferences(final String key, final Map<String, String> attributes) {
+		if (attributes == null || key == null) {
 			return key;
 		}
 
-		final Matcher matcher = pattern.matcher(key);
+		final Matcher matcher = MONO_INSTANCE_REPLACEMENT_PATTERN.matcher(key);
 
 		final StringBuffer sb = new StringBuffer();
 		while (matcher.find()) {
-			final String attrKey = matcher.group(1).trim();
-			final String attributesValue = attributes.get(attrKey);
+			final String attributesValue = attributes.get(matcher.group(1));
 			if (attributesValue != null) {
 				matcher.appendReplacement(sb, Matcher.quoteReplacement(attributesValue));
 			}
 		}
 		matcher.appendTail(sb);
+
 		return sb.toString();
-	}
-
-	/**
-	 * Replaces `${attribute::KEY}` in {@code key} using monitor attributes.
-	 *
-	 * @param key         input string
-	 * @param attributes  monitor attributes
-	 * @return resolved string, or original {@code key}
-	 */
-	public static String replaceAttributeReferences(final String key, final Map<String, String> attributes) {
-		return replaceReferencesWithPattern(key, attributes, MONO_INSTANCE_REPLACEMENT_PATTERN);
-	}
-
-	/**
-	 * Replaces `${resource.attributes::KEY}` in {@code key} using resource-level attributes.
-	 *
-	 * @param key                 input string
-	 * @param resourceAttributes  resource attributes
-	 * @return resolved string, or original {@code key}
-	 */
-	public static String replaceResourceAttributeReferences(
-		final String key,
-		final Map<String, String> resourceAttributes
-	) {
-		return replaceReferencesWithPattern(key, resourceAttributes, RESOURCE_ATTRIBUTE_REFERENCE_PATTERN);
 	}
 
 	/**
@@ -569,9 +531,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 				continue;
 			}
 
-			copy.update(value ->
-				replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
-			);
 			copy.update(dataValue -> replaceAttributeReferences(dataValue, attributes));
 
 			copy.update(value -> replaceSourceReference(value, copy));

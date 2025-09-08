@@ -487,26 +487,6 @@ class SourceUpdaterProcessorTest {
 	}
 
 	@Test
-	void testReplaceResourceAttributeReferences() {
-		String header = "Authorization: Bearer ${resource.attribute::api.token}";
-		assertEquals(
-			"Authorization: Bearer mySecretToken",
-			SourceUpdaterProcessor.replaceResourceAttributeReferences(header, Map.of("api.token", "mySecretToken"))
-		);
-		assertEquals(header, SourceUpdaterProcessor.replaceResourceAttributeReferences(header, Map.of()));
-		assertEquals(header, SourceUpdaterProcessor.replaceResourceAttributeReferences(header, null));
-		assertNull(SourceUpdaterProcessor.replaceResourceAttributeReferences(null, Map.of()));
-		header = "Authorization: Bearer ${resource.attribute::api.token}/${resource.attribute::user.id}";
-		assertEquals(
-			"Authorization: Bearer mySecretToken/user123",
-			SourceUpdaterProcessor.replaceResourceAttributeReferences(
-				header,
-				Map.of("api.token", "mySecretToken", "user.id", "user123")
-			)
-		);
-	}
-
-	@Test
 	void testProcessWbemSource() {
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
@@ -528,15 +508,11 @@ class SourceUpdaterProcessorTest {
 	@Test
 	void testProcessWmiSource() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(WmiSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(HostConfiguration.builder().build())
-			.build();
 		assertEquals(
 			SourceTable.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
-				telemetryManager,
+				TelemetryManager.builder().build(),
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
 			)
@@ -547,15 +523,12 @@ class SourceUpdaterProcessorTest {
 	@Test
 	void testProcessCommandLineSource() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(HostConfiguration.builder().build())
-			.build();
+
 		assertEquals(
 			SourceTable.empty(),
 			new SourceUpdaterProcessor(
 				sourceProcessor,
-				telemetryManager,
+				TelemetryManager.builder().build(),
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
 			)
@@ -664,15 +637,11 @@ class SourceUpdaterProcessorTest {
 
 		final SourceTable sourceTable = SourceTable.builder().table(List.of(List.of("12345"))).build();
 		doReturn(sourceTable).when(sourceProcessor).process(any(JmxSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(HostConfiguration.builder().build())
-			.build();
 		assertEquals(
 			sourceTable,
 			new SourceUpdaterProcessor(
 				sourceProcessor,
-				telemetryManager,
+				TelemetryManager.builder().build(),
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
 			)
