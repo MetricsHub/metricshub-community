@@ -133,6 +133,5 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	/**
 	 * Helper record to wrap user and JWT
 	 */
-	private record UserAndJwt(User user, String jwt) {
-	}
+	private record UserAndJwt(User user, String jwt) {}
 }
