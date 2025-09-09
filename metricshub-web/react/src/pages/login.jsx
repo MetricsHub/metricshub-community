@@ -7,7 +7,6 @@ import { withLayout } from "../hocs/with-layout";
 import { AuthLayout } from "../layouts/auth/layout";
 import * as Yup from "yup";
 import { useFormik } from "formik";
-import { useMounted } from "../hooks/use-mounted";
 
 const initialValues = {
 	username: "",
