@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
@@ -54,9 +53,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 @Slf4j
 public class MetricsHubAgentServer {
-	static {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-	}
 
 	private static ConfigurableApplicationContext context;
 

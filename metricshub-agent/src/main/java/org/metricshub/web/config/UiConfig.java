@@ -21,11 +21,14 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
  * Configuration class for setting up UI-related configurations in the MetricsHub web application.
@@ -46,6 +49,32 @@ public class UiConfig implements WebMvcConfigurer {
 	 */
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		registry.addResourceHandler("/**").addResourceLocations("file:" + ConfigHelper.getSubPath("web").toString() + "/");
+		final String webRoot = "file:" + ConfigHelper.getSubPath("web").toString() + "/";
+
+		registry
+			.addResourceHandler("/**")
+			.addResourceLocations(webRoot)
+			.resourceChain(true)
+			.addResolver(
+				new PathResourceResolver() {
+					@Override
+					protected Resource getResource(String resourcePath, Resource location) throws IOException {
+						// Serve the file if it exists
+						Resource requested = location.createRelative(resourcePath);
+						if (requested.exists() && requested.isReadable()) {
+							return requested;
+						}
+
+						// Don’t swallow API or real files with extensions
+						if (resourcePath.startsWith("api/") || resourcePath.contains(".")) {
+							// let other handlers (e.g., controllers) deal with it
+							return null;
+						}
+
+						// Fallback to the SPA entry point for client-side routes
+						return location.createRelative("index.html");
+					}
+				}
+			);
 	}
 }
