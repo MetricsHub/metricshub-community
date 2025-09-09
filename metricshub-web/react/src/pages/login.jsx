@@ -36,7 +36,6 @@ const LoginPage = () => {
 				if (returnTo) {
 					globalThis.location.assign(returnTo);
 				} else {
-					// paths.index should be "/" — make sure this exists
 					navigate(paths.index ?? "/", { replace: true });
 				}
 			} catch (err) {
