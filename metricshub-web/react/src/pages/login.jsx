@@ -91,12 +91,7 @@ const LoginPage = () => {
 					</FormHelperText>
 				)}
 
-				<Button
-					type="submit"
-					variant="contained"
-					size="large"
-					disabled={formik.isSubmitting}
-				>
+				<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
 					Sign in
 				</Button>
 			</Stack>
