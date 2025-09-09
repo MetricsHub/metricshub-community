@@ -40,8 +40,9 @@ const LoginPage = () => {
 					navigate(paths.index ?? "/", { replace: true });
 				}
 			} catch (err) {
+				console.error(err);
 				helpers.setStatus({ success: false });
-				helpers.setErrors({ submit: err?.message || "Sign-in failed" });
+				helpers.setErrors({ submit: "Sign-in failed" });
 			} finally {
 				// Always re-enable the button
 				helpers.setSubmitting(false);
