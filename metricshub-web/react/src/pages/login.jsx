@@ -85,7 +85,7 @@ const LoginPage = () => {
 				/>
 
 				{formik.errors.submit && (
-					<FormHelperText error sx={{ mt: -1 }}>
+					<FormHelperText error sx={{ textAlign: "center" }}>
 						{formik.errors.submit}
 					</FormHelperText>
 				)}
