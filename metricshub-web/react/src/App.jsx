@@ -2,9 +2,10 @@ import * as React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
-import LoginPage from "./pages/login";
-import HomePage from "./pages/home";
 import metricshubLogo from "./assets/metricshub.svg";
+
+const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
+const HomePage = React.lazy(() => import("./pages/home"));
 
 const SplashScreen = () => (
 	<Box
@@ -17,7 +18,11 @@ const SplashScreen = () => (
 			gap: 2,
 		}}
 	>
-		<img src={metricshubLogo} alt="MetricsHub" style={{ width: 120, height: "auto", marginBottom: "1rem" }} />
+		<img
+			src={metricshubLogo}
+			alt="MetricsHub"
+			style={{ width: 120, height: "auto", marginBottom: "1rem" }}
+		/>
 		<CircularProgress />
 	</Box>
 );
