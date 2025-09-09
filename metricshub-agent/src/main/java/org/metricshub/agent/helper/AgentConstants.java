@@ -154,4 +154,14 @@ public class AgentConstants {
 	 * Prefix for API keys stored in the KeyStore.
 	 */
 	public static final String API_KEY_PREFIX = "api_key:";
+
+	/**
+	 * Prefix for users stored in the KeyStore.
+	 */
+	public static final String USER_PREFIX = "user:";
+
+	/**
+	 * User info separator in the KeyStore.
+	 */
+	public static final String USER_INFO_SEPARATOR = "__§m8b_user_info§__";
 }

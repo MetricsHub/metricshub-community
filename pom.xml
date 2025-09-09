@@ -109,6 +109,7 @@
 		<module>metricshub-doc</module>
 		<module>metricshub-yaml-configuration-extension</module>
 		<module>metricshub-programmable-configuration-extension</module>
+		<module>metricshub-web</module>
 	</modules>
 
 	<profiles>

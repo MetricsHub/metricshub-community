@@ -21,3 +21,6 @@ web:
   spring.ai.mcp.server.capabilities.prompt: true
   spring.ai.mcp.server.capabilities.resource: true
   spring.ai.mcp.server.capabilities.tool: true
+  jwt.short_expire: 3600
+  jwt.long_expire: 14400
+  jwt.secret: eyJhbGciOiJIUzI1NiJ9.ew0KICAic3ViIjogInNlbnRyeSIsDQogICJuYW1lIjogIlNlbnRyeSBTb2Z3YXJlIiwNCiAgImlhdCI6IDE1MTYyMzkwMjINCn0.UUUxmysmx49zKKRt8_pQln-WqXjaTVQlwgjg3SbidF4
