@@ -44,7 +44,8 @@ const handlers = {
 	}),
 };
 
-const reducer = (state, action) => (handlers[action.type] ? handlers[action.type](state, action) : state);
+const reducer = (state, action) =>
+	handlers[action.type] ? handlers[action.type](state, action) : state;
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext({
