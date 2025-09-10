@@ -32,11 +32,11 @@ public class TestConfiguration implements IConfiguration {
 
 	@Override
 	public Object getProperty(final String property) {
-		return null;
+		return "myProperty".equalsIgnoreCase(property) ? "myPropertyValue" : null;
 	}
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return false;
+		return "test".equalsIgnoreCase(protocol);
 	}
 }
