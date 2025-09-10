@@ -49,7 +49,7 @@ class JwtAuthFilterTest {
 		final Authentication existingAuth = mock(Authentication.class);
 		SecurityContextHolder.getContext().setAuthentication(existingAuth);
 
-		final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/any");
+		final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/resource");
 		final MockHttpServletResponse response = new MockHttpServletResponse();
 		final FilterChain chain = mock(FilterChain.class);
 
