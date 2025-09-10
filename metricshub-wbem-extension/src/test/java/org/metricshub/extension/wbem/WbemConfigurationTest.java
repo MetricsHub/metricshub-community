@@ -1,8 +1,13 @@
 package org.metricshub.extension.wbem;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -102,5 +107,48 @@ class WbemConfigurationTest {
 
 		// Ensure that the copied configuration is a distinct object
 		assert (wbemConfiguration != wbemConfigurationCopy);
+	}
+
+	@Test
+	void testGetProperty() {
+		final WbemConfiguration wbemConfiguration = WbemConfiguration
+			.builder()
+			.namespace("myNamespace")
+			.password("myPassword".toCharArray())
+			.port(443)
+			.protocol(TransportProtocols.HTTPS)
+			.username("myUsername")
+			.vCenter("myVCenter")
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(wbemConfiguration.getProperty(null));
+		assertNull(wbemConfiguration.getProperty(""));
+		assertNull(wbemConfiguration.getProperty("badProperty"));
+
+		final Object propertyPasswordObject = wbemConfiguration.getProperty("password");
+		assertInstanceOf(char[].class, propertyPasswordObject);
+		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
+
+		assertEquals("myNamespace", wbemConfiguration.getProperty("namespace"));
+		assertEquals(443, wbemConfiguration.getProperty("port"));
+		assertEquals(TransportProtocols.HTTPS, wbemConfiguration.getProperty("protocol"));
+		assertEquals("myUsername", wbemConfiguration.getProperty("username"));
+		assertEquals("myVCenter", wbemConfiguration.getProperty("vcenter"));
+		assertEquals(100L, wbemConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", wbemConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final WbemConfiguration wbemConfiguration = new WbemConfiguration();
+		assertFalse(wbemConfiguration.isCorrespondingProtocol(null));
+		assertFalse(wbemConfiguration.isCorrespondingProtocol(""));
+		assertFalse(wbemConfiguration.isCorrespondingProtocol("SNMP"));
+
+		assertTrue(wbemConfiguration.isCorrespondingProtocol("wbem"));
+		assertTrue(wbemConfiguration.isCorrespondingProtocol("WBEM"));
+		assertTrue(wbemConfiguration.isCorrespondingProtocol("WbEm"));
 	}
 }

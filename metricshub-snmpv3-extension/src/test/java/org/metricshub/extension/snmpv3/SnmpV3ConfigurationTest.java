@@ -1,6 +1,10 @@
 package org.metricshub.extension.snmpv3;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -236,5 +240,63 @@ class SnmpV3ConfigurationTest {
 
 		// Ensure that the copied configuration is a distinct object
 		assert (snmpV3Configuration != snmpV3ConfigurationCopy);
+	}
+
+	@Test
+	void testGetProperty() {
+		final SnmpV3Configuration snmpConfiguration = SnmpV3Configuration
+			.builder()
+			.authType(AuthType.MD5)
+			.contextName("myContextname")
+			.password("myPassword".toCharArray())
+			.port(443)
+			.privacy(Privacy.AES)
+			.privacyPassword("myPrivacyPassword".toCharArray())
+			.retryIntervals(new int[] { 100 })
+			.username("myUsername")
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(snmpConfiguration.getProperty(null));
+		assertNull(snmpConfiguration.getProperty(""));
+		assertNull(snmpConfiguration.getProperty("badProperty"));
+
+		final Object propertyPasswordObject = snmpConfiguration.getProperty("password");
+		assertInstanceOf(char[].class, propertyPasswordObject);
+		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
+
+		final Object propertyPrivacyPasswordObject = snmpConfiguration.getProperty("privacypassword");
+		assertInstanceOf(char[].class, propertyPrivacyPasswordObject);
+		assertArrayEquals("myPrivacyPassword".toCharArray(), (char[]) propertyPrivacyPasswordObject);
+
+		final Object propertyRetryIntervalsObject = snmpConfiguration.getProperty("retryintervals");
+		assertInstanceOf(int[].class, propertyRetryIntervalsObject);
+		assertArrayEquals(new int[] { 100 }, (int[]) propertyRetryIntervalsObject);
+
+		assertEquals(AuthType.MD5, snmpConfiguration.getProperty("authtype"));
+		assertEquals("myContextname", snmpConfiguration.getProperty("contextname"));
+		assertEquals(443, snmpConfiguration.getProperty("port"));
+		assertEquals(Privacy.AES, snmpConfiguration.getProperty("privacy"));
+		assertEquals("myUsername", snmpConfiguration.getProperty("username"));
+		assertEquals(100L, snmpConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", snmpConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final SnmpV3Configuration snmpConfiguration = new SnmpV3Configuration();
+		assertFalse(snmpConfiguration.isCorrespondingProtocol(null));
+		assertFalse(snmpConfiguration.isCorrespondingProtocol(""));
+		assertFalse(snmpConfiguration.isCorrespondingProtocol("http"));
+		assertFalse(snmpConfiguration.isCorrespondingProtocol("SNMP"));
+
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmp3"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMP3"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMp3"));
+
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmpv3"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMPV3"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMpV3"));
 	}
 }

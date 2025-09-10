@@ -154,6 +154,16 @@ class HttpExtensionTest {
 
 					@Override
 					public void setTimeout(Long timeout) {}
+
+					@Override
+					public Object getProperty(String property) {
+						return null;
+					}
+
+					@Override
+					public boolean isCorrespondingProtocol(String protocol) {
+						return false;
+					}
 				}
 			)
 		);

@@ -2,7 +2,10 @@ package org.metricshub.extension.ping;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -39,5 +42,32 @@ class PingConfigurationTest {
 
 		// Ensure that the copied configuration is a distinct object
 		assert (pingConfiguration != pingConfigurationCopy);
+	}
+
+	@Test
+	void testGetProperty() {
+		final PingConfiguration pingConfiguration = PingConfiguration
+			.builder()
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(pingConfiguration.getProperty(null));
+		assertNull(pingConfiguration.getProperty(""));
+		assertNull(pingConfiguration.getProperty("badProperty"));
+
+		assertEquals(100L, pingConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", pingConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final PingConfiguration pingConfiguration = new PingConfiguration();
+		assertFalse(pingConfiguration.isCorrespondingProtocol(null));
+		assertFalse(pingConfiguration.isCorrespondingProtocol(""));
+		assertFalse(pingConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(pingConfiguration.isCorrespondingProtocol("PING"));
+		assertTrue(pingConfiguration.isCorrespondingProtocol("ping"));
+		assertTrue(pingConfiguration.isCorrespondingProtocol("PiNg"));
 	}
 }

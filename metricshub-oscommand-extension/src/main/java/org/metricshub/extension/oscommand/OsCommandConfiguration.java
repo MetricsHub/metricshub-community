@@ -120,4 +120,28 @@ public class OsCommandConfiguration implements IConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public Object getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "sudocommand":
+				return getSudoCommand();
+			case "timeout":
+				return getTimeout();
+			case "usesudo":
+				return isUseSudo();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "oscommand".equalsIgnoreCase(protocol);
+	}
 }

@@ -246,4 +246,40 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public Object getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "authtype":
+				return getAuthType();
+			case "contextname":
+				return getContextName();
+			case "password":
+				return getPassword();
+			case "port":
+				return getPort();
+			case "privacy":
+				return getPrivacy();
+			case "privacypassword":
+				return getPrivacyPassword();
+			case "retryintervals":
+				return getRetryIntervals();
+			case "timeout":
+				return getTimeout();
+			case "username":
+				return getUsername();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "snmp3".equalsIgnoreCase(protocol) || "snmpv3".equalsIgnoreCase(protocol);
+	}
 }

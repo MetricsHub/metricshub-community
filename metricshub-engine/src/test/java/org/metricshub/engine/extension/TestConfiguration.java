@@ -29,4 +29,14 @@ public class TestConfiguration implements IConfiguration {
 
 	@Override
 	public void setTimeout(Long timeout) {}
+
+	@Override
+	public Object getProperty(final String property) {
+		return null;
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return false;
+	}
 }

@@ -116,4 +116,32 @@ public class HttpConfiguration implements IConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public Object getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "username":
+				return getUsername();
+			case "password":
+				return getPassword();
+			case "https":
+				return getHttps();
+			case "port":
+				return getPort();
+			case "timeout":
+				return getTimeout();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "http".equalsIgnoreCase(protocol);
+	}
 }
