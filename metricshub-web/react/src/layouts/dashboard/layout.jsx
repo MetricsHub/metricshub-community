@@ -5,6 +5,9 @@ import { AppBar, Box, Button, Container, CssBaseline, Toolbar, Typography } from
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 import { withAuthGuard } from "../../hocs/with-auth-guard";
+import StatusText from "../../components/status-text";
+import StatusDetailsMenu from "../../components/status-details-menu";
+import OtelStatusIcon from "../../components/otel-status-icon";
 
 export const DashboardLayout = withAuthGuard(({ children }) => {
 	const navigate = useNavigate();
@@ -23,14 +26,25 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 			<CssBaseline />
 			<AppBar position="fixed" elevation={1} color="default">
 				<Toolbar sx={{ gap: 2 }}>
-					<Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-						MetricsHub
-					</Typography>
+					{/* Left side: Logo + Status */}
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
+						<Typography variant="h6" component="div">
+							MetricsHub
+						</Typography>
+						<StatusText sx={{ ml: 0.5 }} />
+						<OtelStatusIcon />
+					</Box>
+
+					{/* Right side: Username + Dropdown + Sign out */}
 					{user && (
 						<Typography variant="body2" sx={{ mr: 1, opacity: 0.75 }}>
 							{`Signed in as ${user.username}`}
 						</Typography>
 					)}
+
+					{/* The dropdown menu with backend details */}
+					<StatusDetailsMenu />
+
 					<Button onClick={handleSignOut} variant="outlined" size="small">
 						Sign out
 					</Button>

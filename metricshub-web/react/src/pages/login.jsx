@@ -50,50 +50,67 @@ const LoginPage = () => {
 	});
 
 	return (
-		<Box
-			component="form"
-			onSubmit={formik.handleSubmit}
-			noValidate
-			sx={{ mx: "auto", width: "100%", maxWidth: 640 }}
-		>
-			<Stack spacing={3}>
-				<TextField
-					autoFocus
-					fullWidth
-					label="Username"
-					name="username"
-					type="text"
-					value={formik.values.username}
-					onChange={formik.handleChange}
-					onBlur={formik.handleBlur}
-					error={Boolean(formik.touched.username && formik.errors.username)}
-					helperText={formik.touched.username && formik.errors.username}
-					autoComplete="username"
-				/>
+		<Box sx={{ position: "relative", width: "100%", height: "100%" }}>
+			{/* ADDED: top-right label */}
+			<Box
+				sx={{
+					position: "absolute",
+					top: 16,
+					right: 16,
+					fontSize: "0.9rem",
+					fontWeight: "bold",
+					color: "text.secondary",
+				}}
+			>
+				Lancelot&apos;s version
+			</Box>
 
-				<TextField
-					fullWidth
-					label="Password"
-					name="password"
-					type="password"
-					value={formik.values.password}
-					onChange={formik.handleChange}
-					onBlur={formik.handleBlur}
-					error={Boolean(formik.touched.password && formik.errors.password)}
-					helperText={formik.touched.password && formik.errors.password}
-					autoComplete="current-password"
-				/>
+			{/* Existing form */}
+			<Box
+				component="form"
+				onSubmit={formik.handleSubmit}
+				noValidate
+				sx={{ mx: "auto", width: "100%", maxWidth: 640 }}
+			>
+				<Stack spacing={3}>
+					<TextField
+						autoFocus
+						fullWidth
+						label="Username"
+						name="username"
+						type="text"
+						value={formik.values.username}
+						onChange={formik.handleChange}
+						onBlur={formik.handleBlur}
+						error={Boolean(formik.touched.username && formik.errors.username)}
+						helperText={formik.touched.username && formik.errors.username}
+						autoComplete="username"
+					/>
 
-				{formik.errors.submit && (
-					<FormHelperText error sx={{ textAlign: "center" }}>
-						{formik.errors.submit}
-					</FormHelperText>
-				)}
+					<TextField
+						fullWidth
+						label="Password"
+						name="password"
+						type="password"
+						value={formik.values.password}
+						onChange={formik.handleChange}
+						onBlur={formik.handleBlur}
+						error={Boolean(formik.touched.password && formik.errors.password)}
+						helperText={formik.touched.password && formik.errors.password}
+						autoComplete="current-password"
+					/>
 
-				<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
-					Sign in
-				</Button>
-			</Stack>
+					{formik.errors.submit && (
+						<FormHelperText error sx={{ textAlign: "center" }}>
+							{formik.errors.submit}
+						</FormHelperText>
+					)}
+
+					<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
+						Sign in
+					</Button>
+				</Stack>
+			</Box>
 		</Box>
 	);
 };

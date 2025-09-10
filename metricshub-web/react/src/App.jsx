@@ -8,51 +8,51 @@ const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped 
 const HomePage = React.lazy(() => import("./pages/home"));
 
 const SplashScreen = () => (
-	<Box
-		sx={{
-			minHeight: "100vh",
-			display: "flex",
-			flexDirection: "column",
-			alignItems: "center",
-			justifyContent: "center",
-			gap: 2,
-		}}
-	>
-		<img
-			src={metricshubLogo}
-			alt="MetricsHub"
-			style={{ width: 120, height: "auto", marginBottom: "1rem" }}
-		/>
-		<CircularProgress />
-	</Box>
+  <Box
+    sx={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 2,
+    }}
+  >
+    <img
+      src={metricshubLogo}
+      alt="MetricsHub"
+      style={{ width: 120, height: "auto", marginBottom: "1rem" }}
+    />
+    <CircularProgress />
+  </Box>
 );
 
 export default function App() {
-	const theme = createTheme({
-		palette: { mode: "light" },
-	});
+  const theme = createTheme({
+    palette: { mode: "light" },
+  });
 
-	return (
-		<ThemeProvider theme={theme}>
-			<CssBaseline />
-			<AuthProvider>
-				<AuthConsumer>
-					{(auth) =>
-						auth.isInitialized ? (
-							<BrowserRouter>
-								<Routes>
-									<Route path="/login" element={<LoginPage />} />
-									<Route path="/" element={<HomePage />} />
-									{/* Fallback */}
-									<Route path="*" element={<Navigate to="/" replace />} />
-								</Routes>
-							</BrowserRouter>
-						) : (
-							<SplashScreen />
-						)
-					}
-				</AuthConsumer>
-			</AuthProvider>
-		</ThemeProvider>
-	);
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <AuthProvider>
+        <AuthConsumer>
+          {(auth) =>
+            auth.isInitialized ? (
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/" element={<HomePage />} />
+                  {/* Fallback */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </BrowserRouter>
+            ) : (
+              <SplashScreen />
+            )
+          }
+        </AuthConsumer>
+      </AuthProvider>
+    </ThemeProvider>
+  );
 }
