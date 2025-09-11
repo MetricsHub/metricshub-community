@@ -230,6 +230,6 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return (protocol != null && SnmpExtension.IDENTIFIER.equalsIgnoreCase(protocol.toLowerCase()));
+		return SnmpExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }
