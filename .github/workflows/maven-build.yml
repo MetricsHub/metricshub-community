@@ -24,6 +24,12 @@ jobs:
 
     steps:
 
+    - name: Setup tmate SSH session
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      with:
+        detached: true
+  
     - name: Install gcc-multilib
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
