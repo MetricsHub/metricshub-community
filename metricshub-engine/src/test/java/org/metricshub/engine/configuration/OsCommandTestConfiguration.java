@@ -80,4 +80,14 @@ public class OsCommandTestConfiguration implements IConfiguration {
 	public IConfiguration copy() {
 		return null;
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		return null;
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return false;
+	}
 }

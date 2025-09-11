@@ -3,7 +3,9 @@ package org.metricshub.extension.jmx;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -119,5 +121,38 @@ class JmxConfigurationTest {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("host").port(1234).build();
 
 		assertEquals("JMX/host:1234", config.toString(), "toString() should format without username");
+	}
+
+	@Test
+	void testGetProperty() {
+		final JmxConfiguration jmxConfiguration = JmxConfiguration
+			.builder()
+			.username("myUsername")
+			.password("myPassword".toCharArray())
+			.port(443)
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(jmxConfiguration.getProperty(null));
+		assertNull(jmxConfiguration.getProperty(""));
+		assertNull(jmxConfiguration.getProperty("badProperty"));
+
+		assertEquals("myPassword", jmxConfiguration.getProperty("password"));
+		assertEquals("myUsername", jmxConfiguration.getProperty("username"));
+		assertEquals("443", jmxConfiguration.getProperty("port"));
+		assertEquals("100", jmxConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", jmxConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final JmxConfiguration jmxConfiguration = new JmxConfiguration();
+		assertFalse(jmxConfiguration.isCorrespondingProtocol(null));
+		assertFalse(jmxConfiguration.isCorrespondingProtocol(""));
+		assertFalse(jmxConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(jmxConfiguration.isCorrespondingProtocol("JMX"));
+		assertTrue(jmxConfiguration.isCorrespondingProtocol("jmx"));
+		assertTrue(jmxConfiguration.isCorrespondingProtocol("JmX"));
 	}
 }

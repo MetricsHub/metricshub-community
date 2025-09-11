@@ -77,4 +77,24 @@ public class PingConfiguration implements IConfiguration {
 	public IConfiguration copy() {
 		return PingConfiguration.builder().timeout(timeout).hostname(hostname).build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "timeout":
+				return getTimeout().toString();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return PingExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }
