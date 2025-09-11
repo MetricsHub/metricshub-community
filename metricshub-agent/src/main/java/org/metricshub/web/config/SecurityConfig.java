@@ -79,7 +79,9 @@ public class SecurityConfig {
 			// Order matters: API key first, JWT after it.
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
-			.authorizeHttpRequests(authz -> authz.requestMatchers("/api/**").authenticated().anyRequest().permitAll())
+			.authorizeHttpRequests(authz ->
+				authz.requestMatchers("/api/**", "/sse", "/mcp/message").authenticated().anyRequest().permitAll()
+			)
 			.exceptionHandling(ex ->
 				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
 			)

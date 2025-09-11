@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Button, Stack, TextField, Box, FormHelperText } from "@mui/material";
+import { Button, Stack, TextField, Box, Alert } from "@mui/material";
 import { useAuth } from "../hooks/use-auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { paths } from "../paths";
@@ -41,7 +41,9 @@ const LoginPage = () => {
 			} catch (err) {
 				console.error(err);
 				helpers.setStatus({ success: false });
-				helpers.setErrors({ submit: "Sign-in failed" });
+				helpers.setErrors({
+					submit: "Sign-in failed: " + err.response?.data?.message || "Unknown error",
+				});
 			} finally {
 				// Always re-enable the button
 				helpers.setSubmitting(false);
@@ -100,11 +102,7 @@ const LoginPage = () => {
 						autoComplete="current-password"
 					/>
 
-					{formik.errors.submit && (
-						<FormHelperText error sx={{ textAlign: "center" }}>
-							{formik.errors.submit}
-						</FormHelperText>
-					)}
+					{formik.errors.submit && <Alert severity="error">{formik.errors.submit}</Alert>}
 
 					<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
 						Sign in
