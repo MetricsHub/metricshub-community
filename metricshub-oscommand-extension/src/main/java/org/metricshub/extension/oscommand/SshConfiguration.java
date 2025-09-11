@@ -152,7 +152,7 @@ public class SshConfiguration extends OsCommandConfiguration {
 		}
 		switch (property.toLowerCase()) {
 			case "password":
-				return getPassword().toString();
+				return String.valueOf(getPassword());
 			case "port":
 				return getPort().toString();
 			case "privatekey":
