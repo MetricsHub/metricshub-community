@@ -42,6 +42,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -85,6 +86,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		"\\$\\{resource\\.attribute::([^}]+)\\}",
 		Pattern.CASE_INSENSITIVE
 	);
+
+	private static final Pattern PROTOCOL_PATTERN = Pattern.compile("\\$\\{protocol::(.*?)\\}", Pattern.CASE_INSENSITIVE);
 
 	private ISourceProcessor sourceProcessor;
 	private TelemetryManager telemetryManager;
@@ -199,6 +202,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			replaceResourceAttributeReferences(value, telemetryManager.getHostConfiguration().getAttributes())
 		);
 		copy.update(value -> replaceAttributeReferences(value, attributes));
+
+		copy.update(value -> replaceProtocolPropertyReferences(value));
 
 		copy.update(value -> replaceSourceReference(value, copy));
 
@@ -574,6 +579,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			);
 			copy.update(dataValue -> replaceAttributeReferences(dataValue, attributes));
 
+			copy.update(value -> replaceProtocolPropertyReferences(value));
+
 			copy.update(value -> replaceSourceReference(value, copy));
 
 			concatEntryResult(source, result, row, copy.accept(sourceProcessor));
@@ -763,5 +770,36 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		}
 
 		return EMPTY;
+	}
+
+	/**
+	 * Replace the attribute identifiers referenced in the key
+	 * with the protocol properties that need to be retrieved from the {@link TelemetryManager}.
+	 *
+	 * @param key The key where to replace the properties.
+	 * @return String value
+	 */
+	public String replaceProtocolPropertyReferences(final String key) {
+		if (key == null) {
+			return key;
+		}
+
+		final Matcher matcher = PROTOCOL_PATTERN.matcher(key);
+
+		final StringBuilder sb = new StringBuilder();
+		while (matcher.find()) {
+			final String protocolPropertyValue = matcher.group(1);
+			if (protocolPropertyValue != null) {
+				matcher.appendReplacement(
+					sb,
+					Matcher.quoteReplacement(
+						ProtocolPropertyReferenceHelper.getProtocolProperty(protocolPropertyValue, telemetryManager)
+					)
+				);
+			}
+		}
+		matcher.appendTail(sb);
+
+		return sb.toString();
 	}
 }

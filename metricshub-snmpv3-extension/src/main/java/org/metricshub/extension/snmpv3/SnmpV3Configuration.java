@@ -25,6 +25,7 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.Arrays;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -245,5 +246,41 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			.username(username)
 			.hostname(hostname)
 			.build();
+	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "authtype":
+				return getAuthType().toString();
+			case "contextname":
+				return getContextName();
+			case "password":
+				return String.valueOf(getPassword());
+			case "port":
+				return getPort().toString();
+			case "privacy":
+				return getPrivacy().toString();
+			case "privacypassword":
+				return String.valueOf(getPrivacyPassword());
+			case "retryintervals":
+				return Arrays.toString(getRetryIntervals());
+			case "timeout":
+				return getTimeout().toString();
+			case "username":
+				return getUsername();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "snmp".equalsIgnoreCase(protocol);
 	}
 }

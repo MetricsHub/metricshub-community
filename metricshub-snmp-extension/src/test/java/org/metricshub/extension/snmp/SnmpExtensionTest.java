@@ -544,6 +544,16 @@ class SnmpExtensionTest {
 
 					@Override
 					public void setTimeout(Long timeout) {}
+
+					@Override
+					public String getProperty(String property) {
+						return null;
+					}
+
+					@Override
+					public boolean isCorrespondingProtocol(String protocol) {
+						return false;
+					}
 				}
 			)
 		);
