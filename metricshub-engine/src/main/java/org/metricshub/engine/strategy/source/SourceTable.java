@@ -178,7 +178,11 @@ public class SourceTable {
 
 		// Hard-coded source
 		return Optional.of(
-			SourceTable.builder().table(SourceTable.csvToTable(sourceKey, MetricsHubConstants.TABLE_SEP)).build()
+			SourceTable
+				.builder()
+				.table(SourceTable.csvToTable(sourceKey, MetricsHubConstants.TABLE_SEP))
+				.rawData(sourceKey)
+				.build()
 		);
 	}
 }
