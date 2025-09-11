@@ -79,13 +79,13 @@ public class PingConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
 		switch (property.toLowerCase()) {
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "hostname":
 				return getHostname();
 			default:
@@ -95,6 +95,6 @@ public class PingConfiguration implements IConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "ping".equalsIgnoreCase(protocol);
+		return PingExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }

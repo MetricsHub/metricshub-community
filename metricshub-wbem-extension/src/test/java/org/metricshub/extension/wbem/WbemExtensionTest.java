@@ -179,7 +179,7 @@ class WbemExtensionTest {
 					public void setTimeout(Long timeout) {}
 
 					@Override
-					public Object getProperty(String property) {
+					public String getProperty(String property) {
 						return null;
 					}
 

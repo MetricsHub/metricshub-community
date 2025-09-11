@@ -121,7 +121,7 @@ public class JmxConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -129,13 +129,13 @@ public class JmxConfiguration implements IConfiguration {
 			case "hostname":
 				return getHostname();
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "username":
 				return getUsername();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			default:
 				return null;
 		}
@@ -143,6 +143,6 @@ public class JmxConfiguration implements IConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "jmx".equalsIgnoreCase(protocol);
+		return JmxExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }

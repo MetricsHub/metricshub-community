@@ -122,7 +122,7 @@ public class OsCommandConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -130,9 +130,9 @@ public class OsCommandConfiguration implements IConfiguration {
 			case "sudocommand":
 				return getSudoCommand();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "usesudo":
-				return isUseSudo();
+				return String.valueOf(isUseSudo());
 			case "hostname":
 				return getHostname();
 			default:

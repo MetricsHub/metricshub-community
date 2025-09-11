@@ -56,7 +56,7 @@ class PingConfigurationTest {
 		assertNull(pingConfiguration.getProperty(""));
 		assertNull(pingConfiguration.getProperty("badProperty"));
 
-		assertEquals(100L, pingConfiguration.getProperty("timeout"));
+		assertEquals("100", pingConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", pingConfiguration.getProperty("hostname"));
 	}
 

@@ -1,10 +1,8 @@
 package org.metricshub.extension.snmp;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -179,17 +177,11 @@ class SnmpConfigurationTest {
 		assertNull(snmpConfiguration.getProperty(""));
 		assertNull(snmpConfiguration.getProperty("badProperty"));
 
-		final Object propertyCommunityObject = snmpConfiguration.getProperty("community");
-		assertInstanceOf(char[].class, propertyCommunityObject);
-		assertArrayEquals("myCommunity".toCharArray(), (char[]) propertyCommunityObject);
-
-		final Object propertyRetryIntervalsObject = snmpConfiguration.getProperty("retryintervals");
-		assertInstanceOf(int[].class, propertyRetryIntervalsObject);
-		assertArrayEquals(new int[] { 100 }, (int[]) propertyRetryIntervalsObject);
-
-		assertEquals(SnmpVersion.V2C, snmpConfiguration.getProperty("version"));
-		assertEquals(443, snmpConfiguration.getProperty("port"));
-		assertEquals(100L, snmpConfiguration.getProperty("timeout"));
+		assertEquals("myCommunity", snmpConfiguration.getProperty("community"));
+		assertEquals("[100]", snmpConfiguration.getProperty("retryintervals"));
+		assertEquals("V2C", snmpConfiguration.getProperty("version"));
+		assertEquals("443", snmpConfiguration.getProperty("port"));
+		assertEquals("100", snmpConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", snmpConfiguration.getProperty("hostname"));
 	}
 
@@ -199,24 +191,9 @@ class SnmpConfigurationTest {
 		assertFalse(snmpConfiguration.isCorrespondingProtocol(null));
 		assertFalse(snmpConfiguration.isCorrespondingProtocol(""));
 		assertFalse(snmpConfiguration.isCorrespondingProtocol("http"));
+
 		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMP"));
 		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmp"));
 		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMp"));
-
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMP1"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmp1"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMp1"));
-
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMPV1"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmpv1"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMpV1"));
-
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMP2"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmp2"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMp2"));
-
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMPV2"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmpv2"));
-		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMpV2"));
 	}
 }

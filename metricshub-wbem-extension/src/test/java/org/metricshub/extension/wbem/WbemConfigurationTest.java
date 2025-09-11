@@ -1,10 +1,8 @@
 package org.metricshub.extension.wbem;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -127,16 +125,13 @@ class WbemConfigurationTest {
 		assertNull(wbemConfiguration.getProperty(""));
 		assertNull(wbemConfiguration.getProperty("badProperty"));
 
-		final Object propertyPasswordObject = wbemConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myPassword", wbemConfiguration.getProperty("password"));
 		assertEquals("myNamespace", wbemConfiguration.getProperty("namespace"));
-		assertEquals(443, wbemConfiguration.getProperty("port"));
-		assertEquals(TransportProtocols.HTTPS, wbemConfiguration.getProperty("protocol"));
+		assertEquals("443", wbemConfiguration.getProperty("port"));
+		assertEquals("https", wbemConfiguration.getProperty("protocol"));
 		assertEquals("myUsername", wbemConfiguration.getProperty("username"));
 		assertEquals("myVCenter", wbemConfiguration.getProperty("vcenter"));
-		assertEquals(100L, wbemConfiguration.getProperty("timeout"));
+		assertEquals("100", wbemConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", wbemConfiguration.getProperty("hostname"));
 	}
 

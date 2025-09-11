@@ -1,9 +1,7 @@
 package org.metricshub.extension.ipmi;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -103,14 +101,11 @@ class IpmiConfigurationTest {
 		assertNull(ipmiConfiguration.getProperty(""));
 		assertNull(ipmiConfiguration.getProperty("badProperty"));
 
-		final Object propertyPasswordObject = ipmiConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myPassword", ipmiConfiguration.getProperty("password"));
 		assertEquals("myUsername", ipmiConfiguration.getProperty("username"));
-		assertEquals(true, ipmiConfiguration.getProperty("skipAuth"));
+		assertEquals("true", ipmiConfiguration.getProperty("skipAuth"));
 		assertEquals("myBmckey", ipmiConfiguration.getProperty("bmckey"));
-		assertEquals(100L, ipmiConfiguration.getProperty("timeout"));
+		assertEquals("100", ipmiConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", ipmiConfiguration.getProperty("hostname"));
 	}
 

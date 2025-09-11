@@ -1,10 +1,8 @@
 package org.metricshub.extension.wmi;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,13 +85,10 @@ class WmiConfigurationTest {
 		assertNull(wmiConfiguration.getProperty(""));
 		assertNull(wmiConfiguration.getProperty("badProperty"));
 
-		final Object propertyPasswordObject = wmiConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myPassword", wmiConfiguration.getProperty("password"));
 		assertEquals("myNamespace", wmiConfiguration.getProperty("namespace"));
 		assertEquals("myUsername", wmiConfiguration.getProperty("username"));
-		assertEquals(100L, wmiConfiguration.getProperty("timeout"));
+		assertEquals("100", wmiConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", wmiConfiguration.getProperty("hostname"));
 	}
 

@@ -82,7 +82,7 @@ public class OsCommandTestConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		return null;
 	}
 

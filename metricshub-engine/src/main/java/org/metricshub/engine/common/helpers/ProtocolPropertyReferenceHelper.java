@@ -39,7 +39,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 public class ProtocolPropertyReferenceHelper {
 
-	private static final String PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX = "([^.]+).([^}]+)";
+	private static final Pattern PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX_PATTERN = Pattern.compile("([^\\.]+).([^}]+)");
 
 	/**
 	 * Returns the property associated to the protocol from the parameter protocolDotProperty
@@ -48,12 +48,12 @@ public class ProtocolPropertyReferenceHelper {
 	 * @param telemetryManager The {@link TelemetryManager} instance.
 	 * @return The protocol's property if possible, null otherwise.
 	 */
-	public static Object getProtocolProperty(final String protocolDotProperty, final TelemetryManager telemetryManager) {
+	public static String getProtocolProperty(final String protocolDotProperty, final TelemetryManager telemetryManager) {
 		if (protocolDotProperty == null || protocolDotProperty.isEmpty()) {
 			return null;
 		}
 
-		final Matcher matcher = Pattern.compile(PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX).matcher(protocolDotProperty);
+		final Matcher matcher = PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX_PATTERN.matcher(protocolDotProperty);
 
 		final String protocol;
 		final String property;

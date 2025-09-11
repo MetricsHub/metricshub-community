@@ -145,7 +145,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -153,13 +153,13 @@ public class WinRmConfiguration implements IWinConfiguration {
 			case "namespace":
 				return getNamespace();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "protocol":
 				return getProtocol().toString();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "username":
 				return getUsername();
 			case "hostname":
@@ -171,6 +171,6 @@ public class WinRmConfiguration implements IWinConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "winrm".equalsIgnoreCase(protocol);
+		return WinRmExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }

@@ -75,7 +75,7 @@ public interface IConfiguration {
 	 * @param property The name of the property.
 	 * @return The value of the property.
 	 */
-	Object getProperty(String property);
+	String getProperty(String property);
 
 	/**
 	 * Check if the protocol in parameter corresponds to the {@code IConfiguration} instance.

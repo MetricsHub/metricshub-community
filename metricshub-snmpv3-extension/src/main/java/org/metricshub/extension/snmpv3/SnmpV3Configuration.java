@@ -25,6 +25,7 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.Arrays;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -248,27 +249,27 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
 		switch (property.toLowerCase()) {
 			case "authtype":
-				return getAuthType();
+				return getAuthType().toString();
 			case "contextname":
 				return getContextName();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "privacy":
-				return getPrivacy();
+				return getPrivacy().toString();
 			case "privacypassword":
-				return getPrivacyPassword();
+				return String.valueOf(getPrivacyPassword());
 			case "retryintervals":
-				return getRetryIntervals();
+				return Arrays.toString(getRetryIntervals());
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "username":
 				return getUsername();
 			case "hostname":
@@ -280,6 +281,6 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "snmp3".equalsIgnoreCase(protocol) || "snmpv3".equalsIgnoreCase(protocol);
+		return "snmp".equalsIgnoreCase(protocol);
 	}
 }

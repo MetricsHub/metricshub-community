@@ -1,10 +1,8 @@
 package org.metricshub.extension.winrm;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -97,15 +95,12 @@ class WinRmConfigurationTest {
 		assertNull(winRmConfiguration.getProperty(""));
 		assertNull(winRmConfiguration.getProperty("badProperty"));
 
-		final Object propertyPasswordObject = winRmConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myPassword", winRmConfiguration.getProperty("password"));
 		assertEquals("myNamespace", winRmConfiguration.getProperty("namespace"));
-		assertEquals(443, winRmConfiguration.getProperty("port"));
-		assertEquals(TransportProtocols.HTTPS.toString(), winRmConfiguration.getProperty("protocol"));
+		assertEquals("443", winRmConfiguration.getProperty("port"));
+		assertEquals("https".toString(), winRmConfiguration.getProperty("protocol"));
 		assertEquals("myUsername", winRmConfiguration.getProperty("username"));
-		assertEquals(100L, winRmConfiguration.getProperty("timeout"));
+		assertEquals("100", winRmConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", winRmConfiguration.getProperty("hostname"));
 	}
 

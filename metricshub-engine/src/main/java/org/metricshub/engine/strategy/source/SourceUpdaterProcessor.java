@@ -786,14 +786,14 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		final Matcher matcher = PROTOCOL_PATTERN.matcher(key);
 
-		final StringBuffer sb = new StringBuffer();
+		final StringBuilder sb = new StringBuilder();
 		while (matcher.find()) {
 			final String protocolPropertyValue = matcher.group(1);
 			if (protocolPropertyValue != null) {
 				matcher.appendReplacement(
 					sb,
 					Matcher.quoteReplacement(
-						ProtocolPropertyReferenceHelper.getProtocolProperty(protocolPropertyValue, telemetryManager).toString()
+						ProtocolPropertyReferenceHelper.getProtocolProperty(protocolPropertyValue, telemetryManager)
 					)
 				);
 			}

@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -239,19 +238,13 @@ class JdbcConfigurationTest {
 		assertNull(jdbcConfiguration.getProperty(""));
 		assertNull(jdbcConfiguration.getProperty("badProperty"));
 
-		final Object propertyUrlObject = jdbcConfiguration.getProperty("url");
-		assertInstanceOf(char[].class, propertyUrlObject);
-		assertArrayEquals("myUrl".toCharArray(), (char[]) propertyUrlObject);
-
-		final Object propertyPasswordObject = jdbcConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myUrl", jdbcConfiguration.getProperty("url"));
+		assertEquals("myPassword", jdbcConfiguration.getProperty("password"));
 		assertEquals("myUsername", jdbcConfiguration.getProperty("username"));
 		assertEquals("myDatabase", jdbcConfiguration.getProperty("database"));
-		assertEquals(443, jdbcConfiguration.getProperty("port"));
+		assertEquals("443", jdbcConfiguration.getProperty("port"));
 		assertEquals("myType", jdbcConfiguration.getProperty("type"));
-		assertEquals(100L, jdbcConfiguration.getProperty("timeout"));
+		assertEquals("100", jdbcConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", jdbcConfiguration.getProperty("hostname"));
 	}
 

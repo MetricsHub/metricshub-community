@@ -51,7 +51,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 public class JmxExtension implements IProtocolExtension {
 
-	private static final String IDENTIFIER = "jmx";
+	public static final String IDENTIFIER = "jmx";
 
 	private JmxRequestExecutor jmxRequestExecutor;
 

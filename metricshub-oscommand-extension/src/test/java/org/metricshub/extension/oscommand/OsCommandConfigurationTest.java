@@ -73,8 +73,8 @@ class OsCommandConfigurationTest {
 		assertNull(osCommandConfiguration.getProperty("badProperty"));
 
 		assertEquals("mySudocommand", osCommandConfiguration.getProperty("sudocommand"));
-		assertEquals(true, osCommandConfiguration.getProperty("usesudo"));
-		assertEquals(100L, osCommandConfiguration.getProperty("timeout"));
+		assertEquals("true", osCommandConfiguration.getProperty("usesudo"));
+		assertEquals("100", osCommandConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", osCommandConfiguration.getProperty("hostname"));
 	}
 

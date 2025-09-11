@@ -146,25 +146,25 @@ public class SshConfiguration extends OsCommandConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
 		switch (property.toLowerCase()) {
 			case "password":
-				return getPassword();
+				return getPassword().toString();
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "privatekey":
 				return getPrivateKey();
 			case "sudocommand":
 				return getSudoCommand();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "username":
 				return getUsername();
 			case "usesudo":
-				return isUseSudo();
+				return String.valueOf(isUseSudo());
 			case "hostname":
 				return getHostname();
 			default:

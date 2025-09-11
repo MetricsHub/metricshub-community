@@ -11,7 +11,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
-public class ProtocolPropertyReferenceHelperTest {
+class ProtocolPropertyReferenceHelperTest {
 
 	@Test
 	void testGetProtocolProperty() {

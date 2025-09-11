@@ -26,7 +26,6 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,8 +52,6 @@ import org.metricshub.engine.deserialization.TimeDeserializer;
 public class SnmpConfiguration implements ISnmpConfiguration {
 
 	private static final String INVALID_SNMP_VERSION_EXCEPTION_MESSAGE = "Invalid SNMP version: ";
-
-	private static final List<String> SNMP_NAMES = List.of("snmp", "snmp1", "snmpv1", "snmp2", "snmpv2");
 
 	@Default
 	@JsonSetter(nulls = SKIP)
@@ -209,21 +206,21 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
 		switch (property.toLowerCase()) {
 			case "community":
-				return getCommunity();
+				return String.valueOf(getCommunity());
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "retryintervals":
-				return getRetryIntervals();
+				return Arrays.toString(getRetryIntervals());
 			case "version":
-				return getVersion();
+				return getVersion().toString();
 			case "hostname":
 				return getHostname();
 			default:
@@ -233,6 +230,6 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return (protocol != null && SNMP_NAMES.contains(protocol.toLowerCase()));
+		return (protocol != null && SnmpExtension.IDENTIFIER.equalsIgnoreCase(protocol.toLowerCase()));
 	}
 }

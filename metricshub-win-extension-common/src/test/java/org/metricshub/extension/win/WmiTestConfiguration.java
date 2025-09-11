@@ -28,7 +28,7 @@ public class WmiTestConfiguration implements IWinConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -36,13 +36,13 @@ public class WmiTestConfiguration implements IWinConfiguration {
 			case "username":
 				return getUsername();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "namespace":
 				return getNamespace();
 			case "hostname":
 				return getHostname();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			default:
 				return null;
 		}

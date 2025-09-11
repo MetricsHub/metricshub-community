@@ -153,7 +153,7 @@ public class WbemConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -161,13 +161,13 @@ public class WbemConfiguration implements IConfiguration {
 			case "namespace":
 				return getNamespace();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "protocol":
-				return getProtocol();
+				return getProtocol().toString();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "username":
 				return getUsername();
 			case "vcenter":
@@ -181,6 +181,6 @@ public class WbemConfiguration implements IConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "wbem".equalsIgnoreCase(protocol);
+		return WbemExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }

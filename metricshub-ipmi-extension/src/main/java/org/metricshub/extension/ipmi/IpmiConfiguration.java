@@ -105,7 +105,7 @@ public class IpmiConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -113,11 +113,11 @@ public class IpmiConfiguration implements IConfiguration {
 			case "bmckey":
 				return getBmcKey();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "skipauth":
-				return isSkipAuth();
+				return String.valueOf(isSkipAuth());
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "username":
 				return getUsername();
 			case "hostname":
@@ -129,6 +129,6 @@ public class IpmiConfiguration implements IConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "ipmi".equalsIgnoreCase(protocol);
+		return IpmiExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }

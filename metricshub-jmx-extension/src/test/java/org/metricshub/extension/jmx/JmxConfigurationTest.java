@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -139,13 +138,10 @@ class JmxConfigurationTest {
 		assertNull(jmxConfiguration.getProperty(""));
 		assertNull(jmxConfiguration.getProperty("badProperty"));
 
-		final Object propertyPasswordObject = jmxConfiguration.getProperty("password");
-		assertInstanceOf(char[].class, propertyPasswordObject);
-		assertArrayEquals("myPassword".toCharArray(), (char[]) propertyPasswordObject);
-
+		assertEquals("myPassword", jmxConfiguration.getProperty("password"));
 		assertEquals("myUsername", jmxConfiguration.getProperty("username"));
-		assertEquals(443, jmxConfiguration.getProperty("port"));
-		assertEquals(100L, jmxConfiguration.getProperty("timeout"));
+		assertEquals("443", jmxConfiguration.getProperty("port"));
+		assertEquals("100", jmxConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", jmxConfiguration.getProperty("hostname"));
 	}
 

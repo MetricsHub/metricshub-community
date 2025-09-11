@@ -31,7 +31,7 @@ public class TestConfiguration implements IConfiguration {
 	public void setTimeout(Long timeout) {}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		return "myProperty".equalsIgnoreCase(property) ? "myPropertyValue" : null;
 	}
 

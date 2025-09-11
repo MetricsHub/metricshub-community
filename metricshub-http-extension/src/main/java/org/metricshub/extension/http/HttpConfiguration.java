@@ -118,7 +118,7 @@ public class HttpConfiguration implements IConfiguration {
 	}
 
 	@Override
-	public Object getProperty(final String property) {
+	public String getProperty(final String property) {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
@@ -126,13 +126,13 @@ public class HttpConfiguration implements IConfiguration {
 			case "username":
 				return getUsername();
 			case "password":
-				return getPassword();
+				return String.valueOf(getPassword());
 			case "https":
-				return getHttps();
+				return getHttps().toString();
 			case "port":
-				return getPort();
+				return getPort().toString();
 			case "timeout":
-				return getTimeout();
+				return getTimeout().toString();
 			case "hostname":
 				return getHostname();
 			default:
@@ -142,6 +142,6 @@ public class HttpConfiguration implements IConfiguration {
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return "http".equalsIgnoreCase(protocol);
+		return HttpExtension.IDENTIFIER.equalsIgnoreCase(protocol);
 	}
 }
