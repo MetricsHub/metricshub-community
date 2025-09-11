@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
 import metricshubLogo from "./assets/metricshub.svg";
+import { Provider as ReduxProvider } from "react-redux";
+import { store } from "./store";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const HomePage = React.lazy(() => import("./pages/home"));
@@ -35,24 +37,28 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <AuthConsumer>
-          {(auth) =>
-            auth.isInitialized ? (
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/" element={<HomePage />} />
-                  {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </BrowserRouter>
-            ) : (
-              <SplashScreen />
-            )
-          }
-        </AuthConsumer>
-      </AuthProvider>
-    </ThemeProvider>
+      <ReduxProvider store={store}>
+        <AuthProvider>
+          <AuthConsumer>
+            {(auth) =>
+              auth.isInitialized ? (
+                <BrowserRouter>
+                  <React.Suspense fallback={<SplashScreen />}>
+                    <Routes>
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/" element={<HomePage />} />
+                      {/* Fallback */}
+                      <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                  </React.Suspense>
+                </BrowserRouter>
+              ) : (
+                <SplashScreen />
+              )
+            }
+          </AuthConsumer>
+        </AuthProvider>
+      </ReduxProvider>
+    </ThemeProvider >
   );
 }

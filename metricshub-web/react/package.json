@@ -17,6 +17,7 @@
 		"@emotion/styled": "^11.14.1",
 		"@mui/icons-material": "^7.3.2",
 		"@mui/material": "^7.3.2",
+		"@mui/x-tree-view": "^8.11.2",
 		"axios": "^1.11.0",
 		"formik": "^2.4.6",
 		"react": "^19.1.1",

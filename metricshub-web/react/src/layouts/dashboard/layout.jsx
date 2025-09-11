@@ -1,17 +1,43 @@
 import * as React from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AppBar, Box, Button, Container, CssBaseline, Toolbar, Typography } from "@mui/material";
+import {
+	AppBar,
+	Box,
+	Button,
+	Container,
+	CssBaseline,
+	Toolbar,
+	Typography,
+	Drawer,
+	useMediaQuery,
+	IconButton,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 import { withAuthGuard } from "../../hocs/with-auth-guard";
+
+import { useAppDispatch } from "../../hooks/store";
+import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
+
 import StatusText from "../../components/status-text";
 import StatusDetailsMenu from "../../components/status-details-menu";
 import OtelStatusIcon from "../../components/otel-status-icon";
+import TestButton from "../../components/TestButton";
+import ErrorBoundary from "../../components/ErrorBoundary";
+import MachineTree from "../../components/sidebar/MachineTree";
+
+const DRAWER_WIDTH = 260;
 
 export const DashboardLayout = withAuthGuard(({ children }) => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
+	const dispatch = useAppDispatch();
+	const isSmall = useMediaQuery("(max-width:900px)");
+
+	const [sidebarOpen, setSidebarOpen] = useState(!isSmall);
 
 	const handleSignOut = useCallback(async () => {
 		try {
@@ -21,12 +47,39 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 		}
 	}, [signOut, navigate]);
 
+	useEffect(() => {
+		dispatch(fetchApplicationStatus());
+		const id = setInterval(() => dispatch(fetchApplicationStatus()), 30000);
+		return () => clearInterval(id);
+	}, [dispatch]);
+
+	useEffect(() => {
+		setSidebarOpen(!isSmall);
+	}, [isSmall]);
+
 	return (
-		<React.Fragment>
+		<>
 			<CssBaseline />
-			<AppBar position="fixed" elevation={1} color="default">
+
+			{/* AppBar: always full-width, never pushed by the drawer */}
+			<AppBar
+				position="fixed"
+				elevation={1}
+				color="default"
+				sx={{
+					zIndex: (t) => t.zIndex.drawer + 1, // stay above the drawer
+				}}
+			>
 				<Toolbar sx={{ gap: 2 }}>
-					{/* Left side: Logo + Status */}
+					<IconButton
+						size="small"
+						edge="start"
+						aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
+						onClick={() => setSidebarOpen((v) => !v)}
+					>
+						<MenuIcon />
+					</IconButton>
+
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
 						<Typography variant="h6" component="div">
 							MetricsHub
@@ -35,30 +88,69 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 						<OtelStatusIcon />
 					</Box>
 
-					{/* Right side: Username + Dropdown + Sign out */}
+					<TestButton />
+
 					{user && (
 						<Typography variant="body2" sx={{ mr: 1, opacity: 0.75 }}>
 							{`Signed in as ${user.username}`}
 						</Typography>
 					)}
-
-					{/* The dropdown menu with backend details */}
 					<StatusDetailsMenu />
-
 					<Button onClick={handleSignOut} variant="outlined" size="small">
 						Sign out
 					</Button>
 				</Toolbar>
 			</AppBar>
 
-			{/* Spacer to offset fixed AppBar */}
-			<Toolbar />
+			{/* Drawer: starts below the AppBar (never pushes/resizes it) */}
+			<Drawer
+				variant={isSmall ? "temporary" : "persistent"}
+				open={sidebarOpen}
+				onClose={() => setSidebarOpen(false)}
+				ModalProps={{ keepMounted: true }}
+				sx={{ width: DRAWER_WIDTH, flexShrink: 0 }}
+				slotProps={{
+					paper: {
+						sx: (t) => {
+							const hSmUp = t.mixins.toolbar?.minHeight ?? 64; // desktop AppBar height
+							const hXs = 56;                                   // mobile AppBar height
+							return {
+								width: DRAWER_WIDTH,
+								boxSizing: "border-box",
+								top: { xs: hXs, sm: hSmUp },                    // start right under AppBar
+								height: { xs: `calc(100% - ${hXs}px)`, sm: `calc(100% - ${hSmUp}px)` },
+								p: 0,
+								m: 0,
+								overflow: "hidden",
+								display: "flex",
+								flexDirection: "column",
+								borderRight: 1,
+								borderColor: "divider",
+							};
+						},
+					},
+				}}
+			>
+				<MachineTree />
+			</Drawer>
 
-			<Box component="main" sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+			{/* Main content: sits under AppBar; shifts right on desktop when drawer is open */}
+			<Box
+				component="main"
+				sx={(t) => {
+					const hSmUp = t.mixins.toolbar?.minHeight ?? 64;
+					const hXs = 56;
+					return {
+						minHeight: "100vh",
+						bgcolor: "background.default",
+						mt: { xs: `${hXs}px`, sm: `${hSmUp}px` }, // keep under AppBar
+					};
+				}}
+			>
 				<Container maxWidth="lg" sx={{ py: 3 }}>
-					{children}
+					<ErrorBoundary>{children}</ErrorBoundary>
 				</Container>
 			</Box>
-		</React.Fragment>
+		</>
 	);
 });
