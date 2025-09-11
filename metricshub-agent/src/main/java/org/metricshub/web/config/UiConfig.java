@@ -22,6 +22,7 @@ package org.metricshub.web.config;
  */
 
 import java.io.IOException;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
@@ -34,6 +35,7 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
  * Configuration class for setting up UI-related configurations in the MetricsHub web application.
  */
 @Configuration
+@Slf4j
 public class UiConfig implements WebMvcConfigurer {
 
 	/**
@@ -49,7 +51,9 @@ public class UiConfig implements WebMvcConfigurer {
 	 */
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		final String webRoot = "file:" + ConfigHelper.getSubPath("web").toString() + "/";
+		final String webRoot = "file:" + getWebDirectory() + "/";
+
+		log.info("Serving web resources from {}", webRoot);
 
 		registry
 			.addResourceHandler("/**")
@@ -76,5 +80,19 @@ public class UiConfig implements WebMvcConfigurer {
 					}
 				}
 			);
+	}
+
+	/**
+	 * Retrieves the web directory path from system properties or defaults to a predefined location.
+	 *
+	 * @return The path to the web directory as a string.
+	 */
+	private static String getWebDirectory() {
+		// Get the path directory from the java properties or from the default location
+		final var webDir = System.getProperty("web.dir");
+		if (webDir != null && !webDir.isBlank()) {
+			return webDir;
+		}
+		return ConfigHelper.getSubPath("web").toString();
 	}
 }
