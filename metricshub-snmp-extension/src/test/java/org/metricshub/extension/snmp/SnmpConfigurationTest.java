@@ -2,7 +2,10 @@ package org.metricshub.extension.snmp;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -156,5 +159,41 @@ class SnmpConfigurationTest {
 
 		// Ensure that the copied configuration is a distinct object
 		assert (snmpConfiguration != snmpConfigurationCopy);
+	}
+
+	@Test
+	void testGetProperty() {
+		final SnmpConfiguration snmpConfiguration = SnmpConfiguration
+			.builder()
+			.community("myCommunity".toCharArray())
+			.port(443)
+			.retryIntervals(new int[] { 100 })
+			.version(SnmpVersion.V2C)
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(snmpConfiguration.getProperty(null));
+		assertNull(snmpConfiguration.getProperty(""));
+		assertNull(snmpConfiguration.getProperty("badProperty"));
+
+		assertEquals("myCommunity", snmpConfiguration.getProperty("community"));
+		assertEquals("[100]", snmpConfiguration.getProperty("retryintervals"));
+		assertEquals("V2C", snmpConfiguration.getProperty("version"));
+		assertEquals("443", snmpConfiguration.getProperty("port"));
+		assertEquals("100", snmpConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", snmpConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final SnmpConfiguration snmpConfiguration = new SnmpConfiguration();
+		assertFalse(snmpConfiguration.isCorrespondingProtocol(null));
+		assertFalse(snmpConfiguration.isCorrespondingProtocol(""));
+		assertFalse(snmpConfiguration.isCorrespondingProtocol("http"));
+
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SNMP"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(snmpConfiguration.isCorrespondingProtocol("SnMp"));
 	}
 }

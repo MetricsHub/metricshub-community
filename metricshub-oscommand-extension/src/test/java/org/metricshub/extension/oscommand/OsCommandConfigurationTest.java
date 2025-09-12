@@ -2,7 +2,10 @@ package org.metricshub.extension.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -53,5 +56,36 @@ class OsCommandConfigurationTest {
 		// Ensure that the copied configuration is a distinct object
 		assert (osCommandConfiguration != osCommandConfigurationCopy);
 		assert (osCommandConfiguration.getUseSudoCommands() != osCommandConfigurationCopy.getUseSudoCommands());
+	}
+
+	@Test
+	void testGetProperty() {
+		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration
+			.builder()
+			.sudoCommand("mySudocommand")
+			.useSudo(true)
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(osCommandConfiguration.getProperty(null));
+		assertNull(osCommandConfiguration.getProperty(""));
+		assertNull(osCommandConfiguration.getProperty("badProperty"));
+
+		assertEquals("mySudocommand", osCommandConfiguration.getProperty("sudocommand"));
+		assertEquals("true", osCommandConfiguration.getProperty("usesudo"));
+		assertEquals("100", osCommandConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", osCommandConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final OsCommandConfiguration osCommandConfiguration = new OsCommandConfiguration();
+		assertFalse(osCommandConfiguration.isCorrespondingProtocol(null));
+		assertFalse(osCommandConfiguration.isCorrespondingProtocol(""));
+		assertFalse(osCommandConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(osCommandConfiguration.isCorrespondingProtocol("OSCOMMAND"));
+		assertTrue(osCommandConfiguration.isCorrespondingProtocol("oscommand"));
+		assertTrue(osCommandConfiguration.isCorrespondingProtocol("OscoMMand"));
 	}
 }

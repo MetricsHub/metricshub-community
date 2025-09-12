@@ -119,4 +119,30 @@ public class JmxConfiguration implements IConfiguration {
 	public String toString() {
 		return String.format("JMX/%s:%d%s", hostname, port, username != null ? " as " + username : "");
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "hostname":
+				return getHostname();
+			case "port":
+				return getPort().toString();
+			case "username":
+				return getUsername();
+			case "password":
+				return String.valueOf(getPassword());
+			case "timeout":
+				return getTimeout().toString();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return JmxExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }

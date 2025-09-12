@@ -85,7 +85,7 @@ public class WmiExtension implements IProtocolExtension {
 	/**
 	 * The identifier for the Wmi protocol.
 	 */
-	private static final String IDENTIFIER = "wmi";
+	public static final String IDENTIFIER = "wmi";
 
 	private WmiRequestExecutor wmiRequestExecutor;
 	private WmiDetectionService wmiDetectionService;

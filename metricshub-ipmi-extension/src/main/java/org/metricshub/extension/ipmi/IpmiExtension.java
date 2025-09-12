@@ -54,7 +54,7 @@ public class IpmiExtension implements IProtocolExtension {
 	/**
 	 * The identifier for the Ipmi protocol.
 	 */
-	private static final String IDENTIFIER = "ipmi";
+	public static final String IDENTIFIER = "ipmi";
 
 	private IpmiRequestExecutor ipmiRequestExecutor = new IpmiRequestExecutor();
 

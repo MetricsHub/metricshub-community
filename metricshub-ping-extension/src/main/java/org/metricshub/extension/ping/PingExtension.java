@@ -52,7 +52,7 @@ public class PingExtension implements IProtocolExtension {
 	/**
 	 * The identifier for ping.
 	 */
-	private static final String IDENTIFIER = "ping";
+	public static final String IDENTIFIER = "ping";
 
 	private PingRequestExecutor pingRequestExecutor;
 

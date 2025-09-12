@@ -21,6 +21,9 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.agent.helper.AgentConstants.USER_INFO_SEPARATOR;
+import static org.metricshub.agent.helper.AgentConstants.USER_PREFIX;
+
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
@@ -30,6 +33,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
@@ -37,6 +41,8 @@ import org.metricshub.agent.security.PasswordEncrypt;
 import org.metricshub.engine.security.SecurityManager;
 import org.metricshub.web.security.ApiKeyRegistry;
 import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
+import org.metricshub.web.security.User;
+import org.metricshub.web.security.UserRegistry;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -79,12 +85,10 @@ public class MetricsHubAgentServer {
 				new SpringApplicationBuilder()
 					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) -> {
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("apiKeyRegistry", new ApiKeyRegistry(resolveApiKeys()));
+						final var beanFactory = applicationContext.getBeanFactory();
+						beanFactory.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
+						beanFactory.registerSingleton("apiKeyRegistry", new ApiKeyRegistry(resolveApiKeys()));
+						beanFactory.registerSingleton("userRegistry", new UserRegistry(resolveUsers()));
 					})
 					.run(args.toArray(String[]::new));
 
@@ -133,6 +137,55 @@ public class MetricsHubAgentServer {
 		}
 
 		return apiKeys;
+	}
+
+	/**
+	 * Resolves users from the KeyStore.
+	 *
+	 * @return a map of usernames to their corresponding {@link User} objects
+	 */
+	private static Map<String, User> resolveUsers() {
+		final Map<String, User> users = new HashMap<>();
+
+		final var sepPattern = Pattern.compile(USER_INFO_SEPARATOR, Pattern.LITERAL);
+
+		try {
+			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
+			final var ks = SecurityManager.loadKeyStore(keyStoreFile);
+
+			final var aliases = ks.aliases();
+			while (aliases.hasMoreElements()) {
+				final var alias = aliases.nextElement();
+				if (!alias.startsWith(USER_PREFIX)) {
+					continue;
+				}
+
+				final var entry = ks.getEntry(alias, new PasswordProtection(new char[] { 's', 'e', 'c', 'r', 'e', 't' }));
+				if (entry instanceof KeyStore.SecretKeyEntry secretKeyEntry) {
+					final var secretKey = secretKeyEntry.getSecretKey();
+					final var raw = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
+
+					// payload = username <SEP> bcrypt(password) <SEP> role
+					final var parts = sepPattern.split(raw, -1);
+					if (parts.length < 3) {
+						// Malformed record; skip but keep logs for diagnostics
+						log.warn("Malformed user entry for alias '{}': expected 3 parts, got {}", alias, parts.length);
+						continue;
+					}
+
+					final String storedUsername = parts[0];
+					final String bcryptHash = parts[1];
+					final String role = parts[2];
+
+					users.put(storedUsername, User.builder().username(storedUsername).password(bcryptHash).role(role).build());
+				}
+			}
+		} catch (Exception e) {
+			log.error("Failed to resolve users from KeyStore");
+			log.debug("Exception details: ", e);
+		}
+
+		return users;
 	}
 
 	/**

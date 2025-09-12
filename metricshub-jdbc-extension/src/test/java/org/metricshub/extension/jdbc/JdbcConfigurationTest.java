@@ -3,8 +3,11 @@ package org.metricshub.extension.jdbc;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -215,5 +218,44 @@ class JdbcConfigurationTest {
 			.build();
 		String url = String.valueOf(cfg.generateUrl());
 		assertEquals("jdbc:postgresql://localhost:5432/mydb", url);
+	}
+
+	@Test
+	void testGetProperty() {
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
+			.builder()
+			.username("myUsername")
+			.password("myPassword".toCharArray())
+			.database("myDatabase")
+			.port(443)
+			.type("myType")
+			.url("myUrl".toCharArray())
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(jdbcConfiguration.getProperty(null));
+		assertNull(jdbcConfiguration.getProperty(""));
+		assertNull(jdbcConfiguration.getProperty("badProperty"));
+
+		assertEquals("myUrl", jdbcConfiguration.getProperty("url"));
+		assertEquals("myPassword", jdbcConfiguration.getProperty("password"));
+		assertEquals("myUsername", jdbcConfiguration.getProperty("username"));
+		assertEquals("myDatabase", jdbcConfiguration.getProperty("database"));
+		assertEquals("443", jdbcConfiguration.getProperty("port"));
+		assertEquals("myType", jdbcConfiguration.getProperty("type"));
+		assertEquals("100", jdbcConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", jdbcConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final JdbcConfiguration jdbcConfiguration = new JdbcConfiguration();
+		assertFalse(jdbcConfiguration.isCorrespondingProtocol(null));
+		assertFalse(jdbcConfiguration.isCorrespondingProtocol(""));
+		assertFalse(jdbcConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(jdbcConfiguration.isCorrespondingProtocol("JDBC"));
+		assertTrue(jdbcConfiguration.isCorrespondingProtocol("jdbc"));
+		assertTrue(jdbcConfiguration.isCorrespondingProtocol("JdBc"));
 	}
 }
