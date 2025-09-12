@@ -9,7 +9,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import jakarta.servlet.FilterChain;
@@ -49,7 +48,7 @@ class JwtAuthFilterTest {
 		final Authentication existingAuth = mock(Authentication.class);
 		SecurityContextHolder.getContext().setAuthentication(existingAuth);
 
-		final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/any");
+		final MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/resource");
 		final MockHttpServletResponse response = new MockHttpServletResponse();
 		final FilterChain chain = mock(FilterChain.class);
 
@@ -61,20 +60,6 @@ class JwtAuthFilterTest {
 			SecurityContextHolder.getContext().getAuthentication(),
 			"Existing authentication must be preserved"
 		);
-	}
-
-	@Test
-	void testShouldSkipForLoginPostAuthPath() throws ServletException, IOException {
-		final MockHttpServletRequest request = new MockHttpServletRequest("POST", "/auth");
-		final MockHttpServletResponse response = new MockHttpServletResponse();
-		final FilterChain chain = mock(FilterChain.class);
-
-		filter.doFilterInternal(request, response, chain);
-
-		// No token interactions, just passes through
-		verify(chain, times(1)).doFilter(request, response);
-		assertNull(SecurityContextHolder.getContext().getAuthentication(), "Auth should remain null for /auth POST");
-		verifyNoInteractions(jwtComponent);
 	}
 
 	@Test

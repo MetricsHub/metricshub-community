@@ -235,22 +235,13 @@ public class UserCliService {
 			}
 			char[] pwd1 = console.readPassword("Enter password: ");
 			char[] pwd2 = console.readPassword("Confirm password: ");
-			try {
-				if (pwd1 == null || pwd2 == null) {
-					return null;
-				}
-				if (!Arrays.equals(pwd1, pwd2)) {
-					throw new IllegalArgumentException("Passwords do not match.");
-				}
-				return pwd1;
-			} finally {
-				if (pwd1 != null) {
-					Arrays.fill(pwd1, '\0');
-				}
-				if (pwd2 != null) {
-					Arrays.fill(pwd2, '\0');
-				}
+			if (pwd1 == null || pwd2 == null) {
+				return null;
 			}
+			if (!Arrays.equals(pwd1, pwd2)) {
+				throw new IllegalArgumentException("Passwords do not match.");
+			}
+			return pwd1;
 		}
 	}
 

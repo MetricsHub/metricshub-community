@@ -22,6 +22,7 @@ package org.metricshub.web.service;
  */
 
 import java.util.Optional;
+import org.metricshub.web.dto.UserDto;
 import org.metricshub.web.security.User;
 import org.metricshub.web.security.UserRegistry;
 import org.metricshub.web.security.jwt.JwtAuthToken;
@@ -30,6 +31,7 @@ import org.metricshub.web.security.login.LoginAuthenticationProvider;
 import org.metricshub.web.security.login.LoginAuthenticationRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -107,5 +109,14 @@ public class UserService {
 
 		// Perform the authentication
 		return (JwtAuthToken) loginAuthenticationProvider.authenticate(usernamePasswordAuthenticationToken);
+	}
+
+	/**
+	 * Get the current authenticated user details
+	 * @return The {@link UserDto} instance representing the current user
+	 */
+	public UserDto getCurrent() {
+		final var user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+		return UserDto.fromUser(user);
 	}
 }

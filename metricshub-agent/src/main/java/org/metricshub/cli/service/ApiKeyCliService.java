@@ -30,7 +30,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
 import java.time.LocalDateTime;
-import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import javax.crypto.spec.SecretKeySpec;
@@ -69,9 +68,6 @@ import picocli.CommandLine.Spec;
 @NoArgsConstructor
 @Data
 public class ApiKeyCliService {
-	static {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-	}
 
 	@Spec
 	static CommandSpec spec;
