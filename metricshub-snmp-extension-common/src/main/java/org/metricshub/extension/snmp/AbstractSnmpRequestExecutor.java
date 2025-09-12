@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.snmp.client.ISnmpClient;
 import org.metricshub.snmp.client.SnmpClient;
 
 /**
@@ -47,11 +48,16 @@ public abstract class AbstractSnmpRequestExecutor {
 	 *
 	 * @param configuration The SNMP configuration containing connection details.
 	 * @param hostname      The hostname or IP address of the SNMP-enabled device.
+	 * @param emulationInputFilePath Snmp emulation input file
 	 * @throws RuntimeException If an {@link IOException} is thrown during the creation of the {@link SnmpClient}
 	 * @return The created SnmpClient {@link SnmpClient}.
 	 * @throws IOException If an error occurs during the creation of the {@link SnmpClient}.
 	 */
-	protected abstract SnmpClient createSnmpClient(ISnmpConfiguration configuration, String hostname) throws IOException;
+	protected abstract ISnmpClient createSnmpClient(
+		ISnmpConfiguration configuration,
+		String hostname,
+		String emulationInputFilePath
+	) throws IOException;
 
 	/**
 	 * Execute SNMP GetNext request
@@ -60,6 +66,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration  The SNMP configuration specifying parameters like version, community, etc.
 	 * @param hostname       The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode        A boolean indicating whether to log errors and warnings during execution.
+	 * @param emulationInputFilePath Snmp emulation input file
 	 * @return The SNMP response as a String value.
 	 * @throws InterruptedException If the execution is interrupted.
 	 * @throws ExecutionException  If an exception occurs during execution.
@@ -70,13 +77,22 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.oid") final String oid,
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
-		final boolean logMode
+		final boolean logMode,
+		final String emulationInputFilePath
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP GetNext request:\n- OID: {}\n", oid));
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(SnmpGetRequest.GETNEXT, oid, configuration, hostname, null, logMode);
+		String result = executeSnmpGetRequest(
+			SnmpGetRequest.GETNEXT,
+			oid,
+			configuration,
+			hostname,
+			null,
+			logMode,
+			emulationInputFilePath
+		);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -99,6 +115,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration  The SNMP configuration specifying parameters like version, community, etc.
 	 * @param hostname       The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode        A boolean indicating whether to log errors and warnings during execution.
+	 * @param emulationInputFilePath Snmp emulation input file
 	 * @return The SNMP response as a String value.
 	 * @throws InterruptedException If the execution is interrupted.
 	 * @throws ExecutionException  If an exception occurs during execution.
@@ -109,13 +126,22 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.oid") final String oid,
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
-		final boolean logMode
+		final boolean logMode,
+		final String emulationInputFilePath
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP Get request:\n- OID: {}\n", oid));
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(SnmpGetRequest.GET, oid, configuration, hostname, null, logMode);
+		String result = executeSnmpGetRequest(
+			SnmpGetRequest.GET,
+			oid,
+			configuration,
+			hostname,
+			null,
+			logMode,
+			emulationInputFilePath
+		);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -134,6 +160,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration     The SNMP configuration containing connection details.
 	 * @param hostname          The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode           Flag indicating whether to log warnings in case of errors.
+	 * @param emulationInputFilePath Snmp emulation input file
 	 * @return A list of rows, where each row is a list of string cells representing the SNMP table.
 	 * @throws InterruptedException If the thread executing this method is interrupted.
 	 * @throws ExecutionException  If an exception occurs during the execution of the SNMP request.
@@ -145,7 +172,8 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.columns") String[] selectColumnArray,
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
-		final boolean logMode
+		final boolean logMode,
+		final String emulationInputFilePath
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() ->
 			log.trace("Executing SNMP Table request:\n- OID: {}\n- Columns: {}\n", oid, Arrays.toString(selectColumnArray))
@@ -159,7 +187,8 @@ public abstract class AbstractSnmpRequestExecutor {
 			configuration,
 			hostname,
 			selectColumnArray,
-			logMode
+			logMode,
+			emulationInputFilePath
 		);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
@@ -186,6 +215,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param hostname          The hostname or IP address of the SNMP-enabled device.
 	 * @param selectColumnArray An array of column names for TABLE requests.
 	 * @param logMode           Flag indicating whether to log warnings in case of errors.
+	 * @param emulationInputFilePath Snmp emulation input file
 	 * @param <T>               The type of result to return.
 	 * @return The result of the SNMP request, which can be a single value, a table, or null if an error occurs.
 	 * @throws InterruptedException If the thread executing this method is interrupted.
@@ -199,11 +229,12 @@ public abstract class AbstractSnmpRequestExecutor {
 		final ISnmpConfiguration protocol,
 		final String hostname,
 		final String[] selectColumnArray,
-		final boolean logMode
+		final boolean logMode,
+		final String emulationInputFilePath
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		return (T) ThreadHelper.execute(
 			() -> {
-				final SnmpClient snmpClient = createSnmpClient(protocol, hostname);
+				final ISnmpClient snmpClient = createSnmpClient(protocol, hostname, emulationInputFilePath);
 				try {
 					switch (request) {
 						case GET:
@@ -229,7 +260,9 @@ public abstract class AbstractSnmpRequestExecutor {
 					}
 					return null;
 				} finally {
-					snmpClient.freeResources();
+					if (snmpClient instanceof SnmpClient) {
+						((SnmpClient) snmpClient).freeResources();
+					}
 				}
 			},
 			protocol.getTimeout()
@@ -269,13 +302,22 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.oid") final String oid,
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
-		final boolean logMode
+		final boolean logMode,
+		final String emulationInputFilePath
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP Walk request:\n- OID: {}\n", oid));
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(SnmpGetRequest.WALK, oid, configuration, hostname, null, logMode);
+		String result = executeSnmpGetRequest(
+			SnmpGetRequest.WALK,
+			oid,
+			configuration,
+			hostname,
+			null,
+			logMode,
+			emulationInputFilePath
+		);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
