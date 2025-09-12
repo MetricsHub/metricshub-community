@@ -25,7 +25,9 @@ import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -56,6 +58,7 @@ public class UiConfig implements WebMvcConfigurer {
 		log.info("Serving web resources from {}", webRoot);
 
 		registry
+			.setOrder(Ordered.LOWEST_PRECEDENCE)
 			.addResourceHandler("/**")
 			.addResourceLocations(webRoot)
 			.resourceChain(true)
@@ -69,9 +72,9 @@ public class UiConfig implements WebMvcConfigurer {
 							return requested;
 						}
 
-						// Don’t swallow API or real files with extensions
-						if (resourcePath.startsWith("api/") || resourcePath.contains(".")) {
-							// let other handlers (e.g., controllers) deal with it
+						// Path has a file extension? let's consider a static asset
+						if (StringUtils.getFilenameExtension(resourcePath) != null) {
+							// Return null to bypass SPA fallback so Spring returns a real 404 for missing files
 							return null;
 						}
 
