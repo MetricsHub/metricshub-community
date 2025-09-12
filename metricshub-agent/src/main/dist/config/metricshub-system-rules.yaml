@@ -3,9 +3,9 @@ groups:
   rules:
   - alert: MetricsHub-System-CPU-High-Utilization-Warning
     expr: |
-      (1 - sum by (host_name)(rate(system_cpu_time_seconds_total{system_cpu_state="idle"}[5m]))
+      (1 - sum by (host_name, site)(rate(system_cpu_time_seconds_total{system_cpu_state="idle"}[5m]))
        /
-       sum by (host_name)(rate(system_cpu_time_seconds_total[5m]))) * 100 > 90
+       sum by (host_name, site)(rate(system_cpu_time_seconds_total[5m]))) * 100 > 90
     for: 10m
     labels:
       severity: warning
@@ -23,11 +23,11 @@ groups:
   - alert: MetricsHub-System-Filesystem-High-Utilization-Warning
     expr: |
       (
-        sum by (host_name, system_device) (
+        sum by (host_name, site, system_device) (
           system_filesystem_usage_bytes{system_filesystem_state="used"}
         )
         /
-        sum by (host_name, system_device) (
+        sum by (host_name, site, system_device) (
           system_filesystem_usage_bytes{system_filesystem_state=~"used|free"}
         )
       ) * 100 > 80
@@ -46,11 +46,11 @@ groups:
   - alert: MetricsHub-System-Filesystem-High-Utilization-Critical
     expr: |
       (
-        sum by (host_name, system_device) (
+        sum by (host_name, site, system_device) (
           system_filesystem_usage_bytes{system_filesystem_state="used"}
         )
         /
-        sum by (host_name, system_device) (
+        sum by (host_name, site, system_device) (
           system_filesystem_usage_bytes{system_filesystem_state=~"used|free"}
         )
       ) * 100 > 90
@@ -86,9 +86,9 @@ groups:
   rules:
   - alert: MetricsHub-System-Network-Bandwidth-High-Warning
     expr: |
-      sum by (host_name, network_interface_name) (rate(system_network_io_bytes_total[5m]))
+      sum by (host_name, site, network_interface_name) (rate(system_network_io_bytes_total[5m]))
       /
-      max by (host_name, network_interface_name) (system_network_bandwidth_limit_bytes)
+      max by (host_name, site, network_interface_name) (system_network_bandwidth_limit_bytes)
       * 100 > 80
     for: 10m
     labels:
@@ -104,9 +104,9 @@ groups:
 
   - alert: MetricsHub-System-Network-Bandwidth-High-Critical
     expr: |
-      sum by (host_name, network_interface_name) (rate(system_network_io_bytes_total[5m]))
+      sum by (host_name, site, network_interface_name) (rate(system_network_io_bytes_total[5m]))
       /
-      max by (host_name, network_interface_name) (system_network_bandwidth_limit_bytes)
+      max by (host_name, site, network_interface_name) (system_network_bandwidth_limit_bytes)
       * 100 > 90
     for: 15m
     labels:
@@ -140,11 +140,11 @@ groups:
   - alert: MetricsHub-System-Network-Packets-Dropped-Warning
     expr: |
       (
-      sum by (host_name, network_interface_name, network_io_direction) (
+      sum by (host_name, site, network_interface_name, network_io_direction) (
         delta(system_network_dropped_total[5m])
       )
       /
-      sum by (host_name, network_interface_name, network_io_direction) (
+      sum by (host_name, site, network_interface_name, network_io_direction) (
         delta(system_network_dropped_total[5m])
         + delta(system_network_packets_total[5m])
       )

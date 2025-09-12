@@ -204,4 +204,32 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "community":
+				return String.valueOf(getCommunity());
+			case "port":
+				return getPort().toString();
+			case "timeout":
+				return getTimeout().toString();
+			case "retryintervals":
+				return Arrays.toString(getRetryIntervals());
+			case "version":
+				return getVersion().toString();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return SnmpExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }

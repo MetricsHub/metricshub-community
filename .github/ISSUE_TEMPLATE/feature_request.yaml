@@ -36,6 +36,7 @@ body:
       - metricshub-community-windows
       - metricshub-community-linux
       - metricshub-doc
+      - metricshub-web
       # End components list
   - type: textarea
     attributes:
@@ -80,3 +81,4 @@ body:
     attributes:
       label: Additional context
       description: Add any other context or screenshots about the feature request here.
+

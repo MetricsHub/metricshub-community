@@ -144,4 +144,36 @@ public class SshConfiguration extends OsCommandConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "password":
+				return String.valueOf(getPassword());
+			case "port":
+				return getPort().toString();
+			case "privatekey":
+				return getPrivateKey();
+			case "sudocommand":
+				return getSudoCommand();
+			case "timeout":
+				return getTimeout().toString();
+			case "username":
+				return getUsername();
+			case "usesudo":
+				return String.valueOf(isUseSudo());
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "ssh".equalsIgnoreCase(protocol);
+	}
 }

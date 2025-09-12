@@ -29,4 +29,14 @@ public class TestConfiguration implements IConfiguration {
 
 	@Override
 	public void setTimeout(Long timeout) {}
+
+	@Override
+	public String getProperty(final String property) {
+		return "myProperty".equalsIgnoreCase(property) ? "myPropertyValue" : null;
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return "test".equalsIgnoreCase(protocol);
+	}
 }

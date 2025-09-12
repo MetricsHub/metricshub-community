@@ -391,7 +391,8 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 					// Save the snmp result to a file if the filename is provided when the record option is enabled
 					// CHECKSTYLE:OFF
 					if ("WALK".equalsIgnoreCase(queryNode.get("action").asText()) && record) {
-						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter);
+						final String oid = queryNode.get("oid").asText();
+						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter, oid);
 					}
 					// CHECKSTYLE:ON
 					// display the result

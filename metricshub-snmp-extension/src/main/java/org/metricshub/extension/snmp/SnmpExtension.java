@@ -40,7 +40,7 @@ public class SnmpExtension extends AbstractSnmpExtension {
 	/**
 	 * The identifier for the Snmp protocol.
 	 */
-	private static final String IDENTIFIER = "snmp";
+	public static final String IDENTIFIER = "snmp";
 
 	@NonNull
 	private SnmpRequestExecutor snmpRequestExecutor;

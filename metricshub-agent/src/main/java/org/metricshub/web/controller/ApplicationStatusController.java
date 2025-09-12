@@ -24,6 +24,7 @@ package org.metricshub.web.controller;
 import org.metricshub.web.dto.ApplicationStatus;
 import org.metricshub.web.service.ApplicationStatusService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,13 +33,14 @@ import org.springframework.web.bind.annotation.RestController;
  * Controller for status of the MetricsHub Agent service.
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ApplicationStatusController {
 
 	private ApplicationStatusService applicationStatusService;
 
 	/**
 	 * Constructor for ApplicationStatusController.
+	 *
 	 * @param applicationStatusService the ApplicationStatusService to handle status requests.
 	 */
 	@Autowired

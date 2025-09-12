@@ -32,13 +32,19 @@ import java.nio.file.StandardOpenOption;
 public class SnmpCliHelper {
 
 	/**
-	 * Saves the SNMP result to a file if the filename is provided.
+	 * Saves the SNMP result to files in the specified directory with the filename based on the OID.
 	 * @param result the SNMP result to save
-	 * @param directory the name of the directory to save the result to
-	 * @param out the PrintWriter to print messages to the console
+	 * @param directory	 the directory to save the result files
+	 * @param out the PrintWriter to log messages
+	 * @param oid the OID used to name the result file and perform the SNMP walk
 	 */
-	public static void saveSnmpResultToFile(final String result, final Path directory, final PrintWriter out) {
-		final var outPath = directory.resolve("out.walk");
+	public static void saveSnmpResultToFile(
+		final String result,
+		final Path directory,
+		final PrintWriter out,
+		final String oid
+	) {
+		final var outPath = directory.resolve(oid + ".walk");
 		try {
 			// Ensure parent directory exists
 			final Path parentDir = outPath.getParent();

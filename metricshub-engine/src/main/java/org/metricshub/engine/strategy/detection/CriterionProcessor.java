@@ -376,7 +376,12 @@ public class CriterionProcessor {
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
 		// CHECKSTYLE:OFF
-		if (emulationInputDirectory != null && !emulationInputDirectory.isBlank()) {
+		if (
+			emulationInputDirectory != null &&
+			!emulationInputDirectory.isBlank() &&
+			!(criterion instanceof SnmpGetCriterion) &&
+			!(criterion instanceof SnmpGetNextCriterion)
+		) {
 			Optional<CriterionTestResult> emulatedCriterionResult = readEmulatedCriterionResult(
 				connectorId,
 				criterion,
@@ -397,7 +402,12 @@ public class CriterionProcessor {
 			})
 			.orElse(CriterionTestResult.empty());
 
-		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+		if (
+			recordOutputDirectory != null &&
+			!recordOutputDirectory.isBlank() &&
+			!(criterion instanceof SnmpGetCriterion) &&
+			!(criterion instanceof SnmpGetNextCriterion)
+		) {
 			persist(result, connectorId, criterion, recordOutputDirectory);
 		}
 		return result;
