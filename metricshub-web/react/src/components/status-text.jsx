@@ -3,16 +3,30 @@ import { Typography, CircularProgress } from "@mui/material";
 import { useAppSelector } from "../hooks/store";
 
 export default function StatusText({ sx }) {
-    const { data, loading, error } = useAppSelector(s => s.applicationStatus);
-    if (loading && !data) return <CircularProgress size={16} sx={sx} />;
-    if (error && !data) return <Typography variant="body2" sx={{ color: "error.main", fontWeight: 700, ...sx }}>ERROR</Typography>;
+	const { data, loading, error } = useAppSelector((s) => s.applicationStatus);
 
-    const status = String(data?.status ?? "UNKNOWN").toUpperCase();
-    const color = status === "UP" ? "success.main" : status === "DOWN" ? "error.main" : "warning.main";
+	let status = String(data?.status ?? "UNKNOWN").toUpperCase();
+	let color = "warning.main";
 
-    return (
-        <Typography variant="body2" sx={{ color, fontWeight: 800, fontSize: "1.1rem", letterSpacing: "0.5px", ...sx }}>
-            {status}
-        </Typography>
-    );
+	if (status === "UP") color = "success.main";
+	else if (status === "DOWN") color = "error.main";
+
+	return (
+		<Typography
+			variant="body2"
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				gap: 0.5,
+				color,
+				fontWeight: 800,
+				fontSize: "1.1rem",
+				letterSpacing: "0.5px",
+				...sx,
+			}}
+		>
+			{loading && <CircularProgress size={14} thickness={4} />}
+			{error ? "ERROR" : status}
+		</Typography>
+	);
 }

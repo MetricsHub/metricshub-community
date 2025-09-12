@@ -31,7 +31,9 @@ const HomePage = () => {
 			</Typography>
 
 			{loading ? (
-				<Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}>
+				<Box
+					sx={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 200 }}
+				>
 					<CircularProgress />
 				</Box>
 			) : error ? (
@@ -41,4 +43,7 @@ const HomePage = () => {
 	);
 };
 
-export default withLayout(DashboardLayout)(HomePage);
+const HomePageWithLayout = withLayout(DashboardLayout)(HomePage);
+HomePageWithLayout.displayName = "HomePageWithLayout";
+
+export default HomePageWithLayout;

@@ -1,22 +1,29 @@
 import React from "react";
-import { Button } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
+import buildInfo from "../build-info.json";
 
 export default function TestButton() {
-    // Toggle to verify new builds
-    const testColor = "red"; // change to "grey" or text to confirm deploy
+	const built = new Date(buildInfo.buildTime);
+	const time = built.toLocaleTimeString([], {
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	});
 
-    return (
-        <Button
-            variant="contained"
-            sx={{
-                backgroundColor: testColor,
-                minWidth: 80,
-                fontWeight: "bold",
-                color: "#fff",
-                "&:hover": { backgroundColor: testColor, opacity: 0.85 },
-            }}
-        >
-            Test
-        </Button>
-    );
+	return (
+		<Tooltip title={`Built: ${built.toLocaleString()}`}>
+			<Button
+				variant="contained"
+				sx={{
+					backgroundColor: "red",
+					minWidth: 120,
+					fontWeight: "bold",
+					color: "#fff",
+					"&:hover": { backgroundColor: "red", opacity: 0.85 },
+				}}
+			>
+				{time}
+			</Button>
+		</Tooltip>
+	);
 }
