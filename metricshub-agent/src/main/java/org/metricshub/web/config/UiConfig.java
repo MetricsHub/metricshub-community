@@ -21,16 +21,23 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.IOException;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
+import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
  * Configuration class for setting up UI-related configurations in the MetricsHub web application.
  */
 @Configuration
+@Slf4j
 public class UiConfig implements WebMvcConfigurer {
 
 	/**
@@ -46,6 +53,49 @@ public class UiConfig implements WebMvcConfigurer {
 	 */
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		registry.addResourceHandler("/**").addResourceLocations("file:" + ConfigHelper.getSubPath("web").toString() + "/");
+		final String webRoot = "file:" + getWebDirectory() + "/";
+
+		log.info("Serving web resources from {}", webRoot);
+
+		registry
+			.setOrder(Ordered.LOWEST_PRECEDENCE)
+			.addResourceHandler("/**")
+			.addResourceLocations(webRoot)
+			.resourceChain(true)
+			.addResolver(
+				new PathResourceResolver() {
+					@Override
+					protected Resource getResource(String resourcePath, Resource location) throws IOException {
+						// Serve the file if it exists
+						Resource requested = location.createRelative(resourcePath);
+						if (requested.exists() && requested.isReadable()) {
+							return requested;
+						}
+
+						// Path has a file extension? let's consider a static asset
+						if (StringUtils.getFilenameExtension(resourcePath) != null) {
+							// Return null to bypass SPA fallback so Spring returns a real 404 for missing files
+							return null;
+						}
+
+						// Fallback to the SPA entry point for client-side routes
+						return location.createRelative("index.html");
+					}
+				}
+			);
+	}
+
+	/**
+	 * Retrieves the web directory path from system properties or defaults to a predefined location.
+	 *
+	 * @return The path to the web directory as a string.
+	 */
+	private static String getWebDirectory() {
+		// Get the path directory from the java properties or from the default location
+		final var webDir = System.getProperty("web.dir");
+		if (webDir != null && !webDir.isBlank()) {
+			return webDir;
+		}
+		return ConfigHelper.getSubPath("web").toString();
 	}
 }
