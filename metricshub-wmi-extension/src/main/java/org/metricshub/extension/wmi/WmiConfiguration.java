@@ -96,4 +96,30 @@ public class WmiConfiguration implements IWinConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "username":
+				return getUsername();
+			case "password":
+				return String.valueOf(getPassword());
+			case "namespace":
+				return getNamespace();
+			case "hostname":
+				return getHostname();
+			case "timeout":
+				return getTimeout().toString();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return WmiExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }

@@ -83,7 +83,7 @@ public class WinRmExtension implements IProtocolExtension {
 	/**
 	 * The identifier for the WinRm protocol.
 	 */
-	private static final String IDENTIFIER = "winrm";
+	public static final String IDENTIFIER = "winrm";
 
 	private WinRmRequestExecutor winRmRequestExecutor;
 	private WmiDetectionService wmiDetectionService;

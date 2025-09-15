@@ -151,4 +151,36 @@ public class WbemConfiguration implements IConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "namespace":
+				return getNamespace();
+			case "password":
+				return String.valueOf(getPassword());
+			case "port":
+				return getPort().toString();
+			case "protocol":
+				return getProtocol().toString();
+			case "timeout":
+				return getTimeout().toString();
+			case "username":
+				return getUsername();
+			case "vcenter":
+				return getVCenter();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return WbemExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }

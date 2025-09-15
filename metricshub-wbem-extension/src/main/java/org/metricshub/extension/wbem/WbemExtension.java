@@ -72,7 +72,7 @@ public class WbemExtension implements IProtocolExtension {
 	/**
 	 * The identifier for the Wbem protocol.
 	 */
-	private static final String IDENTIFIER = "wbem";
+	public static final String IDENTIFIER = "wbem";
 
 	private WbemRequestExecutor wbemRequestExecutor;
 

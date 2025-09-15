@@ -42,6 +42,8 @@ body:
       - metricshub-community-windows
       - metricshub-community-linux
       - metricshub-doc
+      - metricshub-programmable-configuration-extension
+      - metricshub-web
       # End components list
   - type: textarea
     attributes:

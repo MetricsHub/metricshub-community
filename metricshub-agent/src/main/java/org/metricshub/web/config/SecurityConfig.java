@@ -31,6 +31,7 @@ import org.metricshub.web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -65,27 +66,39 @@ public class SecurityConfig {
 	}
 
 	/**
-	 * Configures the security filter chain for the web application.
+	 * Configures the security filter chain for the API and MCP endpoints.
 	 *
 	 * @param http the HttpSecurity object to configure security settings
 	 * @return the configured SecurityFilterChain
 	 * @throws Exception if an error occurs during configuration
 	 */
 	@Bean
+	@Order(1)
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		return http
+			.securityMatcher("/api/**", "/sse", "/mcp/message")
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			// Order matters: API key first, JWT after it.
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
-			.authorizeHttpRequests(authz ->
-				authz.requestMatchers("/api/**", "/sse", "/mcp/message").authenticated().anyRequest().permitAll()
-			)
+			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
 			.exceptionHandling(ex ->
 				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
 			)
 			.build();
+	}
+
+	/**
+	 * Configures the default security filter chain for all other requests, permitting all access.
+	 *
+	 * @param http the HttpSecurity object to configure security settings
+	 * @return the configured SecurityFilterChain
+	 * @throws Exception if an error occurs during configuration
+	 */
+	@Bean
+	@Order(2)
+	public SecurityFilterChain defaultFilterChain(HttpSecurity http) throws Exception {
+		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(authz -> authz.anyRequest().permitAll()).build();
 	}
 
 	/**

@@ -188,4 +188,36 @@ public class JdbcConfiguration implements IConfiguration {
 			default -> new char[0];
 		};
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "database":
+				return getDatabase();
+			case "password":
+				return String.valueOf(getPassword());
+			case "port":
+				return getPort().toString();
+			case "timeout":
+				return getTimeout().toString();
+			case "type":
+				return getType();
+			case "username":
+				return getUsername();
+			case "url":
+				return String.valueOf(getUrl());
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return JdbcExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }

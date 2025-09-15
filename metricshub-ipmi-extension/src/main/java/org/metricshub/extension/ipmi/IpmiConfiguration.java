@@ -103,4 +103,32 @@ public class IpmiConfiguration implements IConfiguration {
 			.hostname(hostname)
 			.build();
 	}
+
+	@Override
+	public String getProperty(final String property) {
+		if (property == null || property.isEmpty()) {
+			return null;
+		}
+		switch (property.toLowerCase()) {
+			case "bmckey":
+				return getBmcKey();
+			case "password":
+				return String.valueOf(getPassword());
+			case "skipauth":
+				return String.valueOf(isSkipAuth());
+			case "timeout":
+				return getTimeout().toString();
+			case "username":
+				return getUsername();
+			case "hostname":
+				return getHostname();
+			default:
+				return null;
+		}
+	}
+
+	@Override
+	public boolean isCorrespondingProtocol(final String protocol) {
+		return IpmiExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+	}
 }
