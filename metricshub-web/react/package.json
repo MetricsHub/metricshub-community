@@ -5,8 +5,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "node write-build-info.mjs && vite build",
-		"build:watch": "node write-build-info.mjs && vite build --watch",
+		"build": "vite build",
+		"build:watch": "vite build --watch",
 		"lint": "eslint .",
 		"preview": "vite preview",
 		"format": "prettier --write .",
