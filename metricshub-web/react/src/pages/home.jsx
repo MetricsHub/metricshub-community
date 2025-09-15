@@ -11,7 +11,6 @@ const HomePage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 
-	// Optional: still ping backend to show loading/error; remove this whole effect if not needed
 	useEffect(() => {
 		(async () => {
 			try {

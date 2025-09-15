@@ -31,8 +31,8 @@ const SplashScreen = () => (
 );
 
 export default function App() {
-	// Track theme mode (light or dark)
-	const [mode, setMode] = useState("light");
+	//light or dark
+	const [mode, setMode] = useState("dark");
 
 	// Create theme dynamically
 	const theme = useMemo(
@@ -41,7 +41,6 @@ export default function App() {
 				palette: {
 					mode,
 					background: {
-						// AppBar color for each mode
 						appbar: mode === "light" ? "#f5f5f7" : "#1e1e1e",
 					},
 				},

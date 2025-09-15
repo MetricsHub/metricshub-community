@@ -64,7 +64,7 @@ const LoginPage = () => {
 					color: "text.secondary",
 				}}
 			>
-				Lancelot&apos;s version
+				{" "}
 			</Box>
 
 			{/* Existing form */}

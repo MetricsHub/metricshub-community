@@ -61,7 +61,7 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 	const appBarHeights = useMemo(() => ({ xs: 56, sm: 64 }), []);
 
 	// Choose which tree to display (can be driven by route or Redux later)
-	const activeTree = "machines";
+	const activeTree = "none";
 
 	return (
 		<>

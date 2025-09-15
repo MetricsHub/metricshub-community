@@ -1,11 +1,11 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { applicationStatusReducer } from "./slices/applicationStatusSlice";
-import { machinesReducer } from "./slices/machinesSlice";
+//import { machinesReducer } from "./slices/machinesSlice";
 
 export const store = configureStore({
 	reducer: {
 		applicationStatus: applicationStatusReducer,
-		machines: machinesReducer,
+		/*machines: machinesReducer,*/
 	},
 	devTools: true,
 });
