@@ -1,10 +1,9 @@
 import React from "react";
 import { Box, CircularProgress, Tooltip } from "@mui/material";
-import { useAppSelector } from "../hooks/store";
-import otelColor from "../assets/opentelemetry-icon-color.png";
+import { useAppSelector } from "../../hooks/store";
+import otelColor from "../../assets/opentelemetry-icon-color.png";
 
 export default function OtelStatusIcon({ sx = {} }) {
-	// ✅ default {}
 	const { data, loading, error } = useAppSelector((s) => s.applicationStatus);
 	if (loading && !data) return <CircularProgress size={16} sx={sx} />;
 
@@ -14,7 +13,6 @@ export default function OtelStatusIcon({ sx = {} }) {
 		<Tooltip title={`OpenTelemetry Collector: ${running ? "running" : "stopped"}`}>
 			<Box sx={{ width: 24, height: 24, ...(sx || {}) }}>
 				{" "}
-				{/* ✅ safe spread */}
 				<img
 					src={otelColor}
 					alt="OpenTelemetry status"

@@ -1,6 +1,6 @@
 import React from "react";
 import { Typography, CircularProgress } from "@mui/material";
-import { useAppSelector } from "../hooks/store";
+import { useAppSelector } from "../../hooks/store";
 
 export default function StatusText({ sx }) {
 	const { data, loading, error } = useAppSelector((s) => s.applicationStatus);

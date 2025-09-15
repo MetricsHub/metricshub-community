@@ -12,6 +12,7 @@ dist
 build
 .vite
 .esbuild
+build-info.json
 
 # Coverage
 coverage
