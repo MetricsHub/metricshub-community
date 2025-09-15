@@ -61,7 +61,7 @@ export default function StatusDetailsMenu() {
 				anchorEl={anchorEl}
 				open={open}
 				onClose={() => setAnchorEl(null)}
-				PaperProps={{ sx: { maxWidth: 460, width: { xs: "92vw", sm: 460 }, p: 2 } }}
+				slotProps={{ paper: { sx: { maxWidth: 460, width: { xs: "92vw", sm: 460 }, p: 2 } } }}
 			>
 				<Box sx={{ minWidth: 260, maxHeight: 440, overflow: "auto" }}>
 					{loading && !data ? (
@@ -86,8 +86,10 @@ export default function StatusDetailsMenu() {
 												<ListItemText
 													primary={prettifyKey(k)}
 													secondary={formatValue(v)}
-													primaryTypographyProps={{ fontSize: "0.9rem", fontWeight: 600 }}
-													secondaryTypographyProps={{ fontSize: "0.9rem" }}
+													slotProps={{
+														primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
+														secondary: { sx: { fontSize: "0.9rem" } },
+													}}
 												/>
 											</ListItem>
 										))}

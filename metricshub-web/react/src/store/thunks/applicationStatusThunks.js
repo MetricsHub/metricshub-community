@@ -1,6 +1,9 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { statusApi } from "../../api/auth";
+import { statusApi } from "../../api/status";
 
+/**
+ * Thunk to fetch application status from backend
+ */
 export const fetchApplicationStatus = createAsyncThunk(
 	"applicationStatus/fetchApplicationStatus",
 	async (_, { rejectWithValue }) => {

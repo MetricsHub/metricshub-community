@@ -3,7 +3,7 @@ import { Typography, CircularProgress } from "@mui/material";
 import { useAppSelector } from "../../hooks/store";
 
 export default function StatusText({ sx }) {
-	const { data, loading, error } = useAppSelector((s) => s.applicationStatus);
+	const { data, loading } = useAppSelector((s) => s.applicationStatus);
 
 	let status = String(data?.status ?? "UNKNOWN").toUpperCase();
 	let color = "warning.main";
@@ -26,7 +26,7 @@ export default function StatusText({ sx }) {
 			}}
 		>
 			{loading && <CircularProgress size={14} thickness={4} />}
-			{error ? "ERROR" : status}
+			{status}
 		</Typography>
 	);
 }

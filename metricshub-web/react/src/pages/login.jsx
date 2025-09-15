@@ -52,63 +52,46 @@ const LoginPage = () => {
 	});
 
 	return (
-		<Box sx={{ position: "relative", width: "100%", height: "100%" }}>
-			{/* ADDED: top-right label */}
-			<Box
-				sx={{
-					position: "absolute",
-					top: 16,
-					right: 16,
-					fontSize: "0.9rem",
-					fontWeight: "bold",
-					color: "text.secondary",
-				}}
-			>
-				{" "}
-			</Box>
+		<Box
+			component="form"
+			onSubmit={formik.handleSubmit}
+			noValidate
+			sx={{ mx: "auto", width: "100%", maxWidth: 640 }}
+		>
+			<Stack spacing={3}>
+				<TextField
+					autoFocus
+					fullWidth
+					label="Username"
+					name="username"
+					type="text"
+					value={formik.values.username}
+					onChange={formik.handleChange}
+					onBlur={formik.handleBlur}
+					error={Boolean(formik.touched.username && formik.errors.username)}
+					helperText={formik.touched.username && formik.errors.username}
+					autoComplete="username"
+				/>
 
-			{/* Existing form */}
-			<Box
-				component="form"
-				onSubmit={formik.handleSubmit}
-				noValidate
-				sx={{ mx: "auto", width: "100%", maxWidth: 640 }}
-			>
-				<Stack spacing={3}>
-					<TextField
-						autoFocus
-						fullWidth
-						label="Username"
-						name="username"
-						type="text"
-						value={formik.values.username}
-						onChange={formik.handleChange}
-						onBlur={formik.handleBlur}
-						error={Boolean(formik.touched.username && formik.errors.username)}
-						helperText={formik.touched.username && formik.errors.username}
-						autoComplete="username"
-					/>
+				<TextField
+					fullWidth
+					label="Password"
+					name="password"
+					type="password"
+					value={formik.values.password}
+					onChange={formik.handleChange}
+					onBlur={formik.handleBlur}
+					error={Boolean(formik.touched.password && formik.errors.password)}
+					helperText={formik.touched.password && formik.errors.password}
+					autoComplete="current-password"
+				/>
 
-					<TextField
-						fullWidth
-						label="Password"
-						name="password"
-						type="password"
-						value={formik.values.password}
-						onChange={formik.handleChange}
-						onBlur={formik.handleBlur}
-						error={Boolean(formik.touched.password && formik.errors.password)}
-						helperText={formik.touched.password && formik.errors.password}
-						autoComplete="current-password"
-					/>
+				{formik.errors.submit && <Alert severity="error">{formik.errors.submit}</Alert>}
 
-					{formik.errors.submit && <Alert severity="error">{formik.errors.submit}</Alert>}
-
-					<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
-						Sign in
-					</Button>
-				</Stack>
-			</Box>
+				<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
+					Sign in
+				</Button>
+			</Stack>
 		</Box>
 	);
 };

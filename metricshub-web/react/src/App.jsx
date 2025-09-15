@@ -3,32 +3,37 @@ import { useMemo, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
-import metricshubLogo from "./assets/metricshub.svg";
+import logoDark from "./assets/logo-dark.svg";
+import logoLight from "./assets/logo-light.svg";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./store";
+import { useTheme } from "@mui/material/styles";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const HomePage = React.lazy(() => import("./pages/home"));
 
-const SplashScreen = () => (
-	<Box
-		sx={{
-			minHeight: "100vh",
-			display: "flex",
-			flexDirection: "column",
-			alignItems: "center",
-			justifyContent: "center",
-			gap: 2,
-		}}
-	>
-		<img
-			src={metricshubLogo}
-			alt="MetricsHub"
-			style={{ width: 120, height: "auto", marginBottom: "1rem" }}
-		/>
-		<CircularProgress />
-	</Box>
-);
+const SplashScreen = () => {
+	const theme = useTheme();
+	return (
+		<Box
+			sx={{
+				minHeight: "100vh",
+				display: "flex",
+				flexDirection: "column",
+				alignItems: "center",
+				justifyContent: "center",
+				gap: 2,
+			}}
+		>
+			<img
+				src={theme.palette.mode === "dark" ? logoDark : logoLight}
+				alt="MetricsHub"
+				style={{ width: 120, height: "auto", marginBottom: "1rem" }}
+			/>
+			<CircularProgress />
+		</Box>
+	);
+};
 
 export default function App() {
 	//light or dark

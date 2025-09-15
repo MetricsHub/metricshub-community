@@ -7,7 +7,7 @@ const LS_KEY = "metricshub.drawerWidth";
 
 // Drawer width bounds (px)
 const DEFAULT_WIDTH = 320;
-const MIN_WIDTH = 100;
+const MIN_WIDTH = 200;
 const MAX_WIDTH = 1000;
 
 // Overlay scrollbar geometry (px)

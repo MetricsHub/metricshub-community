@@ -3,6 +3,12 @@ import { Box, CircularProgress, Tooltip } from "@mui/material";
 import { useAppSelector } from "../../hooks/store";
 import otelColor from "../../assets/opentelemetry-icon-color.png";
 
+/**
+ * OpenTelemetry status icon component
+ * @param {object} props - Component props
+ * @param {object} props.sx - MUI sx prop for styling
+ * @returns JSX.Element
+ */
 export default function OtelStatusIcon({ sx = {} }) {
 	const { data, loading, error } = useAppSelector((s) => s.applicationStatus);
 	if (loading && !data) return <CircularProgress size={16} sx={sx} />;

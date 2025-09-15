@@ -9,28 +9,30 @@ import {
 	Toolbar,
 	Typography,
 	useMediaQuery,
-	IconButton,
+	Container,
 } from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import CloseIcon from "@mui/icons-material/Close";
-
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 import { withAuthGuard } from "../../hocs/with-auth-guard";
 import { useAppDispatch } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
-
 import StatusText from "../../components/status/status-text";
 import StatusDetailsMenu from "../../components/status/status-details-menu";
 import OtelStatusIcon from "../../components/status/otel-status-icon";
-import TestButton from "../../components/test-button";
-// import ErrorBoundary from "../../components/error-boundary";
-
+import ErrorBoundary from "../../components/error-boundary";
 import Sidebar from "../../components/sidebar/sidebar";
+import logoDark from "../../assets/logo-dark.svg";
+import logoLight from "../../assets/logo-light.svg";
+import { useTheme } from "@mui/material/styles";
 
 // For initial main-content offset before first width report
 const DEFAULT_WIDTH = 320;
+// Refresh status every 30 seconds
+const STATUS_REFRESH_MS = 30000;
 
+/**
+ * Dashboard layout component
+ */
 export const DashboardLayout = withAuthGuard(({ children }) => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
@@ -42,7 +44,7 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 
 	useEffect(() => {
 		dispatch(fetchApplicationStatus());
-		const id = setInterval(() => dispatch(fetchApplicationStatus()), 30000);
+		const id = setInterval(() => dispatch(fetchApplicationStatus()), STATUS_REFRESH_MS);
 		return () => clearInterval(id);
 	}, [dispatch]);
 
@@ -63,6 +65,9 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 	// Choose which tree to display (can be driven by route or Redux later)
 	const activeTree = "none";
 
+	const theme = useTheme();
+	const metricshubLogo = theme.palette.mode === "dark" ? logoDark : logoLight;
+
 	return (
 		<>
 			<CssBaseline />
@@ -79,22 +84,11 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 				})}
 			>
 				<Toolbar sx={{ gap: 1.5 }}>
-					<IconButton
-						size="small"
-						edge="start"
-						aria-label="Toggle sidebar"
-						onClick={() => setSidebarOpen((v) => !v)}
-					>
-						{sidebarOpen ? <CloseIcon /> : <MenuIcon />}
-					</IconButton>
-
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexGrow: 1 }}>
-						<Typography variant="h6">MetricsHub</Typography>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 2.5, flexGrow: 1 }}>
+						<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
 						<StatusText sx={{ ml: 0.5 }} />
 						<OtelStatusIcon />
 					</Box>
-
-					{/*<TestButton />*/}
 
 					{user && (
 						<Typography variant="body2" sx={{ mr: 1, opacity: 0.75 }}>
@@ -126,13 +120,13 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 						minHeight: "100vh",
 						bgcolor: "background.default",
 						mt: { xs: `${hXs}px`, sm: `${hSmUp}px` },
-						...(isSmall ? {} : sidebarOpen ? { ml: `${sidebarWidth}px` } : {}),
+						...(isSmall ? {} : { ml: `${sidebarWidth}px` }),
 					};
 				}}
 			>
-				{/* <Container maxWidth="lg" sx={{ py: 3 }}>
-          <ErrorBoundary>{children}</ErrorBoundary>
-        </Container> */}
+				<Container maxWidth="lg" sx={{ py: 3 }}>
+					<ErrorBoundary>{children}</ErrorBoundary>
+				</Container>
 			</Box>
 		</>
 	);

@@ -1,6 +1,9 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { fetchApplicationStatus } from "../thunks/applicationStatusThunks";
 
+/**
+ * Initial state for application status slice
+ */
 const initialState = {
 	data: null,
 	loading: false,
@@ -8,6 +11,9 @@ const initialState = {
 	lastUpdatedAt: null,
 };
 
+/**
+ * Slice for managing application status state
+ */
 const applicationStatusSlice = createSlice({
 	name: "applicationStatus",
 	initialState,
