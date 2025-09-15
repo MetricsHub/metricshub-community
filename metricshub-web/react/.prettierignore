@@ -1,0 +1,32 @@
+# Node dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
+dist
+build
+.vite
+.esbuild
+
+# Coverage
+coverage
+
+# Misc
+.DS_Store
+*.tar.gz
+
+# Vite/React caches
+*.local
+.vscode
+.idea
+
+# Prettier should not touch config-generated files
+*.min.js
+*.min.css
+*.bundle.js
+*.bundle.css
