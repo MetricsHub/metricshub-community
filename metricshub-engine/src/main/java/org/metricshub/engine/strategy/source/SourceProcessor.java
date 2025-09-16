@@ -24,8 +24,17 @@ package org.metricshub.engine.strategy.source;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -38,6 +47,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -146,11 +156,106 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @return A {@link SourceTable} containing the results from processing the source through the extension,
 	 *         or an empty table if no extension can process the source.
 	 */
-	private SourceTable processSourceThroughExtension(final Source source) {
-		final Optional<IProtocolExtension> maybeExtension = extensionManager.findSourceExtension(source, telemetryManager);
-		return maybeExtension
-			.map(extension -> extension.processSource(source, connectorId, telemetryManager))
-			.orElseGet(SourceTable::empty);
+	private SourceTable processSourceThroughExtension(Source source) {
+		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+
+		// CHECKSTYLE:OFF
+		if (
+			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
+			emulationInputDirectory != null &&
+			!emulationInputDirectory.isBlank()
+		) {
+			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(connectorId, source, emulationInputDirectory);
+			return emulatedSourceTable.orElse(null);
+		}
+
+		SourceTable table = extensionManager
+			.findSourceExtension(source, telemetryManager)
+			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
+			.orElse(SourceTable.empty());
+
+		if (
+			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
+			recordOutputDirectory != null &&
+			!recordOutputDirectory.isBlank()
+		) {
+			persist(table, connectorId, source, recordOutputDirectory);
+		}
+		return table;
+		//CHECKSTYLE:ON
+	}
+
+	// Create a YAML ObjectMapper to serialize SourceTable to YAML format
+	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
+
+	/**
+	 *
+	 * @param sourceTable the {@link SourceTable} to persist
+	 * @param connectorId the identifier of the connector defining the source
+	 * @param source the {@link Source} that was processed
+	 */
+	private void persist(
+		final SourceTable sourceTable,
+		final String connectorId,
+		final Source source,
+		final String recordOutputDirectory
+	) {
+		// Directory where we will store the sources results files
+		// We will store 1 file per source, named as <connectorId><sourceKey>.yaml
+		final Path sourceResultOutputDirectory = Paths.get(recordOutputDirectory);
+		try {
+			Files.createDirectories(sourceResultOutputDirectory);
+
+			final String cleanKey = source.getKey().replace(":", "-");
+			final Path file = sourceResultOutputDirectory.resolve(
+				telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"
+			); // keep extension if you wish
+
+			try (
+				BufferedWriter out = Files.newBufferedWriter(
+					file,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING
+				)
+			) {
+				YAML_MAPPER.writeValue(out, sourceTable); // Jackson YAMLFactory handles it
+				out.newLine();
+			}
+		} catch (IOException e) {
+			log.warn("Could not write SourceTable to {}", sourceResultOutputDirectory, e);
+		}
+	}
+
+	/**
+	 * Reads a {@link SourceTable} from the emulated source output directory based on the connector ID and source.
+	 *
+	 * @param connectorId The identifier of the connector defining the source.
+	 * @param source      The source for which to read the {@link SourceTable}.
+	 * @param emulationModeSourceOutputDirectory Source emulation input files directory
+	 * @return An {@link Optional} containing the {@link SourceTable} if it exists, or empty if not found.
+	 */
+	private Optional<SourceTable> readEmulatedSourceTable(
+		String connectorId,
+		Source source,
+		String emulationModeSourceOutputDirectory
+	) {
+		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
+		final String cleanKey = source.getKey().replace(":", "-");
+		final Path file = outDir.resolve(telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"); // content is YAML
+
+		if (!Files.exists(file)) {
+			throw new IllegalStateException("The file " + file.getFileName() + " does not exist!");
+		}
+
+		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+			final SourceTable table = YAML_MAPPER.readValue(in, SourceTable.class);
+			return Optional.of(table);
+		} catch (IOException e) {
+			log.warn("Could not read SourceTable from {}", file, e);
+			return Optional.empty();
+		}
 	}
 
 	/**
