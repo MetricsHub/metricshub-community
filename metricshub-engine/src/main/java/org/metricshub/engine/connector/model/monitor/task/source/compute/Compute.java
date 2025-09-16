@@ -43,6 +43,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 		@JsonSubTypes.Type(value = ArrayTranslate.class, name = "arrayTranslate"),
 		@JsonSubTypes.Type(value = Awk.class, name = "awk"),
 		@JsonSubTypes.Type(value = Convert.class, name = "convert"),
+		@JsonSubTypes.Type(value = Decode.class, name = "decode"),
 		@JsonSubTypes.Type(value = Divide.class, name = "divide"),
 		@JsonSubTypes.Type(value = DuplicateColumn.class, name = "duplicateColumn"),
 		@JsonSubTypes.Type(value = Encode.class, name = "encode"),
