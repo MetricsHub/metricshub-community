@@ -47,6 +47,18 @@
 						</configuration>
 					</execution>
 
+					<!-- Run "npm run format:check" -->
+					<execution>
+						<id>npm-format-check</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>run format:check</arguments>
+						</configuration>
+					</execution>
+
 					<!-- Run "npm run build" -->
 					<execution>
 						<id>npm-build</id>

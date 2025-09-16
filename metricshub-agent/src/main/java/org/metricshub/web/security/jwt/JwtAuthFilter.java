@@ -43,8 +43,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-	private static final String AUTH_PATH = "/auth";
-
 	private JwtComponent jwtComponent;
 	private UserService userService;
 
@@ -85,11 +83,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	 * @param request HTTP request
 	 */
 	private void doApiFilter(final HttpServletRequest request) {
-		// Skip filtering for POST /auth (login)
-		if (AUTH_PATH.equals(request.getRequestURI()) && "post".equalsIgnoreCase(request.getMethod())) {
-			return;
-		}
-
 		// Get the authentication token
 		final String authToken = jwtComponent.getTokenFromRequestCookie(request);
 
