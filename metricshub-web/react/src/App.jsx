@@ -8,9 +8,11 @@ import logoLight from "./assets/logo-light.svg";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
+import { DashboardLayout } from "./layouts/dashboard/layout";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const HomePage = React.lazy(() => import("./pages/home"));
+const ConfigPage = React.lazy(() => import("./pages/config"));
 
 const SplashScreen = () => {
 	const theme = useTheme();
@@ -68,14 +70,23 @@ export default function App() {
 											<Route
 												path="/"
 												element={
-													<HomePage
-														toggleTheme={() =>
-															setMode((prev) => (prev === "light" ? "dark" : "light"))
-														}
-													/>
+													<DashboardLayout>
+														<HomePage
+															toggleTheme={() =>
+																setMode((prev) => (prev === "light" ? "dark" : "light"))
+															}
+														/>
+													</DashboardLayout>
 												}
 											/>
-											{/* Fallback */}
+											<Route
+												path="/config"
+												element={
+													<DashboardLayout>
+														<ConfigPage />
+													</DashboardLayout>
+												}
+											/>
 											<Route path="*" element={<Navigate to="/" replace />} />
 										</Routes>
 									</React.Suspense>

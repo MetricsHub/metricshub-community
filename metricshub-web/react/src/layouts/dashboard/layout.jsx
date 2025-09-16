@@ -10,7 +10,10 @@ import {
 	Typography,
 	useMediaQuery,
 	Container,
+	IconButton,
+	Tooltip
 } from "@mui/material";
+import LogoutIcon from "@mui/icons-material/Logout";
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 import { withAuthGuard } from "../../hocs/with-auth-guard";
@@ -24,6 +27,7 @@ import Sidebar from "../../components/sidebar/sidebar";
 import logoDark from "../../assets/logo-dark.svg";
 import logoLight from "../../assets/logo-light.svg";
 import { useTheme } from "@mui/material/styles";
+import { NavLink } from "react-router-dom";
 
 // For initial main-content offset before first width report
 const DEFAULT_WIDTH = 320;
@@ -67,6 +71,23 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 
 	const theme = useTheme();
 	const metricshubLogo = theme.palette.mode === "dark" ? logoDark : logoLight;
+	const navBtnSx = {
+		alignSelf: "stretch",          // ensure each button fills the group's height
+		height: "100%",
+		minHeight: "auto",             // override MUI’s default 36px minHeight
+		borderRadius: 0,
+		px: 2.25,
+		py: 0,                         // remove vertical padding
+		lineHeight: 1,
+		minWidth: 90,
+		color: "text.primary",
+		borderBottom: "2px solid transparent",     // reserve underline space
+		"&:hover": { bgcolor: "action.hover" },
+		"&.active": (t) => ({
+			bgcolor: t.palette.action.selected,
+			borderBottomColor: t.palette.primary.main,
+		}),
+	};
 
 	return (
 		<>
@@ -83,24 +104,36 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 					boxShadow: "none",
 				})}
 			>
-				<Toolbar sx={{ gap: 1.5 }}>
-					<Box sx={{ display: "flex", alignItems: "center", gap: 2.5, flexGrow: 1 }}>
-						<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
-						<StatusText sx={{ ml: 0.5 }} />
-						<OtelStatusIcon />
+				<Toolbar disableGutters sx={{ gap: 1.5, minHeight: { xs: 56, sm: 64 }, px: 2 }}>
+					{/* LEFT SIDE: */}
+					<Box sx={{ display: "flex", gap: 2.5, height: "100%" }}>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
+							<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
+							<StatusText sx={{ ml: 0.5 }} />
+							<OtelStatusIcon />
+						</Box>
+						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
+							<Button component={NavLink} to="/" end sx={navBtnSx}>Dashboard</Button>
+							<Button component={NavLink} to="/config" sx={navBtnSx}>Config</Button>
+						</Box>
 					</Box>
 
-					{user && (
-						<Typography variant="body2" sx={{ mr: 1, opacity: 0.75 }}>
-							{`Signed in as ${user.username}`}
-						</Typography>
-					)}
-					<StatusDetailsMenu />
-					<Button onClick={handleSignOut} variant="outlined" size="small">
-						Sign out
-					</Button>
+					{/* RIGHT SIDE: */}
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
+						{user && (
+							<Typography variant="body2" sx={{ opacity: 0.75 }}>
+								{`Signed in as ${user.username}`}
+							</Typography>
+						)}
+						<StatusDetailsMenu />
+						<Tooltip title="Sign out">
+							<IconButton onClick={handleSignOut} color="default">
+								<LogoutIcon />
+							</IconButton>
+						</Tooltip>
+					</Box>
 				</Toolbar>
-			</AppBar>
+			</AppBar >
 
 			<Sidebar
 				open={sidebarOpen}
@@ -124,9 +157,9 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 					};
 				}}
 			>
-				<Container maxWidth="lg" sx={{ py: 3 }}>
+				<Box sx={{ py: 3, px: 3, width: "100%" }}>
 					<ErrorBoundary>{children}</ErrorBoundary>
-				</Container>
+				</Box>
 			</Box>
 		</>
 	);

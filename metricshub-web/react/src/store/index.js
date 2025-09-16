@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { applicationStatusReducer } from "./slices/applicationStatusSlice";
+import configEditorReducer from "./slices/configEditorSlice";
 
 /**
  * Main Redux store configuration
@@ -7,6 +8,7 @@ import { applicationStatusReducer } from "./slices/applicationStatusSlice";
 export const store = configureStore({
 	reducer: {
 		applicationStatus: applicationStatusReducer,
+		configEditor: configEditorReducer,
 	},
 	devTools: true,
 });
