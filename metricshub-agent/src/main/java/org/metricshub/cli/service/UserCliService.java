@@ -35,6 +35,7 @@ import java.util.Locale;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 import javax.crypto.spec.SecretKeySpec;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.fusesource.jansi.Ansi;
@@ -77,7 +78,7 @@ public class UserCliService {
 	private static final Pattern USER_INFO_PATTERN = Pattern.compile(USER_INFO_SEPARATOR, Pattern.LITERAL);
 
 	@Spec
-	static CommandSpec spec;
+	public static CommandSpec spec;
 
 	/**
 	 * Returns the password used to protect the KeyStore.
@@ -123,6 +124,8 @@ public class UserCliService {
 	 * Create a new user with specified username, role, and password.
 	 */
 	@Command(name = "create", description = "Create a user with role 'ro' or 'rw'.")
+	@AllArgsConstructor
+	@NoArgsConstructor
 	public static class CreateCommand implements Callable<Integer> {
 
 		@Parameters(index = "0", paramLabel = "USERNAME", description = "The username for the new user.")
