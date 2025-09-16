@@ -38,39 +38,39 @@ import lombok.NonNull;
 import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
- * Represents an Encode computation task for monitoring.
- * This compute is used to encode or hash a column content through various protocols.
+ * Represents a Decode computation task for monitoring.
+ * This compute is used to decode a column content through various protocols.
  */
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class Encode extends Compute {
+public class Decode extends Compute {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * The column index used in the Encode computation.
+	 * The column index used in the Decode computation.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
 	private Integer column;
 
 	/**
-	 * The encoding protocol to use.
+	 * The decoding protocol to use.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
 	private String protocol;
 
 	/**
-	 * Construct a new instance of Encode.
+	 * Construct a new instance of Decode.
 	 *
 	 * @param type   The type of the computation task.
 	 * @param column The column index used in the computation.
 	 */
 	@Builder
 	@JsonCreator
-	public Encode(
+	public Decode(
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "column", required = true) @NonNull Integer column,
 		@JsonProperty(value = "protocol", required = true) @NonNull String protocol
@@ -93,8 +93,8 @@ public class Encode extends Compute {
 	}
 
 	@Override
-	public Encode copy() {
-		return Encode.builder().type(type).column(column).protocol(protocol).build();
+	public Decode copy() {
+		return Decode.builder().type(type).column(column).protocol(protocol).build();
 	}
 
 	@Override

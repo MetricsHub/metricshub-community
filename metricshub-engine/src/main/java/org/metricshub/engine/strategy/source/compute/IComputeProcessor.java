@@ -27,6 +27,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
@@ -87,6 +88,13 @@ public interface IComputeProcessor {
 	 * @param convert The Convert compute operation to be processed.
 	 */
 	void process(Convert convert);
+
+	/**
+	 * Processes the Decode compute operation on the source data.
+	 *
+	 * @param decdode The Decode compute operation to be processed.
+	 */
+	void process(Decode decode);
 
 	/**
 	 * Processes the Divide compute operation on the source data.

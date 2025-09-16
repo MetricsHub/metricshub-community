@@ -33,6 +33,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTr
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
@@ -95,6 +96,11 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 	@Override
 	public void process(final Convert convert) {
 		processCompute(convert);
+	}
+
+	@Override
+	public void process(final Decode decode) {
+		processCompute(decode);
 	}
 
 	@Override
