@@ -53,6 +53,8 @@ import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.monitor.AbstractMonitorJob;
 import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -138,6 +140,9 @@ public class AgentContext {
 		// to ease data retrieval in the scheduler
 		ConfigHelper.normalizeAgentConfiguration(agentConfig);
 
+		// Merge connector metrics definitions with their monitors metrics definitions if not already defined
+		mergeMetricsDefinitions(connectorStore);
+
 		telemetryManagers = ConfigHelper.buildTelemetryManagers(agentConfig, connectorStore);
 
 		// Build OpenTelemetry configuration
@@ -171,6 +176,77 @@ public class AgentContext {
 		final var startupDuration = Duration.ofNanos(System.nanoTime() - startTime);
 
 		log.info("Started MetricsHub Agent in {} seconds.", startupDuration.toMillis() / 1000.0);
+	}
+
+	/**
+	 * Ensure store connector metrics reflect monitor metrics definitions of the configured connector metrics definitions.
+	 * Collect all metric definitions from monitors of the configured connector then override the store connector
+	 * metric definitions with these monitor metrics.
+	 *
+	 * @param connectorStore The connector store containing connectors and their monitors
+	 */
+	protected void mergeMetricsDefinitions(final ConnectorStore connectorStore) {
+		agentConfig
+			.getResourceGroups()
+			.forEach((resourceGroupKey, resourceGroupConfig) -> {
+				resourceGroupConfig
+					.getResources()
+					.forEach((resourceKey, resourceConfig) -> {
+						final var configuredConnector = resourceConfig.getConnector();
+						if (configuredConnector == null) {
+							return;
+						}
+
+						// Collect metrics definitions from all monitors of the configured connector
+						final Map<String, MetricDefinition> monitorMetricDefinitions = new HashMap<>();
+						configuredConnector
+							.getMonitors()
+							.values()
+							.forEach(monitorJob -> {
+								if (monitorJob instanceof AbstractMonitorJob) {
+									monitorMetricDefinitions.putAll(((AbstractMonitorJob) monitorJob).getMetrics());
+								}
+							});
+
+						if (monitorMetricDefinitions.isEmpty()) {
+							return;
+						}
+
+						// Apply monitor metrics to override store connector metrics
+						for (String rawConnectorId : resourceConfig.getConnectors()) {
+							String connectorId = sanitizeConnectorId(rawConnectorId);
+							if (connectorId == null || connectorId.isBlank()) {
+								continue;
+							}
+
+							final var storeConnector = connectorStore.getStore().get(connectorId);
+							if (storeConnector == null) {
+								log.warn(
+									"Connector {} not found in store for resource {} (group {}).",
+									connectorId,
+									resourceKey,
+									resourceGroupKey
+								);
+								continue;
+							}
+
+							final Map<String, MetricDefinition> storeConnectorMetrics = storeConnector.getMetrics();
+
+							// Configured connector monitor metrics override store connector metrics
+							storeConnectorMetrics.putAll(monitorMetricDefinitions);
+						}
+					});
+			});
+	}
+
+	/**
+	 * Sanitize connector ID by stripping leading special characters like + or !.
+	 */
+	private static String sanitizeConnectorId(final String rawId) {
+		if (rawId == null) {
+			return null;
+		}
+		return rawId.replaceAll("^[^a-zA-Z0-9]+", ""); // strip leading non-alphanumeric chars
 	}
 
 	/**

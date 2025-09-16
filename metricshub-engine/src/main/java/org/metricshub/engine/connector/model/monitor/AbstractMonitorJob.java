@@ -25,11 +25,14 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT_K
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.deserializer.custom.NonBlankInLinkedHashSetDeserializer;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 
 /**
  * Abstract base class implementing {@link MonitorJob}, holding a set of keys to build a monitor ID.
@@ -55,4 +58,7 @@ public class AbstractMonitorJob implements MonitorJob {
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = NonBlankInLinkedHashSetDeserializer.class)
 	private Set<String> keys = DEFAULT_KEYS;
+
+	@JsonSetter(nulls = SKIP)
+	private Map<String, MetricDefinition> metrics = new HashMap<>();
 }
