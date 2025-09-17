@@ -3182,10 +3182,10 @@ class ComputeProcessorTest {
 		assertEquals(baseTable, sourceTable.getTable());
 
 		// Wrong type of decoding.
-		final Decode decodeWrongDecoding = Decode.builder().column(2).decoding("WrongDecoding").build();
+		final Decode decodeWrongEncoding = Decode.builder().column(2).encoding("WrongEncoding").build();
 
 		// Execute the Decode compute.
-		computeProcessor.process(decodeWrongDecoding);
+		computeProcessor.process(decodeWrongEncoding);
 
 		// Verify there is no change.
 		assertEquals(baseTable, sourceTable.getTable());
@@ -3207,7 +3207,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// Base64 decoding.
-		final Decode decodeBase64 = Decode.builder().column(2).decoding("Base64").build();
+		final Decode decodeBase64 = Decode.builder().column(2).encoding("Base64").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeBase64);
@@ -3233,7 +3233,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// URL decoding.
-		final Decode decodeURL = Decode.builder().column(2).decoding("URLDecode").build();
+		final Decode decodeURL = Decode.builder().column(2).encoding("URLDecode").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeURL);

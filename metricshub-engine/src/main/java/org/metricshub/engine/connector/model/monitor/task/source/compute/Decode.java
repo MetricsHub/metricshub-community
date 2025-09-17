@@ -39,7 +39,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * Represents a Decode computation task for monitoring.
- * This compute is used to decode a column content through various decoding types.
+ * This compute is used to decode a column content through various encoding types.
  */
 @Data
 @NoArgsConstructor
@@ -56,29 +56,29 @@ public class Decode extends Compute {
 	private Integer column;
 
 	/**
-	 * The type of decoding to use.
+	 * The type of encoding to use.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
-	private String decoding;
+	private String encoding;
 
 	/**
 	 * Construct a new instance of Decode.
 	 *
 	 * @param type   The type of the computation task.
 	 * @param column The column index used in the computation.
-	 * @param decoding The type of decoding to use.
+	 * @param encoding The type of encoding to use.
 	 */
 	@Builder
 	@JsonCreator
 	public Decode(
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "column", required = true) @NonNull Integer column,
-		@JsonProperty(value = "decoding", required = true) @NonNull String decoding
+		@JsonProperty(value = "encoding", required = true) @NonNull String encoding
 	) {
 		super(type);
 		this.column = column;
-		this.decoding = decoding;
+		this.encoding = encoding;
 	}
 
 	@Override
@@ -88,14 +88,14 @@ public class Decode extends Compute {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- column=", column);
-		addNonNull(stringJoiner, "- decoding=", decoding);
+		addNonNull(stringJoiner, "- encoding=", encoding);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Decode copy() {
-		return Decode.builder().type(type).column(column).decoding(decoding).build();
+		return Decode.builder().type(type).column(column).encoding(encoding).build();
 	}
 
 	@Override

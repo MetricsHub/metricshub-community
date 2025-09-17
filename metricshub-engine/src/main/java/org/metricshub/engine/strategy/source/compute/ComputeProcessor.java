@@ -567,13 +567,13 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (decode.getDecoding() == null || decode.getDecoding().isEmpty()) {
-			log.warn("Hostname {} - The type of decoding cannot be null or empty, the table remains unchanged.", hostname);
+		if (decode.getEncoding() == null || decode.getEncoding().isEmpty()) {
+			log.warn("Hostname {} - The type of encoding cannot be null or empty, the table remains unchanged.", hostname);
 			return;
 		}
 
 		final int columnIndex = decode.getColumn() - 1;
-		final String decoding = decode.getDecoding();
+		final String encoding = decode.getEncoding();
 
 		for (final List<String> line : sourceTable.getTable()) {
 			if (columnIndex < line.size()) {
@@ -581,7 +581,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 				final String newValue;
 
-				switch (decoding.toLowerCase()) {
+				switch (encoding.toLowerCase()) {
 					case "base64":
 						newValue = new String(Base64.getDecoder().decode(valueToBeDecoded), StandardCharsets.UTF_8);
 						break;
@@ -589,14 +589,14 @@ public class ComputeProcessor implements IComputeProcessor {
 						newValue = URLDecoder.decode(valueToBeDecoded, StandardCharsets.UTF_8);
 						break;
 					default:
-						log.warn("Hostname {} - The type of decoding is not recognized, the table remains unchanged.", hostname);
+						log.warn("Hostname {} - The type of encoding is not recognized, the table remains unchanged.", hostname);
 						return;
 				}
 
 				if (newValue != null) {
 					line.set(columnIndex, newValue);
 				} else {
-					log.warn("Hostname {} - Error when decoding the value {}.", hostname, valueToBeDecoded);
+					log.warn("Hostname {} - Error when encoding the value {}.", hostname, valueToBeDecoded);
 				}
 			}
 		}
