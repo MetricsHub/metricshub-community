@@ -67,28 +67,23 @@ export default function App() {
 									<React.Suspense fallback={<SplashScreen />}>
 										<Routes>
 											<Route path="/login" element={<LoginPage />} />
-											<Route
-												path="/"
-												element={
-													<DashboardLayout>
+											<Route element={<DashboardLayout />}>
+												<Route
+													index
+													element={
 														<HomePage
 															toggleTheme={() =>
 																setMode((prev) => (prev === "light" ? "dark" : "light"))
 															}
 														/>
-													</DashboardLayout>
-												}
-											/>
-											<Route
-												path="/config"
-												element={
-													<DashboardLayout>
-														<ConfigPage />
-													</DashboardLayout>
-												}
-											/>
+													}
+												/>
+												<Route path="config" element={<ConfigPage />} />
+											</Route>
+
 											<Route path="*" element={<Navigate to="/" replace />} />
 										</Routes>
+
 									</React.Suspense>
 								</BrowserRouter>
 							) : (

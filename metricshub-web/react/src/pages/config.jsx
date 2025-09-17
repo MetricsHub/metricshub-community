@@ -20,12 +20,7 @@ import {
 const LS_KEY_CONTENT = "config_yaml_content";
 const LS_KEY_FILENAME = "config_yaml_filename";
 
-const DEFAULT_YAML = `service:
-  name: metricshub
-  port: 31888
-features:
-  - traces
-  - metrics
+const DEFAULT_YAML = `config: here
 `;
 
 export default function Config() {
@@ -41,8 +36,6 @@ export default function Config() {
     useEffect(() => {
         const savedContent = localStorage.getItem(LS_KEY_CONTENT);
         const savedFilename = localStorage.getItem(LS_KEY_FILENAME);
-
-        // Initialize content: prefer saved, else keep existing, else default
         const initialContent = savedContent ?? (content || DEFAULT_YAML);
         if (initialContent !== content) {
             dispatch(setContent(initialContent));
@@ -142,6 +135,19 @@ export default function Config() {
                 <Alert severity="error" variant="outlined">
                     YAML error: {error}
                 </Alert>
+            )}
+            {filename && (
+                <Typography
+                    variant="subtitle2"
+                    sx={{
+                        mt: 1,
+                        mb: -1,
+                        color: "text.secondary",
+                        fontStyle: "italic",
+                    }}
+                >
+                    {filename}
+                </Typography>
             )}
 
             <Box

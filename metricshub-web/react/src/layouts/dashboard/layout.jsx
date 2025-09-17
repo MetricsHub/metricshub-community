@@ -37,7 +37,10 @@ const STATUS_REFRESH_MS = 30000;
 /**
  * Dashboard layout component
  */
-export const DashboardLayout = withAuthGuard(({ children }) => {
+
+import { Outlet } from "react-router-dom";
+
+export const DashboardLayout = withAuthGuard(() => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
 	const dispatch = useAppDispatch();
@@ -158,7 +161,7 @@ export const DashboardLayout = withAuthGuard(({ children }) => {
 				}}
 			>
 				<Box sx={{ py: 3, px: 3, width: "100%" }}>
-					<ErrorBoundary>{children}</ErrorBoundary>
+					<ErrorBoundary><Outlet /></ErrorBoundary>
 				</Box>
 			</Box>
 		</>

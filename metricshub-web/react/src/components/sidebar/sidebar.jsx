@@ -348,10 +348,10 @@ export default function Sidebar({
 		(trees && activeTree && trees[activeTree]) ||
 		(activeTree === "none" || !trees
 			? (emptyState ?? (
-					<Box sx={{ p: 2, color: "text.secondary" }}>
-						<Typography variant="body2">Nothing to display yet.</Typography>
-					</Box>
-				))
+				<Box sx={{ p: 2, color: "text.secondary" }}>
+					<Typography variant="body2">Nothing to display yet.</Typography>
+				</Box>
+			))
 			: null);
 
 	return (
