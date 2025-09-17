@@ -22,7 +22,7 @@ import ToggleTheme from "./toggle-theme";
 // Refresh status every 30 seconds
 const STATUS_REFRESH_MS = 30000;
 
-const NavBar = ( {toggleTheme} ) => {
+const NavBar = ({ toggleTheme }) => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
