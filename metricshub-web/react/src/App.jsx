@@ -92,16 +92,7 @@ export default function App() {
 													/>
 												}
 											>
-												<Route
-													path="/monitor"
-													element={
-														<Monitor
-															toggleTheme={() =>
-																setMode((prev) => (prev === "light" ? "dark" : "light"))
-															}
-														/>
-													}
-												/>
+												<Route path="/monitor" element={<Monitor />} />
 												{/* Fallback */}
 												<Route path="*" element={<Navigate to="/monitor" replace />} />
 											</Route>
