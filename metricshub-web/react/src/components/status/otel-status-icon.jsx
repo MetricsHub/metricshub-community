@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, CircularProgress, Tooltip } from "@mui/material";
 import { useAppSelector } from "../../hooks/store";
-import otelColor from "../../assets/opentelemetry-icon-color.png";
+import opentelemetryCollectorIcon from "../../assets/opentelemetry-icon-color.svg";
 
 /**
  * OpenTelemetry status icon component
@@ -20,7 +20,7 @@ export default function OtelStatusIcon({ sx = {} }) {
 			<Box sx={{ width: "1.2em", height: "1.2em", ...(sx || {}) }}>
 				{" "}
 				<img
-					src={otelColor}
+					src={opentelemetryCollectorIcon}
 					alt="OpenTelemetry Collector Status"
 					style={{
 						width: "100%",
