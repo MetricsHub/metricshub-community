@@ -17,11 +17,11 @@ export default function OtelStatusIcon({ sx = {} }) {
 
 	return (
 		<Tooltip title={`OpenTelemetry Collector: ${running ? "running" : "stopped"}`}>
-			<Box sx={{ width: 24, height: 24, ...(sx || {}) }}>
+			<Box sx={{ width: "1.2em", height: "1.2em", ...(sx || {}) }}>
 				{" "}
 				<img
 					src={otelColor}
-					alt="OpenTelemetry status"
+					alt="OpenTelemetry Collector Status"
 					style={{
 						width: "100%",
 						height: "100%",

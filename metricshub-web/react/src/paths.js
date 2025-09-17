@@ -1,4 +1,4 @@
 export const paths = {
-	index: "/",
+	monitor: "/monitor",
 	login: "/login",
 };

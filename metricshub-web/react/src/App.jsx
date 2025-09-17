@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useMemo, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
 import logoDark from "./assets/logo-dark.svg";
@@ -10,8 +10,10 @@ import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
-const HomePage = React.lazy(() => import("./pages/home"));
+const Monitor = React.lazy(() => import("./pages/monitor"));
+const NavBar = React.lazy(() => import("./components/navbar/navbar"));
 
+// Splash screen while loading
 const SplashScreen = () => {
 	const theme = useTheme();
 	return (
@@ -35,8 +37,22 @@ const SplashScreen = () => {
 	);
 };
 
+/**
+ * App layout component
+ * @returns JSX.Element
+ */
+const AppLayout = ({ authed, toggleTheme }) => {
+	return (
+		<>
+			{authed && <NavBar toggleTheme={toggleTheme} />}
+			{/* Child pages render here */}
+			<Outlet />
+		</>
+	);
+};
+
 export default function App() {
-	//light or dark
+	// light or dark
 	const [mode, setMode] = useState("dark");
 
 	// Create theme dynamically
@@ -65,18 +81,30 @@ export default function App() {
 									<React.Suspense fallback={<SplashScreen />}>
 										<Routes>
 											<Route path="/login" element={<LoginPage />} />
+											{/* App routes with NavBar */}
 											<Route
-												path="/"
 												element={
-													<HomePage
+													<AppLayout
+														authed={auth.isAuthenticated}
 														toggleTheme={() =>
 															setMode((prev) => (prev === "light" ? "dark" : "light"))
 														}
 													/>
 												}
-											/>
-											{/* Fallback */}
-											<Route path="*" element={<Navigate to="/" replace />} />
+											>
+												<Route
+													path="/monitor"
+													element={
+														<Monitor
+															toggleTheme={() =>
+																setMode((prev) => (prev === "light" ? "dark" : "light"))
+															}
+														/>
+													}
+												/>
+												{/* Fallback */}
+												<Route path="*" element={<Navigate to="/monitor" replace />} />
+											</Route>
 										</Routes>
 									</React.Suspense>
 								</BrowserRouter>
