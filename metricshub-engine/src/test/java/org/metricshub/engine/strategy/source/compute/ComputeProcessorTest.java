@@ -3172,26 +3172,26 @@ class ComputeProcessorTest {
 			)
 		);
 
-		// Wrong protocol encoding.
-		final Encode encodeWrongProtocol = Encode.builder().column(2).protocol("WrongProtocol").build();
+		// Wrong type of encoding.
+		final Encode encodeWrongEncoding = Encode.builder().column(2).encoding("WrongEncoding").build();
 
 		// Execute the Encode compute.
-		computeProcessor.process(encodeWrongProtocol);
+		computeProcessor.process(encodeWrongEncoding);
 
 		// Verify there is no change.
 		assertEquals(baseTable, sourceTable.getTable());
 
-		// Wrong protocol decoding.
-		final Decode decodeWrongProtocol = Decode.builder().column(2).protocol("WrongProtocol").build();
+		// Wrong type of decoding.
+		final Decode decodeWrongDecoding = Decode.builder().column(2).decoding("WrongDecoding").build();
 
 		// Execute the Decode compute.
-		computeProcessor.process(decodeWrongProtocol);
+		computeProcessor.process(decodeWrongDecoding);
 
 		// Verify there is no change.
 		assertEquals(baseTable, sourceTable.getTable());
 
 		// Base64 encoding.
-		final Encode encodeBase64 = Encode.builder().column(2).protocol("Base64").build();
+		final Encode encodeBase64 = Encode.builder().column(2).encoding("Base64").build();
 
 		// Execute the Encode compute.
 		computeProcessor.process(encodeBase64);
@@ -3207,7 +3207,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// Base64 decoding.
-		final Decode decodeBase64 = Decode.builder().column(2).protocol("Base64").build();
+		final Decode decodeBase64 = Decode.builder().column(2).decoding("Base64").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeBase64);
@@ -3216,7 +3216,7 @@ class ComputeProcessorTest {
 		assertEquals(baseTable, sourceTable.getTable());
 
 		// URL encoding.
-		final Encode encodeUrl = Encode.builder().column(2).protocol("URLEncode").build();
+		final Encode encodeUrl = Encode.builder().column(2).encoding("URLEncode").build();
 
 		// Execute the Encode compute.
 		computeProcessor.process(encodeUrl);
@@ -3233,29 +3233,12 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// URL decoding.
-		final Decode decodeURL = Decode.builder().column(2).protocol("URLEncode").build();
+		final Decode decodeURL = Decode.builder().column(2).decoding("URLEncode").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeURL);
 
 		// Verify the converted table matches the base table.
 		assertEquals(baseTable, sourceTable.getTable());
-
-		// MD5 hash.
-		final Encode hashMD5 = Encode.builder().column(2).protocol("MD5").build();
-
-		// Execute the Encode compute.
-		computeProcessor.process(hashMD5);
-
-		// Define the expected results.
-		expected =
-			Arrays.asList(
-				Arrays.asList("ID1", "66D2E2C68FCB97CE9BF0DDCC66F932E1"),
-				Arrays.asList("ID2", "133E1B8EDA335C4C7F7A508620CA7F10"),
-				Arrays.asList("ID3", "DE5B7AF08DB54F4A681A178A64D9A365")
-			);
-
-		// Verify the converted table matches our expected values.
-		assertEquals(expected, sourceTable.getTable());
 	}
 }

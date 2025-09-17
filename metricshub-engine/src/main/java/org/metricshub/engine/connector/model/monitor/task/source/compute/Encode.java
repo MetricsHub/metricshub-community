@@ -39,7 +39,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * Represents an Encode computation task for monitoring.
- * This compute is used to encode or hash a column content through various protocols.
+ * This compute is used to encode or hash a column content through various encoding types.
  */
 @Data
 @NoArgsConstructor
@@ -56,28 +56,29 @@ public class Encode extends Compute {
 	private Integer column;
 
 	/**
-	 * The encoding protocol to use.
+	 * The type of encoding to use.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
-	private String protocol;
+	private String encoding;
 
 	/**
 	 * Construct a new instance of Encode.
 	 *
-	 * @param type   The type of the computation task.
-	 * @param column The column index used in the computation.
+	 * @param type     The type of the computation task.
+	 * @param column   The column index used in the computation.
+	 * @param encoding The type of encoding to use.
 	 */
 	@Builder
 	@JsonCreator
 	public Encode(
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "column", required = true) @NonNull Integer column,
-		@JsonProperty(value = "protocol", required = true) @NonNull String protocol
+		@JsonProperty(value = "encoding", required = true) @NonNull String encoding
 	) {
 		super(type);
 		this.column = column;
-		this.protocol = protocol;
+		this.encoding = encoding;
 	}
 
 	@Override
@@ -87,14 +88,14 @@ public class Encode extends Compute {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- column=", column);
-		addNonNull(stringJoiner, "- protocol=", protocol);
+		addNonNull(stringJoiner, "- encoding=", encoding);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Encode copy() {
-		return Encode.builder().type(type).column(column).protocol(protocol).build();
+		return Encode.builder().type(type).column(column).encoding(encoding).build();
 	}
 
 	@Override

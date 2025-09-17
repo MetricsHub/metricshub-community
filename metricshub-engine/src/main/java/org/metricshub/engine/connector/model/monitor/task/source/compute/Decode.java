@@ -39,7 +39,7 @@ import org.metricshub.engine.strategy.source.compute.IComputeProcessor;
 
 /**
  * Represents a Decode computation task for monitoring.
- * This compute is used to decode a column content through various protocols.
+ * This compute is used to decode a column content through various decoding types.
  */
 @Data
 @NoArgsConstructor
@@ -56,28 +56,29 @@ public class Decode extends Compute {
 	private Integer column;
 
 	/**
-	 * The decoding protocol to use.
+	 * The type of decoding to use.
 	 */
 	@NonNull
 	@JsonSetter(nulls = FAIL)
-	private String protocol;
+	private String decoding;
 
 	/**
 	 * Construct a new instance of Decode.
 	 *
 	 * @param type   The type of the computation task.
 	 * @param column The column index used in the computation.
+	 * @param decoding The type of decoding to use.
 	 */
 	@Builder
 	@JsonCreator
 	public Decode(
 		@JsonProperty("type") String type,
 		@JsonProperty(value = "column", required = true) @NonNull Integer column,
-		@JsonProperty(value = "protocol", required = true) @NonNull String protocol
+		@JsonProperty(value = "decoding", required = true) @NonNull String decoding
 	) {
 		super(type);
 		this.column = column;
-		this.protocol = protocol;
+		this.decoding = decoding;
 	}
 
 	@Override
@@ -87,14 +88,14 @@ public class Decode extends Compute {
 		stringJoiner.add(super.toString());
 
 		addNonNull(stringJoiner, "- column=", column);
-		addNonNull(stringJoiner, "- protocol=", protocol);
+		addNonNull(stringJoiner, "- decoding=", decoding);
 
 		return stringJoiner.toString();
 	}
 
 	@Override
 	public Decode copy() {
-		return Decode.builder().type(type).column(column).protocol(protocol).build();
+		return Decode.builder().type(type).column(column).decoding(decoding).build();
 	}
 
 	@Override

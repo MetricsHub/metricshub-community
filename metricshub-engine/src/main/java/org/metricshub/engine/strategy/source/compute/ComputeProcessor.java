@@ -41,8 +41,6 @@ import java.math.BigInteger;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -60,7 +58,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import javax.xml.bind.DatatypeConverter;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -570,13 +567,13 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (decode.getProtocol() == null || decode.getProtocol().isEmpty()) {
-			log.warn("Hostname {} - The protocol in Decode cannot be null or empty, the table remains unchanged.", hostname);
+		if (decode.getDecoding() == null || decode.getDecoding().isEmpty()) {
+			log.warn("Hostname {} - The type of decoding cannot be null or empty, the table remains unchanged.", hostname);
 			return;
 		}
 
 		final int columnIndex = decode.getColumn() - 1;
-		final String protocol = decode.getProtocol();
+		final String decoding = decode.getDecoding();
 
 		for (final List<String> line : sourceTable.getTable()) {
 			if (columnIndex < line.size()) {
@@ -584,7 +581,7 @@ public class ComputeProcessor implements IComputeProcessor {
 
 				final String newValue;
 
-				switch (protocol.toLowerCase()) {
+				switch (decoding.toLowerCase()) {
 					case "base64":
 						newValue = new String(Base64.getDecoder().decode(valueToBeDecoded), StandardCharsets.UTF_8);
 						break;
@@ -592,7 +589,7 @@ public class ComputeProcessor implements IComputeProcessor {
 						newValue = URLDecoder.decode(valueToBeDecoded, StandardCharsets.UTF_8);
 						break;
 					default:
-						log.warn("Hostname {} - The protocol in Decode is not recognized, the table remains unchanged.", hostname);
+						log.warn("Hostname {} - The type of decoding is not recognized, the table remains unchanged.", hostname);
 						return;
 				}
 
@@ -682,13 +679,13 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		if (encode.getProtocol() == null || encode.getProtocol().isEmpty()) {
-			log.warn("Hostname {} - The protocol in Encode cannot be null or empty, the table remains unchanged.", hostname);
+		if (encode.getEncoding() == null || encode.getEncoding().isEmpty()) {
+			log.warn("Hostname {} - The type of encoding cannot be null or empty, the table remains unchanged.", hostname);
 			return;
 		}
 
 		final int columnIndex = encode.getColumn() - 1;
-		final String protocol = encode.getProtocol();
+		final String encoding = encode.getEncoding();
 
 		for (final List<String> line : sourceTable.getTable()) {
 			if (columnIndex < line.size()) {
@@ -696,29 +693,15 @@ public class ComputeProcessor implements IComputeProcessor {
 
 				final String newValue;
 
-				switch (protocol.toLowerCase()) {
+				switch (encoding.toLowerCase()) {
 					case "base64":
 						newValue = Base64.getEncoder().encodeToString((valueToBeEncoded.trim()).getBytes(StandardCharsets.UTF_8));
 						break;
 					case "urlencode":
 						newValue = URLEncoder.encode(valueToBeEncoded, StandardCharsets.UTF_8);
 						break;
-					case "md5":
-						try {
-							final MessageDigest md = MessageDigest.getInstance("MD5");
-							md.update(valueToBeEncoded.getBytes());
-							final byte[] digest = md.digest();
-							newValue = DatatypeConverter.printHexBinary(digest);
-						} catch (NoSuchAlgorithmException exception) {
-							log.warn(
-								"Hostname {} - The protocol is not recognized when encoding when using MD5 protocol, the table remains unchanged.",
-								hostname
-							);
-							return;
-						}
-						break;
 					default:
-						log.warn("Hostname {} - The protocol in Encode is not recognized, the table remains unchanged.", hostname);
+						log.warn("Hostname {} - The type of encoding is not recognized, the table remains unchanged.", hostname);
 						return;
 				}
 
