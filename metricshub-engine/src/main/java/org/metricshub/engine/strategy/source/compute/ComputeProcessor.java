@@ -585,7 +585,7 @@ public class ComputeProcessor implements IComputeProcessor {
 					case "base64":
 						newValue = new String(Base64.getDecoder().decode(valueToBeDecoded), StandardCharsets.UTF_8);
 						break;
-					case "urlencode":
+					case "urldecode":
 						newValue = URLDecoder.decode(valueToBeDecoded, StandardCharsets.UTF_8);
 						break;
 					default:

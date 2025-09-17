@@ -3233,7 +3233,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// URL decoding.
-		final Decode decodeURL = Decode.builder().column(2).decoding("URLEncode").build();
+		final Decode decodeURL = Decode.builder().column(2).decoding("URLDecode").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeURL);
