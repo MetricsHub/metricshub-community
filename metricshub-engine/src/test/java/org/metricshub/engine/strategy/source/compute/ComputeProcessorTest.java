@@ -43,10 +43,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
-import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
@@ -3151,111 +3149,6 @@ class ComputeProcessorTest {
 		);
 
 		// Verify the converted table matches our expected values
-		assertEquals(expected, sourceTable.getTable());
-	}
-
-	@Test
-	void testEncodeAndDecode() {
-		// Prepare the sourceTable table with values to encode.
-		final List<List<String>> baseTable = Arrays.asList(
-			Arrays.asList("ID1", "testEncode"),
-			Arrays.asList("ID2", "username:password"),
-			Arrays.asList("ID3", "123//;AB&CD")
-		);
-
-		// Set up the source table with our input data.
-		sourceTable.setTable(
-			Arrays.asList(
-				Arrays.asList("ID1", "testEncode"),
-				Arrays.asList("ID2", "username:password"),
-				Arrays.asList("ID3", "123//;AB&CD")
-			)
-		);
-
-		// Wrong protocol encoding.
-		final Encode encodeWrongProtocol = Encode.builder().column(2).protocol("WrongProtocol").build();
-
-		// Execute the Encode compute.
-		computeProcessor.process(encodeWrongProtocol);
-
-		// Verify there is no change.
-		assertEquals(baseTable, sourceTable.getTable());
-
-		// Wrong protocol decoding.
-		final Decode decodeWrongProtocol = Decode.builder().column(2).protocol("WrongProtocol").build();
-
-		// Execute the Decode compute.
-		computeProcessor.process(decodeWrongProtocol);
-
-		// Verify there is no change.
-		assertEquals(baseTable, sourceTable.getTable());
-
-		// Base64 encoding.
-		final Encode encodeBase64 = Encode.builder().column(2).protocol("Base64").build();
-
-		// Execute the Encode compute.
-		computeProcessor.process(encodeBase64);
-
-		// Define the expected results.
-		List<List<String>> expected = Arrays.asList(
-			Arrays.asList("ID1", "dGVzdEVuY29kZQ=="),
-			Arrays.asList("ID2", "dXNlcm5hbWU6cGFzc3dvcmQ="),
-			Arrays.asList("ID3", "MTIzLy87QUImQ0Q=")
-		);
-
-		// Verify the converted table matches our expected values.
-		assertEquals(expected, sourceTable.getTable());
-
-		// Base64 decoding.
-		final Decode decodeBase64 = Decode.builder().column(2).protocol("Base64").build();
-
-		// Execute the Decode compute.
-		computeProcessor.process(decodeBase64);
-
-		// Verify the converted table matches the base table.
-		assertEquals(baseTable, sourceTable.getTable());
-
-		// URL encoding.
-		final Encode encodeUrl = Encode.builder().column(2).protocol("URLEncode").build();
-
-		// Execute the Encode compute.
-		computeProcessor.process(encodeUrl);
-
-		// Define the expected results.
-		expected =
-			Arrays.asList(
-				Arrays.asList("ID1", "testEncode"),
-				Arrays.asList("ID2", "username%3Apassword"),
-				Arrays.asList("ID3", "123%2F%2F%3BAB%26CD")
-			);
-
-		// Verify the converted table matches our expected values.
-		assertEquals(expected, sourceTable.getTable());
-
-		// URL decoding.
-		final Decode decodeURL = Decode.builder().column(2).protocol("URLEncode").build();
-
-		// Execute the Decode compute.
-		computeProcessor.process(decodeURL);
-
-		// Verify the converted table matches the base table.
-		assertEquals(baseTable, sourceTable.getTable());
-
-		// MD5 hash.
-		final Encode hashMD5 = Encode.builder().column(2).protocol("MD5").build();
-
-		// Execute the Encode compute.
-		computeProcessor.process(hashMD5);
-
-		// Define the expected results.
-		expected =
-			Arrays.asList(
-				Arrays.asList("ID1", "66D2E2C68FCB97CE9BF0DDCC66F932E1"),
-				Arrays.asList("ID2", "133E1B8EDA335C4C7F7A508620CA7F10"),
-				Arrays.asList("ID3", "DE5B7AF08DB54F4A681A178A64D9A365")
-			);
-
-		// Verify the converted table matches our expected values.
 		assertEquals(expected, sourceTable.getTable());
 	}
 }

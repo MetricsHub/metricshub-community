@@ -186,14 +186,27 @@ public class AgentContext {
 	 * @param connectorStore The connector store containing connectors and their monitors
 	 */
 	protected void mergeMetricsDefinitions(final ConnectorStore connectorStore) {
+		if (agentConfig == null || agentConfig.getResourceGroups() == null || connectorStore == null) {
+			log.warn("Merge of metrics definitions aborted: agent configuration or connector store is null");
+			return;
+		}
+
 		agentConfig
 			.getResourceGroups()
 			.forEach((resourceGroupKey, resourceGroupConfig) -> {
+				if (resourceGroupConfig == null || resourceGroupConfig.getResources() == null) {
+					return; // nothing to process
+				}
+
 				resourceGroupConfig
 					.getResources()
 					.forEach((resourceKey, resourceConfig) -> {
+						if (resourceConfig == null) {
+							return;
+						}
+
 						final var configuredConnector = resourceConfig.getConnector();
-						if (configuredConnector == null) {
+						if (configuredConnector == null || configuredConnector.getMonitors() == null) {
 							return;
 						}
 
@@ -203,8 +216,11 @@ public class AgentContext {
 							.getMonitors()
 							.values()
 							.forEach(monitorJob -> {
-								if (monitorJob instanceof AbstractMonitorJob) {
-									monitorMetricDefinitions.putAll(((AbstractMonitorJob) monitorJob).getMetrics());
+								if (monitorJob instanceof final AbstractMonitorJob abstractJob) {
+									final Map<String, MetricDefinition> metrics = abstractJob.getMetrics();
+									if (metrics != null) {
+										monitorMetricDefinitions.putAll(metrics);
+									}
 								}
 							});
 
@@ -212,14 +228,34 @@ public class AgentContext {
 							return;
 						}
 
-						// Apply monitor metrics to override store connector metrics
-						for (String rawConnectorId : resourceConfig.getConnectors()) {
-							String connectorId = sanitizeConnectorId(rawConnectorId);
+						final var connectors = resourceConfig.getConnectors();
+						if (connectors == null) {
+							return;
+						}
+
+						for (final String rawConnectorId : connectors) {
+							final String connectorId = sanitizeConnectorId(rawConnectorId);
 							if (connectorId == null || connectorId.isBlank()) {
+								log.debug(
+									"Skipping invalid connectorId '{}' for resource {} (group {}).",
+									rawConnectorId,
+									resourceKey,
+									resourceGroupKey
+								);
 								continue;
 							}
 
-							final var storeConnector = connectorStore.getStore().get(connectorId);
+							final var store = connectorStore.getStore();
+							if (store == null) {
+								log.warn(
+									"Connector store is null while processing resource {} (group {}).",
+									resourceKey,
+									resourceGroupKey
+								);
+								return; // cannot proceed further
+							}
+
+							final var storeConnector = store.get(connectorId);
 							if (storeConnector == null) {
 								log.warn(
 									"Connector {} not found in store for resource {} (group {}).",
@@ -231,6 +267,15 @@ public class AgentContext {
 							}
 
 							final Map<String, MetricDefinition> storeConnectorMetrics = storeConnector.getMetrics();
+							if (storeConnectorMetrics == null) {
+								log.warn(
+									"Metrics map is null for connector {} (resource {}, group {}).",
+									connectorId,
+									resourceKey,
+									resourceGroupKey
+								);
+								continue;
+							}
 
 							// Configured connector monitor metrics override store connector metrics
 							storeConnectorMetrics.putAll(monitorMetricDefinitions);
@@ -240,13 +285,20 @@ public class AgentContext {
 	}
 
 	/**
-	 * Sanitize connector ID by stripping leading special characters like + or !.
+	 * Sanitize connector ID by stripping leading special characters like + or ! or extra spaces.
 	 */
-	private static String sanitizeConnectorId(final String rawId) {
-		if (rawId == null) {
+	private String sanitizeConnectorId(final String rawConnectorId) {
+		if (rawConnectorId == null) {
 			return null;
 		}
-		return rawId.replaceAll("^[^a-zA-Z0-9]+", ""); // strip leading non-alphanumeric chars
+
+		final String trimmed = rawConnectorId.trim();
+		if (trimmed.isEmpty()) {
+			return null;
+		}
+
+		// If first character is non-alphanumeric, drop it — keep the rest as-is
+		return trimmed.length() > 1 && !Character.isLetterOrDigit(trimmed.charAt(0)) ? trimmed.substring(1) : trimmed;
 	}
 
 	/**

@@ -148,7 +148,7 @@ public class ApiKeyCliService {
 		 * @return the generated API key as a string
 		 * @throws Exception if an error occurs while creating the API key
 		 */
-		private static String createApiKey(final String apiKeyAlias, final LocalDateTime expirationDateTime)
+		public static String createApiKey(final String apiKeyAlias, final LocalDateTime expirationDateTime)
 			throws Exception {
 			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
 			// Load the keyStore.
