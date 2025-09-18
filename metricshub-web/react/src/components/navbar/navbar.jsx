@@ -13,9 +13,9 @@ import { AppBar, Box, IconButton, Tooltip, CssBaseline, Toolbar, Typography } fr
 
 import { useAppDispatch } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
-import StatusText from "../../components/status/status-text";
-import StatusDetailsMenu from "../../components/status/status-details-menu";
-import OtelStatusIcon from "../../components/status/otel-status-icon";
+import StatusText from "./status/status-text";
+import StatusDetailsMenu from "./status/status-details-menu";
+import OtelStatusIcon from "./status/otel-status-icon";
 import Logout from "./logout";
 import ToggleTheme from "./toggle-theme";
 

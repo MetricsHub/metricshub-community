@@ -1,8 +1,8 @@
 import React from "react";
 import { Box, CircularProgress, Tooltip } from "@mui/material";
 import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import { useAppSelector } from "../../hooks/store";
-import otelCollectorIcon from "../../assets/opentelemetry-icon-color.svg";
+import { useAppSelector } from "../../../hooks/store";
+import otelCollectorIcon from "../../../assets/opentelemetry-icon-color.svg";
 
 // Define the possible statuses and their visual/tooltip representations
 const OTEL_COLLECTOR_STATUSES = {
