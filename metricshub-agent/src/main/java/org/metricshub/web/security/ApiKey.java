@@ -21,31 +21,9 @@ package org.metricshub.web.security;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Map;
+import java.time.LocalDateTime;
 
 /**
- * Registry for managing users. This class provides a method to retrieve users by their username.
+ * Represents an API key with its associated properties.
  */
-public class UserRegistry {
-
-	private final Map<String, User> users;
-
-	/**
-	 * Constructor for UserRegistry.
-	 *
-	 * @param users a map of users where the key is the username and the value is the User object.
-	 */
-	public UserRegistry(final Map<String, User> users) {
-		this.users = users;
-	}
-
-	/**
-	 * Retrieves a user by their username.
-	 *
-	 * @param username the username of the user to retrieve
-	 * @return the User object if found, otherwise null
-	 */
-	public User getUserByUsername(final String username) {
-		return users.get(username);
-	}
-}
+public record ApiKey(String alias, String key, LocalDateTime expiresOn) {}
