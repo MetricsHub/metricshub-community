@@ -180,7 +180,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 			sx={{
 				position: "relative",
 				display: "grid",
-				// Use fr across to avoid overflow (VS Code-like)
+				// Use fr across to avoid overflow
 				gridTemplateColumns: `${leftPct}fr ${SASH_WIDTH}px ${100 - leftPct}fr`,
 				gridTemplateRows: "minmax(0, 1fr)",
 				alignItems: "stretch",
@@ -228,7 +228,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 						bottom: 0,
 						left: "calc(50% - 1px)",
 						width: "2px",
-						bgcolor: "primary.main",
+						bgcolor: "grey.500",
 						opacity: 0.5,
 					},
 				}}
