@@ -39,10 +39,10 @@ export default function StatusDetailsMenu() {
 	const rest =
 		data && typeof data === "object"
 			? Object.fromEntries(
-				Object.entries(data).filter(
-					([k]) => k !== "agentInfo" && k !== "status" && k !== "otelCollectorRunning",
-				),
-			)
+					Object.entries(data).filter(
+						([k]) => k !== "agentInfo" && k !== "status" && k !== "otelCollectorRunning",
+					),
+				)
 			: null;
 
 	return (
