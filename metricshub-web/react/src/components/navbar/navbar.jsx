@@ -50,7 +50,6 @@ const NavBar = ({ toggleTheme }) => {
 				position="sticky"
 				elevation={1}
 				sx={(t) => ({
-					zIndex: t.zIndex.drawer + 1,
 					bgcolor: t.palette.background.paper,
 					color: t.palette.text.primary,
 					borderBottom: `1px solid ${t.palette.divider}`,
