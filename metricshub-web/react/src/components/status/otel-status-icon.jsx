@@ -35,12 +35,12 @@ export default function OtelStatusIcon({ sx = {} }) {
 	// Determine the OpenTelemetry Collector status
 	const otelCollectorStatus = data?.otelCollectorStatus ?? null;
 
-	if (!otelCollectorStatus || otelCollectorStatus === "not_installed") return null;
+	if (!otelCollectorStatus || otelCollectorStatus === "not-installed") return null;
 
 	// Determine visual/tooltip states
-	let tooltip = OTEL_COLLECTOR_STATUSES[otelCollectorStatus].tooltip;
-	let showCross = OTEL_COLLECTOR_STATUSES[otelCollectorStatus].showCross;
-	let grayscale = OTEL_COLLECTOR_STATUSES[otelCollectorStatus].grayscale;
+	let tooltip = OTEL_COLLECTOR_STATUSES[otelCollectorStatus]?.tooltip;
+	let showCross = OTEL_COLLECTOR_STATUSES[otelCollectorStatus]?.showCross;
+	let grayscale = OTEL_COLLECTOR_STATUSES[otelCollectorStatus]?.grayscale;
 
 	return (
 		<Tooltip title={tooltip}>
