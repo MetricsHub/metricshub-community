@@ -3216,7 +3216,7 @@ class ComputeProcessorTest {
 		assertEquals(baseTable, sourceTable.getTable());
 
 		// URL encoding.
-		final Encode encodeUrl = Encode.builder().column(2).encoding("URLEncode").build();
+		final Encode encodeUrl = Encode.builder().column(2).encoding("URL").build();
 
 		// Execute the Encode compute.
 		computeProcessor.process(encodeUrl);
@@ -3233,7 +3233,7 @@ class ComputeProcessorTest {
 		assertEquals(expected, sourceTable.getTable());
 
 		// URL decoding.
-		final Decode decodeURL = Decode.builder().column(2).encoding("URLDecode").build();
+		final Decode decodeURL = Decode.builder().column(2).encoding("URL").build();
 
 		// Execute the Decode compute.
 		computeProcessor.process(decodeURL);
