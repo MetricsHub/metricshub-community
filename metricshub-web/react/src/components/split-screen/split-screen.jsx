@@ -200,22 +200,6 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 				role="separator"
 				aria-orientation="vertical"
 				aria-label="Resize panels"
-				tabIndex={0}
-				onKeyDown={(e) => {
-					if (e.key === "ArrowLeft") {
-						setLeftPct((v) => Math.max(MIN_PCT, v - 2));
-						e.preventDefault();
-					} else if (e.key === "ArrowRight") {
-						setLeftPct((v) => Math.min(MAX_PCT, v + 2));
-						e.preventDefault();
-					} else if (e.key === "Home") {
-						setLeftPct(MIN_PCT);
-						e.preventDefault();
-					} else if (e.key === "End") {
-						setLeftPct(MAX_PCT);
-						e.preventDefault();
-					}
-				}}
 				sx={{
 					gridColumn: 2,
 					gridRow: 1,
