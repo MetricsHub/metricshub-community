@@ -13,21 +13,7 @@ import {
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useAppSelector } from "../../../hooks/store";
-import { prettifyKey } from "../../../utils/text";
-
-// Fields to display in the Agent Info section, in order
-const AGENT_INFO_FIELDS = [
-	{ key: "osType", label: "OS Type" },
-	{ key: "name", label: "Name" },
-	{ key: "ccVersion", label: "CC Version" },
-	{ key: "version", label: "Version" },
-	{ key: "hostType", label: "Host Type" },
-	{ key: "agentHostName", label: "Agent Host Name" },
-	{ key: "hostName", label: "Host Name" },
-	{ key: "serviceName", label: "Service Name" },
-	{ key: "buildDate", label: "Build Date" },
-	{ key: "buildNumber", label: "Build Number" },
-];
+import { prettifyKey } from "../../../utils/text-prettifier";
 
 // Format value for display
 const formatValue = (v) =>
@@ -86,22 +72,18 @@ export default function StatusDetailsMenu() {
 										Agent info
 									</Typography>
 									<List dense disablePadding>
-										{AGENT_INFO_FIELDS.map(({ key, label }) => {
-											const value = agentInfo[key];
-											if (value == null || value === "") return null; // hide missing fields
-											return (
-												<ListItem key={key} sx={{ py: 0.25 }}>
-													<ListItemText
-														primary={label}
-														secondary={formatValue(value)}
-														slotProps={{
-															primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
-															secondary: { sx: { fontSize: "0.9rem" } },
-														}}
-													/>
-												</ListItem>
-											);
-										})}
+										{Object.entries(agentInfo).map(([k, v]) => (
+											<ListItem key={k} sx={{ py: 0.25 }}>
+												<ListItemText
+													primary={prettifyKey(k)}
+													secondary={formatValue(v)}
+													slotProps={{
+														primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
+														secondary: { sx: { fontSize: "0.9rem" } },
+													}}
+												/>
+											</ListItem>
+										))}
 									</List>
 									<Divider sx={{ my: 1 }} />
 								</>
