@@ -36,7 +36,7 @@ const LoginPage = () => {
 				if (returnTo) {
 					globalThis.location.assign(returnTo);
 				} else {
-					navigate(paths.index ?? "/", { replace: true });
+					navigate(paths.monitor ?? "/", { replace: true });
 				}
 			} catch (err) {
 				console.error(err);
