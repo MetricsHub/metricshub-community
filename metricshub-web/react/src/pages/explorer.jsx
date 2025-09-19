@@ -12,7 +12,7 @@ const ExplorerPage = () => {
 	return (
 		<SplitScreen initialLeftPct={35}>
 			<Left>
-				<Typography>Tree View</Typography>
+				<Typography>Explorer Tree View</Typography>
 			</Left>
 			<Right>
 				<Typography>Monitored Resources</Typography>
