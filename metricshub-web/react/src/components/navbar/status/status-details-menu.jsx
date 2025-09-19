@@ -15,6 +15,20 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useAppSelector } from "../../../hooks/store";
 import { prettifyKey } from "../../../utils/text-prettifier";
 
+// Fields to display in the Agent Info section, in order
+const AGENT_INFO_FIELDS = [
+	{ key: "osType", label: "OS Type" },
+	{ key: "name", label: "Name" },
+	{ key: "ccVersion", label: "CC Version" },
+	{ key: "version", label: "Version" },
+	{ key: "hostType", label: "Host Type" },
+	{ key: "agentHostName", label: "Agent Host Name" },
+	{ key: "hostName", label: "Host Name" },
+	{ key: "serviceName", label: "Service Name" },
+	{ key: "buildDate", label: "Build Date" },
+	{ key: "buildNumber", label: "Build Number" },
+];
+
 // Format value for display
 const formatValue = (v) =>
 	v == null ? "—" : typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
@@ -33,6 +47,11 @@ export default function StatusDetailsMenu() {
 		data && typeof data === "object"
 			? Object.fromEntries(Object.entries(data).filter(([k]) => !EXCLUDE_KEYS.has(k)))
 			: null;
+
+	const curatedKeys = new Set(AGENT_INFO_FIELDS.map((f) => f.key));
+	const additionalAgentInfoEntries = agentInfo
+		? Object.entries(agentInfo).filter(([k, v]) => !curatedKeys.has(k) && v != null && v !== "")
+		: [];
 
 	return (
 		<>
@@ -71,20 +90,51 @@ export default function StatusDetailsMenu() {
 									<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
 										Agent info
 									</Typography>
+
+									{/* Curated (ordered) fields */}
 									<List dense disablePadding>
-										{Object.entries(agentInfo).map(([k, v]) => (
-											<ListItem key={k} sx={{ py: 0.25 }}>
-												<ListItemText
-													primary={prettifyKey(k)}
-													secondary={formatValue(v)}
-													slotProps={{
-														primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
-														secondary: { sx: { fontSize: "0.9rem" } },
-													}}
-												/>
-											</ListItem>
-										))}
+										{AGENT_INFO_FIELDS.map(({ key, label }) => {
+											const value = agentInfo[key];
+											if (value == null || value === "") return null;
+											return (
+												<ListItem key={key} sx={{ py: 0.25 }}>
+													<ListItemText
+														primary={label}
+														secondary={formatValue(value)}
+														slotProps={{
+															primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
+															secondary: { sx: { fontSize: "0.9rem" } },
+														}}
+													/>
+												</ListItem>
+											);
+										})}
 									</List>
+
+									{/* Any extra keys not in the curated list */}
+									{additionalAgentInfoEntries.length > 0 && (
+										<>
+											<Divider sx={{ my: 1 }} />
+											<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+												More
+											</Typography>
+											<List dense disablePadding>
+												{additionalAgentInfoEntries.map(([k, v]) => (
+													<ListItem key={k} sx={{ py: 0.25 }}>
+														<ListItemText
+															primary={prettifyKey(k)}
+															secondary={formatValue(v)}
+															slotProps={{
+																primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
+																secondary: { sx: { fontSize: "0.9rem" } },
+															}}
+														/>
+													</ListItem>
+												))}
+											</List>
+										</>
+									)}
+
 									<Divider sx={{ my: 1 }} />
 								</>
 							)}
