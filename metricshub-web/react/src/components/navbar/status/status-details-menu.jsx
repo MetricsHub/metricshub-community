@@ -13,20 +13,23 @@ import {
 } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useAppSelector } from "../../../hooks/store";
+import { prettifyKey } from "../../../utils/text";
 
-// key prettifier
-function prettifyKey(key = "") {
-	const ACR = new Set(["id", "url", "api", "cpu", "gpu", "os", "otel", "cc"]);
-	let k = String(key)
-		.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-		.replace(/[._-]+/g, " ")
-		.trim()
-		.toLowerCase();
-	return k
-		.split(/\s+/)
-		.map((w) => (ACR.has(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
-		.join(" ");
-}
+// Fields to display in the Agent Info section, in order
+const AGENT_INFO_FIELDS = [
+	{ key: "osType", label: "OS Type" },
+	{ key: "name", label: "Name" },
+	{ key: "ccVersion", label: "CC Version" },
+	{ key: "version", label: "Version" },
+	{ key: "hostType", label: "Host Type" },
+	{ key: "agentHostName", label: "Agent Host Name" },
+	{ key: "hostName", label: "Host Name" },
+	{ key: "serviceName", label: "Service Name" },
+	{ key: "buildDate", label: "Build Date" },
+	{ key: "buildNumber", label: "Build Number" },
+];
+
+// Format value for display
 const formatValue = (v) =>
 	v == null ? "—" : typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
 
@@ -36,13 +39,13 @@ export default function StatusDetailsMenu() {
 	const open = Boolean(anchorEl);
 
 	const agentInfo = data?.agentInfo ?? null;
+
+	// Keys to exclude from the Overview section
+	const EXCLUDE_KEYS = new Set(["agentInfo", "status", "otelCollectorStatus"]);
+
 	const rest =
 		data && typeof data === "object"
-			? Object.fromEntries(
-					Object.entries(data).filter(
-						([k]) => k !== "agentInfo" && k !== "status" && k !== "otelCollectorRunning",
-					),
-				)
+			? Object.fromEntries(Object.entries(data).filter(([k]) => !EXCLUDE_KEYS.has(k)))
 			: null;
 
 	return (
@@ -64,6 +67,7 @@ export default function StatusDetailsMenu() {
 				slotProps={{ paper: { sx: { maxWidth: 460, width: { xs: "92vw", sm: 460 }, p: 2 } } }}
 			>
 				<Box sx={{ minWidth: 260, maxHeight: 440, overflow: "auto" }}>
+					{/* Loading */}
 					{loading && !data ? (
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 							<CircularProgress size={18} />
@@ -75,28 +79,35 @@ export default function StatusDetailsMenu() {
 						</Typography>
 					) : data ? (
 						<>
+							{/* ======= Agent Info Section ======= */}
 							{agentInfo && (
 								<>
 									<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
 										Agent info
 									</Typography>
 									<List dense disablePadding>
-										{Object.entries(agentInfo).map(([k, v]) => (
-											<ListItem key={k} sx={{ py: 0.25 }}>
-												<ListItemText
-													primary={prettifyKey(k)}
-													secondary={formatValue(v)}
-													slotProps={{
-														primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
-														secondary: { sx: { fontSize: "0.9rem" } },
-													}}
-												/>
-											</ListItem>
-										))}
+										{AGENT_INFO_FIELDS.map(({ key, label }) => {
+											const value = agentInfo[key];
+											if (value == null || value === "") return null; // hide missing fields
+											return (
+												<ListItem key={key} sx={{ py: 0.25 }}>
+													<ListItemText
+														primary={label}
+														secondary={formatValue(value)}
+														slotProps={{
+															primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
+															secondary: { sx: { fontSize: "0.9rem" } },
+														}}
+													/>
+												</ListItem>
+											);
+										})}
 									</List>
 									<Divider sx={{ my: 1 }} />
 								</>
 							)}
+
+							{/* ======= Overview Section ======= */}
 							{rest && (
 								<>
 									<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
