@@ -11,6 +11,7 @@ import { useTheme } from "@mui/material/styles";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
+const Configuration = React.lazy(() => import("./pages/configuration"));
 const NavBar = React.lazy(() => import("./components/navbar/navbar"));
 
 // Splash screen while loading
@@ -93,6 +94,7 @@ export default function App() {
 												}
 											>
 												<Route path="/explorer" element={<Explorer />} />
+												<Route path="/configuration" element={<Configuration />} />
 												{/* Fallback */}
 												<Route path="*" element={<Navigate to="/explorer" replace />} />
 											</Route>

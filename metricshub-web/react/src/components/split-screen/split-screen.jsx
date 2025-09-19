@@ -203,7 +203,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 				sx={{
 					gridColumn: 2,
 					gridRow: 1,
-					cursor: "col-resize",
+					cursor: "ew-resize",
 					position: "relative",
 					"&::after": {
 						content: '""',
