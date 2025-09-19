@@ -95,10 +95,10 @@ const NavBar = ({ toggleTheme }) => {
 
 						{/* Navigation Buttons */}
 						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
-							<Button component={NavLink} to="/explorer" sx={navBtnSx}>
+							<Button component={NavLink} to={paths.explorer} sx={navBtnSx}>
 								Explorer
 							</Button>
-							<Button component={NavLink} to="/configuration" sx={navBtnSx}>
+							<Button component={NavLink} to={paths.configuration} sx={navBtnSx}>
 								Configuration
 							</Button>
 						</Box>
