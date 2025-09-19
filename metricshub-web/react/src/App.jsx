@@ -8,9 +8,11 @@ import logoLight from "./assets/logo-light.svg";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
+import { paths } from "./paths";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
+const Configuration = React.lazy(() => import("./pages/configuration"));
 const NavBar = React.lazy(() => import("./components/navbar/navbar"));
 
 // Splash screen while loading
@@ -80,7 +82,7 @@ export default function App() {
 								<BrowserRouter>
 									<React.Suspense fallback={<SplashScreen />}>
 										<Routes>
-											<Route path="/login" element={<LoginPage />} />
+											<Route path={paths.login} element={<LoginPage />} />
 											{/* App routes with NavBar */}
 											<Route
 												element={
@@ -92,9 +94,10 @@ export default function App() {
 													/>
 												}
 											>
-												<Route path="/explorer" element={<Explorer />} />
+												<Route path={paths.explorer} element={<Explorer />} />
+												<Route path={paths.configuration} element={<Configuration />} />
 												{/* Fallback */}
-												<Route path="*" element={<Navigate to="/explorer" replace />} />
+												<Route path="*" element={<Navigate to={paths.explorer} replace />} />
 											</Route>
 										</Routes>
 									</React.Suspense>
