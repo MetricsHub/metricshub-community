@@ -18,12 +18,15 @@ const ToggleTheme = ({ onClick }) => {
 			title={theme.palette.mode === "dark" ? "Switch to light mode" : "Switch to dark mode"}
 			arrow
 		>
-			<IconButton aria-label="Toggle theme" size="small" onClick={onClick} sx={{ mr: 0.5 }}>
-				{theme.palette.mode === "dark" ? (
-					<LightModeIcon fontSize="inherit" />
-				) : (
-					<DarkModeIcon fontSize="inherit" />
-				)}
+			<IconButton
+				aria-label="Toggle theme"
+				onClick={onClick}
+				sx={{
+					mr: 0.5,
+					color: theme.palette.mode == "light" ? theme.palette.warning.main : "default",
+				}}
+			>
+				{theme.palette.mode === "dark" ? <DarkModeIcon /> : <LightModeIcon />}
 			</IconButton>
 		</Tooltip>
 	);

@@ -5,8 +5,8 @@ import { buildOptions as buildLightOptions } from "./light/options";
 
 /**
  * Create a MUI theme instance based on configuration.
- * 
- * @param {*} config - Configuration object containing direction, paletteMode, and responsiveFontSizes properties. 
+ *
+ * @param {*} config - Configuration object containing direction, paletteMode, and responsiveFontSizes properties.
  * @returns MUI theme instance.
  */
 export const createTheme = (config) => {

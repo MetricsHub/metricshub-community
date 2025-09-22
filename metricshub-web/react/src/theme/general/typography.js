@@ -20,7 +20,7 @@ export const buildTypography = () => {
 			fontWeight: 600,
 		},
 		caption: {
-			fontSize: "0.75rem",
+			fontSize: "0.825rem",
 			fontWeight: 500,
 			lineHeight: 1.66,
 		},
