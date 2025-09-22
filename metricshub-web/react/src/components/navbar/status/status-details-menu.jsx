@@ -15,21 +15,21 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { useAppSelector } from "../../../hooks/store";
 import { prettifyKey } from "../../../utils/text-prettifier";
 
-// Fields to display in the Agent Info section, in order
+// Fields to display in the Agent Info section
 const AGENT_INFO_FIELDS = [
-	{ key: "osType", label: "OS Type" },
+	{ key: "os.type", label: "OS Type" },
 	{ key: "name", label: "Name" },
-	{ key: "ccVersion", label: "CC Version" },
+	{ key: "cc_version", label: "Community Connector Version" },
 	{ key: "version", label: "Version" },
-	{ key: "hostType", label: "Host Type" },
-	{ key: "agentHostName", label: "Agent Host Name" },
-	{ key: "hostName", label: "Host Name" },
-	{ key: "serviceName", label: "Service Name" },
-	{ key: "buildDate", label: "Build Date" },
-	{ key: "buildNumber", label: "Build Number" },
+	{ key: "host.type", label: "Host Type" },
+	{ key: "agent.host.name", label: "Agent Host Name" },
+	{ key: "host.name", label: "Host Name" },
+	{ key: "service.name", label: "Service Name" },
+	{ key: "build_date", label: "Build Date" },
+	{ key: "build_number", label: "Build Number" },
 ];
 
-// Format value for display
+// Format value for display if unknown
 const formatValue = (v) =>
 	v == null ? "—" : typeof v === "boolean" ? (v ? "Yes" : "No") : String(v);
 
