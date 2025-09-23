@@ -1,5 +1,4 @@
 import { filledInputClasses } from "@mui/material";
-import { alpha } from "@mui/material/styles";
 
 /**
  * Create component style overrides and default props.
@@ -9,15 +8,6 @@ import { alpha } from "@mui/material/styles";
  */
 export const buildComponents = ({ palette }) => {
 	return {
-		MuiInputBase: {
-			styleOverrides: {
-				input: {
-					"&::placeholder": {
-						color: palette.text.secondary,
-					},
-				},
-			},
-		},
 		MuiIconButton: {
 			styleOverrides: {
 				root: {
@@ -49,14 +39,6 @@ export const buildComponents = ({ palette }) => {
 						borderColor: palette.error.main,
 						boxShadow: `${palette.error.main} 0 0 0 2px`,
 					},
-				},
-			},
-		},
-		MuiTooltip: {
-			styleOverrides: {
-				tooltip: {
-					backdropFilter: "blur(6px)",
-					background: alpha(palette.neutral[900], 0.8),
 				},
 			},
 		},
