@@ -1,4 +1,13 @@
 import { inputLabelClasses } from "@mui/material";
+import PoppinsExtraBoldwoff2 from "../../assets/fonts/Poppins-ExtraBold.woff2";
+import PoppinsExtraBoldwoff from "../../assets/fonts/Poppins-ExtraBold.woff";
+import PoppinsExtraBoldttf from "../../assets/fonts/Poppins-ExtraBold.ttf";
+import PoppinsBoldwoff2 from "../../assets/fonts/Poppins-Bold.woff2";
+import PoppinsBoldwoff from "../../assets/fonts/Poppins-Bold.woff";
+import PoppinsBoldttf from "../../assets/fonts/Poppins-Bold.ttf";
+import PoppinsRegularwoff2 from "../../assets/fonts/Poppins-Regular.woff2";
+import PoppinsRegularwoff from "../../assets/fonts/Poppins-Regular.woff";
+import PoppinsRegularttf from "../../assets/fonts/Poppins-Regular.ttf";
 
 /**
  * Build component style overrides and default props.
@@ -7,6 +16,39 @@ import { inputLabelClasses } from "@mui/material";
  */
 export const buildComponents = () => {
 	return {
+		MuiCssBaseline: {
+			styleOverrides: `
+				@font-face {
+					font-family: 'Poppins';
+					src: url(${PoppinsExtraBoldwoff2}) format('woff2'),
+						url(${PoppinsExtraBoldwoff}) format('woff'),
+						url(${PoppinsExtraBoldttf}) format('truetype'),
+						local('Helvetica');
+					font-weight: 800;
+					font-style: normal;
+					font-display: swap;
+				}	
+				@font-face {
+					font-family: 'Poppins';
+					src: url(${PoppinsBoldwoff2}) format('woff2'),
+						url(${PoppinsBoldwoff}) format('woff'),
+						url(${PoppinsBoldttf}) format('truetype'),
+						local('Helvetica');
+					font-weight: 700;
+					font-style: normal;
+					font-display: swap;
+				}
+				@font-face {
+					font-family: 'Poppins';
+					src: url(${PoppinsRegularwoff2}) format('woff2'),
+						url(${PoppinsRegularwoff}) format('woff'),
+						url(${PoppinsRegularttf}) format('truetype'),
+						local('Helvetica');
+					font-weight: 400;
+					font-style: normal;
+					font-display: swap;
+				}`,
+		},
 		MuiTextField: {
 			defaultProps: {
 				variant: "filled",
@@ -15,44 +57,22 @@ export const buildComponents = () => {
 		MuiButton: {
 			styleOverrides: {
 				root: {
-					borderRadius: "26px",
+					borderRadius: "1.625em",
 					textTransform: "none",
 					fontWeight: 500,
-					variants: [
-						{
-							props: { variant: "text", size: "small" },
-							style: {
-								fontSize: "14px",
-								padding: "7px 12px",
-							},
-						},
-						{
-							props: { variant: "text", size: "medium" },
-							style: {
-								fontSize: "15px",
-								padding: "9px 16px",
-							},
-						},
-						{
-							props: { variant: "text", size: "large" },
-							style: {
-								fontSize: "16px",
-								padding: "12px 16px",
-							},
-						},
-					],
+					padding: ".5em .85em",
 				},
 				sizeSmall: {
-					fontSize: "14px",
-					padding: "4px 12px",
+					fontSize: "0.875rem",
+					padding: "0.5em 0.85em",
 				},
 				sizeMedium: {
-					fontSize: "15px",
-					padding: "6px 16px",
+					fontSize: "0.9375rem",
+					padding: "0.6em 1em",
 				},
 				sizeLarge: {
-					fontSize: "16px",
-					padding: "8px 22px",
+					fontSize: "1rem",
+					padding: "0.75em 1.4em",
 				},
 			},
 		},
@@ -62,8 +82,8 @@ export const buildComponents = () => {
 			},
 			styleOverrides: {
 				root: {
-					borderRadius: 8,
-					padding: 4,
+					borderRadius: "0.5em",
+					padding: "0.25em",
 					transition: "all 0.2s ease-in-out",
 					"&:hover": {
 						backgroundColor: "rgba(0,0,0,0.05)",
@@ -86,9 +106,9 @@ export const buildComponents = () => {
 		MuiInput: {
 			styleOverrides: {
 				input: {
-					fontSize: 14,
+					fontSize: "0.875rem",
 					fontWeight: 500,
-					lineHeight: "24px",
+					lineHeight: "1.7em",
 				},
 			},
 		},
@@ -108,16 +128,16 @@ export const buildComponents = () => {
 					},
 				},
 				input: {
-					fontSize: 14,
+					fontSize: "0.875rem",
 					fontWeight: 500,
-					lineHeight: "24px",
+					lineHeight: "1.7em",
 				},
 			},
 		},
 		MuiFormLabel: {
 			styleOverrides: {
 				root: {
-					fontSize: "14px",
+					fontSize: "0.875rem",
 					fontWeight: 500,
 					[`&.${inputLabelClasses.filled}`]: {
 						transform: "translate(12px, 18px) scale(1)",

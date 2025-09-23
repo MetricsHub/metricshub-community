@@ -8,7 +8,7 @@ import { buildComponents } from "./components";
  * @returns theme options object.
  */
 export const buildOptions = (config) => {
-	const { direction = "ltr" } = config;
+	const direction = config.direction || "ltr";
 
 	return {
 		breakpoints: {
