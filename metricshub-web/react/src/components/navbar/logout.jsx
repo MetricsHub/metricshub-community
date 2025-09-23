@@ -10,8 +10,8 @@ import LogoutIcon from "@mui/icons-material/Logout";
 const Logout = ({ onClick }) => {
 	return (
 		<Tooltip title="Log out" arrow enterDelay={200}>
-			<IconButton aria-label="Log out" size="small" onClick={onClick} sx={{ cursor: "pointer" }}>
-				<LogoutIcon fontSize="inherit" />
+			<IconButton aria-label="Log out" onClick={onClick}>
+				<LogoutIcon />
 			</IconButton>
 		</Tooltip>
 	);
