@@ -72,11 +72,7 @@ public class ConfigurationFilesService {
 			final var configurationDirectory = agentContext.getConfigDirectory();
 			// List all the files
 			try (
-				Stream<Path> files = Files.find(
-					configurationDirectory,
-					MAX_DEPTH,
-					ConfigurationFilesService::keepOnlyRegularYamlFile
-				)
+				Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH, ConfigurationFilesService::isRegularYamlFile)
 			) {
 				return files
 					.map(this::buildConfigurationFile)
@@ -92,12 +88,13 @@ public class ConfigurationFilesService {
 	}
 
 	/**
-	 * Predicate to filter only regular files with YAML extensions.
+	 * Checks if the given path is a regular file with a YAML extension.
+	 *
 	 * @param path                The path to the file.
 	 * @param basicFileAttributes The file attributes.
 	 * @return true if the file is a regular file and has a YAML extension, false otherwise.
 	 */
-	private static boolean keepOnlyRegularYamlFile(final Path path, final BasicFileAttributes basicFileAttributes) {
+	private static boolean isRegularYamlFile(final Path path, final BasicFileAttributes basicFileAttributes) {
 		return basicFileAttributes.isRegularFile() && hasYamlExtension(path);
 	}
 
