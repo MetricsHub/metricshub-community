@@ -130,7 +130,7 @@ public class ConfigurationFilesService {
 	 */
 	private static boolean hasYamlExtension(Path path) {
 		// Make sure the file has a valid yaml extension
-		var fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+		final var fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
 		return YAML_EXTENSIONS.stream().anyMatch(fileName::endsWith);
 	}
 }
