@@ -59,6 +59,18 @@
 						</configuration>
 					</execution>
 
+					<!-- Run "npm run lint" -->
+					<execution>
+						<id>npm-lint</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>run lint</arguments>
+						</configuration>
+					</execution>
+
 					<!-- Run "npm run build" -->
 					<execution>
 						<id>npm-build</id>
