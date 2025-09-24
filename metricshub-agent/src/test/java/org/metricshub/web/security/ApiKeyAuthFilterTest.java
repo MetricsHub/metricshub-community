@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -19,13 +20,14 @@ import java.io.StringWriter;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
+import org.metricshub.web.service.ApiKeyService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 class ApiKeyAuthFilterTest {
 
-	private ApiKeyRegistry apiKeyRegistry;
+	private ApiKeyService apiKeyService;
 	private ApiKeyAuthFilter filter;
 	private HttpServletRequest request;
 	private HttpServletResponse response;
@@ -36,8 +38,8 @@ class ApiKeyAuthFilterTest {
 
 	@BeforeEach
 	void setUp() {
-		apiKeyRegistry = mock(ApiKeyRegistry.class);
-		filter = new ApiKeyAuthFilter(apiKeyRegistry);
+		apiKeyService = mock(ApiKeyService.class);
+		filter = new ApiKeyAuthFilter(apiKeyService);
 		request = mock(HttpServletRequest.class);
 		response = mock(HttpServletResponse.class);
 		filterChain = mock(FilterChain.class);
@@ -47,9 +49,9 @@ class ApiKeyAuthFilterTest {
 	@Test
 	void testValidApiKey() throws ServletException, IOException {
 		when(request.getHeader("Authorization")).thenReturn("Bearer " + validToken);
-		when(apiKeyRegistry.isValid(validToken)).thenReturn(true);
-		final ApiKey apiKey = new ApiKeyRegistry.ApiKey(principalName, validToken, LocalDateTime.now().plusDays(1));
-		when(apiKeyRegistry.getApiKeyByToken(validToken)).thenReturn(apiKey);
+		final ApiKey apiKey = new ApiKey(principalName, validToken, LocalDateTime.now().plusDays(1));
+		when(apiKeyService.findApiKeyByToken(validToken)).thenReturn(apiKey);
+		when(apiKeyService.isValid(apiKey)).thenReturn(true);
 
 		filter.doFilterInternal(request, response, filterChain);
 
@@ -65,7 +67,7 @@ class ApiKeyAuthFilterTest {
 	@Test
 	void testInvalidApiKey() throws ServletException, IOException {
 		when(request.getHeader("Authorization")).thenReturn("Bearer invalid-token");
-		when(apiKeyRegistry.isValid("invalid-token")).thenReturn(false);
+		when(apiKeyService.findApiKeyByToken(validToken)).thenReturn(null);
 
 		StringWriter responseWriter = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(responseWriter);
@@ -93,9 +95,8 @@ class ApiKeyAuthFilterTest {
 
 		filter.doFilterInternal(request, response, filterChain);
 
-		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
-		verify(filterChain, never()).doFilter(request, response);
+		verify(response, never()).setStatus(HttpStatus.UNAUTHORIZED.value());
+		verify(filterChain, times(1)).doFilter(request, response);
 		assertNull(
 			SecurityContextHolder.getContext().getAuthentication(),
 			"Authentication should be null when no Authorization header is present"
@@ -105,7 +106,9 @@ class ApiKeyAuthFilterTest {
 	@Test
 	void testApiKeyWithoutBearerPrefix() throws ServletException, IOException {
 		when(request.getHeader("Authorization")).thenReturn(validToken); // No "Bearer " prefix
-		when(apiKeyRegistry.isValid(validToken)).thenReturn(false); // Should still fail
+		final ApiKey apiKey = new ApiKey(principalName, validToken, LocalDateTime.now().minusDays(1));
+		when(apiKeyService.findApiKeyByToken(validToken)).thenReturn(apiKey);
+		when(apiKeyService.isValid(apiKey)).thenReturn(false);
 
 		StringWriter responseWriter = new StringWriter();
 		PrintWriter printWriter = new PrintWriter(responseWriter);
@@ -113,7 +116,7 @@ class ApiKeyAuthFilterTest {
 
 		filter.doFilterInternal(request, response, filterChain);
 
-		verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+		verify(response).setStatus(HttpStatus.UNAUTHORIZED.value());
 		assertTrue(responseWriter.toString().contains("Unauthorized"), "Response should indicate unauthorized access");
 		verify(filterChain, never()).doFilter(request, response);
 		assertNull(

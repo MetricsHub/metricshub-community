@@ -59,7 +59,7 @@ public class ApplicationStatusService {
 			.builder()
 			.status(determineApplicationStatus(agentContext))
 			.agentInfo(readAgentInfo(agentContext))
-			.isOtelCollectorRunning(isOtelCollectorRunning(agentContext))
+			.otelCollectorStatus(determineOtelCollectorStatus(agentContext))
 			.numberOfObservedResources(determineNumberOfObservedResources(agentContext))
 			.numberOfConfiguredResources(determineNumberOfConfiguredResources(agentContext))
 			.build();
@@ -109,17 +109,26 @@ public class ApplicationStatusService {
 	}
 
 	/**
-	 * Checks if the OpenTelemetry Collector is currently running.
+	 * Determines the OpenTelemetry Collector status.
 	 *
 	 * @param agentContext the AgentContext containing the OpenTelemetry Collector process service.
-	 * @return true if the OpenTelemetry Collector is running, false otherwise.
+	 * @return the OpenTelemetry Collector status: running, disabled, errored, not-installed
 	 */
-	private static boolean isOtelCollectorRunning(final AgentContext agentContext) {
-		final var otelCollectorProcessService = agentContext.getOtelCollectorProcessService();
-		if (otelCollectorProcessService != null) {
-			return otelCollectorProcessService.isStarted();
+	private static String determineOtelCollectorStatus(final AgentContext agentContext) {
+		if (agentContext.getAgentConfig().getOtelCollector().isDisabled()) {
+			return "disabled";
 		}
-		return false;
+		final var otelCollectorProcessService = agentContext.getOtelCollectorProcessService();
+		if (otelCollectorProcessService == null) {
+			return null;
+		}
+		if (!otelCollectorProcessService.isExecutableInstalled()) {
+			return "not-installed";
+		} else if (otelCollectorProcessService.isStarted()) {
+			return "running";
+		} else {
+			return "errored";
+		}
 	}
 
 	/**

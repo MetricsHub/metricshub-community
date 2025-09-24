@@ -21,22 +21,11 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.KeyStore.PasswordProtection;
-import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimeZone;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
-import org.metricshub.agent.helper.AgentConstants;
-import org.metricshub.agent.security.PasswordEncrypt;
-import org.metricshub.engine.security.SecurityManager;
-import org.metricshub.web.security.ApiKeyRegistry;
-import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -48,9 +37,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 @Slf4j
 public class MetricsHubAgentServer {
-	static {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-	}
 
 	private static ConfigurableApplicationContext context;
 
@@ -79,12 +65,8 @@ public class MetricsHubAgentServer {
 				new SpringApplicationBuilder()
 					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) -> {
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("apiKeyRegistry", new ApiKeyRegistry(resolveApiKeys()));
+						final var beanFactory = applicationContext.getBeanFactory();
+						beanFactory.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
 					})
 					.run(args.toArray(String[]::new));
 
@@ -92,47 +74,6 @@ public class MetricsHubAgentServer {
 		} catch (Exception e) {
 			log.error("Failed to start REST API server", e);
 		}
-	}
-
-	/**
-	 * Resolves API keys from the KeyStore.
-	 *
-	 * @return a map of API key names to their corresponding {@link ApiKey} objects
-	 */
-	private static Map<String, ApiKey> resolveApiKeys() {
-		final Map<String, ApiKey> apiKeys = new HashMap<>();
-		try {
-			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
-			final var ks = SecurityManager.loadKeyStore(keyStoreFile);
-
-			final var aliases = ks.aliases();
-			while (aliases.hasMoreElements()) {
-				final var alias = aliases.nextElement();
-				if (!alias.startsWith(AgentConstants.API_KEY_PREFIX)) {
-					continue;
-				}
-
-				final var entry = ks.getEntry(alias, new PasswordProtection(new char[] { 's', 'e', 'c', 'r', 'e', 't' }));
-				if (entry instanceof KeyStore.SecretKeyEntry secreKeyEntry) {
-					final var secretKey = secreKeyEntry.getSecretKey();
-					final var apiKeyId = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
-
-					final var parts = apiKeyId.split("__");
-					final var key = parts[0];
-					LocalDateTime expirationDateTime = null;
-					if (parts.length > 1) {
-						expirationDateTime = LocalDateTime.parse(parts[1]);
-					}
-					final var apiKeyAlias = alias.substring(AgentConstants.API_KEY_PREFIX.length());
-					apiKeys.put(apiKeyAlias, new ApiKey(apiKeyAlias, key, expirationDateTime));
-				}
-			}
-		} catch (Exception e) {
-			log.error("Failed to resolve API keys from KeyStore");
-			log.debug("Exception details: ", e);
-		}
-
-		return apiKeys;
 	}
 
 	/**

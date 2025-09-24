@@ -7,7 +7,7 @@
 --vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
 --dest "${project.build.directory}"
---app-content metricshub/config,metricshub/LICENSE,metricshub/connectors,metricshub/site,metricshub/extensions
+--app-content metricshub/config,metricshub/LICENSE,metricshub/connectors,metricshub/site,metricshub/extensions,metricshub/web
 --main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports
 --java-options java.xml/com.sun.org.apache.xerces.internal.parsers=ALL-UNNAMED

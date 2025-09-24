@@ -59,7 +59,7 @@ public class JdbcExtension implements IProtocolExtension {
 	/**
 	 * The identifier for jdbc.
 	 */
-	private static final String IDENTIFIER = "jdbc";
+	public static final String IDENTIFIER = "jdbc";
 
 	private SqlRequestExecutor sqlRequestExecutor;
 
