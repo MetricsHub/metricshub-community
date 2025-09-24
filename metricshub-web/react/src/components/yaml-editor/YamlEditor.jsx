@@ -109,7 +109,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		return [cmYaml(), lintGutter(), createYamlLinter(), history(), keymap.of(km)];
 	}, [onSave, readOnly]);
 
-
 	/**
 	 * Handle document changes.
 	 * Updates local state, performs live validation, and calls onChange prop if provided.
@@ -141,10 +140,10 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	}, [doc, runValidation]);
 
 	/**
-	  * Format the YAML document.
-	  * Parses and re-serializes the YAML to ensure consistent formatting.
-	  * If parsing fails, sets error state and shows validation cue.
-	*/
+	 * Format the YAML document.
+	 * Parses and re-serializes the YAML to ensure consistent formatting.
+	 * If parsing fails, sets error state and shows validation cue.
+	 */
 	const handleFormat = useCallback(() => {
 		try {
 			const obj = doc.trim() ? YAML.parse(doc) : {};
