@@ -97,23 +97,18 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	const extensions = useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
-			km.push({
+			km.unshift({
 				key: "Mod-s",
 				preventDefault: true,
-				run: () => {
-					onSave(doc);
+				run: (view) => {
+					onSave(view.state.doc.toString()); // latest content directly
 					return true;
 				},
 			});
 		}
-		return [
-			cmYaml(),
-			lintGutter(),
-			createYamlLinter(),
-			history(),
-			keymap.of(km),
-		];
-	}, [onSave, doc]);
+		return [cmYaml(), lintGutter(), createYamlLinter(), history(), keymap.of(km)];
+	}, [onSave, readOnly]);
+
 
 	/**
 	 * Handle document changes.
