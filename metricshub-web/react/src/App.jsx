@@ -1,13 +1,14 @@
 import * as React from "react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { ThemeProvider, createTheme, CssBaseline, Box, CircularProgress } from "@mui/material";
+import { ThemeProvider, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
 import logoDark from "./assets/logo-dark.svg";
 import logoLight from "./assets/logo-light.svg";
 import { Provider as ReduxProvider } from "react-redux";
 import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
+import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
@@ -53,20 +54,39 @@ const AppLayout = ({ authed, toggleTheme }) => {
 	);
 };
 
+// Theme settings
+const themeSettings = {
+	direction: "ltr",
+	paletteMode: "dark",
+	responsiveFontSizes: true,
+};
+
+// Key to store theme preference in localStorage
+const STORAGE_KEY = "metricshub.paletteMode"; // 'light' | 'dark'
+
+// Get initial mode from localStorage or default to dark
+const getInitialMode = (defaultMode = "dark") => {
+	const saved = localStorage.getItem(STORAGE_KEY);
+	if (saved === "light" || saved === "dark") return saved;
+	return defaultMode;
+};
+
 export default function App() {
 	// light or dark
-	const [mode, setMode] = useState("dark");
+	const [mode, setMode] = useState(() => getInitialMode(themeSettings.paletteMode));
+
+	// Persist to localStorage whenever mode changes
+	useEffect(() => {
+		localStorage.setItem(STORAGE_KEY, mode);
+	}, [mode]);
 
 	// Create theme dynamically
 	const theme = useMemo(
 		() =>
-			createTheme({
-				palette: {
-					mode,
-					background: {
-						appbar: mode === "light" ? "#f5f5f7" : "#1e1e1e",
-					},
-				},
+			createMetricsHubTheme({
+				direction: themeSettings.direction,
+				paletteMode: mode,
+				responsiveFontSizes: themeSettings.responsiveFontSizes,
 			}),
 		[mode],
 	);

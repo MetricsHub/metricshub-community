@@ -56,12 +56,8 @@ export default function StatusDetailsMenu() {
 	return (
 		<>
 			<Tooltip title="System Info">
-				<IconButton
-					size="small"
-					onClick={(e) => setAnchorEl(e.currentTarget)}
-					aria-label="system info"
-				>
-					<InfoOutlinedIcon fontSize="small" />
+				<IconButton onClick={(e) => setAnchorEl(e.currentTarget)} aria-label="system info">
+					<InfoOutlinedIcon />
 				</IconButton>
 			</Tooltip>
 
@@ -87,7 +83,7 @@ export default function StatusDetailsMenu() {
 							{/* ======= Agent Info Section ======= */}
 							{agentInfo && (
 								<>
-									<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+									<Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
 										Agent info
 									</Typography>
 
@@ -102,8 +98,8 @@ export default function StatusDetailsMenu() {
 														primary={label}
 														secondary={formatValue(value)}
 														slotProps={{
-															primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
-															secondary: { sx: { fontSize: "0.9rem" } },
+															primary: { variant: "subtitle2" },
+															secondary: { variant: "caption" },
 														}}
 													/>
 												</ListItem>
@@ -115,7 +111,7 @@ export default function StatusDetailsMenu() {
 									{additionalAgentInfoEntries.length > 0 && (
 										<>
 											<Divider sx={{ my: 1 }} />
-											<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+											<Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
 												More
 											</Typography>
 											<List dense disablePadding>
@@ -125,8 +121,8 @@ export default function StatusDetailsMenu() {
 															primary={prettifyKey(k)}
 															secondary={formatValue(v)}
 															slotProps={{
-																primary: { sx: { fontSize: "0.9rem", fontWeight: 600 } },
-																secondary: { sx: { fontSize: "0.9rem" } },
+																primary: { variant: "subtitle2" },
+																secondary: { variant: "caption" },
 															}}
 														/>
 													</ListItem>
@@ -142,7 +138,7 @@ export default function StatusDetailsMenu() {
 							{/* ======= Overview Section ======= */}
 							{rest && (
 								<>
-									<Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+									<Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
 										Overview
 									</Typography>
 									<List dense disablePadding>
@@ -151,8 +147,10 @@ export default function StatusDetailsMenu() {
 												<ListItemText
 													primary={prettifyKey(k)}
 													secondary={formatValue(v)}
-													primaryTypographyProps={{ fontSize: "0.9rem", fontWeight: 600 }}
-													secondaryTypographyProps={{ fontSize: "0.9rem" }}
+													slotProps={{
+														primary: { variant: "subtitle2" },
+														secondary: { variant: "caption" },
+													}}
 												/>
 											</ListItem>
 										))}
