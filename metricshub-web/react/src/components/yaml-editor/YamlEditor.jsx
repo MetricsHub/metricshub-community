@@ -1,15 +1,16 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Box, Stack, Typography, IconButton, Tooltip } from "@mui/material";
+import { Box, Stack, Typography, IconButton, Tooltip, Chip } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
+import CheckIcon from "@mui/icons-material/Check";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
-import { linter, lintGutter, getDiagnostics /* , lintPanel */ } from "@codemirror/lint";
+import { linter, lintGutter } from "@codemirror/lint";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
-import { keymap, EditorView, ViewPlugin, WidgetType, Decoration } from "@codemirror/view";
-import { RangeSetBuilder } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
 import YAML from "yaml";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
@@ -34,89 +35,13 @@ function createYamlLinter() {
 				{
 					from,
 					to: from,
-					message: e.message || "Unknown error",
+					message: e.message || "YAML parse error",
 					severity: "error",
 				},
 			];
 		}
-	}, { delay: 1000 });
+	});
 }
-
-const inlineLintMessages = ViewPlugin.fromClass(class {
-	decorations;
-
-	constructor(view) {
-		this.decorations = this.build(view);
-	}
-
-	update(update) {
-		if (update.docChanged || update.viewportChanged || update.transactions.length) {
-			this.decorations = this.build(update.view);
-		}
-	}
-
-	build(view) {
-		const deco = new RangeSetBuilder();
-		const diags = getDiagnostics(view.state);
-		if (!diags || diags.length === 0) return deco.finish();
-
-		for (const d of diags) {
-			const line = view.state.doc.lineAt(d.from);
-			const widget = Decoration.widget({
-				widget: new (class extends WidgetType {
-					toDOM() {
-						const el = document.createElement("div");
-						el.className =
-							`cm-inline-lint ${d.severity === "error" ? "cm-inline-lint-error" : "cm-inline-lint-warning"}`;
-						el.textContent = d.message;
-						return el;
-					}
-				})(),
-				side: 1,
-				block: true,
-			});
-			deco.add(line.to, line.to, widget);
-		}
-
-		return deco.finish();
-	}
-}, {
-	decorations: v => v.decorations
-});
-
-const inlineLintTheme = EditorView.theme({
-	".cm-inline-lint": {
-		fontSize: "0.80rem",
-		lineHeight: 1.4,
-		padding: "2px 8px",
-		margin: "2px 0 4px 0",
-		borderLeft: "3px solid",
-		borderRadius: "4px",
-		background: "rgba(0,0,0,0.04)",
-	},
-	".cm-inline-lint-error": {
-		borderColor: "#d32f2f",
-		color: "#b71c1c",
-	},
-	".cm-inline-lint-warning": {
-		borderColor: "#f57c00",
-		color: "#e65100",
-	},
-}, { dark: false });
-
-const inlineLintThemeDark = EditorView.theme({
-	".cm-inline-lint": {
-		background: "rgba(255,255,255,0.06)",
-	},
-	".cm-inline-lint-error": {
-		borderColor: "#ef5350",
-		color: "#ef9a9a",
-	},
-	".cm-inline-lint-warning": {
-		borderColor: "#ffa726",
-		color: "#ffcc80",
-	},
-}, { dark: true });
 
 export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
 	const theme = useTheme();
@@ -126,16 +51,19 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
 		return stored ?? value ?? DEFAULT_YAML;
 	});
+	const [hasError, setHasError] = useState(false);
 
-	const docRef = useRef(doc);
-	useEffect(() => {
-		docRef.current = doc;
-	}, [doc]);
+	// Visual cue state for explicit "Validate" clicks
+	const [validateResult, setValidateResult] = useState(null); // "ok" | "error" | null
+	const [showValidateCue, setShowValidateCue] = useState(false);
+	const validateTimerRef = useRef(null);
 
+	// Sync external value if provided
 	useEffect(() => {
-		if (value == null) return;
-		setDoc(value);
-		localStorage.setItem(LOCAL_STORAGE_KEY, value);
+		if (typeof value === "string") {
+			setDoc(value);
+			localStorage.setItem(LOCAL_STORAGE_KEY, value);
+		}
 	}, [value]);
 
 	// Save to localStorage on every change
@@ -143,15 +71,22 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
+	// Clear timeout on unmount
+	useEffect(() => {
+		return () => {
+			if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
+		};
+	}, []);
+
 	const extensions = useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
-
+		// Ctrl+S to save when onSave implemented
 		if (onSave) {
 			km.push({
 				key: "Mod-s",
 				preventDefault: true,
 				run: () => {
-					onSave(docRef.current);
+					onSave(doc);
 					return true;
 				},
 			});
@@ -160,34 +95,59 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 			cmYaml(),
 			lintGutter(),
 			createYamlLinter(),
-			history(),
-			keymap.of(km),
-			inlineLintMessages,
-			inlineLintTheme,
-			inlineLintThemeDark,
-			// Optional: show a bottom panel listing all diagnostics
-			// lintPanel(),
+			history(), // enables undo/redo stack
+			keymap.of(km), // binds Ctrl/Cmd+Z and Ctrl+Y / Cmd+Shift+Z
 		];
-	}, [onSave]);
+	}, [onSave, doc]);
 
-	const handleChange = useCallback((val) => {
-		setDoc(val);
-		if (onChange) onChange(val);
-	}, [onChange]);
+	const handleChange = useCallback(
+		(val) => {
+			setDoc(val);
+			// live validation for icon
+			try {
+				if (val.trim()) YAML.parse(val);
+				setHasError(false);
+			} catch {
+				setHasError(true);
+			}
+			onChange && onChange(val);
+		},
+		[onChange],
+	);
 
 	const handleFormat = useCallback(() => {
 		try {
 			const obj = doc.trim() ? YAML.parse(doc) : {};
 			const formatted = YAML.stringify(obj, { indent: 2, lineWidth: 100 });
 			setDoc(formatted);
-			if (onChange) onChange(formatted);
+			onChange && onChange(formatted);
+			setHasError(false);
 		} catch {
+			setHasError(true);
+			setValidateResult("error");
+			setShowValidateCue(true);
+			if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
+			validateTimerRef.current = setTimeout(() => setShowValidateCue(false), 1500);
 		}
 	}, [doc, onChange]);
 
+	const handleValidate = useCallback(() => {
+		try {
+			if (doc.trim()) YAML.parse(doc);
+			setHasError(false);
+			setValidateResult("ok");
+		} catch {
+			setHasError(true);
+			setValidateResult("error");
+		}
+		setShowValidateCue(true);
+		if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
+		validateTimerRef.current = setTimeout(() => setShowValidateCue(false), 1500);
+	}, [doc]);
+
 	const handleSave = useCallback(() => {
-		if (onSave) onSave(docRef.current);
-	}, [onSave]);
+		onSave && onSave(doc);
+	}, [onSave, doc]);
 
 	return (
 		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -196,6 +156,34 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 				<Typography variant="subtitle2" sx={{ flex: 1 }}>
 					YAML Editor
 				</Typography>
+
+				{/* Feedback chip */}
+				{showValidateCue && (
+					<Chip
+						size="small"
+						label={validateResult === "ok" ? "Valid YAML" : "Invalid YAML"}
+						color={validateResult === "ok" ? "success" : "error"}
+						variant="filled"
+						sx={{ mr: 0.5 }}
+					/>
+				)}
+
+				{/* Validate */}
+				<Tooltip title="Validate (parse YAML)">
+					<span>
+						<IconButton
+							size="small"
+							onClick={handleValidate}
+							aria-label="Validate YAML"
+							sx={{
+								...(showValidateCue && validateResult === "ok" && { color: "success.main" }),
+								...(showValidateCue && validateResult === "error" && { color: "error.main" }),
+							}}
+						>
+							{hasError ? <ErrorOutlineIcon /> : <CheckIcon />}
+						</IconButton>
+					</span>
+				</Tooltip>
 
 				{/* Format */}
 				<Tooltip title="Format YAML">
