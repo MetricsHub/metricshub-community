@@ -50,8 +50,8 @@ import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jawk.backend.AVM;
 import org.metricshub.jawk.ext.JawkExtension;
+import org.metricshub.jawk.frontend.AstNode;
 import org.metricshub.jawk.frontend.AwkParser;
-import org.metricshub.jawk.frontend.AwkSyntaxTree;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
@@ -194,16 +194,16 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// All scripts need to be prefixed with an extra statement that sets the Record Separator (RS)
 		// to the "normal" end-of-line (\n), because Jawk uses line.separator System property, which
 		// is \r\n on Windows, thus preventing it from splitting lines properly.
-		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"), false);
-		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script), false);
+		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"));
+		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script));
 		final List<ScriptSource> sourceList = new ArrayList<>();
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
 		// Parse the Awk script
 		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(false, false, extensions);
-		final AwkSyntaxTree ast;
+		final AwkParser parser = new AwkParser(extensions);
+		final AstNode ast;
 		try {
 			ast = parser.parse(sourceList);
 
