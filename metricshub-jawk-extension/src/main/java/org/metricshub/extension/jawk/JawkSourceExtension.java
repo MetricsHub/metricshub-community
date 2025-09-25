@@ -26,9 +26,9 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -50,7 +50,6 @@ import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jawk.backend.AVM;
 import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.frontend.AstNode;
 import org.metricshub.jawk.frontend.AwkParser;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
@@ -200,30 +199,10 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
-		// Parse the Awk script
-		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(extensions);
-		final AstNode ast;
 		try {
-			ast = parser.parse(sourceList);
-
-			// Produce the intermediate code
-			if (ast != null) {
-				// 1st pass to tie actual parameters to back-referenced formal parameters
-				ast.semanticAnalysis();
-
-				// 2nd pass to tie actual parameters to forward-referenced formal parameters
-				ast.semanticAnalysis();
-				if (ast.populateTuples(tuples) != 0) {
-					throw new ParseException("Syntax problem with the Awk script", 0);
-				}
-				tuples.postProcess();
-				parser.populateGlobalVariableNameToOffsetMappings(tuples);
-			}
-		} catch (Exception e) {
+			return new org.metricshub.jawk.Awk(extensions).compile(sourceList);
+		} catch (IOException | ClassNotFoundException e) {
 			throw new JawkSourceExtensionRuntimeException(e.getMessage(), e);
 		}
-
-		return tuples;
 	}
 }

@@ -35,9 +35,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.metricshub.jawk.ExitException;
 import org.metricshub.jawk.backend.AVM;
-import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.frontend.AstNode;
-import org.metricshub.jawk.frontend.AwkParser;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
@@ -66,35 +63,11 @@ public class Awk {
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
-		// Awk Setup
-		final AwkSettings settings = new AwkSettings();
-		settings.setCatchIllegalFormatExceptions(false);
-
-		// Parse the Awk script
-		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(Collections.<String, JawkExtension>emptyMap());
-		final AstNode ast;
 		try {
-			ast = parser.parse(sourceList);
-
-			// Produce the intermediate code
-			if (ast != null) {
-				// 1st pass to tie actual parameters to back-referenced formal parameters
-				ast.semanticAnalysis();
-
-				// 2nd pass to tie actual parameters to forward-referenced formal parameters
-				ast.semanticAnalysis();
-				if (ast.populateTuples(tuples) != 0) {
-					throw new RuntimeException("Syntax problem with the Awk script");
-				}
-				tuples.postProcess();
-				parser.populateGlobalVariableNameToOffsetMappings(tuples);
-			}
-		} catch (IOException e) {
+			return new org.metricshub.jawk.Awk().compile(sourceList);
+		} catch (IOException | ClassNotFoundException e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
-
-		return tuples;
 	}
 
 	/**
