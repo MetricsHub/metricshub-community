@@ -17,13 +17,13 @@ const ConfigurationPage = () => (
 
 		<Right>
 			<YamlEditor
-				onSave={(text) => {
-					// plug into Redux
-					console.log("YAML saved:", text);
-				}}
-				onChange={(text) => {
-					// optional: dispatch to Redux for live state
-				}}
+			//onSave={(text) => {
+			// plug into Redux
+			//console.log("YAML saved:", text);
+			//}}
+			//onChange={(text) => {
+			// optional: dispatch to Redux for live state
+			//}}
 			/>
 		</Right>
 	</SplitScreen>

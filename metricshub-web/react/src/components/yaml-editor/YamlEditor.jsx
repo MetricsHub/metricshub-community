@@ -6,7 +6,6 @@ import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
-import { linter, lintGutter } from "@codemirror/lint";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
 import YAML from "yaml";
@@ -20,37 +19,14 @@ service:
   enabled: true
 `;
 
-/** Creates a CodeMirror linter extension for YAML syntax validation. */
-function createYamlLinter() {
-	return linter((view) => {
-		const text = view.state.doc.toString();
-		if (!text.trim()) return [];
-		try {
-			YAML.parse(text);
-			return [];
-		} catch (e) {
-			const from = e.pos ?? 0;
-			return [
-				{
-					from,
-					to: from,
-					message: e.message || "YAML parse error",
-					severity: "error",
-				},
-			];
-		}
-	});
-}
-
 /**
- * YAML Editor component.
- * @param {*} param0 Props:
- * - value: initial YAML text (optional, can be controlled)
- * - onChange: callback on text change (optional)
- * - onSave: callback on save action (optional)
- * - height: CSS height of the editor (default "100%")
- * - readOnly: if true, makes the editor read-only (default false)
- * @returns The YAML Editor component.
+ * YAML Editor component
+ * Props:
+ * - value?: string
+ * - onChange?: (val: string) => void
+ * - onSave?: (val: string) => void
+ * - height?: CSS height (default "100%")
+ * - readOnly?: boolean (default false)
  */
 export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
 	const theme = useTheme();
@@ -100,7 +76,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 				},
 			});
 		}
-		return [cmYaml(), lintGutter(), createYamlLinter(), history(), keymap.of(km)];
+		return [cmYaml(), history(), keymap.of(km)];
 	}, [onSave]);
 
 	/**
@@ -116,7 +92,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		[onChange],
 	);
 
-	/** Runs actual validation */
+	/** Runs actual validation (chip feedback) */
 	const runValidation = useCallback(() => {
 		try {
 			if (doc.trim()) YAML.parse(doc);
