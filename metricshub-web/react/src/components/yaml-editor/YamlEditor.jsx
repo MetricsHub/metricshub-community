@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect, useCallback, useRef } from "react"
 import { Box, Stack, Typography, IconButton, Tooltip, Chip } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
@@ -21,11 +20,7 @@ service:
   enabled: true
 `;
 
-/**
- * Creates a CodeMirror linter extension for YAML syntax validation.
- *
- * @returns A CodeMirror linter extension that validates YAML syntax.
- */
+/** Creates a CodeMirror linter extension for YAML syntax validation. */
 function createYamlLinter() {
 	return linter((view) => {
 		const text = view.state.doc.toString();
@@ -64,7 +59,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
 		return stored ?? value ?? DEFAULT_YAML;
 	});
-	const [hasError, setHasError] = useState(false);
 
 	const [validateResult, setValidateResult] = useState(null); // "ok" | "error" | null
 	const [showValidateCue, setShowValidateCue] = useState(false);
@@ -101,13 +95,13 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 				key: "Mod-s",
 				preventDefault: true,
 				run: (view) => {
-					onSave(view.state.doc.toString()); // latest content directly
+					onSave(view.state.doc.toString());
 					return true;
 				},
 			});
 		}
 		return [cmYaml(), lintGutter(), createYamlLinter(), history(), keymap.of(km)];
-	}, [onSave, readOnly]);
+	}, [onSave]);
 
 	/**
 	 * Handle document changes.
@@ -117,7 +111,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		(val) => {
 			setShowValidateCue(false);
 			setDoc(val);
-			if (onChange) onChange(val);
+			onChange?.(val);
 		},
 		[onChange],
 	);
@@ -149,17 +143,15 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 			const obj = doc.trim() ? YAML.parse(doc) : {};
 			const formatted = YAML.stringify(obj, { indent: 2, lineWidth: 100 });
 			setDoc(formatted);
-			if (onChange) onChange(formatted);
-			setHasError(false);
+			onChange?.(formatted);
 		} catch {
-			setHasError(true);
 			setValidateResult("error");
 			setShowValidateCue(true);
 		}
 	}, [doc, onChange]);
 
 	const handleSave = useCallback(() => {
-		if (onSave) onSave(doc);
+		onSave?.(doc);
 	}, [onSave, doc]);
 
 	return (
