@@ -95,9 +95,23 @@ public class HostDetailsService {
 	@Tool(
 		name = "GetHostDetails",
 		description = """
-		Retrieves telemetry information about a host from the MetricsHub agent configuration.
-		Given a hostname, it returns a HostDetails object that includes the configured availability protocols, the working connectors, and the collectors available for those protocols.
-		If the hostname cannot be found, the result contains an error message instead.
+		Use this tool when you need to fetch details about how MetricsHub is monitoring a specific host.
+		The result is a structured object for the given hostname, containing:
+
+		- Protocols (e.g., SNMP, SSH, WMI) configured to check host reachability and provide raw data for connectors.
+		- Working connectors that have been successfully detected and are usable to collect metrics.
+		- Collectors, which are direct references to executable tools (e.g., SNMP Walk, SQL Query, SSH Command, HTTP Request)
+		that can be invoked to perform requests and validate connectivity, authentication, or data availability.
+
+		This information helps you:
+		- Decide which connector or protocol to use when troubleshooting or collecting metrics.
+		- Explain why certain data is or isn’t available for a host.
+		- Invoke the appropriate collectors as tools for targeted tests
+		(e.g., run an SNMP Walk on a specific OID subtree, or send an HTTP Request to verify response codes or payload content).
+
+		If the hostname does not exist in the current agent configuration, the result will contain an error message instead.
+
+		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
 	public HostDetails getHostDetails(
@@ -147,7 +161,7 @@ public class HostDetailsService {
 			.collect(Collectors.toSet());
 
 		// Collect metrics that represent "host up" status for this host.
-		final Set<NumberMetric> configuredProtocols = Optional
+		final Set<NumberMetric> hostUpMetrics = Optional
 			.ofNullable(telemetryManager.getEndpointHostMonitor())
 			.map(Monitor::getMetrics)
 			.orElse(Collections.emptyMap())
@@ -160,9 +174,9 @@ public class HostDetailsService {
 			.collect(Collectors.toSet());
 
 		// Extract protocol identifiers from the collected metrics.
-		final Set<String> protocols = configuredProtocols
+		final Set<String> protocols = hostUpMetrics
 			.stream()
-			.map(protocol -> protocol.getAttributes().get("protocol"))
+			.map(metric -> metric.getAttributes().get("protocol"))
 			.collect(Collectors.toSet());
 
 		// Resolve the collectors associated with each protocol.
