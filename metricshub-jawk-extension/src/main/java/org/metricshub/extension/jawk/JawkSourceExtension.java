@@ -50,7 +50,6 @@ import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jawk.backend.AVM;
 import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.frontend.AwkParser;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
@@ -64,6 +63,8 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 	// script to AwkTuple
 	private static final Map<String, AwkTuples> AWK_CODE_MAP = new ConcurrentHashMap<>();
+
+	private static org.metricshub.jawk.Awk awkInstance;
 
 	@Override
 	public boolean isValidSource(final Source source) {
@@ -184,7 +185,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	 * that can be interpreted afterward.
 	 *
 	 * @param script Awk script source code to be converted to intermediate code
-	 * @param extensions The extensions to be used by the {@link AwkParser}
+	 * @param extensions The extensions to be used during compilation
 	 * @return The actual AwkTuples to be interpreted
 	 * @throws JawkSourceExtensionRuntimeException when the Awk script is wrong or an error occurs during the parsing
 	 */
@@ -200,7 +201,10 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		sourceList.add(awkSource);
 
 		try {
-			return new org.metricshub.jawk.Awk(extensions).compile(sourceList);
+			if (awkInstance == null) {
+				awkInstance = new org.metricshub.jawk.Awk(extensions);
+			}
+			return awkInstance.compile(sourceList);
 		} catch (IOException | ClassNotFoundException e) {
 			throw new JawkSourceExtensionRuntimeException(e.getMessage(), e);
 		}
