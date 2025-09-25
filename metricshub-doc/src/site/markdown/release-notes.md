@@ -5,6 +5,81 @@ description: Learn more about the new features, changes and improvements, and bu
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+## MetricsHub Enterprise Edition v3.0.01
+
+### MetricsHub Enterprise Edition v3.0.01
+
+#### Changes and Improvements
+
+| ID                                                                          | Description                                                 |
+| --------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| [**\#98**](https://github.com/MetricsHub/metricshub-enterprise/issues/98)   | Added a `user` CLI to manage REST API users                 |
+| [**\#100**](https://github.com/MetricsHub/metricshub-enterprise/issues/100) | Upgraded OpenTelemetry Collector Contrib to version 0.136.0 |
+
+### MetricsHub Enterprise Connectors v109
+
+#### What's New
+
+| ID                                                                        | Description                                                                                      |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [**\#30**](https://github.com/MetricsHub/enterprise-connectors/issues/30) | Added support for [**AIX**](./connectors/aix.html) systems via command lines                     |
+| [**\#70**](https://github.com/MetricsHub/enterprise-connectors/issues/70) | Added support for [**EMC Isilon**](./connectors/emcisilonrest.html) storage systems via REST API |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#72**](https://github.com/MetricsHub/enterprise-connectors/issues/72) | The `storage.size` metric is now collected for storage systems and physical disks by the following storage array connectors: <ul><li>**Dell EMC PowerMax Storage (REST)**</li><li>**Pure Storage FA Series (REST)**</li><li>**Pure Storage FA Series v2 (REST)**</li></ul> |
+
+#### Fixed Issues
+
+| ID                                                                          | Description                                                                                                                                                                                                                                                            |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#90**](https://github.com/MetricsHub/enterprise-connectors/issues/90)   | **Hitachi (REST)**: <ul><li>The consumed capacity metric uses the wrong unit for storage pools</li><li>The configured capacity metric is missing for storage pools</li><li>The consumed capacity for traditional volumes does not match their total capacity</li></ul> |
+| [**\#94**](https://github.com/MetricsHub/enterprise-connectors/issues/94)   | **NetApp Filer (REST)**: The physical disk `speed` is wrongly exposed as a metric instead of an attribute.                                                                                                                                                             |
+| [**\#100**](https://github.com/MetricsHub/enterprise-connectors/issues/100) | **Cisco UCS Manager (REST)**: Early logout during discovery and collect invalidates the session cookie and breaks metric collection                                                                                                                                    |
+| [**\#102**](https://github.com/MetricsHub/enterprise-connectors/issues/102) | **RedFish (REST)**: Connector fails to request REST API URLs                                                                                                                                                                                                           |
+| [**\#109**](https://github.com/MetricsHub/enterprise-connectors/issues/109) | **Brocade SAN Switch**: The `bandwidth` attribute incorrectly displays the WWN instead of the actual network bandwidth                                                                                                                                                 |
+| [**\#104**](https://github.com/MetricsHub/enterprise-connectors/issues/104) | **HPE OneView (Frames and Blades)**: The CPU collect fails due to a missing REST API URL                                                                                                                                                                               |
+| [**\#106**](https://github.com/MetricsHub/enterprise-connectors/issues/106) | **Palo Alto Firewall (SNMP)**: The `firewall.sessions` metric reports the protocol attribute as `ucp` instead of `udp`                                                                                                                                                 |
+
+### MetricsHub Community Edition v1.0.08
+
+#### What's New
+
+| ID                                                                         | Description                                                                                                                                                                                                                               |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#765**](https://github.com/MetricsHub/metricshub-community/issues/765) | Added [MCP tool](./integrations/ai-agent-mcp.md) to get host details                                                                                                                                                                      |
+| [**\#772**](https://github.com/MetricsHub/metricshub-community/issues/772) | Custom monitoring jobs in `metricshub.yaml` can now reference resource attributes using the syntax `${esc.d}{resource.attribute::ATTRIBUTE-KEY}`, where ATTRIBUTE-KEY is configured at the resource level                                 |
+| [**\#773**](https://github.com/MetricsHub/metricshub-community/issues/773) | Custom monitoring jobs in `metricshub.yaml` can now reference protocol properties using the syntax `${esc.d}{protocol::PROTOCOL.PROPERTY}`, where PROTOCOL is the name of the protocol and PROPERTY is the specific property to reference |
+| [**\#796**](https://github.com/MetricsHub/metricshub-community/issues/796) | Added support for JWT authentication in the REST API                                                                                                                                                                                      |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [**\#768**](https://github.com/MetricsHub/metricshub-community/issues/768) | MetricsHub no longer passes the deprecated `pkg.translator.prometheus.NormalizeName` feature gate when starting the OpenTelemetry Collector                                    |
+| [**\#775**](https://github.com/MetricsHub/metricshub-community/issues/775) | On Windows, the logs are now written to the working directory (`.\logs`) if it is writable, instead of the system logs path                                                    |
+| [**\#788**](https://github.com/MetricsHub/metricshub-community/issues/788) | The `metricshub -V` command now outputs both log and config directories                                                                                                        |
+| [**\#804**](https://github.com/MetricsHub/metricshub-community/issues/804) | System alert rules now include the `site` attribute                                                                                                                            |
+| [**\#810**](https://github.com/MetricsHub/metricshub-community/issues/810) | New API keys and users can now be recognized by MetricsHub on the fly, without requiring an agent restart                                                                      |
+| [**\#825**](https://github.com/MetricsHub/metricshub-community/issues/825) | Internal dependency [Jawk](https://github.com/MetricsHub/jawk) has been upgraded to [v4.1.00](https://github.com/MetricsHub/jawk/releases/tag/v4.1.00) for better API handling |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                |
+| -------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [**\#777**](https://github.com/MetricsHub/metricshub-community/issues/777) | Table unions are not performed correctly by the core engine on raw results |
+
+### MetricsHub Community Connectors v1.0.14
+
+#### Documentation Updates
+
+| ID                                                                         | Description                                                                                                                                                         |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#273**](https://github.com/MetricsHub/community-connectors/issues/273) | Documented [${esc.d}{resource.attribute::ATTRIBUTE}](https://metricshub.org/community-connectors/develop/references.html#!#resource-attribute-reference) references |
+| [**\#278**](https://github.com/MetricsHub/community-connectors/issues/278) | Documented [${esc.d}{protocol::PROTOCOL.PROPERTY}](https://metricshub.org/community-connectors/develop/references.html#!#protocol-reference) references             |
+
 ## MetricsHub Enterprise Edition v3.0.00
 
 ### MetricsHub Enterprise Edition v3.0.00
