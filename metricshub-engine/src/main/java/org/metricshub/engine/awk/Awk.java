@@ -35,8 +35,6 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.metricshub.jawk.ExitException;
 import org.metricshub.jawk.backend.AVM;
-import org.metricshub.jawk.frontend.AwkParser;
-import org.metricshub.jawk.frontend.AwkSyntaxTree;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
@@ -59,41 +57,17 @@ public class Awk {
 		// All scripts need to be prefixed with an extra statement that sets the Record Separator (RS)
 		// to the "normal" end-of-line (\n), because Jawk uses line.separator System property, which
 		// is \r\n on Windows, thus preventing it from splitting lines properly.
-		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"), false);
-		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script), false);
+		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"));
+		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script));
 		final List<ScriptSource> sourceList = new ArrayList<>();
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
-		// Awk Setup
-		final AwkSettings settings = new AwkSettings();
-		settings.setCatchIllegalFormatExceptions(false);
-
-		// Parse the Awk script
-		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(false, false, Collections.emptyMap());
-		final AwkSyntaxTree ast;
 		try {
-			ast = parser.parse(sourceList);
-
-			// Produce the intermediate code
-			if (ast != null) {
-				// 1st pass to tie actual parameters to back-referenced formal parameters
-				ast.semanticAnalysis();
-
-				// 2nd pass to tie actual parameters to forward-referenced formal parameters
-				ast.semanticAnalysis();
-				if (ast.populateTuples(tuples) != 0) {
-					throw new RuntimeException("Syntax problem with the Awk script");
-				}
-				tuples.postProcess();
-				parser.populateGlobalVariableNameToOffsetMappings(tuples);
-			}
-		} catch (IOException e) {
+			return new org.metricshub.jawk.Awk().compile(sourceList);
+		} catch (IOException | ClassNotFoundException e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
-
-		return tuples;
 	}
 
 	/**

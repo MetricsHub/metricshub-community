@@ -92,7 +92,7 @@ public interface IComputeProcessor {
 	/**
 	 * Processes the Decode compute operation on the source data.
 	 *
-	 * @param decdode The Decode compute operation to be processed.
+	 * @param decode The Decode compute operation to be processed.
 	 */
 	void process(Decode decode);
 
