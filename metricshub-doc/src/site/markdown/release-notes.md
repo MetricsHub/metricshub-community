@@ -73,6 +73,12 @@ description: Learn more about the new features, changes and improvements, and bu
 
 ### MetricsHub Community Connectors v1.0.14
 
+#### What's New
+
+| ID                                                                         | Description                                                                                           |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [**\#277**](https://github.com/MetricsHub/community-connectors/issues/277) | The system semantic conventions now include `system.disk.limit` and `system.filesystem.limit` metrics |
+
 #### Documentation Updates
 
 | ID                                                                         | Description                                                                                                                                                         |
