@@ -53,6 +53,8 @@ import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.monitor.AbstractMonitorJob;
 import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -138,6 +140,9 @@ public class AgentContext {
 		// to ease data retrieval in the scheduler
 		ConfigHelper.normalizeAgentConfiguration(agentConfig);
 
+		// Merge connector metrics definitions with their monitors metrics definitions if not already defined
+		mergeMetricsDefinitions(connectorStore);
+
 		telemetryManagers = ConfigHelper.buildTelemetryManagers(agentConfig, connectorStore);
 
 		// Build OpenTelemetry configuration
@@ -171,6 +176,129 @@ public class AgentContext {
 		final var startupDuration = Duration.ofNanos(System.nanoTime() - startTime);
 
 		log.info("Started MetricsHub Agent in {} seconds.", startupDuration.toMillis() / 1000.0);
+	}
+
+	/**
+	 * Ensure store connector metrics reflect monitor metrics definitions of the configured connector metrics definitions.
+	 * Collect all metric definitions from monitors of the configured connector then override the store connector
+	 * metric definitions with these monitor metrics.
+	 *
+	 * @param connectorStore The connector store containing connectors and their monitors
+	 */
+	protected void mergeMetricsDefinitions(final ConnectorStore connectorStore) {
+		if (agentConfig == null || agentConfig.getResourceGroups() == null || connectorStore == null) {
+			log.warn("Merge of metrics definitions aborted: agent configuration or connector store is null");
+			return;
+		}
+
+		agentConfig
+			.getResourceGroups()
+			.forEach((resourceGroupKey, resourceGroupConfig) -> {
+				if (resourceGroupConfig == null || resourceGroupConfig.getResources() == null) {
+					return; // nothing to process
+				}
+
+				resourceGroupConfig
+					.getResources()
+					.forEach((resourceKey, resourceConfig) -> {
+						if (resourceConfig == null) {
+							return;
+						}
+
+						final var configuredConnector = resourceConfig.getConnector();
+						if (configuredConnector == null || configuredConnector.getMonitors() == null) {
+							return;
+						}
+
+						// Collect metrics definitions from all monitors of the configured connector
+						final Map<String, MetricDefinition> monitorMetricDefinitions = new HashMap<>();
+						configuredConnector
+							.getMonitors()
+							.values()
+							.forEach(monitorJob -> {
+								if (monitorJob instanceof final AbstractMonitorJob abstractJob) {
+									final Map<String, MetricDefinition> metrics = abstractJob.getMetrics();
+									if (metrics != null) {
+										monitorMetricDefinitions.putAll(metrics);
+									}
+								}
+							});
+
+						if (monitorMetricDefinitions.isEmpty()) {
+							return;
+						}
+
+						final var connectors = resourceConfig.getConnectors();
+						if (connectors == null) {
+							return;
+						}
+
+						for (final String rawConnectorId : connectors) {
+							final String connectorId = sanitizeConnectorId(rawConnectorId);
+							if (connectorId == null || connectorId.isBlank()) {
+								log.debug(
+									"Skipping invalid connectorId '{}' for resource {} (group {}).",
+									rawConnectorId,
+									resourceKey,
+									resourceGroupKey
+								);
+								continue;
+							}
+
+							final var store = connectorStore.getStore();
+							if (store == null) {
+								log.warn(
+									"Connector store is null while processing resource {} (group {}).",
+									resourceKey,
+									resourceGroupKey
+								);
+								return; // cannot proceed further
+							}
+
+							final var storeConnector = store.get(connectorId);
+							if (storeConnector == null) {
+								log.warn(
+									"Connector {} not found in store for resource {} (group {}).",
+									connectorId,
+									resourceKey,
+									resourceGroupKey
+								);
+								continue;
+							}
+
+							final Map<String, MetricDefinition> storeConnectorMetrics = storeConnector.getMetrics();
+							if (storeConnectorMetrics == null) {
+								log.warn(
+									"Metrics map is null for connector {} (resource {}, group {}).",
+									connectorId,
+									resourceKey,
+									resourceGroupKey
+								);
+								continue;
+							}
+
+							// Configured connector monitor metrics override store connector metrics
+							storeConnectorMetrics.putAll(monitorMetricDefinitions);
+						}
+					});
+			});
+	}
+
+	/**
+	 * Sanitize connector ID by stripping leading special characters like + or ! or extra spaces.
+	 */
+	private String sanitizeConnectorId(final String rawConnectorId) {
+		if (rawConnectorId == null) {
+			return null;
+		}
+
+		final String trimmed = rawConnectorId.trim();
+		if (trimmed.isEmpty()) {
+			return null;
+		}
+
+		// If first character is non-alphanumeric, drop it — keep the rest as-is
+		return trimmed.length() > 1 && !Character.isLetterOrDigit(trimmed.charAt(0)) ? trimmed.substring(1) : trimmed;
 	}
 
 	/**
