@@ -11,10 +11,10 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                          | Description                                                 |
-| --------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| [**\#98**](https://github.com/MetricsHub/metricshub-enterprise/issues/98)   | Added a `user` CLI to manage REST API users                 |
-| [**\#100**](https://github.com/MetricsHub/metricshub-enterprise/issues/100) | Upgraded OpenTelemetry Collector Contrib to version 0.136.0 |
+| ID                                                                          | Description                                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**\#98**](https://github.com/MetricsHub/metricshub-enterprise/issues/98)   | Added a `user` CLI to manage REST API users, allowing secure creation, listing, and deletion of users used for JWT-based authentication                                                                                                                        |
+| [**\#100**](https://github.com/MetricsHub/metricshub-enterprise/issues/100) | Upgraded OpenTelemetry Collector Contrib to version [0.136.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.136.0). Refer to [Upgrading to v3.0.01](./upgrade.md#upgrading-to-v3001) for installation upgrade instructions |
 
 ### MetricsHub Enterprise Connectors v109
 
@@ -49,10 +49,10 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                         | Description                                                                                                                                                                                                                               |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**\#765**](https://github.com/MetricsHub/metricshub-community/issues/765) | Added [MCP tool](./integrations/ai-agent-mcp.md) to get host details                                                                                                                                                                      |
+| [**\#765**](https://github.com/MetricsHub/metricshub-community/issues/765) | Added the [GetHostDetails MCP Tool](./integrations/ai-agent-mcp.md) to retrieve detailed information about a host                                                                                                                         |
 | [**\#772**](https://github.com/MetricsHub/metricshub-community/issues/772) | Custom monitoring jobs in `metricshub.yaml` can now reference resource attributes using the syntax `${esc.d}{resource.attribute::ATTRIBUTE-KEY}`, where ATTRIBUTE-KEY is configured at the resource level                                 |
 | [**\#773**](https://github.com/MetricsHub/metricshub-community/issues/773) | Custom monitoring jobs in `metricshub.yaml` can now reference protocol properties using the syntax `${esc.d}{protocol::PROTOCOL.PROPERTY}`, where PROTOCOL is the name of the protocol and PROPERTY is the specific property to reference |
-| [**\#796**](https://github.com/MetricsHub/metricshub-community/issues/796) | Added support for JWT authentication in the REST API                                                                                                                                                                                      |
+| [**\#796**](https://github.com/MetricsHub/metricshub-community/issues/796) | Added support for JWT authentication in the REST API to enable stateless sessions and improve security                                                                                                                                    |
 
 #### Changes and Improvements
 
