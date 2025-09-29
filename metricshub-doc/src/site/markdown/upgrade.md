@@ -44,7 +44,7 @@ Your active configuration file `otel-config.yaml` is located at:
 * **Windows (default):**
   `C:\ProgramData\MetricsHub\otel\otel-config.yaml`
 
-Update `otel-config.yaml` as follows:
+Update the `service:` section of your `otel-config.yaml` as follows:
 
 from:
 
