@@ -64,8 +64,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	// script to AwkTuple
 	private static final Map<String, AwkTuples> AWK_CODE_MAP = new ConcurrentHashMap<>();
 
-	private static org.metricshub.jawk.Awk awkInstance;
-
 	@Override
 	public boolean isValidSource(final Source source) {
 		return source instanceof JawkSource;
@@ -201,10 +199,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		sourceList.add(awkSource);
 
 		try {
-			if (awkInstance == null) {
-				awkInstance = new org.metricshub.jawk.Awk(extensions);
-			}
-			return awkInstance.compile(sourceList);
+			return new org.metricshub.jawk.Awk(extensions).compile(sourceList);
 		} catch (IOException | ClassNotFoundException e) {
 			throw new JawkSourceExtensionRuntimeException(e.getMessage(), e);
 		}
