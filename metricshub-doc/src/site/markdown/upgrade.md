@@ -7,7 +7,7 @@ description: Describes version-specific changes that may affect functionality, p
 
 ## MetricsHub Enterprise
 
-### Upgrading to v3.0.01
+### Upgrading to v2.0.00
 
 #### Support for multiple configuration files
 
@@ -19,9 +19,11 @@ description: Describes version-specific changes that may affect functionality, p
 * Disable unused files by renaming them with a non-YAML extension (e.g., `.bak`, `.txt`, or `.disabled`).
 * Regularly check the files stored in the `config/` directory to ensure only intended configurations are loaded.
 
+### Upgrading to v3.0.01
+
 #### OpenTelemetry Collector configuration
 
-MetricsHub Enterprise leverages **version `${otelVersion}`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
+MetricsHub Enterprise leverages **version `0.136.0`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
 
 To avoid confusion, always refer to the example reference file `otel-config.example.yaml`:
 
