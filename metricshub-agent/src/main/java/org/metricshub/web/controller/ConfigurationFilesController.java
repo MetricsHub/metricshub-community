@@ -21,21 +21,25 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.util.Map;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Controller for managing configuration files.
@@ -44,7 +48,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/api/config-files")
 public class ConfigurationFilesController {
 
-	private final ConfigurationFilesService configurationFilesService;
+	private ConfigurationFilesService configurationFilesService;
 
 	/**
 	 * Constructor for ConfigurationFilesController.
@@ -68,91 +72,66 @@ public class ConfigurationFilesController {
 	}
 
 	/**
-	 * Endpoint to get the content of a specific configuration file.
+	 * Endpoint to get the content of a specific configuration file by its name.
 	 *
-	 * @param fileName The name of the configuration file.
-	 * @return The content of the file as plain text.
+	 * @param fileName the name of the configuration file to retrieve.
+	 * @return the content of the configuration file as plain text.
+	 * @throws ResponseStatusException with status 404 if the file is not found,
+	 *                                 400 if the file name is invalid, or 500 for
+	 *                                 other unexpected errors.
 	 */
-	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getConfigurationFile(@PathVariable String fileName) {
-		String content = configurationFilesService.getFileContent(fileName);
-		return ResponseEntity.ok(content);
+	@GetMapping(value = "/content", produces = MediaType.TEXT_PLAIN_VALUE)
+	public ResponseEntity<String> getConfigurationFileContent(@RequestParam("name") String fileName) {
+		try {
+			return ResponseEntity.ok(configurationFilesService.getFileContent(fileName));
+		} catch (ResponseStatusException ex) {
+			throw ex;
+		} catch (Exception ex) {
+			throw new ResponseStatusException(
+				HttpStatus.INTERNAL_SERVER_ERROR,
+				"Unexpected error while reading file: " + ex.getMessage(),
+				ex
+			);
+		}
 	}
 
-	/**
-	 * Endpoint to create or update the content of a configuration file.
-	 *
-	 * @param fileName The name of the configuration file.
-	 * @param content  The new content of the configuration file.
-	 * @return A success message.
-	 */
-	@PutMapping(value = "/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE)
+	@PutMapping(value = "/content")
 	public ResponseEntity<String> saveOrUpdateConfigurationFile(
-		@PathVariable String fileName,
-		@RequestBody String content
+		@RequestParam("name") String fileName,
+		@RequestBody(required = false) String content
 	) {
 		configurationFilesService.saveOrUpdateFile(fileName, content);
 		return ResponseEntity.ok("Configuration file saved successfully.");
 	}
 
-	/**
-	 * Endpoint to validate the content of a configuration file.
-	 *
-	 * @param fileName The name of the configuration file.
-	 * @param content  The content to validate.
-	 * @return A JSON object containing validation errors or success message.
-	 */
-	@PostMapping(
-		value = "/{fileName}",
-		consumes = MediaType.TEXT_PLAIN_VALUE,
-		produces = MediaType.APPLICATION_JSON_VALUE
-	)
-	public ResponseEntity<Object> validateConfigurationFile(@PathVariable String fileName, @RequestBody String content) {
-		var validationResult = configurationFilesService.validateFile(fileName, content);
-		return ResponseEntity.ok(validationResult);
-	}
-
-	/**
-	 * Endpoint to delete a configuration file.
-	 *
-	 * @param fileName The name of the configuration file to delete.
-	 * @return A success message.
-	 */
-	@DeleteMapping(value = "/{fileName}")
-	public ResponseEntity<String> deleteConfigurationFile(@PathVariable String fileName) {
-		configurationFilesService.deleteFile(fileName);
-		return ResponseEntity.ok("Configuration file deleted successfully.");
-	}
-
-	/**
-	 * Endpoint to rename a configuration file.
-	 *
-	 * @param fileName      The current name of the configuration file.
-	 * @param renameRequest The request body containing the new file name.
-	 * @return A success message.
-	 */
-	@PatchMapping(value = "/{fileName}", consumes = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<String> renameConfigurationFile(
-		@PathVariable String fileName,
-		@RequestBody RenameRequest renameRequest
+	@PostMapping(value = "/content", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<ObjectNode> validateConfigurationFile(
+		@RequestParam("name") String fileName,
+		@RequestBody(required = false) String content
 	) {
-		configurationFilesService.renameFile(fileName, renameRequest.getNewName());
-		return ResponseEntity.ok("Configuration file renamed successfully.");
+		// If no body is provided, validate the file currently on disk
+		if (content == null) {
+			content = configurationFilesService.getFileContent(fileName);
+		}
+		return ResponseEntity.ok(configurationFilesService.validateFile(fileName, content));
 	}
 
-	/**
-	 * DTO for rename request body.
-	 */
-	public static class RenameRequest {
+	@DeleteMapping(value = "/content")
+	public ResponseEntity<Void> deleteConfigurationFile(@RequestParam("name") String fileName) {
+		configurationFilesService.deleteFile(fileName);
+		return ResponseEntity.noContent().build();
+	}
 
-		private String newName;
-
-		public String getNewName() {
-			return newName;
+	@PatchMapping(value = "/content")
+	public ResponseEntity<Void> renameConfigurationFile(
+		@RequestParam("name") String oldName,
+		@RequestBody Map<String, String> body
+	) {
+		final String newName = body == null ? null : body.get("newName");
+		if (newName == null || newName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Field 'newName' is required.");
 		}
-
-		public void setNewName(String newName) {
-			this.newName = newName;
-		}
+		configurationFilesService.renameFile(oldName, newName);
+		return ResponseEntity.noContent().build(); // 204
 	}
 }

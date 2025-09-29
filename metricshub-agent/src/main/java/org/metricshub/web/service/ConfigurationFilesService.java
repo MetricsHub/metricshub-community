@@ -108,6 +108,7 @@ public class ConfigurationFilesService {
 	public String getFileContent(final String fileName) {
 		final Path dir = requireConfigDir();
 		final Path file = resolveSafeYaml(dir, fileName);
+		log.info("Reading config file: {}", file.toAbsolutePath());
 
 		if (!Files.exists(file)) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Configuration file not found.");
