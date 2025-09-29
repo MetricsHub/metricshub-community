@@ -9,30 +9,9 @@ description: Describes version-specific changes that may affect functionality, p
 
 ### Upgrading to v3.0.01
 
-#### OpenTelemetry Collector configuration
+#### Updating otel-config.yaml
 
-**MetricsHub Enterprise v3.0.01** leverages **version `0.136.0`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
-
-To avoid confusion, always refer to the example reference file `otel-config.example.yaml`:
-
-* **Linux (default):**
-  `/opt/metricshub/lib/otel/otel-config.example.yaml`
-
-* **Windows (default):**
-  `C:\Program Files\MetricsHub\otel\otel-config.example.yaml`
-
-* **Alternatively, download the latest example from:**
-  [otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)
-
-Your active configuration file `otel-config.yaml` is located at:
-
-* **Linux (default):**
-  `/opt/metricshub/lib/otel/otel-config.yaml`
-
-* **Windows (default):**
-  `C:\ProgramData\MetricsHub\otel\otel-config.yaml`
-
-Replace the following `service:` section in your `otel-config.yaml`:
+To guarantee the correct operation of **MetricsHub Enterprise v3.0.01**, you must replace the following `service:` section of your `otel-config.yaml` file:
 
 ```yaml
 service:
@@ -44,7 +23,7 @@ service:
       level: basic
 ```
 
-with the following section:
+with this one:
 
 ```yaml
 service:
@@ -58,8 +37,19 @@ service:
             exporter:
               prometheus:
                 host: '0.0.0.0'
-                port: 8888
 ```
+
+By default, the `otel-config.yaml` file is stored in:
+
+* `/opt/metricshub/lib/otel/otel-config.yaml` **(Linux)**
+* or `C:\ProgramData\MetricsHub\otel\otel-config.yaml` **(Windows)**.
+
+If you have any doubt, you can refer to the example files provided for the different operating systems:
+
+* `/opt/metricshub/lib/otel/otel-config-example.yaml` **(Linux)**
+* `C:\Program Files\MetricsHub\otel\otel-config-example.yaml` **(Windows)**
+
+or download the latest **[otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)** example.
 
 ### Upgrading to v2.0.00
 
