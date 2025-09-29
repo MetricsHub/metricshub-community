@@ -56,7 +56,7 @@ service:
       level: basic
 ```
 
-with the following structure:
+with the following section:
 
 ```yaml
 service:
