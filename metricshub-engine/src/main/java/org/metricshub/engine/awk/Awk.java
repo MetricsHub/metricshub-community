@@ -45,6 +45,9 @@ import org.metricshub.jawk.util.ScriptSource;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class Awk {
 
+	private static final org.metricshub.jawk.Awk AWK_COMPILER = new org.metricshub.jawk.Awk();
+	private static final String AWK_HEADER = "BEGIN { ORS = RS = \"\\n\"; }";
+
 	/**
 	 * Generates the "Awk Tuples", i.e. the intermediate Awk code
 	 * that can be interpreted afterward.
@@ -57,14 +60,14 @@ public class Awk {
 		// All scripts need to be prefixed with an extra statement that sets the Record Separator (RS)
 		// to the "normal" end-of-line (\n), because Jawk uses line.separator System property, which
 		// is \r\n on Windows, thus preventing it from splitting lines properly.
-		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"));
+		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader(AWK_HEADER));
 		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script));
 		final List<ScriptSource> sourceList = new ArrayList<>();
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
 		try {
-			return new org.metricshub.jawk.Awk().compile(sourceList);
+			return AWK_COMPILER.compile(sourceList);
 		} catch (IOException | ClassNotFoundException e) {
 			throw new ParseException(e.getMessage(), 0);
 		}
