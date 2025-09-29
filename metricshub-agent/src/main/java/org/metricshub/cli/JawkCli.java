@@ -24,7 +24,7 @@ package org.metricshub.cli;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import org.metricshub.jawk.Main;
+import org.metricshub.jawk.Cli;
 
 /**
  * Command-line interface for executing AWK scripts with validation.
@@ -52,8 +52,7 @@ public class JawkCli {
 	 */
 	public static void main(final String[] args, final InputStream in, final PrintStream out, final PrintStream err)
 		throws Exception {
-		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
-		Main.create(args, in, new ReplacingPrintStream(out), err);
+		Cli.create(args, in, new ReplacingPrintStream(out), err);
 	}
 
 	/**
