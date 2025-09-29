@@ -23,7 +23,7 @@ description: Describes version-specific changes that may affect functionality, p
 
 #### OpenTelemetry Collector configuration
 
-MetricsHub Enterprise leverages **version `0.136.0`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
+**MetricsHub Enterprise v3.0.01** leverages **version `0.136.0`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
 
 To avoid confusion, always refer to the example reference file `otel-config.example.yaml`:
 
