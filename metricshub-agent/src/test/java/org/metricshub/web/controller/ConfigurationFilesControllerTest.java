@@ -84,14 +84,12 @@ class ConfigurationFilesControllerTest {
 			.andExpect(content().json("[]"));
 	}
 
-	// -------------------- NEW TESTS --------------------
-
 	@Test
 	void testShouldGetFileContent() throws Exception {
 		when(configurationFilesService.getFileContent("metricshub.yaml")).thenReturn("key: value\n");
 
 		mockMvc
-			.perform(get("/api/config-files/content").param("name", "metricshub.yaml"))
+			.perform(get("/api/config-files/metricshub.yaml").accept(MediaType.TEXT_PLAIN))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
 			.andExpect(content().string("key: value\n"));
@@ -102,7 +100,7 @@ class ConfigurationFilesControllerTest {
 		when(configurationFilesService.getFileContent("missing.yaml"))
 			.thenThrow(new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Not Found"));
 
-		mockMvc.perform(get("/api/config-files/content").param("name", "missing.yaml")).andExpect(status().isNotFound());
+		mockMvc.perform(get("/api/config-files/missing.yaml")).andExpect(status().isNotFound());
 	}
 
 	@Test
@@ -111,8 +109,7 @@ class ConfigurationFilesControllerTest {
 
 		mockMvc
 			.perform(
-				put("/api/config-files/content")
-					.param("name", "metricshub.yaml")
+				put("/api/config-files/metricshub.yaml")
 					.contentType(MediaType.TEXT_PLAIN)
 					.content("test: noo\n".getBytes(StandardCharsets.UTF_8))
 			)
@@ -131,8 +128,7 @@ class ConfigurationFilesControllerTest {
 
 		mockMvc
 			.perform(
-				post("/api/config-files/content")
-					.param("name", "metricshub.yaml")
+				post("/api/config-files/metricshub.yaml")
 					.contentType(MediaType.TEXT_PLAIN)
 					.content("a: 1\n")
 					.accept(MediaType.APPLICATION_JSON)
@@ -153,7 +149,7 @@ class ConfigurationFilesControllerTest {
 		when(configurationFilesService.validateFile("metricshub.yaml", "x: 2\n")).thenReturn(result);
 
 		mockMvc
-			.perform(post("/api/config-files/content").param("name", "metricshub.yaml"))
+			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.valid").value(false))
 			.andExpect(jsonPath("$.errors[0]").value("Invalid YAML"));
@@ -163,9 +159,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldDeleteFile() throws Exception {
 		doNothing().when(configurationFilesService).deleteFile("metricshub.yaml");
 
-		mockMvc
-			.perform(delete("/api/config-files/content").param("name", "metricshub.yaml"))
-			.andExpect(status().isNoContent());
+		mockMvc.perform(delete("/api/config-files/metricshub.yaml")).andExpect(status().isNoContent());
 
 		verify(configurationFilesService).deleteFile("metricshub.yaml");
 	}
@@ -177,12 +171,7 @@ class ConfigurationFilesControllerTest {
 		String body = mapper.writeValueAsString(Map.of("newName", "new.yaml"));
 
 		mockMvc
-			.perform(
-				patch("/api/config-files/content")
-					.param("name", "old.yaml")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(body)
-			)
+			.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isNoContent());
 
 		verify(configurationFilesService).renameFile("old.yaml", "new.yaml");
@@ -193,12 +182,7 @@ class ConfigurationFilesControllerTest {
 		String body = mapper.writeValueAsString(Map.of()); // empty JSON
 
 		mockMvc
-			.perform(
-				patch("/api/config-files/content")
-					.param("name", "old.yaml")
-					.contentType(MediaType.APPLICATION_JSON)
-					.content(body)
-			)
+			.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
 			.andExpect(status().isBadRequest());
 	}
 }
