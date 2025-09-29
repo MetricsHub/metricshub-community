@@ -34,7 +34,7 @@ To avoid confusion, always refer to the example reference file `otel-config.exam
   `C:\Program Files\MetricsHub\otel\otel-config.example.yaml`
 
 * **Alternatively, download the latest example from:**
-  [https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)
+  [otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)
 
 Your active configuration file `otel-config.yaml` is located at:
 
