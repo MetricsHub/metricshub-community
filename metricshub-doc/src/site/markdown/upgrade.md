@@ -21,7 +21,27 @@ description: Describes version-specific changes that may affect functionality, p
 
 #### OpenTelemetry Collector configuration
 
-Use the `otel-config.example.yaml` shipped with this release as the version-aligned baseline.  
+MetricsHub Enterprise leverages **version `${otelVersion}`** of the OpenTelemetry Collector Contrib, which enhances and extends the configuration options of the `otel/otel-config.yaml` file.
+
+To avoid confusion, always refer to the example reference file `otel-config.example.yaml`:
+
+* **Linux (default):**
+  `/opt/metricshub/lib/otel/otel-config.example.yaml`
+
+* **Windows (default):**
+  `C:\Program Files\MetricsHub\otel\otel-config.example.yaml`
+
+* **Alternatively, download the latest example from:**
+  [https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)
+
+Your active configuration file `otel-config.yaml` is located at:
+
+* **Linux (default):**
+  `/opt/metricshub/lib/otel/otel-config.yaml`
+
+* **Windows (default):**
+  `C:\ProgramData\MetricsHub\otel\otel-config.yaml`
+
 Update `otel-config.yaml` as follows:
 
 from:
