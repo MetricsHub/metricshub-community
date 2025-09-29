@@ -37,7 +37,9 @@ service:
             exporter:
               prometheus:
                 host: '0.0.0.0'
+                port: 8888
 ```
+
 
 By default, the `otel-config.yaml` file is stored in:
 
