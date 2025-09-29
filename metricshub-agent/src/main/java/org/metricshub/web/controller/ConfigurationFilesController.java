@@ -88,27 +88,40 @@ public class ConfigurationFilesController {
 			throw ex;
 		} catch (Exception ex) {
 			throw new ResponseStatusException(
-				HttpStatus.INTERNAL_SERVER_ERROR,
-				"Unexpected error while reading file: " + ex.getMessage(),
-				ex
-			);
+					HttpStatus.INTERNAL_SERVER_ERROR,
+					"Unexpected error while reading file: " + ex.getMessage(),
+					ex);
 		}
 	}
 
+	/**
+	 * Endpoint to create or update a configuration file.
+	 * 
+	 * @param fileName the name of the configuration file to create or update.
+	 * @param content  the content to write to the configuration file.
+	 * @return a ResponseEntity with a success message.
+	 */
 	@PutMapping(value = "/content")
 	public ResponseEntity<String> saveOrUpdateConfigurationFile(
-		@RequestParam("name") String fileName,
-		@RequestBody(required = false) String content
-	) {
+			@RequestParam("name") String fileName,
+			@RequestBody(required = false) String content) {
 		configurationFilesService.saveOrUpdateFile(fileName, content);
 		return ResponseEntity.ok("Configuration file saved successfully.");
 	}
 
+	/**
+	 * Endpoint to validate a configuration file's content.
+	 * If no content is provided in the request body, the file currently on disk
+	 * 
+	 * @param fileName the name of the configuration file to validate.
+	 * @param content  the content to validate; if null, validates the file on disk.
+	 * @return an ObjectNode containing validation results.
+	 * @throws ResponseStatusException with status 404 if the file is not found,
+	 */
 	@PostMapping(value = "/content", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<ObjectNode> validateConfigurationFile(
-		@RequestParam("name") String fileName,
-		@RequestBody(required = false) String content
-	) {
+			@RequestParam("name") String fileName,
+			@RequestBody(required = false) String content) {
 		// If no body is provided, validate the file currently on disk
 		if (content == null) {
 			content = configurationFilesService.getFileContent(fileName);
@@ -116,17 +129,32 @@ public class ConfigurationFilesController {
 		return ResponseEntity.ok(configurationFilesService.validateFile(fileName, content));
 	}
 
+	/**
+	 * Endpoint to delete a configuration file by its name.
+	 * 
+	 * @param fileName the name of the configuration file to delete.
+	 * @return a ResponseEntity with no content.
+	 * @throws ResponseStatusException with status 404 if the file is not found.
+	 */
 	@DeleteMapping(value = "/content")
 	public ResponseEntity<Void> deleteConfigurationFile(@RequestParam("name") String fileName) {
 		configurationFilesService.deleteFile(fileName);
 		return ResponseEntity.noContent().build();
 	}
 
+	/**
+	 * Endpoint to rename a configuration file.
+	 * 
+	 * @param oldName the current name of the configuration file.
+	 * @param body    a map containing the new name with key "newName".
+	 * @return a ResponseEntity with no content.
+	 * @throws ResponseStatusException with status 400 if the new name is missing or
+	 *                                 invalid
+	 */
 	@PatchMapping(value = "/content")
 	public ResponseEntity<Void> renameConfigurationFile(
-		@RequestParam("name") String oldName,
-		@RequestBody Map<String, String> body
-	) {
+			@RequestParam("name") String oldName,
+			@RequestBody Map<String, String> body) {
 		final String newName = body == null ? null : body.get("newName");
 		if (newName == null || newName.isBlank()) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Field 'newName' is required.");
