@@ -76,11 +76,11 @@ class ConfigurationFilesServiceTest {
 	}
 
 	@Test
-	void testShouldReturnEmptyListWhenNoAgentContext() {
+	void testGetAllConfigurationFiles_serviceUnavailable() {
 		final ConfigurationFilesService service = newServiceWithNoContext();
 
-		final List<ConfigurationFile> files = service.getAllConfigurationFiles();
-		assertEquals(0, files.size(), "Should return empty list when AgentContext is null");
+		ResponseStatusException ex = assertThrows(ResponseStatusException.class, service::getAllConfigurationFiles);
+		assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), ex.getStatusCode().value());
 	}
 
 	// ---------- new tests ----------

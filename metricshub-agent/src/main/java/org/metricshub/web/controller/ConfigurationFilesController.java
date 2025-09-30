@@ -21,7 +21,6 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Map;
 import org.metricshub.web.dto.ConfigurationFile;
@@ -96,8 +95,18 @@ public class ConfigurationFilesController {
 	@PutMapping(value = "/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> saveOrUpdateConfigurationFile(
 		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@RequestBody(required = false) String content,
+		@org.springframework.web.bind.annotation.RequestParam(
+			name = "skipValidation",
+			defaultValue = "false"
+		) boolean skipValidation
 	) {
+		if (!skipValidation) {
+			var v = configurationFilesService.validate(content, fileName);
+			if (!v.isValid()) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getError());
+			}
+		}
 		configurationFilesService.saveOrUpdateFile(fileName, content);
 		return ResponseEntity.ok("Configuration file saved successfully.");
 	}
@@ -116,16 +125,14 @@ public class ConfigurationFilesController {
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
-	public ResponseEntity<ObjectNode> validateConfigurationFile(
+	public ResponseEntity<ConfigurationFilesService.Validation> validateConfigurationFile(
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content
 	) {
-		// If no body is provided, validate the file currently on disk
 		if (content == null) {
 			content = configurationFilesService.getFileContent(fileName);
 		}
-
-		return ResponseEntity.ok(configurationFilesService.validateFile(fileName, content));
+		return ResponseEntity.ok(configurationFilesService.validate(content, fileName));
 	}
 
 	/**

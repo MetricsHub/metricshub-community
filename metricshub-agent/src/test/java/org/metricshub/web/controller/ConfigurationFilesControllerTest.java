@@ -109,7 +109,7 @@ class ConfigurationFilesControllerTest {
 
 		mockMvc
 			.perform(
-				put("/api/config-files/metricshub.yaml")
+				put("/api/config-files/metricshub.yaml?skipValidation=true")
 					.contentType(MediaType.TEXT_PLAIN)
 					.content("test: noo\n".getBytes(StandardCharsets.UTF_8))
 			)
@@ -124,7 +124,8 @@ class ConfigurationFilesControllerTest {
 		ObjectNode result = JsonNodeFactory.instance.objectNode();
 		result.put("valid", true).putArray("errors");
 
-		when(configurationFilesService.validateFile("metricshub.yaml", "a: 1\n")).thenReturn(result);
+		when(configurationFilesService.validate("a: 1\n", "metricshub.yaml"))
+			.thenReturn(ConfigurationFilesService.Validation.ok("metricshub.yaml"));
 
 		mockMvc
 			.perform(
@@ -134,9 +135,10 @@ class ConfigurationFilesControllerTest {
 					.accept(MediaType.APPLICATION_JSON)
 			)
 			.andExpect(status().isOk())
-			.andExpect(content().contentType(MediaType.APPLICATION_JSON))
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.fileName").value("metricshub.yaml"))
 			.andExpect(jsonPath("$.valid").value(true))
-			.andExpect(jsonPath("$.errors").isArray());
+			.andExpect(jsonPath("$.error").doesNotExist());
 	}
 
 	@Test
@@ -146,13 +148,17 @@ class ConfigurationFilesControllerTest {
 		ObjectNode result = JsonNodeFactory.instance.objectNode();
 		result.put("valid", false).putArray("errors").add("Invalid YAML");
 
-		when(configurationFilesService.validateFile("metricshub.yaml", "x: 2\n")).thenReturn(result);
+		when(configurationFilesService.getFileContent("metricshub.yaml")).thenReturn("x: 2\n");
+		when(configurationFilesService.validate("x: 2\n", "metricshub.yaml"))
+			.thenReturn(ConfigurationFilesService.Validation.fail("metricshub.yaml", "Invalid YAML"));
 
 		mockMvc
 			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.fileName").value("metricshub.yaml"))
 			.andExpect(jsonPath("$.valid").value(false))
-			.andExpect(jsonPath("$.errors[0]").value("Invalid YAML"));
+			.andExpect(jsonPath("$.error").value("Invalid YAML"));
 	}
 
 	@Test
