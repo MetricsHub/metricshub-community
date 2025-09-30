@@ -79,24 +79,22 @@ public class ConfigurationFilesService {
 	 *         files.
 	 */
 	public List<ConfigurationFile> getAllConfigurationFiles() {
-		final var agentContext = agentContextHolder.getAgentContext();
-		if (agentContext != null) {
-			final var configurationDirectory = agentContext.getConfigDirectory();
-			// List all the files
-			try (
-				Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH, ConfigurationFilesService::isRegularYamlFile)
-			) {
-				return files
+		final Path configurationDirectory = requireConfigDir();
+
+		try (Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH,
+				ConfigurationFilesService::isRegularYamlFile)) {
+			return files
 					.map(this::buildConfigurationFile)
 					.filter(Objects::nonNull)
 					.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
 					.toList();
-			} catch (Exception e) {
-				log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory, e.getMessage());
-				log.debug("Failed to list configuration directory: '{}'. Exception:", configurationDirectory, e);
-			}
+		} catch (Exception e) {
+			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory,
+					e.getMessage());
+			log.debug("Failed to list configuration directory: '{}'. Exception:", configurationDirectory, e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to list configuration files.",
+					e);
 		}
-		return List.of();
 	}
 
 	/**
@@ -118,7 +116,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to read configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to read configuration file: '{}'. Exception:", file, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read configuration file.", e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read configuration file.",
+					e);
 		}
 	}
 
@@ -137,11 +136,10 @@ public class ConfigurationFilesService {
 			// Write to a temp file, then move atomically
 			final Path tmp = Files.createTempFile(dir, fileName + ".", ".tmp");
 			Files.writeString(
-				tmp,
-				content == null ? "" : content,
-				StandardCharsets.UTF_8,
-				StandardOpenOption.TRUNCATE_EXISTING
-			);
+					tmp,
+					content == null ? "" : content,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.TRUNCATE_EXISTING);
 			try {
 				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (AtomicMoveNotSupportedException amnse) {
@@ -150,7 +148,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to save configuration file: '{}'. Error: {}", target, e.getMessage());
 			log.debug("Failed to save configuration file: '{}'. Exception:", target, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save configuration file.", e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save configuration file.",
+					e);
 		}
 	}
 
@@ -198,7 +197,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to delete configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to delete configuration file: '{}'. Exception:", file, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete configuration file.", e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete configuration file.",
+					e);
 		}
 	}
 
@@ -228,7 +228,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to rename configuration file: '{}' -> '{}'. Error: {}", source, target, e.getMessage());
 			log.debug("Failed to rename configuration file: '{}' -> '{}'. Exception:", source, target, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to rename configuration file.", e);
+			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to rename configuration file.",
+					e);
 		}
 	}
 
@@ -255,11 +256,11 @@ public class ConfigurationFilesService {
 	private ConfigurationFile buildConfigurationFile(final Path path) {
 		try {
 			return ConfigurationFile
-				.builder()
-				.name(path.getFileName().toString())
-				.size(Files.size(path))
-				.lastModificationTime(Files.getLastModifiedTime(path).toString())
-				.build();
+					.builder()
+					.name(path.getFileName().toString())
+					.size(Files.size(path))
+					.lastModificationTime(Files.getLastModifiedTime(path).toString())
+					.build();
 		} catch (IOException e) {
 			log.error("Failed to read configuration file metadata: '{}'. Error: {}", path, e.getMessage());
 			log.debug("Failed to read configuration file metadata: '{}'. Exception:", path, e);
@@ -313,7 +314,8 @@ public class ConfigurationFilesService {
 	private Path requireConfigDir() {
 		final var agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null || agentContext.getConfigDirectory() == null) {
-			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Configuration directory is not available.");
+			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+					"Configuration directory is not available.");
 		}
 		return agentContext.getConfigDirectory();
 	}
