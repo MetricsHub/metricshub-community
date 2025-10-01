@@ -21,7 +21,9 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.Map;
 import org.metricshub.web.dto.ErrorResponse;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -41,7 +43,7 @@ public class RestExceptionHandler {
 	/**
 	 * Handle UnauthorizedException exceptions.
 	 *
-	 * @param <T>  the type of the exception
+	 * @param <T>       the type of the exception
 	 * @param exception the exception to handle
 	 * @return a ResponseEntity containing the error response
 	 */
@@ -55,7 +57,8 @@ public class RestExceptionHandler {
 
 	/**
 	 * Handle AccessDeniedException exceptions.
-	 * @param <T> the type of the exception
+	 *
+	 * @param <T>       the type of the exception
 	 * @param exception the exception to handle
 	 * @return a ResponseEntity containing the error response
 	 */
@@ -65,5 +68,35 @@ public class RestExceptionHandler {
 			ErrorResponse.builder().httpStatus(HttpStatus.FORBIDDEN).message(exception.getMessage()).build(),
 			HttpStatus.FORBIDDEN
 		);
+	}
+
+	@ExceptionHandler(ConfigFilesException.class)
+	public ResponseEntity<Map<String, Object>> handleConfigFilesException(ConfigFilesException ex) {
+		Map<String, Object> body = Map.of("error", ex.getCode().name(), "message", ex.getMessage());
+
+		HttpStatus status;
+		switch (ex.getCode()) {
+			case CONFIG_DIR_UNAVAILABLE:
+				status = HttpStatus.SERVICE_UNAVAILABLE;
+				break;
+			case FILE_NOT_FOUND:
+				status = HttpStatus.NOT_FOUND;
+				break;
+			case INVALID_FILE_NAME:
+			case INVALID_EXTENSION:
+			case INVALID_PATH:
+			case VALIDATION_FAILED:
+				status = HttpStatus.BAD_REQUEST;
+				break;
+			case TARGET_EXISTS:
+				status = HttpStatus.CONFLICT;
+				break;
+			case IO_FAILURE:
+			default:
+				status = HttpStatus.INTERNAL_SERVER_ERROR;
+				break;
+		}
+
+		return ResponseEntity.status(status).body(body);
 	}
 }

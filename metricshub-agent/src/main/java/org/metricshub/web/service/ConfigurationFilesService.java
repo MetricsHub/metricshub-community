@@ -47,10 +47,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConfigurationFile;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.MarkedYAMLException;
 
@@ -86,7 +85,7 @@ public class ConfigurationFilesService {
 	 *         files.
 	 */
 	public List<ConfigurationFile> getAllConfigurationFiles() {
-		final Path configurationDirectory = requireConfigDir();
+		final Path configurationDirectory = getConfigDir();
 
 		try (
 			Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH, ConfigurationFilesService::isRegularYamlFile)
@@ -99,7 +98,7 @@ public class ConfigurationFilesService {
 		} catch (Exception e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configurationDirectory, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to list configuration files.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list configuration files.", e);
 		}
 	}
 
@@ -110,19 +109,19 @@ public class ConfigurationFilesService {
 	 * @return file content
 	 */
 	public String getFileContent(final String fileName) {
-		final Path dir = requireConfigDir();
+		final Path dir = getConfigDir();
 		final Path file = resolveSafeYaml(dir, fileName);
 		log.info("Reading config file: {}", file.toAbsolutePath());
 
 		if (!Files.exists(file)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Configuration file not found.");
+			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Configuration file not found.");
 		}
 		try {
 			return Files.readString(file, StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			log.error("Failed to read configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to read configuration file: '{}'. Exception:", file, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read configuration file.", e);
 		}
 	}
 
@@ -133,7 +132,7 @@ public class ConfigurationFilesService {
 	 * @param content  the content to write
 	 */
 	public void saveOrUpdateFile(final String fileName, final String content) {
-		final Path dir = requireConfigDir();
+		final Path dir = getConfigDir();
 		final Path target = resolveSafeYaml(dir, fileName);
 
 		try {
@@ -156,7 +155,7 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to save configuration file: '{}'. Error: {}", target, e.getMessage());
 			log.debug("Failed to save configuration file: '{}'. Exception:", target, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to save configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save configuration file.", e);
 		}
 	}
 
@@ -193,14 +192,14 @@ public class ConfigurationFilesService {
 		try {
 			yaml.load(content == null ? "" : content);
 		} catch (MarkedYAMLException ye) {
-			throw new ResponseStatusException(
-				HttpStatus.BAD_REQUEST,
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
 				safeMessage("YAML syntax error in '%s': %s".formatted(fileName, ye.getMessage())),
 				ye
 			);
 		} catch (Exception e) {
-			throw new ResponseStatusException(
-				HttpStatus.BAD_REQUEST,
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
 				safeMessage("Validation error in '%s': %s".formatted(fileName, e.getMessage())),
 				e
 			);
@@ -213,19 +212,17 @@ public class ConfigurationFilesService {
 	 * @param fileName the configuration file name
 	 */
 	public void deleteFile(final String fileName) {
-		final Path dir = requireConfigDir();
+		final Path dir = getConfigDir();
 		final Path file = resolveSafeYaml(dir, fileName);
 
 		try {
 			if (!Files.deleteIfExists(file)) {
-				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Configuration file not found.");
+				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Configuration file not found.");
 			}
-		} catch (ResponseStatusException rse) {
-			throw rse;
 		} catch (IOException e) {
 			log.error("Failed to delete configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to delete configuration file: '{}'. Exception:", file, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete configuration file.", e);
 		}
 	}
 
@@ -236,16 +233,17 @@ public class ConfigurationFilesService {
 	 * @param newName target file name (must be .yml/.yaml and not exist)
 	 */
 	public void renameFile(final String oldName, final String newName) {
-		final Path dir = requireConfigDir();
+		final Path dir = getConfigDir();
 		final Path source = resolveSafeYaml(dir, oldName);
 		final Path target = resolveSafeYaml(dir, newName);
 
 		if (!Files.exists(source)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Source configuration file not found.");
+			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Source configuration file not found.");
 		}
 		if (Files.exists(target)) {
-			throw new ResponseStatusException(HttpStatus.CONFLICT, "Target file name already exists.");
+			throw new ConfigFilesException(ConfigFilesException.Code.TARGET_EXISTS, "Target file name already exists.");
 		}
+
 		try {
 			try {
 				Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
@@ -255,11 +253,9 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to rename configuration file: '{}' -> '{}'. Error: {}", source, target, e.getMessage());
 			log.debug("Failed to rename configuration file: '{}' -> '{}'. Exception:", source, target, e);
-			throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to rename configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.", e);
 		}
 	}
-
-	/* =========================== Internals =========================== */
 
 	/**
 	 * Checks if the given path is a regular file with a YAML extension.
@@ -316,22 +312,25 @@ public class ConfigurationFilesService {
 	 */
 	private Path resolveSafeYaml(final Path baseDir, final String fileName) {
 		if (fileName == null || fileName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File name is required.");
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "File name is required.");
 		}
 		if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file name.");
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "Invalid file name.");
 		}
 
 		final var lower = fileName.toLowerCase(Locale.ROOT);
 		if (YAML_EXTENSIONS.stream().noneMatch(lower::endsWith)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only .yml or .yaml files are allowed.");
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.INVALID_EXTENSION,
+				"Only .yml or .yaml files are allowed."
+			);
 		}
 
 		final Path normalizedBase = baseDir.normalize();
 		final Path resolved = normalizedBase.resolve(fileName).normalize();
 
 		if (!resolved.startsWith(normalizedBase)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path.");
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_PATH, "Invalid file path.");
 		}
 		return resolved;
 	}
@@ -341,10 +340,13 @@ public class ConfigurationFilesService {
 	 *
 	 * @return configuration directory path
 	 */
-	private Path requireConfigDir() {
+	private Path getConfigDir() {
 		final var agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null || agentContext.getConfigDirectory() == null) {
-			throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Configuration directory is not available.");
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE,
+				"Configuration directory is not available."
+			);
 		}
 		return agentContext.getConfigDirectory();
 	}

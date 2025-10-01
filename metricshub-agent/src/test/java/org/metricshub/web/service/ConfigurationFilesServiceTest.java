@@ -3,7 +3,6 @@ package org.metricshub.web.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,9 +13,8 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConfigurationFile;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.mockito.Mockito;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 class ConfigurationFilesServiceTest {
 
@@ -39,11 +37,10 @@ class ConfigurationFilesServiceTest {
 		return new ConfigurationFilesService(holder);
 	}
 
-	// ---------- existing tests (kept) ----------
+	// ---------- tests ----------
 
 	@Test
 	void testShouldListYamlFilesAtDepthOneSorted() throws Exception {
-		// Create files in the temp config directory
 		final Path aYml = tempConfigDir.resolve("a.yml");
 		final Path bYaml = tempConfigDir.resolve("B.yaml");
 		final Path notYaml = tempConfigDir.resolve("ignore.txt");
@@ -79,11 +76,9 @@ class ConfigurationFilesServiceTest {
 	void testGetAllConfigurationFiles_serviceUnavailable() {
 		final ConfigurationFilesService service = newServiceWithNoContext();
 
-		ResponseStatusException ex = assertThrows(ResponseStatusException.class, service::getAllConfigurationFiles);
-		assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), ex.getStatusCode().value());
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, service::getAllConfigurationFiles);
+		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode());
 	}
-
-	// ---------- new tests ----------
 
 	@Test
 	void testGetFileContent_ok() throws Exception {
@@ -99,35 +94,27 @@ class ConfigurationFilesServiceTest {
 	void testGetFileContent_notFound() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ResponseStatusException ex = assertThrows(
-			ResponseStatusException.class,
-			() -> service.getFileContent("missing.yaml")
-		);
-		assertEquals(404, ex.getStatusCode().value());
-		assertTrue(ex.getReason().contains("not found"));
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("missing.yaml"));
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
+		assertTrue(ex.getMessage().toLowerCase().contains("not found"));
 	}
 
 	@Test
 	void testGetFileContent_invalidName_rejectTraversal() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ResponseStatusException ex = assertThrows(
-			ResponseStatusException.class,
-			() -> service.getFileContent("../evil.yaml")
-		);
-		assertEquals(HttpStatus.BAD_REQUEST.value(), ex.getStatusCode().value());
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("../evil.yaml"));
+		// The service rejects traversal early as INVALID_FILE_NAME
+		assertEquals(ConfigFilesException.Code.INVALID_FILE_NAME, ex.getCode());
 	}
 
 	@Test
 	void testGetFileContent_invalidExtension() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ResponseStatusException ex = assertThrows(
-			ResponseStatusException.class,
-			() -> service.getFileContent("config.txt")
-		);
-		assertEquals(HttpStatus.BAD_REQUEST.value(), ex.getStatusCode().value());
-		assertTrue(ex.getReason().contains(".yml") || ex.getReason().contains(".yaml"));
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("config.txt"));
+		assertEquals(ConfigFilesException.Code.INVALID_EXTENSION, ex.getCode());
+		assertTrue(ex.getMessage().contains(".yml") || ex.getMessage().contains(".yaml"));
 	}
 
 	@Test
@@ -158,7 +145,7 @@ class ConfigurationFilesServiceTest {
 		// invalid
 		ObjectNode bad = service.validateFile("bad.yaml", "k: : v\n list: [ 1, 2");
 		assertFalse(bad.get("valid").asBoolean());
-		JsonNode errors = bad.get("errors");
+		var errors = bad.get("errors");
 		assertTrue(errors.isArray());
 		assertTrue(errors.size() >= 1);
 		assertTrue(errors.get(0).asText().toLowerCase().contains("yaml"));
@@ -178,8 +165,8 @@ class ConfigurationFilesServiceTest {
 	void testDeleteFile_missing() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.deleteFile("nope.yml"));
-		assertEquals(HttpStatus.NOT_FOUND.value(), ex.getStatusCode().value());
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.deleteFile("nope.yml"));
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
 	}
 
 	@Test
@@ -200,11 +187,11 @@ class ConfigurationFilesServiceTest {
 	void testRenameFile_sourceMissing() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ResponseStatusException ex = assertThrows(
-			ResponseStatusException.class,
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
 			() -> service.renameFile("absent.yaml", "new.yaml")
 		);
-		assertEquals(HttpStatus.NOT_FOUND.value(), ex.getStatusCode().value());
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
 	}
 
 	@Test
@@ -215,21 +202,17 @@ class ConfigurationFilesServiceTest {
 		Files.writeString(src, "x: 1");
 		Files.writeString(dst, "x: 2");
 
-		ResponseStatusException ex = assertThrows(
-			ResponseStatusException.class,
-			() -> service.renameFile("a.yaml", "b.yaml")
-		);
-		assertEquals(HttpStatus.CONFLICT.value(), ex.getStatusCode().value());
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.renameFile("a.yaml", "b.yaml"));
+		assertEquals(ConfigFilesException.Code.TARGET_EXISTS, ex.getCode());
 	}
 
 	@Test
 	void testRequireConfigDir_unavailable() {
-		// holder returns null; any public method that accesses config dir should 503
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		when(holder.getAgentContext()).thenReturn(null);
 		final ConfigurationFilesService service = new ConfigurationFilesService(holder);
 
-		ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> service.getFileContent("x.yaml"));
-		assertEquals(HttpStatus.SERVICE_UNAVAILABLE.value(), ex.getStatusCode().value());
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("x.yaml"));
+		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode());
 	}
 }
