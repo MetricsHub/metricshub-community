@@ -117,7 +117,7 @@ public class ExecuteSnmpQueryService {
 		queryNode.set("oid", new TextNode(oid));
 
 		// add the columns if an SNMP table query is invoked.
-		if (action.equals("table") && columns != null) {
+		if (action.equalsIgnoreCase("table") && columns != null) {
 			final ArrayNode columnsNode = JsonNodeFactory.instance.arrayNode();
 
 			try {
