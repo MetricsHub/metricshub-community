@@ -44,7 +44,7 @@ import org.springframework.stereotype.Service;
 public class ExecuteSnmpQueryService {
 
 	/**
-	 *
+	 * The set of SNMP accepted queries.
 	 */
 	private static final Set<String> SNMP_METHODS = Set.of("get", "getnext", "walk", "table");
 	/**
