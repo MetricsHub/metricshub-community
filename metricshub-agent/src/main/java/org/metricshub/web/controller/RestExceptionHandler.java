@@ -21,7 +21,6 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Map;
 import org.metricshub.web.dto.ErrorResponse;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.UnauthorizedException;
@@ -50,9 +49,8 @@ public class RestExceptionHandler {
 	@ExceptionHandler({ UnauthorizedException.class })
 	protected <T extends UnauthorizedException> ResponseEntity<Object> handleUnauthorizedException(final T exception) {
 		return new ResponseEntity<>(
-			ErrorResponse.builder().httpStatus(HttpStatus.UNAUTHORIZED).message(exception.getMessage()).build(),
-			HttpStatus.UNAUTHORIZED
-		);
+				ErrorResponse.builder().httpStatus(HttpStatus.UNAUTHORIZED).message(exception.getMessage()).build(),
+				HttpStatus.UNAUTHORIZED);
 	}
 
 	/**
@@ -65,15 +63,12 @@ public class RestExceptionHandler {
 	@ExceptionHandler({ AccessDeniedException.class })
 	protected <T extends RuntimeException> ResponseEntity<Object> handleAccessDeniedException(final T exception) {
 		return new ResponseEntity<>(
-			ErrorResponse.builder().httpStatus(HttpStatus.FORBIDDEN).message(exception.getMessage()).build(),
-			HttpStatus.FORBIDDEN
-		);
+				ErrorResponse.builder().httpStatus(HttpStatus.FORBIDDEN).message(exception.getMessage()).build(),
+				HttpStatus.FORBIDDEN);
 	}
 
 	@ExceptionHandler(ConfigFilesException.class)
-	public ResponseEntity<Map<String, Object>> handleConfigFilesException(ConfigFilesException ex) {
-		Map<String, Object> body = Map.of("error", ex.getCode().name(), "message", ex.getMessage());
-
+	protected ResponseEntity<Object> handleConfigFilesException(final ConfigFilesException ex) {
 		HttpStatus status;
 		switch (ex.getCode()) {
 			case CONFIG_DIR_UNAVAILABLE:
@@ -97,6 +92,16 @@ public class RestExceptionHandler {
 				break;
 		}
 
-		return ResponseEntity.status(status).body(body);
+		final String message = (ex.getMessage() != null && !ex.getMessage().isEmpty())
+				? ex.getMessage()
+				: ex.getCode().name();
+
+		return new ResponseEntity<>(
+				ErrorResponse.builder()
+						.httpStatus(status)
+						.message(message)
+						.build(),
+				status);
 	}
+
 }
