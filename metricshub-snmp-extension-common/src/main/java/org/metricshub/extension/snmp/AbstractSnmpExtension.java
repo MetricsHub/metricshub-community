@@ -64,7 +64,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	public static final String SNMP_OID = "1.3.6.1";
 
 	public static final String GET = "get";
-	public static final String GET_NEXT = "getNext";
+	public static final String GET_NEXT = "getnext";
 	public static final String WALK = "walk";
 	public static final String TABLE = "table";
 
@@ -195,7 +195,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 
 		final AbstractSnmpRequestExecutor executor = getRequestExecutor();
 		try {
-			switch (action) {
+			switch (action.toLowerCase()) {
 				case GET:
 					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false);
 					break;
