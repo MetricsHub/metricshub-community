@@ -20,11 +20,13 @@ package org.metricshub.engine.connector.model.monitor;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
+import java.util.Map;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.monitor.task.AbstractCollect;
 import org.metricshub.engine.connector.model.monitor.task.Discovery;
 
@@ -49,8 +51,13 @@ public class StandardMonitorJob extends AbstractMonitorJob {
 	 * @param collect The collect instance for the monitor job.
 	 */
 	@Builder(builderMethodName = "standardBuilder")
-	public StandardMonitorJob(final Set<String> keys, final Discovery discovery, final AbstractCollect collect) {
-		super(keys);
+	public StandardMonitorJob(
+		final Set<String> keys,
+		final Discovery discovery,
+		final AbstractCollect collect,
+		final Map<String, MetricDefinition> metrics
+	) {
+		super(keys, metrics);
 		this.discovery = discovery;
 		this.collect = collect;
 	}
