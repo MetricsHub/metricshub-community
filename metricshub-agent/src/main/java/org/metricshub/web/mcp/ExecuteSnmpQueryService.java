@@ -62,6 +62,15 @@ public class ExecuteSnmpQueryService {
 		this.agentContextHolder = agentContextHolder;
 	}
 
+	/**
+	 * Executes an SNMP query on the given host.
+	 *
+	 * @param hostname  target host name
+	 * @param queryType SNMP queries to execute: get, getNext, walk, or table
+	 * @param oid       SNMP OID used in the request
+	 * @param columns   comma-separated column indexes; required when {@code queryType} is {@code "table"}, ignored otherwise
+	 * @return a {@link QueryResponse} containing the result or an error message
+	 */
 	@Tool(
 		name = "ExecuteSnmpQuery",
 		description = """
