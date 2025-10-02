@@ -7,16 +7,7 @@ import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 
 import { useNavigate, NavLink } from "react-router-dom";
-import {
-	AppBar,
-	Box,
-	IconButton,
-	Tooltip,
-	CssBaseline,
-	Toolbar,
-	Typography,
-	Button,
-} from "@mui/material";
+import { AppBar, Box, CssBaseline, Toolbar, Typography, Button } from "@mui/material";
 
 import { useAppDispatch } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
@@ -62,7 +53,7 @@ const NavBar = ({ toggleTheme }) => {
 		minWidth: 90,
 		color: "text.primary",
 		borderBottom: "2px solid transparent",
-		"&:hover": { bgcolor: "action.hover" },
+		"&:hover": { bgcolor: "action.hover", color: "text.primary" },
 		"&.active": (t) => ({
 			bgcolor: t.palette.action.selected,
 			borderBottomColor: t.palette.primary.main,
@@ -77,7 +68,7 @@ const NavBar = ({ toggleTheme }) => {
 				position="sticky"
 				elevation={1}
 				sx={(t) => ({
-					bgcolor: t.palette.background.paper,
+					bgcolor: t.palette.background.default,
 					color: t.palette.text.primary,
 					borderBottom: `1px solid ${t.palette.divider}`,
 					boxShadow: "none",
@@ -95,10 +86,10 @@ const NavBar = ({ toggleTheme }) => {
 
 						{/* Navigation Buttons */}
 						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
-							<Button component={NavLink} to={paths.explorer} sx={navBtnSx}>
+							<Button component={NavLink} size="large" to={paths.explorer} sx={navBtnSx}>
 								Explorer
 							</Button>
-							<Button component={NavLink} to={paths.configuration} sx={navBtnSx}>
+							<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
 								Configuration
 							</Button>
 						</Box>
@@ -107,13 +98,13 @@ const NavBar = ({ toggleTheme }) => {
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
 						{user && (
-							<Typography variant="body2" sx={{ mr: 1, opacity: 0.75 }}>
+							<Typography variant="body1" sx={{ mr: 1 }}>
 								{`Signed in as ${user.username}`}
 							</Typography>
 						)}
 						<StatusDetailsMenu />
-						<ToggleTheme onClick={toggleTheme} />
 						<Logout onClick={handleSignOut} />
+						<ToggleTheme onClick={toggleTheme} />
 					</Box>
 				</Toolbar>
 			</AppBar>

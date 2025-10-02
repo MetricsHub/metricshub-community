@@ -7,7 +7,6 @@ import { SplitScreen, Left, Right } from "../components/split-screen/split-scree
  * Monitor page component
  * @returns JSX.Element
  */
-// eslint-disable-next-line react-refresh/only-export-components
 const ExplorerPage = () => {
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -22,5 +21,4 @@ const ExplorerPage = () => {
 };
 
 // Wrap with AuthGuard
-// eslint-disable-next-line react-refresh/only-export-components
 export default withAuthGuard(ExplorerPage);

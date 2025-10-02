@@ -1,14 +1,11 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { Box, Stack, Typography, IconButton, Tooltip, Chip } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
-import CheckIcon from "@mui/icons-material/Check";
 import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
-import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
-import { linter, lintGutter } from "@codemirror/lint";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
 import YAML from "yaml";
@@ -22,45 +19,30 @@ service:
   enabled: true
 `;
 
-function createYamlLinter() {
-	return linter((view) => {
-		const text = view.state.doc.toString();
-		if (!text.trim()) return [];
-		try {
-			YAML.parse(text);
-			return [];
-		} catch (e) {
-			const from = e.pos ?? 0;
-			return [
-				{
-					from,
-					to: from,
-					message: e.message || "YAML parse error",
-					severity: "error",
-				},
-			];
-		}
-	});
-}
-
+/**
+ * YAML Editor component
+ * Props:
+ * - value?: string
+ * - onChange?: (val: string) => void
+ * - onSave?: (val: string) => void
+ * - height?: CSS height (default "100%")
+ * - readOnly?: boolean (default false)
+ */
 export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
 	const theme = useTheme();
 
-	// Load initial value from localStorage OR prop OR default
 	const [doc, setDoc] = useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
 		return stored ?? value ?? DEFAULT_YAML;
 	});
-	const [hasError, setHasError] = useState(false);
 
-	// Visual cue state for explicit "Validate" clicks
 	const [validateResult, setValidateResult] = useState(null); // "ok" | "error" | null
 	const [showValidateCue, setShowValidateCue] = useState(false);
-	const validateTimerRef = useRef(null);
+	const debounceRef = useRef(null); // for live validation debounce
 
 	// Sync external value if provided
 	useEffect(() => {
-		if (typeof value === "string") {
+		if (value != null) {
 			setDoc(value);
 			localStorage.setItem(LOCAL_STORAGE_KEY, value);
 		}
@@ -71,82 +53,81 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
-	// Clear timeout on unmount
+	// Cleanup timers on unmount
 	useEffect(() => {
 		return () => {
-			if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
+			if (debounceRef.current) clearTimeout(debounceRef.current);
 		};
 	}, []);
 
+	/**
+	 * CodeMirror extensions, memoized to avoid re-creating on every render.
+	 * Includes YAML language support, linting, history, and keymaps.
+	 */
 	const extensions = useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
-		// Ctrl+S to save when onSave implemented
 		if (onSave) {
-			km.push({
+			km.unshift({
 				key: "Mod-s",
 				preventDefault: true,
-				run: () => {
-					onSave(doc);
+				run: (view) => {
+					onSave(view.state.doc.toString());
 					return true;
 				},
 			});
 		}
-		return [
-			cmYaml(),
-			lintGutter(),
-			createYamlLinter(),
-			history(), // enables undo/redo stack
-			keymap.of(km), // binds Ctrl/Cmd+Z and Ctrl+Y / Cmd+Shift+Z
-		];
-	}, [onSave, doc]);
+		return [cmYaml(), history(), keymap.of(km)];
+	}, [onSave]);
 
+	/**
+	 * Handle document changes.
+	 * Updates local state, performs live validation, and calls onChange prop if provided.
+	 */
 	const handleChange = useCallback(
 		(val) => {
+			setShowValidateCue(false);
 			setDoc(val);
-			// live validation for icon
-			try {
-				if (val.trim()) YAML.parse(val);
-				setHasError(false);
-			} catch {
-				setHasError(true);
-			}
-			onChange && onChange(val);
+			onChange?.(val);
 		},
 		[onChange],
 	);
 
+	/** Runs actual validation (chip feedback) */
+	const runValidation = useCallback(() => {
+		try {
+			if (doc.trim()) YAML.parse(doc);
+			setValidateResult("ok");
+		} catch {
+			setValidateResult("error");
+		}
+		setShowValidateCue(true);
+	}, [doc]);
+
+	/** Debounce validation: run 1 second after user stops typing */
+	useEffect(() => {
+		if (debounceRef.current) clearTimeout(debounceRef.current);
+		debounceRef.current = setTimeout(runValidation, 1000);
+	}, [doc, runValidation]);
+
+	/**
+	 * Format the YAML document.
+	 * Parses and re-serializes the YAML to ensure consistent formatting.
+	 * If parsing fails, sets error state and shows validation cue.
+	 */
 	const handleFormat = useCallback(() => {
 		try {
 			const obj = doc.trim() ? YAML.parse(doc) : {};
 			const formatted = YAML.stringify(obj, { indent: 2, lineWidth: 100 });
 			setDoc(formatted);
-			onChange && onChange(formatted);
-			setHasError(false);
+			onChange?.(formatted);
 		} catch {
-			setHasError(true);
 			setValidateResult("error");
 			setShowValidateCue(true);
-			if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
-			validateTimerRef.current = setTimeout(() => setShowValidateCue(false), 1500);
 		}
 	}, [doc, onChange]);
 
-	const handleValidate = useCallback(() => {
-		try {
-			if (doc.trim()) YAML.parse(doc);
-			setHasError(false);
-			setValidateResult("ok");
-		} catch {
-			setHasError(true);
-			setValidateResult("error");
-		}
-		setShowValidateCue(true);
-		if (validateTimerRef.current) clearTimeout(validateTimerRef.current);
-		validateTimerRef.current = setTimeout(() => setShowValidateCue(false), 1500);
-	}, [doc]);
-
 	const handleSave = useCallback(() => {
-		onSave && onSave(doc);
+		onSave?.(doc);
 	}, [onSave, doc]);
 
 	return (
@@ -167,23 +148,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 						sx={{ mr: 0.5 }}
 					/>
 				)}
-
-				{/* Validate */}
-				<Tooltip title="Validate (parse YAML)">
-					<span>
-						<IconButton
-							size="small"
-							onClick={handleValidate}
-							aria-label="Validate YAML"
-							sx={{
-								...(showValidateCue && validateResult === "ok" && { color: "success.main" }),
-								...(showValidateCue && validateResult === "error" && { color: "error.main" }),
-							}}
-						>
-							{hasError ? <ErrorOutlineIcon /> : <CheckIcon />}
-						</IconButton>
-					</span>
-				</Tooltip>
 
 				{/* Format */}
 				<Tooltip title="Format YAML">
@@ -218,7 +182,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 					extensions={extensions}
 					editable={!readOnly}
 					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
-					theme={theme.palette.mode === "dark" ? "dark" : "light"}
+					theme={theme.palette.mode}
 				/>
 			</Box>
 		</Box>

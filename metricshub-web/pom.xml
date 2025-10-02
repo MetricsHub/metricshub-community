@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.08-SNAPSHOT</version>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 	<artifactId>metricshub-web</artifactId>
 	<name>MetricsHub Web</name>
@@ -56,6 +56,18 @@
 						</goals>
 						<configuration>
 							<arguments>run format:check</arguments>
+						</configuration>
+					</execution>
+
+					<!-- Run "npm run lint" -->
+					<execution>
+						<id>npm-lint</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>npm</goal>
+						</goals>
+						<configuration>
+							<arguments>run lint</arguments>
 						</configuration>
 					</execution>
 
