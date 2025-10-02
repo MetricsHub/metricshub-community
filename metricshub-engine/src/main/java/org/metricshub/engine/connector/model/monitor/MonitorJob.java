@@ -24,7 +24,9 @@ package org.metricshub.engine.connector.model.monitor;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Set;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 
 /**
  * Represents an interface for monitor jobs.
@@ -42,4 +44,10 @@ public interface MonitorJob extends Serializable {
 	 * @return A set of String representing the monitor job keys
 	 */
 	Set<String> getKeys();
+
+	/**
+	 * Returns a map of metric definitions associated with the monitor job.
+	 * @return A map where the key is a String representing the metric name and the value is a MetricDefinition object.
+	 */
+	Map<String, MetricDefinition> getMetrics();
 }
