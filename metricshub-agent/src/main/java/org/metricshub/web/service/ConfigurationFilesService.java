@@ -22,8 +22,6 @@ package org.metricshub.web.service;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
@@ -50,8 +48,6 @@ import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.error.MarkedYAMLException;
 
 /**
  * Service class for managing configuration files.
@@ -71,7 +67,6 @@ public class ConfigurationFilesService {
 	private static final int MAX_DEPTH = 1;
 
 	private final AgentContextHolder agentContextHolder;
-	private final Yaml yaml = new Yaml();
 
 	@Autowired
 	public ConfigurationFilesService(final AgentContextHolder agentContextHolder) {
@@ -88,17 +83,19 @@ public class ConfigurationFilesService {
 		final Path configurationDirectory = getConfigDir();
 
 		try (
-			Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH, ConfigurationFilesService::isRegularYamlFile)
-		) {
+				Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH,
+						ConfigurationFilesService::isRegularYamlFile)) {
 			return files
-				.map(this::buildConfigurationFile)
-				.filter(Objects::nonNull)
-				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
-				.toList();
+					.map(this::buildConfigurationFile)
+					.filter(Objects::nonNull)
+					.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
+					.toList();
 		} catch (Exception e) {
-			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory, e.getMessage());
+			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory,
+					e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configurationDirectory, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list configuration files.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list configuration files.",
+					e);
 		}
 	}
 
@@ -121,7 +118,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to read configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to read configuration file: '{}'. Exception:", file, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read configuration file.",
+					e);
 		}
 	}
 
@@ -140,11 +138,10 @@ public class ConfigurationFilesService {
 			// Write to a temp file, then move atomically
 			final Path tmp = Files.createTempFile(dir, fileName + ".", ".tmp");
 			Files.writeString(
-				tmp,
-				content == null ? "" : content,
-				StandardCharsets.UTF_8,
-				StandardOpenOption.TRUNCATE_EXISTING
-			);
+					tmp,
+					content == null ? "" : content,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.TRUNCATE_EXISTING);
 			try {
 				// Write atomically via temp file + move (ensures no partial writes, even if
 				// process crashes)
@@ -155,54 +152,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to save configuration file: '{}'. Error: {}", target, e.getMessage());
 			log.debug("Failed to save configuration file: '{}'. Exception:", target, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save configuration file.", e);
-		}
-	}
-
-	/**
-	 * Validates the YAML content of a configuration file.
-	 * Returns a JSON object: { "valid": boolean, "errors": [ ... ] }
-	 *
-	 * @param fileName for context in messages
-	 * @param content  YAML content to validate
-	 * @return validation result JSON
-	 */
-	public ObjectNode validateFile(final String fileName, final String content) {
-		final ObjectNode result = JsonNodeFactory.instance.objectNode();
-		try {
-			yaml.load(content == null ? "" : content);
-			result.put("valid", true);
-			result.putArray("errors");
-			return result;
-		} catch (MarkedYAMLException ye) {
-			final var errors = result.put("valid", false).putArray("errors");
-			errors.add(safeMessage("YAML syntax error in '%s': %s".formatted(fileName, ye.getMessage())));
-			return result;
-		} catch (Exception e) {
-			final var errors = result.put("valid", false).putArray("errors");
-			errors.add(safeMessage("Validation error in '%s': %s".formatted(fileName, e.getMessage())));
-			return result;
-		}
-	}
-
-	/**
-	 * Validates YAML content and throws 400 if invalid.
-	 */
-	public void validateOrThrow(final String fileName, final String content) {
-		try {
-			yaml.load(content == null ? "" : content);
-		} catch (MarkedYAMLException ye) {
-			throw new ConfigFilesException(
-				ConfigFilesException.Code.VALIDATION_FAILED,
-				safeMessage("YAML syntax error in '%s': %s".formatted(fileName, ye.getMessage())),
-				ye
-			);
-		} catch (Exception e) {
-			throw new ConfigFilesException(
-				ConfigFilesException.Code.VALIDATION_FAILED,
-				safeMessage("Validation error in '%s': %s".formatted(fileName, e.getMessage())),
-				e
-			);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save configuration file.",
+					e);
 		}
 	}
 
@@ -217,12 +168,14 @@ public class ConfigurationFilesService {
 
 		try {
 			if (!Files.deleteIfExists(file)) {
-				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Configuration file not found.");
+				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND,
+						"Configuration file not found.");
 			}
 		} catch (IOException e) {
 			log.error("Failed to delete configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to delete configuration file: '{}'. Exception:", file, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete configuration file.",
+					e);
 		}
 	}
 
@@ -238,7 +191,8 @@ public class ConfigurationFilesService {
 		final Path target = resolveSafeYaml(dir, newName);
 
 		if (!Files.exists(source)) {
-			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Source configuration file not found.");
+			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND,
+					"Source configuration file not found.");
 		}
 		if (Files.exists(target)) {
 			throw new ConfigFilesException(ConfigFilesException.Code.TARGET_EXISTS, "Target file name already exists.");
@@ -253,7 +207,8 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to rename configuration file: '{}' -> '{}'. Error: {}", source, target, e.getMessage());
 			log.debug("Failed to rename configuration file: '{}' -> '{}'. Exception:", source, target, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.", e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.",
+					e);
 		}
 	}
 
@@ -278,11 +233,11 @@ public class ConfigurationFilesService {
 	private ConfigurationFile buildConfigurationFile(final Path path) {
 		try {
 			return ConfigurationFile
-				.builder()
-				.name(path.getFileName().toString())
-				.size(Files.size(path))
-				.lastModificationTime(Files.getLastModifiedTime(path).toString())
-				.build();
+					.builder()
+					.name(path.getFileName().toString())
+					.size(Files.size(path))
+					.lastModificationTime(Files.getLastModifiedTime(path).toString())
+					.build();
 		} catch (IOException e) {
 			log.error("Failed to read configuration file metadata: '{}'. Error: {}", path, e.getMessage());
 			log.debug("Failed to read configuration file metadata: '{}'. Exception:", path, e);
@@ -321,9 +276,8 @@ public class ConfigurationFilesService {
 		final var lower = fileName.toLowerCase(Locale.ROOT);
 		if (YAML_EXTENSIONS.stream().noneMatch(lower::endsWith)) {
 			throw new ConfigFilesException(
-				ConfigFilesException.Code.INVALID_EXTENSION,
-				"Only .yml or .yaml files are allowed."
-			);
+					ConfigFilesException.Code.INVALID_EXTENSION,
+					"Only .yml or .yaml files are allowed.");
 		}
 
 		final Path normalizedBase = baseDir.normalize();
@@ -344,9 +298,8 @@ public class ConfigurationFilesService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null || agentContext.getConfigDirectory() == null) {
 			throw new ConfigFilesException(
-				ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE,
-				"Configuration directory is not available."
-			);
+					ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE,
+					"Configuration directory is not available.");
 		}
 		return agentContext.getConfigDirectory();
 	}

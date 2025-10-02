@@ -3,7 +3,6 @@ package org.metricshub.web.service;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -94,7 +93,8 @@ class ConfigurationFilesServiceTest {
 	void testGetFileContent_notFound() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("missing.yaml"));
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
+				() -> service.getFileContent("missing.yaml"));
 		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
 		assertTrue(ex.getMessage().toLowerCase().contains("not found"));
 	}
@@ -103,7 +103,8 @@ class ConfigurationFilesServiceTest {
 	void testGetFileContent_invalidName_rejectTraversal() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("../evil.yaml"));
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
+				() -> service.getFileContent("../evil.yaml"));
 		// The service rejects traversal early as INVALID_FILE_NAME
 		assertEquals(ConfigFilesException.Code.INVALID_FILE_NAME, ex.getCode());
 	}
@@ -130,25 +131,6 @@ class ConfigurationFilesServiceTest {
 		// overwrite
 		service.saveOrUpdateFile("app.yaml", "a: 2\nb: 3");
 		assertEquals("a: 2\nb: 3", Files.readString(path, StandardCharsets.UTF_8));
-	}
-
-	@Test
-	void testValidateFile_validAndInvalid() {
-		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
-
-		// valid
-		ObjectNode ok = service.validateFile("good.yaml", "k: v\nlist:\n  - x\n  - y");
-		assertTrue(ok.get("valid").asBoolean());
-		assertTrue(ok.get("errors").isArray());
-		assertEquals(0, ok.withArray("errors").size());
-
-		// invalid
-		ObjectNode bad = service.validateFile("bad.yaml", "k: : v\n list: [ 1, 2");
-		assertFalse(bad.get("valid").asBoolean());
-		var errors = bad.get("errors");
-		assertTrue(errors.isArray());
-		assertTrue(errors.size() >= 1);
-		assertTrue(errors.get(0).asText().toLowerCase().contains("yaml"));
 	}
 
 	@Test
@@ -188,9 +170,8 @@ class ConfigurationFilesServiceTest {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
 		ConfigFilesException ex = assertThrows(
-			ConfigFilesException.class,
-			() -> service.renameFile("absent.yaml", "new.yaml")
-		);
+				ConfigFilesException.class,
+				() -> service.renameFile("absent.yaml", "new.yaml"));
 		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
 	}
 
@@ -202,7 +183,8 @@ class ConfigurationFilesServiceTest {
 		Files.writeString(src, "x: 1");
 		Files.writeString(dst, "x: 2");
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.renameFile("a.yaml", "b.yaml"));
+		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
+				() -> service.renameFile("a.yaml", "b.yaml"));
 		assertEquals(ConfigFilesException.Code.TARGET_EXISTS, ex.getCode());
 	}
 
