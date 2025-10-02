@@ -1,6 +1,8 @@
 package org.metricshub.web.controller;
 
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -21,6 +23,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.dto.ConfigurationFile;
+import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
@@ -30,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 class ConfigurationFilesControllerTest {
 
+	private static final String METRICSHUB_YAML_FILE_NAME = "metricshub.yaml";
 	private MockMvc mockMvc;
 	private ConfigurationFilesService configurationFilesService;
 
@@ -46,7 +50,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldListConfigurationFiles() throws Exception {
 		final ConfigurationFile f1 = ConfigurationFile
 			.builder()
-			.name("metricshub.yaml")
+			.name(METRICSHUB_YAML_FILE_NAME)
 			.size(1024L)
 			.lastModificationTime("2025-09-01T10:15:30Z")
 			.build();
@@ -68,7 +72,7 @@ class ConfigurationFilesControllerTest {
 			.andExpect(jsonPath("$[0].name").value("general-settings.yaml"))
 			.andExpect(jsonPath("$[0].size").value(256))
 			.andExpect(jsonPath("$[0].lastModificationTime").value("2025-09-02T08:00:00Z"))
-			.andExpect(jsonPath("$[1].name").value("metricshub.yaml"))
+			.andExpect(jsonPath("$[1].name").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$[1].size").value(1024))
 			.andExpect(jsonPath("$[1].lastModificationTime").value("2025-09-01T10:15:30Z"));
 	}
@@ -86,7 +90,7 @@ class ConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldGetFileContent() throws Exception {
-		when(configurationFilesService.getFileContent("metricshub.yaml")).thenReturn("key: value\n");
+		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("key: value\n");
 
 		mockMvc
 			.perform(get("/api/config-files/metricshub.yaml").accept(MediaType.TEXT_PLAIN))
@@ -105,7 +109,17 @@ class ConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldSaveOrUpdateFile() throws Exception {
-		doNothing().when(configurationFilesService).saveOrUpdateFile("metricshub.yaml", "test: noo\n");
+		final String lastModificationTime = "2025-09-03T12:00:00Z";
+		final long size = 1000L;
+		final ConfigurationFile configurationFile = ConfigurationFile
+			.builder()
+			.lastModificationTime(lastModificationTime)
+			.name(METRICSHUB_YAML_FILE_NAME)
+			.size(size)
+			.build();
+		doReturn(configurationFile)
+			.when(configurationFilesService)
+			.saveOrUpdateFile(METRICSHUB_YAML_FILE_NAME, "test: noo\n");
 
 		mockMvc
 			.perform(
@@ -114,9 +128,11 @@ class ConfigurationFilesControllerTest {
 					.content("test: noo\n".getBytes(StandardCharsets.UTF_8))
 			)
 			.andExpect(status().isOk())
-			.andExpect(content().string("Configuration file saved successfully."));
+			.andExpect(jsonPath("$.name").value(METRICSHUB_YAML_FILE_NAME))
+			.andExpect(jsonPath("$.size").value(size))
+			.andExpect(jsonPath("$.lastModificationTime").value(lastModificationTime));
 
-		verify(configurationFilesService).saveOrUpdateFile("metricshub.yaml", "test: noo\n");
+		verify(configurationFilesService, times(1)).saveOrUpdateFile(METRICSHUB_YAML_FILE_NAME, "test: noo\n");
 	}
 
 	@Test
@@ -124,8 +140,8 @@ class ConfigurationFilesControllerTest {
 		ObjectNode result = JsonNodeFactory.instance.objectNode();
 		result.put("valid", true).putArray("errors");
 
-		when(configurationFilesService.validate("a: 1\n", "metricshub.yaml"))
-			.thenReturn(ConfigurationFilesService.Validation.ok("metricshub.yaml"));
+		when(configurationFilesService.validate("a: 1\n", METRICSHUB_YAML_FILE_NAME))
+			.thenReturn(ConfigurationFilesService.Validation.ok(METRICSHUB_YAML_FILE_NAME));
 
 		mockMvc
 			.perform(
@@ -136,51 +152,63 @@ class ConfigurationFilesControllerTest {
 			)
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-			.andExpect(jsonPath("$.fileName").value("metricshub.yaml"))
+			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.valid").value(true))
 			.andExpect(jsonPath("$.error").doesNotExist());
 	}
 
 	@Test
 	void testShouldValidateFileOnDiskWhenNoBody() throws Exception {
-		when(configurationFilesService.getFileContent("metricshub.yaml")).thenReturn("x: 2\n");
+		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("x: 2\n");
 
 		ObjectNode result = JsonNodeFactory.instance.objectNode();
 		result.put("valid", false).putArray("errors").add("Invalid YAML");
 
-		when(configurationFilesService.getFileContent("metricshub.yaml")).thenReturn("x: 2\n");
-		when(configurationFilesService.validate("x: 2\n", "metricshub.yaml"))
-			.thenReturn(ConfigurationFilesService.Validation.fail("metricshub.yaml", "Invalid YAML"));
+		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("x: 2\n");
+		when(configurationFilesService.validate("x: 2\n", METRICSHUB_YAML_FILE_NAME))
+			.thenReturn(ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, "Invalid YAML"));
 
 		mockMvc
 			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-			.andExpect(jsonPath("$.fileName").value("metricshub.yaml"))
+			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.valid").value(false))
 			.andExpect(jsonPath("$.error").value("Invalid YAML"));
 	}
 
 	@Test
 	void testShouldDeleteFile() throws Exception {
-		doNothing().when(configurationFilesService).deleteFile("metricshub.yaml");
+		doNothing().when(configurationFilesService).deleteFile(METRICSHUB_YAML_FILE_NAME);
 
 		mockMvc.perform(delete("/api/config-files/metricshub.yaml")).andExpect(status().isNoContent());
 
-		verify(configurationFilesService).deleteFile("metricshub.yaml");
+		verify(configurationFilesService).deleteFile(METRICSHUB_YAML_FILE_NAME);
 	}
 
 	@Test
 	void testShouldRenameFile() throws Exception {
-		doNothing().when(configurationFilesService).renameFile("old.yaml", "new.yaml");
+		final String lastModificationTime = "2025-09-03T12:00:00Z";
+		final long size = 1000L;
+		final ConfigurationFile configurationFile = ConfigurationFile
+			.builder()
+			.lastModificationTime(lastModificationTime)
+			.name(METRICSHUB_YAML_FILE_NAME)
+			.size(size)
+			.build();
+		final String newName = "new.yaml";
+		doReturn(configurationFile).when(configurationFilesService).renameFile(METRICSHUB_YAML_FILE_NAME, newName);
 
-		String body = mapper.writeValueAsString(Map.of("newName", "new.yaml"));
+		String body = mapper.writeValueAsString(new FileNewName(newName));
 
 		mockMvc
-			.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
-			.andExpect(status().isNoContent());
+			.perform(patch("/api/config-files/metricshub.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value(METRICSHUB_YAML_FILE_NAME))
+			.andExpect(jsonPath("$.size").value(size))
+			.andExpect(jsonPath("$.lastModificationTime").value(lastModificationTime));
 
-		verify(configurationFilesService).renameFile("old.yaml", "new.yaml");
+		verify(configurationFilesService, times(1)).renameFile(METRICSHUB_YAML_FILE_NAME, newName);
 	}
 
 	@Test

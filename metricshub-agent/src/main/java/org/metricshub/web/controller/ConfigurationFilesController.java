@@ -21,9 +21,11 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Map;
 import org.metricshub.web.dto.ConfigurationFile;
+import org.metricshub.web.dto.FileNewName;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -37,6 +39,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -52,8 +55,7 @@ public class ConfigurationFilesController {
 	/**
 	 * Constructor for ConfigurationFilesController.
 	 *
-	 * @param configurationFilesService the ConfigurationFilesService to handle
-	 *                                  configuration file requests.
+	 * @param configurationFilesService the ConfigurationFilesService to handle configuration file requests.
 	 */
 	@Autowired
 	public ConfigurationFilesController(final ConfigurationFilesService configurationFilesService) {
@@ -64,9 +66,10 @@ public class ConfigurationFilesController {
 	 * Endpoint to list all configuration files with their metadata.
 	 *
 	 * @return A list of ConfigurationFile representing all configuration files.
+	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
 	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-	public List<ConfigurationFile> listConfigurationFiles() {
+	public List<ConfigurationFile> listConfigurationFiles() throws ConfigFilesException {
 		return configurationFilesService.getAllConfigurationFiles();
 	}
 
@@ -75,13 +78,12 @@ public class ConfigurationFilesController {
 	 *
 	 * @param fileName the name of the configuration file to retrieve.
 	 * @return the content of the configuration file as plain text.
-	 * @throws ResponseStatusException with status 404 if the file is not found,
-	 *                                 400 if the file name is invalid, or 500 for
-	 *                                 other unexpected errors.
+	 * @throws ConfigFilesException if the file is not found or cannot be read
 	 */
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getConfigurationFileContent(@PathVariable("fileName") String fileName) {
-		String content = configurationFilesService.getFileContent(fileName);
+	public ResponseEntity<String> getConfigurationFileContent(@PathVariable("fileName") String fileName)
+		throws ConfigFilesException {
+		final String content = configurationFilesService.getFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
 
@@ -90,35 +92,33 @@ public class ConfigurationFilesController {
 	 *
 	 * @param fileName the name of the configuration file to create or update.
 	 * @param content  the content to write to the configuration file.
-	 * @return a ResponseEntity with a success message.
+	 * @param skipValidation if true, skips validation of the content before saving.
+	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the saved file's metadata.
+	 * @throws ConfigFilesException if the file cannot be written
 	 */
-	@PutMapping(value = "/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> saveOrUpdateConfigurationFile(
+	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
+	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content,
-		@org.springframework.web.bind.annotation.RequestParam(
-			name = "skipValidation",
-			defaultValue = "false"
-		) boolean skipValidation
-	) {
+		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+	) throws ConfigFilesException {
 		if (!skipValidation) {
 			var v = configurationFilesService.validate(content, fileName);
 			if (!v.isValid()) {
 				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getError());
 			}
 		}
-		configurationFilesService.saveOrUpdateFile(fileName, content);
-		return ResponseEntity.ok("Configuration file saved successfully.");
+		return ResponseEntity.ok(configurationFilesService.saveOrUpdateFile(fileName, content));
 	}
 
 	/**
-	 * Endpoint to validate a configuration file's content.
-	 * If no content is provided in the request body, the file currently on disk
+	 * Endpoint to validate a configuration file's content.<br>
+	 * If no content is provided in the request body, the file content on disk is fetched and validated.
 	 *
 	 * @param fileName the name of the configuration file to validate.
 	 * @param content  the content to validate; if null, validates the file on disk.
-	 * @return an ObjectNode containing validation results.
-	 * @throws ResponseStatusException with status 404 if the file is not found,
+	 * @return an {@link ConfigurationFilesService.Validation} object containing validation results.
+	 * @throws ConfigFilesException if the file content cannot be read
 	 */
 	@PostMapping(
 		value = "/{fileName}",
@@ -128,7 +128,7 @@ public class ConfigurationFilesController {
 	public ResponseEntity<ConfigurationFilesService.Validation> validateConfigurationFile(
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content
-	) {
+	) throws ConfigFilesException {
 		if (content == null) {
 			content = configurationFilesService.getFileContent(fileName);
 		}
@@ -140,35 +140,32 @@ public class ConfigurationFilesController {
 	 *
 	 * @param fileName the name of the configuration file to delete.
 	 * @return a ResponseEntity with no content.
-	 * @throws ResponseStatusException with status 404 if the file is not found.
+	 * @throws ConfigFilesException if an IO error occurs during deletion
 	 */
 	@DeleteMapping("/{fileName}")
-	public ResponseEntity<Void> deleteConfigurationFile(@PathVariable("fileName") String fileName) {
+	public ResponseEntity<Void> deleteConfigurationFile(@PathVariable("fileName") String fileName)
+		throws ConfigFilesException {
 		configurationFilesService.deleteFile(fileName);
-		return ResponseEntity.noContent().build(); // Returns 204 No Content
+		// Returns 204 No Content
+		return ResponseEntity.noContent().build();
 	}
 
 	/**
 	 * Endpoint to rename a configuration file.
 	 *
-	 * @param oldName the current name of the configuration file.
-	 * @param body    a map containing the new name with key "newName".
-	 * @return a ResponseEntity with no content.
-	 * @throws ResponseStatusException with status 400 if the new name is missing or
-	 *                                 invalid
+	 * @param fileNewName the DTO containing the new name for the file.
+	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the renamed file's metadata.
+	 * @throws ConfigFilesException if an IO error occurs during renaming
 	 */
-	@PatchMapping("/{fileName}")
-	public ResponseEntity<Void> renameConfigurationFile(
+	@PatchMapping(
+		value = "/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.APPLICATION_JSON_VALUE
+	)
+	public ResponseEntity<ConfigurationFile> renameConfigurationFile(
 		@PathVariable("fileName") String oldName,
-		@RequestBody Map<String, String> body
-	) {
-		final String newName = body == null ? null : body.get("newName");
-
-		if (newName == null || newName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Field 'newName' is required.");
-		}
-
-		configurationFilesService.renameFile(oldName, newName);
-		return ResponseEntity.noContent().build(); // 204 No Content
+		@Valid @RequestBody FileNewName fileNewName
+	) throws ConfigFilesException {
+		return ResponseEntity.ok(configurationFilesService.renameFile(oldName, fileNewName.getNewName()));
 	}
 }

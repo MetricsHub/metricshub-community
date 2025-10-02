@@ -21,8 +21,19 @@ package org.metricshub.web.exception;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-public class ConfigFilesException extends RuntimeException {
+/**
+ * Exception class for configuration file-related errors.
+ */
+public class ConfigFilesException extends Exception {
 
+	/**
+	 * Serial version UID for serialization.
+	 */
+	private static final long serialVersionUID = 1L;
+
+	/**
+	 * Enumeration of error codes for configuration file operations.
+	 */
 	public enum Code {
 		CONFIG_DIR_UNAVAILABLE,
 		FILE_NOT_FOUND,
@@ -36,21 +47,44 @@ public class ConfigFilesException extends RuntimeException {
 
 	private final Code code;
 
+	/**
+	 * Constructor for ConfigFilesException.
+	 *
+	 * @param code the error code representing the type of error.
+	 */
 	public ConfigFilesException(Code code) {
 		super(code.name());
 		this.code = code;
 	}
 
+	/**
+	 * Constructor for ConfigFilesException with a custom message.
+	 *
+	 * @param code    the error code representing the type of error.
+	 * @param message the custom error message.
+	 */
 	public ConfigFilesException(Code code, String message) {
 		super(message);
 		this.code = code;
 	}
 
+	/**
+	 * Constructor for ConfigFilesException with a cause.
+	 *
+	 * @param code    the error code representing the type of error.
+	 * @param message the custom error message.
+	 * @param cause   the underlying cause of the exception.
+	 */
 	public ConfigFilesException(Code code, String message, Throwable cause) {
 		super(message, cause);
 		this.code = code;
 	}
 
+	/**
+	 * Gets the error code associated with this exception.
+	 *
+	 * @return the error code.
+	 */
 	public Code getCode() {
 		return code;
 	}

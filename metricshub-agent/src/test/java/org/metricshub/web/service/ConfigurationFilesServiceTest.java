@@ -1,6 +1,10 @@
 package org.metricshub.web.service;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
@@ -20,8 +24,11 @@ class ConfigurationFilesServiceTest {
 	@TempDir
 	Path tempConfigDir;
 
-	// ---------- helpers ----------
-
+	/**
+	 * Create a ConfigurationFilesService with a mocked AgentContextHolder that returns the given dir.
+	 * @param dir the config dir to return from the mocked AgentContext
+	 * @return the service instance
+	 */
 	private ConfigurationFilesService newServiceWithDir(Path dir) {
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		final AgentContext agentContext = Mockito.mock(AgentContext.class);
@@ -30,13 +37,15 @@ class ConfigurationFilesServiceTest {
 		return new ConfigurationFilesService(holder);
 	}
 
+	/**
+	 * Create a ConfigurationFilesService with a mocked AgentContextHolder that returns null context.
+	 * @return the service instance
+	 */
 	private ConfigurationFilesService newServiceWithNoContext() {
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		when(holder.getAgentContext()).thenReturn(null);
 		return new ConfigurationFilesService(holder);
 	}
-
-	// ---------- tests ----------
 
 	@Test
 	void testShouldListYamlFilesAtDepthOneSorted() throws Exception {
@@ -72,87 +81,108 @@ class ConfigurationFilesServiceTest {
 	}
 
 	@Test
-	void testGetAllConfigurationFiles_serviceUnavailable() {
+	void testGetAllConfigurationFilesServiceUnavailable() {
 		final ConfigurationFilesService service = newServiceWithNoContext();
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, service::getAllConfigurationFiles);
-		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode());
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			service::getAllConfigurationFiles,
+			"Service should throw when no AgentContext"
+		);
+		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode(), "Error code should match");
 	}
 
 	@Test
-	void testGetFileContent_ok() throws Exception {
+	void testGetFileContentOk() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 		final Path file = tempConfigDir.resolve("metricshub.yaml");
 		Files.writeString(file, "hello: world", StandardCharsets.UTF_8);
 
 		String content = service.getFileContent("metricshub.yaml");
-		assertEquals("hello: world", content);
+		assertEquals("hello: world", content, "File content should match");
 	}
 
 	@Test
-	void testGetFileContent_notFound() {
+	void testGetFileContentNotFound() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
-				() -> service.getFileContent("missing.yaml"));
-		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
-		assertTrue(ex.getMessage().toLowerCase().contains("not found"));
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.getFileContent("missing.yaml"),
+			"Service should throw when file is missing"
+		);
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode(), "Error code should match");
+		assertTrue(ex.getMessage().toLowerCase().contains("not found"), "Message should indicate not found");
 	}
 
 	@Test
-	void testGetFileContent_invalidName_rejectTraversal() {
+	void testGetFileContentInvalidNameRejectTraversal() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
-				() -> service.getFileContent("../evil.yaml"));
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.getFileContent("../evil.yaml"),
+			"Service should throw on path traversal attempt"
+		);
 		// The service rejects traversal early as INVALID_FILE_NAME
-		assertEquals(ConfigFilesException.Code.INVALID_FILE_NAME, ex.getCode());
+		assertEquals(ConfigFilesException.Code.INVALID_FILE_NAME, ex.getCode(), "Error code should match");
 	}
 
 	@Test
-	void testGetFileContent_invalidExtension() {
+	void testGetFileContentInvalidExtension() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("config.txt"));
-		assertEquals(ConfigFilesException.Code.INVALID_EXTENSION, ex.getCode());
-		assertTrue(ex.getMessage().contains(".yml") || ex.getMessage().contains(".yaml"));
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.getFileContent("config.txt"),
+			"Service should throw on invalid file extension"
+		);
+		assertEquals(ConfigFilesException.Code.INVALID_EXTENSION, ex.getCode(), "Error code should match");
+		assertTrue(
+			ex.getMessage().contains(".yml") || ex.getMessage().contains(".yaml"),
+			"Message should indicate valid extensions"
+		);
 	}
 
 	@Test
-	void testSaveOrUpdate_createsAndOverwrites() throws Exception {
+	void testSaveOrUpdateCreatesAndOverwrites() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 		final Path path = tempConfigDir.resolve("app.yaml");
 
 		// create
 		service.saveOrUpdateFile("app.yaml", "a: 1");
-		assertTrue(Files.exists(path));
-		assertEquals("a: 1", Files.readString(path, StandardCharsets.UTF_8));
+		assertTrue(Files.exists(path), "File should be created");
+		assertEquals("a: 1", Files.readString(path, StandardCharsets.UTF_8), "File content should match");
 
 		// overwrite
 		service.saveOrUpdateFile("app.yaml", "a: 2\nb: 3");
-		assertEquals("a: 2\nb: 3", Files.readString(path, StandardCharsets.UTF_8));
+		assertEquals("a: 2\nb: 3", Files.readString(path, StandardCharsets.UTF_8), "File content should be updated");
 	}
 
 	@Test
-	void testDeleteFile_existing() throws Exception {
+	void testDeleteFileExisting() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 		final Path path = tempConfigDir.resolve("to-delete.yml");
 		Files.writeString(path, "x: y");
 
 		service.deleteFile("to-delete.yml");
-		assertFalse(Files.exists(path));
+		assertFalse(Files.exists(path), "File should be deleted");
 	}
 
 	@Test
-	void testDeleteFile_missing() {
+	void testDeleteFileMissing() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.deleteFile("nope.yml"));
-		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.deleteFile("nope.yml"),
+			"Service should throw when deleting missing file"
+		);
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode(), "Error code should match");
 	}
 
 	@Test
-	void testRenameFile_ok() throws Exception {
+	void testRenameFileOk() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 		final Path src = tempConfigDir.resolve("old.yaml");
 		final Path dst = tempConfigDir.resolve("new.yaml");
@@ -160,41 +190,50 @@ class ConfigurationFilesServiceTest {
 
 		service.renameFile("old.yaml", "new.yaml");
 
-		assertFalse(Files.exists(src));
-		assertTrue(Files.exists(dst));
-		assertEquals("name: old", Files.readString(dst, StandardCharsets.UTF_8));
+		assertFalse(Files.exists(src), "Source file should be gone");
+		assertTrue(Files.exists(dst), "Target file should exist");
+		assertEquals("name: old", Files.readString(dst, StandardCharsets.UTF_8), "Target file content should match source");
 	}
 
 	@Test
-	void testRenameFile_sourceMissing() {
+	void testRenameFileSourceMissing() {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 
 		ConfigFilesException ex = assertThrows(
-				ConfigFilesException.class,
-				() -> service.renameFile("absent.yaml", "new.yaml"));
-		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode());
+			ConfigFilesException.class,
+			() -> service.renameFile("absent.yaml", "new.yaml"),
+			"Service should throw when source file is missing"
+		);
+		assertEquals(ConfigFilesException.Code.FILE_NOT_FOUND, ex.getCode(), "Error code should match");
 	}
 
 	@Test
-	void testRenameFile_targetExists() throws Exception {
+	void testRenameFileTargetExists() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
 		final Path src = tempConfigDir.resolve("a.yaml");
 		final Path dst = tempConfigDir.resolve("b.yaml");
 		Files.writeString(src, "x: 1");
 		Files.writeString(dst, "x: 2");
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class,
-				() -> service.renameFile("a.yaml", "b.yaml"));
-		assertEquals(ConfigFilesException.Code.TARGET_EXISTS, ex.getCode());
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.renameFile("a.yaml", "b.yaml"),
+			"Service should throw when target file exists"
+		);
+		assertEquals(ConfigFilesException.Code.TARGET_EXISTS, ex.getCode(), "Error code should match");
 	}
 
 	@Test
-	void testRequireConfigDir_unavailable() {
+	void testRequireConfigDirUnavailable() {
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		when(holder.getAgentContext()).thenReturn(null);
 		final ConfigurationFilesService service = new ConfigurationFilesService(holder);
 
-		ConfigFilesException ex = assertThrows(ConfigFilesException.class, () -> service.getFileContent("x.yaml"));
-		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode());
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.getFileContent("x.yaml"),
+			"Service should throw when no AgentContext"
+		);
+		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode(), "Error code should match");
 	}
 }
