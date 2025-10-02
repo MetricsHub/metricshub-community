@@ -53,7 +53,7 @@ public class ExecuteSnmpQueryService {
 	private AgentContextHolder agentContextHolder;
 
 	/**
-	 * Constructor for ExecuteSnmpGetService
+	 * Constructor for ExecuteSnmpQueryService
 	 *
 	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
 	 */
@@ -72,39 +72,42 @@ public class ExecuteSnmpQueryService {
 	public QueryResponse executeQuery(
 		@ToolParam(description = "The hostname to execute SNMP Query on.", required = true) final String hostname,
 		@ToolParam(
-			description = "The SNMP action to execute: Get, GetNext, Walk or Table.",
+			description = "The SNMP query to execute: Get, GetNext, Walk or Table.",
 			required = true
-		) final String action,
-		@ToolParam(description = "The SNMP OID to use in the request.", required = true) final String oId,
+		) final String queryType,
+		@ToolParam(description = "The SNMP OID to use in the request.", required = true) final String oid,
 		@ToolParam(description = "The columns to select on the SNMP Table query.") final String columns
 	) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("snmp")
-			.map((IProtocolExtension extension) -> executeQueryWithExtension(extension, hostname, action, oId, columns))
+			.map((IProtocolExtension extension) ->
+				executeQueryWithExtension(extension, hostname.trim(), queryType.trim(), oid.trim(), columns)
+			)
 			.orElse(QueryResponse.builder().isError("SNMP Extension is not available").build());
 	}
 
 	/**
-	 * Builds the SNMP query payload and executes it with the provided extension.
+	 * Builds the SNMP query configuration and executes it with the provided extension.
 	 *
 	 * @param extension the SNMP protocol extension
 	 * @param hostname  the target host
-	 * @param action    the SNMP action (get, getNext, walk, table)
+	 * @param queryType the SNMP query (get, getNext, walk, table)
 	 * @param oid       the target OID
-	 * @param columns   optional CSV of integer column indexes for table queries
+	 * @param columns   comma-separated list of integer column indexes; required when {@code queryType} is {@code "table"},
+	 *                  ignored for all other actions
 	 * @return the {@link QueryResponse} with the execution result or an error
 	 */
 	private QueryResponse executeQueryWithExtension(
 		final IProtocolExtension extension,
 		final String hostname,
-		final String action,
+		final String queryType,
 		final String oid,
 		final String columns
 	) {
 		// Make sure the selected SNMP method exists.
-		if (!SNMP_METHODS.contains(action.toLowerCase())) {
+		if (!SNMP_METHODS.contains(queryType.toLowerCase())) {
 			return QueryResponse
 				.builder()
 				.isError("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
@@ -113,11 +116,11 @@ public class ExecuteSnmpQueryService {
 
 		// Create an ObjectNode containing all the SNMP query details.
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
-		queryNode.set("action", new TextNode(action));
+		queryNode.set("action", new TextNode(queryType));
 		queryNode.set("oid", new TextNode(oid));
 
 		// add the columns if an SNMP table query is invoked.
-		if (action.equalsIgnoreCase("table") && columns != null) {
+		if (queryType.equalsIgnoreCase("table") && columns != null) {
 			final ArrayNode columnsNode = JsonNodeFactory.instance.arrayNode();
 
 			try {
@@ -152,7 +155,7 @@ public class ExecuteSnmpQueryService {
 				} catch (Exception e) {
 					return QueryResponse
 						.builder()
-						.isError("failed to execute SNMP %s Query on %s.".formatted(action, hostname))
+						.isError("failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
 						.build();
 				}
 			})
