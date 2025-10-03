@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>1.0.08-SNAPSHOT</version>
+	<version>1.0.09-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -79,10 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.13</community-connectors.version>
+		<community-connectors.version>1.0.14</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
-		<project.build.outputTimestamp>2025-08-07T15:53:41Z</project.build.outputTimestamp>
+		<project.build.outputTimestamp>2025-09-29T13:33:23Z</project.build.outputTimestamp>
 	</properties>
 
 	<modules>
@@ -302,7 +302,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>4.0.01</version>
+				<version>4.1.00</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -590,5 +590,3 @@
 	</build>
 
 </project>
-
-

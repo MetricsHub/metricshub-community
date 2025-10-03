@@ -1,29 +1,43 @@
 import js from "@eslint/js";
 import globals from "globals";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactRefresh from "eslint-plugin-react-refresh";
 import { defineConfig, globalIgnores } from "eslint/config";
+import react from "eslint-plugin-react";
+import reactRecommended from "eslint-plugin-react/configs/recommended.js";
+import reactJsxRuntime from "eslint-plugin-react/configs/jsx-runtime.js";
+import reactHooks from "eslint-plugin-react-hooks";
 
+// Eslint configuration for React files
 export default defineConfig([
 	globalIgnores(["dist"]),
 	{
+		ignores: ["dist"],
 		files: ["**/*.{js,jsx}"],
-		extends: [
-			js.configs.recommended,
-			reactHooks.configs["recommended-latest"],
-			reactRefresh.configs.vite,
-		],
+
+		plugins: {
+			react,
+			"react-hooks": reactHooks,
+		},
+
+		extends: [js.configs.recommended, reactRecommended, reactJsxRuntime],
+
 		languageOptions: {
-			ecmaVersion: 2020,
+			ecmaVersion: "latest",
 			globals: globals.browser,
 			parserOptions: {
-				ecmaVersion: "latest",
 				ecmaFeatures: { jsx: true },
 				sourceType: "module",
 			},
 		},
+
+		settings: {
+			react: { version: "detect" },
+		},
+
 		rules: {
+			"react-hooks/rules-of-hooks": "error",
+			"react-hooks/exhaustive-deps": "warn",
 			"no-unused-vars": ["error", { varsIgnorePattern: "^[A-Z_]" }],
+			"react/prop-types": "off",
 		},
 	},
 ]);

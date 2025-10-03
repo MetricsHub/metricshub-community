@@ -28,7 +28,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.User;
 import org.metricshub.web.service.UserService;
@@ -120,10 +119,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	 * @return {@link User} instance
 	 */
 	private User getUser(final String username) {
-		final Optional<User> userOptional = userService.find(username);
-		if (userOptional.isEmpty()) {
+		final User user = userService.find(username);
+		if (user == null) {
 			throw new AccessDeniedException("User not found");
 		}
-		return userOptional.get();
+		return user;
 	}
 }

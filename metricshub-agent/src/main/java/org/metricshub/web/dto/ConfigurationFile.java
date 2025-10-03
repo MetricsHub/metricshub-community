@@ -1,4 +1,4 @@
-package org.metricshub.web.security;
+package org.metricshub.web.dto;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,31 +21,21 @@ package org.metricshub.web.security;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Registry for managing users. This class provides a method to retrieve users by their username.
+ * DTO representing a configuration file with its metadata.
  */
-public class UserRegistry {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ConfigurationFile {
 
-	private final Map<String, User> users;
-
-	/**
-	 * Constructor for UserRegistry.
-	 *
-	 * @param users a map of users where the key is the username and the value is the User object.
-	 */
-	public UserRegistry(final Map<String, User> users) {
-		this.users = users;
-	}
-
-	/**
-	 * Retrieves a user by their username.
-	 *
-	 * @param username the username of the user to retrieve
-	 * @return the User object if found, otherwise null
-	 */
-	public User getUserByUsername(final String username) {
-		return users.get(username);
-	}
+	private String name;
+	private long size;
+	private String lastModificationTime;
 }

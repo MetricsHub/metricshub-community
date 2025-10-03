@@ -43,8 +43,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
@@ -3150,5 +3152,93 @@ class ComputeProcessorTest {
 
 		// Verify the converted table matches our expected values
 		assertEquals(expected, sourceTable.getTable());
+	}
+
+	@Test
+	void testEncodeAndDecode() {
+		// Prepare the sourceTable table with values to encode.
+		final List<List<String>> baseTable = Arrays.asList(
+			Arrays.asList("ID1", "testEncode"),
+			Arrays.asList("ID2", "username:password"),
+			Arrays.asList("ID3", "123//;AB&CD")
+		);
+
+		// Set up the source table with our input data.
+		sourceTable.setTable(
+			Arrays.asList(
+				Arrays.asList("ID1", "testEncode"),
+				Arrays.asList("ID2", "username:password"),
+				Arrays.asList("ID3", "123//;AB&CD")
+			)
+		);
+
+		// Wrong type of encoding.
+		final Encode encodeWrongEncoding = Encode.builder().column(2).encoding("WrongEncoding").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeWrongEncoding);
+
+		// Verify there is no change.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// Wrong type of decoding.
+		final Decode decodeWrongEncoding = Decode.builder().column(2).encoding("WrongEncoding").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeWrongEncoding);
+
+		// Verify there is no change.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// Base64 encoding.
+		final Encode encodeBase64 = Encode.builder().column(2).encoding("Base64").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeBase64);
+
+		// Define the expected results.
+		List<List<String>> expected = Arrays.asList(
+			Arrays.asList("ID1", "dGVzdEVuY29kZQ=="),
+			Arrays.asList("ID2", "dXNlcm5hbWU6cGFzc3dvcmQ="),
+			Arrays.asList("ID3", "MTIzLy87QUImQ0Q=")
+		);
+
+		// Verify the converted table matches our expected values.
+		assertEquals(expected, sourceTable.getTable());
+
+		// Base64 decoding.
+		final Decode decodeBase64 = Decode.builder().column(2).encoding("Base64").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeBase64);
+
+		// Verify the converted table matches the base table.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// URL encoding.
+		final Encode encodeUrl = Encode.builder().column(2).encoding("URL").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeUrl);
+
+		// Define the expected results.
+		expected =
+			Arrays.asList(
+				Arrays.asList("ID1", "testEncode"),
+				Arrays.asList("ID2", "username%3Apassword"),
+				Arrays.asList("ID3", "123%2F%2F%3BAB%26CD")
+			);
+
+		// Verify the converted table matches our expected values.
+		assertEquals(expected, sourceTable.getTable());
+
+		// URL decoding.
+		final Decode decodeURL = Decode.builder().column(2).encoding("URL").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeURL);
+
+		// Verify the converted table matches the base table.
+		assertEquals(baseTable, sourceTable.getTable());
 	}
 }

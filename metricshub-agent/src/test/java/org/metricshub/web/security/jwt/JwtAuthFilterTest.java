@@ -14,7 +14,6 @@ import static org.mockito.Mockito.when;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import java.io.IOException;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -82,7 +81,7 @@ class JwtAuthFilterTest {
 
 		final User user = new User();
 		user.setUsername(username);
-		when(userService.find(username)).thenReturn(Optional.of(user));
+		when(userService.find(username)).thenReturn(user);
 
 		// Exercise
 		filter.doFilterInternal(request, response, chain);
@@ -127,7 +126,7 @@ class JwtAuthFilterTest {
 		when(jwtComponent.getTokenFromRequestCookie(request)).thenReturn(token);
 		when(jwtComponent.getAllClaimsFromToken(token)).thenReturn(claims);
 		when(claims.getSubject()).thenReturn(username);
-		when(userService.find(username)).thenReturn(Optional.empty()); // will throw AccessDeniedException inside
+		when(userService.find(username)).thenReturn(null); // will throw AccessDeniedException inside
 
 		filter.doFilterInternal(request, response, chain);
 

@@ -27,6 +27,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
+import org.metricshub.web.service.ApiKeyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,11 +45,11 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 	 */
 	private static final String API_KEY_HEADER = "Authorization";
 
-	private ApiKeyRegistry apiKeyRegistry;
+	private ApiKeyService apiKeyService;
 
 	@Autowired
-	public ApiKeyAuthFilter(ApiKeyRegistry apiKeyRegistry) {
-		this.apiKeyRegistry = apiKeyRegistry;
+	public ApiKeyAuthFilter(ApiKeyService apiKeyService) {
+		this.apiKeyService = apiKeyService;
 	}
 
 	/**
@@ -66,8 +67,8 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
 		}
 
 		final var token = requestApiKey.replace("Bearer ", "");
-		if (apiKeyRegistry.isValid(token)) {
-			final var apiKey = apiKeyRegistry.getApiKeyByToken(token);
+		final var apiKey = apiKeyService.findApiKeyByToken(token);
+		if (apiKeyService.isValid(apiKey)) {
 			final var authentication = new UsernamePasswordAuthenticationToken(
 				apiKey.alias(),
 				token,

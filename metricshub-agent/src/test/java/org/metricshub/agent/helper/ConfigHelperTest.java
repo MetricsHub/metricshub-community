@@ -14,7 +14,9 @@ import static org.metricshub.agent.helper.TestConstants.TEST_CONFIG_DIRECTORY_PA
 import static org.metricshub.agent.helper.TestConstants.TOP_LEVEL_RESOURCES_CONFIG_PATH;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,6 +47,8 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.metric.StateSet;
+import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -473,27 +477,27 @@ class ConfigHelperTest {
 
 		assertEquals(
 			expected,
-			ConfigHelper.fetchMetricDefinitions(connectorStore, PURE_STORAGE_REST_CONNECTOR_ID),
+			ConfigHelper.fetchMetricDefinitions(connectorStore, PURE_STORAGE_REST_CONNECTOR_ID, "anyType"),
 			"Should return the expected metric definitions"
 		);
 		assertEquals(
 			defaultMetricDefinitionMap,
-			ConfigHelper.fetchMetricDefinitions(connectorStore, "other"),
+			ConfigHelper.fetchMetricDefinitions(connectorStore, "other", "anyType"),
 			"Should return the default metric definitions"
 		);
 		assertEquals(
 			defaultMetricDefinitionMap,
-			ConfigHelper.fetchMetricDefinitions(null, null),
+			ConfigHelper.fetchMetricDefinitions(null, null, "anyType"),
 			"Should return the default metric definitions"
 		);
 		assertEquals(
 			defaultMetricDefinitionMap,
-			ConfigHelper.fetchMetricDefinitions(null, PURE_STORAGE_REST_CONNECTOR_ID),
+			ConfigHelper.fetchMetricDefinitions(null, PURE_STORAGE_REST_CONNECTOR_ID, "anyType"),
 			"Should return the default metric definitions"
 		);
 		assertEquals(
 			defaultMetricDefinitionMap,
-			ConfigHelper.fetchMetricDefinitions(connectorStore, null),
+			ConfigHelper.fetchMetricDefinitions(connectorStore, null, "anyType"),
 			"Should return the default metric definitions"
 		);
 	}
@@ -534,6 +538,208 @@ class ConfigHelperTest {
 		assertFalse(
 			ConfigHelper.isSuppressZerosCompression(StateSetMetricCompression.NONE),
 			"Should return false for non-matching value"
+		);
+	}
+
+	@Test
+	void testFetchMetricDefinitionsOverrideConnectorMetrics() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+
+		// Define connector-level metrics
+		final Map<String, MetricDefinition> connectorMetrics = Map.of(
+			"metric1",
+			MetricDefinition.builder().unit("connUnit").build()
+		);
+
+		// Define monitor-level metrics
+		final Map<String, MetricDefinition> monitorMetrics = Map.of(
+			"metric1",
+			MetricDefinition.builder().unit("monUnit").build()
+		);
+
+		// Create a monitor job with its metrics
+		final MonitorJob monitorJob = mock(MonitorJob.class);
+		when(monitorJob.getMetrics()).thenReturn(monitorMetrics);
+
+		// Create a connector with both connector metrics and a monitor
+		final Connector connector = Connector
+			.builder()
+			.metrics(connectorMetrics)
+			.monitors(Map.of("testMonitor", monitorJob))
+			.build();
+
+		connectorStore.setStore(Map.of(PURE_STORAGE_REST_CONNECTOR_ID, connector));
+
+		// Expected map should contain connector metrics, monitor metrics, and the default connector status metric
+		final Map<String, MetricDefinition> expected = new HashMap<>();
+		expected.putAll(connectorMetrics);
+		expected.putAll(monitorMetrics);
+		expected.put(
+			MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY,
+			MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
+		);
+
+		final Map<String, MetricDefinition> actual = ConfigHelper.fetchMetricDefinitions(
+			connectorStore,
+			PURE_STORAGE_REST_CONNECTOR_ID,
+			"testMonitor"
+		);
+
+		assertEquals(expected, actual);
+		assertTrue(actual.containsKey(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY));
+		assertTrue(actual.get("metric1").getUnit().equals("monUnit"), "Monitor metric should override connector metric");
+	}
+
+	@Test
+	void testFetchMetricDefinitionsMonitorOnlyMetric() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+
+		// Monitor-only metrics
+		final Map<String, MetricDefinition> monitorMetrics = Map.of(
+			"monitorMetric",
+			MetricDefinition.builder().unit("monUnit").build()
+		);
+
+		final MonitorJob monitorJob = mock(MonitorJob.class);
+		when(monitorJob.getMetrics()).thenReturn(monitorMetrics);
+
+		final Connector connector = Connector
+			.builder()
+			.metrics(null) // No connector metrics
+			.monitors(Map.of("testMonitor", monitorJob))
+			.build();
+
+		connectorStore.setStore(Map.of(PURE_STORAGE_REST_CONNECTOR_ID, connector));
+
+		final Map<String, MetricDefinition> actual = ConfigHelper.fetchMetricDefinitions(
+			connectorStore,
+			PURE_STORAGE_REST_CONNECTOR_ID,
+			"testMonitor"
+		);
+
+		assertTrue(actual.containsKey("monitorMetric"), "Monitor metric should be present");
+		assertEquals("monUnit", actual.get("monitorMetric").getUnit(), "Monitor metric should be used");
+		assertTrue(
+			actual.containsKey(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY),
+			"Default connector status metric should always be present"
+		);
+	}
+
+	@Test
+	void testFetchMetricDefinitionsConnectorOnlyMetric() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+
+		// Connector-only metrics
+		final Map<String, MetricDefinition> connectorMetrics = Map.of(
+			"connectorMetric",
+			MetricDefinition.builder().unit("connUnit").build()
+		);
+
+		final Connector connector = Connector
+			.builder()
+			.metrics(connectorMetrics)
+			.monitors(Map.of()) // No monitor
+			.build();
+
+		connectorStore.setStore(Map.of(PURE_STORAGE_REST_CONNECTOR_ID, connector));
+
+		final Map<String, MetricDefinition> actual = ConfigHelper.fetchMetricDefinitions(
+			connectorStore,
+			PURE_STORAGE_REST_CONNECTOR_ID,
+			"testMonitor"
+		);
+
+		assertTrue(actual.containsKey("connectorMetric"), "Connector metric should be present");
+		assertEquals("connUnit", actual.get("connectorMetric").getUnit(), "Connector metric should be used");
+		assertTrue(
+			actual.containsKey(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY),
+			"Default connector status metric should always be present"
+		);
+	}
+
+	@Test
+	void testFetchMetricDefinitionsNoMetrics() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+
+		// Connector with no metrics and no monitors
+		final Connector connector = Connector.builder().build();
+		connectorStore.setStore(Map.of(PURE_STORAGE_REST_CONNECTOR_ID, connector));
+
+		final Map<String, MetricDefinition> actual = ConfigHelper.fetchMetricDefinitions(
+			connectorStore,
+			PURE_STORAGE_REST_CONNECTOR_ID,
+			"testMonitor"
+		);
+
+		// Should only contain the default metric
+		assertEquals(1, actual.size(), "Only default metric should be present");
+		assertTrue(
+			actual.containsKey(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY),
+			"Default connector status metric should always be present"
+		);
+	}
+
+	@Test
+	void testFetchMetricDefinitionsConnectorStatusOverrideByMonitor() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+
+		// Connector-level definition: failure / success
+		final MetricDefinition connectorStatusMetric = MetricDefinition
+			.builder()
+			.description("Connector operational status (connector-level).")
+			.type(StateSet.builder().set(Set.of("failure", "success")).build())
+			.build();
+
+		final Map<String, MetricDefinition> connectorMetrics = Map.of(
+			MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY,
+			connectorStatusMetric
+		);
+
+		// Monitor-level definition: ok / not ok
+		final MetricDefinition monitorStatusMetric = MetricDefinition
+			.builder()
+			.description("Connector operational status (monitor-level).")
+			.type(StateSet.builder().set(Set.of("ok", "not ok")).build())
+			.build();
+
+		final MonitorJob monitorJob = mock(MonitorJob.class);
+		when(monitorJob.getMetrics())
+			.thenReturn(Map.of(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY, monitorStatusMetric));
+
+		// Connector with both connector and monitor metrics
+		final Connector connector = Connector
+			.builder()
+			.metrics(connectorMetrics)
+			.monitors(Map.of("testMonitor", monitorJob))
+			.build();
+
+		connectorStore.setStore(Map.of(PURE_STORAGE_REST_CONNECTOR_ID, connector));
+
+		// Act
+		final Map<String, MetricDefinition> actual = ConfigHelper.fetchMetricDefinitions(
+			connectorStore,
+			PURE_STORAGE_REST_CONNECTOR_ID,
+			"testMonitor"
+		);
+
+		// Assert: monitor overrides connector
+		assertTrue(
+			actual.containsKey(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY),
+			"Connector status metric should be present"
+		);
+
+		final MetricDefinition resultMetric = actual.get(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY);
+		final StateSet resultStateSet = (StateSet) resultMetric.getType();
+
+		assertEquals(
+			Set.of("ok", "not ok"),
+			resultStateSet.getSet(),
+			"Monitor definition should override connector definition"
+		);
+		assertEquals(
+			"Connector operational status (monitor-level).",
+			resultMetric.getDescription(),
+			"Monitor description should override connector description"
 		);
 	}
 }

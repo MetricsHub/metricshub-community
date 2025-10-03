@@ -7,6 +7,52 @@ description: Describes version-specific changes that may affect functionality, p
 
 ## MetricsHub Enterprise
 
+### Upgrading to v3.0.01
+
+#### Updating otel-config.yaml
+
+To guarantee the correct operation of **MetricsHub Enterprise v3.0.01**, you must replace the following `service:` section of your `otel-config.yaml` file:
+
+```yaml
+service:
+  telemetry:
+    logs:
+      level: info # Change to debug for more details
+    metrics:
+      address: localhost:8888
+      level: basic
+```
+
+with this one:
+
+```yaml
+service:
+  telemetry:
+    logs:
+      level: info # Change to debug for more details
+    metrics:
+      level: basic
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '0.0.0.0'
+                port: 8888
+```
+
+
+By default, the `otel-config.yaml` file is stored in:
+
+* `/opt/metricshub/lib/otel/otel-config.yaml` **(Linux)**
+* or `C:\ProgramData\MetricsHub\otel\otel-config.yaml` **(Windows)**.
+
+If you have any doubt, you can refer to the example files provided for the different operating systems:
+
+* `/opt/metricshub/lib/otel/otel-config-example.yaml` **(Linux)**
+* `C:\Program Files\MetricsHub\otel\otel-config-example.yaml` **(Windows)**
+
+or download the latest **[otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)** example.
+
 ### Upgrading to v2.0.00
 
 #### Support for multiple configuration files

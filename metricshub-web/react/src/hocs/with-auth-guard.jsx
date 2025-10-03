@@ -1,8 +1,11 @@
 import { AuthGuard } from "../guards/auth-guard";
 
-// eslint-disable-next-line no-unused-vars
-export const withAuthGuard = (Component) => (props) => (
-	<AuthGuard>
-		<Component {...props} />
-	</AuthGuard>
-);
+// Higher Order Component to wrap a component with AuthGuard
+export const withAuthGuard = (Component) => {
+	const Content = (props) => (
+		<AuthGuard>
+			<Component {...props} />
+		</AuthGuard>
+	);
+	return Content;
+};

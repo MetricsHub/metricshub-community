@@ -39,6 +39,7 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.metric.MetricType;
 import org.metricshub.engine.connector.model.metric.StateSet;
+import org.metricshub.engine.connector.model.monitor.AbstractMonitorJob;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.metricshub.engine.telemetry.metric.StateSetMetric;
@@ -211,8 +212,18 @@ public class MetricFactory {
 		final Map<String, MetricDefinition> metricDefinitionMap = connector.getMetrics();
 
 		// Remove attribute parts from the metric name
-		String extractedName = extractName(metricName);
+		final String extractedName = extractName(metricName);
 
+		// Retrieve the monitor job metric definitions
+		final AbstractMonitorJob monitorJob = (AbstractMonitorJob) connector.getMonitors().get(monitor.getType());
+		final Map<String, MetricDefinition> monitorMetricDefinitionMap = monitorJob != null
+			? monitorJob.getMetrics()
+			: null;
+
+		// Monitor jobs metric definitions should override connector metric definitions
+		if (monitorMetricDefinitionMap != null && monitorMetricDefinitionMap.containsKey(extractedName)) {
+			return monitorMetricDefinitionMap.get(extractedName);
+		}
 		// Retrieve the metric definition using the extracted name
 		return metricDefinitionMap.get(extractedName);
 	}

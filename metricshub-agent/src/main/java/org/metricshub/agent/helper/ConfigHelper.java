@@ -90,6 +90,7 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
@@ -1215,7 +1216,8 @@ public class ConfigHelper {
 	 */
 	public static Map<String, MetricDefinition> fetchMetricDefinitions(
 		final ConnectorStore connectorStore,
-		final String connectorId
+		final String connectorId,
+		final String monitorType
 	) {
 		final Map<String, MetricDefinition> metricDefinitions = new HashMap<>();
 
@@ -1225,6 +1227,14 @@ public class ConfigHelper {
 				final Map<String, MetricDefinition> connectorMetricDefinitions = connector.getMetrics();
 				if (connectorMetricDefinitions != null) {
 					metricDefinitions.putAll(connectorMetricDefinitions);
+				}
+				final MonitorJob monitorJob = connector.getMonitors().get(monitorType);
+				// For Connector and Host monitor types, there are no monitor jobs
+				if (monitorJob != null) {
+					final Map<String, MetricDefinition> monitorMetrics = monitorJob.getMetrics();
+					if (monitorMetrics != null) {
+						metricDefinitions.putAll(monitorMetrics);
+					}
 				}
 			}
 		}

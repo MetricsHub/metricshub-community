@@ -21,13 +21,17 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.HashMap;
+import java.util.Map;
 import org.metricshub.web.dto.ErrorResponse;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -41,7 +45,7 @@ public class RestExceptionHandler {
 	/**
 	 * Handle UnauthorizedException exceptions.
 	 *
-	 * @param <T>  the type of the exception
+	 * @param <T>       the type of the exception
 	 * @param exception the exception to handle
 	 * @return a ResponseEntity containing the error response
 	 */
@@ -55,7 +59,8 @@ public class RestExceptionHandler {
 
 	/**
 	 * Handle AccessDeniedException exceptions.
-	 * @param <T> the type of the exception
+	 *
+	 * @param <T>       the type of the exception
 	 * @param exception the exception to handle
 	 * @return a ResponseEntity containing the error response
 	 */
@@ -65,5 +70,58 @@ public class RestExceptionHandler {
 			ErrorResponse.builder().httpStatus(HttpStatus.FORBIDDEN).message(exception.getMessage()).build(),
 			HttpStatus.FORBIDDEN
 		);
+	}
+
+	/**
+	 * Handle ConfigFilesException exceptions.
+	 *
+	 * @param ex the exception to handle
+	 * @return a ResponseEntity containing the error response
+	 */
+	@ExceptionHandler(ConfigFilesException.class)
+	protected ResponseEntity<Object> handleConfigFilesException(final ConfigFilesException ex) {
+		HttpStatus status;
+		switch (ex.getCode()) {
+			case CONFIG_DIR_UNAVAILABLE:
+				status = HttpStatus.SERVICE_UNAVAILABLE;
+				break;
+			case FILE_NOT_FOUND:
+				status = HttpStatus.NOT_FOUND;
+				break;
+			case INVALID_FILE_NAME, INVALID_EXTENSION, INVALID_PATH, VALIDATION_FAILED:
+				status = HttpStatus.BAD_REQUEST;
+				break;
+			case TARGET_EXISTS:
+				status = HttpStatus.CONFLICT;
+				break;
+			case IO_FAILURE:
+			default:
+				status = HttpStatus.INTERNAL_SERVER_ERROR;
+				break;
+		}
+
+		final String message = (ex.getMessage() != null && !ex.getMessage().isEmpty())
+			? ex.getMessage()
+			: ex.getCode().name();
+
+		return new ResponseEntity<>(ErrorResponse.builder().httpStatus(status).message(message).build(), status);
+	}
+
+	/**
+	 * Handle BindException exceptions.
+	 * @param ex the exception to handle
+	 * @return a ResponseEntity containing the validation errors
+	 */
+	@ExceptionHandler(BindException.class)
+	public ResponseEntity<Map<String, String>> handleValidationExceptions(final BindException ex) {
+		final Map<String, String> errors = ex
+			.getBindingResult()
+			.getFieldErrors()
+			.stream()
+			.map(error ->
+				Map.entry(error.getField(), error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value")
+			)
+			.collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
+		return ResponseEntity.badRequest().body(errors);
 	}
 }

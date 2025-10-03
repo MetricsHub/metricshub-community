@@ -26,9 +26,9 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -50,8 +50,6 @@ import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.jawk.backend.AVM;
 import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.frontend.AwkParser;
-import org.metricshub.jawk.frontend.AwkSyntaxTree;
 import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 import org.metricshub.jawk.util.ScriptSource;
@@ -185,7 +183,7 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 	 * that can be interpreted afterward.
 	 *
 	 * @param script Awk script source code to be converted to intermediate code
-	 * @param extensions The extensions to be used by the {@link AwkParser}
+	 * @param extensions The extensions to be used during compilation
 	 * @return The actual AwkTuples to be interpreted
 	 * @throws JawkSourceExtensionRuntimeException when the Awk script is wrong or an error occurs during the parsing
 	 */
@@ -194,36 +192,16 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		// All scripts need to be prefixed with an extra statement that sets the Record Separator (RS)
 		// to the "normal" end-of-line (\n), because Jawk uses line.separator System property, which
 		// is \r\n on Windows, thus preventing it from splitting lines properly.
-		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"), false);
-		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script), false);
+		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"));
+		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script));
 		final List<ScriptSource> sourceList = new ArrayList<>();
 		sourceList.add(awkHeader);
 		sourceList.add(awkSource);
 
-		// Parse the Awk script
-		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(false, false, extensions);
-		final AwkSyntaxTree ast;
 		try {
-			ast = parser.parse(sourceList);
-
-			// Produce the intermediate code
-			if (ast != null) {
-				// 1st pass to tie actual parameters to back-referenced formal parameters
-				ast.semanticAnalysis();
-
-				// 2nd pass to tie actual parameters to forward-referenced formal parameters
-				ast.semanticAnalysis();
-				if (ast.populateTuples(tuples) != 0) {
-					throw new ParseException("Syntax problem with the Awk script", 0);
-				}
-				tuples.postProcess();
-				parser.populateGlobalVariableNameToOffsetMappings(tuples);
-			}
-		} catch (Exception e) {
+			return new org.metricshub.jawk.Awk(extensions).compile(sourceList);
+		} catch (IOException | ClassNotFoundException e) {
 			throw new JawkSourceExtensionRuntimeException(e.getMessage(), e);
 		}
-
-		return tuples;
 	}
 }

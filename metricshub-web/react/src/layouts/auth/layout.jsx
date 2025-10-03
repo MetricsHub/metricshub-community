@@ -13,7 +13,7 @@ export const AuthLayout = (props) => {
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
-					bgcolor: (theme) => (theme.palette.mode === "light" ? "grey.100" : "background.default"),
+					bgcolor: (theme) => theme.palette.background.default,
 					px: 2,
 				}}
 			>

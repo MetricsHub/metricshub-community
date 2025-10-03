@@ -126,6 +126,7 @@ class AgentContextTest {
 			.simpleBuilder()
 			.keys(DEFAULT_KEYS)
 			.simple(simple)
+			.metrics(new HashMap<>())
 			.build();
 		final Map<String, SimpleMonitorJob> expectedMonitors = Map.of(GRAFANA_MONITOR_JOB_KEY, simpleMonitorJobExpected);
 		assertEquals(expectedMonitors, grafanaServiceResourceConfig.getMonitors(), "Monitors should match");

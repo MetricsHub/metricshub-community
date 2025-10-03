@@ -195,7 +195,7 @@ public class AgentContext {
 	 *         the processing phase with {@link EnvironmentProcessor} or at the final deserialization
 	 *		   into an {@link AgentConfig}.
 	 */
-	private AgentConfig loadConfiguration(final JsonNode configNode) throws IOException {
+	public AgentConfig loadConfiguration(final JsonNode configNode) throws IOException {
 		final var objectMapper = newAgentConfigObjectMapper(extensionManager);
 
 		new EnvironmentProcessor().process(configNode);

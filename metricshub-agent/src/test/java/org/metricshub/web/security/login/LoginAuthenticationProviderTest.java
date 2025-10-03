@@ -9,7 +9,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Collections;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,7 +66,7 @@ class LoginAuthenticationProviderTest {
 		auth.setAuthenticated(false);
 		auth.setDetails(req);
 
-		when(userService.find("ghost")).thenReturn(Optional.empty());
+		when(userService.find("ghost")).thenReturn(null);
 
 		final UnauthorizedException ex = assertThrows(
 			UnauthorizedException.class,
@@ -92,7 +91,7 @@ class LoginAuthenticationProviderTest {
 		stored.setUsername("john");
 		stored.setPassword("ENCODED");
 
-		when(userService.find("john")).thenReturn(Optional.of(stored));
+		when(userService.find("john")).thenReturn(stored);
 		when(passwordEncoder.matches("bad", "ENCODED")).thenReturn(false);
 
 		final UnauthorizedException ex = assertThrows(
@@ -118,7 +117,7 @@ class LoginAuthenticationProviderTest {
 		stored.setUsername("alice");
 		stored.setPassword("ENC");
 
-		when(userService.find("alice")).thenReturn(Optional.of(stored));
+		when(userService.find("alice")).thenReturn(stored);
 		when(passwordEncoder.matches("secret", "ENC")).thenReturn(true);
 
 		final String jwt = "jwt-123";

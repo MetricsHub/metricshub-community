@@ -20,11 +20,13 @@ package org.metricshub.engine.connector.model.monitor;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
+import java.util.Map;
 import java.util.Set;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.monitor.task.Simple;
 
 /**
@@ -47,8 +49,8 @@ public class SimpleMonitorJob extends AbstractMonitorJob {
 	 * @param simple The {@link Simple} instance for the monitor job.
 	 */
 	@Builder(builderMethodName = "simpleBuilder")
-	public SimpleMonitorJob(final Set<String> keys, final Simple simple) {
-		super(keys);
+	public SimpleMonitorJob(final Set<String> keys, final Simple simple, final Map<String, MetricDefinition> metrics) {
+		super(keys, metrics);
 		this.simple = simple;
 	}
 

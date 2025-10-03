@@ -38,8 +38,12 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.VERTICAL_
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.math.BigInteger;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -79,8 +83,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTr
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
@@ -549,6 +555,56 @@ public class ComputeProcessor implements IComputeProcessor {
 	}
 
 	@Override
+	@WithSpan("Compute Decode Exec")
+	public void process(@SpanAttribute("compute.definition") final Decode decode) {
+		if (decode == null) {
+			log.warn("Hostname {} - Decode object is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (decode.getColumn() == null || decode.getColumn() == 0) {
+			log.warn("Hostname {} - The column index in Decode cannot be null or 0, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (decode.getEncoding() == null || decode.getEncoding().isEmpty()) {
+			log.warn("Hostname {} - The type of encoding cannot be null or empty, the table remains unchanged.", hostname);
+			return;
+		}
+
+		final int columnIndex = decode.getColumn() - 1;
+		final String encoding = decode.getEncoding();
+
+		for (final List<String> line : sourceTable.getTable()) {
+			if (columnIndex < line.size()) {
+				final String valueToBeDecoded = line.get(columnIndex);
+
+				final String newValue;
+
+				switch (encoding.toLowerCase()) {
+					case "base64":
+						newValue = new String(Base64.getDecoder().decode(valueToBeDecoded), StandardCharsets.UTF_8);
+						break;
+					case "url":
+						newValue = URLDecoder.decode(valueToBeDecoded, StandardCharsets.UTF_8);
+						break;
+					default:
+						log.warn("Hostname {} - The type of encoding is not recognized, the table remains unchanged.", hostname);
+						return;
+				}
+
+				if (newValue != null) {
+					line.set(columnIndex, newValue);
+				} else {
+					log.warn("Hostname {} - Error when encoding the value {}.", hostname, valueToBeDecoded);
+				}
+			}
+		}
+
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+	}
+
+	@Override
 	@WithSpan("Compute Divide Exec")
 	public void process(@SpanAttribute("compute.definition") final Divide divide) {
 		if (divide == null) {
@@ -607,6 +663,56 @@ public class ComputeProcessor implements IComputeProcessor {
 				elementList.add(columnIndex, elementList.get(columnIndex));
 			}
 		}
+		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
+	}
+
+	@Override
+	@WithSpan("Compute Encode Exec")
+	public void process(@SpanAttribute("compute.definition") final Encode encode) {
+		if (encode == null) {
+			log.warn("Hostname {} - Encode object is null, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (encode.getColumn() == null || encode.getColumn() == 0) {
+			log.warn("Hostname {} - The column index in Encode cannot be null or 0, the table remains unchanged.", hostname);
+			return;
+		}
+
+		if (encode.getEncoding() == null || encode.getEncoding().isEmpty()) {
+			log.warn("Hostname {} - The type of encoding cannot be null or empty, the table remains unchanged.", hostname);
+			return;
+		}
+
+		final int columnIndex = encode.getColumn() - 1;
+		final String encoding = encode.getEncoding();
+
+		for (final List<String> line : sourceTable.getTable()) {
+			if (columnIndex < line.size()) {
+				final String valueToBeEncoded = line.get(columnIndex);
+
+				final String newValue;
+
+				switch (encoding.toLowerCase()) {
+					case "base64":
+						newValue = Base64.getEncoder().encodeToString((valueToBeEncoded.trim()).getBytes(StandardCharsets.UTF_8));
+						break;
+					case "url":
+						newValue = URLEncoder.encode(valueToBeEncoded, StandardCharsets.UTF_8);
+						break;
+					default:
+						log.warn("Hostname {} - The type of encoding is not recognized, the table remains unchanged.", hostname);
+						return;
+				}
+
+				if (newValue != null) {
+					line.set(columnIndex, newValue);
+				} else {
+					log.warn("Hostname {} - Error when encoding the value {}.", hostname, valueToBeEncoded);
+				}
+			}
+		}
+
 		sourceTable.setRawData(SourceTable.tableToCsv(sourceTable.getTable(), TABLE_SEP, false));
 	}
 

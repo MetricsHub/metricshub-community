@@ -22,7 +22,6 @@ package org.metricshub.web.security.login;
  */
 
 import java.util.Collections;
-import java.util.Optional;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.User;
@@ -113,14 +112,12 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	 */
 	User getUserAndCheckPassword(final LoginAuthenticationRequest request) {
 		// Find user by username
-		final Optional<User> userOptional = userService.find(request.getUsername());
+		final var user = userService.find(request.getUsername());
 
 		// Are we able to find the user?
-		if (userOptional.isEmpty()) {
+		if (user == null) {
 			throw new UnauthorizedException("User not found.");
 		}
-
-		final var user = userOptional.get();
 
 		// Verify the encoded user password obtained from storage matches the submitted raw password
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {

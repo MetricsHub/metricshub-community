@@ -109,8 +109,7 @@ public class OtelCollectorProcessService extends AbstractProcess {
 		}
 
 		// Ensure that the OpenTelemetry Collector Contrib executable is installed
-		final List<String> commandLine = processConfig.getCommandLine();
-		if (commandLine.isEmpty() || !Files.exists(Paths.get(commandLine.get(0)))) {
+		if (!isExecutableInstalled()) {
 			log.info(
 				"The MetricsHub Agent will not start the OpenTelemetry Collector because the executable is not present."
 			);
@@ -161,5 +160,15 @@ public class OtelCollectorProcessService extends AbstractProcess {
 			);
 			log.debug("Error: ", e);
 		}
+	}
+
+	/**
+	 * Checks whether the executable is installed or not.
+	 *
+	 * @return true if installed, false otherwise.
+	 */
+	public boolean isExecutableInstalled() {
+		final List<String> commandLine = processConfig.getCommandLine();
+		return !commandLine.isEmpty() && Files.exists(Paths.get(commandLine.get(0)));
 	}
 }
