@@ -11,6 +11,7 @@ import org.metricshub.engine.connector.model.PowerMeasurement;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
@@ -169,6 +170,10 @@ class PowerMeasurementStatusUpdateTest {
 
 			public Set<String> getKeys() {
 				return Set.of();
+			}
+
+			public Map<String, MetricDefinition> getMetrics() {
+				return Map.of();
 			}
 		};
 		connector.setMonitors(Map.of("enclosure", unknown));

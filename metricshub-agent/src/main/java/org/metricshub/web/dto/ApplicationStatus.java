@@ -38,7 +38,7 @@ public class ApplicationStatus {
 
 	private Status status;
 	private Map<String, String> agentInfo;
-	private boolean isOtelCollectorRunning;
+	private String otelCollectorStatus;
 	private long numberOfObservedResources;
 	private long numberOfConfiguredResources;
 

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLParser;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,6 +121,7 @@ class MonitorJobsDeserializerTest {
 			.simpleBuilder()
 			.keys(DEFAULT_KEYS)
 			.simple(simple)
+			.metrics(new HashMap<>())
 			.build();
 		final Map<String, SimpleMonitorJob> expected = Map.of(GRAFANA_MONITOR_JOB_KEY, simpleMonitorJobExpected);
 

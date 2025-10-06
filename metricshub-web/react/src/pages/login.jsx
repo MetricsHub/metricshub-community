@@ -19,7 +19,10 @@ const validationSchema = Yup.object({
 	password: Yup.string().required("Password is required"),
 });
 
-// eslint-disable-next-line react-refresh/only-export-components
+/**
+ * Login page component.
+ * @returns The login form.
+ */
 const LoginPage = () => {
 	const { signIn } = useAuth();
 	const navigate = useNavigate();
@@ -36,7 +39,7 @@ const LoginPage = () => {
 				if (returnTo) {
 					globalThis.location.assign(returnTo);
 				} else {
-					navigate(paths.index ?? "/", { replace: true });
+					navigate(paths.monitor ?? "/", { replace: true });
 				}
 			} catch (err) {
 				console.error(err);
@@ -97,5 +100,4 @@ const LoginPage = () => {
 };
 
 // Wrap LoginPage with AuthLayout
-// eslint-disable-next-line react-refresh/only-export-components
 export default withLayout(AuthLayout)(LoginPage);
