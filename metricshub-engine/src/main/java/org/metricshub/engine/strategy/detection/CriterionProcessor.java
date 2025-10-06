@@ -440,39 +440,39 @@ public class CriterionProcessor {
 		final Criterion criterion,
 		final String recordOutputDirectory
 	) {
-		// Directory where we will store the criterion results
 		final Path criterionResultOutputDirectory = Paths.get(recordOutputDirectory);
 		try {
 			Files.createDirectories(criterionResultOutputDirectory);
 
-			final Path file = criterionResultOutputDirectory.resolve(
-				telemetryManager.getHostname() + "_" + connectorId + "_" + criterion.getType() + "_criterion.yaml"
+			String baseFileName = String.format(
+				"%s_%s_%s_criterion",
+				telemetryManager.getHostname(),
+				connectorId,
+				criterion.getType()
 			);
 
-			try (
-				BufferedWriter out = Files.newBufferedWriter(
-					file,
-					StandardCharsets.UTF_8,
-					StandardOpenOption.CREATE,
-					StandardOpenOption.TRUNCATE_EXISTING
-				)
-			) {
+			// Generate a unique file name (e.g., _criterion1.yaml, _criterion2.yaml, etc.)
+			int counter = 1;
+			Path file;
+			do {
+				file = criterionResultOutputDirectory.resolve(baseFileName + counter + ".yaml");
+				counter++;
+			} while (Files.exists(file));
+
+			try (BufferedWriter out = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)) {
 				YAML_MAPPER.writeValue(out, result);
 				out.newLine();
 			}
+
+			log.debug("Hostname {} - Criterion result persisted to {}", telemetryManager.getHostname(), file);
 		} catch (IOException e) {
 			log.warn(
 				"Hostname {} - Could not write CriterionTestResult to {}. Error: {}",
 				telemetryManager.getHostname(),
-				criterionResultOutputDirectory,
+				recordOutputDirectory,
 				e.getMessage()
 			);
-			log.debug(
-				"Hostname {} - Could not write CriterionTestResult to {}",
-				telemetryManager.getHostname(),
-				criterionResultOutputDirectory,
-				e
-			);
+			log.debug("Detailed error:", e);
 		}
 	}
 
@@ -490,18 +490,35 @@ public class CriterionProcessor {
 		String emulationModeCriterionOutputDirectory
 	) {
 		final Path outDir = Paths.get(emulationModeCriterionOutputDirectory);
-		final Path file = outDir.resolve(
-			telemetryManager.getHostname() + "_" + connectorId + "_" + criterion.getType() + "_criterion.yaml"
+		final String filePattern = String.format(
+			"%s_%s_%s_criterion*.yaml",
+			telemetryManager.getHostname(),
+			connectorId,
+			criterion.getType()
 		);
 
-		if (!Files.exists(file)) {
-			log.debug("Hostname {} - No emulated CriterionTestResult found at {}", telemetryManager.getHostname(), file);
-			return Optional.empty();
-		}
+		try {
+			// List all matching files
+			try (var stream = Files.list(outDir)) {
+				Optional<Path> maybeFile = stream
+					.filter(p -> p.getFileName().toString().matches(filePattern.replace("*", ".*")))
+					.findFirst();
 
-		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
-			return Optional.of(result);
+				if (maybeFile.isEmpty()) {
+					log.debug(
+						"Hostname {} - No emulated CriterionTestResult found for pattern {}",
+						telemetryManager.getHostname(),
+						filePattern
+					);
+					return Optional.empty();
+				}
+
+				Path file = maybeFile.get();
+				try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+					CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
+					return Optional.of(result);
+				}
+			}
 		} catch (IOException e) {
 			log.warn(
 				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
@@ -509,12 +526,7 @@ public class CriterionProcessor {
 				emulationModeCriterionOutputDirectory,
 				e.getMessage()
 			);
-			log.debug(
-				"Hostname {} - Could not read CriterionTestResult from {}",
-				telemetryManager.getHostname(),
-				emulationModeCriterionOutputDirectory,
-				e
-			);
+			log.debug("Detailed error:", e);
 			return Optional.empty();
 		}
 	}

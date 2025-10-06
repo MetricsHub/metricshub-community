@@ -260,9 +260,7 @@ public abstract class AbstractSnmpRequestExecutor {
 					}
 					return null;
 				} finally {
-					if (snmpClient instanceof SnmpClient) {
-						((SnmpClient) snmpClient).freeResources();
-					}
+					snmpClient.freeResources();
 				}
 			},
 			protocol.getTimeout()
