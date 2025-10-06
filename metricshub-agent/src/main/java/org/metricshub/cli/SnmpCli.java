@@ -315,11 +315,13 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 
 					// display the request
 					final JsonNode queryNode = getQuery();
+					final String action = queryNode.get("action").asText();
+					displayQuery(action, queryNode.get("oid").asText());
 					// Execute the SNMP query
 					String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided
 					// CHECKSTYLE:OFF
-					if ("WALK".equalsIgnoreCase(queryNode.get("action").asText()) && record) {
+					if ("walk".equals(action) && record) {
 						final String oid = queryNode.get("oid").asText();
 						saveSnmpResultToFile(result, ConfigHelper.getDefaultOutputDirectory(), printWriter, oid);
 					}
@@ -331,6 +333,18 @@ public class SnmpCli implements IQuery, Callable<Integer> {
 				}
 			});
 		return CommandLine.ExitCode.OK;
+	}
+
+	/**
+	 * Prints query details.
+	 *
+	 * @param action the action being performed, such as "GET" or "GETNEXT".
+	 * @param oid the Object Identifier being queried.
+	 */
+	void displayQuery(final String action, final String oid) {
+		printWriter.println(String.format("Hostname %s - Executing SNMP %s query:", hostname, action));
+		printWriter.println(Ansi.ansi().a("OID: ").fgBrightBlack().a(oid).reset().toString());
+		printWriter.flush();
 	}
 
 	/**

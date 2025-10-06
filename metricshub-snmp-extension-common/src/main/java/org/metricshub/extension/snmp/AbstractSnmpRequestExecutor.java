@@ -48,7 +48,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	 *
 	 * @param configuration The SNMP configuration containing connection details.
 	 * @param hostname      The hostname or IP address of the SNMP-enabled device.
-	 * @param emulationInputFilePath Snmp emulation input file
+	 * @param emulationInputDirectory Snmp emulation input file
 	 * @throws RuntimeException If an {@link IOException} is thrown during the creation of the {@link SnmpClient}
 	 * @return The created SnmpClient {@link SnmpClient}.
 	 * @throws IOException If an error occurs during the creation of the {@link SnmpClient}.
@@ -56,7 +56,7 @@ public abstract class AbstractSnmpRequestExecutor {
 	protected abstract ISnmpClient createSnmpClient(
 		ISnmpConfiguration configuration,
 		String hostname,
-		String emulationInputFilePath
+		String emulationInputDirectory
 	) throws IOException;
 
 	/**
@@ -303,7 +303,7 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
 		final boolean logMode,
-		final String emulationInputFilePath
+		final String emulationInputDirectory
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP Walk request:\n- OID: {}\n", oid));
 
@@ -316,7 +316,7 @@ public abstract class AbstractSnmpRequestExecutor {
 			hostname,
 			null,
 			logMode,
-			emulationInputFilePath
+			emulationInputDirectory
 		);
 
 		final long responseTime = System.currentTimeMillis() - startTime;

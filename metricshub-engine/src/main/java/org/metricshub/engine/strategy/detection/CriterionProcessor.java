@@ -103,6 +103,7 @@ public class CriterionProcessor {
 	 * @param clientsExecutor The ClientsExecutor instance.
 	 * @param telemetryManager      The TelemetryManager instance.
 	 * @param connectorId           The connector ID.
+	 * @param extensionManager  The extension manager
 	 */
 	public CriterionProcessor(
 		final ClientsExecutor clientsExecutor,
@@ -373,8 +374,6 @@ public class CriterionProcessor {
 		@SpanAttribute("criterion.definition") Criterion criterion
 	) {
 		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-
 		// CHECKSTYLE:OFF
 		if (
 			emulationInputDirectory != null &&
@@ -390,17 +389,12 @@ public class CriterionProcessor {
 			return emulatedCriterionResult.orElse(CriterionTestResult.empty());
 		}
 
-		CriterionTestResult result = extensionManager
+		final CriterionTestResult result = extensionManager
 			.findCriterionExtension(criterion, telemetryManager)
-			.map(ext -> {
-				CriterionTestResult r = ext.processCriterion(criterion, connectorId, telemetryManager);
-				if (r != null) {
-					r.setCriterion(criterion);
-					return r;
-				}
-				return CriterionTestResult.empty();
-			})
-			.orElse(CriterionTestResult.empty());
+			.map((IProtocolExtension extension) -> processCriterionThroughExtension(criterion, extension))
+			.orElseGet(CriterionTestResult::empty);
+
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
 		if (
 			recordOutputDirectory != null &&
@@ -412,6 +406,24 @@ public class CriterionProcessor {
 		}
 		return result;
 		// CHECKSTYLE:ON
+	}
+
+	/**
+	 * Processes the given {@link Criterion} using the specified {@link IProtocolExtension}.
+	 *
+	 * @param criterion The criterion to be processed.
+	 * @param extension The protocol extension to use for processing.
+	 * @return A {@link CriterionTestResult} containing the outcome of the processing.
+	 */
+	private CriterionTestResult processCriterionThroughExtension(
+		final Criterion criterion,
+		final IProtocolExtension extension
+	) {
+		final var result = extension.processCriterion(criterion, connectorId, telemetryManager);
+		if (result != null) {
+			result.setCriterion(criterion);
+		}
+		return result;
 	}
 
 	/**
@@ -449,7 +461,18 @@ public class CriterionProcessor {
 				out.newLine();
 			}
 		} catch (IOException e) {
-			log.warn("Could not write CriterionTestResult to {}", criterionResultOutputDirectory, e);
+			log.warn(
+				"Hostname {} - Could not write CriterionTestResult to {}. Error: {}",
+				telemetryManager.getHostname(),
+				criterionResultOutputDirectory,
+				e.getMessage()
+			);
+			log.debug(
+				"Hostname {} - Could not write CriterionTestResult to {}",
+				telemetryManager.getHostname(),
+				criterionResultOutputDirectory,
+				e
+			);
 		}
 	}
 
@@ -472,14 +495,26 @@ public class CriterionProcessor {
 		);
 
 		if (!Files.exists(file)) {
-			throw new IllegalStateException("The path " + file.getFileName() + " does not exist!");
+			log.debug("Hostname {} - No emulated CriterionTestResult found at {}", telemetryManager.getHostname(), file);
+			return Optional.empty();
 		}
 
 		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
 			return Optional.of(result);
 		} catch (IOException e) {
-			log.warn("Could not read CriterionTestResult from {}", file, e);
+			log.warn(
+				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
+				telemetryManager.getHostname(),
+				emulationModeCriterionOutputDirectory,
+				e.getMessage()
+			);
+			log.debug(
+				"Hostname {} - Could not read CriterionTestResult from {}",
+				telemetryManager.getHostname(),
+				emulationModeCriterionOutputDirectory,
+				e
+			);
 			return Optional.empty();
 		}
 	}

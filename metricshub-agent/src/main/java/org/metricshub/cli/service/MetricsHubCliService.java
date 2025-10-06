@@ -22,7 +22,6 @@ package org.metricshub.cli.service;
  */
 
 import java.io.PrintWriter;
-import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -366,14 +365,12 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Add the connectors with variables connectors to the host.
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
-		final Path defaultLogDirectory = ConfigHelper.getDefaultOutputDirectory();
-
 		// Create the TelemetryManager using the connector store and the host configuration created above.
 		final TelemetryManager telemetryManager = TelemetryManager
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
-			.recordOutputDirectory(record ? defaultLogDirectory.toString() : null)
+			.recordOutputDirectory(record ? ConfigHelper.getDefaultOutputDirectory().toString() : null)
 			.emulationInputDirectory(emulate)
 			.build();
 

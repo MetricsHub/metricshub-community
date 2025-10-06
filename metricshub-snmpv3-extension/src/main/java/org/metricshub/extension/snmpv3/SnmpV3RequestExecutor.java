@@ -37,11 +37,11 @@ import org.metricshub.snmp.client.SnmpClient;
 public class SnmpV3RequestExecutor extends AbstractSnmpRequestExecutor {
 
 	@Override
-	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname, String emulationInputFilePath)
+	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname, String emulationInputDirectory)
 		throws IOException {
 		// If an emulation input file path is provided, use the OfflineSnmpFileClient for testing purposes.
-		if (emulationInputFilePath != null && !emulationInputFilePath.isBlank()) {
-			return new OfflineSnmpClient(Path.of(emulationInputFilePath));
+		if (emulationInputDirectory != null && !emulationInputDirectory.isBlank()) {
+			return new OfflineSnmpClient(Path.of(emulationInputDirectory));
 		}
 
 		final SnmpV3Configuration snmpConfig = (SnmpV3Configuration) protocol;

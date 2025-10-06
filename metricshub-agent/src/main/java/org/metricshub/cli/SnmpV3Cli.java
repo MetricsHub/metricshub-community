@@ -386,6 +386,7 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 
 					// display the request
 					final JsonNode queryNode = getQuery();
+					displayQuery(queryNode.get("action").asText(), queryNode.get("oid").asText());
 					// Execute the SNMPv3 query
 					final String result = extension.executeQuery(configuration, queryNode);
 					// Save the snmp result to a file if the filename is provided when the record option is enabled
@@ -402,6 +403,18 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 				}
 			});
 		return CommandLine.ExitCode.OK;
+	}
+
+	/**
+	 * Prints query details.
+	 *
+	 * @param action the action being performed, such as "GET" or "GETNEXT".
+	 * @param oid the Object Identifier being queried.
+	 */
+	void displayQuery(final String action, final String oid) {
+		printWriter.println(String.format("Hostname %s - Executing SNMPv3 %s query:", hostname, action));
+		printWriter.println(Ansi.ansi().a("OID: ").fgBrightBlack().a(oid).reset().toString());
+		printWriter.flush();
 	}
 
 	/**

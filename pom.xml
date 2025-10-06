@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>1.0.08-SNAPSHOT</version>
+	<version>1.0.09-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -302,7 +302,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>4.0.01</version>
+				<version>4.1.00</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -590,5 +590,3 @@
 	</build>
 
 </project>
-
-

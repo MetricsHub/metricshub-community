@@ -83,6 +83,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Slf4j
 public class SourceProcessor implements ISourceProcessor {
 
+	// Create a YAML ObjectMapper to serialize SourceTable to YAML format
+	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
+
 	private TelemetryManager telemetryManager;
 	private String connectorId;
 	private ClientsExecutor clientsExecutor;
@@ -167,13 +170,13 @@ public class SourceProcessor implements ISourceProcessor {
 			!emulationInputDirectory.isBlank()
 		) {
 			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(connectorId, source, emulationInputDirectory);
-			return emulatedSourceTable.orElse(null);
+			return emulatedSourceTable.orElseGet(SourceTable::empty);
 		}
 
 		SourceTable table = extensionManager
 			.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
-			.orElse(SourceTable.empty());
+			.orElseGet(SourceTable::empty);
 
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
@@ -185,9 +188,6 @@ public class SourceProcessor implements ISourceProcessor {
 		return table;
 		//CHECKSTYLE:ON
 	}
-
-	// Create a YAML ObjectMapper to serialize SourceTable to YAML format
-	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
 
 	/**
 	 *
@@ -220,11 +220,18 @@ public class SourceProcessor implements ISourceProcessor {
 					StandardOpenOption.TRUNCATE_EXISTING
 				)
 			) {
-				YAML_MAPPER.writeValue(out, sourceTable); // Jackson YAMLFactory handles it
+				// Jackson YAMLFactory handles it
+				YAML_MAPPER.writeValue(out, sourceTable);
 				out.newLine();
 			}
 		} catch (IOException e) {
-			log.warn("Could not write SourceTable to {}", sourceResultOutputDirectory, e);
+			log.warn(
+				"Hostname {} - Could not write SourceTable to {}. Error: {}",
+				telemetryManager.getHostname(),
+				sourceResultOutputDirectory,
+				e.getMessage()
+			);
+			log.debug("Hostname {} - Could not write SourceTable to {}", telemetryManager.getHostname(), source, e);
 		}
 	}
 
@@ -243,17 +250,20 @@ public class SourceProcessor implements ISourceProcessor {
 	) {
 		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
 		final String cleanKey = source.getKey().replace(":", "-");
-		final Path file = outDir.resolve(telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"); // content is YAML
-
-		if (!Files.exists(file)) {
-			throw new IllegalStateException("The file " + file.getFileName() + " does not exist!");
-		}
+		// Content is YAML
+		final Path file = outDir.resolve(telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml");
 
 		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
 			final SourceTable table = YAML_MAPPER.readValue(in, SourceTable.class);
 			return Optional.of(table);
 		} catch (IOException e) {
-			log.warn("Could not read SourceTable from {}", file, e);
+			log.warn(
+				"Hostname {} - Could not read SourceTable from {}. Error: {}",
+				telemetryManager.getHostname(),
+				emulationModeSourceOutputDirectory,
+				e.getMessage()
+			);
+			log.debug("Hostname {} - Could not read SourceTable from {}", telemetryManager.getHostname(), source, e);
 			return Optional.empty();
 		}
 	}
