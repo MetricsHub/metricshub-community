@@ -160,8 +160,8 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
+		// Retrieve emulation input directory and read recorded source from it
 		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
 		// CHECKSTYLE:OFF
 		if (
@@ -178,6 +178,8 @@ public class SourceProcessor implements ISourceProcessor {
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);
 
+		// Retrieve emulation output directory and persist source output if required and if not SNMP source
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
 			recordOutputDirectory != null &&
@@ -194,6 +196,7 @@ public class SourceProcessor implements ISourceProcessor {
 	 * @param sourceTable the {@link SourceTable} to persist
 	 * @param connectorId the identifier of the connector defining the source
 	 * @param source the {@link Source} that was processed
+	 * @param recordOutputDirectory The directory to which we save recorded sources
 	 */
 	private void persist(
 		final SourceTable sourceTable,

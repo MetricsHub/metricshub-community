@@ -316,13 +316,18 @@ public abstract class AbstractConnectorProcessor {
 	 * @param connector The {@link Connector} defining the criterion
 	 * @return <code>true</code> if the criterion execution succeeded
 	 */
-	protected CriterionTestResult processCriterion(final Criterion criterion, final Connector connector) {
+	protected CriterionTestResult processCriterion(
+		final Criterion criterion,
+		final Connector connector,
+		final int criterionId
+	) {
 		// Instantiate criterionProcessor with clientsExecutor, telemetryManager and connector name
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutor,
 			telemetryManager,
 			connector.getConnectorIdentity().getCompiledFilename(),
-			extensionManager
+			extensionManager,
+			criterionId
 		);
 
 		final Supplier<CriterionTestResult> executable;
@@ -396,9 +401,9 @@ public abstract class AbstractConnectorProcessor {
 			);
 			return connectorTestResult;
 		}
-
+		int criterionId = 0;
 		for (final Criterion criterion : criteria) {
-			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
+			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector, criterionId);
 			if (!criterionTestResult.isSuccess()) {
 				log.debug(
 					"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
@@ -409,6 +414,7 @@ public abstract class AbstractConnectorProcessor {
 			}
 
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
+			criterionId++;
 		}
 
 		return connectorTestResult;

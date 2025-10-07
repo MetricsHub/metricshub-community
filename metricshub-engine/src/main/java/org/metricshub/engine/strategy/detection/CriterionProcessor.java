@@ -36,10 +36,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,7 +85,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class CriterionProcessor {
 
 	private static final String CONFIGURE_OS_TYPE_MESSAGE = "Configured OS type : ";
-	private static final Map<String, Integer> CRITERION_INSTANCE_COUNTER = new ConcurrentHashMap<>();
 
 	// Create a YAML ObjectMapper to serialize CriterionTestResult to YAML format
 	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper().deactivateDefaultTyping();
@@ -99,6 +96,8 @@ public class CriterionProcessor {
 	private TelemetryManager telemetryManager;
 
 	private String connectorId;
+
+	private int criterionId;
 
 	/**
 	 * Constructor for the CriterionProcessor class.
@@ -112,12 +111,14 @@ public class CriterionProcessor {
 		final ClientsExecutor clientsExecutor,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
-		final ExtensionManager extensionManager
+		final ExtensionManager extensionManager,
+		final int criterionId
 	) {
 		this.clientsExecutor = clientsExecutor;
 		this.telemetryManager = telemetryManager;
 		this.connectorId = connectorId;
 		this.extensionManager = extensionManager;
+		this.criterionId = criterionId;
 	}
 
 	/**
@@ -365,18 +366,6 @@ public class CriterionProcessor {
 	}
 
 	/**
-	 * Generate a unique index per distinct criterion (not per type).
-	 * Two criteria with identical content will share the same key.
-	 */
-	private int getSequentialIndexForCriterion(Criterion criterion) {
-		// Build a unique key based on type + content hash
-		String uniqueKey = criterion.getType() + "_" + Math.abs(criterion.toString().hashCode());
-
-		// If this is the first time we see this exact criterion, assign a unique sequential ID
-		return CRITERION_INSTANCE_COUNTER.computeIfAbsent(uniqueKey, k -> CRITERION_INSTANCE_COUNTER.size() + 1);
-	}
-
-	/**
 	 * Processes the given {@link Criterion} by attempting to find a suitable {@link IProtocolExtension} via the
 	 * {@link ExtensionManager}. If an extension is found, it processes the criterion accordingly; otherwise,
 	 * it returns an empty {@link CriterionTestResult}.
@@ -388,7 +377,9 @@ public class CriterionProcessor {
 	public CriterionTestResult processCriterionThroughExtension(
 		@SpanAttribute("criterion.definition") Criterion criterion
 	) {
+		// Retrieve emulation input directory and read recorded criterion from it
 		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+
 		// CHECKSTYLE:OFF
 		if (
 			emulationInputDirectory != null &&
@@ -396,12 +387,8 @@ public class CriterionProcessor {
 			!(criterion instanceof SnmpGetCriterion) &&
 			!(criterion instanceof SnmpGetNextCriterion)
 		) {
-			Optional<CriterionTestResult> emulatedCriterionResult = readEmulatedCriterionResult(
-				connectorId,
-				criterion,
-				emulationInputDirectory
-			);
-			return emulatedCriterionResult.orElse(CriterionTestResult.empty());
+			return readEmulatedCriterionResult(connectorId, criterion, emulationInputDirectory)
+				.orElseGet(CriterionTestResult::empty);
 		}
 		// CHECKSTYLE:ON
 
@@ -410,6 +397,7 @@ public class CriterionProcessor {
 			.map((IProtocolExtension extension) -> processCriterionThroughExtension(criterion, extension))
 			.orElseGet(CriterionTestResult::empty);
 
+		// Persist source output if required and if not SNMP source
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
 		// CHECKSTYLE:OFF
@@ -419,8 +407,7 @@ public class CriterionProcessor {
 			!(criterion instanceof SnmpGetCriterion) &&
 			!(criterion instanceof SnmpGetNextCriterion)
 		) {
-			int criterionIndex = getSequentialIndexForCriterion(criterion);
-			persist(result, connectorId, criterion, recordOutputDirectory, criterionIndex);
+			persist(result, connectorId, criterion, recordOutputDirectory, criterionId);
 		}
 
 		// CHECKSTYLE:ON
@@ -452,13 +439,14 @@ public class CriterionProcessor {
 	 * @param connectorId the identifier of the connector defining the criterion
 	 * @param criterion the {@link Criterion} that was processed
 	 * @param recordOutputDirectory the directory to store the results
+	 * @param criterionId the index of the criterion to persist
 	 */
 	private void persist(
 		final CriterionTestResult result,
 		final String connectorId,
 		final Criterion criterion,
 		final String recordOutputDirectory,
-		final int criterionIndex
+		final int criterionId
 	) {
 		final Path criterionResultOutputDirectory = Paths.get(recordOutputDirectory);
 		try {
@@ -469,7 +457,7 @@ public class CriterionProcessor {
 				telemetryManager.getHostname(),
 				connectorId,
 				criterion.getType(),
-				criterionIndex
+				criterionId
 			);
 
 			final Path file = criterionResultOutputDirectory.resolve(fileName);
