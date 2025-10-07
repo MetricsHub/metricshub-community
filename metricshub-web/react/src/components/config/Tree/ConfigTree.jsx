@@ -1,6 +1,7 @@
 import * as React from "react";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
-import { Stack } from "@mui/material";
+import FileTypeIcon from "./icons/FileTypeIcons.jsx";
+import { Stack, Box } from "@mui/material";
 import FileTreeItem from "./FileTreeItem";
 
 /**
@@ -14,6 +15,13 @@ import FileTreeItem from "./FileTreeItem";
  */
 export default function ConfigTree({ files, selectedName, onSelect, onRename, onDeleteRequest }) {
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
+
+    const folderLabel = (
+  <Box sx={{ display: "flex", alignItems: "center" }}>
+    <FileTypeIcon type="folder" />
+    <span>config</span>
+  </Box>
+);
 
 	return (
 		<Stack sx={{ p: 0 }}>
@@ -32,13 +40,13 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 					"& .MuiTreeItem-content": { py: 0.25 },
 				}}
 			>
-				<TreeItem
-					itemId="config"
-					label="config"
-					sx={{
-						"& .MuiTreeItem-label": { fontWeight: 600 },
-					}}
-				>
+<TreeItem
+  itemId="config"
+  label={folderLabel}
+  sx={{
+    "& .MuiTreeItem-label": { fontWeight: 400 },
+  }}
+>
 					{files.map((f) => (
 						<FileTreeItem
 							key={f.name}
