@@ -194,7 +194,8 @@ public class MonitoringTask implements Runnable {
 						telemetryManager,
 						ConfigHelper.fetchMetricDefinitions(
 							connectorStore,
-							monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID)
+							monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID),
+							monitor.getType()
 						),
 						meter
 					);
