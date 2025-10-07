@@ -1,6 +1,6 @@
 import * as React from "react";
 import { TreeItem } from "@mui/x-tree-view";
-import { Box, IconButton, Menu, MenuItem, TextField, Stack } from "@mui/material";
+import { Box, IconButton, Menu, MenuItem, TextField, Stack, Chip } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -111,9 +111,28 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 								sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
 							/>
 						</Box>
-						<Box sx={{ mt: 0.5, opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}>
-							{`${formatBytes(file.size)} • ${formatRelativeTime(file.lastModificationTime)}`}
-						</Box>
+						<Stack
+							direction="row"
+							alignItems="center"
+							spacing={1}
+							sx={{ mt: 0.5, opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}
+						>
+							<Box component="span">
+								{`${formatBytes(file.size ?? 0)} • ${formatRelativeTime(file.lastModificationTime ?? Date.now())}`}
+							</Box>
+							{file.localOnly && (
+								<Chip
+									label="Unsaved"
+									size="small"
+									sx={{
+										border: 0,
+										bgcolor: "transparent",
+										p: 0,
+										"& .MuiChip-label": { p: 0, fontWeight: 500 },
+									}}
+								/>
+							)}
+						</Stack>
 					</>
 				) : (
 					<>
@@ -131,9 +150,28 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 								{file.name}
 							</Box>
 						</Box>
-						<Box sx={{ opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}>
-							{`${formatBytes(file.size)} • ${formatRelativeTime(file.lastModificationTime)}`}
-						</Box>
+						<Stack
+							direction="row"
+							alignItems="center"
+							spacing={1}
+							sx={{ opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}
+						>
+							<Box component="span">
+								{`${formatBytes(file.size ?? 0)} • ${formatRelativeTime(file.lastModificationTime ?? Date.now())}`}
+							</Box>
+							{file.localOnly && (
+								<Chip
+									label="Unsaved"
+									size="small"
+									sx={{
+										border: 0,
+										bgcolor: "transparent",
+										p: 0,
+										"& .MuiChip-label": { p: 0, fontWeight: 500 },
+									}}
+								/>
+							)}
+						</Stack>
 					</>
 				)}
 			</Box>

@@ -16,17 +16,32 @@ import {
 	deleteConfig,
 	renameConfig,
 } from "../store/thunks/configThunks";
-import { select as selectFile } from "../store/slices/configSlice";
-
+import {
+	select as selectFile,
+	addLocalFile,
+	setContent,
+	renameLocalFile,
+	deleteLocalFile,
+} from "../store/slices/configSlice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/Editor/ConfigEditorContainer";
 import ConfirmDeleteDialog from "../components/config/ConfirmDeleteDialog";
 import ConfigTree from "../components/config/Tree/ConfigTree";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
-	const { list, selected, content, loadingList, loadingContent, saving, validation, error } =
-		useAppSelector((s) => s.config);
+	const {
+		list,
+		filesByName,
+		selected,
+		content,
+		loadingList,
+		loadingContent,
+		saving,
+		validation,
+		error,
+	} = useAppSelector((s) => s.config);
 
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState(null);
@@ -38,16 +53,32 @@ function ConfigurationPage() {
 	const onSelect = useCallback(
 		(name) => {
 			dispatch(selectFile(name));
+			const cached = filesByName?.[name];
+			if (cached) {
+				dispatch(setContent(cached.content ?? ""));
+				return;
+			}
+			// if the list entry is flagged localOnly, also avoid backend and show whatever we have
+			const meta = list.find((f) => f.name === name);
+			if (meta?.localOnly) {
+				dispatch(setContent(filesByName?.[name]?.content ?? ""));
+				return;
+			}
+			// otherwise fetch from backend
 			dispatch(fetchConfigContent(name));
 		},
-		[dispatch],
+		[dispatch, filesByName, list],
 	);
-
 	const handleInlineRename = useCallback(
 		(oldName, newName) => {
-			dispatch(renameConfig({ oldName, newName }));
+			const meta = list.find((f) => f.name === oldName);
+			if (meta?.localOnly) {
+				dispatch(renameLocalFile({ oldName, newName }));
+			} else {
+				dispatch(renameConfig({ oldName, newName }));
+			}
 		},
-		[dispatch],
+		[dispatch, list],
 	);
 
 	const onSave = useCallback(
@@ -72,9 +103,14 @@ function ConfigurationPage() {
 			setDeleteOpen(false);
 			return;
 		}
-		dispatch(deleteConfig(deleteTarget));
+		const meta = list.find((f) => f.name === deleteTarget);
+		if (meta?.localOnly) {
+			dispatch(deleteLocalFile(deleteTarget));
+		} else {
+			dispatch(deleteConfig(deleteTarget));
+		}
 		setDeleteOpen(false);
-	}, [dispatch, deleteTarget]);
+	}, [dispatch, deleteTarget, list]);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -88,6 +124,31 @@ function ConfigurationPage() {
 						>
 							Refresh
 						</Button>
+
+						<Button
+							size="small"
+							//variant="outlined"
+							component="label"
+							startIcon={<UploadFileIcon />}
+						>
+							Upload
+							<input
+								type="file"
+								accept=".yaml,.yml"
+								hidden
+								onChange={(e) => {
+									const file = e.target.files?.[0];
+									if (!file) return;
+									const reader = new FileReader();
+									reader.onload = (evt) => {
+										const content = evt.target.result;
+										dispatch(addLocalFile({ name: file.name, content }));
+									};
+									reader.readAsText(file);
+								}}
+							/>
+						</Button>
+
 						{loadingList && <CircularProgress size={18} />}
 						{error && <Chip size="small" color="error" label={error} sx={{ maxWidth: 280 }} />}
 					</Stack>
