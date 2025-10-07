@@ -16,17 +16,17 @@ import FileTreeItem from "./FileTreeItem";
 export default function ConfigTree({ files, selectedName, onSelect, onRename, onDeleteRequest }) {
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
 
-    const folderLabel = (
-  <Box sx={{ display: "flex", alignItems: "center" }}>
-    <FileTypeIcon type="folder" />
-    <span>config</span>
-  </Box>
-);
+	const folderLabel = (
+		<Box sx={{ display: "flex", alignItems: "center" }}>
+			<FileTypeIcon type="folder" />
+			<span>config</span>
+		</Box>
+	);
 
 	return (
 		<Stack sx={{ p: 0 }}>
 			<SimpleTreeView
-                defaultExpandedItems={["config"]}
+				defaultExpandedItems={["config"]}
 				aria-label="Configuration files"
 				multiSelect={false}
 				selectedItems={selectedIds}
@@ -40,13 +40,13 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 					"& .MuiTreeItem-content": { py: 0.25 },
 				}}
 			>
-<TreeItem
-  itemId="config"
-  label={folderLabel}
-  sx={{
-    "& .MuiTreeItem-label": { fontWeight: 400 },
-  }}
->
+				<TreeItem
+					itemId="config"
+					label={folderLabel}
+					sx={{
+						"& .MuiTreeItem-label": { fontWeight: 400 },
+					}}
+				>
 					{files.map((f) => (
 						<FileTreeItem
 							key={f.name}

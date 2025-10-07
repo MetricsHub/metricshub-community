@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -34,8 +34,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		return stored ?? value ?? DEFAULT_YAML;
 	});
 
-	const debounceRef = useRef(null);
-
 	// Sync external value if provided
 	useEffect(() => {
 		if (value != null) {
@@ -48,13 +46,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	useEffect(() => {
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
-
-	// Cleanup timers on unmount
-	useEffect(() => {
-		return () => {
-			if (debounceRef.current) clearTimeout(debounceRef.current);
-		};
-	}, []);
 
 	// CodeMirror extensions
 	const extensions = useMemo(() => {
@@ -80,20 +71,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		},
 		[onChange],
 	);
-
-	const runValidation = useCallback(() => {
-		try {
-			if (doc.trim()) YAML.parse(doc);
-			// no visual feedback by design
-		} catch {
-			// no visual feedback by design
-		}
-	}, [doc]);
-
-	useEffect(() => {
-		if (debounceRef.current) clearTimeout(debounceRef.current);
-		debounceRef.current = setTimeout(runValidation, 1000);
-	}, [doc, runValidation]);
 
 	return (
 		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
