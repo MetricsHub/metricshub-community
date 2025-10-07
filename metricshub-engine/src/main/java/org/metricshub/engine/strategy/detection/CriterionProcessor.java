@@ -36,8 +36,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -85,6 +87,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public class CriterionProcessor {
 
 	private static final String CONFIGURE_OS_TYPE_MESSAGE = "Configured OS type : ";
+	private static final Map<String, Integer> CRITERION_INSTANCE_COUNTER = new ConcurrentHashMap<>();
 
 	// Create a YAML ObjectMapper to serialize CriterionTestResult to YAML format
 	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper().deactivateDefaultTyping();
@@ -362,6 +365,18 @@ public class CriterionProcessor {
 	}
 
 	/**
+	 * Generate a unique index per distinct criterion (not per type).
+	 * Two criteria with identical content will share the same key.
+	 */
+	private int getSequentialIndexForCriterion(Criterion criterion) {
+		// Build a unique key based on type + content hash
+		String uniqueKey = criterion.getType() + "_" + Math.abs(criterion.toString().hashCode());
+
+		// If this is the first time we see this exact criterion, assign a unique sequential ID
+		return CRITERION_INSTANCE_COUNTER.computeIfAbsent(uniqueKey, k -> CRITERION_INSTANCE_COUNTER.size() + 1);
+	}
+
+	/**
 	 * Processes the given {@link Criterion} by attempting to find a suitable {@link IProtocolExtension} via the
 	 * {@link ExtensionManager}. If an extension is found, it processes the criterion accordingly; otherwise,
 	 * it returns an empty {@link CriterionTestResult}.
@@ -388,6 +403,7 @@ public class CriterionProcessor {
 			);
 			return emulatedCriterionResult.orElse(CriterionTestResult.empty());
 		}
+		// CHECKSTYLE:ON
 
 		final CriterionTestResult result = extensionManager
 			.findCriterionExtension(criterion, telemetryManager)
@@ -396,16 +412,19 @@ public class CriterionProcessor {
 
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
+		// CHECKSTYLE:OFF
 		if (
 			recordOutputDirectory != null &&
 			!recordOutputDirectory.isBlank() &&
 			!(criterion instanceof SnmpGetCriterion) &&
 			!(criterion instanceof SnmpGetNextCriterion)
 		) {
-			persist(result, connectorId, criterion, recordOutputDirectory);
+			int criterionIndex = getSequentialIndexForCriterion(criterion);
+			persist(result, connectorId, criterion, recordOutputDirectory, criterionIndex);
 		}
-		return result;
+
 		// CHECKSTYLE:ON
+		return result;
 	}
 
 	/**
@@ -438,41 +457,47 @@ public class CriterionProcessor {
 		final CriterionTestResult result,
 		final String connectorId,
 		final Criterion criterion,
-		final String recordOutputDirectory
+		final String recordOutputDirectory,
+		final int criterionIndex
 	) {
 		final Path criterionResultOutputDirectory = Paths.get(recordOutputDirectory);
 		try {
 			Files.createDirectories(criterionResultOutputDirectory);
 
-			String baseFileName = String.format(
-				"%s_%s_%s_criterion",
+			final String fileName = String.format(
+				"%s_%s_%s_criterion%d.yaml",
 				telemetryManager.getHostname(),
 				connectorId,
-				criterion.getType()
+				criterion.getType(),
+				criterionIndex
 			);
 
-			// Generate a unique file name (e.g., _criterion1.yaml, _criterion2.yaml, etc.)
-			int counter = 1;
-			Path file;
-			do {
-				file = criterionResultOutputDirectory.resolve(baseFileName + counter + ".yaml");
-				counter++;
-			} while (Files.exists(file));
+			final Path file = criterionResultOutputDirectory.resolve(fileName);
 
-			try (BufferedWriter out = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW)) {
+			try (
+				BufferedWriter out = Files.newBufferedWriter(
+					file,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING
+				)
+			) {
 				YAML_MAPPER.writeValue(out, result);
 				out.newLine();
 			}
-
-			log.debug("Hostname {} - Criterion result persisted to {}", telemetryManager.getHostname(), file);
 		} catch (IOException e) {
 			log.warn(
-				"Hostname {} - Could not write CriterionTestResult to {}. Error: {}",
+				"Hostname {} - Could not write ConnectorTestResult to {}. Error: {}",
 				telemetryManager.getHostname(),
-				recordOutputDirectory,
+				criterionResultOutputDirectory,
 				e.getMessage()
 			);
-			log.debug("Detailed error:", e);
+			log.debug(
+				"Hostname {} - Could not write ConnectorTestResult to {}",
+				telemetryManager.getHostname(),
+				criterionResultOutputDirectory,
+				e
+			);
 		}
 	}
 
@@ -526,7 +551,12 @@ public class CriterionProcessor {
 				emulationModeCriterionOutputDirectory,
 				e.getMessage()
 			);
-			log.debug("Detailed error:", e);
+			log.debug(
+				"Hostname {} - Could not read CriterionTestResult from {}",
+				telemetryManager.getHostname(),
+				emulationModeCriterionOutputDirectory,
+				e
+			);
 			return Optional.empty();
 		}
 	}
