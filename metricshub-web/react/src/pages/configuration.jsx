@@ -18,10 +18,10 @@ import {
 } from "../store/thunks/configThunks";
 import { select as selectFile, setContent } from "../store/slices/configSlice";
 
-import ConfigList from "../components/config/ConfigList";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditor from "../components/config/Editor/ConfigEditor";
 import ConfirmDeleteDialog from "../components/config/ConfirmDeleteDialog";
+import ConfigTree from "../components/config/Tree/ConfigTree";
 
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
@@ -63,7 +63,6 @@ function ConfigurationPage() {
 		dispatch(validateConfig({ name: selected, content }));
 	}, [dispatch, selected, content]);
 
-	// delete
 	const openDelete = useCallback((fileName) => {
 		setDeleteTarget(fileName);
 		setDeleteOpen(true);
@@ -93,13 +92,12 @@ function ConfigurationPage() {
 						{error && <Chip size="small" color="error" label={error} sx={{ maxWidth: 280 }} />}
 					</Stack>
 
-					<ConfigList
+					<ConfigTree
 						files={list}
 						selectedName={selected}
-						loading={loadingList}
 						onSelect={onSelect}
-						onDeleteRequest={openDelete}
 						onRename={handleInlineRename}
+						onDeleteRequest={openDelete}
 					/>
 
 					<ConfirmDeleteDialog
