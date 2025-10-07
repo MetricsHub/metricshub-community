@@ -47,6 +47,11 @@ public class ExecuteSnmpQueryService {
 	 * The set of SNMP accepted queries.
 	 */
 	private static final Set<String> SNMP_METHODS = Set.of("get", "getnext", "walk", "table");
+
+	/**
+	 * Default timeout of the query execution in seconds
+	 */
+	private static final Long DEFAULT_TIMEOUT = 10L;
 	/**
 	 * Holds contextual information about the current agent instance.
 	 */
@@ -69,6 +74,7 @@ public class ExecuteSnmpQueryService {
 	 * @param queryType SNMP queries to execute: get, getNext, walk, or table
 	 * @param oid       SNMP OID used in the request
 	 * @param columns   comma-separated column indexes; required when {@code queryType} is {@code "table"}, ignored otherwise
+	 * @param timeout   the timeout of the query execution in seconds
 	 * @return a {@link QueryResponse} containing the result or an error message
 	 */
 	@Tool(
@@ -85,14 +91,15 @@ public class ExecuteSnmpQueryService {
 			required = true
 		) final String queryType,
 		@ToolParam(description = "The SNMP OID to use in the request.", required = true) final String oid,
-		@ToolParam(description = "The columns to select on the SNMP Table query.") final String columns
+		@ToolParam(description = "The columns to select on the SNMP Table query.", required = false) final String columns,
+		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout
 	) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("snmp")
 			.map((IProtocolExtension extension) ->
-				executeQueryWithExtension(extension, hostname.trim(), queryType.trim(), oid.trim(), columns)
+				executeQueryWithExtension(extension, hostname.trim(), queryType.trim(), oid.trim(), columns, timeout)
 			)
 			.orElse(QueryResponse.builder().isError("SNMP Extension is not available").build());
 	}
@@ -106,6 +113,7 @@ public class ExecuteSnmpQueryService {
 	 * @param oid       the target OID
 	 * @param columns   comma-separated list of integer column indexes; required when {@code queryType} is {@code "table"},
 	 *                  ignored for all other actions
+	 * @param timeout   the timeout of the query execution in seconds
 	 * @return the {@link QueryResponse} with the execution result or an error
 	 */
 	private QueryResponse executeQueryWithExtension(
@@ -113,7 +121,8 @@ public class ExecuteSnmpQueryService {
 		final String hostname,
 		final String queryType,
 		final String oid,
-		final String columns
+		final String columns,
+		final Long timeout
 	) {
 		// Make sure the selected SNMP method exists.
 		if (!SNMP_METHODS.contains(queryType.toLowerCase())) {
@@ -159,6 +168,7 @@ public class ExecuteSnmpQueryService {
 			.findFirst()
 			.map(configuration -> {
 				try {
+					configuration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_TIMEOUT);
 					final String result = extension.executeQuery(configuration, queryNode);
 					return QueryResponse.builder().response(result).build();
 				} catch (Exception e) {

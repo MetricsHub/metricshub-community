@@ -34,6 +34,8 @@ class ExecuteSnmpQueryServiceTest {
 
 	private static final String SUCCESS_MESSAGE = "Success";
 
+	private static final Long TIMEOUT = 10L;
+
 	private AgentContextHolder agentContextHolder;
 	private AgentContext agentContext;
 	private ExecuteSnmpQueryService snmpQueryService;
@@ -84,7 +86,7 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null);
+		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
 		assertEquals("No SNMP configuration found for %s.".formatted(HOSTNAME), result.getIsError());
 	}
@@ -95,7 +97,7 @@ class ExecuteSnmpQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null);
+		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
 		assertEquals("SNMP Extension is not available", result.getIsError());
 		assertNull(result.getResponse());
@@ -131,13 +133,13 @@ class ExecuteSnmpQueryServiceTest {
 			.thenReturn("Success");
 
 		// Calling execute query
-		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null);
+		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
 		assertNull(result.getIsError());
 		assertEquals(SUCCESS_MESSAGE, result.getResponse());
 
 		// Test a wrong SNMP query type
-		result = snmpQueryService.executeQuery(HOSTNAME, "aw", OID, null);
+		result = snmpQueryService.executeQuery(HOSTNAME, "aw", OID, null, TIMEOUT);
 
 		assertTrue(result.getIsError().contains("Unknown SNMP query"));
 	}
@@ -172,7 +174,7 @@ class ExecuteSnmpQueryServiceTest {
 			.thenReturn("Success");
 
 		// Calling execute query
-		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "getNext", OID, null);
+		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "getNext", OID, null, TIMEOUT);
 
 		assertNull(result.getIsError());
 		assertEquals(SUCCESS_MESSAGE, result.getResponse());
@@ -208,7 +210,7 @@ class ExecuteSnmpQueryServiceTest {
 			.thenReturn("Success");
 
 		// Calling execute query
-		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "walk", OID, null);
+		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "walk", OID, null, TIMEOUT);
 
 		assertNull(result.getIsError());
 		assertEquals(SUCCESS_MESSAGE, result.getResponse());
@@ -246,7 +248,7 @@ class ExecuteSnmpQueryServiceTest {
 			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
 
 		// Calling execute query
-		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, 5 ,");
+		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, 5 ,", TIMEOUT);
 
 		assertNull(result.getIsError());
 		assertEquals(
@@ -255,7 +257,7 @@ class ExecuteSnmpQueryServiceTest {
 		);
 
 		// test a wrong columns value
-		result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, a");
+		result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, a", TIMEOUT);
 
 		assertTrue(result.getIsError().contains("Exception occurred when parsing columns:"));
 	}

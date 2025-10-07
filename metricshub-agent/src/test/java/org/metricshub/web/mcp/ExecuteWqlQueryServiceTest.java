@@ -51,6 +51,12 @@ class ExecuteWqlQueryServiceTest {
 	 */
 	private static final String WMI_IDENTIFIER = "wmi";
 
+	/**
+	 * A Timeout for the query execution
+	 */
+
+	private static final Long TIMEOUT = 10L;
+
 	private AgentContextHolder agentContextHolder;
 	private AgentContext agentContext;
 	private ExtensionManager extensionManager;
@@ -103,7 +109,7 @@ class ExecuteWqlQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE);
+		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertEquals("No configuration found.".formatted(HOSTNAME), result.getIsError());
 	}
@@ -115,7 +121,7 @@ class ExecuteWqlQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE);
+		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertEquals("No Extension found for wmi protocol.", result.getIsError());
 		assertNull(result.getResponse());
@@ -149,7 +155,7 @@ class ExecuteWqlQueryServiceTest {
 		when(wmiRequestExecutorMock.executeWmi(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE)))
 			.thenReturn(List.of(List.of("Value1", "Value2")));
 
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE);
+		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertEquals(TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))), result.getResponse());
 	}
@@ -185,7 +191,7 @@ class ExecuteWqlQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE);
+		QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		// Assertions
 		assertNotNull(result.getIsError());

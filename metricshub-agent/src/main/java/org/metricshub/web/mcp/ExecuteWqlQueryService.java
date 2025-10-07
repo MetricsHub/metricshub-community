@@ -52,6 +52,7 @@ public class ExecuteWqlQueryService {
 	 * Default WMI Namespace
 	 */
 	private static final String DEFAULT_NAMESPACE = "root\\cimv2";
+
 	/**
 	 * Holds contextual information about the current agent instance.
 	 */
@@ -77,6 +78,7 @@ public class ExecuteWqlQueryService {
 	 * @param protocol  the protocol identifier (for example, {@code "WMI"} or {@code "WinRm"})
 	 * @param query     the WQL query string to execute
 	 * @param namespace the WMI namespace to use
+	 * @param timeout   the timeout for the query execution in seconds
 	 * @return a {@link QueryResponse} containing the extension response or an error
 	 */
 	@Tool(
@@ -93,13 +95,16 @@ public class ExecuteWqlQueryService {
 			required = true
 		) final String protocol,
 		@ToolParam(description = "The WQL query to execute.", required = true) final String query,
-		@ToolParam(description = "The namespace to use.") final String namespace
+		@ToolParam(description = "The namespace to use.", required = false) final String namespace,
+		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout
 	) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
-			.map((IProtocolExtension extension) -> executeQuery(extension, hostname, query, namespace))
+			.map((IProtocolExtension extension) ->
+				executeQueryWithExtensionSafe(extension, hostname, query, namespace, timeout)
+			)
 			.orElse(QueryResponse.builder().isError("No Extension found for %s protocol.".formatted(protocol)).build());
 	}
 
@@ -114,13 +119,15 @@ public class ExecuteWqlQueryService {
 	 * @param hostname  the target host
 	 * @param query     the WQL query string
 	 * @param namespace the namespace to inject into the configuration
+	 * @param timeout   the timeout for the query execution in seconds
 	 * @return a {@link QueryResponse} containing either the extension result or an error
 	 */
-	private QueryResponse executeQuery(
+	private QueryResponse executeQueryWithExtensionSafe(
 		final IProtocolExtension extension,
 		final String hostname,
 		final String query,
-		final String namespace
+		final String namespace,
+		final Long timeout
 	) {
 		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
 			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
@@ -139,7 +146,7 @@ public class ExecuteWqlQueryService {
 
 		// add hostname and timeout to the valid configuration
 		validConfiguration.setHostname(hostname);
-		validConfiguration.setTimeout(DEFAULT_QUERY_TIMEOUT);
+		validConfiguration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
 
 		// Create a json node and populate it with the query
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
