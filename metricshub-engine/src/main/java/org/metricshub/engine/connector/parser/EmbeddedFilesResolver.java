@@ -36,6 +36,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -126,7 +127,7 @@ public class EmbeddedFilesResolver {
 			return;
 		}
 
-		final List<EmbeddedFile> embeddedFilesWithEmbeddedFiles = new ArrayList<>();
+		final Set<EmbeddedFile> embeddedFilesWithEmbeddedFiles = new HashSet<>();
 
 		// Parse the embedded files to find eventual new embedded files within them.
 		Collection<EmbeddedFile> temporaryEmbeddedFilesList = new ArrayList<>(processedEmbeddedFiles.values());
