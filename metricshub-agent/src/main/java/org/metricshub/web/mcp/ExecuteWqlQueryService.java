@@ -49,6 +49,10 @@ public class ExecuteWqlQueryService {
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
 
 	/**
+	 * Default WMI Namespace
+	 */
+	private static final String DEFAULT_NAMESPACE = "root\\cimv2";
+	/**
 	 * Holds contextual information about the current agent instance.
 	 */
 	private AgentContextHolder agentContextHolder;
@@ -89,7 +93,7 @@ public class ExecuteWqlQueryService {
 			required = true
 		) final String protocol,
 		@ToolParam(description = "The WQL query to execute.", required = true) final String query,
-		@ToolParam(description = "The namespace to use.", required = true) final String namespace
+		@ToolParam(description = "The namespace to use.") final String namespace
 	) {
 		return agentContextHolder
 			.getAgentContext()
@@ -173,7 +177,10 @@ public class ExecuteWqlQueryService {
 		final ObjectNode configurationNode = mapper.valueToTree(configuration);
 
 		// Inject the namespace into the configuration ObjectNode
-		configurationNode.set("namespace", new TextNode(namespace));
+		configurationNode.set(
+			"namespace",
+			new TextNode(namespace != null && !namespace.isBlank() ? namespace : DEFAULT_NAMESPACE)
+		);
 
 		try {
 			// Try to build an IConfiguration from the modified ObjectNode.
