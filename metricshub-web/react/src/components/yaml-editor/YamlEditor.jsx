@@ -27,95 +27,95 @@ service:
  * - readOnly?: boolean (default false)
  */
 export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
-  const theme = useTheme();
+	const theme = useTheme();
 
-  const [doc, setDoc] = useState(() => {
-    const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return stored ?? value ?? DEFAULT_YAML;
-  });
+	const [doc, setDoc] = useState(() => {
+		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+		return stored ?? value ?? DEFAULT_YAML;
+	});
 
-  const debounceRef = useRef(null);
+	const debounceRef = useRef(null);
 
-  // Sync external value if provided
-  useEffect(() => {
-    if (value != null) {
-      setDoc(value);
-      localStorage.setItem(LOCAL_STORAGE_KEY, value);
-    }
-  }, [value]);
+	// Sync external value if provided
+	useEffect(() => {
+		if (value != null) {
+			setDoc(value);
+			localStorage.setItem(LOCAL_STORAGE_KEY, value);
+		}
+	}, [value]);
 
-  // Save to localStorage on every change
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, doc);
-  }, [doc]);
+	// Save to localStorage on every change
+	useEffect(() => {
+		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
+	}, [doc]);
 
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
+	// Cleanup timers on unmount
+	useEffect(() => {
+		return () => {
+			if (debounceRef.current) clearTimeout(debounceRef.current);
+		};
+	}, []);
 
-  // CodeMirror extensions
-  const extensions = useMemo(() => {
-    const km = [...defaultKeymap, ...historyKeymap];
-    if (onSave) {
-      km.unshift({
-        key: "Mod-s",
-        preventDefault: true,
-        run: (view) => {
-          onSave(view.state.doc.toString());
-          return true;
-        },
-      });
-    }
-    return [cmYaml(), history(), keymap.of(km)];
-  }, [onSave]);
+	// CodeMirror extensions
+	const extensions = useMemo(() => {
+		const km = [...defaultKeymap, ...historyKeymap];
+		if (onSave) {
+			km.unshift({
+				key: "Mod-s",
+				preventDefault: true,
+				run: (view) => {
+					onSave(view.state.doc.toString());
+					return true;
+				},
+			});
+		}
+		return [cmYaml(), history(), keymap.of(km)];
+	}, [onSave]);
 
-  // Handle changes
-  const handleChange = useCallback(
-    (val) => {
-      setDoc(val);
-      onChange?.(val);
-    },
-    [onChange],
-  );
+	// Handle changes
+	const handleChange = useCallback(
+		(val) => {
+			setDoc(val);
+			onChange?.(val);
+		},
+		[onChange],
+	);
 
-  const runValidation = useCallback(() => {
-    try {
-      if (doc.trim()) YAML.parse(doc);
-      // no visual feedback by design
-    } catch {
-      // no visual feedback by design
-    }
-  }, [doc]);
+	const runValidation = useCallback(() => {
+		try {
+			if (doc.trim()) YAML.parse(doc);
+			// no visual feedback by design
+		} catch {
+			// no visual feedback by design
+		}
+	}, [doc]);
 
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(runValidation, 1000);
-  }, [doc, runValidation]);
+	useEffect(() => {
+		if (debounceRef.current) clearTimeout(debounceRef.current);
+		debounceRef.current = setTimeout(runValidation, 1000);
+	}, [doc, runValidation]);
 
-  return (
-    <Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      {/* Editor container only (no toolbar/header/buttons) */}
-      <Box
-        sx={{
-          flex: 1,
-          minHeight: 0,
-          borderTop: 0,
-          ".cm-editor": { height: "100%" },
-          ".cm-scroller": { overflow: "auto" },
-        }}
-      >
-        <CodeMirror
-          value={doc}
-          onChange={handleChange}
-          extensions={extensions}
-          editable={!readOnly}
-          basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
-          theme={theme.palette.mode}
-        />
-      </Box>
-    </Box>
-  );
+	return (
+		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
+			{/* Editor container only (no toolbar/header/buttons) */}
+			<Box
+				sx={{
+					flex: 1,
+					minHeight: 0,
+					borderTop: 0,
+					".cm-editor": { height: "100%" },
+					".cm-scroller": { overflow: "auto" },
+				}}
+			>
+				<CodeMirror
+					value={doc}
+					onChange={handleChange}
+					extensions={extensions}
+					editable={!readOnly}
+					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
+					theme={theme.palette.mode}
+				/>
+			</Box>
+		</Box>
+	);
 }
