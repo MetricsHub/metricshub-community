@@ -16,10 +16,10 @@ import {
 	deleteConfig,
 	renameConfig,
 } from "../store/thunks/configThunks";
-import { select as selectFile, setContent } from "../store/slices/configSlice";
+import { select as selectFile } from "../store/slices/configSlice";
 
 import EditorHeader from "../components/config/EditorHeader";
-import ConfigEditor from "../components/config/Editor/ConfigEditor";
+import ConfigEditorContainer from "../components/config/Editor/ConfigEditorContainer";
 import ConfirmDeleteDialog from "../components/config/ConfirmDeleteDialog";
 import ConfigTree from "../components/config/Tree/ConfigTree";
 
@@ -120,13 +120,7 @@ function ConfigurationPage() {
 						canSave={!!selected && !saving}
 					/>
 					<Box sx={{ height: "calc(100vh - 160px)" }}>
-						<ConfigEditor
-							value={content}
-							readOnly={!selected || loadingContent}
-							onChange={(doc) => dispatch(setContent(doc))}
-							onSave={(doc) => onSave(doc)}
-							height="100%"
-						/>
+						<ConfigEditorContainer />
 					</Box>
 					{loadingContent && (
 						<Stack direction="row" alignItems="center" spacing={1}>
