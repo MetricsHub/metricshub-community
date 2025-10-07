@@ -1,12 +1,5 @@
 package org.metricshub.web.mcp;
 
-import org.metricshub.engine.extension.IProtocolExtension;
-import org.metricshub.web.AgentContextHolder;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
@@ -28,11 +21,32 @@ import org.springframework.stereotype.Service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import java.util.Optional;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 @Service
 /**
- * 
+ * Service that executes a WQL query through the given {@link IProtocolExtension}.
+ * The service resolves host configurations from the agent context, keeps only those that the
+ * extension accepts, injects the requested namespace, and then delegates execution to the extension.
+ * Failures at any step are surfaced as an error in the returned {@link QueryResponse}.
  */
 public class ExecuteWqlQueryService {
+
+	/**
+	 * Default timeout in seconds used when executing the query through the protocol extension.
+	 */
+	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -49,49 +63,123 @@ public class ExecuteWqlQueryService {
 		this.agentContextHolder = agentContextHolder;
 	}
 
+	/**
+	 * Executes a WQL query against the specified host using the requested protocol extension. The method
+	 * looks up the extension by its type, prepares a valid configuration for the host and namespace, and
+	 * returns the raw response produced by the extension. If the extension is not available or no valid
+	 * configuration can be prepared, the response contains an error message instead of data.
+	 *
+	 * @param hostname  the target host on which to execute the query
+	 * @param protocol  the protocol identifier (for example, {@code "WMI"} or {@code "WinRm"})
+	 * @param query     the WQL query string to execute
+	 * @param namespace the WMI namespace to use
+	 * @return a {@link QueryResponse} containing the extension response or an error
+	 */
 	@Tool(
-			name = "ExecuteSnmpQuery",
-			description = """
-			Executes a WQL query via WMI or WinRm on a given hostname and a namespace.
-			TODO.
-			"""
-		)
+		name = "ExecuteWqlQuery",
+		description = """
+		Executes a WQL query on a given Windows host using the specified protocol (WMI or WinRM) and namespace.
+		Returns the result produced by the Windows provider, or an error if the query cannot be executed.
+		"""
+	)
 	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute SNMP Query on.", required = true) final String hostname,
+		@ToolParam(description = "The hostname to execute WQL query on.", required = true) final String hostname,
 		@ToolParam(
-			description = "The SNMP action to execute: Get, GetNext, Walk or Table.",
+			description = "The protocol to use to execute the WQL query (WMI or WinRm).",
 			required = true
 		) final String protocol,
-		@ToolParam(description = "The SNMP OID to use in the request.", required = true) final String query,
-		@ToolParam(description = "The columns to select on the SNMP Table query.") final String namespace
+		@ToolParam(description = "The WQL query to execute.", required = true) final String query,
+		@ToolParam(description = "The namespace to use.", required = true) final String namespace
 	) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
-			.map((IProtocolExtension extension) -> executeQueryWithExtension(extension, hostname, query, namespace))
-			.orElse(QueryResponse.builder().isError("SNMP Extension is not available").build());
+			.map((IProtocolExtension extension) -> executeQuery(extension, hostname, query, namespace))
+			.orElse(QueryResponse.builder().isError("No Extension found for %s protocol.".formatted(protocol)).build());
 	}
 
 	/**
-	 * 
-	 * @param extension the SNMP protocol extension
+	 * Prepares a configuration accepted by the provided extension and performs the query execution.
+	 * The method chooses the first configuration that the extension validates, enriches it with the
+	 * requested namespace, applies runtime fields such as hostname and timeout, builds the query node,
+	 * and finally delegates execution to the extension. Any exception raised by the extension is caught
+	 * and translated into an error response.
+	 *
+	 * @param extension the protocol extension that will validate the configuration and execute the query
 	 * @param hostname  the target host
-	 * @param query 
-	 * @param namespace
-	 * @return
+	 * @param query     the WQL query string
+	 * @param namespace the namespace to inject into the configuration
+	 * @return a {@link QueryResponse} containing either the extension result or an error
 	 */
-	private QueryResponse executeQueryWithExtension(
+	private QueryResponse executeQuery(
 		final IProtocolExtension extension,
 		final String hostname,
 		final String query,
 		final String namespace
 	) {
-		return MCPConfigHelper
+		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
 			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
-			.findFirst()
-			
+			.map(configCandidate -> this.buildConfigurationWithNamespace(extension, configCandidate, namespace))
+			.flatMap(Optional::stream)
+			.findFirst();
+
+		if (maybeConfiguration.isEmpty()) {
+			return QueryResponse.builder().isError("No configuration found.").build();
+		}
+
+		// Retrieve the valid configuration from maybe configuration.
+		final IConfiguration validConfiguration = maybeConfiguration.get();
+
+		// add hostname and timeout to the valid configuration
+		validConfiguration.setHostname(hostname);
+		validConfiguration.setTimeout(DEFAULT_QUERY_TIMEOUT);
+
+		// Create a json node and populate it with the query
+		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
+		queryNode.set("query", new TextNode(query));
+
+		try {
+			return QueryResponse.builder().response(extension.executeQuery(validConfiguration, queryNode)).build();
+		} catch (Exception e) {
+			return QueryResponse
+				.builder()
+				.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+				.build();
+		}
+	}
+
+	/**
+	 * Builds a configuration derived from the supplied candidate by injecting the provided namespace and
+	 * delegating to {@link IProtocolExtension#buildConfiguration(String, ObjectNode, Object)}. When the
+	 * extension rejects the candidate or any error occurs during the build process, the method returns
+	 * an empty {@link Optional}.
+	 *
+	 * @param extension     the protocol extension responsible for building the final configuration
+	 * @param configuration the base configuration candidate
+	 * @param namespace     the namespace to set on the configuration, for example {@code root\\cimv2}
+	 * @return an optional containing the built configuration, or empty if the build fails
+	 */
+	Optional<IConfiguration> buildConfigurationWithNamespace(
+		final IProtocolExtension extension,
+		final IConfiguration configuration,
+		final String namespace
+	) {
+		final ObjectMapper mapper = new ObjectMapper();
+
+		// extract an ObjectNode from the IConfiguration
+		final ObjectNode configurationNode = mapper.valueToTree(configuration);
+
+		// Inject the namespace into the configuration ObjectNode
+		configurationNode.set("namespace", new TextNode(namespace));
+
+		try {
+			// Try to build an IConfiguration from the modified ObjectNode.
+			return Optional.of(extension.buildConfiguration(extension.getIdentifier(), configurationNode, null));
+		} catch (Exception e) {
+			return Optional.empty();
+		}
 	}
 }

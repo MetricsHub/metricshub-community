@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
+import org.metricshub.web.mcp.ExecuteWqlQueryService;
 import org.metricshub.web.mcp.HostDetailsService;
 import org.metricshub.web.mcp.ListConnectorsService;
 import org.metricshub.web.mcp.ListResourcesService;
@@ -70,6 +71,11 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public ExecuteSnmpQueryService executeSnmpQueryService() {
 			return mock(ExecuteSnmpQueryService.class);
+		}
+
+		@Bean
+		public ExecuteWqlQueryService executeWqlQueryService() {
+			return mock(ExecuteWqlQueryService.class);
 		}
 	}
 }

@@ -70,7 +70,7 @@ class ExecuteSnmpQueryServiceTest {
 
 	@Test
 	void testExecuteSNMPQueryWithoutConfiguration() {
-		// creating a host configuration with the SNMP configuration
+		// creating a host configuration without configuration
 		HostConfiguration hostConfiguration = HostConfiguration
 			.builder()
 			.hostname(HOSTNAME)
