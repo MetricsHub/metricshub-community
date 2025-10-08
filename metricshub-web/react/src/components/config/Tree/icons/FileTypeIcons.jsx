@@ -1,4 +1,4 @@
-// src/components/config/tree/icons/FileTypeIcon.jsx
+// src/components/config/tree/icons/FileTypeIcons.jsx
 import { Box } from "@mui/material";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
