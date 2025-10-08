@@ -22,7 +22,7 @@ service:
  * Props:
  * - value?: string
  * - onChange?: (val: string) => void
- * - onSave?: (val: string) => void  // still supported via Ctrl/Cmd+S
+ * - onSave?: (val: string) => void
  * - height?: CSS height (default "100%")
  * - readOnly?: boolean (default false)
  */
@@ -47,7 +47,10 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
-	// CodeMirror extensions
+	/**
+	 * CodeMirror extensions, memoized to avoid re-creating on every render.
+	 * Includes YAML language support, linting, history, and keymaps.
+	 */
 	const extensions = useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
@@ -63,7 +66,10 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 		return [cmYaml(), history(), keymap.of(km)];
 	}, [onSave]);
 
-	// Handle changes
+	/**
+	 * Handle document changes.
+	 * Updates local state, performs live validation, and calls onChange prop if provided.
+	 */
 	const handleChange = useCallback(
 		(val) => {
 			setDoc(val);

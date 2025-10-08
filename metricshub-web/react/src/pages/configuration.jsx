@@ -29,6 +29,11 @@ import ConfirmDeleteDialog from "../components/config/ConfirmDeleteDialog";
 import ConfigTree from "../components/config/Tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 
+/**
+ * Configuration page component.
+ * @returns The configuration page with a split view: tree on the left, YAML editor on the right.
+ */
+
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const {
