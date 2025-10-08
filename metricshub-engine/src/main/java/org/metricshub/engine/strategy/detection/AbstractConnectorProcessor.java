@@ -46,6 +46,8 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.DeviceTypeCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.ProductRequirementsCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
@@ -401,7 +403,7 @@ public abstract class AbstractConnectorProcessor {
 			);
 			return connectorTestResult;
 		}
-		int criterionId = 0;
+		int criterionId = 1;
 		for (final Criterion criterion : criteria) {
 			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector, criterionId);
 			if (!criterionTestResult.isSuccess()) {
@@ -414,9 +416,20 @@ public abstract class AbstractConnectorProcessor {
 			}
 
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
-			criterionId++;
+			if (criterionHasExtensionSupport(criterion)) {
+				criterionId++;
+			}
 		}
 
 		return connectorTestResult;
+	}
+
+	/**
+	 * Return true if the criterion has extension support
+	 * @param criterion A given criterion
+	 * @return boolean value
+	 */
+	private boolean criterionHasExtensionSupport(final Criterion criterion) {
+		return !(criterion instanceof ProductRequirementsCriterion || criterion instanceof DeviceTypeCriterion);
 	}
 }

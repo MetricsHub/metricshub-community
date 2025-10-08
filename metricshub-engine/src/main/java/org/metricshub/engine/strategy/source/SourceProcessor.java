@@ -48,6 +48,7 @@ import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -166,8 +167,7 @@ public class SourceProcessor implements ISourceProcessor {
 		// CHECKSTYLE:OFF
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			emulationInputDirectory != null &&
-			!emulationInputDirectory.isBlank()
+			StringHelper.nonNullNonBlank(emulationInputDirectory)
 		) {
 			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(connectorId, source, emulationInputDirectory);
 			return emulatedSourceTable.orElseGet(SourceTable::empty);
@@ -182,8 +182,7 @@ public class SourceProcessor implements ISourceProcessor {
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 		if (
 			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			recordOutputDirectory != null &&
-			!recordOutputDirectory.isBlank()
+			StringHelper.nonNullNonBlank(recordOutputDirectory)
 		) {
 			persist(table, connectorId, source, recordOutputDirectory);
 		}

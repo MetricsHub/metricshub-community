@@ -44,6 +44,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.VersionHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
@@ -106,6 +107,7 @@ public class CriterionProcessor {
 	 * @param telemetryManager      The TelemetryManager instance.
 	 * @param connectorId           The connector ID.
 	 * @param extensionManager  The extension manager
+	 * @param criterionId The criterion id
 	 */
 	public CriterionProcessor(
 		final ClientsExecutor clientsExecutor,
@@ -382,8 +384,7 @@ public class CriterionProcessor {
 
 		// CHECKSTYLE:OFF
 		if (
-			emulationInputDirectory != null &&
-			!emulationInputDirectory.isBlank() &&
+			StringHelper.nonNullNonBlank(emulationInputDirectory) &&
 			!(criterion instanceof SnmpGetCriterion) &&
 			!(criterion instanceof SnmpGetNextCriterion)
 		) {
@@ -402,8 +403,7 @@ public class CriterionProcessor {
 
 		// CHECKSTYLE:OFF
 		if (
-			recordOutputDirectory != null &&
-			!recordOutputDirectory.isBlank() &&
+			StringHelper.nonNullNonBlank(recordOutputDirectory) &&
 			!(criterion instanceof SnmpGetCriterion) &&
 			!(criterion instanceof SnmpGetNextCriterion)
 		) {
@@ -498,51 +498,44 @@ public class CriterionProcessor {
 	 * @return An {@link Optional} with the {@link CriterionTestResult} if found, or empty otherwise
 	 */
 	private Optional<CriterionTestResult> readEmulatedCriterionResult(
-		String connectorId,
-		Criterion criterion,
-		String emulationModeCriterionOutputDirectory
+		final String connectorId,
+		final Criterion criterion,
+		final String emulationModeCriterionOutputDirectory
 	) {
 		final Path outDir = Paths.get(emulationModeCriterionOutputDirectory);
-		final String filePattern = String.format(
-			"%s_%s_%s_criterion*.yaml",
+		final String expectedFileName = String.format(
+			"%s_%s_%s_criterion%d.yaml",
 			telemetryManager.getHostname(),
 			connectorId,
-			criterion.getType()
+			criterion.getType(),
+			criterionId
 		);
 
-		try {
-			// List all matching files
-			try (var stream = Files.list(outDir)) {
-				Optional<Path> maybeFile = stream
-					.filter(p -> p.getFileName().toString().matches(filePattern.replace("*", ".*")))
-					.findFirst();
+		final Path expectedFile = outDir.resolve(expectedFileName);
 
-				if (maybeFile.isEmpty()) {
-					log.debug(
-						"Hostname {} - No emulated CriterionTestResult found for pattern {}",
-						telemetryManager.getHostname(),
-						filePattern
-					);
-					return Optional.empty();
-				}
+		if (!Files.exists(expectedFile)) {
+			log.debug(
+				"Hostname {} - No emulated CriterionTestResult found for {}",
+				telemetryManager.getHostname(),
+				expectedFileName
+			);
+			return Optional.empty();
+		}
 
-				Path file = maybeFile.get();
-				try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-					CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
-					return Optional.of(result);
-				}
-			}
+		try (BufferedReader in = Files.newBufferedReader(expectedFile, StandardCharsets.UTF_8)) {
+			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
+			return Optional.of(result);
 		} catch (IOException e) {
 			log.warn(
 				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
 				telemetryManager.getHostname(),
-				emulationModeCriterionOutputDirectory,
+				expectedFileName,
 				e.getMessage()
 			);
 			log.debug(
 				"Hostname {} - Could not read CriterionTestResult from {}",
 				telemetryManager.getHostname(),
-				emulationModeCriterionOutputDirectory,
+				expectedFileName,
 				e
 			);
 			return Optional.empty();
