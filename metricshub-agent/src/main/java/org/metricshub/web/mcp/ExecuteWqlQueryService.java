@@ -78,7 +78,7 @@ public class ExecuteWqlQueryService {
 	 * @param protocol  the protocol identifier (for example, {@code "WMI"} or {@code "WinRm"})
 	 * @param query     the WQL query string to execute
 	 * @param namespace the WMI namespace to use
-	 * @param timeout   the timeout for the query execution in seconds
+	 * @param timeout   the timeout for the query execution in seconds (default: 10s)
 	 * @return a {@link QueryResponse} containing the extension response or an error
 	 */
 	@Tool(
