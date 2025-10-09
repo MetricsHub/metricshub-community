@@ -1,7 +1,12 @@
 // src/components/common/QuestionDialog.jsx
 import * as React from "react";
 import {
-  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button
+	Dialog,
+	DialogTitle,
+	DialogContent,
+	DialogContentText,
+	DialogActions,
+	Button,
 } from "@mui/material";
 
 /**
@@ -20,34 +25,34 @@ import {
  * @param {() => void} [props.onClose]
  */
 export default function QuestionDialog({
-  open,
-  title = "Question",
-  question = "Do you confirm?",
-  actionButtons = [],
-  onClose,
+	open,
+	title = "Question",
+	question = "Do you confirm?",
+	actionButtons = [],
+	onClose,
 }) {
-  return (
-    <Dialog open={open} onClose={onClose} aria-labelledby="question-dialog-title">
-      <DialogTitle id="question-dialog-title">{title}</DialogTitle>
-      <DialogContent>
-        <DialogContentText>{question}</DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        {actionButtons.map(
-          ({ btnTitle, btnColor, btnVariant, btnIcon, callback, autoFocus }, i) => (
-            <Button
-              key={i}
-              color={btnColor}
-              variant={btnVariant}
-              onClick={callback}
-              startIcon={btnIcon}
-              autoFocus={autoFocus}
-            >
-              {btnTitle}
-            </Button>
-          )
-        )}
-      </DialogActions>
-    </Dialog>
-  );
+	return (
+		<Dialog open={open} onClose={onClose} aria-labelledby="question-dialog-title">
+			<DialogTitle id="question-dialog-title">{title}</DialogTitle>
+			<DialogContent>
+				<DialogContentText>{question}</DialogContentText>
+			</DialogContent>
+			<DialogActions>
+				{actionButtons.map(
+					({ btnTitle, btnColor, btnVariant, btnIcon, callback, autoFocus }, i) => (
+						<Button
+							key={i}
+							color={btnColor}
+							variant={btnVariant}
+							onClick={callback}
+							startIcon={btnIcon}
+							autoFocus={autoFocus}
+						>
+							{btnTitle}
+						</Button>
+					),
+				)}
+			</DialogActions>
+		</Dialog>
+	);
 }

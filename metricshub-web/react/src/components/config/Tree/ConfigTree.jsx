@@ -32,10 +32,9 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 				aria-label="Configuration files"
 				multiSelect={false}
 				selectedItems={selectedIds}
-onSelectedItemsChange={(_, id) => {
-  if (id && id !== ROOT_ID) onSelect(id);
-}}
-
+				onSelectedItemsChange={(_, id) => {
+					if (id && id !== ROOT_ID) onSelect(id);
+				}}
 				sx={{ "& .MuiTreeItem-content": { py: 0.25 } }}
 			>
 				<TreeItem

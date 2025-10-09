@@ -176,16 +176,22 @@ function ConfigurationPage() {
 						onDelete={openDelete}
 					/>
 
-<QuestionDialog
-  open={deleteOpen}
-  title="Delete file"
-  question={`Are you sure you want to delete “${deleteTarget ?? ""}”? This action cannot be undone.`}
-  onClose={() => setDeleteOpen(false)}
-  actionButtons={[
-    { btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
-    { btnTitle: "Delete", btnColor: "error", btnVariant: "contained", btnIcon: <DeleteIcon />, callback: submitDelete }
-  ]}
-/>
+					<QuestionDialog
+						open={deleteOpen}
+						title="Delete file"
+						question={`Are you sure you want to delete “${deleteTarget ?? ""}”? This action cannot be undone.`}
+						onClose={() => setDeleteOpen(false)}
+						actionButtons={[
+							{ btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
+							{
+								btnTitle: "Delete",
+								btnColor: "error",
+								btnVariant: "contained",
+								btnIcon: <DeleteIcon />,
+								callback: submitDelete,
+							},
+						]}
+					/>
 				</Stack>
 			</Left>
 
