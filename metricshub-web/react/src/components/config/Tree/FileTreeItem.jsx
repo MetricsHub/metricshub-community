@@ -62,10 +62,7 @@ export default function FileTreeItem({ file, onRename, onDelete }) {
 			direction="row"
 			alignItems="center"
 			justifyContent="space-between"
-			sx={{ width: "100%", pr: 1 }}
-			onMouseDown={() => {
-				if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-			}}
+			sx={{ width: "100%", pr: 1, userSelect: "none" }}
 		>
 			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 				{editing ? (

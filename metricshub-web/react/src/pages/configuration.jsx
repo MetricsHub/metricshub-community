@@ -25,9 +25,10 @@ import {
 } from "../store/slices/configSlice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/Editor/ConfigEditorContainer";
-import ConfirmDeleteDialog from "../components/config/ConfirmDeleteDialog";
 import ConfigTree from "../components/config/Tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import QuestionDialog from "../components/common/QuestionDialog";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 /**
  * Configuration page component.
@@ -175,12 +176,16 @@ function ConfigurationPage() {
 						onDelete={openDelete}
 					/>
 
-					<ConfirmDeleteDialog
-						open={deleteOpen}
-						fileName={deleteTarget}
-						onCancel={() => setDeleteOpen(false)}
-						onConfirm={submitDelete}
-					/>
+<QuestionDialog
+  open={deleteOpen}
+  title="Delete file"
+  question={`Are you sure you want to delete “${deleteTarget ?? ""}”? This action cannot be undone.`}
+  onClose={() => setDeleteOpen(false)}
+  actionButtons={[
+    { btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
+    { btnTitle: "Delete", btnColor: "error", btnVariant: "contained", btnIcon: <DeleteIcon />, callback: submitDelete }
+  ]}
+/>
 				</Stack>
 			</Left>
 

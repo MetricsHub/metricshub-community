@@ -5,6 +5,7 @@ import FileTypeIcon from "./icons/FileTypeIcons.jsx";
 import { Stack, Box } from "@mui/material";
 import FileTreeItem from "./FileTreeItem";
 
+const ROOT_ID = "__config_root__";
 /**
  * Props:
  * - files: Array<{ name: string, size: number, lastModificationTime: string }>
@@ -27,24 +28,20 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 	return (
 		<Stack sx={{ p: 0 }}>
 			<SimpleTreeView
-				defaultExpandedItems={["config"]}
+				defaultExpandedItems={[ROOT_ID]}
 				aria-label="Configuration files"
 				multiSelect={false}
 				selectedItems={selectedIds}
-				onSelectedItemsChange={(_, ids) => {
-					const id = Array.isArray(ids) ? ids[0] : ids;
-					if (id && id !== "config") onSelect(id);
-				}}
-				sx={{
-					"& .MuiTreeItem-content": { py: 0.25 },
-				}}
+onSelectedItemsChange={(_, id) => {
+  if (id && id !== ROOT_ID) onSelect(id);
+}}
+
+				sx={{ "& .MuiTreeItem-content": { py: 0.25 } }}
 			>
 				<TreeItem
-					itemId="config"
+					itemId={ROOT_ID}
 					label={folderLabel}
-					sx={{
-						"& .MuiTreeItem-label": { fontWeight: 400 },
-					}}
+					sx={{ "& .MuiTreeItem-label": { fontWeight: 400 } }}
 				>
 					{files.map((f) => (
 						<FileTreeItem

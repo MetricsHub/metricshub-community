@@ -13,7 +13,7 @@ export default function EditorHeader({
 }) {
 	return (
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
-			<Typography variant="subtitle1" sx={{ opacity: 0.85 }}>
+			<Typography variant="subtitle1">
 				{selected ?? "Select a file to edit"}
 			</Typography>
 			<Stack direction="row" spacing={1} alignItems="center">
