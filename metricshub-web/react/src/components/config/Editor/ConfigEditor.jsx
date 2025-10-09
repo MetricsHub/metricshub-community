@@ -4,6 +4,11 @@ import { Box } from "@mui/material";
 
 const YamlEditor = React.lazy(() => import("../../yaml-editor/YamlEditor"));
 
+/**
+ * Configuration file editor component.
+ * @param {{value:string,readOnly?:boolean,onChange?:(v:string)=>void,onSave?:()=>void,height?:string}} props
+ * @returns The editor component.
+ */
 export default function ConfigEditor({ value, readOnly, onChange, onSave, height = "100%" }) {
 	return (
 		<Box sx={{ height }}>

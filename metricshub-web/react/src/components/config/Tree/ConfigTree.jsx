@@ -1,3 +1,4 @@
+// src/components/config/Tree/ConfigTree.jsx
 import * as React from "react";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
 import FileTypeIcon from "./icons/FileTypeIcons.jsx";
@@ -10,10 +11,10 @@ import FileTreeItem from "./FileTreeItem";
  * - selectedName: string | null
  * - onSelect: (name: string) => void
  * - onRename: (oldName: string, newName: string) => void
- * - onDeleteRequest: (name: string) => void
+ * - onDelete: (name: string) => void
  * - loading: boolean
  */
-export default function ConfigTree({ files, selectedName, onSelect, onRename, onDeleteRequest }) {
+export default function ConfigTree({ files, selectedName, onSelect, onRename, onDelete }) {
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
 
 	const folderLabel = (
@@ -34,8 +35,6 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 					const id = Array.isArray(ids) ? ids[0] : ids;
 					if (id && id !== "config") onSelect(id);
 				}}
-				slots={{}}
-				slotProps={{}}
 				sx={{
 					"& .MuiTreeItem-content": { py: 0.25 },
 				}}
@@ -51,10 +50,9 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 						<FileTreeItem
 							key={f.name}
 							file={f}
-							selected={selectedName === f.name}
 							onSelect={onSelect}
 							onRename={onRename}
-							onDeleteRequest={onDeleteRequest}
+							onDelete={onDelete}
 						/>
 					))}
 				</TreeItem>

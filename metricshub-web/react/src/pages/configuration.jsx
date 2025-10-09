@@ -94,6 +94,15 @@ function ConfigurationPage() {
 		[dispatch, selected],
 	);
 
+	const didAutoSelect = React.useRef(false);
+	React.useEffect(() => {
+		if (didAutoSelect.current) return;
+		if (!selected && list?.length > 0) {
+			didAutoSelect.current = true;
+			onSelect(list[0].name);
+		}
+	}, [list, selected, onSelect]);
+
 	const onValidate = useCallback(() => {
 		if (!selected) return;
 		dispatch(validateConfig({ name: selected, content }));
@@ -163,7 +172,7 @@ function ConfigurationPage() {
 						selectedName={selected}
 						onSelect={onSelect}
 						onRename={handleInlineRename}
-						onDeleteRequest={openDelete}
+						onDelete={openDelete}
 					/>
 
 					<ConfirmDeleteDialog

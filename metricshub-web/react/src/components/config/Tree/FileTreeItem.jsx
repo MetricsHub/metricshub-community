@@ -4,10 +4,11 @@ import { Box, IconButton, Menu, MenuItem, TextField, Stack, Chip } from "@mui/ma
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
-import { formatBytes, formatRelativeTime } from "../../../utils/formatters";
 import FileTypeIcon from "./icons/FileTypeIcons";
+import FileMeta from "./FileMeta";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
 
-export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
+export default function FileTreeItem({ file, onRename, onDelete }) {
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -55,16 +56,6 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 		setEditing(false);
 	}, [draft, file.name, onRename]);
 
-	React.useEffect(() => {
-		if (!editing) return;
-		const onDown = (e) => {
-			const c = containerRef.current;
-			if (c && !c.contains(e.target)) submitRename();
-		};
-		document.addEventListener("mousedown", onDown, true);
-		return () => document.removeEventListener("mousedown", onDown, true);
-	}, [editing, submitRename]);
-
 	const label = (
 		<Stack
 			ref={containerRef}
@@ -78,62 +69,40 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 		>
 			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 				{editing ? (
-					<>
-						<Box sx={{ display: "flex", alignItems: "center" }}>
-							<FileTypeIcon type="yaml" />
-							<TextField
-								inputRef={inputRef}
-								value={draft}
-								onChange={(e) => setDraft(e.target.value)}
-								variant="standard"
-								size="small"
-								fullWidth
-								autoFocus
-								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										e.preventDefault();
-										e.stopPropagation();
-										submitRename();
-										return;
-									}
-									if (e.key === "Escape") {
-										e.preventDefault();
-										e.stopPropagation();
-										cancelRename();
-										return;
-									}
-									e.stopPropagation();
-								}}
-								onKeyUp={(e) => {
-									e.stopPropagation();
-								}}
-								inputProps={{ "aria-label": "Rename file" }}
-								sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
-							/>
-						</Box>
-						<Stack
-							direction="row"
-							alignItems="center"
-							spacing={1}
-							sx={{ mt: 0.5, opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}
-						>
-							<Box component="span">
-								{`${formatBytes(file.size ?? 0)} • ${formatRelativeTime(file.lastModificationTime ?? Date.now())}`}
-							</Box>
-							{file.localOnly && (
-								<Chip
-									label="Unsaved"
+					<ClickAwayListener onClickAway={submitRename} mouseEvent="onMouseDown">
+						<Box>
+							<Box sx={{ display: "flex", alignItems: "center" }}>
+								<FileTypeIcon type="yaml" />
+								<TextField
+									inputRef={inputRef}
+									value={draft}
+									onChange={(e) => setDraft(e.target.value)}
+									variant="standard"
 									size="small"
-									sx={{
-										border: 0,
-										bgcolor: "transparent",
-										p: 0,
-										"& .MuiChip-label": { p: 0, fontWeight: 500 },
+									fullWidth
+									autoFocus
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											e.preventDefault();
+											e.stopPropagation();
+											submitRename();
+											return;
+										}
+										if (e.key === "Escape") {
+											e.preventDefault();
+											e.stopPropagation();
+											cancelRename();
+											return;
+										}
+										e.stopPropagation();
 									}}
+									inputProps={{ "aria-label": "Rename file" }}
+									sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
 								/>
-							)}
-						</Stack>
-					</>
+							</Box>
+							<FileMeta file={file} sx={{ mt: 0.5 }} />
+						</Box>
+					</ClickAwayListener>
 				) : (
 					<>
 						<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
@@ -150,28 +119,7 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 								{file.name}
 							</Box>
 						</Box>
-						<Stack
-							direction="row"
-							alignItems="center"
-							spacing={1}
-							sx={{ opacity: 0.65, fontSize: "0.8rem", fontWeight: 400 }}
-						>
-							<Box component="span">
-								{`${formatBytes(file.size ?? 0)} • ${formatRelativeTime(file.lastModificationTime ?? Date.now())}`}
-							</Box>
-							{file.localOnly && (
-								<Chip
-									label="Unsaved"
-									size="small"
-									sx={{
-										border: 0,
-										bgcolor: "transparent",
-										p: 0,
-										"& .MuiChip-label": { p: 0, fontWeight: 500 },
-									}}
-								/>
-							)}
-						</Stack>
+						<FileMeta file={file} />
 					</>
 				)}
 			</Box>
@@ -217,7 +165,7 @@ export default function FileTreeItem({ file, onRename, onDeleteRequest }) {
 				<MenuItem
 					onClick={() => {
 						closeMenu();
-						onDeleteRequest(file.name);
+						onDelete(file.name);
 					}}
 				>
 					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />

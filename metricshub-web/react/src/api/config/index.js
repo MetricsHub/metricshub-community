@@ -3,16 +3,25 @@ import { httpRequest } from "../../utils/axios-request";
 
 const BASE = "/api/config-files";
 
+/**
+ * Normalize any Axios-style error into a plain Error with a readable message.
+ * @param {unknown} e
+ * @param {string} [fallback="Request failed"]
+ * @returns {Error}
+ */
 const normalizeError = (e, fallback = "Request failed") => {
 	const r = e?.response;
 	if (!r) return new Error(e?.message || fallback);
-	// Prefer backend-provided text or JSON message
 	if (typeof r.data === "string" && r.data.trim()) return new Error(r.data);
 	if (r.data?.message) return new Error(r.data.message);
-	return new Error(`${r.status} ${r.statusText}`);
+	return new Error(`${r.status ?? ""} ${r.statusText ?? ""}`.trim() || fallback);
 };
 
-// Small helper to unwrap axios responses and map 204 -> null
+/**
+ * Axios unwrap helper: returns response.data (or null for 204),
+ * throws a normalized Error on failure.
+ * @param {Promise<any>} promise
+ */
 const unwrap = async (promise) => {
 	try {
 		const res = await promise;
@@ -22,9 +31,19 @@ const unwrap = async (promise) => {
 	}
 };
 
-export const configApi = {
-	list: ({ signal } = {}) =>
-		unwrap(
+/**
+ * Configuration Files API
+ * Mirrors the style used in AuthApi/StatusApi (class + exported singleton).
+ */
+class ConfigApi {
+	/**
+	 * List configuration files.
+	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @returns {Promise<Array<{name:string,size?:number,lastModificationTime?:string}>>}
+	 */
+	list(opts = {}) {
+		const { signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: BASE,
 				method: "GET",
@@ -32,10 +51,18 @@ export const configApi = {
 				signal,
 				headers: { Accept: "application/json" },
 			}),
-		),
+		);
+	}
 
-	getContent: (name, { signal } = {}) =>
-		unwrap(
+	/**
+	 * Get the raw YAML content of a file.
+	 * @param {string} name
+	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @returns {Promise<string>}
+	 */
+	getContent(name, opts = {}) {
+		const { signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "GET",
@@ -44,10 +71,19 @@ export const configApi = {
 				responseType: "text",
 				headers: { Accept: "text/plain" },
 			}),
-		),
+		);
+	}
 
-	save: (name, content, { skipValidation = false, signal } = {}) =>
-		unwrap(
+	/**
+	 * Save a file (PUT). Returns the file metadata from backend.
+	 * @param {string} name
+	 * @param {string} content
+	 * @param {{ skipValidation?: boolean, signal?: AbortSignal }} [opts]
+	 * @returns {Promise<Object>} // ConfigurationFile
+	 */
+	save(name, content, opts = {}) {
+		const { skipValidation = false, signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "PUT",
@@ -57,10 +93,19 @@ export const configApi = {
 				data: content ?? "",
 				headers: { "Content-Type": "text/plain", Accept: "application/json" },
 			}),
-		),
+		);
+	}
 
-	validate: (name, content, { signal } = {}) =>
-		unwrap(
+	/**
+	 * Validate a file (POST). Returns { valid:boolean, error?:string }.
+	 * @param {string} name
+	 * @param {string} content
+	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @returns {Promise<{valid:boolean,error?:string}>}
+	 */
+	validate(name, content, opts = {}) {
+		const { signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "POST",
@@ -69,10 +114,18 @@ export const configApi = {
 				data: content ?? "",
 				headers: { "Content-Type": "text/plain", Accept: "application/json" },
 			}),
-		),
+		);
+	}
 
-	remove: (name, { signal } = {}) =>
-		unwrap(
+	/**
+	 * Delete a file.
+	 * @param {string} name
+	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @returns {Promise<null|any>} // null on 204, or backend payload
+	 */
+	remove(name, opts = {}) {
+		const { signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "DELETE",
@@ -80,10 +133,19 @@ export const configApi = {
 				signal,
 				headers: { Accept: "application/json" },
 			}),
-		),
+		);
+	}
 
-	rename: (oldName, newName, { signal } = {}) =>
-		unwrap(
+	/**
+	 * Rename a file. Returns the updated file metadata.
+	 * @param {string} oldName
+	 * @param {string} newName
+	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @returns {Promise<Object>} // ConfigurationFile
+	 */
+	rename(oldName, newName, opts = {}) {
+		const { signal } = opts;
+		return unwrap(
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(oldName)}`,
 				method: "PATCH",
@@ -92,5 +154,8 @@ export const configApi = {
 				data: { newName },
 				headers: { "Content-Type": "application/json", Accept: "application/json" },
 			}),
-		),
-};
+		);
+	}
+}
+
+export const configApi = new ConfigApi();
