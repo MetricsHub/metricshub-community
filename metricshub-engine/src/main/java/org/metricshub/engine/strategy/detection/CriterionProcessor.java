@@ -23,17 +23,8 @@ package org.metricshub.engine.strategy.detection;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SUCCESSFUL_OS_DETECTION_MESSAGE;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -42,9 +33,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.VersionHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
@@ -87,9 +76,6 @@ public class CriterionProcessor {
 
 	private static final String CONFIGURE_OS_TYPE_MESSAGE = "Configured OS type : ";
 
-	// Create a YAML ObjectMapper to serialize CriterionTestResult to YAML format
-	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper().deactivateDefaultTyping();
-
 	private ClientsExecutor clientsExecutor;
 
 	private ExtensionManager extensionManager;
@@ -98,29 +84,23 @@ public class CriterionProcessor {
 
 	private String connectorId;
 
-	private int criterionId;
-
 	/**
 	 * Constructor for the CriterionProcessor class.
 	 *
 	 * @param clientsExecutor The ClientsExecutor instance.
 	 * @param telemetryManager      The TelemetryManager instance.
 	 * @param connectorId           The connector ID.
-	 * @param extensionManager  The extension manager
-	 * @param criterionId The criterion id
 	 */
 	public CriterionProcessor(
 		final ClientsExecutor clientsExecutor,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
-		final ExtensionManager extensionManager,
-		final int criterionId
+		final ExtensionManager extensionManager
 	) {
 		this.clientsExecutor = clientsExecutor;
 		this.telemetryManager = telemetryManager;
 		this.connectorId = connectorId;
 		this.extensionManager = extensionManager;
-		this.criterionId = criterionId;
 	}
 
 	/**
@@ -379,167 +359,19 @@ public class CriterionProcessor {
 	public CriterionTestResult processCriterionThroughExtension(
 		@SpanAttribute("criterion.definition") Criterion criterion
 	) {
-		// Retrieve emulation input directory and read recorded criterion from it
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-
-		// CHECKSTYLE:OFF
-		if (
-			StringHelper.nonNullNonBlank(emulationInputDirectory) &&
-			!(criterion instanceof SnmpGetCriterion) &&
-			!(criterion instanceof SnmpGetNextCriterion)
-		) {
-			return readEmulatedCriterionResult(connectorId, criterion, emulationInputDirectory)
-				.orElseGet(CriterionTestResult::empty);
-		}
-		// CHECKSTYLE:ON
-
-		final CriterionTestResult result = extensionManager
-			.findCriterionExtension(criterion, telemetryManager)
-			.map((IProtocolExtension extension) -> processCriterionThroughExtension(criterion, extension))
-			.orElseGet(CriterionTestResult::empty);
-
-		// Persist source output if required and if not SNMP source
-		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-
-		// CHECKSTYLE:OFF
-		if (
-			StringHelper.nonNullNonBlank(recordOutputDirectory) &&
-			!(criterion instanceof SnmpGetCriterion) &&
-			!(criterion instanceof SnmpGetNextCriterion)
-		) {
-			persist(result, connectorId, criterion, recordOutputDirectory, criterionId);
-		}
-
-		// CHECKSTYLE:ON
-		return result;
-	}
-
-	/**
-	 * Processes the given {@link Criterion} using the specified {@link IProtocolExtension}.
-	 *
-	 * @param criterion The criterion to be processed.
-	 * @param extension The protocol extension to use for processing.
-	 * @return A {@link CriterionTestResult} containing the outcome of the processing.
-	 */
-	private CriterionTestResult processCriterionThroughExtension(
-		final Criterion criterion,
-		final IProtocolExtension extension
-	) {
-		final var result = extension.processCriterion(criterion, connectorId, telemetryManager);
-		if (result != null) {
-			result.setCriterion(criterion);
-		}
-		return result;
-	}
-
-	/**
-	 * Persists the {@link CriterionTestResult} to a YAML file.
-	 *
-	 * @param result the {@link CriterionTestResult} to persist
-	 * @param connectorId the identifier of the connector defining the criterion
-	 * @param criterion the {@link Criterion} that was processed
-	 * @param recordOutputDirectory the directory to store the results
-	 * @param criterionId the index of the criterion to persist
-	 */
-	private void persist(
-		final CriterionTestResult result,
-		final String connectorId,
-		final Criterion criterion,
-		final String recordOutputDirectory,
-		final int criterionId
-	) {
-		final Path criterionResultOutputDirectory = Paths.get(recordOutputDirectory);
-		try {
-			Files.createDirectories(criterionResultOutputDirectory);
-
-			final String fileName = String.format(
-				"%s_%s_%s_criterion%d.yaml",
-				telemetryManager.getHostname(),
-				connectorId,
-				criterion.getType(),
-				criterionId
-			);
-
-			final Path file = criterionResultOutputDirectory.resolve(fileName);
-
-			try (
-				BufferedWriter out = Files.newBufferedWriter(
-					file,
-					StandardCharsets.UTF_8,
-					StandardOpenOption.CREATE,
-					StandardOpenOption.TRUNCATE_EXISTING
-				)
-			) {
-				YAML_MAPPER.writeValue(out, result);
-				out.newLine();
-			}
-		} catch (IOException e) {
-			log.warn(
-				"Hostname {} - Could not write ConnectorTestResult to {}. Error: {}",
-				telemetryManager.getHostname(),
-				criterionResultOutputDirectory,
-				e.getMessage()
-			);
-			log.debug(
-				"Hostname {} - Could not write ConnectorTestResult to {}",
-				telemetryManager.getHostname(),
-				criterionResultOutputDirectory,
-				e
-			);
-		}
-	}
-
-	/**
-	 * Reads a {@link CriterionTestResult} from the emulated criterion output directory.
-	 *
-	 * @param connectorId the identifier of the connector defining the criterion
-	 * @param criterion the {@link Criterion} to load results for
-	 * @param emulationModeCriterionOutputDirectory directory containing emulated results
-	 * @return An {@link Optional} with the {@link CriterionTestResult} if found, or empty otherwise
-	 */
-	private Optional<CriterionTestResult> readEmulatedCriterionResult(
-		final String connectorId,
-		final Criterion criterion,
-		final String emulationModeCriterionOutputDirectory
-	) {
-		final Path outDir = Paths.get(emulationModeCriterionOutputDirectory);
-		final String expectedFileName = String.format(
-			"%s_%s_%s_criterion%d.yaml",
-			telemetryManager.getHostname(),
-			connectorId,
-			criterion.getType(),
-			criterionId
+		final Optional<IProtocolExtension> maybeExtension = extensionManager.findCriterionExtension(
+			criterion,
+			telemetryManager
 		);
-
-		final Path expectedFile = outDir.resolve(expectedFileName);
-
-		if (!Files.exists(expectedFile)) {
-			log.debug(
-				"Hostname {} - No emulated CriterionTestResult found for {}",
-				telemetryManager.getHostname(),
-				expectedFileName
-			);
-			return Optional.empty();
-		}
-
-		try (BufferedReader in = Files.newBufferedReader(expectedFile, StandardCharsets.UTF_8)) {
-			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
-			return Optional.of(result);
-		} catch (IOException e) {
-			log.warn(
-				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
-				telemetryManager.getHostname(),
-				expectedFileName,
-				e.getMessage()
-			);
-			log.debug(
-				"Hostname {} - Could not read CriterionTestResult from {}",
-				telemetryManager.getHostname(),
-				expectedFileName,
-				e
-			);
-			return Optional.empty();
-		}
+		return maybeExtension
+			.map(extension -> {
+				CriterionTestResult result = extension.processCriterion(criterion, connectorId, telemetryManager);
+				if (result != null) {
+					result.setCriterion(criterion);
+				}
+				return result;
+			})
+			.orElseGet(CriterionTestResult::empty);
 	}
 
 	/**

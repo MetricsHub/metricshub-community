@@ -187,8 +187,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(snmpGetCriterion));
 	}
@@ -226,8 +225,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(wmiCriterion));
 	}
@@ -265,8 +263,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(wbemCriterion));
 	}
@@ -300,8 +297,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(serviceCriterion));
 	}
@@ -335,8 +331,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(ipmiCriterion));
 	}
@@ -370,8 +365,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(commandLineCriterion));
 	}
@@ -403,8 +397,7 @@ class CriterionProcessorTest {
 				clientsExecutorMock,
 				telemetryManagerMock,
 				MY_CONNECTOR_1_NAME,
-				extensionManager,
-				0
+				extensionManager
 			);
 			assertEquals(expected, criterionProcessor.process(processCriterion));
 		}
@@ -441,8 +434,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(expected, criterionProcessor.process(snmpGetNextCriterion));
 	}
@@ -770,8 +762,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 
 		final CriterionTestResult criterionTestResult = criterionProcessor.process(httpCriterion);
@@ -826,8 +817,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 
 		assertEquals(
@@ -867,8 +857,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 		assertEquals(CriterionTestResult.empty(), criterionProcessor.process(new IpmiCriterion()));
 	}
@@ -890,8 +879,7 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager,
-			0
+			extensionManager
 		);
 
 		final CriterionTestResult criterionTestResult = criterionProcessor.process(commandLineCriterion);
