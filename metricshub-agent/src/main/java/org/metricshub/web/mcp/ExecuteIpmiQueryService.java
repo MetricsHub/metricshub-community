@@ -21,8 +21,6 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Optional;
-import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
@@ -99,31 +97,24 @@ public class ExecuteIpmiQueryService {
 		final String hostname,
 		final Long timeout
 	) {
-		// Try to retrieve a IPMI configuration for the host
-		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
+		return MCPConfigHelper
 			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
-			.findFirst();
-
-		// Early return if no IPMI configuration is found for the given host.
-		if (maybeConfiguration.isEmpty()) {
-			return QueryResponse.builder().isError("No IPMI configuration found for %s.".formatted(hostname)).build();
-		}
-
-		// Retrieve the valid configuration from maybe configuration.
-		final IConfiguration validConfiguration = maybeConfiguration.get();
-
-		// add a timeout to the valid configuration
-		validConfiguration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
-
-		try {
-			return QueryResponse.builder().response(extension.executeQuery(validConfiguration, null)).build();
-		} catch (Exception e) {
-			return QueryResponse
-				.builder()
-				.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
-				.build();
-		}
+			.findFirst()
+			.map(configuration -> {
+				configuration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
+				try {
+					return QueryResponse.builder().response(extension.executeQuery(configuration, null)).build();
+				} catch (Exception e) {
+					return QueryResponse
+						.builder()
+						.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+						.build();
+				}
+			})
+			.orElseGet(() ->
+				QueryResponse.builder().isError("No IPMI configuration found for %s.".formatted(hostname)).build()
+			);
 	}
 }
