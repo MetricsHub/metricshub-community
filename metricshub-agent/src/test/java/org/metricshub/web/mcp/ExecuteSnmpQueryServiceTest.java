@@ -132,7 +132,9 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPGet query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
+		when(
+			snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
+		)
 			.thenReturn("Success");
 
 		// Calling execute query
@@ -169,7 +171,15 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPGetNext query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPGetNext(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
+		when(
+			snmpRequestExecutor.executeSNMPGetNext(
+				eq(OID),
+				any(ISnmpConfiguration.class),
+				eq(HOSTNAME),
+				anyBoolean(),
+				isNull()
+			)
+		)
 			.thenReturn("Success");
 
 		// Calling execute query
@@ -198,7 +208,9 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPWalk query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
+		when(
+			snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
+		)
 			.thenReturn("Success");
 
 		// Calling execute query
