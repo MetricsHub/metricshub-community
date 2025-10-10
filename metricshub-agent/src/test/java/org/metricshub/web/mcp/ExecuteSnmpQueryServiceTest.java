@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -125,7 +126,8 @@ class ExecuteSnmpQueryServiceTest {
 				eq(OID),
 				eq((ISnmpConfiguration) snmpConfiguration),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn("Success");
@@ -166,7 +168,8 @@ class ExecuteSnmpQueryServiceTest {
 				eq(OID),
 				eq((ISnmpConfiguration) snmpConfiguration),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn("Success");
@@ -202,7 +205,8 @@ class ExecuteSnmpQueryServiceTest {
 				eq(OID),
 				eq((ISnmpConfiguration) snmpConfiguration),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn("Success");
@@ -240,7 +244,8 @@ class ExecuteSnmpQueryServiceTest {
 				eq(columns),
 				eq((ISnmpConfiguration) snmpConfiguration),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
