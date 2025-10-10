@@ -52,7 +52,7 @@ import org.metricshub.web.AgentContextHolder;
 public class MCPConfigHelper {
 
 	/**
-	 * Retrieves all configurations associated with the given hostname from the
+	 * Retrieves a deep copy of all configurations associated with the given hostname from the
 	 * provided agent context, without applying any protocol-specific validation.
 	 *
 	 * @param hostname     the target host
@@ -60,7 +60,7 @@ public class MCPConfigHelper {
 	 * @return a set of all {@link IConfiguration} instances associated with the
 	 *         host
 	 */
-	public static Set<IConfiguration> resolveAllHostConfigurationsFromContext(
+	public static Set<IConfiguration> resolveAllHostConfigurationCopiesFromContext(
 		final String hostname,
 		final AgentContextHolder contextHolder
 	) {
@@ -96,6 +96,8 @@ public class MCPConfigHelper {
 				// Stream the IConfiguration instances
 				return configMap.values().stream();
 			})
+			// create a deep copy of the configuration
+			.map(IConfiguration::copy)
 			// Collect all configurations into a Set
 			.collect(Collectors.toSet());
 	}

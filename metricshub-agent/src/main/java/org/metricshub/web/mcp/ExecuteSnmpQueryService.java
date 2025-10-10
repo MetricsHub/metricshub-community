@@ -162,7 +162,7 @@ public class ExecuteSnmpQueryService {
 
 		// Execute the query using the SNMP Extension.
 		return MCPConfigHelper
-			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
+			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()

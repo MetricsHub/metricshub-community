@@ -147,18 +147,18 @@ public class ProtocolCheckService {
 		final IProtocolExtension extension
 	) {
 		// Fetch the available configurations for the host
-		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationsFromContext(
+		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
 			hostname,
 			agentContextHolder
 		);
 
 		// Iterate through each configuration until one succeeds
-		for (IConfiguration configuration : configurations) {
+		for (final IConfiguration configuration : configurations) {
 			IConfiguration validConfiguration;
 
 			if (extension.isValidConfiguration(configuration)) {
 				// Use the original configuration if it's valid for the extension
-				validConfiguration = configuration.copy();
+				validConfiguration = configuration;
 			} else {
 				// Attempt to build a compatible configuration using shared fields
 				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
