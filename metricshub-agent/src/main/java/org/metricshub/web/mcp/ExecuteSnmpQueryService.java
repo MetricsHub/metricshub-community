@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Predicate;
+import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
@@ -168,7 +169,7 @@ public class ExecuteSnmpQueryService {
 			.findFirst()
 			.map(configuration -> {
 				try {
-					configuration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_TIMEOUT);
+					configuration.setTimeout((Long) NumberHelper.getPositiveOrDefault(timeout, DEFAULT_TIMEOUT));
 					final String result = extension.executeQuery(configuration, queryNode);
 					return QueryResponse.builder().response(result).build();
 				} catch (Exception e) {
