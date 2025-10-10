@@ -21,25 +21,20 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.OutputStream;
-import java.io.PrintStream;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import org.metricshub.engine.strategy.source.SourceProcessor;
+import org.metricshub.jawk.util.AwkSettings;
 
-/**
- * Overrides the println method of {@link PrintStream}
- */
-public class UniformPrintStream extends PrintStream {
+@Builder
+@EqualsAndHashCode(callSuper = false)
+@AllArgsConstructor
+@Getter
+public class MetricsHubAwkSettings extends AwkSettings {
 
-	/**
-	 * Construct a new instance of the {@link UniformPrintStream}.
-	 *
-	 * @param out {@link OutputStream} that needs to be passed to super class
-	 */
-	public UniformPrintStream(OutputStream out) {
-		super(out);
-	}
-
-	@Override
-	public void println() {
-		this.write('\n');
-	}
+	private SourceProcessor sourceProcessor;
+	private String hostname;
+	private String connectorId;
 }
