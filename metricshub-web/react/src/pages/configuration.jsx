@@ -1,6 +1,7 @@
 // src/pages/configuration.jsx
 import * as React from "react";
 import { useEffect, useCallback, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
@@ -29,14 +30,16 @@ import ConfigTree from "../components/config/Tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { paths } from "../paths";
 
 /**
  * Configuration page component.
- * @returns The configuration page with a split view: tree on the left, YAML editor on the right.
+ * URL is the source of truth for selection: /configuration/:name
  */
-
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
+	const { name: routeName } = useParams();
 	const {
 		list,
 		filesByName,
@@ -56,25 +59,44 @@ function ConfigurationPage() {
 		dispatch(fetchConfigList());
 	}, [dispatch]);
 
+	useEffect(() => {
+		const target = routeName ? decodeURIComponent(routeName) : null;
+
+		if (!target) {
+			if (selected) dispatch(selectFile(null));
+			return;
+		}
+
+		if (target !== selected) {
+			const cached = filesByName?.[target];
+			const isLocalOnly = list.find((f) => f.name === target)?.localOnly;
+
+			dispatch(selectFile(target));
+			if (cached || isLocalOnly) {
+				dispatch(setContent(cached?.content ?? ""));
+			} else {
+				dispatch(fetchConfigContent(target));
+			}
+		}
+	}, [routeName, selected, filesByName, list, dispatch]);
+
+	useEffect(() => {
+		if (!routeName && list?.length > 0) {
+			navigate(paths.configurationFile(list[0].name), { replace: true });
+		}
+	}, [routeName, list, navigate]);
+
 	const onSelect = useCallback(
 		(name) => {
-			dispatch(selectFile(name));
-			const cached = filesByName?.[name];
-			if (cached) {
-				dispatch(setContent(cached.content ?? ""));
-				return;
+			if (!name) return;
+			const url = paths.configurationFile(name);
+			if (url !== window.location.pathname) {
+				navigate(url, { replace: false });
 			}
-			// if the list entry is flagged localOnly, also avoid backend and show whatever we have
-			const meta = list.find((f) => f.name === name);
-			if (meta?.localOnly) {
-				dispatch(setContent(filesByName?.[name]?.content ?? ""));
-				return;
-			}
-			// otherwise fetch from backend
-			dispatch(fetchConfigContent(name));
 		},
-		[dispatch, filesByName, list],
+		[navigate],
 	);
+
 	const handleInlineRename = useCallback(
 		(oldName, newName) => {
 			const meta = list.find((f) => f.name === oldName);
@@ -83,8 +105,11 @@ function ConfigurationPage() {
 			} else {
 				dispatch(renameConfig({ oldName, newName }));
 			}
+			if (routeName && decodeURIComponent(routeName) === oldName) {
+				navigate(paths.configurationFile(newName), { replace: true });
+			}
 		},
-		[dispatch, list],
+		[dispatch, list, routeName, navigate],
 	);
 
 	const onSave = useCallback(
@@ -94,15 +119,6 @@ function ConfigurationPage() {
 		},
 		[dispatch, selected],
 	);
-
-	const didAutoSelect = React.useRef(false);
-	React.useEffect(() => {
-		if (didAutoSelect.current) return;
-		if (!selected && list?.length > 0) {
-			didAutoSelect.current = true;
-			onSelect(list[0].name);
-		}
-	}, [list, selected, onSelect]);
 
 	const onValidate = useCallback(() => {
 		if (!selected) return;
@@ -124,8 +140,11 @@ function ConfigurationPage() {
 		} else {
 			dispatch(deleteConfig(deleteTarget));
 		}
+		if (selected === deleteTarget) {
+			navigate(paths.configuration, { replace: true });
+		}
 		setDeleteOpen(false);
-	}, [dispatch, deleteTarget, list]);
+	}, [dispatch, deleteTarget, list, selected, navigate]);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -161,6 +180,8 @@ function ConfigurationPage() {
 									reader.onload = (evt) => {
 										const content = evt.target.result;
 										dispatch(addLocalFile({ name: file.name, content }));
+										// Navigate to new local file so URL reflects selection
+										navigate(paths.configurationFile(file.name), { replace: false });
 									};
 									reader.readAsText(file);
 								}}
