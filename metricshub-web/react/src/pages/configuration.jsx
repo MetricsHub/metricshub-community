@@ -134,6 +134,8 @@ function ConfigurationPage() {
 					<Stack direction="row" spacing={1} alignItems="center">
 						<Button
 							size="small"
+							variant="outlined"
+							color="inherit"
 							startIcon={<RefreshIcon />}
 							onClick={() => dispatch(fetchConfigList())}
 						>
@@ -142,11 +144,12 @@ function ConfigurationPage() {
 
 						<Button
 							size="small"
-							//variant="outlined"
+							color="inherit"
+							variant="outlined"
 							component="label"
 							startIcon={<UploadFileIcon />}
 						>
-							Upload
+							Import
 							<input
 								type="file"
 								accept=".yaml,.yml"

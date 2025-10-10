@@ -26,7 +26,13 @@ export default function EditorHeader({
 				<Button size="small" onClick={onValidate} disabled={!selected}>
 					Validate
 				</Button>
-				<Button size="small" startIcon={<SaveIcon />} onClick={onSave} disabled={!canSave}>
+				<Button
+					size="small"
+					startIcon={<SaveIcon />}
+					onClick={onSave}
+					disabled={!canSave}
+					variant="contained"
+				>
 					{saving ? "Saving..." : "Save"}
 				</Button>
 			</Stack>
