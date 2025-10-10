@@ -106,7 +106,7 @@ export default function FileTreeItem({ file, onRename, onDelete, isDirty = false
 							<FileTypeIcon type="yaml" />
 							<Box
 								sx={{
-									fontWeight: 500,
+									fontWeight: isDirty ? 510 : 500,
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",

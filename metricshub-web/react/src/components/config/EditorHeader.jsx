@@ -11,7 +11,9 @@ export default function EditorHeader({ selected, saving, validation, onValidate,
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
 			{/* File name + unsaved indicator */}
 			<Stack direction="row" alignItems="center" spacing={1}>
-				<Typography variant="subtitle1">{selected ?? "Select a file to edit"}</Typography>
+				<Typography variant="subtitle1" sx={{ fontWeight: isDirty ? 510 : 500 }}>
+					{selected ?? "Select a file to edit"}
+				</Typography>
 
 				{isDirty && selected && (
 					<Box
