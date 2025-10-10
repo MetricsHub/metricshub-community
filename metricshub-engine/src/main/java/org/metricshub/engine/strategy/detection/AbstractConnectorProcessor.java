@@ -36,7 +36,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -415,17 +414,15 @@ public abstract class AbstractConnectorProcessor {
 			return connectorTestResult;
 		}
 
-		// Keep track of the number of criteria per type
-		final Map<String, Integer> criterionTypeCountMap = new HashMap<>();
-
 		// Retrieve emulation input directory and read recorded criterion from it
 		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
 
 		// Persist source output if required and if not SNMP source
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
 
+		int criterionId = 1;
+
 		for (final Criterion criterion : criteria) {
-			int currentCriterionTypeCount = criterionTypeCountMap.getOrDefault(criterion.getType(), 0);
 			CriterionTestResult criterionTestResult = null;
 
 			// CHECKSTYLE:OFF
@@ -435,12 +432,7 @@ public abstract class AbstractConnectorProcessor {
 				!(criterion instanceof SnmpGetNextCriterion)
 			) {
 				criterionTestResult =
-					readEmulatedCriterionResult(
-						connector.getCompiledFilename(),
-						criterion,
-						emulationInputDirectory,
-						currentCriterionTypeCount + 1
-					)
+					readEmulatedCriterionResult(connector.getCompiledFilename(), criterion, emulationInputDirectory, criterionId)
 						.orElseGet(CriterionTestResult::empty);
 			} else {
 				criterionTestResult = processCriterion(criterion, connector);
@@ -457,17 +449,11 @@ public abstract class AbstractConnectorProcessor {
 					!(criterion instanceof SnmpGetCriterion) &&
 					!(criterion instanceof SnmpGetNextCriterion)
 				) {
-					persist(
-						criterionTestResult,
-						connector.getCompiledFilename(),
-						criterion,
-						recordOutputDirectory,
-						currentCriterionTypeCount + 1
-					);
+					persist(criterionTestResult, connector.getCompiledFilename(), criterion, recordOutputDirectory, criterionId);
 				}
 				// CHECKSTYLE:ON
 			}
-			criterionTypeCountMap.put(criterion.getType(), currentCriterionTypeCount + 1);
+			criterionId++;
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
 		}
 
