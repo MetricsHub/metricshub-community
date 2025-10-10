@@ -22,6 +22,7 @@ package org.metricshub.web.config;
  */
 
 import org.metricshub.web.mcp.ExecuteIpmiQueryService;
+import org.metricshub.web.mcp.ExecuteJmxQueryService;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
 import org.metricshub.web.mcp.ExecuteWbemQueryService;
 import org.metricshub.web.mcp.ExecuteWqlQueryService;
@@ -57,6 +58,7 @@ public class ToolCallbackConfiguration {
 	 * @param executeWqlQueryService     the service for executing WQL queries through WMI or WinRm.
 	 * @param executeWbemQueryService    the service for executing Wbem (CIM-XML) queries.
 	 * @param executeIpmiQueryService    the service for executing IPMI queries.
+	 * @param executeJmxQueryService     the service for executing JMX queries.
 	 * @return a {@link ToolCallbackProvider} exposing all registered protocol services as tools
 	 */
 	@Bean
@@ -70,7 +72,8 @@ public class ToolCallbackConfiguration {
 		final ExecuteSnmpQueryService executeSnmpQueryService,
 		final ExecuteWqlQueryService executeWqlQueryService,
 		final ExecuteWbemQueryService executeWbemQueryService,
-		final ExecuteIpmiQueryService executeIpmiQueryService
+		final ExecuteIpmiQueryService executeIpmiQueryService,
+		final ExecuteJmxQueryService executeJmxQueryService
 	) {
 		return MethodToolCallbackProvider
 			.builder()
@@ -84,7 +87,8 @@ public class ToolCallbackConfiguration {
 				executeSnmpQueryService,
 				executeWqlQueryService,
 				executeWbemQueryService,
-				executeIpmiQueryService
+				executeIpmiQueryService,
+				executeJmxQueryService
 			)
 			.build();
 	}
