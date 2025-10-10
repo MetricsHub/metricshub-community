@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -131,7 +132,7 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPGet query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean()))
+		when(snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
 			.thenReturn("Success");
 
 		// Calling execute query
@@ -168,7 +169,7 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPGetNext query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPGetNext(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean()))
+		when(snmpRequestExecutor.executeSNMPGetNext(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
 			.thenReturn("Success");
 
 		// Calling execute query
@@ -197,7 +198,7 @@ class ExecuteSnmpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeSNMPWalk query on SNMP request executor
-		when(snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean()))
+		when(snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull()))
 			.thenReturn("Success");
 
 		// Calling execute query
@@ -233,7 +234,8 @@ class ExecuteSnmpQueryServiceTest {
 				eq(columns),
 				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
