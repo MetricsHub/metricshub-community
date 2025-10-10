@@ -6,10 +6,17 @@ const YamlEditor = React.lazy(() => import("../../yaml-editor/YamlEditor"));
 
 /**
  * Configuration file editor component.
- * @param {{value:string,readOnly?:boolean,onChange?:(v:string)=>void,onSave?:()=>void,height?:string}} props
+ * @param {{value:string,readOnly?:boolean,onChange?:(v:string)=>void,onSave?:()=>void,canSave?:boolean,height?:string}} props
  * @returns The editor component.
  */
-export default function ConfigEditor({ value, readOnly, onChange, onSave, height = "100%" }) {
+export default function ConfigEditor({
+	value,
+	readOnly,
+	onChange,
+	onSave,
+	canSave = true,
+	height = "100%",
+}) {
 	return (
 		<Box sx={{ height }}>
 			<React.Suspense fallback={<Box sx={{ p: 2 }}>Loading editor…</Box>}>
@@ -18,6 +25,7 @@ export default function ConfigEditor({ value, readOnly, onChange, onSave, height
 					readOnly={readOnly}
 					onChange={onChange}
 					onSave={onSave}
+					canSave={canSave}
 					height="100%"
 				/>
 			</React.Suspense>

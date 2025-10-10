@@ -1,19 +1,34 @@
-// src/components/config/EditorHeader.jsx
-import { Stack, Typography, Chip, Button } from "@mui/material";
+import { Stack, Typography, Chip, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import { useAppSelector } from "../../hooks/store";
 
-export default function EditorHeader({
-	selected,
-	saving,
-	validation,
-	onValidate,
-	onSave,
-	canSave,
-}) {
+export default function EditorHeader({ selected, saving, validation, onValidate, onSave }) {
+	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
+	const isDirty = !!dirtyByName?.[selected];
+
 	return (
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
-			<Typography variant="subtitle1">{selected ?? "Select a file to edit"}</Typography>
+			{/* File name + unsaved indicator */}
+			<Stack direction="row" alignItems="center" spacing={1}>
+				<Typography variant="subtitle1">{selected ?? "Select a file to edit"}</Typography>
+
+				{isDirty && selected && (
+					<Box
+						component="span"
+						aria-hidden
+						sx={{
+							width: 8,
+							height: 8,
+							borderRadius: "50%",
+							bgcolor: (t) => t.palette.warning.main,
+							ml: 0.25,
+						}}
+					/>
+				)}
+			</Stack>
+
+			{/* Right side buttons */}
 			<Stack direction="row" spacing={1} alignItems="center">
 				{validation && (
 					<Chip
@@ -30,7 +45,7 @@ export default function EditorHeader({
 					size="small"
 					startIcon={<SaveIcon />}
 					onClick={onSave}
-					disabled={!canSave}
+					disabled={!selected || !isDirty || saving}
 					variant="contained"
 				>
 					{saving ? "Saving..." : "Save"}

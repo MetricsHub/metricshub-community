@@ -15,6 +15,9 @@ export default function ConfigEditorContainer() {
 	const selected = useAppSelector((s) => s.config.selected);
 	const storeContent = useAppSelector((s) => s.config.content);
 	const saving = useAppSelector((s) => s.config.saving);
+	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
+	const isDirty = !!(selected && dirtyByName[selected]);
+	const canSave = !!selected && isDirty && !saving;
 
 	const [local, setLocal] = React.useState(storeContent);
 
@@ -53,15 +56,14 @@ export default function ConfigEditorContainer() {
 	};
 
 	/**
-	 * Handle save action from the editor.
-	 * Dispatches save action to Redux store.
-	 * No-op if no file is selected or already saving.
-	 * @type {()=>void}
+	 * Handle save action.
+	 * Dispatches saveConfig thunk if saving is allowed.
+	 * @type {React.MouseEventHandler}
 	 */
-	const onSave = () => {
-		if (!selected || saving) return;
+	const onSave = React.useCallback(() => {
+		if (!canSave) return;
 		dispatch(saveConfig({ name: selected, content: local, skipValidation: false }));
-	};
+	}, [canSave, dispatch, selected, local]);
 
 	return (
 		<ConfigEditor
@@ -69,6 +71,7 @@ export default function ConfigEditorContainer() {
 			readOnly={!selected}
 			onChange={onChange}
 			onSave={onSave}
+			canSave={canSave}
 			height="100%"
 		/>
 	);

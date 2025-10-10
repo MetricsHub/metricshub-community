@@ -1,6 +1,6 @@
 import * as React from "react";
 import { TreeItem } from "@mui/x-tree-view";
-import { Box, IconButton, Menu, MenuItem, TextField, Stack, Chip } from "@mui/material";
+import { Box, IconButton, Menu, MenuItem, TextField, Stack } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -8,7 +8,7 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 
-export default function FileTreeItem({ file, onRename, onDelete }) {
+export default function FileTreeItem({ file, onRename, onDelete, isDirty = false }) {
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -115,6 +115,23 @@ export default function FileTreeItem({ file, onRename, onDelete }) {
 							>
 								{file.name}
 							</Box>
+
+							{/* Unsaved/dirty indicator */}
+							{isDirty && (
+								<Box
+									component="span"
+									title="Unsaved changes"
+									aria-label="Unsaved changes"
+									sx={{
+										ml: 0.75,
+										width: 8,
+										height: 8,
+										borderRadius: "50%",
+										bgcolor: (t) => t.palette.warning.main,
+										flexShrink: 0,
+									}}
+								/>
+							)}
 						</Box>
 						<FileMeta file={file} />
 					</>

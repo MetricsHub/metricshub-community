@@ -4,6 +4,7 @@ import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
 import FileTypeIcon from "./icons/FileTypeIcons.jsx";
 import { Stack, Box } from "@mui/material";
 import FileTreeItem from "./FileTreeItem";
+import { useAppSelector } from "../../../hooks/store";
 
 const ROOT_ID = "__config_root__";
 /**
@@ -24,6 +25,8 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 			<span>config</span>
 		</Box>
 	);
+
+	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
 
 	return (
 		<Stack sx={{ p: 0 }}>
@@ -46,6 +49,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 						<FileTreeItem
 							key={f.name}
 							file={f}
+							isDirty={!!dirtyByName?.[f.name]}
 							onSelect={onSelect}
 							onRename={onRename}
 							onDelete={onDelete}

@@ -26,7 +26,14 @@ service:
  * - height?: CSS height (default "100%")
  * - readOnly?: boolean (default false)
  */
-export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
+export default function YamlEditor({
+	value,
+	onChange,
+	onSave,
+	canSave = true,
+	height = "100%",
+	readOnly = false,
+}) {
 	const theme = useTheme();
 
 	const [doc, setDoc] = useState(() => {
@@ -58,13 +65,13 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 				key: "Mod-s",
 				preventDefault: true,
 				run: (view) => {
+					if (!canSave) return true;
 					onSave(view.state.doc.toString());
-					return true;
 				},
 			});
 		}
 		return [cmYaml(), history(), keymap.of(km)];
-	}, [onSave]);
+	}, [onSave, canSave]);
 
 	/**
 	 * Handle document changes.

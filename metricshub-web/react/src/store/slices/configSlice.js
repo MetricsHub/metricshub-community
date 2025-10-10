@@ -18,6 +18,8 @@ const initialState = {
 	loadingContent: false,
 	saving: false,
 	error: null,
+	dirtyByName: {},
+	originalsByName: {},
 };
 
 const slice = createSlice({
@@ -29,13 +31,13 @@ const slice = createSlice({
 			state.validation = null;
 		},
 		setContent(state, action) {
-			state.content = action.payload ?? "";
+			const next = action.payload ?? "";
+			state.content = next;
 			const n = state.selected;
 			if (n) {
-				state.filesByName[n] = {
-					...(state.filesByName[n] || {}),
-					content: state.content,
-				};
+				const prev = state.filesByName[n] || {};
+				state.filesByName[n] = { ...prev, content: next };
+				state.dirtyByName[n] = next !== (state.originalsByName[n] ?? "");
 			}
 		},
 		clearError(state) {
@@ -117,8 +119,14 @@ const slice = createSlice({
 			})
 			.addCase(fetchConfigContent.fulfilled, (s, a) => {
 				s.loadingContent = false;
-				s.selected = a.payload.name;
-				s.content = a.payload.content || "";
+				const { name, content = "" } = a.payload;
+				s.selected = name;
+				s.content = content;
+
+				const prev = s.filesByName[name] || {};
+				s.filesByName[name] = { ...prev, content };
+				s.originalsByName[name] = content;
+				s.dirtyByName[name] = false;
 			})
 			.addCase(fetchConfigContent.rejected, (s, a) => {
 				s.loadingContent = false;
@@ -132,9 +140,15 @@ const slice = createSlice({
 			.addCase(saveConfig.fulfilled, (s, a) => {
 				s.saving = false;
 				const meta = a.payload.meta;
-				const i = s.list.findIndex((f) => f.name === meta.name);
+				const name = meta.name;
+				const i = s.list.findIndex((f) => f.name === name);
 				if (i >= 0) s.list[i] = meta;
 				else s.list.push(meta);
+				const cur = s.filesByName[name] || {};
+				s.filesByName[name] = { ...cur, localOnly: false };
+				const savedContent = cur.content ?? s.content ?? "";
+				s.originalsByName[name] = savedContent;
+				s.dirtyByName[name] = false;
 			})
 			.addCase(saveConfig.rejected, (s, a) => {
 				s.saving = false;
@@ -151,6 +165,9 @@ const slice = createSlice({
 			.addCase(deleteConfig.fulfilled, (s, a) => {
 				const n = a.payload;
 				s.list = s.list.filter((f) => f.name !== n);
+				delete s.filesByName[n];
+				delete s.originalsByName[n];
+				delete s.dirtyByName[n];
 				if (s.selected === n) {
 					s.selected = null;
 					s.content = "";
