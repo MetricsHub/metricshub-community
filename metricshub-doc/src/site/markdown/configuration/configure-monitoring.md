@@ -3,7 +3,7 @@ description: How to configure the MetricsHub Agent to collect metrics from a var
 
 # Monitoring Configuration
 
-<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=3|id=toc} -->
 
 **MetricsHub** extracts metrics from the resources defined in the configuration file(s). These **resources** can be hosts, applications, or any components running in your IT infrastructure.
 Each **resource** is typically associated with a physical location, such as a data center or server room, or a logical location, like a business unit.
@@ -141,6 +141,8 @@ At this stage, you can configure sustainability metrics reporting. For more deta
 
 ## Step 3: Configure resources
 
+### Manual Configuration
+
 **Resources** can either be configured:
 
 * under the `resources` section located at the top of the configuration file *(recommended for centralized infrastructures)*
@@ -175,7 +177,7 @@ At this stage, you can configure sustainability metrics reporting. For more deta
 The syntax to adopt for configuring your resources will differ whether your resources have unique
 or similar characteristics (such as device type, protocols, and credentials).
 
-### Syntax for unique resources
+#### Syntax for unique resources
 
 ```yaml
 resources:
@@ -186,7 +188,7 @@ resources:
     <protocol-configuration> 
 ```
 
-### Syntax for resources sharing similar characteristics
+#### Syntax for resources sharing similar characteristics
 
 ```yaml
 resources:
@@ -253,9 +255,9 @@ resourceGroups:
         <protocol-configuration>
 ```
 
-### Protocols and credentials
+#### Protocols and credentials
 
-#### HTTP
+##### HTTP
 
 Use the parameters below to configure the HTTP protocol:
 
@@ -289,7 +291,7 @@ resourceGroups:
             timeout: 60
 ```
 
-#### ICMP Ping
+##### ICMP Ping
 
 Use the parameters below to configure the ICMP ping protocol:
 
@@ -316,7 +318,7 @@ resourceGroups:
             timeout: 10s
 ```
 
-#### IPMI
+##### IPMI
 
 Use the parameters below to configure the IPMI protocol:
 
@@ -345,7 +347,7 @@ resourceGroups:
             password: mypwd
 ```
 
-#### JDBC
+##### JDBC
 
 Use the parameters below to configure JDBC to connect to a database:
 
@@ -384,7 +386,7 @@ resourceGroups:
             port: 3306
 ```
 
-#### JMX
+##### JMX
 
 Use the parameters below to configure the JMX protocol:
 
@@ -415,7 +417,7 @@ resourceGroups:
             port: 7199
 ```
 
-#### OS commands
+##### OS commands
 
 Use the parameters below to configure OS Commands that are executed locally:
 
@@ -448,7 +450,7 @@ resourceGroups:
             sudoCommand: sudo
 ```
 
-#### SSH
+##### SSH
 
 Use the parameters below to configure the SSH protocol:
 
@@ -490,7 +492,7 @@ resourceGroups:
 
 ```
 
-#### SNMP
+##### SNMP
 
 Use the parameters below to configure the SNMP protocol:
 
@@ -534,7 +536,7 @@ resourceGroups:
             timeout: 120s
 ```
 
-#### SNMP version 3
+##### SNMP version 3
 
 Use the parameters below to configure the SNMP version 3 protocol:
 
@@ -576,7 +578,7 @@ resourceGroups:
             password: myAuthPassword 
 ```
 
-#### WBEM
+##### WBEM
 
 Use the parameters below to configure the WBEM protocol:
 
@@ -612,7 +614,7 @@ resourceGroups:
             password: mypwd
 ```
 
-#### WMI
+##### WMI
 
 Use the parameters below to configure the WMI protocol:
 
@@ -643,7 +645,6 @@ resourceGroups:
             password: mypwd
 ```
 
-#### WinRM
 
 Use the parameters below to configure the WinRM protocol:
 
@@ -679,40 +680,35 @@ resourceGroups:
             timeout: 120s
             authentications: [ntlm]
 ```
-
 ### Programmable Configuration
 
-**MetricsHub** introduces the **programmable configuration support** via [Apache Velocity](https://velocity.apache.org) templates. This enables dynamic generation of resource configurations using external sources such as files or HTTP APIs.
+You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, or parsing JSON content.
 
-You can now use tools like `${esc.d}http.execute(...)` or `${esc.d}file.readAllLines(...)` in the `.vm` template files located under the `/config` directory to fetch and transform external data into valid resource configuration blocks.
+To fetch and transform this data into valid configuration blocks, use [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) in the `.vm` template files located under the `/config` directory, such as:
 
-These templates leverage [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) to simplify logic and data handling. Some commonly used tools include:
+* `${esc.d}http` for making HTTP requests
+* `${esc.d}file` for reading local files
+* `${esc.d}json` for parsing JSON data
+* `${esc.d}collection` for splitting strings or manipulating collections
+* `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
-- `${esc.d}http`: for making HTTP requests
-- `${esc.d}file`: for reading local files
-- `${esc.d}json`: for parsing JSON data
-- `${esc.d}collection`: for splitting strings or manipulating collections
-- `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
+##### `${esc.d}http.execute` tool arguments
 
-#### `${esc.d}http.execute` tool arguments
+Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates. It supports the following arguments:
 
-The `${esc.d}http` tool allows you to execute HTTP requests directly from templates using the `execute` function (`${esc.d}http.execute({ ...args })`). The following arguments are supported:
+| Argument   | Description                                                    |
+|------------|----------------------------------------------------------------|
+| `url`      | **(Required)** The HTTP(S) endpoint to call.                   |
+| `method`   | HTTP method (`GET`, `POST`, etc.). (Default: `GET`).           |
+| `username` | Username used for authentication.                              |
+| `password` | Password used for authentication.                              |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs. |
+| `body`     | Payload to send with the request (e.g., for `POST`).           |
+| `timeout`  | Request timeout in seconds. (Default: `60`).                   |
 
-| Argument   | Description                                                            |
-| ---------- | ---------------------------------------------------------------------- |
-| `url`      | (Required) The HTTP(S) endpoint to call.                               |
-| `method`   | HTTP method (`GET`, `POST`, etc.). Defaults to `GET` if not specified. |
-| `username` | Username used for authentication.                                      |
-| `password` | Password used for authentication.                                      |
-| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs.         |
-| `body`     | Payload to send with the request (e.g., for `POST`).                   |
-| `timeout`  | Request timeout in seconds. Defaults to `60`.                          |
+> Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
 
-Two convenience functions are also available:
-- `${esc.d}http.get(...)`: Executes a `GET` request without requiring a `method` argument.
-- `${esc.d}http.post(...)`: Executes a `POST` request without requiring a `method` argument.
-
-#### Example 1: Load resources from an HTTP API
+##### Example 1: Loading resources from an HTTP API
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
@@ -726,6 +722,8 @@ Suppose your API endpoint at `https://cmdb/servers` returns:
 You can dynamically create resource blocks using:
 
 ```
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+
 resources:
 ${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
 
@@ -745,9 +743,9 @@ ${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
 ${esc.h}end
 ```
 
-#### Example 2: Load resources from a local file
+##### Example 2: Loading resources from a local file
 
-Assume a CSV file contains:
+If your CSV file contains:
 
 ```
 host1,win,wmi,user1,pass1
@@ -757,6 +755,8 @@ host2,linux,ssh,user2,pass2
 Use this Velocity template to generate the resource block:
 
 ```
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+
 ${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
 ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
@@ -865,8 +865,9 @@ Follow the structure below to declare your monitor:
 ```
 
 Refer to:
-- [Monitors](https://metricshub.org/community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
-- [Monitoring the health of a Web service](https://metricshub.com/usecases/monitoring-the-health-of-a-web-service/) for a practical example that demonstrates how to use this feature effectively.
+
+* [Monitors](https://metricshub.org/community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
+* [Monitoring the health of a Web service](https://metricshub.com/usecases/monitoring-the-health-of-a-web-service/) for a practical example that demonstrates how to use this feature effectively.
 
 ### OTLP Exporter settings
 
@@ -878,7 +879,7 @@ Refer to:
 The table below describes the available OTLP Exporter properties:
 
 | Property                                                    | Description                                                                                                                                                                                                                    |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **`otel.exporter.otlp.metrics.endpoint`**                   | The OTLP metrics endpoint URL. <p><p></p>Must be an `http` or `https` URL, depending on whether TLS is used.</p><p></p><p>**Default:** `http://localhost:4317` (gRPC) / `http://localhost:4318/v1/metrics` (HTTP/Protobuf)</p> |
 | **`otel.exporter.otlp.metrics.protocol`**                   | Transport protocol for OTLP metric requests.<p></p><p>Possible Values: `grpc`, `http/protobuf`.</p><p></p><p>**Default:** `grpc`</p>                                                                                           |
 | **`otel.exporter.otlp.metrics.certificate`**                | Path to a PEM-formatted file containing trusted certificates for verifying the OTLP server’s TLS credentials.<p></p><p>**Default:** Uses the host platform’s trusted root certificates</p>                                     |
@@ -1137,6 +1138,7 @@ resources:
 > Note: If a connector is added under the `additionalConnectors` section with missing or unspecified variables, those variables will automatically be populated with default values defined by the connector itself.
 
 For practical examples demonstrating effective use of this feature, refer to the following pages:
+
 * [Monitoring a process command line](https://metricshub.com/usecases/monitoring-a-process-on-windows/)
 * [Monitoring a service running on Linux](https://metricshub.com/usecases/monitoring-a-service-running-on-linux/).
 
