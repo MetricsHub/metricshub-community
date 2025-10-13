@@ -21,11 +21,13 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Optional;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -129,31 +131,45 @@ public class ExecuteWqlQueryService {
 		final String namespace,
 		final Long timeout
 	) {
-		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
-			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper
+			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
-			.map(configCandidate -> this.buildConfigurationWithNamespace(extension, configCandidate, namespace))
+			.map(configCandidate -> buildConfigurationWithNamespace(extension, configCandidate, namespace))
 			.flatMap(Optional::stream)
-			.findFirst();
+			.findFirst()
+			.map((IConfiguration configurationCopy) ->
+				executeQuerySafe(extension, hostname, query, timeout, configurationCopy)
+			)
+			.orElseGet(() -> QueryResponse.builder().isError("No valid configuration found.").build());
+	}
 
-		if (maybeConfiguration.isEmpty()) {
-			return QueryResponse.builder().isError("No configuration found.").build();
-		}
-
-		// Retrieve the valid configuration from maybe configuration.
-		final IConfiguration validConfiguration = maybeConfiguration.get();
-
+	/**
+	 * Executes the query using the provided extension and configuration. The method sets the hostname
+	 * @param extension         the protocol extension to use for execution
+	 * @param hostname          the target host
+	 * @param query             the query string to execute
+	 * @param timeout           the timeout for the query execution in seconds
+	 * @param configurationCopy the configuration to use for execution
+	 * @return a {@link QueryResponse} containing either the extension result or an error
+	 */
+	private static QueryResponse executeQuerySafe(
+		final IProtocolExtension extension,
+		final String hostname,
+		final String query,
+		final Long timeout,
+		final IConfiguration configurationCopy
+	) {
 		// add hostname and timeout to the valid configuration
-		validConfiguration.setHostname(hostname);
-		validConfiguration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
+		configurationCopy.setHostname(hostname);
+		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 
 		// Create a json node and populate it with the query
-		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
+		final var queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
 
 		try {
-			return QueryResponse.builder().response(extension.executeQuery(validConfiguration, queryNode)).build();
+			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
@@ -178,16 +194,11 @@ public class ExecuteWqlQueryService {
 		final IConfiguration configuration,
 		final String namespace
 	) {
-		final ObjectMapper mapper = new ObjectMapper();
-
 		// extract an ObjectNode from the IConfiguration
-		final ObjectNode configurationNode = mapper.valueToTree(configuration);
+		final ObjectNode configurationNode = JsonHelper.buildObjectMapper().valueToTree(configuration);
 
 		// Inject the namespace into the configuration ObjectNode
-		configurationNode.set(
-			"namespace",
-			new TextNode(namespace != null && !namespace.isBlank() ? namespace : DEFAULT_NAMESPACE)
-		);
+		configurationNode.set("namespace", new TextNode(StringHelper.getValue(() -> namespace, DEFAULT_NAMESPACE)));
 
 		try {
 			// Try to build an IConfiguration from the modified ObjectNode.
