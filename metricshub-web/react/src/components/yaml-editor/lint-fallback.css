@@ -1,0 +1,25 @@
+/* fallback styles for lint markers */
+.cm-lintPoint-error {
+  background-color: #f44336;
+  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.cm-lintRange-error {
+  background-color: rgba(244, 67, 54, 0.2);
+}
+
+.cm-lintRange-warning {
+  background-color: rgba(255, 193, 7, 0.2);
+}
+
+.cm-lintTooltip {
+  background: #333;
+  color: #fff;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 0.8rem;
+}

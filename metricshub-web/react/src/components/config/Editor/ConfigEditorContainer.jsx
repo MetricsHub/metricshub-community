@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { setContent } from "../../../store/slices/configSlice";
-import { saveConfig } from "../../../store/thunks/configThunks";
+import { saveConfig, validateConfig } from "../../../store/thunks/configThunks";
 import ConfigEditor from "./ConfigEditor";
 
 /**
@@ -65,6 +65,18 @@ export default function ConfigEditorContainer() {
 		dispatch(saveConfig({ name: selected, content: local, skipValidation: false }));
 	}, [canSave, dispatch, selected, local]);
 
+const validateFn = React.useCallback(
+  async (content, name) => {
+    try {
+      const res = await dispatch(validateConfig({ name, content })).unwrap();
+      return res?.result ?? { valid: true };
+    } catch {
+      return { valid: true }; // fallback to no lint markers
+    }
+  },
+  [dispatch],
+);
+
 	return (
 		<ConfigEditor
 			value={local}
@@ -73,6 +85,8 @@ export default function ConfigEditorContainer() {
 			onSave={onSave}
 			canSave={canSave}
 			height="100%"
+			fileName={selected}
+			validateFn={validateFn}
 		/>
 	);
 }
