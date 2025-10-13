@@ -8,6 +8,7 @@ import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
 import { linter, lintGutter } from "@codemirror/lint";
 import "./lint-fallback.css";
+import { shortYamlError } from "../../utils/yaml-error";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
@@ -88,6 +89,9 @@ export default function YamlEditor({
 			return out.join("\n").trim();
 		};
 
+		// Use reusable helper for extracting concise YAML error messages
+		const shortError = shortYamlError;
+
 		const makePos = (lineNum, column) => {
 			// Some backends use 0-based lines, some use 1-based. Accept either.
 			// If lineNum is undefined/null, default to 1.
@@ -129,7 +133,8 @@ export default function YamlEditor({
 					return {
 						from: safeFrom,
 						to: safeTo,
-						message: normalizeMessage(e.message || e.msg || "Validation error"),
+						// prefer a short extracted message, but still normalize duplicates
+						message: normalizeMessage(shortError(e.message || e.msg || "Validation error")),
 						severity: e.severity || "error",
 					};
 				} catch (_err) {
@@ -137,7 +142,7 @@ export default function YamlEditor({
 					return {
 						from: 0,
 						to: Math.min(1, cmDoc.length),
-						message: normalizeMessage(e?.message || _err?.message || "Validation error"),
+						message: normalizeMessage(shortError(e?.message || _err?.message || "Validation error")),
 						severity: e?.severity || "error",
 					};
 				}
@@ -186,7 +191,7 @@ export default function YamlEditor({
 					return {
 						from,
 						to,
-						message: normalizeMessage(text),
+						message: normalizeMessage(shortError(text)),
 						severity: "error",
 					};
 				});
@@ -207,7 +212,7 @@ export default function YamlEditor({
 				{
 					from: 0,
 					to: Math.min(1, cmDoc.length),
-					message: normalizeMessage(text),
+					message: normalizeMessage(shortError(text)),
 					severity: "error",
 				},
 			];
