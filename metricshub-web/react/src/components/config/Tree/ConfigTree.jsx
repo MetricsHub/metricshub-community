@@ -6,14 +6,12 @@ import { Stack, Box } from "@mui/material";
 import FileTreeItem from "./FileTreeItem";
 
 const ROOT_ID = "__config_root__";
+
 /**
- * Props:
- * - files: Array<{ name: string, size: number, lastModificationTime: string }>
- * - selectedName: string | null
- * - onSelect: (name: string) => void
- * - onRename: (oldName: string, newName: string) => void
- * - onDelete: (name: string) => void
- * - loading: boolean
+ * Configuration tree component.
+ *
+ * @param {{files:{name:string,size:number,lastModificationTime:string,localOnly?:boolean}[],selectedName:string,onSelect:(name:string)=>void,onRename?:(oldName:string,newName:string)=>void,onDelete?:(name:string)=>void}} props The component props.
+ * @returns {JSX.Element} The configuration tree component.
  */
 export default function ConfigTree({ files, selectedName, onSelect, onRename, onDelete }) {
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);

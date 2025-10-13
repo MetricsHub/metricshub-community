@@ -18,7 +18,7 @@ export default function ConfigEditor({ value, readOnly, onChange, onSave, height
 					readOnly={readOnly}
 					onChange={onChange}
 					onSave={onSave}
-					height="100%"
+					height={height}
 				/>
 			</React.Suspense>
 		</Box>

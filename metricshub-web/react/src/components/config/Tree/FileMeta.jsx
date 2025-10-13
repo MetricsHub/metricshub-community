@@ -2,6 +2,11 @@ import * as React from "react";
 import { Stack, Box, Chip } from "@mui/material";
 import { formatBytes, formatRelativeTime } from "../../../utils/formatters";
 
+/**
+ * File metadata display component.
+ * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},sx?:object}} props The component props.
+ * @returns JSX.Element
+ */
 function FileMeta({ file, sx }) {
 	return (
 		<Stack

@@ -1,6 +1,6 @@
 // src/components/config/tree/icons/FileTypeIcons.jsx
 import * as React from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box } from "@mui/material";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 
@@ -20,13 +20,11 @@ const ICONS = {
  * @returns The icon element.
  */
 const FileTypeIconComponent = ({ type }) => {
-	const theme = useTheme();
-	const Icon = ICONS[type] || ICONS.file;
-	const size = theme.custom.treeIconSize;
+	const TreeIcon = ICONS[type] || ICONS.file;
 
 	return (
 		<Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 1 }}>
-			<Icon sx={{ fontSize: size }} />
+			<TreeIcon fontSize="small" />
 		</Box>
 	);
 };

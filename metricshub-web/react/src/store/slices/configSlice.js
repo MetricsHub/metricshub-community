@@ -149,9 +149,9 @@ const slice = createSlice({
 			})
 
 			.addCase(deleteConfig.fulfilled, (s, a) => {
-				const n = a.payload;
-				s.list = s.list.filter((f) => f.name !== n);
-				if (s.selected === n) {
+				const fileName = a.payload;
+				s.list = s.list.filter((f) => f.name !== fileName);
+				if (s.selected === fileName) {
 					s.selected = null;
 					s.content = "";
 					s.validation = null;

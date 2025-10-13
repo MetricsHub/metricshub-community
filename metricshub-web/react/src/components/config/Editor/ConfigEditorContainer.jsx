@@ -1,4 +1,3 @@
-// src/components/config/Editor/ConfigEditorContainer.jsx
 import * as React from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { setContent } from "../../../store/slices/configSlice";

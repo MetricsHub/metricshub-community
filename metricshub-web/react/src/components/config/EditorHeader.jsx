@@ -3,6 +3,11 @@ import { Stack, Typography, Chip, Button } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
 
+/**
+ * Editor header component.
+ * @param {{selected:string,saving:boolean,validation:{valid:boolean,error?:string},onValidate:()=>void,onSave:()=>void,canSave:boolean}} param0 The component props.
+ * @returns {JSX.Element} The editor header component.
+ */
 export default function EditorHeader({
 	selected,
 	saving,

@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -6,36 +6,25 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
-import YAML from "yaml";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
-const DEFAULT_YAML = `# Example
-service:
-  name: metricshub
-  port: 8080
-  enabled: true
-`;
-
 /**
- * YAML Editor component
- * Props:
- * - value?: string
- * - onChange?: (val: string) => void
- * - onSave?: (val: string) => void
- * - height?: CSS height (default "100%")
- * - readOnly?: boolean (default false)
+ * YAML Editor component.
+ *
+ * @param {{value?:string,onChange?:(val:string)=>void,onSave?:(val:string)=>void,height?:string,readOnly?:boolean}} props The component props.
+ * @returns {JSX.Element} The YAML editor component.
  */
 export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
 	const theme = useTheme();
 
-	const [doc, setDoc] = useState(() => {
+	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-		return stored ?? value ?? DEFAULT_YAML;
+		return stored ?? value;
 	});
 
 	// Sync external value if provided
-	useEffect(() => {
+	React.useEffect(() => {
 		if (value != null) {
 			setDoc(value);
 			localStorage.setItem(LOCAL_STORAGE_KEY, value);
@@ -43,7 +32,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	}, [value]);
 
 	// Save to localStorage on every change
-	useEffect(() => {
+	React.useEffect(() => {
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
@@ -51,7 +40,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	 * CodeMirror extensions, memoized to avoid re-creating on every render.
 	 * Includes YAML language support, linting, history, and keymaps.
 	 */
-	const extensions = useMemo(() => {
+	const extensions = React.useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
 			km.unshift({
@@ -70,7 +59,7 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	 * Handle document changes.
 	 * Updates local state, performs live validation, and calls onChange prop if provided.
 	 */
-	const handleChange = useCallback(
+	const handleChange = React.useCallback(
 		(val) => {
 			setDoc(val);
 			onChange?.(val);
