@@ -1,11 +1,8 @@
 /* fallback styles for lint markers */
 .cm-lintPoint-error {
-  background-color: #f44336;
-  border-radius: 50%;
-  width: 6px;
-  height: 6px;
-  display: inline-block;
-  margin-left: 4px;
+  /* Hide the inline "point" marker (typically shown inside the line)
+     so only the gutter marker remains visible on the left. */
+  display: none;
 }
 
 .cm-lintRange-error {
