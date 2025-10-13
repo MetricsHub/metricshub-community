@@ -57,7 +57,7 @@ class MCPConfigHelperTest {
 		when(contextHolder.getAgentContext()).thenReturn(agentContext);
 
 		// When
-		Set<IConfiguration> result = MCPConfigHelper.resolveAllHostConfigurationsFromContext(hostname, contextHolder);
+		Set<IConfiguration> result = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, contextHolder);
 
 		// Then
 		assertEquals(1, result.size());
@@ -93,7 +93,7 @@ class MCPConfigHelperTest {
 		when(contextHolder.getAgentContext()).thenReturn(agentContext);
 
 		// When
-		Set<IConfiguration> result = MCPConfigHelper.resolveAllHostConfigurationsFromContext(hostname, contextHolder);
+		Set<IConfiguration> result = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, contextHolder);
 
 		// Then
 		assertTrue(result.isEmpty());
