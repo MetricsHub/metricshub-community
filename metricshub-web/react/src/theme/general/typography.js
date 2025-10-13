@@ -28,6 +28,7 @@ export const buildTypography = () => {
 			fontSize: "1rem",
 			fontWeight: 500,
 			lineHeight: 1.57,
+			opacity: 0.85,
 		},
 		subtitle2: {
 			fontSize: "0.875rem",

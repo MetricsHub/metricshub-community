@@ -22,9 +22,8 @@ package org.metricshub.web.mcp;
  */
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
@@ -33,8 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.metricshub.engine.common.exception.InvalidConfigurationException;
-import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -52,7 +50,7 @@ import org.metricshub.web.AgentContextHolder;
 public class MCPConfigHelper {
 
 	/**
-	 * Retrieves all configurations associated with the given hostname from the
+	 * Retrieves a deep copy of all configurations associated with the given hostname from the
 	 * provided agent context, without applying any protocol-specific validation.
 	 *
 	 * @param hostname     the target host
@@ -60,7 +58,7 @@ public class MCPConfigHelper {
 	 * @return a set of all {@link IConfiguration} instances associated with the
 	 *         host
 	 */
-	public static Set<IConfiguration> resolveAllHostConfigurationsFromContext(
+	public static Set<IConfiguration> resolveAllHostConfigurationCopiesFromContext(
 		final String hostname,
 		final AgentContextHolder contextHolder
 	) {
@@ -77,27 +75,32 @@ public class MCPConfigHelper {
 			// Match telemetry managers by hostname
 			.filter((TelemetryManager telemetryManager) -> hostname.equalsIgnoreCase(telemetryManager.getHostname()))
 			// Extract IConfiguration instances from matching TelemetryManagers
-			.flatMap((TelemetryManager telemetryManager) -> {
-				final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
-
-				// Skip if no host configuration is available
-				if (hostConfiguration == null) {
-					return Stream.empty();
-				}
-
-				final Map<Class<? extends IConfiguration>, ? extends IConfiguration> configMap =
-					hostConfiguration.getConfigurations();
-
-				// Skip if no configuration map is present
-				if (configMap == null) {
-					return Stream.empty();
-				}
-
-				// Stream the IConfiguration instances
-				return configMap.values().stream();
-			})
+			.flatMap(MCPConfigHelper::getConfigStream)
+			// create a deep copy of the configuration
+			.map(IConfiguration::copy)
 			// Collect all configurations into a Set
 			.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Streams all {@link IConfiguration} instances from the given {@link TelemetryManager}'s
+	 *
+	 * @param telemetryManager the telemetry manager to extract configurations from
+	 * @return a stream of {@link IConfiguration} instances; empty if none are found
+	 */
+	private static Stream<IConfiguration> getConfigStream(final TelemetryManager telemetryManager) {
+		final var hostConfiguration = telemetryManager.getHostConfiguration();
+
+		// Skip if no host configuration is available
+		if (hostConfiguration == null) {
+			return Stream.empty();
+		}
+
+		return Optional
+			.ofNullable(hostConfiguration.getConfigurations())
+			.map(Map::values)
+			.map(Collection::stream)
+			.orElseGet(Stream::empty);
 	}
 
 	/**
@@ -160,18 +163,18 @@ public class MCPConfigHelper {
 		final IProtocolExtension extension
 	) {
 		// Convert the source configuration to a JsonNode tree
-		final ObjectMapper mapper = new ObjectMapper();
+		final var mapper = JsonHelper.buildObjectMapper();
 		final JsonNode configurationNode = mapper.valueToTree(configuration);
 
 		// Create a new configuration node with only the required shared fields
-		final ObjectNode newConfigurationNode = JsonNodeFactory.instance.objectNode();
+		final var newConfigurationNode = JsonNodeFactory.instance.objectNode();
 		newConfigurationNode.set("username", configurationNode.get("username"));
 		newConfigurationNode.set("password", configurationNode.get("password"));
 
 		// Build the new configuration using the extracted credentials
 		try {
 			return extension.buildConfiguration(protocol, newConfigurationNode, null);
-		} catch (InvalidConfigurationException e) {
+		} catch (Exception e) {
 			return null;
 		}
 	}
