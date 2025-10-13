@@ -6,9 +6,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.metricshub.jawk.util.AwkSettings;
 
-class MetricsHubExtensionForJawkTest {
+class UtilityExtensionForJawkTest {
 
-	static final MetricsHubExtensionForJawk UNDER_TEST = new MetricsHubExtensionForJawk();
+	static final UtilityExtensionForJawk UNDER_TEST = new UtilityExtensionForJawk();
 
 	@BeforeAll
 	static void setup() {

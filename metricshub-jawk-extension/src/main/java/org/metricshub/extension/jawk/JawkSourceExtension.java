@@ -27,7 +27,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
-import org.metricshub.engine.awk.MetricsHubAwkSettings;
+import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
+import org.metricshub.engine.awk.UtilityExtensionForJawk;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -38,7 +39,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.jawk.util.AwkSettings;
+import org.metricshub.jawk.Awk;
 
 /**
  * This class implements the {@link ICompositeSourceScriptExtension} contract, reports the supported features,
@@ -103,9 +104,6 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 
 		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
-		// Special AwkSettings with MetricsHub-specific information
-		final AwkSettings settings = new MetricsHubAwkSettings(sourceProcessor, hostname, connectorId);
-
 		final String input = jawkSource.getInput();
 		final String inputContent = (input != null && !input.isEmpty())
 			? SourceUpdaterProcessor.replaceSourceReferenceContent(
@@ -117,8 +115,13 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			)
 			: input;
 
+		// Instantiate the MetricsHub extension for Jawk with the proper context
+		MetricsHubExtensionForJawk extension = new MetricsHubExtensionForJawk(sourceProcessor, hostname, connectorId);
+
+		// Execute
 		try {
-			String result = AwkExecutor.executeAwk(awkScript, inputContent, settings);
+			Awk awkEngine = new Awk(extension, UtilityExtensionForJawk.INSTANCE);
+			String result = AwkExecutor.executeAwk(awkScript, inputContent, awkEngine);
 			final SourceTable sourceTable = new SourceTable();
 			sourceTable.setRawData(result);
 			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));

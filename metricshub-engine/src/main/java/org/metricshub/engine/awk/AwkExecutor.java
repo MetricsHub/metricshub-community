@@ -21,6 +21,8 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -36,7 +38,7 @@ import org.metricshub.jawk.intermediate.AwkTuples;
 import org.metricshub.jawk.util.AwkSettings;
 
 /**
- * Utility class for executing AWK scripts.
+ * Utility class for executing AWK_PLUS_UTILITY scripts.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class AwkExecutor {
@@ -44,15 +46,15 @@ public class AwkExecutor {
 	/**
 	 * Standard Jawk instance, with the MetricsHub extension
 	 */
-	private static final org.metricshub.jawk.Awk AWK = new Awk(new MetricsHubExtensionForJawk());
+	private static final Awk AWK_PLUS_UTILITY = new Awk(UtilityExtensionForJawk.INSTANCE);
 
 	/**
 	 * Map of the scripts that have already been transformed to intermediate code
 	 */
-	static ConcurrentHashMap<String, AwkTuples> awkCodeMap = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<String, AwkTuples> TUPLES_CACHE = new ConcurrentHashMap<>();
 
 	/**
-	 * Compiles the specified AWK script into AwkTuples.
+	 * Compiles the specified AWK_PLUS_UTILITY script into AwkTuples.
 	 * <p>
 	 * Retrieves the AwkTuples in the cache if present to avoid compiling the same
 	 * script again and again.
@@ -62,16 +64,16 @@ public class AwkExecutor {
 	 * @return the corresponding AwkTuples
 	 * @throws AwkException when unable to compile the script
 	 */
-	private static AwkTuples getAwkTuples(String awkScript) throws AwkException {
+	private static AwkTuples getAwkTuples(String awkScript, Awk awkEngine) throws AwkException {
 		// We're using our ConcurrentHashMap to cache the intermediate
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
 		try {
-			return awkCodeMap.computeIfAbsent(
+			return TUPLES_CACHE.computeIfAbsent(
 				awkScript,
 				code -> {
 					try {
-						return AWK.compile(code);
+						return awkEngine.compile(code);
 					} catch (IOException e) {
 						// Throw a RuntimeException so the e.getMessage() can be passed
 						// through the call stack
@@ -85,7 +87,7 @@ public class AwkExecutor {
 	}
 
 	/**
-	 * Compiles the specified AWK expression into AwkTuples.
+	 * Compiles the specified AWK_PLUS_UTILITY expression into AwkTuples.
 	 * <p>
 	 * Retrieves the AwkTuples in the cache if present to avoid compiling the same
 	 * expression again and again.
@@ -100,11 +102,11 @@ public class AwkExecutor {
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
 		try {
-			return awkCodeMap.computeIfAbsent(
+			return TUPLES_CACHE.computeIfAbsent(
 				awkExpression,
 				code -> {
 					try {
-						return AWK.compileForEval(code);
+						return AWK_PLUS_UTILITY.compileForEval(code);
 					} catch (IOException e) {
 						// Throw a RuntimeException so the e.getMessage() can be passed
 						// through the call stack
@@ -119,31 +121,40 @@ public class AwkExecutor {
 
 	/**
 	 * Execute the given <code>awkScript</code> on the <code>awkInput</code>
+	 * on the specified Awk engine.
+	 * <p>
+	 * Use this method when you need to execute Awk scripts with specific extensions.
 	 *
-	 * @param awkScript The AWK script to process and interpret
-	 * @param awkInput The input to modify via the AWK script
-	 * @return The result of the AWK script
+	 * @param awkScript The AWK_PLUS_UTILITY script to process and interpret
+	 * @param awkInput The input to modify via the AWK_PLUS_UTILITY script
+	 * @param awkEngine The Awk engine where the script needs to be executed
+	 * @return The result of the AWK_PLUS_UTILITY script
 	 * @throws AwkException if execution fails
 	 */
 	public static String executeAwk(final String awkScript, final String awkInput) throws AwkException {
-		return executeAwk(awkScript, awkInput, new AwkSettings());
+		return executeAwk(awkScript, awkInput, AWK_PLUS_UTILITY);
 	}
 
 	/**
 	 * Execute the given <code>awkScript</code> on the <code>awkInput</code>
+	 * on the specified Awk engine.
+	 * <p>
+	 * Use this method when you need to execute Awk scripts with specific extensions.
 	 *
-	 * @param awkScript The AWK script to process and interpret
-	 * @param awkInput The input to modify via the AWK script
-	 * @return The result of the AWK script
+	 * @param awkScript The AWK_PLUS_UTILITY script to process and interpret
+	 * @param awkInput The input to modify via the AWK_PLUS_UTILITY script
+	 * @param awkEngine The Awk engine where the script needs to be executed
+	 * @return The result of the AWK_PLUS_UTILITY script
 	 * @throws AwkException if execution fails
 	 */
-	public static String executeAwk(final String awkScript, final String awkInput, final AwkSettings settings)
+	public static String executeAwk(final String awkScript, final String awkInput, final Awk awkEngine)
 		throws AwkException {
-		AwkTuples tuples = getAwkTuples(awkScript);
+		var tuples = getAwkTuples(awkScript, awkEngine);
 		if (tuples == null) {
 			throw new AwkException("Failed to compile Awk script:\n" + awkScript);
 		}
 
+		var settings = new AwkSettings();
 		settings.setInput(
 			awkInput == null
 				? InputStream.nullInputStream()
@@ -151,8 +162,8 @@ public class AwkExecutor {
 		);
 
 		// Create the OutputStream to collect the result as a String
-		final ByteArrayOutputStream resultBytesStream = new ByteArrayOutputStream();
-		final PrintStream resultStream = new PrintStream(resultBytesStream);
+		final var resultBytesStream = new ByteArrayOutputStream();
+		final var resultStream = new PrintStream(resultBytesStream);
 		settings.setOutputStream(resultStream);
 
 		// We force \n as the Record Separator (RS) because even if running on Windows
@@ -162,7 +173,7 @@ public class AwkExecutor {
 
 		// Interpret
 		try {
-			AWK.invoke(tuples, settings);
+			awkEngine.invoke(tuples, settings);
 		} catch (ExitException e) {
 			// ExitException code 0 means exit OK
 			if (e.getCode() != 0) {
@@ -179,8 +190,8 @@ public class AwkExecutor {
 	/**
 	 * Evaluate the given <code>awkExpression</code> on the <code>awkInput</code>
 	 *
-	 * @param awkExpression The AWK script to process and interpret
-	 * @param awkInput The input to modify via the AWK script
+	 * @param awkExpression The AWK_PLUS_UTILITY script to process and interpret
+	 * @param awkInput The input to modify via the AWK_PLUS_UTILITY script
 	 * @return The result of the Awk expression
 	 * @throws AwkException if evaluation fails
 	 */
@@ -192,16 +203,16 @@ public class AwkExecutor {
 
 		// Interpret
 		try {
-			return String.valueOf(AWK.eval(tuples, awkInput, ";"));
+			return String.valueOf(AWK_PLUS_UTILITY.eval(tuples, awkInput, TABLE_SEP));
 		} catch (Exception e) {
 			throw new RuntimeException(e.getMessage());
 		}
 	}
 
 	/**
-	 * Clear the {@link ConcurrentHashMap} <code>awkCodeMap</code>
+	 * Clear the {@link ConcurrentHashMap} <code>TUPLES_CACHE</code>
 	 */
 	public static void resetCache() {
-		awkCodeMap.clear();
+		TUPLES_CACHE.clear();
 	}
 }
