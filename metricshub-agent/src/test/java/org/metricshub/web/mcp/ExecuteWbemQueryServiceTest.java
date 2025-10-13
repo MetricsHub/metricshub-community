@@ -1,6 +1,10 @@
 package org.metricshub.web.mcp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -103,7 +107,11 @@ class ExecuteWbemQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = wbemQueryService.executeQuery(HOSTNAME, WBEM_QUERY, NAMESPACE, VCENTER, TIMEOUT);
 
-		assertEquals("No configuration found.".formatted(HOSTNAME), result.getIsError());
+		assertEquals(
+			"No WBEM configuration found for %s.".formatted(HOSTNAME),
+			result.getIsError(),
+			() -> "Should return `missing WBEM configuration` message"
+		);
 	}
 
 	@Test
@@ -115,8 +123,12 @@ class ExecuteWbemQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = wbemQueryService.executeQuery(HOSTNAME, WBEM_QUERY, NAMESPACE, VCENTER, TIMEOUT);
 
-		assertEquals("No Extension found for Wbem protocol.", result.getIsError());
-		assertNull(result.getResponse());
+		assertEquals(
+			"No Extension found for WBEM protocol.",
+			result.getIsError(),
+			() -> "Should return `missing WBEM extension` message"
+		);
+		assertNull(result.getResponse(), () -> "Response should be null when extension is missing");
 	}
 
 	@Test
@@ -157,7 +169,11 @@ class ExecuteWbemQueryServiceTest {
 
 		final QueryResponse result = wbemQueryService.executeQuery(HOSTNAME, WBEM_QUERY, NAMESPACE, VCENTER, TIMEOUT);
 
-		assertEquals(TextTableHelper.generateTextTable("MajorVersion", List.of(List.of("Value1"))), result.getResponse());
+		assertEquals(
+			TextTableHelper.generateTextTable("MajorVersion", List.of(List.of("Value1"))),
+			result.getResponse(),
+			() -> "Result should return a single column text table with `MajorVersion` as header and one value `Value1`."
+		);
 	}
 
 	@Test
@@ -202,8 +218,11 @@ class ExecuteWbemQueryServiceTest {
 		QueryResponse result = wbemQueryService.executeQuery(HOSTNAME, WBEM_QUERY, NAMESPACE, VCENTER, TIMEOUT);
 
 		// Assertions
-		assertNotNull(result.getIsError());
-		assertTrue(result.getIsError().contains("An error has occurred"));
+		assertNotNull(result.getIsError(), () -> "Error should be set when executor throws");
+		assertTrue(
+			result.getIsError().contains("An error has occurred"),
+			() -> "Error message should include the thrown text"
+		);
 	}
 
 	@Test
@@ -223,15 +242,35 @@ class ExecuteWbemQueryServiceTest {
 			VCENTER
 		);
 
-		assertTrue(result.isPresent());
+		assertTrue(result.isPresent(), () -> "Configuration should be present after building with namespace");
 
 		final WbemConfiguration resultedConfiguration = (WbemConfiguration) result.get();
 
 		assertAll(
-			() -> assertEquals(NAMESPACE, resultedConfiguration.getNamespace()),
-			() -> assertEquals(VCENTER, resultedConfiguration.getVCenter()),
-			() -> assertEquals(HOSTNAME, resultedConfiguration.getHostname()),
-			() -> assertEquals("username", resultedConfiguration.getUsername())
+			() ->
+				assertEquals(
+					NAMESPACE,
+					resultedConfiguration.getNamespace(),
+					() -> "Namespace from the resulted configuration must be: `namespace`."
+				),
+			() ->
+				assertEquals(
+					VCENTER,
+					resultedConfiguration.getVCenter(),
+					() -> "VCenter from the resulted configuration must be: `vcenter`."
+				),
+			() ->
+				assertEquals(
+					HOSTNAME,
+					resultedConfiguration.getHostname(),
+					() -> "Hostname from the resulted configuration must be: `hostname`."
+				),
+			() ->
+				assertEquals(
+					"username",
+					resultedConfiguration.getUsername(),
+					() -> "Username from the resulted configuration must be: `username`."
+				)
 		);
 	}
 }

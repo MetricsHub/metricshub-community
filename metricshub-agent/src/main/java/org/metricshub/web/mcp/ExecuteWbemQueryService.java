@@ -1,18 +1,5 @@
 package org.metricshub.web.mcp;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
-import java.util.Optional;
-import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.extension.IProtocolExtension;
-import org.metricshub.web.AgentContextHolder;
-import org.springframework.ai.tool.annotation.Tool;
-import org.springframework.ai.tool.annotation.ToolParam;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
@@ -33,6 +20,21 @@ import org.springframework.stereotype.Service;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
+
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+import java.util.Optional;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 /**
@@ -92,7 +94,7 @@ public class ExecuteWbemQueryService {
 	)
 	public QueryResponse executeQuery(
 		@ToolParam(description = "The hostname to execute Wbem query on.", required = true) final String hostname,
-		@ToolParam(description = "The Wbem query to execute.", required = true) final String query,
+		@ToolParam(description = "The WBEM query to execute.", required = true) final String query,
 		@ToolParam(description = "The namespace to use (default: root/cimv2).", required = false) final String namespace,
 		@ToolParam(description = "Optional vCenter to use for session brokering.", required = false) final String vcenter,
 		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout
@@ -104,7 +106,7 @@ public class ExecuteWbemQueryService {
 			.map((IProtocolExtension extension) ->
 				executeWbemQueryWithExtensionSafe(extension, hostname, query, namespace, vcenter, timeout)
 			)
-			.orElse(QueryResponse.builder().isError("No Extension found for Wbem protocol.").build());
+			.orElse(QueryResponse.builder().isError("No Extension found for WBEM protocol.").build());
 	}
 
 	/**
@@ -128,35 +130,50 @@ public class ExecuteWbemQueryService {
 		final String vCenter,
 		final Long timeout
 	) {
-		// Try to retrieve a Wbem configuration for the host
-		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
-			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper
+			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.map(configCandidate ->
 				this.buildConfigurationWithNamespaceAndVcenter(extension, configCandidate, namespace, vCenter)
 			)
 			.flatMap(Optional::stream)
-			.findFirst();
+			.findFirst()
+			.map((IConfiguration configurationCopy) ->
+				executeQuerySafe(extension, configurationCopy, hostname, query, timeout)
+			)
+			.orElseGet(() ->
+				QueryResponse.builder().isError("No WBEM configuration found for %s.".formatted(hostname)).build()
+			);
+	}
 
-		// Early return if no Wbem configuration is found for the given host.
-		if (maybeConfiguration.isEmpty()) {
-			return QueryResponse.builder().isError("No configuration found.").build();
-		}
-
-		// Retrieve the valid configuration from maybe configuration.
-		final IConfiguration validConfiguration = maybeConfiguration.get();
-
+	/**
+	 * Executes the query using the provided extension and configuration. The method sets the hostname
+	 * and the timeout.
+	 * @param extension         the protocol extension to use for execution
+	 * @param configurationCopy the configuration to use for execution
+	 * @param hostname          the target host
+	 * @param query             the query string to execute
+	 * @param timeout           the timeout for the query execution in seconds
+	 * @return a {@link QueryResponse} containing either the extension result or an error
+	 */
+	private static QueryResponse executeQuerySafe(
+		final IProtocolExtension extension,
+		final IConfiguration configurationCopy,
+		final String hostname,
+		final String query,
+		final Long timeout
+	) {
 		// add hostname and timeout to the valid configuration
-		validConfiguration.setHostname(hostname);
-		validConfiguration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
+		configurationCopy.setHostname(hostname);
+		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 
-		// Create a Json node and populate it with the query
-		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
+		// Create a json node and populate it with the query
+		final var queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
 
 		try {
-			return QueryResponse.builder().response(extension.executeQuery(validConfiguration, queryNode)).build();
+			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
@@ -183,19 +200,14 @@ public class ExecuteWbemQueryService {
 		final String namespace,
 		final String vCenter
 	) {
-		final ObjectMapper mapper = new ObjectMapper();
-
 		// extract an ObjectNode from the IConfiguration
-		final ObjectNode configurationNode = mapper.valueToTree(configuration);
+		final ObjectNode configurationNode = JsonHelper.buildObjectMapper().valueToTree(configuration);
 
 		// Inject the namespace and vcenter into the configuration ObjectNode
-		configurationNode.set(
-			"namespace",
-			new TextNode(namespace != null && !namespace.isBlank() ? namespace : DEFAULT_NAMESPACE)
-		);
+		configurationNode.set("namespace", new TextNode(StringHelper.getValue(() -> namespace, DEFAULT_NAMESPACE)));
 
 		// Inject vCenter if it isn't blank nor null
-		if (vCenter != null && !vCenter.isBlank()) {
+		if (StringHelper.nonNullNonBlank(vCenter)) {
 			configurationNode.set("vcenter", new TextNode(vCenter));
 		}
 
