@@ -16,8 +16,9 @@ export default function ConfigEditor({
 	onSave,
 	canSave = true,
 	height = "100%",
-	  fileName,
-  validateFn,
+	fileName,
+	validateFn,
+	onEditorReady,
 }) {
 	return (
 		<Box sx={{ height }}>
@@ -27,8 +28,9 @@ export default function ConfigEditor({
 					readOnly={readOnly}
 					onChange={onChange}
 					onSave={onSave}
-          fileName={fileName}
-          validateFn={validateFn}
+					fileName={fileName}
+					onEditorReady={onEditorReady}
+					validateFn={validateFn}
 					canSave={canSave}
 					height="100%"
 				/>

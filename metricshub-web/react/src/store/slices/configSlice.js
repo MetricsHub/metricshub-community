@@ -156,10 +156,28 @@ const slice = createSlice({
 			})
 
 			.addCase(validateConfig.fulfilled, (s, a) => {
+				// global selected validation
 				s.validation = a.payload.result || null;
+				// also store per-file validation so file list/tree can show errors per file
+				try {
+					const name = a.payload?.name;
+					if (name) {
+						const prev = s.filesByName[name] || {};
+						s.filesByName[name] = { ...prev, validation: a.payload.result || null };
+					}
+				} catch {
+					// ignore
+				}
 			})
 			.addCase(validateConfig.rejected, (s, a) => {
-				s.validation = { valid: false, error: a.payload || a.error?.message };
+				const val = { valid: false, error: a.payload || a.error?.message };
+				s.validation = val;
+				// store per-file if name available in meta args
+				const name = a?.meta?.arg?.name;
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					s.filesByName[name] = { ...prev, validation: val };
+				}
 			})
 
 			.addCase(deleteConfig.fulfilled, (s, a) => {

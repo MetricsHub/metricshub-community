@@ -8,7 +8,13 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 
-export default function FileTreeItem({ file, onRename, onDelete, isDirty = false }) {
+export default function FileTreeItem({
+	file,
+	onRename,
+	onDelete,
+	isDirty = false,
+	validation = null,
+}) {
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -116,18 +122,25 @@ export default function FileTreeItem({ file, onRename, onDelete, isDirty = false
 								{file.name}
 							</Box>
 
-							{/* Unsaved/dirty indicator */}
+							{/* Unsaved/dirty indicator or error indicator */}
 							{isDirty && (
 								<Box
 									component="span"
-									title="Unsaved changes"
+									title={
+										validation && validation.valid === false
+											? "Validation errors"
+											: "Unsaved changes"
+									}
 									aria-label="Unsaved changes"
 									sx={{
 										ml: 0.75,
 										width: 8,
 										height: 8,
 										borderRadius: "50%",
-										bgcolor: (t) => t.palette.warning.main,
+										bgcolor: (t) =>
+											validation && validation.valid === false
+												? t.palette.error.main
+												: t.palette.warning.main,
 										flexShrink: 0,
 									}}
 								/>

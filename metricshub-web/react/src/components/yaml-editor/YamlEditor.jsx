@@ -30,8 +30,12 @@ export default function YamlEditor({
 	validateFn,
 	height = "100%",
 	readOnly = false,
+	onEditorReady,
 }) {
 	const theme = useTheme();
+
+	// expose editor view for parent components (used to scroll to error locations)
+	const viewRef = React.useRef(null);
 
 	const [doc, setDoc] = useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -52,8 +56,37 @@ export default function YamlEditor({
 	}, [doc]);
 
 	// Robust mapping of backend validation result -> CodeMirror diagnostics
+	/**
+	 * Map backend validation result to CodeMirror diagnostics.
+	 * Handles various formats and attempts to map line/column to document positions.
+	 * @param {object} result - Validation result from backend.
+	 * @param {import("@codemirror/state").Text} cmDoc - CodeMirror document instance.
+	 * @returns {Array} Array of diagnostic objects for CodeMirror.
+	 */
 	const toDiagnostics = useCallback((result, cmDoc) => {
 		if (!result || result.valid) return [];
+
+		// normalize message: trim and collapse exact repeated whole-message repetitions
+		const normalizeMessage = (m) => {
+			if (!m) return "";
+			let txt = String(m).trim();
+			// try collapsing k-fold exact repeats for small k
+			for (let k = 2; k <= 4; k++) {
+				if (txt.length % k !== 0) continue;
+				const part = txt.slice(0, txt.length / k);
+				if (part.repeat(k) === txt) {
+					txt = part.trim();
+					break;
+				}
+			}
+			// collapse consecutive identical lines to reduce trivial duplication
+			const lines = txt.split(/\r?\n/);
+			const out = [];
+			for (let i = 0; i < lines.length; i++) {
+				if (i === 0 || lines[i] !== lines[i - 1]) out.push(lines[i]);
+			}
+			return out.join("\n").trim();
+		};
 
 		const makePos = (lineNum, column) => {
 			// Some backends use 0-based lines, some use 1-based. Accept either.
@@ -78,7 +111,7 @@ export default function YamlEditor({
 		};
 
 		if (Array.isArray(result.errors) && result.errors.length > 0) {
-			return result.errors.map((e) => {
+			const diags = result.errors.map((e) => {
 				try {
 					const from = makePos(e.line ?? e.ln ?? 1, e.column ?? e.col ?? 1);
 					const to = makePos(
@@ -96,7 +129,7 @@ export default function YamlEditor({
 					return {
 						from: safeFrom,
 						to: safeTo,
-						message: e.message || e.msg || "Validation error",
+						message: normalizeMessage(e.message || e.msg || "Validation error"),
 						severity: e.severity || "error",
 					};
 				} catch (_err) {
@@ -104,53 +137,89 @@ export default function YamlEditor({
 					return {
 						from: 0,
 						to: Math.min(1, cmDoc.length),
-						message: e?.message || _err?.message || "Validation error",
+						message: normalizeMessage(e?.message || _err?.message || "Validation error"),
 						severity: e?.severity || "error",
 					};
 				}
 			});
+
+			const seen = new Map();
+			const uniq = [];
+			for (const d of diags) {
+				const key = `${d.from}:${d.to}:${String(d.message || "")
+					.replace(/\s+/g, " ")
+					.trim()}`;
+				if (!seen.has(key)) {
+					seen.set(key, true);
+					uniq.push(d);
+				}
+			}
+			return uniq;
 		}
 
 		if (result.error) {
-				// Attempt to parse locations like "line 9, column 1" from the error message
-				const text = String(result.error || "");
-				const locRegex = /line\s+(\d+),\s*column\s+(\d+)/gi;
-				const matches = Array.from(text.matchAll(locRegex));
-				if (matches.length > 0) {
-					const diags = matches.map((m) => {
-						const ln = parseInt(m[1], 10);
-						const col = parseInt(m[2], 10);
-						const from = makePos(ln, col);
-						// try to extend to a token end on the same line for better visibility
-						const lineInfo = cmDoc.line(Math.max(1, Math.min(cmDoc.lines, ln <= 0 ? ln + 1 : ln)));
-						const offsetInLine = Math.max(0, Math.min(lineInfo.length, from - lineInfo.from));
-						const lineText = lineInfo.text || "";
-						let endOffset = offsetInLine;
-						while (endOffset < lineText.length && !/\s/.test(lineText[endOffset])) endOffset++;
-						let to = lineInfo.from + endOffset;
-						if (to <= from) to = Math.min(cmDoc.length, from + 1);
-						return {
-							from,
-							to,
-							message: text,
-							severity: "error",
-						};
-					});
-					return diags;
-				}
-				return [
-					{
-						from: 0,
-						to: Math.min(1, cmDoc.length),
-						message: text,
+			const text = String(result.error || "");
+			const locRegex = /line\s+(\d+),\s*column\s+(\d+)/gi;
+			const matches = Array.from(text.matchAll(locRegex));
+
+			if (matches.length > 0) {
+				// Keep only first location per line (avoid hover duplication)
+				const seenLines = new Set();
+				const filtered = matches.filter((m) => {
+					const ln = parseInt(m[1], 10) || 1;
+					if (seenLines.has(ln)) return false;
+					seenLines.add(ln);
+					return true;
+				});
+
+				const diags = filtered.slice(0, 1 /* keep only first if you prefer */).map((m) => {
+					const ln = parseInt(m[1], 10) || 1;
+					const col = parseInt(m[2], 10) || 1;
+					const from = makePos(ln, col);
+					const lineInfo = cmDoc.line(Math.max(1, Math.min(cmDoc.lines, ln)));
+					const offsetInLine = Math.max(0, Math.min(lineInfo.length, from - lineInfo.from));
+					const lineText = lineInfo.text || "";
+					let endOffset = offsetInLine;
+					while (endOffset < lineText.length && !/\s/.test(lineText[endOffset])) endOffset++;
+					let to = lineInfo.from + endOffset;
+					if (to <= from) to = Math.min(cmDoc.length, from + 1);
+					return {
+						from,
+						to,
+						message: normalizeMessage(text),
 						severity: "error",
-					},
-				];
+					};
+				});
+
+				// Deduplicate by message only (avoid double hover)
+				const byMsg = new Map();
+				for (const d of diags) {
+					const key = String(d.message || "")
+						.replace(/\s+/g, " ")
+						.trim();
+					if (!byMsg.has(key)) byMsg.set(key, d);
+				}
+				return [...byMsg.values()];
+			}
+
+			// fallback single diagnostic
+			return [
+				{
+					from: 0,
+					to: Math.min(1, cmDoc.length),
+					message: normalizeMessage(text),
+					severity: "error",
+				},
+			];
 		}
 
 		return [];
 	}, []);
 
+	/**
+	 * Validation extensions for CodeMirror based on provided validateFn and fileName.
+	 * @returns {Array} Array of CodeMirror extensions for validation.
+	 */
 	const validationExtension = useMemo(() => {
 		if (!validateFn || !fileName) return [];
 		return [
@@ -223,8 +292,12 @@ export default function YamlEditor({
 					editable={!readOnly}
 					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
 					theme={theme.palette.mode}
+					onCreateEditor={(editor) => {
+						viewRef.current = editor.view;
+						onEditorReady?.(editor.view);
+					}}
 				/>
 			</Box>
-			</Box>
-		);
-	}
+		</Box>
+	);
+}

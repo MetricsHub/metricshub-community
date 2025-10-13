@@ -3,9 +3,12 @@ import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { useAppSelector } from "../../hooks/store";
 
-export default function EditorHeader({ selected, saving, validation, onValidate, onSave }) {
+export default function EditorHeader({ selected, saving, onSave }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
 	const isDirty = !!dirtyByName?.[selected];
+	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
+	const fileValidation = selected ? filesByName[selected]?.validation : null;
+	const hasErrors = !!(fileValidation && fileValidation.valid === false);
 
 	return (
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -23,7 +26,7 @@ export default function EditorHeader({ selected, saving, validation, onValidate,
 							width: 8,
 							height: 8,
 							borderRadius: "50%",
-							bgcolor: (t) => t.palette.warning.main,
+							bgcolor: (t) => (hasErrors ? t.palette.error.main : t.palette.warning.main),
 							ml: 0.25,
 						}}
 					/>
@@ -32,17 +35,6 @@ export default function EditorHeader({ selected, saving, validation, onValidate,
 
 			{/* Right side buttons */}
 			<Stack direction="row" spacing={1} alignItems="center">
-				{validation && (
-					<Chip
-						size="small"
-						icon={validation.valid ? <VerifiedIcon /> : undefined}
-						color={validation.valid ? "success" : "error"}
-						label={validation.valid ? "Valid" : validation.error || "Invalid"}
-					/>
-				)}
-				<Button size="small" onClick={onValidate} disabled={!selected}>
-					Validate
-				</Button>
 				<Button
 					size="small"
 					startIcon={<SaveIcon />}

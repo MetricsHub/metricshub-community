@@ -12,7 +12,6 @@ import { useAppDispatch, useAppSelector } from "../hooks/store";
 import {
 	fetchConfigList,
 	fetchConfigContent,
-	saveConfig,
 	validateConfig,
 	deleteConfig,
 	renameConfig,
@@ -112,13 +111,7 @@ function ConfigurationPage() {
 		[dispatch, list, routeName, navigate],
 	);
 
-	const onSave = useCallback(
-		(doc) => {
-			if (!selected) return;
-			dispatch(saveConfig({ name: selected, content: doc, skipValidation: false }));
-		},
-		[dispatch, selected],
-	);
+	// onSave is handled by the editor container (validate-then-save). Header will call container.save via ref.
 
 	const onValidate = useCallback(() => {
 		if (!selected) return;
@@ -145,6 +138,8 @@ function ConfigurationPage() {
 		}
 		setDeleteOpen(false);
 	}, [dispatch, deleteTarget, list, selected, navigate]);
+
+	const editorRef = React.useRef(null);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -226,11 +221,11 @@ function ConfigurationPage() {
 						saving={saving}
 						validation={validation}
 						onValidate={onValidate}
-						onSave={() => onSave(content)}
+						onSave={() => editorRef.current?.save?.()}
 						canSave={!!selected && !saving}
 					/>
 					<Box sx={{ height: "calc(100vh - 160px)" }}>
-						<ConfigEditorContainer />
+						<ConfigEditorContainer ref={editorRef} />
 					</Box>
 					{loadingContent && (
 						<Stack direction="row" alignItems="center" spacing={1}>

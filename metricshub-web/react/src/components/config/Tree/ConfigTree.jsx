@@ -27,6 +27,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 	);
 
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
+	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
 
 	return (
 		<Stack sx={{ p: 0 }}>
@@ -50,6 +51,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 							key={f.name}
 							file={f}
 							isDirty={!!dirtyByName?.[f.name]}
+							validation={filesByName[f.name]?.validation}
 							onSelect={onSelect}
 							onRename={onRename}
 							onDelete={onDelete}
