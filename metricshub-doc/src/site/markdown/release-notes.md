@@ -189,7 +189,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                        | Description                                                                 |
 | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| [**\#60**](https://github.com/MetricsHub/metricshub-enterprise/issues/60) | Included the **IBM Informix** JDBC driver                                   |
+| [**\#60**](https://github.com/MetricsHub/metricshub-enterprise/issues/60) | Included the [**IBM Informix**](./connectors/informix.html) JDBC driver                                   |
 | [**\#68**](https://github.com/MetricsHub/metricshub-enterprise/issues/68) | Added support for Java Management Extension (JMX)                           |
 | [**\#69**](https://github.com/MetricsHub/metricshub-enterprise/issues/69) | Added support for [REST API and remote MCP](./integrations/ai-agent-mcp.md) |
 
@@ -295,9 +295,9 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                            |
-| ------------------------------------------------------------------------- | -------------------------------------- |
-| [**\#18**](https://github.com/MetricsHub/enterprise-connectors/issues/18) | Added support for Nvidia's DGX servers |
+| ID                                                                        | Description                                                               |
+| ------------------------------------------------------------------------- |---------------------------------------------------------------------------|
+| [**\#18**](https://github.com/MetricsHub/enterprise-connectors/issues/18) | Added support for [Nvidia's DGX servers](./connectors/nvidiadgxrest.html) |
 
 #### Changes and Improvements
 
@@ -354,9 +354,9 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                         | Description                  |
-| -------------------------------------------------------------------------- | ---------------------------- |
-| [**\#200**](https://github.com/MetricsHub/community-connectors/issues/200) | Added support for PostgreSQL |
+| ID                                                                         | Description                                     |
+| -------------------------------------------------------------------------- |-------------------------------------------------|
+| [**\#200**](https://github.com/MetricsHub/community-connectors/issues/200) | Added support for [PostgreSQL](./connectors/postgresql.html) |
 
 #### Changes and Improvements
 
@@ -414,14 +414,14 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID     | Description                                      |
-| ------ | ------------------------------------------------ |
-| EC-3   | Added support for Dell EMC PowerMax              |
-| EC-4   | Added support for Hitachi Disk Arrays            |
-| EC-70  | Added support for HPE MSA 2060 via HTTP API      |
-| EC-107 | Added support for Oracle databases               |
-| EC-109 | Added support for Microsoft SQL Server databases |
-| EC-118 | Added support for DotHill storage systems        |
+| ID     | Description                                                                 |
+| ------ |-----------------------------------------------------------------------------|
+| EC-3   | Added support for [Dell EMC PowerMax](./connectors/dellemcpowermaxrest.html) |
+| EC-4   | Added support for [Hitachi Disk Arrays](./connectors/hitachidiskarray.html) |
+| EC-70  | Added support for [HPE MSA](./connectors/hpemsarest.html) 2060 via HTTP API              |
+| EC-107 | Added support for [Oracle databases](./connectors/oracle.html)              |
+| EC-109 | Added support for [Microsoft SQL Server databases](./connectors/mssql.html) |
+| EC-118 | Added support for [DotHill storage systems](./connectors/dothillrest.html) |
 
 #### Changes and Improvements
 
@@ -496,11 +496,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                         | Description                                                                        |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [**\#188**](https://github.com/metricshub/community-connectors/issues/188) | Defined semantic conventions for Oracle and SQL Server database metrics            |
-| [**\#190**](https://github.com/metricshub/community-connectors/issues/190) | **MySQL:** `db.server.name` attribute is now reported                              |
-| [**\#193**](https://github.com/metricshub/community-connectors/issues/193) | **Generic Ethernet Switch:** `hw.network.name` and `hw.network.alias` now reported |
+| ID                                                                         | Description                                                                                                                                       |
+| -------------------------------------------------------------------------- |---------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**\#188**](https://github.com/metricshub/community-connectors/issues/188) | Defined semantic conventions for [Oracle](./connectors/oracle.html) and [Microsoft SQL Server](./connectors/mssql.html) database metrics |
+| [**\#190**](https://github.com/metricshub/community-connectors/issues/190) | **[MySQL](./connectors/mysql.html):** `db.server.name` attribute is now reported                                                                  |
+| [**\#193**](https://github.com/metricshub/community-connectors/issues/193) | **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html):** `hw.network.name` and `hw.network.alias` now reported                    |
 
 #### Changes and Improvements
 
@@ -543,11 +543,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID    | Description                                                                                      |
-| ----- | ------------------------------------------------------------------------------------------------ |
-| EC-72 | Added performance and capacity metrics for Pure Storage FlashArray storage systems via REST API  |
-| EC-75 | Added performance and capacity metrics for NetApp FAS and AFF storage systems via ONTAP REST API |
-| EC-86 | Added support for Citrix NetScaler via SNMP                                                      |
+| ID    | Description                                                                                                                          |
+| ----- |--------------------------------------------------------------------------------------------------------------------------------------|
+| EC-72 | Added performance and capacity metrics for [Pure Storage](./connectors/purestoragerest.html) FlashArray storage systems via REST API |
+| EC-75 | Added performance and capacity metrics for [NetApp](./connectors/netapprest.html) FAS and AFF storage systems via ONTAP REST API     |
+| EC-86 | Added support for [Citrix NetScaler](./connectors/citrixnetscaler.html) via SNMP                                                     |
 
 #### Changes and Improvements
 
@@ -620,9 +620,9 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                         | Description                                    |
-| -------------------------------------------------------------------------- | ---------------------------------------------- |
-| [**\#137**](https://github.com/metricshub/community-connectors/issues/137) | Added support for `MySQL` databases via `JDBC` |
+| ID                                                                         | Description                                                              |
+| -------------------------------------------------------------------------- |--------------------------------------------------------------------------|
+| [**\#137**](https://github.com/metricshub/community-connectors/issues/137) | Added support for [MySQL databases](./connectors/mysql.html)  via `JDBC` |
 
 #### Changes and Improvements
 
