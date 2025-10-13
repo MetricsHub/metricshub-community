@@ -55,17 +55,17 @@ class NumberHelperTest {
 
 	@Test
 	void testGetPositiveOrDefault() {
-		final Number DEFAULT_VALUE = 42;
+		final Number defaultValue = 42;
 
-		assertEquals(DEFAULT_VALUE, getPositiveOrDefault(null, DEFAULT_VALUE), () -> "Null input: should return default");
-		assertEquals(5, getPositiveOrDefault(5, DEFAULT_VALUE), () -> "Positive integer: should return input");
-		assertEquals(DEFAULT_VALUE, getPositiveOrDefault(0, DEFAULT_VALUE), () -> "Zero: should return default");
-		assertEquals(DEFAULT_VALUE, getPositiveOrDefault(-3, DEFAULT_VALUE), () -> "Negative: should return default");
+		assertEquals(defaultValue, getPositiveOrDefault(null, defaultValue), () -> "Null input: should return default");
+		assertEquals(5, getPositiveOrDefault(5, defaultValue), () -> "Positive integer: should return input");
+		assertEquals(defaultValue, getPositiveOrDefault(0, defaultValue), () -> "Zero: should return default");
+		assertEquals(defaultValue, getPositiveOrDefault(-3, defaultValue), () -> "Negative: should return default");
 		assertEquals(
-			DEFAULT_VALUE,
-			getPositiveOrDefault(0.1, DEFAULT_VALUE),
+			defaultValue,
+			getPositiveOrDefault(0.1, defaultValue),
 			() -> "Double 0.1 truncates to 0: should return default"
 		);
-		assertEquals(1.9, getPositiveOrDefault(1.9, DEFAULT_VALUE), () -> "Double 1.9 truncates to 1: should return input");
+		assertEquals(1.9, getPositiveOrDefault(1.9, defaultValue), () -> "Double 1.9 truncates to 1: should return input");
 	}
 }

@@ -21,7 +21,6 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
@@ -136,7 +135,7 @@ public class ExecuteWqlQueryService {
 			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
-			.map(configCandidate -> this.buildConfigurationWithNamespace(extension, configCandidate, namespace))
+			.map(configCandidate -> buildConfigurationWithNamespace(extension, configCandidate, namespace))
 			.flatMap(Optional::stream)
 			.findFirst()
 			.map((IConfiguration configurationCopy) ->
@@ -154,7 +153,7 @@ public class ExecuteWqlQueryService {
 	 * @param configurationCopy the configuration to use for execution
 	 * @return a {@link QueryResponse} containing either the extension result or an error
 	 */
-	private QueryResponse executeQuerySafe(
+	private static QueryResponse executeQuerySafe(
 		final IProtocolExtension extension,
 		final String hostname,
 		final String query,
@@ -163,10 +162,10 @@ public class ExecuteWqlQueryService {
 	) {
 		// add hostname and timeout to the valid configuration
 		configurationCopy.setHostname(hostname);
-		configurationCopy.setTimeout((Long) NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT));
+		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 
 		// Create a json node and populate it with the query
-		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
+		final var queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
 
 		try {
@@ -195,10 +194,8 @@ public class ExecuteWqlQueryService {
 		final IConfiguration configuration,
 		final String namespace
 	) {
-		final ObjectMapper mapper = JsonHelper.buildObjectMapper();
-
 		// extract an ObjectNode from the IConfiguration
-		final ObjectNode configurationNode = mapper.valueToTree(configuration);
+		final ObjectNode configurationNode = JsonHelper.buildObjectMapper().valueToTree(configuration);
 
 		// Inject the namespace into the configuration ObjectNode
 		configurationNode.set("namespace", new TextNode(StringHelper.getValue(() -> namespace, DEFAULT_NAMESPACE)));
