@@ -167,7 +167,9 @@ public class ProtocolCheckService {
 			}
 
 			validConfiguration.setHostname(hostname);
-			validConfiguration.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue());
+			validConfiguration.setTimeout(
+				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
+			);
 
 			// Build the telemetry manager based on this configuration
 			final var telemetryManager = TelemetryManager
