@@ -1,6 +1,9 @@
 package org.metricshub.web.mcp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -82,7 +85,11 @@ class ExecuteIpmiQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
 
-		assertEquals("No IPMI configuration found for hostname.", result.getIsError());
+		assertEquals(
+			"No IPMI configuration found for hostname.",
+			result.getIsError(),
+			() -> "Should report missing IPMI configuration"
+		);
 	}
 
 	@Test
@@ -93,8 +100,12 @@ class ExecuteIpmiQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
 
-		assertEquals("No Extension found for IPMI protocol.", result.getIsError());
-		assertNull(result.getResponse());
+		assertEquals(
+			"No Extension found for IPMI protocol.",
+			result.getIsError(),
+			() -> "Should return `missing IPMI extension` message"
+		);
+		assertNull(result.getResponse(), () -> "Response should be null when IPMI extension is unavailable");
 	}
 
 	@Test
@@ -126,7 +137,7 @@ class ExecuteIpmiQueryServiceTest {
 
 		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
 
-		assertEquals("Success", result.getResponse());
+		assertEquals("Success", result.getResponse(), () -> "The query result should be equals to `Success`");
 	}
 
 	@Test
@@ -160,7 +171,10 @@ class ExecuteIpmiQueryServiceTest {
 		QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
 
 		// Assertions
-		assertNotNull(result.getIsError());
-		assertTrue(result.getIsError().contains("An error has occurred"));
+		assertNotNull(result.getIsError(), () -> "Error should be returned when executor throws");
+		assertTrue(
+			result.getIsError().contains("An error has occurred"),
+			() -> "Error message should include the thrown text"
+		);
 	}
 }
