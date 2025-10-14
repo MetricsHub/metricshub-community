@@ -1,6 +1,11 @@
 package org.metricshub.web.mcp;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WBEM_NAMESPACE;
+import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPACE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -111,7 +116,13 @@ class ExecuteWqlQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
-		assertEquals("No configuration found.".formatted(HOSTNAME), result.getIsError());
+		assertNotNull(result, "Result should not be null when executing a query");
+
+		assertEquals(
+			"No valid configuration found.".formatted(HOSTNAME),
+			result.getIsError(),
+			() -> "Unexpected error message when host has no configurations. "
+		);
 	}
 
 	@Test
@@ -123,8 +134,12 @@ class ExecuteWqlQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
-		assertEquals("No Extension found for wmi protocol.", result.getIsError());
-		assertNull(result.getResponse());
+		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
+		assertEquals(
+			"No Extension found for wmi protocol.",
+			result.getIsError(),
+			() -> "Unexpected error message when the WMI extension isn't found"
+		);
 	}
 
 	@Test
@@ -157,7 +172,11 @@ class ExecuteWqlQueryServiceTest {
 
 		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
-		assertEquals(TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))), result.getResponse());
+		assertEquals(
+			TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))),
+			result.getResponse(),
+			() -> "WMI response mismatch for mocked values [Value1, Value2]"
+		);
 	}
 
 	@Test
@@ -194,8 +213,11 @@ class ExecuteWqlQueryServiceTest {
 		QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		// Assertions
-		assertNotNull(result.getIsError());
-		assertTrue(result.getIsError().contains("An error has occurred"));
+		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertTrue(
+			result.getIsError().contains("An error has occurred"),
+			() -> "Error message should contain 'An error has occurred'"
+		);
 	}
 
 	@Test
@@ -214,11 +236,42 @@ class ExecuteWqlQueryServiceTest {
 			NAMESPACE
 		);
 
-		assertTrue(result.isPresent());
+		assertTrue(result.isPresent(), () -> "Configuration should be present after building with namespace");
 
 		final WmiConfiguration newConfiguration = (WmiConfiguration) result.get();
 
 		wmiConfiguration.setNamespace(NAMESPACE);
-		assertEquals(wmiConfiguration, newConfiguration);
+		assertEquals(
+			wmiConfiguration,
+			newConfiguration,
+			() -> "Built configuration should match input configuration with namespace set"
+		);
+	}
+
+	@Test
+	void normalizeNamespace_core() {
+		wqlQueryService = new ExecuteWqlQueryService(agentContextHolder);
+		final String namespace = "root/custom";
+
+		assertEquals(
+			namespace,
+			wqlQueryService.normalizeNamespace("wbem", namespace),
+			() -> "Should return provided namespace root/custom"
+		);
+		assertEquals(
+			namespace,
+			wqlQueryService.normalizeNamespace("wmi", namespace),
+			() -> "Should return provided namespace root/custom"
+		);
+		assertEquals(
+			DEFAULT_WBEM_NAMESPACE,
+			wqlQueryService.normalizeNamespace("WbEm", "   "),
+			() -> "Should return default WBEM namespace when the given namespace is blank"
+		);
+		assertEquals(
+			DEFAULT_WQL_NAMESPACE,
+			wqlQueryService.normalizeNamespace("wmi", null),
+			() -> "Should return default WMI namespace when the given namespace is blank"
+		);
 	}
 }

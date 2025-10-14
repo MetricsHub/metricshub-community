@@ -1,13 +1,19 @@
 package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -15,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -88,7 +95,11 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
-		assertEquals("No SNMP configuration found for %s.".formatted(HOSTNAME), result.getIsError());
+		assertEquals(
+			"No SNMP configuration found for %s.".formatted(HOSTNAME),
+			result.getIsError(),
+			() -> "Should return `missing SNMP configuration` message"
+		);
 	}
 
 	@Test
@@ -99,8 +110,12 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
-		assertEquals("SNMP Extension is not available", result.getIsError());
-		assertNull(result.getResponse());
+		assertEquals(
+			"SNMP Extension is not available",
+			result.getIsError(),
+			() -> "Should return `missing SNMP extension` message"
+		);
+		assertNull(result.getResponse(), () -> "Response should be null when extension is missing");
 	}
 
 	@Test
@@ -123,25 +138,23 @@ class ExecuteSnmpQueryServiceTest {
 
 		// Mocking executeSNMPGet query on SNMP request executor
 		when(
-			snmpRequestExecutor.executeSNMPGet(
-				eq(OID),
-				eq((ISnmpConfiguration) snmpConfiguration),
-				eq(HOSTNAME),
-				anyBoolean()
-			)
+			snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
 		)
 			.thenReturn("Success");
 
 		// Calling execute query
 		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "get", OID, null, TIMEOUT);
 
-		assertNull(result.getIsError());
-		assertEquals(SUCCESS_MESSAGE, result.getResponse());
+		assertNull(result.getIsError(), () -> "Error should be null on successful GET");
+		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "GET should return `Success`");
 
 		// Test a wrong SNMP query type
 		result = snmpQueryService.executeQuery(HOSTNAME, "aw", OID, null, TIMEOUT);
 
-		assertTrue(result.getIsError().contains("Unknown SNMP query"));
+		assertTrue(
+			result.getIsError().contains("Unknown SNMP query"),
+			() -> "Should return `unknown SNMP query type` message"
+		);
 	}
 
 	@Test
@@ -166,9 +179,10 @@ class ExecuteSnmpQueryServiceTest {
 		when(
 			snmpRequestExecutor.executeSNMPGetNext(
 				eq(OID),
-				eq((ISnmpConfiguration) snmpConfiguration),
+				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn("Success");
@@ -176,8 +190,8 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "getNext", OID, null, TIMEOUT);
 
-		assertNull(result.getIsError());
-		assertEquals(SUCCESS_MESSAGE, result.getResponse());
+		assertNull(result.getIsError(), () -> "Error should be null on successful GETNEXT");
+		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "GETNEXT should return `Success`");
 	}
 
 	@Test
@@ -200,20 +214,15 @@ class ExecuteSnmpQueryServiceTest {
 
 		// Mocking executeSNMPWalk query on SNMP request executor
 		when(
-			snmpRequestExecutor.executeSNMPWalk(
-				eq(OID),
-				eq((ISnmpConfiguration) snmpConfiguration),
-				eq(HOSTNAME),
-				anyBoolean()
-			)
+			snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
 		)
 			.thenReturn("Success");
 
 		// Calling execute query
 		final QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "walk", OID, null, TIMEOUT);
 
-		assertNull(result.getIsError());
-		assertEquals(SUCCESS_MESSAGE, result.getResponse());
+		assertNull(result.getIsError(), () -> "Error should be null on successful WALK");
+		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "WALK should return `Success`");
 	}
 
 	@Test
@@ -240,9 +249,10 @@ class ExecuteSnmpQueryServiceTest {
 			snmpRequestExecutor.executeSNMPTable(
 				eq(OID),
 				eq(columns),
-				eq((ISnmpConfiguration) snmpConfiguration),
+				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
-				anyBoolean()
+				anyBoolean(),
+				isNull()
 			)
 		)
 			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
@@ -250,15 +260,98 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		QueryResponse result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, 5 ,", TIMEOUT);
 
-		assertNull(result.getIsError());
+		assertNull(result.getIsError(), () -> "Error should be null on successful TABLE");
 		assertEquals(
 			TextTableHelper.generateTextTable("1;3;5", List.of(List.of("Column1", "Column2", "Column3"))),
-			result.getResponse()
+			result.getResponse(),
+			() -> "TABLE should return formatted text table"
 		);
 
-		// test a wrong columns value
-		result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, a", TIMEOUT);
+		final String[] lessColumns = { "1", "3" };
+		// Mocking executeSNMPGet query on SNMP request executor
+		when(
+			snmpRequestExecutor.executeSNMPTable(
+				eq(OID),
+				eq(lessColumns),
+				any(ISnmpConfiguration.class),
+				eq(HOSTNAME),
+				anyBoolean(),
+				isNull()
+			)
+		)
+			.thenReturn(List.of(List.of("Column1", "Column3")));
 
-		assertTrue(result.getIsError().contains("Exception occurred when parsing columns:"));
+		// Wrong column value
+		result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "1, 3, a", TIMEOUT);
+		assertNull(result.getIsError(), () -> "Error should be null on successful TABLE");
+		assertEquals(
+			TextTableHelper.generateTextTable("1;3", List.of(List.of("Column1", "Column3"))),
+			result.getResponse(),
+			() -> "TABLE should return formatted text table"
+		);
+
+		// Calling execute query with invalid columns
+		result = snmpQueryService.executeQuery(HOSTNAME, "table", OID, "a,b, c ,", TIMEOUT);
+
+		assertEquals(
+			"At least one valid column index must be provided for SNMP Table queries.",
+			result.getIsError(),
+			"Should return `missing columns` message"
+		);
+	}
+
+	@Test
+	void testNormalizedColumnsNodeShouldParseCommaSeparatedNumbers() {
+		final ArrayNode result = ExecuteSnmpQueryService.normalizedColumnsNode("100,10, 1");
+
+		// Expect 3 numeric values parsed correctly
+		assertEquals(3, result.size(), "Should contain exactly three numeric elements");
+		assertEquals(100, result.get(0).asInt(), "First element should be 100");
+		assertEquals(10, result.get(1).asInt(), "Second element should be 10");
+		assertEquals(1, result.get(2).asInt(), "Third element should be 1");
+	}
+
+	@Test
+	void testNormalizedColumnsNodeShouldIgnoreWhitespaceAndInvalidTokens() {
+		final ArrayNode resultNode = ExecuteSnmpQueryService.normalizedColumnsNode("  1 , two ,  3, , 4x, 5 ");
+
+		// Expect only valid integers to be kept
+		assertEquals(3, resultNode.size(), "Should only include valid numeric tokens");
+
+		final List<Integer> result = JsonHelper
+			.buildObjectMapper()
+			.convertValue(resultNode, new TypeReference<List<Integer>>() {});
+
+		// Validate parsed numbers sequence
+		assertIterableEquals(
+			List.of(1, 3, 5),
+			result,
+			() -> "Result should contain [1, 3, 5] after ignoring invalid tokens"
+		);
+	}
+
+	@Test
+	void testNormalizedColumnsNodeShouldThroughException() {
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> ExecuteSnmpQueryService.normalizedColumnsNode(null),
+			"Should throw IllegalArgumentException for null input"
+		);
+	}
+
+	@Test
+	void testNormalizedColumnsNodeShouldReturnEmptyForBlankInput() {
+		final ArrayNode result = ExecuteSnmpQueryService.normalizedColumnsNode("   ");
+
+		// Blank string should also return empty result
+		assertEquals(0, result.size(), "Blank input should produce an empty result");
+	}
+
+	@Test
+	void testNormalizedColumnsNodeShouldNotHandleMixedDelimiters() {
+		final ArrayNode resultNode = ExecuteSnmpQueryService.normalizedColumnsNode("100; 200, 300 400");
+
+		// Regex only splits on commas, so entire string is treated as one token
+		assertEquals(0, resultNode.size(), "Should produce empty result due to no valid comma-separated numbers");
 	}
 }

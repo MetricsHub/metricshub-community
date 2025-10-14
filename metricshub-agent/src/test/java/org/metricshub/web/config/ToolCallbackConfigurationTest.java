@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.web.mcp.ExecuteIpmiQueryService;
 import org.metricshub.web.mcp.ExecuteJmxQueryService;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
-import org.metricshub.web.mcp.ExecuteWbemQueryService;
 import org.metricshub.web.mcp.ExecuteWqlQueryService;
 import org.metricshub.web.mcp.HostDetailsService;
 import org.metricshub.web.mcp.ListConnectorsService;
@@ -79,11 +78,6 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public ExecuteWqlQueryService executeWqlQueryService() {
 			return mock(ExecuteWqlQueryService.class);
-		}
-
-		@Bean
-		public ExecuteWbemQueryService executeWbemQueryService() {
-			return mock(ExecuteWbemQueryService.class);
 		}
 
 		@Bean
