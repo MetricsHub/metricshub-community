@@ -138,7 +138,9 @@ export default function YamlEditor({
 					return {
 						from: 0,
 						to: Math.min(1, cmDoc.length),
-						message: normalizeMessage(shortError(e?.message || _err?.message || "Validation error")),
+						message: normalizeMessage(
+							shortError(e?.message || _err?.message || "Validation error"),
+						),
 						severity: e?.severity || "error",
 					};
 				}

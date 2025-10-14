@@ -9,13 +9,19 @@ export function shortYamlError(raw) {
 	txt = txt.replace(/\bat \[Source:[\s\S]*$/i, "");
 
 	// Normalize newlines and trim each line
-	const lines = txt.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+	const lines = txt
+		.split(/\r?\n/)
+		.map((l) => l.trim())
+		.filter(Boolean);
 
 	// Try to find the most descriptive message line
-	let msgLine = lines.find((l) => /could not find expected|could not find|expected .*:|error/i.test(l));
+	let msgLine = lines.find((l) =>
+		/could not find expected|could not find|expected .*:|error/i.test(l),
+	);
 	if (!msgLine) {
 		// prefer a human-readable first line that isn't just context like "while scanning..."
-		msgLine = lines.find((l) => !/^while\s+scanning/i.test(l) && !/^in\s+/i.test(l)) || lines[0] || "";
+		msgLine =
+			lines.find((l) => !/^while\s+scanning/i.test(l) && !/^in\s+/i.test(l)) || lines[0] || "";
 	}
 
 	// Try to extract explicit source name + location like: in 'reader', line 11, column 1
