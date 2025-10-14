@@ -21,6 +21,7 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
@@ -98,12 +99,12 @@ public class ExecuteIpmiQueryService {
 		final Long timeout
 	) {
 		return MCPConfigHelper
-			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
+			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
 			.map(configuration -> {
-				configuration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
+				configuration.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 				try {
 					return QueryResponse.builder().response(extension.executeQuery(configuration, null)).build();
 				} catch (Exception e) {
