@@ -1,6 +1,5 @@
 // src/pages/configuration.jsx
 import * as React from "react";
-import { useEffect, useCallback, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
@@ -51,14 +50,18 @@ function ConfigurationPage() {
 		error,
 	} = useAppSelector((s) => s.config);
 
-	const [deleteOpen, setDeleteOpen] = useState(false);
-	const [deleteTarget, setDeleteTarget] = useState(null);
+	const [deleteOpen, setDeleteOpen] = React.useState(false);
+	const [deleteTarget, setDeleteTarget] = React.useState(null);
 
-	useEffect(() => {
+	/**
+	 * Fetch the configuration file list on component mount.
+	 * @type {React.EffectCallback}
+	 */
+	React.useEffect(() => {
 		dispatch(fetchConfigList());
 	}, [dispatch]);
 
-	useEffect(() => {
+	React.useEffect(() => {
 		const target = routeName ? decodeURIComponent(routeName) : null;
 
 		if (!target) {
@@ -79,13 +82,17 @@ function ConfigurationPage() {
 		}
 	}, [routeName, selected, filesByName, list, dispatch]);
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (!routeName && list?.length > 0) {
 			navigate(paths.configurationFile(list[0].name), { replace: true });
 		}
 	}, [routeName, list, navigate]);
 
-	const onSelect = useCallback(
+	/**
+	 * Handle selection of a configuration file from the tree.
+	 * Fetches content if not already cached.
+	 */
+	const onSelect = React.useCallback(
 		(name) => {
 			if (!name) return;
 			const url = paths.configurationFile(name);
@@ -96,7 +103,11 @@ function ConfigurationPage() {
 		[navigate],
 	);
 
-	const handleInlineRename = useCallback(
+	/**
+	 * Handle inline renaming of a configuration file.
+	 * Decides between local rename and backend rename based on file metadata.
+	 */
+	const handleInlineRename = React.useCallback(
 		(oldName, newName) => {
 			const meta = list.find((f) => f.name === oldName);
 			if (meta?.localOnly) {
@@ -111,18 +122,42 @@ function ConfigurationPage() {
 		[dispatch, list, routeName, navigate],
 	);
 
-	// onSave is handled by the editor container (validate-then-save). Header will call container.save via ref.
+	/**
+	 * Whether we have already auto-selected a file.
+	 */
+	const didAutoSelect = React.useRef(false);
 
-	const onValidate = useCallback(() => {
+	/**
+	 * Auto-select the first file in the list if none is selected.
+	 */
+	React.useEffect(() => {
+		if (didAutoSelect.current) return;
+		if (!selected && list?.length > 0) {
+			didAutoSelect.current = true;
+			onSelect(list[0].name);
+		}
+	}, [list, selected, onSelect]);
+
+	/**
+	 * Handle validation request from the editor header.
+	 */
+	const onValidate = React.useCallback(() => {
 		if (!selected) return;
 		dispatch(validateConfig({ name: selected, content }));
 	}, [dispatch, selected, content]);
 
-	const openDelete = useCallback((fileName) => {
+	/**
+	 * Open the delete confirmation dialog for a given file.
+	 */
+	const openDelete = React.useCallback((fileName) => {
 		setDeleteTarget(fileName);
 		setDeleteOpen(true);
 	}, []);
-	const submitDelete = useCallback(() => {
+
+	/**
+	 * Submit the delete action after confirmation.
+	 */
+	const submitDelete = React.useCallback(() => {
 		if (!deleteTarget) {
 			setDeleteOpen(false);
 			return;

@@ -1,13 +1,12 @@
-// src/api/config/index.js
 import { httpRequest } from "../../utils/axios-request";
 
 const BASE = "/api/config-files";
 
 /**
  * Normalize any Axios-style error into a plain Error with a readable message.
- * @param {unknown} e
- * @param {string} [fallback="Request failed"]
- * @returns {Error}
+ * @param {unknown} e the error to normalize
+ * @param {string} fallback fallback message if nothing else is available. Default: "Request failed"
+ * @returns {Error} Normalized error
  */
 const normalizeError = (e, fallback = "Request failed") => {
 	const r = e?.response;
@@ -18,143 +17,130 @@ const normalizeError = (e, fallback = "Request failed") => {
 };
 
 /**
- * Axios unwrap helper: returns response.data (or null for 204),
- * throws a normalized Error on failure.
- * @param {Promise<any>} promise
- */
-const unwrap = async (promise) => {
-	try {
-		const res = await promise;
-		return res?.status === 204 ? null : res?.data;
-	} catch (e) {
-		throw normalizeError(e);
-	}
-};
-
-/**
  * Configuration Files API
- * Mirrors the style used in AuthApi/StatusApi (class + exported singleton).
  */
 class ConfigApi {
 	/**
 	 * List configuration files.
-	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
 	 * @returns {Promise<Array<{name:string,size?:number,lastModificationTime?:string}>>}
 	 */
 	list(opts = {}) {
 		const { signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: BASE,
 				method: "GET",
-				withCredentials: true,
 				signal,
-				headers: { Accept: "application/json" },
-			}),
-		);
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 
 	/**
 	 * Get the raw YAML content of a file.
-	 * @param {string} name
-	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @param {string} name  The file name
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
 	 * @returns {Promise<string>}
 	 */
 	getContent(name, opts = {}) {
 		const { signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "GET",
-				withCredentials: true,
 				signal,
 				responseType: "text",
-				headers: { Accept: "text/plain" },
-			}),
-		);
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 
 	/**
 	 * Save a file (PUT). Returns the file metadata from backend.
-	 * @param {string} name
-	 * @param {string} content
-	 * @param {{ skipValidation?: boolean, signal?: AbortSignal }} [opts]
+	 * @param {string} name    The file name
+	 * @param {string} content The raw file content
+	 * @param {{ skipValidation?: boolean, signal?: AbortSignal }} opts Axios request options
 	 * @returns {Promise<Object>} // ConfigurationFile
 	 */
 	save(name, content, opts = {}) {
 		const { skipValidation = false, signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "PUT",
-				withCredentials: true,
 				signal,
 				params: { skipValidation },
-				data: content ?? "",
+				data: content,
 				headers: { "Content-Type": "text/plain", Accept: "application/json" },
-			}),
-		);
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 
 	/**
 	 * Validate a file (POST). Returns { valid:boolean, error?:string }.
-	 * @param {string} name
-	 * @param {string} content
-	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @param {string} name    The file name
+	 * @param {string} content The raw file content
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
 	 * @returns {Promise<{valid:boolean,error?:string}>}
 	 */
 	validate(name, content, opts = {}) {
 		const { signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "POST",
-				withCredentials: true,
 				signal,
-				data: content ?? "",
+				data: content,
 				headers: { "Content-Type": "text/plain", Accept: "application/json" },
-			}),
-		);
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 
 	/**
 	 * Delete a file.
-	 * @param {string} name
-	 * @param {{ signal?: AbortSignal }} [opts]
-	 * @returns {Promise<null|any>} // null on 204, or backend payload
+	 * @param {string} name The file name
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
+	 * @returns {Promise<null|any>} no payload on success
 	 */
 	remove(name, opts = {}) {
 		const { signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(name)}`,
 				method: "DELETE",
-				withCredentials: true,
 				signal,
-				headers: { Accept: "application/json" },
-			}),
-		);
+			})
+				.then((res) => resolve(res))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 
 	/**
 	 * Rename a file. Returns the updated file metadata.
-	 * @param {string} oldName
-	 * @param {string} newName
-	 * @param {{ signal?: AbortSignal }} [opts]
+	 * @param {string} oldName The current file name
+	 * @param {string} newName The new file name
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
 	 * @returns {Promise<Object>} // ConfigurationFile
 	 */
 	rename(oldName, newName, opts = {}) {
 		const { signal } = opts;
-		return unwrap(
+		return new Promise((resolve, reject) => {
 			httpRequest({
 				url: `${BASE}/${encodeURIComponent(oldName)}`,
 				method: "PATCH",
-				withCredentials: true,
 				signal,
 				data: { newName },
-				headers: { "Content-Type": "application/json", Accept: "application/json" },
-			}),
-		);
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
 	}
 }
 

@@ -26,8 +26,5 @@ export const buildOptions = (config) => {
 			borderRadius: 8,
 		},
 		typography: buildTypography(),
-		custom: {
-			treeIconSize: 18,
-		},
 	};
 };

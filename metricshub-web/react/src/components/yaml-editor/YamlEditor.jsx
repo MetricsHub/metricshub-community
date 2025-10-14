@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useCallback } from "react";
+import React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
@@ -12,15 +12,11 @@ import { shortYamlError } from "../../utils/yaml-error";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
-const DEFAULT_YAML = `# Example
-service:
-	name: metricshub
-	port: 8080
-	enabled: true
-`;
-
 /**
- * YAML Editor component with backend-driven validation.
+ * YAML Editor component.
+ *
+ * @param {{value?:string,onChange?:(val:string)=>void,onSave?:(val:string)=>void,height?:string,readOnly?:boolean}} props The component props.
+ * @returns {JSX.Element} The YAML editor component.
  */
 export default function YamlEditor({
 	value,
@@ -38,13 +34,13 @@ export default function YamlEditor({
 	// expose editor view for parent components (used to scroll to error locations)
 	const viewRef = React.useRef(null);
 
-	const [doc, setDoc] = useState(() => {
+	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-		return stored ?? value ?? DEFAULT_YAML;
+		return stored ?? value;
 	});
 
 	// Sync external value if provided
-	useEffect(() => {
+	React.useEffect(() => {
 		if (value != null) {
 			setDoc(value);
 			localStorage.setItem(LOCAL_STORAGE_KEY, value);
@@ -52,7 +48,7 @@ export default function YamlEditor({
 	}, [value]);
 
 	// Save to localStorage on every change
-	useEffect(() => {
+	React.useEffect(() => {
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
@@ -64,7 +60,7 @@ export default function YamlEditor({
 	 * @param {import("@codemirror/state").Text} cmDoc - CodeMirror document instance.
 	 * @returns {Array} Array of diagnostic objects for CodeMirror.
 	 */
-	const toDiagnostics = useCallback((result, cmDoc) => {
+	const toDiagnostics = React.useCallback((result, cmDoc) => {
 		if (!result || result.valid) return [];
 
 		// normalize message: trim and collapse exact repeated whole-message repetitions
@@ -225,7 +221,7 @@ export default function YamlEditor({
 	 * Validation extensions for CodeMirror based on provided validateFn and fileName.
 	 * @returns {Array} Array of CodeMirror extensions for validation.
 	 */
-	const validationExtension = useMemo(() => {
+	const validationExtension = React.useMemo(() => {
 		if (!validateFn || !fileName) return [];
 		return [
 			lintGutter(),
@@ -251,7 +247,7 @@ export default function YamlEditor({
 		];
 	}, [validateFn, fileName, toDiagnostics]);
 
-	const extensions = useMemo(() => {
+	const extensions = React.useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
 			km.unshift({
@@ -271,7 +267,7 @@ export default function YamlEditor({
 	 * Handle document changes.
 	 * Updates local state, performs live validation, and calls onChange prop if provided.
 	 */
-	const handleChange = useCallback(
+	const handleChange = React.useCallback(
 		(val) => {
 			setDoc(val);
 			onChange?.(val);

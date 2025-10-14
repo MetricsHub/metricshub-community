@@ -3,6 +3,11 @@ import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { useAppSelector } from "../../hooks/store";
 
+/**
+ * Editor header component showing file name, save button, and status.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void}} props The component props.
+ * @returns {JSX.Element} The editor header component.
+ */
 export default function EditorHeader({ selected, saving, onSave }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
 	const isDirty = !!dirtyByName?.[selected];

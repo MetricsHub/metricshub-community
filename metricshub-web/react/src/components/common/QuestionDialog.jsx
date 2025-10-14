@@ -22,7 +22,8 @@ import {
  *   autoFocus?: boolean,
  *   callback: () => void
  * }>} props.actionButtons
- * @param {() => void} [props.onClose]
+ * @param {() => void} props.onClose Callback when dialog is closed (by clicking outside or pressing Esc)
+ * @returns {React.ReactElement} The rendered dialog component
  */
 export default function QuestionDialog({
 	open,

@@ -8,6 +8,11 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 
+/**
+ * File tree item component.
+ * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void}} props The component props.
+ * @returns {JSX.Element} The file tree item component.
+ */
 export default function FileTreeItem({
 	file,
 	onRename,
@@ -23,16 +28,32 @@ export default function FileTreeItem({
 	const cancelledRef = React.useRef(false);
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
 
+	/**
+	 * Reset draft name when file changes (but not when editing).
+	 */
 	React.useEffect(() => {
 		if (!editing) setDraft(file.name);
 	}, [file.name, editing]);
 
+	/**
+	 * Open the action menu.
+	 * @param {*} e The click event.
+	 */
 	const openMenu = (e) => {
 		e.stopPropagation();
 		setMenuAnchor(e.currentTarget);
 	};
+
+	/**
+	 * Close the action menu.
+	 * @returns {void}
+	 */
 	const closeMenu = () => setMenuAnchor(null);
 
+	/**
+	 * Start renaming the file.
+	 * @returns {void}
+	 */
 	const startRename = () => {
 		closeMenu();
 		rowRef.current?.blur?.();
@@ -40,6 +61,10 @@ export default function FileTreeItem({
 		requestAnimationFrame(() => inputRef.current?.select());
 	};
 
+	/**
+	 * Cancel renaming the file.
+	 * @returns {void}
+	 */
 	const cancelRename = () => {
 		cancelledRef.current = true;
 		setDraft(file.name);
@@ -47,6 +72,9 @@ export default function FileTreeItem({
 		rowRef.current?.blur?.();
 	};
 
+	/**
+	 * Submit the rename action.
+	 */
 	const submitRename = React.useCallback(() => {
 		if (cancelledRef.current) {
 			cancelledRef.current = false;
@@ -99,7 +127,9 @@ export default function FileTreeItem({
 										}
 										e.stopPropagation();
 									}}
-									inputProps={{ "aria-label": "Rename file" }}
+									slotProps={{
+										htmlInput: { "aria-label": "Rename file" },
+									}}
 									sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
 								/>
 							</Box>

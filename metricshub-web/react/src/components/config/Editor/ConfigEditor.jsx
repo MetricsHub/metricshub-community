@@ -32,7 +32,7 @@ export default function ConfigEditor({
 					onEditorReady={onEditorReady}
 					validateFn={validateFn}
 					canSave={canSave}
-					height="100%"
+					height={height}
 				/>
 			</React.Suspense>
 		</Box>
