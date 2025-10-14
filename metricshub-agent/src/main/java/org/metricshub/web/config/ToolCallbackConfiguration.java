@@ -22,7 +22,6 @@ package org.metricshub.web.config;
  */
 
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
-import org.metricshub.web.mcp.ExecuteWbemQueryService;
 import org.metricshub.web.mcp.ExecuteWqlQueryService;
 import org.metricshub.web.mcp.HostDetailsService;
 import org.metricshub.web.mcp.ListConnectorsService;
@@ -54,7 +53,6 @@ public class ToolCallbackConfiguration {
 	 * @param hostDetailsService         the service that returns all the host details (protocols, connectors, ...)
 	 * @param executeSnmpQueryService    the service for executing SNMP queries (get, getNext, walk or table).
 	 * @param executeWqlQueryService     the service for executing WQL queries through WMI or WinRm.
-	 * @param executeWbemQueryService    the service for executing Wbem (CIM-XML) queries.
 	 * @return a {@link ToolCallbackProvider} exposing all registered protocol services as tools
 	 */
 	@Bean
@@ -66,8 +64,7 @@ public class ToolCallbackConfiguration {
 		final ListConnectorsService listConnectorsService,
 		final HostDetailsService hostDetailsService,
 		final ExecuteSnmpQueryService executeSnmpQueryService,
-		final ExecuteWqlQueryService executeWqlQueryService,
-		final ExecuteWbemQueryService executeWbemQueryService
+		final ExecuteWqlQueryService executeWqlQueryService
 	) {
 		return MethodToolCallbackProvider
 			.builder()
@@ -79,8 +76,7 @@ public class ToolCallbackConfiguration {
 				listConnectorsService,
 				hostDetailsService,
 				executeSnmpQueryService,
-				executeWqlQueryService,
-				executeWbemQueryService
+				executeWqlQueryService
 			)
 			.build();
 	}
