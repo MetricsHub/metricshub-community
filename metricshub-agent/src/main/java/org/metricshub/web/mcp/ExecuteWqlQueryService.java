@@ -51,9 +51,14 @@ public class ExecuteWqlQueryService {
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
 
 	/**
-	 * Default WMI Namespace
+	 * Default WQL Namespace
 	 */
-	private static final String DEFAULT_NAMESPACE = "root\\cimv2";
+	static final String DEFAULT_WQL_NAMESPACE = "root\\cimv2";
+
+	/**
+	 * Default WBEM Namespace
+	 */
+	static final String DEFAULT_WBEM_NAMESPACE = "root/cimv2";
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -80,20 +85,20 @@ public class ExecuteWqlQueryService {
 	 * @param protocol  the protocol identifier (for example, {@code "WMI"} or {@code "WinRm"})
 	 * @param query     the WQL query string to execute
 	 * @param namespace the WMI namespace to use
-	 * @param timeout   the timeout for the query execution in seconds
+	 * @param timeout   the timeout for the query execution in seconds (default: 10s)
 	 * @return a {@link QueryResponse} containing the extension response or an error
 	 */
 	@Tool(
 		name = "ExecuteWqlQuery",
 		description = """
-		Executes a WQL query on a given Windows host using the specified protocol (WMI or WinRM) and namespace.
+		Executes a WQL query on a given Windows host using the specified protocol (WBEM, WMI or WinRM) and namespace.
 		Returns the result produced by the Windows provider, or an error if the query cannot be executed.
 		"""
 	)
 	public QueryResponse executeQuery(
 		@ToolParam(description = "The hostname to execute WQL query on.", required = true) final String hostname,
 		@ToolParam(
-			description = "The protocol to use to execute the WQL query (WMI or WinRm).",
+			description = "The protocol to use to execute the WQL query (WBEM, WMI or WinRm).",
 			required = true
 		) final String protocol,
 		@ToolParam(description = "The WQL query to execute.", required = true) final String query,
@@ -105,7 +110,7 @@ public class ExecuteWqlQueryService {
 			.getExtensionManager()
 			.findExtensionByType(protocol)
 			.map((IProtocolExtension extension) ->
-				executeQueryWithExtensionSafe(extension, hostname, query, namespace, timeout)
+				executeQueryWithExtensionSafe(extension, hostname, query, normalizeNamespace(protocol, namespace), timeout)
 			)
 			.orElse(QueryResponse.builder().isError("No Extension found for %s protocol.".formatted(protocol)).build());
 	}
@@ -198,7 +203,7 @@ public class ExecuteWqlQueryService {
 		final ObjectNode configurationNode = JsonHelper.buildObjectMapper().valueToTree(configuration);
 
 		// Inject the namespace into the configuration ObjectNode
-		configurationNode.set("namespace", new TextNode(StringHelper.getValue(() -> namespace, DEFAULT_NAMESPACE)));
+		configurationNode.set("namespace", new TextNode(namespace));
 
 		try {
 			// Try to build an IConfiguration from the modified ObjectNode.
@@ -206,5 +211,19 @@ public class ExecuteWqlQueryService {
 		} catch (Exception e) {
 			return Optional.empty();
 		}
+	}
+
+	/**
+	 * Returns the given {@code namespace} if non-blank; otherwise falls back to a protocol-specific default.
+	 *
+	 * @param protocol  protocol name (wbem, wmi, winrm)
+	 * @param namespace candidate namespace to use (may be null/blank)
+	 * @return {@code namespace} if non-blank; else {@code DEFAULT_WBEM_NAMESPACE} for WBEM, or {@code DEFAULT_WQL_NAMESPACE} otherwise
+	 */
+	String normalizeNamespace(final String protocol, final String namespace) {
+		if (StringHelper.nonNullNonBlank(namespace)) {
+			return namespace;
+		}
+		return protocol.equalsIgnoreCase("wbem") ? DEFAULT_WBEM_NAMESPACE : DEFAULT_WQL_NAMESPACE;
 	}
 }
