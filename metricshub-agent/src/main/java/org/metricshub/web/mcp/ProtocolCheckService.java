@@ -24,6 +24,7 @@ package org.metricshub.web.mcp;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -147,19 +148,16 @@ public class ProtocolCheckService {
 		final IProtocolExtension extension
 	) {
 		// Fetch the available configurations for the host
-		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationsFromContext(
+		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
 			hostname,
 			agentContextHolder
 		);
 
 		// Iterate through each configuration until one succeeds
-		for (IConfiguration configuration : configurations) {
-			IConfiguration validConfiguration;
+		for (final IConfiguration configuration : configurations) {
+			IConfiguration validConfiguration = configuration;
 
-			if (extension.isValidConfiguration(configuration)) {
-				// Use the original configuration if it's valid for the extension
-				validConfiguration = configuration.copy();
-			} else {
+			if (!extension.isValidConfiguration(configuration)) {
 				// Attempt to build a compatible configuration using shared fields
 				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
 				// If building failed, skip or continue depending on the context
@@ -169,10 +167,12 @@ public class ProtocolCheckService {
 			}
 
 			validConfiguration.setHostname(hostname);
-			validConfiguration.setTimeout(timeout != null ? timeout : DEFAULT_PROTOCOL_CHECK_TIMEOUT);
+			validConfiguration.setTimeout(
+				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
+			);
 
 			// Build the telemetry manager based on this configuration
-			final TelemetryManager telemetryManager = TelemetryManager
+			final var telemetryManager = TelemetryManager
 				.builder()
 				.hostConfiguration(
 					HostConfiguration

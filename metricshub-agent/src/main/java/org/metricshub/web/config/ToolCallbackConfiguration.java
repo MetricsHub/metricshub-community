@@ -21,7 +21,9 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.web.mcp.ExecuteIpmiQueryService;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
+import org.metricshub.web.mcp.ExecuteWqlQueryService;
 import org.metricshub.web.mcp.HostDetailsService;
 import org.metricshub.web.mcp.ListConnectorsService;
 import org.metricshub.web.mcp.ListResourcesService;
@@ -51,6 +53,8 @@ public class ToolCallbackConfiguration {
 	 * @param listConnectorsService      the service that lists all connectors supported by MetricsHub
 	 * @param hostDetailsService         the service that returns all the host details (protocols, connectors, ...)
 	 * @param executeSnmpQueryService    the service for executing SNMP queries (get, getNext, walk or table).
+	 * @param executeWqlQueryService     the service for executing WQL queries through WMI or WinRm.
+	 * @param executeIpmiQueryService    the service for executing IPMI queries.
 	 * @return a {@link ToolCallbackProvider} exposing all registered protocol services as tools
 	 */
 	@Bean
@@ -61,7 +65,9 @@ public class ToolCallbackConfiguration {
 		final TroubleshootHostService troubleshootHostService,
 		final ListConnectorsService listConnectorsService,
 		final HostDetailsService hostDetailsService,
-		final ExecuteSnmpQueryService executeSnmpQueryService
+		final ExecuteSnmpQueryService executeSnmpQueryService,
+		final ExecuteWqlQueryService executeWqlQueryService,
+		final ExecuteIpmiQueryService executeIpmiQueryService
 	) {
 		return MethodToolCallbackProvider
 			.builder()
@@ -72,7 +78,9 @@ public class ToolCallbackConfiguration {
 				troubleshootHostService,
 				listConnectorsService,
 				hostDetailsService,
-				executeSnmpQueryService
+				executeSnmpQueryService,
+				executeWqlQueryService,
+				executeIpmiQueryService
 			)
 			.build();
 	}
