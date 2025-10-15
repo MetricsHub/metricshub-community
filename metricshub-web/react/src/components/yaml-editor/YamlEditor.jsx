@@ -56,11 +56,10 @@ export default function YamlEditor({
 	 * Validation extensions for CodeMirror based on provided validateFn and fileName.
 	 * @returns {Array} Array of CodeMirror extensions for validation.
 	 */
-const validationExtension = React.useMemo(
-	() => buildYamlLinterExtension(validateFn, fileName, shortYamlError, 400),
-	[validateFn, fileName]
-);
-
+	const validationExtension = React.useMemo(
+		() => buildYamlLinterExtension(validateFn, fileName, shortYamlError, 400),
+		[validateFn, fileName],
+	);
 
 	const extensions = React.useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];

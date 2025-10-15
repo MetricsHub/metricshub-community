@@ -106,10 +106,7 @@ export default function FileTreeItem({
 						touchEvent={false}
 						disableReactTree
 					>
-						<Box
-							onMouseDown={(e) => e.stopPropagation()}
-							onClick={(e) => e.stopPropagation()}
-						>
+						<Box onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
 							<Box sx={{ display: "flex", alignItems: "center" }}>
 								<FileTypeIcon type="yaml" />
 								<TextField

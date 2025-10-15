@@ -37,7 +37,10 @@ const normalizeMessage = (raw) => {
 	for (let k = 2; k <= 4; k++) {
 		if (txt.length % k !== 0) continue;
 		const part = txt.slice(0, txt.length / k);
-		if (part.repeat(k) === txt) { txt = part.trim(); break; }
+		if (part.repeat(k) === txt) {
+			txt = part.trim();
+			break;
+		}
 	}
 
 	// remove consecutive identical lines
@@ -80,9 +83,16 @@ export function toDiagnostics(result, cmDoc, shortYamlError) {
 				const key = `${from}:${to}:${msg}`;
 				if (seen.has(key)) continue;
 				seen.add(key);
-				diags.push({ from, to: Math.max(to, from + 1), message: msg, severity: e.severity || "error" });
+				diags.push({
+					from,
+					to: Math.max(to, from + 1),
+					message: msg,
+					severity: e.severity || "error",
+				});
 			} catch (err) {
-				const msg = normalizeMessage(shortYamlError(e?.message || err?.message || "Validation error"));
+				const msg = normalizeMessage(
+					shortYamlError(e?.message || err?.message || "Validation error"),
+				);
 				const key = `0:1:${msg}`;
 				if (!seen.has(key)) {
 					seen.add(key);
@@ -112,7 +122,14 @@ export function toDiagnostics(result, cmDoc, shortYamlError) {
 				},
 			];
 		}
-		return [{ from: 0, to: Math.min(1, cmDoc.length), message: normalizeMessage(shortYamlError(text)), severity: "error" }];
+		return [
+			{
+				from: 0,
+				to: Math.min(1, cmDoc.length),
+				message: normalizeMessage(shortYamlError(text)),
+				severity: "error",
+			},
+		];
 	}
 
 	return [];
@@ -123,14 +140,24 @@ export function buildYamlLinterExtension(validateFn, fileName, shortYamlError, d
 	if (!validateFn || !fileName) return [];
 	return [
 		lintGutter(),
-		linter(async (view) => {
-			const content = view.state.doc.toString();
-			try {
-				const res = await validateFn(content, fileName);
-				return toDiagnostics(res, view.state.doc, shortYamlError);
-			} catch (err) {
-				return [{ from: 0, to: Math.min(1, view.state.doc.length), message: err?.message || "Validation request failed", severity: "error" }];
-			}
-		}, { delay }),
+		linter(
+			async (view) => {
+				const content = view.state.doc.toString();
+				try {
+					const res = await validateFn(content, fileName);
+					return toDiagnostics(res, view.state.doc, shortYamlError);
+				} catch (err) {
+					return [
+						{
+							from: 0,
+							to: Math.min(1, view.state.doc.length),
+							message: err?.message || "Validation request failed",
+							severity: "error",
+						},
+					];
+				}
+			},
+			{ delay },
+		),
 	];
 }
