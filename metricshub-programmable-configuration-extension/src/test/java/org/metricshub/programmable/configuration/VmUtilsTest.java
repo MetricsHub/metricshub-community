@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for {@link VmUtils}.
  */
-public class VmUtilsTest {
+class VmUtilsTest {
 
 	private final VmUtils vmUtils = new VmUtils();
 

@@ -24,7 +24,7 @@ package org.metricshub.programmable.configuration;
 /**
  * This class provides a helper for converting strings to character arrays.
  */
-class VmUtils {
+public class VmUtils {
 
 	/**
 	 * Converts a string to a character array, or returns {@code null} if the input is null.
