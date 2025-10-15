@@ -68,7 +68,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	private static final Map<String, Object> TOOLS = new HashMap<>();
 
 	static {
-		TOOLS.put("VmUtils", new VmUtils());
+		TOOLS.put("vmUtils", new VmUtils());
 		TOOLS.put("sql", new SqlTool());
 		TOOLS.put("http", new HttpTool());
 		TOOLS.put("json", new JsonTool());
@@ -107,7 +107,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 					readVmFragment(path)
 						.ifPresent((JsonNode jsonNode) -> {
 							configurations.add(jsonNode);
-							log.debug("Generated YAML from template '{}':\n{}", path, yaml);
+							log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
 						})
 				);
 		} catch (IOException e) {
