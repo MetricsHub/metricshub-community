@@ -682,7 +682,7 @@ resourceGroups:
 ```
 ### Programmable Configuration
 
-You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, or parsing JSON content.
+You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, SQL databases, or parsing JSON content.
 
 To fetch and transform this data into valid configuration blocks, use [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) in the `.vm` template files located under the `/config` directory, such as:
 
@@ -690,6 +690,9 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}file` for reading local files
 * `${esc.d}json` for parsing JSON data
 * `${esc.d}collection` for splitting strings or manipulating collections
+* `${esc.d}sql` for executing SQL queries on a database
+* `${esc.d}vmUtils` for utility functions such as converting strings to character arrays
+* `${esc.d}env` for retrieving environment variables
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
 ##### `${esc.d}http.execute` tool arguments
@@ -707,6 +710,19 @@ Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly f
 | `timeout`  | Request timeout in seconds. (Default: `60`).                   |
 
 > Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
+
+##### `${esc.d}sql.query` tool arguments
+
+Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates.
+
+| Argument   | Description                                                                                 |
+|------------|---------------------------------------------------------------------------------------------|
+| `query`    | SQL query to execute.                                                                       |
+| `jdbcUrl`  | The JDBC connection URL to access the database.                                             |
+| `username` | Database username.                                                                          |
+| `password` | Database password converted to a character array (using `${esc.d}vmUtils.toCharArray(...)`).|
+| `timeout`  | (Optional) Query timeout in seconds (default: 120).                                         |
+
 
 ##### Example 1: Loading resources from an HTTP API
 
@@ -774,6 +790,43 @@ ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
       ${esc.d}protocol:
         username: ${esc.d}username
         password: ${esc.d}password
+${esc.h}end
+```
+
+##### Example 3: Loading resources from an SQL database
+Suppose your database table users contains the following data:
+
+|username  | password  | hostname | ostype  |
+|----------|-----------|----------|---------|
+|admin1    | pwd1      | hostA    | STORAGE |
+|admin2    | pwd2      | hostB    | win     |
+
+You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
+```
+${esc.h}set(${esc.d}url = "jdbc:h2:mem:testdb1")
+${esc.h}set(${esc.d}pass = "pwd1")
+${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", ${esc.d}url, "sa", ${esc.d}vmUtils.toCharArray(${esc.d}pass), 120))
+
+resources:
+${esc.h}foreach(${esc.d}r in ${esc.d}rows)
+  ${esc.h}set(${esc.d}user = ${esc.d}r.get(0))
+  ${esc.h}set(${esc.d}password = ${esc.d}r.get(1))
+  ${esc.h}set(${esc.d}hostname = ${esc.d}r.get(2))
+  ${esc.h}set(${esc.d}ostype = ${esc.d}r.get(3))
+  ${esc.h}if(${esc.d}ostype == "STORAGE")
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}ostype
+    protocols:
+      http:
+        hostname: ${esc.d}hostname
+        https: true
+        port: 443
+        username: ${esc.d}user
+        password: ${esc.d}password
+        timeout: 300
+  ${esc.h}end
 ${esc.h}end
 ```
 

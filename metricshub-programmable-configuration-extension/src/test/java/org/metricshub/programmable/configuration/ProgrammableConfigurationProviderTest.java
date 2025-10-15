@@ -7,11 +7,12 @@ import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Paths;
-import java.util.List;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
-import org.metricshub.extension.jdbc.client.JdbcClient;
-import org.metricshub.extension.jdbc.client.SqlResult;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
 import org.mockito.MockedStatic;
@@ -137,19 +138,35 @@ class ProgrammableConfigurationProviderTest {
 	}
 
 	@Test
-	void testLoadUsingSqlTool_mysqlTemplate() {
-		final SqlResult mockResult = new SqlResult();
-		mockResult.addRow(List.of("adminA", "passA", "host-a", "STORAGE"));
-		mockResult.addRow(List.of("adminB", "passB", "host-b", "LINUX"));
-		mockResult.addRow(List.of("userC", "passC", "host-c", "WINDOWS"));
+	void testLoadUsingSqlTool() throws SQLException {
+		Connection connection = null;
+		try {
+			// Setup in-memory H2 database and create table
+			String url = "jdbc:h2:mem:testdb1";
+			connection = DriverManager.getConnection(url, "sa", "pwd1");
 
-		final String url = "jdbc:mysql://localhost:3306/mon_app";
-		final String username = "root";
-		final char[] expectedPwd = "MySQL.0".toCharArray();
-		final String sql = "SELECT username, password, hostname, ostype FROM mon_app.users ORDER BY hostname";
+			try (Statement statement = connection.createStatement()) {
+				String createTableSQL =
+					"""
+					    CREATE TABLE IF NOT EXISTS users (
+					      username VARCHAR(64),
+					      password VARCHAR(64),
+					      hostname VARCHAR(128),
+					      ostype   VARCHAR(32)
+					    )
+					""";
+				statement.execute(createTableSQL);
 
-		try (MockedStatic<JdbcClient> mocked = mockStatic(JdbcClient.class)) {
-			mocked.when(() -> JdbcClient.execute(url, username, expectedPwd, sql, false, 120)).thenReturn(mockResult);
+				// Insert data
+				String insertDataSQL =
+					"""
+					    INSERT INTO users (username, password, hostname, ostype) VALUES
+					      ('adminA','passA','host-a','STORAGE'),
+					      ('adminB','passB','host-b','LINUX'),
+					      ('userC','passC','host-c','WINDOWS')
+					""";
+				statement.execute(insertDataSQL);
+			}
 
 			var provider = new ProgrammableConfigurationProvider();
 			var nodes = provider.load(Paths.get("src/test/resources/sql"));
@@ -160,6 +177,10 @@ class ProgrammableConfigurationProviderTest {
 				nodes.toString(),
 				"Should load one configuration fragment with sql tool"
 			);
+		} finally {
+			if (connection != null) {
+				connection.close();
+			}
 		}
 	}
 }

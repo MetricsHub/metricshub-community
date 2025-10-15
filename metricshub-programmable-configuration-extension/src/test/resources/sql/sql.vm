@@ -1,7 +1,7 @@
 ## mapping: c1=username, c2=password, c3=hostname, c4=ostype
-#set($url = "jdbc:mysql://localhost:3306/mon_app")
-#set($pass = "MySQL.0")
-#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM mon_app.users ORDER BY hostname", $url, "root", $vmUtils.toCharArray($pass))
+#set($url = "jdbc:h2:mem:testdb1")
+#set($pass = "pwd1")
+#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", $url, "sa", $vmUtils.toCharArray($pass))
 )
 
 resources:

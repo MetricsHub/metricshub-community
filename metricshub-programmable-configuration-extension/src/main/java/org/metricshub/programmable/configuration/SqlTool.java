@@ -22,7 +22,6 @@ package org.metricshub.programmable.configuration;
  */
 
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.List;
 import org.metricshub.extension.jdbc.client.JdbcClient;
 import org.metricshub.extension.jdbc.client.SqlResult;
@@ -40,9 +39,8 @@ public class SqlTool {
 	 * @param query    the SQL query to execute (read-only)
 	 * @param url      the JDBC connection URL
 	 * @param username the username used for the database connection
-	 * @param password the password as a character array (cleared after use)
-	 * @return a list of rows, where each row is a list of column values; never
-	 *         {@code null}
+	 * @param password the password used for the database connection
+	 * @return a list of rows.
 	 * @throws RuntimeException if any SQL error occurs during query execution
 	 */
 	public List<List<String>> query(final String query, final String url, final String username, final char[] password) {
@@ -51,14 +49,13 @@ public class SqlTool {
 
 	/**
 	 * Executes a read-only SQL query with an explicit timeout.
-	 * If {@code timeoutSeconds} ≤ 0, the default is used.
 	 *
-	 * @param query          SQL query to execute
-	 * @param url            JDBC connection URL
-	 * @param username       JDBC username
-	 * @param password       JDBC password (wiped after use)
-	 * @param timeout timeout in seconds (≤ 0 → default)
-	 * @return rows as list-of-lists; never {@code null}
+	 * @param query    SQL query to execute
+	 * @param url      JDBC connection URL
+	 * @param username JDBC username
+	 * @param password JDBC password
+	 * @param timeout  timeout in seconds
+	 * @return rows as list-of-lists.
 	 * @throws RuntimeException
 	 *
 	 */
@@ -70,14 +67,11 @@ public class SqlTool {
 		final int timeout
 	) {
 		try {
+			// Show SQL warning = false
 			final SqlResult res = JdbcClient.execute(url, username, password, query, false, timeout);
 			return res.getResults();
 		} catch (SQLException e) {
 			throw new RuntimeException("SQL query failed: " + e.getMessage(), e);
-		} finally {
-			if (password != null) {
-				Arrays.fill(password, '\0');
-			}
 		}
 	}
 }
