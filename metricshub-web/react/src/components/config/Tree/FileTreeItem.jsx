@@ -159,7 +159,6 @@ export default function FileTreeItem({
 							>
 								{file.name}
 							</Box>
-
 							{/* Unsaved/dirty indicator or error indicator */}
 							{isDirty && (
 								<Box
