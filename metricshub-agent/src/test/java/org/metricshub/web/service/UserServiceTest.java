@@ -9,6 +9,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Set;
@@ -112,6 +114,9 @@ class UserServiceTest {
 			// JWT generation and expiry
 			when(jwtComponent.generateJwt(stored)).thenReturn("jwt-123");
 			when(jwtComponent.getShortExpire()).thenReturn(1800L);
+			// refresh token generation for success path
+			when(jwtComponent.generateRefreshJwt(stored)).thenReturn("rjwt-123");
+			when(jwtComponent.getLongExpire()).thenReturn(86400L);
 
 			final JwtAuthToken token = userService.performSecurity(req);
 
@@ -119,6 +124,8 @@ class UserServiceTest {
 			assertEquals("jwt-123", token.getToken(), "Token should match generated JWT");
 			assertEquals(1800L, token.getExpiresIn(), "ExpiresIn should match jwtComponent.getShortExpire()");
 			assertTrue(token.getPrincipal() instanceof User, "Principal should be a User");
+			assertEquals("rjwt-123", token.getRefreshToken(), "Refresh token should match generated refresh JWT");
+			assertEquals(86400L, token.getRefreshExpiresIn(), "RefreshExpiresIn should match jwtComponent.getLongExpire()");
 
 			final User principal = (User) token.getPrincipal();
 			assertEquals("alice", principal.getUsername(), "Username should match");
@@ -169,6 +176,47 @@ class UserServiceTest {
 			);
 
 			assertEquals("Bad password.", ex.getMessage(), "Exception message should match");
+		}
+	}
+
+	@Test
+	void testShouldRefreshSecurityAndReturnJwtAuthToken() throws Exception {
+		try (MockedStatic<PasswordEncrypt> mockedEncrypt = mockStatic(PasswordEncrypt.class)) {
+			// point keystore to temp file
+			mockedEncrypt.when(() -> PasswordEncrypt.getKeyStoreFile(true)).thenReturn(tempKeystore);
+
+			// create a real user in keystore so userService.find(subject) works
+			createUser("grumpy", "enc".toCharArray(), "rw");
+			final User stored = userService.find("grumpy");
+			assertNotNull(stored, "Precondition: user should exist for refresh");
+
+			// request + JWT
+			final HttpServletRequest request = mock(HttpServletRequest.class);
+			when(jwtComponent.getRefreshTokenFromRequestCookie(request)).thenReturn("cookie-refresh");
+
+			final Claims claims = mock(Claims.class);
+			when(jwtComponent.getAllClaimsFromToken("cookie-refresh")).thenReturn(claims);
+			when(jwtComponent.isRefreshToken(claims)).thenReturn(true);
+			when(claims.getSubject()).thenReturn("grumpy");
+
+			// new tokens
+			when(jwtComponent.generateJwt(stored)).thenReturn("jwt-new");
+			when(jwtComponent.getShortExpire()).thenReturn(900L);
+
+			when(jwtComponent.generateRefreshJwt(stored)).thenReturn("rjwt-new");
+			when(jwtComponent.getLongExpire()).thenReturn(86400L);
+
+			// act
+			final JwtAuthToken out = userService.refreshSecurity(request);
+
+			// assert
+			assertNotNull(out, "JwtAuthToken should not be null");
+			assertEquals("jwt-new", out.getToken(), "Access token should match");
+			assertEquals(900L, out.getExpiresIn(), "Access token expiry should match");
+			assertEquals("rjwt-new", out.getRefreshToken(), "Refresh token should match");
+			assertEquals(86400L, out.getRefreshExpiresIn(), "Refresh expiry should match");
+			assertTrue(out.getPrincipal() instanceof User, "Principal should be a User");
+			assertEquals("grumpy", ((User) out.getPrincipal()).getUsername(), "Username should match");
 		}
 	}
 }

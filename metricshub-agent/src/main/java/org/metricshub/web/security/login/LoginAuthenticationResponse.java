@@ -36,5 +36,4 @@ import lombok.NoArgsConstructor;
 public class LoginAuthenticationResponse {
 
 	private String token;
-	private long expiresIn;
 }

@@ -21,6 +21,7 @@ package org.metricshub.web.security.login;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.metricshub.web.security.SecurityHelper;
@@ -65,20 +66,78 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	public Authentication authenticate(Authentication authentication) {
 		// The application supports only LoginAuthenticationRequest
 		if (!(authentication.getDetails() instanceof LoginAuthenticationRequest)) {
-			throw new UnauthorizedException("Unsuported authentication method.");
+			throw new UnauthorizedException("Unsupported authentication method.");
 		}
 
 		// Perform authentication and get the User instance with the generated JWT
 		final var userAndJwt = doAuth((LoginAuthenticationRequest) authentication.getDetails());
 
-		final User user = userAndJwt.user();
-		final String jwt = userAndJwt.jwt();
+		return generateAuthentication(userAndJwt.user(), userAndJwt.jwt());
+	}
+
+	/**
+	 * Refresh the JWT using the refresh token from the request cookie.
+	 *
+	 * @param request HTTP request containing the refresh token in a cookie
+	 * @return Authentication instance with new JWT and refresh token
+	 */
+	public Authentication refresh(final HttpServletRequest request) {
+		// Perform the refresh strategy and get the User instance with the new JWT
+		final var userAndNewJwt = doRefresh(request);
+
+		return generateAuthentication(userAndNewJwt.user(), userAndNewJwt.jwt());
+	}
+
+	/**
+	 * Generate the Authentication instance wrapping user details, JWT, authority and JWT expiration time
+	 *
+	 * @param user The authenticated user
+	 * @param jwt  The generated JWT
+	 * @return     Authentication instance
+	 */
+	private Authentication generateAuthentication(final User user, final String jwt) {
+		// Generate the refresh token
+		final String refreshToken = jwtComponent.generateRefreshJwt(user);
 
 		// Create the granted authority as application user
 		final GrantedAuthority authority = new SimpleGrantedAuthority(SecurityHelper.ROLE_APP_USER);
 
 		// Return the JWT authentication token wrapping user details, JWT, authority and JWT expiration time
-		return new JwtAuthToken(user, null, jwt, Collections.singleton(authority), jwtComponent.getShortExpire());
+		return new JwtAuthToken(
+			user,
+			null,
+			jwt,
+			jwtComponent.getShortExpire(),
+			refreshToken,
+			jwtComponent.getLongExpire(),
+			Collections.singleton(authority)
+		);
+	}
+
+	/**
+	 * Perform the refresh strategy
+	 *
+	 * @param request HTTP request containing the refresh token in a cookie
+	 * @return UserAndJwt instance with user and new JWT
+	 */
+	private UserAndJwt doRefresh(final HttpServletRequest request) {
+		// Get the refresh token from the request cookie
+		final String refreshToken = jwtComponent.getRefreshTokenFromRequestCookie(request);
+		if (refreshToken == null) {
+			throw new UnauthorizedException("Missing refresh token");
+		}
+
+		// Get all the claims from the refresh token
+		final var claims = jwtComponent.getAllClaimsFromToken(refreshToken);
+
+		// Check that we have a refresh token
+		if (!jwtComponent.isRefreshToken(claims)) {
+			throw new UnauthorizedException("Invalid token type");
+		}
+
+		final User user = findUserByUsername(claims.getSubject());
+		final String newJwt = jwtComponent.generateJwt(user);
+		return new UserAndJwt(user, newJwt);
 	}
 
 	@Override
@@ -111,19 +170,28 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 	 * @return {@link User} instance
 	 */
 	User getUserAndCheckPassword(final LoginAuthenticationRequest request) {
-		// Find user by username
-		final var user = userService.find(request.getUsername());
-
-		// Are we able to find the user?
-		if (user == null) {
-			throw new UnauthorizedException("User not found.");
-		}
+		// Find the user by username
+		final var user = findUserByUsername(request.getUsername());
 
 		// Verify the encoded user password obtained from storage matches the submitted raw password
 		if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
 			throw new UnauthorizedException("Bad password.");
 		}
 
+		return user;
+	}
+
+	/**
+	 * Find the user by username or throw an exception if not found
+	 *
+	 * @param username The username to search for
+	 * @return The found {@link User} instance
+	 */
+	User findUserByUsername(final String username) {
+		final var user = userService.find(username);
+		if (user == null) {
+			throw new UnauthorizedException("User not found.");
+		}
 		return user;
 	}
 
