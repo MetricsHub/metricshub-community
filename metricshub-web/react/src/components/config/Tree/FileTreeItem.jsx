@@ -100,17 +100,16 @@ export default function FileTreeItem({
 		>
 			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 				{editing ? (
-          <ClickAwayListener
-            onClickAway={submitRename}
-            mouseEvent="onClick"
-            touchEvent={false}
-            disableReactTree
-          >
-            <Box
-              // keep all mouse activity inside the editor from reaching the TreeItem
-              onMouseDown={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-            >
+					<ClickAwayListener
+						onClickAway={submitRename}
+						mouseEvent="onClick"
+						touchEvent={false}
+						disableReactTree
+					>
+						<Box
+							onMouseDown={(e) => e.stopPropagation()}
+							onClick={(e) => e.stopPropagation()}
+						>
 							<Box sx={{ display: "flex", alignItems: "center" }}>
 								<FileTypeIcon type="yaml" />
 								<TextField
