@@ -7,8 +7,11 @@ import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.jdbc.client.JdbcClient;
+import org.metricshub.extension.jdbc.client.SqlResult;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
 import org.mockito.MockedStatic;
@@ -131,5 +134,32 @@ class ProgrammableConfigurationProviderTest {
 			nodes.toString(),
 			"Should load correct configuration fragment using file tool"
 		);
+	}
+
+	@Test
+	void testLoadUsingSqlTool_mysqlTemplate() {
+		final SqlResult mockResult = new SqlResult();
+		mockResult.addRow(List.of("adminA", "passA", "host-a", "STORAGE"));
+		mockResult.addRow(List.of("adminB", "passB", "host-b", "LINUX"));
+		mockResult.addRow(List.of("userC", "passC", "host-c", "WINDOWS"));
+
+		final String url = "jdbc:mysql://localhost:3306/mon_app";
+		final String username = "root";
+		final char[] expectedPwd = "MySQL.0".toCharArray();
+		final String sql = "SELECT username, password, hostname, ostype FROM mon_app.users ORDER BY hostname";
+
+		try (MockedStatic<JdbcClient> mocked = mockStatic(JdbcClient.class)) {
+			mocked.when(() -> JdbcClient.execute(url, username, expectedPwd, sql, false, 120)).thenReturn(mockResult);
+
+			var provider = new ProgrammableConfigurationProvider();
+			var nodes = provider.load(Paths.get("src/test/resources/sql"));
+
+			assertEquals(
+				"""
+				[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA","timeout":300}},"connectors":["+DellEMCPowerStoreREST"],"sequential":true}}}]""",
+				nodes.toString(),
+				"Should load one configuration fragment with sql tool"
+			);
+		}
 	}
 }

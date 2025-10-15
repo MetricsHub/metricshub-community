@@ -65,6 +65,11 @@
 			<version>4.0.1</version>
 		</dependency>
 		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>metricshub-jdbc-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
 			<scope>test</scope>
@@ -152,7 +157,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.61</minimum>
+											<minimum>0.67</minimum>
 										</limit>
 									</limits>
 								</rule>

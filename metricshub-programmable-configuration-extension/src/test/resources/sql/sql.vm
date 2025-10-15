@@ -1,0 +1,30 @@
+## mapping: c1=username, c2=password, c3=hostname, c4=ostype
+#set($url = "jdbc:mysql://localhost:3306/mon_app")
+#set($pass = "MySQL.0")
+#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM mon_app.users ORDER BY hostname", $url, "root", $VmUtils.toCharArray($pass))
+)
+
+resources:
+#foreach($r in $rows)
+  #set($user = $r.get(0))
+  #set($password = $r.get(1))
+  #set($hostname = $r.get(2))
+  #set($ostype = $r.get(3))
+  #if($ostype == "STORAGE")
+  $hostname:
+    attributes:
+      host.name: $hostname
+      host.type: $ostype
+    protocols:
+      http:
+        hostname: $hostname
+        https: true
+        port: 443
+        username: $user
+        password: $password
+        timeout: 300
+    connectors: [ +DellEMCPowerStoreREST ]
+    sequential: true
+  #end
+#end
+
