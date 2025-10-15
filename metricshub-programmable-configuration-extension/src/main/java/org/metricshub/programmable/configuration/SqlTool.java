@@ -41,9 +41,10 @@ public class SqlTool {
 	 * @param username the username used for the database connection
 	 * @param password the password used for the database connection
 	 * @return a list of rows.
-	 * @throws RuntimeException if any SQL error occurs during query execution
+	 * @throws SQLException
 	 */
-	public List<List<String>> query(final String query, final String url, final String username, final char[] password) {
+	public List<List<String>> query(final String query, final String url, final String username, final char[] password)
+		throws SQLException {
 		return query(query, url, username, password, DEFAULT_SQL_TIMEOUT);
 	}
 
@@ -56,8 +57,7 @@ public class SqlTool {
 	 * @param password JDBC password
 	 * @param timeout  timeout in seconds
 	 * @return rows as list-of-lists.
-	 * @throws RuntimeException
-	 *
+	 * @throws SQLException
 	 */
 	public List<List<String>> query(
 		final String query,
@@ -65,13 +65,9 @@ public class SqlTool {
 		final String username,
 		final char[] password,
 		final int timeout
-	) {
-		try {
-			// Show SQL warning = false
-			final SqlResult res = JdbcClient.execute(url, username, password, query, false, timeout);
-			return res.getResults();
-		} catch (SQLException e) {
-			throw new RuntimeException("SQL query failed: " + e.getMessage(), e);
-		}
+	) throws SQLException {
+		// Show SQL warning = false
+		final SqlResult res = JdbcClient.execute(url, username, password, query, false, timeout);
+		return res.getResults();
 	}
 }

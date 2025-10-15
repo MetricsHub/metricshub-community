@@ -139,34 +139,32 @@ class ProgrammableConfigurationProviderTest {
 
 	@Test
 	void testLoadUsingSqlTool() throws SQLException {
-		Connection connection = null;
-		try {
-			// Setup in-memory H2 database and create table
-			String url = "jdbc:h2:mem:testdb1";
-			connection = DriverManager.getConnection(url, "sa", "pwd1");
+		// Setup in-memory H2 database and create table
+		String url = "jdbc:h2:mem:testdb1";
+		try (
+			Connection connection = DriverManager.getConnection(url, "sa", "pwd1");
+			Statement statement = connection.createStatement()
+		) {
+			String createTableSQL =
+				"""
+				    CREATE TABLE IF NOT EXISTS users (
+				      username VARCHAR(64),
+				      password VARCHAR(64),
+				      hostname VARCHAR(128),
+				      ostype   VARCHAR(32)
+				    )
+				""";
+			statement.execute(createTableSQL);
 
-			try (Statement statement = connection.createStatement()) {
-				String createTableSQL =
-					"""
-					    CREATE TABLE IF NOT EXISTS users (
-					      username VARCHAR(64),
-					      password VARCHAR(64),
-					      hostname VARCHAR(128),
-					      ostype   VARCHAR(32)
-					    )
-					""";
-				statement.execute(createTableSQL);
-
-				// Insert data
-				String insertDataSQL =
-					"""
-					    INSERT INTO users (username, password, hostname, ostype) VALUES
-					      ('adminA','passA','host-a','STORAGE'),
-					      ('adminB','passB','host-b','LINUX'),
-					      ('userC','passC','host-c','WINDOWS')
-					""";
-				statement.execute(insertDataSQL);
-			}
+			// Insert data
+			String insertDataSQL =
+				"""
+				    INSERT INTO users (username, password, hostname, ostype) VALUES
+				      ('adminA','passA','host-a','STORAGE'),
+				      ('adminB','passB','host-b','LINUX'),
+				      ('userC','passC','host-c','WINDOWS')
+				""";
+			statement.execute(insertDataSQL);
 
 			var provider = new ProgrammableConfigurationProvider();
 			var nodes = provider.load(Paths.get("src/test/resources/sql"));
@@ -177,10 +175,6 @@ class ProgrammableConfigurationProviderTest {
 				nodes.toString(),
 				"Should load one configuration fragment with sql tool"
 			);
-		} finally {
-			if (connection != null) {
-				connection.close();
-			}
 		}
 	}
 }

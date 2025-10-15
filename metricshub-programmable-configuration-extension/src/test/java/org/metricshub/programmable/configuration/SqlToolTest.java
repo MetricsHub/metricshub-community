@@ -43,9 +43,7 @@ class SqlToolTest {
 	void TestThrowsSQLException() throws Exception {
 		final String query = "BAD SQL";
 
-		RuntimeException ex = assertThrows(RuntimeException.class, () -> sqlTool.query(query, URL, USER, PWD, 5));
-
-		assertTrue(ex.getMessage().contains("SQL query failed"));
+		SQLException ex = assertThrows(SQLException.class, () -> sqlTool.query(query, URL, USER, PWD, 5));
 		assertTrue(ex.getCause() instanceof SQLException);
 	}
 }
