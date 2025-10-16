@@ -27,11 +27,11 @@ const flush = (err) => {
  * Uses a CustomEvent to allow listening in other parts of the app.
  */
 const triggerLogout = () => {
-   try {
-	window.dispatchEvent(new CustomEvent("auth:logout"));
-   } catch {
-	// ignore
-   }
+	try {
+		window.dispatchEvent(new CustomEvent("auth:logout"));
+	} catch {
+		// ignore
+	}
 };
 
 /**

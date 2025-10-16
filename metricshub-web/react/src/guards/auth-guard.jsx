@@ -20,7 +20,7 @@ export const AuthGuard = ({ children }) => {
 	 */
 	const returnToRef = React.useRef(null);
 	if (!returnToRef.current) {
-	  returnToRef.current = `${location.pathname}${location.search}${location.hash}`;
+		returnToRef.current = `${location.pathname}${location.search}${location.hash}`;
 	}
 
 	/**
@@ -45,7 +45,6 @@ export const AuthGuard = ({ children }) => {
 
 		// authenticated, allow render
 		setChecked(true);
-
 	}, [isAuthenticated, isInitialized, navigate, location.pathname]);
 
 	/**
