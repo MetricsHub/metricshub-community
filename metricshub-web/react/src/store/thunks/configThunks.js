@@ -138,36 +138,34 @@ export const createConfigBackup = createAsyncThunk(
 				if (!target) throw new Error("No file selected/name provided for file backup");
 
 				const content = await resolveContent(target);
-
-				// Persist as backup-<id>__<original-filename>
 				const flatName = `backup-${id}__${baseName(target)}`;
-				await dispatch(
-					saveConfig({
-						name: flatName,
-						content,
-						skipValidation: true,
-					}),
-				).unwrap();
+				await dispatch(saveConfig({ name: flatName, content, skipValidation: true })).unwrap();
 			} else {
+				const rxBackup = /^backup-\d{8}-\d{6}__/;
+				const originalsOnly = list.filter((meta) => !rxBackup.test(meta?.name || ""));
+
+				if (originalsOnly.length === 0) {
+					await dispatch(fetchConfigList());
+					return { id, count: 0 };
+				}
+
 				const prefix = `backup-${id}__`;
 				await Promise.all(
-					list.map(async (meta) => {
+					originalsOnly.map(async (meta) => {
 						const fname = meta.name;
 						const content = await resolveContent(fname);
 						const flatName = `${prefix}${baseName(fname)}`;
-						await dispatch(
-							saveConfig({
-								name: flatName,
-								content,
-								skipValidation: true,
-							}),
-						).unwrap();
+						await dispatch(saveConfig({ name: flatName, content, skipValidation: true })).unwrap();
 					}),
 				);
 			}
 
 			await dispatch(fetchConfigList());
-			return { id, count: kind === "file" ? 1 : list.length };
+			return {
+				id,
+				count:
+					kind === "file" ? 1 : list.filter((f) => !/^backup-\d{8}-\d{6}__/.test(f.name)).length,
+			};
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}

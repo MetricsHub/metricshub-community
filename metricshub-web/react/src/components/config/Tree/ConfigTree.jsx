@@ -2,9 +2,14 @@
 import * as React from "react";
 import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
 import FileTypeIcon from "./icons/FileTypeIcons.jsx";
-import { Stack, Box } from "@mui/material";
+import { Stack, Box, IconButton, Menu, MenuItem } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import BackupIcon from "@mui/icons-material/Backup";
+import DownloadIcon from "@mui/icons-material/Download";
 import FileTreeItem from "./FileTreeItem";
-import { useAppSelector } from "../../../hooks/store";
+import BackupSetNode from "./BackupSetNode";
+import { useAppDispatch, useAppSelector } from "../../../hooks/store";
+import { createConfigBackup } from "../../../store/thunks/configThunks";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
@@ -16,12 +21,42 @@ const BACKUP_ROOT_ID = "__backup_root__";
  * @returns {JSX.Element} The configuration tree component.
  */
 export default function ConfigTree({ files, selectedName, onSelect, onRename, onDelete }) {
+	const dispatch = useAppDispatch();
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
 
+	// config root kebab
+	const [rootMenuAnchor, setRootMenuAnchor] = React.useState(null);
+	const openRootMenu = (e) => {
+		e.stopPropagation();
+		setRootMenuAnchor(e.currentTarget);
+	};
+	const closeRootMenu = () => setRootMenuAnchor(null);
+	const handleBackupAll = async () => {
+		document.activeElement?.blur?.();
+		closeRootMenu();
+		try {
+			await dispatch(createConfigBackup({ kind: "all" })).unwrap();
+		} catch (e) {
+			console.error("Backup all failed:", e);
+		}
+	};
+
 	const folderLabel = (
-		<Box sx={{ display: "flex", alignItems: "center" }}>
-			<FileTypeIcon type="folder" />
-			<span>config</span>
+		<Box
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+		>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<FileTypeIcon type="folder" />
+				<span>config</span>
+			</Box>
+			<IconButton
+				size="small"
+				aria-label="More actions"
+				onClick={openRootMenu}
+				onMouseDown={(e) => e.preventDefault()}
+			>
+				<MoreVertIcon fontSize="small" />
+			</IconButton>
 		</Box>
 	);
 
@@ -109,34 +144,45 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 				>
 					{Object.keys(backupsBySet)
 						.sort((a, b) => b.localeCompare(a))
-						.map((id) => {
-							const groupLabel = (
-								<Box sx={{ display: "flex", alignItems: "center" }}>
-									<FileTypeIcon type="folder" />
-									<span>{`backup-${id}`}</span>
-								</Box>
-							);
-							const groupItemId = `__backup_set__/${id}`;
-							return (
-								<TreeItem key={groupItemId} itemId={groupItemId} label={groupLabel}>
-									{backupsBySet[id].map((f) => (
-										<FileTreeItem
-											key={f.name}
-											file={f}
-											itemId={f.name}
-											labelName={f.displayName}
-											isDirty={!!dirtyByName?.[f.name]}
-											validation={filesByName[f.name]?.validation}
-											onSelect={onSelect}
-											onRename={onRename}
-											onDelete={onDelete}
-										/>
-									))}
-								</TreeItem>
-							);
-						})}
+						.map((id) => (
+							<BackupSetNode
+								key={id}
+								id={id}
+								files={backupsBySet[id]}
+								dirtyByName={dirtyByName}
+								filesByName={filesByName}
+								onSelect={onSelect}
+								onRename={onRename}
+								onDelete={onDelete}
+							/>
+						))}
 				</TreeItem>
 			</SimpleTreeView>
+
+			{/* Root "config" kebab menu */}
+			<Menu
+				anchorEl={rootMenuAnchor}
+				open={Boolean(rootMenuAnchor)}
+				onClose={closeRootMenu}
+				disableRestoreFocus
+				disableAutoFocusItem
+				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+				transformOrigin={{ vertical: "top", horizontal: "right" }}
+			>
+				<MenuItem onClick={handleBackupAll}>
+					<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
+					Backup all
+				</MenuItem>
+				<MenuItem
+					onClick={() => {
+						closeRootMenu();
+						// TODO: implement download-all later
+					}}
+				>
+					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
+					Download all
+				</MenuItem>
+			</Menu>
 		</Stack>
 	);
 }

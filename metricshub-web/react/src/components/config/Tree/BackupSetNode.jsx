@@ -1,0 +1,195 @@
+import * as React from "react";
+import { TreeItem } from "@mui/x-tree-view";
+import { Box, IconButton, Menu, MenuItem } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import RestoreIcon from "@mui/icons-material/Restore";
+import DeleteIcon from "@mui/icons-material/Delete";
+import FileTypeIcon from "./icons/FileTypeIcons";
+import FileTreeItem from "./FileTreeItem";
+import QuestionDialog from "../../common/QuestionDialog";
+import { useAppDispatch } from "../../../hooks/store";
+import {
+	restoreConfigFromBackup,
+	deleteConfig,
+	fetchConfigList,
+} from "../../../store/thunks/configThunks";
+
+/**
+ * Renders one backup set folder (e.g. "backup-20251016-153012") with its kebab menu (Restore all / Delete backup)
+ * and its file children.
+ *
+ * @param {{
+ *   id: string, // timestamp id e.g. "20251016-153012"
+ *   files: Array<{name:string,size:number,lastModificationTime:string}> & {displayName:string}[],
+ *   dirtyByName: Record<string, boolean>,
+ *   filesByName: Record<string, {validation?:any}>,
+ *   onSelect: (name:string)=>void,
+ *   onRename?: (oldName:string,newName:string)=>void,
+ *   onDelete?: (name:string)=>void,
+ * }} props
+ */
+export default function BackupSetNode({
+	id,
+	files,
+	dirtyByName,
+	filesByName,
+	onSelect,
+	onRename,
+	onDelete,
+}) {
+	const dispatch = useAppDispatch();
+
+	// menu + dialogs (keep the set id stable while dialogs are open)
+	const [menuAnchor, setMenuAnchor] = React.useState(null);
+	const [restoreAllOpen, setRestoreAllOpen] = React.useState(false);
+	const [deleteSetOpen, setDeleteSetOpen] = React.useState(false);
+
+	const openMenu = (e) => {
+		e.stopPropagation();
+		setMenuAnchor(e.currentTarget);
+	};
+	const closeMenu = () => {
+		setMenuAnchor(null);
+		// IMPORTANT: do NOT clear the set id here — this component IS the set
+	};
+
+	const askRestoreAll = () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		setRestoreAllOpen(true);
+	};
+	const askDeleteSet = () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		setDeleteSetOpen(true);
+	};
+
+	const doRestoreAll = async (overwrite) => {
+		setRestoreAllOpen(false);
+		try {
+			await Promise.all(
+				(files || []).map((f) =>
+					dispatch(restoreConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
+				),
+			);
+			await dispatch(fetchConfigList());
+		} catch (e) {
+			console.error("Restore all failed:", e);
+		}
+	};
+
+	const doDeleteSet = async () => {
+		setDeleteSetOpen(false);
+		try {
+			await Promise.all((files || []).map((f) => dispatch(deleteConfig(f.name)).unwrap()));
+			await dispatch(fetchConfigList());
+		} catch (e) {
+			console.error("Delete backup set failed:", e);
+		}
+	};
+
+	const groupItemId = `__backup_set__/${id}`;
+	const groupLabel = (
+		<Box
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+		>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<FileTypeIcon type="folder" />
+				<span>{`backup-${id}`}</span>
+			</Box>
+			<IconButton
+				size="small"
+				aria-label="More actions"
+				onClick={openMenu}
+				onMouseDown={(e) => e.preventDefault()}
+			>
+				<MoreVertIcon fontSize="small" />
+			</IconButton>
+		</Box>
+	);
+
+	return (
+		<>
+			<TreeItem itemId={groupItemId} label={groupLabel}>
+				{files.map((f) => (
+					<FileTreeItem
+						key={f.name}
+						file={f}
+						itemId={f.name}
+						labelName={f.displayName}
+						isDirty={!!dirtyByName?.[f.name]}
+						validation={filesByName[f.name]?.validation}
+						onSelect={onSelect}
+						onRename={onRename}
+						onDelete={onDelete}
+					/>
+				))}
+			</TreeItem>
+
+			{/* Backup set kebab menu */}
+			<Menu
+				anchorEl={menuAnchor}
+				open={Boolean(menuAnchor)}
+				onClose={closeMenu}
+				disableRestoreFocus
+				disableAutoFocusItem
+				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+				transformOrigin={{ vertical: "top", horizontal: "right" }}
+			>
+				<MenuItem onClick={askRestoreAll}>
+					<RestoreIcon fontSize="small" style={{ marginRight: 8 }} />
+					Restore all
+				</MenuItem>
+				<MenuItem onClick={askDeleteSet}>
+					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+					Delete backup
+				</MenuItem>
+			</Menu>
+
+			{/* Restore-all confirmation */}
+			<QuestionDialog
+				open={restoreAllOpen}
+				title="Restore entire backup"
+				question={
+					"Do you want to overwrite existing files?\n\n" +
+					"• Overwrite: restore into original filenames (destructive)\n" +
+					"• Restore as copies: keep originals and create .restored-<timestamp> files"
+				}
+				onClose={() => setRestoreAllOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setRestoreAllOpen(false), autoFocus: true },
+					{
+						btnTitle: "Restore as copies",
+						btnVariant: "contained",
+						callback: () => doRestoreAll(false),
+					},
+					{
+						btnTitle: "Overwrite all",
+						btnColor: "error",
+						btnVariant: "contained",
+						callback: () => doRestoreAll(true),
+					},
+				]}
+			/>
+
+			{/* Delete backup set confirmation */}
+			<QuestionDialog
+				open={deleteSetOpen}
+				title="Delete backup"
+				question={
+					"Are you sure you want to delete this entire backup set? This action cannot be undone."
+				}
+				onClose={() => setDeleteSetOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setDeleteSetOpen(false), autoFocus: true },
+					{
+						btnTitle: "Delete",
+						btnColor: "error",
+						btnVariant: "contained",
+						callback: () => doDeleteSet(),
+					},
+				]}
+			/>
+		</>
+	);
+}

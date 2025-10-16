@@ -285,13 +285,15 @@ export default function FileTreeItem({
 			<QuestionDialog
 				open={restoreOpen}
 				title="Restore from backup"
-				question={
-					"Do you want to overwrite the original file?\n\n"
-				}
+				question={"Do you want to overwrite the original file?\n\n"}
 				onClose={() => setRestoreOpen(false)}
 				actionButtons={[
 					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
-					{ btnTitle: "Restore as copy", btnVariant: "outlined", callback: () => doRestore(false) },
+					{
+						btnTitle: "Restore as copy",
+						btnVariant: "contained",
+						callback: () => doRestore(false),
+					},
 					{
 						btnTitle: "Overwrite",
 						btnColor: "error",
