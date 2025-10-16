@@ -58,7 +58,7 @@ import org.metricshub.jawk.jrt.AssocArray;
 @Builder
 @EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
-public class MetricsHubExtensionForJawk extends AbstractExtension implements JawkExtension {
+public class MetricsHubExtensionForJawk extends AbstractExtension {
 
 	private SourceProcessor sourceProcessor;
 	private String hostname;
@@ -81,6 +81,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 			HttpSource
 				.builder()
 				.type("http")
+				.url(toAwkString(argMap.get("url")))
 				.method(HttpMethod.valueOf(toAwkString(argMap.get("method")).toUpperCase()))
 				.path(toAwkString(argMap.get("path")))
 				.header(toAwkString(argMap.get("header")))
