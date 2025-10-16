@@ -71,11 +71,17 @@ function ConfigurationPage() {
 
 		if (target !== selected) {
 			const cached = filesByName?.[target];
-			const isLocalOnly = list.find((f) => f.name === target)?.localOnly;
+			const isLocalOnly = list.find((f) => f.name === target)?.localOnly === true;
+			const hasCachedContent = typeof cached?.content === "string";
 
 			dispatch(selectFile(target));
-			if (cached || isLocalOnly) {
+			if (isLocalOnly) {
 				dispatch(setContent(cached?.content ?? ""));
+				return;
+			}
+			// for normal files, prefer backend unless we truly have content in cache
+			if (hasCachedContent) {
+				dispatch(setContent(cached.content));
 			} else {
 				dispatch(fetchConfigContent(target));
 			}
