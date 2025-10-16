@@ -25,8 +25,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +34,6 @@ import java.util.function.BiFunction;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -44,7 +41,7 @@ import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.FunctionArgumentsExtractor;
 import org.metricshub.engine.common.helpers.state.DuplexMode;
@@ -58,7 +55,6 @@ import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
-import org.springframework.core.io.ClassPathResource;
 
 /**
  * The {@code MappingProcessor} class provides functionality to interpret non-context mapping attributes, metrics,
@@ -238,7 +234,7 @@ public class MappingProcessor {
 		if (isColumnExtraction(value)) {
 			result.put(key, extractColumnValue(value, key));
 		} else if (isAwkScript(value)) {
-			result.put(key, executeAwkScript(value, key));
+			result.put(key, evalAwkExpression(value, key));
 		} else if (isMegaBit2Bit(value)) {
 			result.put(key, megaBit2bit(value, key));
 		} else if (isMegaBit2Byte(value)) {
@@ -1068,29 +1064,19 @@ public class MappingProcessor {
 	}
 
 	/**
-	 * Executes an awk function
+	 * Evaluate an Awk expression
 	 *
 	 * @param value		String representing an awk function
 	 * @param key		The attribute key
-	 * @return			Result of awk function
+	 * @return			Result of awk expression
 	 */
-	private String executeAwkScript(String value, String key) {
-		final ClientsExecutor clientsExecutor = new ClientsExecutor();
+	private String evalAwkExpression(String value, String key) {
 		final String function = value.trim().replace("${awk::", "").replace("}", "");
-		final ClassPathResource resource = new ClassPathResource("internalAwk.awk");
-		final String awkTemplate;
-
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(resource.getInputStream()))) {
-			awkTemplate = reader.lines().collect(Collectors.joining("\n")).replace("SCRIPT_PLACEHOLDER", function);
-		} catch (Exception e) {
-			return EMPTY;
-		}
-
 		try {
-			return clientsExecutor.executeAwkScript(awkTemplate, String.join(";", row));
+			return AwkExecutor.evalAwk(function, String.join(";", row));
 		} catch (Exception e) {
 			log.error(
-				"Hostname {} - Error while running awk function {} for parameter {}.",
+				"Hostname {} - Error while evaluating awk expression {} for parameter {}.",
 				jobInfo.getHostname(),
 				value,
 				key
