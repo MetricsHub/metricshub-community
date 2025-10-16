@@ -171,7 +171,7 @@ class ProgrammableConfigurationProviderTest {
 
 			assertEquals(
 				"""
-				[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA","timeout":300}},"connectors":["+DellEMCPowerStoreREST"],"sequential":true}}}]""",
+				[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA"}}}}}]""",
 				nodes.toString(),
 				"Should load one configuration fragment with sql tool"
 			);

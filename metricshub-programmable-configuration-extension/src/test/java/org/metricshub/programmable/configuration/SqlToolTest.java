@@ -21,10 +21,10 @@ class SqlToolTest {
 	void testQueryUseDefaultTimeout() throws Exception {
 		final String query = "SELECT 1";
 
-		List<List<String>> rows = sqlTool.query(query, URL, USER, PWD);
-		assertNotNull(rows);
-		assertEquals(1, rows.size());
-		assertEquals(List.of("1"), rows.get(0));
+		final List<List<String>> rows = sqlTool.query(query, URL, USER, PWD);
+		assertNotNull(rows, "Rows should not be null");
+		assertEquals(1, rows.size(), "Should return one row");
+		assertEquals(List.of("1"), rows.get(0), "First row should contain '1'");
 	}
 
 	@Test
@@ -32,18 +32,22 @@ class SqlToolTest {
 		final String query = "SELECT 42";
 		final int explicitTimeout = 45;
 
-		List<List<String>> rows = sqlTool.query(query, URL, USER, PWD, explicitTimeout);
+		final List<List<String>> rows = sqlTool.query(query, URL, USER, PWD, explicitTimeout);
 
-		assertNotNull(rows);
-		assertEquals(1, rows.size());
-		assertEquals(List.of("42"), rows.get(0));
+		assertNotNull(rows, "Rows should not be null");
+		assertEquals(1, rows.size(), "Should return one row");
+		assertEquals(List.of("42"), rows.get(0), "First row should contain '42'");
 	}
 
 	@Test
-	void TestThrowsSQLException() throws Exception {
+	void testThrowsSQLException() {
 		final String query = "BAD SQL";
 
-		SQLException ex = assertThrows(SQLException.class, () -> sqlTool.query(query, URL, USER, PWD, 5));
-		assertTrue(ex.getCause() instanceof SQLException);
+		final SQLException ex = assertThrows(
+			SQLException.class,
+			() -> sqlTool.query(query, URL, USER, PWD, 5),
+			"Should throw SQLException"
+		);
+		assertTrue(ex.getCause() instanceof SQLException, "Cause should be SQLException");
 	}
 }

@@ -58,6 +58,7 @@
 		<dependency>
 			<groupId>org.metricshub</groupId>
 			<artifactId>simple-http-java</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.codehaus.plexus</groupId>
@@ -195,7 +196,6 @@
 									<include>org.apache.velocity:velocity-engine-core</include>
 									<include>org.apache.velocity.tools:velocity-tools-generic</include>
 									<include>org.apache.commons:commons-lang3</include>
-									<include>org.metricshub:simple-http-java</include>
 									<include>org.metricshub:metricshub-programmable-configuration-extension</include>
 								</includes>
 							</artifactSet>

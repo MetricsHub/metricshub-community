@@ -1,15 +1,16 @@
-## mapping: c1=username, c2=password, c3=hostname, c4=ostype
-#set($url = "jdbc:h2:mem:testdb1")
-#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", $url, "sa", "pwd1")
-)
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
 
+#set($url = "jdbc:h2:mem:testdb1")
+#set($user = "sa")
+#set($pass = "pwd1")
+#set($rows = $sql.query("SELECT hostname, ostype, username, password FROM users ORDER BY hostname", $url, $user, $pass, 120))
 resources:
 #foreach($r in $rows)
-  #set($user = $r.get(0))
-  #set($password = $r.get(1))
-  #set($hostname = $r.get(2))
-  #set($ostype = $r.get(3))
-  #if($ostype == "STORAGE")
+  #set($hostname = $r.get(0))
+  #set($ostype   = $r.get(1))
+  #set($username = $r.get(2))
+  #set($password = $r.get(3))
+  #if($ostype.equals("STORAGE"))
   $hostname:
     attributes:
       host.name: $hostname
@@ -19,11 +20,7 @@ resources:
         hostname: $hostname
         https: true
         port: 443
-        username: $user
+        username: $username
         password: $password
-        timeout: 300
-    connectors: [ +DellEMCPowerStoreREST ]
-    sequential: true
   #end
 #end
-

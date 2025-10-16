@@ -691,7 +691,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}json` for parsing JSON data
 * `${esc.d}collection` for splitting strings or manipulating collections
 * `${esc.d}sql` for executing SQL queries on a database
-* `${esc.d}env` for retrieving environment variables, typically for accessing sensitive information. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
+* `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
 ##### `${esc.d}http.execute` tool arguments
@@ -710,20 +710,7 @@ Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly f
 
 > Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
 
-##### `${esc.d}sql.query` tool arguments
-
-Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates.
-
-| Argument   | Description                                                                                 |
-|------------|---------------------------------------------------------------------------------------------|
-| `query`    | **(Required)** SQL query to execute.                                                        |
-| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database.                              |
-| `username` | Name used for database authentication.                                                      |
-| `password` | Password used for database authentication.                                                  |
-| `timeout`  | (Optional) Query timeout in seconds (default: 120).                                         |
-
-
-##### Example 1: Loading resources from an HTTP API
+###### Example: Loading resources from an HTTP API
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
@@ -758,7 +745,15 @@ ${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
 ${esc.h}end
 ```
 
-##### Example 2: Loading resources from a local file
+##### `${esc.d}file.readAllLines` tool arguments
+
+Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
+
+| Argument   | Description                                      |
+|------------|--------------------------------------------------|
+| `filePath` | **(Required)** The path to the local file.       |
+
+###### Example: Loading resources from a local file
 
 If your CSV file contains:
 
@@ -792,39 +787,54 @@ ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
 ${esc.h}end
 ```
 
-##### Example 3: Loading resources from an SQL database
+##### `${esc.d}sql.query` tool arguments
 
-Suppose your database table users contains the following data:
+Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates. It supports the following arguments:
 
-|username  | password  | hostname | ostype  |
-|----------|-----------|----------|---------|
-|admin1    | pwd1      | hostA    | STORAGE |
-|admin2    | pwd2      | hostB    | win     |
+| Argument   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `query`    | **(Required)** SQL query to execute.                           |
+| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database. |
+| `username` | Name used for database authentication.                         |
+| `password` | Password used for database authentication.                     |
+| `timeout`  | (Optional) Query timeout in seconds (Default: 120).            |
+
+###### Example: Loading resources from an SQL database
+
+Consider a `hosts` table in your database with the following data:
+
+| hostname         | host_type | username | password |
+| ---------------- | --------- | -------- | -------- |
+| storage-server-1 | storage   | admin1   | pwd1     |
+| windows-server-1 | windows   | admin2   | pwd2     |
 
 You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
+
 ```
-${esc.h}set(${esc.d}url = "jdbc:h2:mem:testdb1")
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+
+${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
+${esc.h}set(${esc.d}user = "sa")
 ${esc.h}set(${esc.d}pass = "pwd1")
-${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", ${esc.d}url, "sa", ${esc.d}pass, 120))
+${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT hostname, host_type, username, password FROM hosts ORDER BY hostname", ${esc.d}url, ${esc.d}user, ${esc.d}pass, 120))
 resources:
-${esc.h}foreach(${esc.d}r in ${esc.d}rows)
-  ${esc.h}set(${esc.d}user = ${esc.d}r.get(0))
-  ${esc.h}set(${esc.d}password = ${esc.d}r.get(1))
-  ${esc.h}set(${esc.d}hostname = ${esc.d}r.get(2))
-  ${esc.h}set(${esc.d}ostype = ${esc.d}r.get(3))
-  ${esc.h}if(${esc.d}ostype == "STORAGE")
+${esc.h}foreach(${esc.d}row in ${esc.d}rows)
+  ${esc.h}set(${esc.d}hostname  = ${esc.d}row.get(0))
+  ${esc.h}set(${esc.d}host_type = ${esc.d}row.get(1))
+  ${esc.h}set(${esc.d}username  = ${esc.d}row.get(2))
+  ${esc.h}set(${esc.d}password  = ${esc.d}row.get(3))
+  ${esc.h}if(${esc.d}host_type.equals("storage"))
   ${esc.d}hostname:
     attributes:
       host.name: ${esc.d}hostname
-      host.type: ${esc.d}ostype
+      host.type: ${esc.d}host_type
     protocols:
       http:
         hostname: ${esc.d}hostname
         https: true
         port: 443
-        username: ${esc.d}user
+        username: ${esc.d}username
         password: ${esc.d}password
-        timeout: 300
   ${esc.h}end
 ${esc.h}end
 ```
