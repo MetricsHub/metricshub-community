@@ -43,7 +43,7 @@ public class SqlTool {
 	 * @return a list of rows.
 	 * @throws SQLException
 	 */
-	public List<List<String>> query(final String query, final String url, final String username, final char[] password)
+	public List<List<String>> query(final String query, final String url, final String username, final String password)
 		throws SQLException {
 		return query(query, url, username, password, DEFAULT_SQL_TIMEOUT);
 	}
@@ -63,11 +63,11 @@ public class SqlTool {
 		final String query,
 		final String url,
 		final String username,
-		final char[] password,
+		final String password,
 		final int timeout
 	) throws SQLException {
 		// Show SQL warning = false
-		final SqlResult res = JdbcClient.execute(url, username, password, query, false, timeout);
+		final SqlResult res = JdbcClient.execute(url, username, password.toCharArray(), query, false, timeout);
 		return res.getResults();
 	}
 }

@@ -691,8 +691,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}json` for parsing JSON data
 * `${esc.d}collection` for splitting strings or manipulating collections
 * `${esc.d}sql` for executing SQL queries on a database
-* `${esc.d}vmUtils` for utility functions such as converting strings to character arrays
-* `${esc.d}env` for retrieving environment variables
+* `${esc.d}env` for retrieving environment variables, typically for accessing sensitive information. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
 ##### `${esc.d}http.execute` tool arguments
@@ -717,10 +716,10 @@ Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` functio
 
 | Argument   | Description                                                                                 |
 |------------|---------------------------------------------------------------------------------------------|
-| `query`    | SQL query to execute.                                                                       |
-| `jdbcUrl`  | The JDBC connection URL to access the database.                                             |
-| `username` | Database username.                                                                          |
-| `password` | Database password converted to a character array (using `${esc.d}vmUtils.toCharArray(...)`).|
+| `query`    | **(Required)** SQL query to execute.                                                        |
+| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database.                              |
+| `username` | Name used for database authentication.                                                      |
+| `password` | Password used for database authentication.                                                  |
 | `timeout`  | (Optional) Query timeout in seconds (default: 120).                                         |
 
 
@@ -805,8 +804,7 @@ You can dynamically create resource blocks by querying the database using ${esc.
 ```
 ${esc.h}set(${esc.d}url = "jdbc:h2:mem:testdb1")
 ${esc.h}set(${esc.d}pass = "pwd1")
-${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", ${esc.d}url, "sa", ${esc.d}vmUtils.toCharArray(${esc.d}pass), 120))
-
+${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", ${esc.d}url, "sa", ${esc.d}pass, 120))
 resources:
 ${esc.h}foreach(${esc.d}r in ${esc.d}rows)
   ${esc.h}set(${esc.d}user = ${esc.d}r.get(0))

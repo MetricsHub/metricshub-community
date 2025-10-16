@@ -68,7 +68,6 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	private static final Map<String, Object> TOOLS = new HashMap<>();
 
 	static {
-		TOOLS.put("vmUtils", new VmUtils());
 		TOOLS.put("sql", new SqlTool());
 		TOOLS.put("http", new HttpTool());
 		TOOLS.put("json", new JsonTool());

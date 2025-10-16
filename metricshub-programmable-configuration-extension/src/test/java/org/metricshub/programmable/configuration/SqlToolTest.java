@@ -15,7 +15,7 @@ class SqlToolTest {
 
 	private static final String URL = "jdbc:h2:mem:SqlToolTest";
 	private static final String USER = "sa";
-	static final char[] PWD = "pw".toCharArray();
+	private static final String PWD = "pw";
 
 	@Test
 	void testQueryUseDefaultTimeout() throws Exception {

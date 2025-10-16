@@ -1,7 +1,6 @@
 ## mapping: c1=username, c2=password, c3=hostname, c4=ostype
 #set($url = "jdbc:h2:mem:testdb1")
-#set($pass = "pwd1")
-#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", $url, "sa", $vmUtils.toCharArray($pass))
+#set($rows = $sql.query("SELECT username, password, hostname, ostype FROM users ORDER BY hostname", $url, "sa", "pwd1")
 )
 
 resources:
