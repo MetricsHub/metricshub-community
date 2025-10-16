@@ -302,7 +302,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>4.1.00</version>
+				<version>5.0.00-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
