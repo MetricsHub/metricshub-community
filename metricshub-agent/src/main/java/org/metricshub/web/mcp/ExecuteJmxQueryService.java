@@ -21,14 +21,13 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Arrays;
-import java.util.Optional;
-import java.util.stream.Stream;
-
+import lombok.NonNull;
+import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -135,69 +134,106 @@ public class ExecuteJmxQueryService {
 		final Long timeout
 	) {
 		// Try to retrieve a JMX configuration for the host
-		final Optional<IConfiguration> maybeConfiguration = MCPConfigHelper
-			.resolveAllHostConfigurationsFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper
+			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
-			.findFirst();
+			.findFirst()
+			.map((IConfiguration configurationCopy) ->
+				executeQuerySafe(extension, configurationCopy, hostname, objectName, attributes, keyProperties, timeout)
+			)
+			.orElseGet(() ->
+				QueryResponse.builder().isError("No valid configuration found for JMX on %s.".formatted(hostname)).build()
+			);
+	}
 
-		// Early return if no JMX configuration is found for the given host.
-		if (maybeConfiguration.isEmpty()) {
-			return QueryResponse.builder().isError("No configuration found for JMX on %s.".formatted(hostname)).build();
-		}
-
-		// Retrieve the valid configuration from maybe configuration.
-		final IConfiguration validConfiguration = maybeConfiguration.get();
-
+	/**
+	 * Executes the JMX request with the prepared configuration.
+	 * Sets hostname/timeout, builds the payload, and catches execution errors.
+	 *
+	 * @param extension         JMX protocol extension
+	 * @param configurationCopy validated configuration to use
+	 * @param hostname          target host
+	 * @param objectName        MBean object name or pattern
+	 * @param attributes        comma-separated attributes (nullable)
+	 * @param keyProperties     comma-separated key properties (nullable)
+	 * @param timeout           timeout in seconds; defaults when null/≤0
+	 * @return response on success, or an error message
+	 */
+	private static QueryResponse executeQuerySafe(
+		final IProtocolExtension extension,
+		final IConfiguration configurationCopy,
+		final String hostname,
+		final String objectName,
+		final String attributes,
+		final String keyProperties,
+		final Long timeout
+	) {
 		// add hostname and timeout to the valid configuration
-		validConfiguration.setHostname(hostname);
-		validConfiguration.setTimeout(timeout != null && timeout > 0 ? timeout : DEFAULT_QUERY_TIMEOUT);
+		configurationCopy.setHostname(hostname);
+		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 
-		// Create an ObjectNode that will contain query attributes.
-		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
-		queryNode.set("objectName", new TextNode(objectName));
-
-		// Create an arrayNode that will contain MBean attributes.
-		final ArrayNode attributesNode = JsonNodeFactory.instance.arrayNode();
-
-		Stream.ofNullable(attributes)
-			.flatMap(attr -> Arrays.stream(attr.split(",")))
-			.map(String::trim)
-			.filter(attr -> !attr.isBlank())
-			.forEach(attributesNode::add);
-
-		// Create an arrayNode that will contain MBean key properties
-		final ArrayNode keyPropertiesNode = JsonNodeFactory.instance.arrayNode();
-
-		Stream.ofNullable(keyProperties)
-			.flatMap(properties -> Arrays.stream(properties.split(",")))
-			.map(String::trim)
-			.filter(property -> !property.isBlank())
-			.forEach(keyPropertiesNode::add);
-
-		if (!attributesNode.isEmpty()) {
-			queryNode.set("attributes", attributesNode);
-		}
-
-		if (!keyPropertiesNode.isEmpty()) {
-			queryNode.set("keyProperties", keyPropertiesNode);
-		}
-
-		// At least one attribute or one key property must be specified.
-		if (!queryNode.has("keyProperties") && !queryNode.has("attributes")) {
+		// Executes the query and returns the response if it's valid, or an error if it occurs.
+		try {
 			return QueryResponse
 				.builder()
-				.isError("At least one attribute or key property must be specified for JMX query.")
+				.response(extension.executeQuery(configurationCopy, createQueryNode(objectName, attributes, keyProperties)))
 				.build();
-		}
-
-		try {
-			return QueryResponse.builder().response(extension.executeQuery(validConfiguration, queryNode)).build();
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("An error has occurred when executing the JMX query: %s".formatted(e.getMessage()))
+				.isError("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
 				.build();
 		}
+	}
+
+	/**
+	 * Splits a comma-separated string, trims tokens, drops empties, and returns a JSON array.
+	 *
+	 * @param elements comma-separated list (e.g., {@code "HeapMemoryUsage, Uptime"})
+	 * @return an {@link ArrayNode} of cleaned tokens
+	 */
+	static ArrayNode normalizeElements(@NonNull final String elements) {
+		final var elementsNode = JsonNodeFactory.instance.arrayNode();
+
+		Arrays
+			.stream(elements.split(","))
+			.map(String::trim)
+			.filter(element -> !element.isEmpty())
+			.forEach(elementsNode::add);
+
+		return elementsNode;
+	}
+
+	/**
+	 * Builds the JMX request query node: {@code objectName}, {@code attributes}, and {@code keyProperties}.
+	 * At least one attribute or key property is required.
+	 *
+	 * @param objectName    MBean object name or pattern (required)
+	 * @param attributes    comma-separated attributes (nullable)
+	 * @param keyProperties comma-separated key properties (nullable)
+	 * @return a JSON node ready for the extension call
+	 * @throws IllegalArgumentException if both attributes and key properties are empty
+	 */
+	static JsonNode createQueryNode(final String objectName, final String attributes, final String keyProperties)
+		throws IllegalArgumentException {
+		final var queryNode = JsonNodeFactory.instance.objectNode();
+
+		queryNode.set("objectName", new TextNode(objectName));
+
+		// Create an arrayNode that will contain MBean attributes.
+		final ArrayNode attributesNode = normalizeElements(attributes);
+
+		// Create an arrayNode that will contain MBean key properties
+		final ArrayNode keyPropertiesNode = normalizeElements(keyProperties);
+
+		if (attributesNode.isEmpty() && keyPropertiesNode.isEmpty()) {
+			throw new IllegalArgumentException("At least one attribute or key property must be specified for JMX request.");
+		}
+
+		queryNode.set("attributes", attributesNode);
+		queryNode.set("keyProperties", keyPropertiesNode);
+
+		return queryNode;
 	}
 }

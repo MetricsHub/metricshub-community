@@ -146,7 +146,12 @@ public class ExecuteWqlQueryService {
 			.map((IConfiguration configurationCopy) ->
 				executeQuerySafe(extension, hostname, query, timeout, configurationCopy)
 			)
-			.orElseGet(() -> QueryResponse.builder().isError("No valid configuration found.").build());
+			.orElseGet(() ->
+				QueryResponse
+					.builder()
+					.isError("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
+					.build()
+			);
 	}
 
 	/**
