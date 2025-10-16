@@ -21,8 +21,6 @@ package org.metricshub.engine.client;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import io.opentelemetry.instrumentation.annotations.SpanAttribute;
-import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -31,8 +29,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.awk.AwkException;
-import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.common.helpers.ThreadHelper;
@@ -107,26 +103,6 @@ public class ClientsExecutor {
 		);
 
 		return result;
-	}
-
-	/**
-	 * Call AwkExecutor in order to execute the Awk script on the given input
-	 *
-	 * @param embeddedFileScript The embedded file script.
-	 * @param input              The input for the Awk script.
-	 * @return The result of executing the Awk script.
-	 * @throws AwkException if an error occurs during Awk script execution.
-	 */
-	@WithSpan("AWK")
-	public String executeAwkScript(
-		@SpanAttribute("awk.script") String embeddedFileScript,
-		@SpanAttribute("awk.input") String input
-	) throws AwkException {
-		if (embeddedFileScript == null || input == null) {
-			return null;
-		}
-
-		return AwkExecutor.executeAwk(embeddedFileScript, input);
 	}
 
 	/**
