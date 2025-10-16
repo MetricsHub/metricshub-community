@@ -793,6 +793,7 @@ ${esc.h}end
 ```
 
 ##### Example 3: Loading resources from an SQL database
+
 Suppose your database table users contains the following data:
 
 |username  | password  | hostname | ostype  |
