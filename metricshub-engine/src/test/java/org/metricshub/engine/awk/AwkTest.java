@@ -28,9 +28,9 @@ class AwkTest {
 	@MethodSource("listUnitTests")
 	void testAwkAgainstNAwk(String testName) throws URISyntaxException, RuntimeException, ParseException, AwkException {
 		// Get the script, the input to process, and the expected result
-		String script = getResourceAsString("/scripts/" + testName + ".awk");
-		String input = getResourceAsString("/inputs/" + testName + ".INP.txt");
-		String expectedResult = getResourceAsString("/expected-results/" + testName + ".EXP.txt");
+		String script = getResourceAsString("/awk/scripts/" + testName + ".awk");
+		String input = getResourceAsString("/awk/inputs/" + testName + ".INP.txt");
+		String expectedResult = getResourceAsString("/awk/expected-results/" + testName + ".EXP.txt");
 
 		// Do we have everything?
 		assertNotNull(script, "Script " + testName + " is null");
@@ -52,7 +52,7 @@ class AwkTest {
 		ArrayList<String> unitTestList = new ArrayList<String>();
 
 		// Get the scripts resource directory
-		URL scriptsUrl = AwkTest.class.getResource("/scripts");
+		URL scriptsUrl = AwkTest.class.getResource("/awk/scripts");
 		if (scriptsUrl != null) {
 			File scriptsDir = new File(scriptsUrl.toURI());
 
