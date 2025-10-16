@@ -187,7 +187,7 @@
       "model" : "PowerEdge R630",
       "id" : "1",
       "type" : "Computer",
-      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102 "
+      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102"
     },
     "conditionalCollection" : {
       "hw.enclosure.energy" : "3191749"
