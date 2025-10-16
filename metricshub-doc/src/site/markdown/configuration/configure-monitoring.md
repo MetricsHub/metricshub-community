@@ -694,7 +694,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
-#### `${esc.d}http.execute` tool arguments
+##### `${esc.d}http.execute` tool arguments
 
 Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates. It supports the following arguments:
 
@@ -745,7 +745,7 @@ ${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
 ${esc.h}end
 ```
 
-#### `${esc.d}file.readAllLines` tool arguments
+##### `${esc.d}file.readAllLines` tool arguments
 
 Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
 
@@ -787,7 +787,7 @@ ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
 ${esc.h}end
 ```
 
-#### `${esc.d}sql.query` tool arguments
+##### `${esc.d}sql.query` tool arguments
 
 Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates. It supports the following arguments:
 
