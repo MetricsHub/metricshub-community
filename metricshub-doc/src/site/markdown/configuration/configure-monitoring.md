@@ -694,7 +694,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
-##### `${esc.d}http.execute` tool arguments
+#### `${esc.d}http.execute` tool arguments
 
 Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates. It supports the following arguments:
 
@@ -710,7 +710,7 @@ Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly f
 
 > Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
 
-###### Example: Loading resources from an HTTP API
+##### Example: Loading resources from an HTTP API
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
@@ -745,7 +745,7 @@ ${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
 ${esc.h}end
 ```
 
-##### `${esc.d}file.readAllLines` tool arguments
+#### `${esc.d}file.readAllLines` tool arguments
 
 Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
 
@@ -753,7 +753,7 @@ Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a 
 |------------|--------------------------------------------------|
 | `filePath` | **(Required)** The path to the local file.       |
 
-###### Example: Loading resources from a local file
+##### Example: Loading resources from a local file
 
 If your CSV file contains:
 
@@ -787,7 +787,7 @@ ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
 ${esc.h}end
 ```
 
-##### `${esc.d}sql.query` tool arguments
+#### `${esc.d}sql.query` tool arguments
 
 Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates. It supports the following arguments:
 
@@ -799,7 +799,7 @@ Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` functio
 | `password` | Password used for database authentication.                     |
 | `timeout`  | (Optional) Query timeout in seconds (Default: 120).            |
 
-###### Example: Loading resources from an SQL database
+##### Example: Loading resources from an SQL database
 
 Consider a `hosts` table in your database with the following data:
 
