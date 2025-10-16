@@ -6,6 +6,7 @@ import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutli
 import DeleteIcon from "@mui/icons-material/Delete";
 import BackupIcon from "@mui/icons-material/Backup";
 import RestoreIcon from "@mui/icons-material/Restore";
+import DownloadIcon from "@mui/icons-material/Download";
 import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
@@ -13,6 +14,7 @@ import { useAppDispatch } from "../../../hooks/store";
 import { createConfigBackup } from "../../../store/thunks/configThunks";
 import { restoreConfigFromBackup } from "../../../store/thunks/configThunks";
 import QuestionDialog from "../../common/QuestionDialog";
+import { downloadConfigFile } from "../../../utils/downloadFile";
 
 /**
  * File tree item component.
@@ -125,6 +127,18 @@ export default function FileTreeItem({
 		[dispatch, file.name, onSelect],
 	);
 
+	const downloadThisFile = React.useCallback(async () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		// For backups: save as the displayed filename (original name). For normal files: save as-is.
+		const suggestedName = labelName ?? file.name;
+		try {
+			await downloadConfigFile({ name: file.name, suggestedName });
+		} catch (e) {
+			console.error("Download failed:", e);
+		}
+	}, [file.name, labelName]);
+
 	const label = (
 		<Stack
 			ref={containerRef}
@@ -184,7 +198,7 @@ export default function FileTreeItem({
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",
-								}}
+                                }}
 								title={displayName}
 							>
 								{displayName}
@@ -258,6 +272,12 @@ export default function FileTreeItem({
 					</MenuItem>
 				)}
 
+				{/* Download available for both normal and backup files */}
+				<MenuItem onClick={downloadThisFile}>
+					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
+					Download
+				</MenuItem>
+
 				{!isBackupFile ? (
 					<MenuItem onClick={backupThisFile}>
 						<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
@@ -289,11 +309,7 @@ export default function FileTreeItem({
 				onClose={() => setRestoreOpen(false)}
 				actionButtons={[
 					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
-					{
-						btnTitle: "Restore as copy",
-						btnVariant: "contained",
-						callback: () => doRestore(false),
-					},
+					{ btnTitle: "Restore as copy", btnVariant: "contained", callback: () => doRestore(false) },
 					{
 						btnTitle: "Overwrite",
 						btnColor: "error",

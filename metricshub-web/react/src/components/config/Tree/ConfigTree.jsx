@@ -10,6 +10,7 @@ import FileTreeItem from "./FileTreeItem";
 import BackupSetNode from "./BackupSetNode";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { createConfigBackup } from "../../../store/thunks/configThunks";
+import { downloadAllConfigs } from "../../../utils/downloadAllConfigs";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
@@ -22,6 +23,7 @@ const BACKUP_ROOT_ID = "__backup_root__";
  */
 export default function ConfigTree({ files, selectedName, onSelect, onRename, onDelete }) {
 	const dispatch = useAppDispatch();
+	const list = useAppSelector((s) => s.config.list);
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
 
 	// config root kebab
@@ -174,9 +176,9 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 					Backup all
 				</MenuItem>
 				<MenuItem
-					onClick={() => {
+					onClick={async () => {
 						closeRootMenu();
-						// TODO: implement download-all later
+						await downloadAllConfigs(list);
 					}}
 				>
 					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
