@@ -695,7 +695,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
-> Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `#` for directives, `##` for comments, and `$` for variables.
+> Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `${esc.h}` for directives, `${esc.h}${esc.h}` for comments, and `${esc.d}` for variables.
 
 ##### `${esc.d}http.execute` tool arguments
 
@@ -717,7 +717,7 @@ Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly f
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
-```
+```json
 [
   {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
   {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
@@ -726,7 +726,7 @@ Suppose your API endpoint at `https://cmdb/servers` returns:
 
 You can dynamically create resource blocks using:
 
-```
+```velocity
 
 resources:
 ${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
@@ -759,14 +759,14 @@ Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a 
 
 If your CSV file contains:
 
-```
+```csv
 host1,win,wmi,user1,pass1
 host2,linux,ssh,user2,pass2
 ```
 
 Use this Velocity template to generate the resource block:
 
-```
+```velocity
 
 ${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
@@ -811,7 +811,7 @@ Consider a `hosts` table in your database with the following data:
 
 You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
 
-```
+```velocity
 
 ${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
 ${esc.h}set(${esc.d}user = "sa")
