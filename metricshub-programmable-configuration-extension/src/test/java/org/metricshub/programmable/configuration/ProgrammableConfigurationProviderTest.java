@@ -7,6 +7,10 @@ import static org.mockito.Mockito.mockStatic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.http.HttpClient;
@@ -131,5 +135,46 @@ class ProgrammableConfigurationProviderTest {
 			nodes.toString(),
 			"Should load correct configuration fragment using file tool"
 		);
+	}
+
+	@Test
+	void testLoadUsingSqlTool() throws SQLException {
+		// Setup in-memory H2 database and create table
+		String url = "jdbc:h2:mem:testdb1";
+		try (
+			Connection connection = DriverManager.getConnection(url, "sa", "pwd1");
+			Statement statement = connection.createStatement()
+		) {
+			String createTableSQL =
+				"""
+				    CREATE TABLE IF NOT EXISTS users (
+				      username VARCHAR(64),
+				      password VARCHAR(64),
+				      hostname VARCHAR(128),
+				      ostype   VARCHAR(32)
+				    )
+				""";
+			statement.execute(createTableSQL);
+
+			// Insert data
+			String insertDataSQL =
+				"""
+				    INSERT INTO users (username, password, hostname, ostype) VALUES
+				      ('adminA','passA','host-a','STORAGE'),
+				      ('adminB','passB','host-b','LINUX'),
+				      ('userC','passC','host-c','WINDOWS')
+				""";
+			statement.execute(insertDataSQL);
+
+			var provider = new ProgrammableConfigurationProvider();
+			var nodes = provider.load(Paths.get("src/test/resources/sql"));
+
+			assertEquals(
+				"""
+				[{"resources":{"host-a":{"attributes":{"host.name":"host-a","host.type":"STORAGE"},"protocols":{"http":{"hostname":"host-a","https":true,"port":443,"username":"adminA","password":"passA"}}}}}]""",
+				nodes.toString(),
+				"Should load one configuration fragment with sql tool"
+			);
+		}
 	}
 }
