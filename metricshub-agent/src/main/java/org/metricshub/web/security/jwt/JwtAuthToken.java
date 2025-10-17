@@ -38,6 +38,8 @@ public class JwtAuthToken extends UsernamePasswordAuthenticationToken {
 
 	private String token;
 	private long expiresIn;
+	private String refreshToken;
+	private long refreshExpiresIn;
 
 	/**
 	 * Constructor to create a JwtAuthToken with principal, credentials, token, and expiration time.
@@ -72,5 +74,32 @@ public class JwtAuthToken extends UsernamePasswordAuthenticationToken {
 		super(principal, credentials, authorities);
 		this.token = token;
 		this.expiresIn = expiresIn;
+	}
+
+	/**
+	 * Constructor to create a JwtAuthToken with principal, credentials, token, refresh token, authorities, and expiration times.
+	 *
+	 * @param principal         The principal (usually the username or user details)
+	 * @param credentials       The credentials (usually the password)
+	 * @param token             The JWT token
+	 * @param expiresIn         The expiration time in seconds
+	 * @param refreshToken      The refresh token
+	 * @param refreshExpiresIn  The refresh token expiration time in seconds
+	 * @param authorities       The granted authorities for the user
+	 */
+	public JwtAuthToken(
+		Object principal,
+		Object credentials,
+		String token,
+		long expiresIn,
+		String refreshToken,
+		long refreshExpiresIn,
+		Collection<? extends GrantedAuthority> authorities
+	) {
+		super(principal, credentials, authorities);
+		this.token = token;
+		this.expiresIn = expiresIn;
+		this.refreshToken = refreshToken;
+		this.refreshExpiresIn = refreshExpiresIn;
 	}
 }
