@@ -694,7 +694,7 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
-> Reminder: In Velocity, use `#` for directives, `##` for comments, and `$ =` for variables.
+> Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `#` for directives, `##` for comments, and `$` for variables.
 
 
 ##### `${esc.d}http.execute` tool arguments
