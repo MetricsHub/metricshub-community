@@ -284,6 +284,24 @@ public class MetricsHubCliService implements Callable<Integer> {
 	)
 	long jobTimeout;
 
+	@Option(
+		names = { "-rec", "--record" },
+		order = 14,
+		defaultValue = "false",
+		description = "Enables/disables recording of sources execution results",
+		help = true
+	)
+	boolean record;
+
+	@Option(
+		names = { "-e", "--emulate" },
+		order = 15,
+		defaultValue = "",
+		description = "Enables/disables reading the recorded sources execution results",
+		help = true
+	)
+	String emulate;
+
 	@Override
 	public Integer call() throws Exception {
 		// Check whether iterations is greater than 0. If it's not the case, throw a ParameterException
@@ -352,6 +370,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
+			.recordOutputDirectory(record ? ConfigHelper.getDefaultOutputDirectory().toString() : null)
+			.emulationInputDirectory(emulate)
 			.build();
 
 		// Instantiate a new ClientsExecutor

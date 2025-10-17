@@ -21,6 +21,7 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.jwt.JwtAuthToken;
@@ -56,7 +57,7 @@ public class AuthenticationController {
 	/**
 	 * Login endpoint that authenticates a user and returns a JWT token in a cookie.
 	 * @param loginAuthenticationRequest the login request containing user credentials
-	 * @return a ResponseEntity containing the JWT token and its expiration time
+	 * @return a ResponseEntity containing the JWT tokens and setting cookies on success
 	 */
 	@PostMapping
 	public ResponseEntity<LoginAuthenticationResponse> login(
@@ -65,6 +66,16 @@ public class AuthenticationController {
 		// Perform the security
 		final JwtAuthToken authentication = userService.performSecurity(loginAuthenticationRequest);
 
+		return buildAuthResponse(authentication);
+	}
+
+	/**
+	 * Builds the authentication response with JWT token, refresh token, and sets them in cookies.
+	 *
+	 * @param authentication the JwtAuthToken containing the token, refresh token, and expiration info
+	 * @return a ResponseEntity containing the JWT tokens and setting cookies on success
+	 */
+	private ResponseEntity<LoginAuthenticationResponse> buildAuthResponse(final JwtAuthToken authentication) {
 		// Inject into security context
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -72,34 +83,75 @@ public class AuthenticationController {
 		final LoginAuthenticationResponse response = LoginAuthenticationResponse
 			.builder()
 			.token(authentication.getToken())
-			.expiresIn(authentication.getExpiresIn())
 			.build();
 
 		// Build the cookie
 		final ResponseCookie cookie = ResponseCookie
 			.from(SecurityHelper.TOKEN_KEY, authentication.getToken())
 			.path("/")
+			.httpOnly(true)
 			.maxAge(authentication.getExpiresIn())
 			.build();
 
-		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
+		// Build the refresh cookie
+		final ResponseCookie refreshCookie = ResponseCookie
+			.from(SecurityHelper.REFRESH_TOKEN_KEY, authentication.getRefreshToken())
+			.path("/")
+			.httpOnly(true)
+			.maxAge(authentication.getRefreshExpiresIn())
+			.build();
+
+		return ResponseEntity
+			.ok()
+			.header(HttpHeaders.SET_COOKIE, cookie.toString())
+			.header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+			.body(response);
 	}
 
 	/**
 	 * Logout endpoint that clears the authentication and removes the JWT cookie.
+	 *
 	 * @return a ResponseEntity indicating successful logout
 	 */
 	@DeleteMapping
-	public ResponseEntity<Object> logout() {
+	public ResponseEntity<Void> logout() {
 		// Remove authentication details from the current security context
 		SecurityContextHolder.getContext().setAuthentication(null);
 
 		// Remove the cookie
 		final ResponseCookie cookie = ResponseCookie
 			.from(SecurityHelper.TOKEN_KEY, MetricsHubConstants.EMPTY)
+			.path("/")
+			.httpOnly(true)
 			.maxAge(0)
 			.build();
 
-		return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).build();
+		// Remove the refresh cookie
+		final ResponseCookie refreshCookie = ResponseCookie
+			.from(SecurityHelper.REFRESH_TOKEN_KEY, MetricsHubConstants.EMPTY)
+			.path("/")
+			.httpOnly(true)
+			.maxAge(0)
+			.build();
+
+		return ResponseEntity
+			.ok()
+			.header(HttpHeaders.SET_COOKIE, cookie.toString())
+			.header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+			.build();
+	}
+
+	/**
+	 * Refresh endpoint that refreshes the JWT token using the refresh token from the request
+	 *
+	 * @param request the HttpServletRequest containing the refresh token cookie
+	 * @return a ResponseEntity containing the new JWT tokens and setting cookies on success
+	 */
+	@PostMapping("/refresh")
+	public ResponseEntity<LoginAuthenticationResponse> refresh(final HttpServletRequest request) {
+		// Perform the security
+		final JwtAuthToken authentication = userService.refreshSecurity(request);
+
+		return buildAuthResponse(authentication);
 	}
 }

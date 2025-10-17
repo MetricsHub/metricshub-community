@@ -53,6 +53,10 @@ public class JwtComponent {
 	@Getter
 	long shortExpire;
 
+	@Value("${jwt.long_expire}")
+	@Getter
+	long longExpire;
+
 	private SecretKey key;
 
 	/**
@@ -120,7 +124,17 @@ public class JwtComponent {
 	 * @return String value or <code>null</code> if the cookie is null
 	 */
 	public String getTokenFromRequestCookie(final HttpServletRequest request) {
-		final var cookie = WebUtils.getCookie(request, SecurityHelper.TOKEN_KEY);
+		return getTokenFromCookie(request, SecurityHelper.TOKEN_KEY);
+	}
+
+	/**
+	 * Get the token from the cookie identified by the given token key from the given request
+	 * @param request  The HTTP request which provides request information for HTTP servlets.
+	 * @param tokenKey The key of the token cookie
+	 * @return String value or <code>null</code> if the cookie is null
+	 */
+	private static String getTokenFromCookie(final HttpServletRequest request, final String tokenKey) {
+		final var cookie = WebUtils.getCookie(request, tokenKey);
 		if (cookie != null) {
 			return cookie.getValue();
 		}
@@ -139,5 +153,37 @@ public class JwtComponent {
 		} catch (final Exception e) {
 			throw new UnauthorizedException(e.getMessage(), e);
 		}
+	}
+
+	/**
+	 * Generate a refresh JWT token for the {@link User}.
+	 *
+	 * @param user User which requests the REST API access
+	 * @return JWT as {@link String}
+	 */
+	public String generateRefreshJwt(final User user) {
+		return createAuthorizationJwtBuilder(user, longExpire).claim("type", "refresh").compact();
+	}
+
+	/**
+	 * Check if the given token is a refresh token.
+	 *
+	 * @param claims The JWT token claims
+	 * @return true if the token is a refresh token, false otherwise
+	 */
+	public boolean isRefreshToken(final Claims claims) {
+		final var type = claims.get("type");
+		return type != null && "refresh".equals(type.toString());
+	}
+
+	/**
+	 * Get refresh token ({@value SecurityHelper#REFRESH_TOKEN_KEY}) from the
+	 * cookie of the given {@link HttpServletRequest}
+	 *
+	 * @param request The HTTP request which provides request information for HTTP servlets.
+	 * @return String value or <code>null</code> if the cookie is null
+	 */
+	public String getRefreshTokenFromRequestCookie(final HttpServletRequest request) {
+		return getTokenFromCookie(request, SecurityHelper.REFRESH_TOKEN_KEY);
 	}
 }
