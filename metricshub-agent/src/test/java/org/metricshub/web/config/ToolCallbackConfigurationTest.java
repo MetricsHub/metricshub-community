@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.mcp.ExecuteIpmiQueryService;
+import org.metricshub.web.mcp.ExecuteJmxQueryService;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
 import org.metricshub.web.mcp.ExecuteWqlQueryService;
 import org.metricshub.web.mcp.HostDetailsService;
@@ -82,6 +83,11 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public ExecuteIpmiQueryService executeIpmiQueryService() {
 			return mock(ExecuteIpmiQueryService.class);
+		}
+
+		@Bean
+		public ExecuteJmxQueryService executeJmxQueryService() {
+			return mock(ExecuteJmxQueryService.class);
 		}
 	}
 }
