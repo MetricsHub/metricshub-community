@@ -680,6 +680,7 @@ resourceGroups:
             timeout: 120s
             authentications: [ntlm]
 ```
+
 ### Programmable Configuration
 
 You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, SQL databases, or parsing JSON content.
@@ -695,7 +696,6 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
 > Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `#` for directives, `##` for comments, and `$` for variables.
-
 
 ##### `${esc.d}http.execute` tool arguments
 
@@ -812,6 +812,7 @@ Consider a `hosts` table in your database with the following data:
 You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
 
 ```
+
 ${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
 ${esc.h}set(${esc.d}user = "sa")
 ${esc.h}set(${esc.d}pass = "pwd1")
