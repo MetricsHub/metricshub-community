@@ -694,6 +694,9 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
 
+> Reminder: In Velocity, use `#` for directives, `##` for comments, and `$ =` for variables.
+
+
 ##### `${esc.d}http.execute` tool arguments
 
 Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates. It supports the following arguments:
@@ -724,7 +727,6 @@ Suppose your API endpoint at `https://cmdb/servers` returns:
 You can dynamically create resource blocks using:
 
 ```
-## Velocity syntax reminder: # = directive, ## = comment, $ = variable
 
 resources:
 ${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
@@ -765,7 +767,6 @@ host2,linux,ssh,user2,pass2
 Use this Velocity template to generate the resource block:
 
 ```
-## Velocity syntax reminder: # = directive, ## = comment, $ = variable
 
 ${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
