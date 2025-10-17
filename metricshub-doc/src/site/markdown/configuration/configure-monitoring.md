@@ -812,7 +812,6 @@ Consider a `hosts` table in your database with the following data:
 You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
 
 ```
-
 ${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
 ${esc.h}set(${esc.d}user = "sa")
 ${esc.h}set(${esc.d}pass = "pwd1")
