@@ -1,0 +1,22 @@
+/* fallback styles for lint markers */
+.cm-lintPoint-error {
+	/* Hide the inline "point" marker (typically shown inside the line)
+     so only the gutter marker remains visible on the left. */
+	display: none;
+}
+
+.cm-lintRange-error {
+	background-color: rgba(244, 67, 54, 0.2);
+}
+
+.cm-lintRange-warning {
+	background-color: rgba(255, 193, 7, 0.2);
+}
+
+.cm-lintTooltip {
+	background: #333;
+	color: #fff;
+	border-radius: 4px;
+	padding: 4px 6px;
+	font-size: 0.8rem;
+}

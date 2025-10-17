@@ -116,6 +116,7 @@ export default function App() {
 											>
 												<Route path={paths.explorer} element={<Explorer />} />
 												<Route path={paths.configuration} element={<Configuration />} />
+												<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
 												{/* Fallback */}
 												<Route path="*" element={<Navigate to={paths.explorer} replace />} />
 											</Route>

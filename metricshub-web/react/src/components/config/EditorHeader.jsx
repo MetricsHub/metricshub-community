@@ -1,37 +1,52 @@
-// src/components/config/EditorHeader.jsx
-import { Stack, Typography, Chip, Button } from "@mui/material";
+import { Stack, Typography, Chip, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
+import { useAppSelector } from "../../hooks/store";
 
 /**
- * Editor header component.
- * @param {{selected:string,saving:boolean,validation:{valid:boolean,error?:string},onValidate:()=>void,onSave:()=>void,canSave:boolean}} param0 The component props.
+ * Editor header component showing file name, save button, and status.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void}} props The component props.
  * @returns {JSX.Element} The editor header component.
  */
-export default function EditorHeader({
-	selected,
-	saving,
-	validation,
-	onValidate,
-	onSave,
-	canSave,
-}) {
+export default function EditorHeader({ selected, saving, onSave }) {
+	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
+	const isDirty = !!dirtyByName?.[selected];
+	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
+	const fileValidation = selected ? filesByName[selected]?.validation : null;
+	const hasErrors = !!(fileValidation && fileValidation.valid === false);
+
 	return (
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
-			<Typography variant="subtitle1">{selected ?? "Select a file to edit"}</Typography>
-			<Stack direction="row" spacing={1} alignItems="center">
-				{validation && (
-					<Chip
-						size="small"
-						icon={validation.valid ? <VerifiedIcon /> : undefined}
-						color={validation.valid ? "success" : "error"}
-						label={validation.valid ? "Valid" : validation.error || "Invalid"}
+			{/* File name + unsaved indicator */}
+			<Stack direction="row" alignItems="center" spacing={1}>
+				<Typography variant="subtitle1" sx={{ fontWeight: isDirty ? 510 : 500 }}>
+					{selected ?? "Select a file to edit"}
+				</Typography>
+
+				{isDirty && selected && (
+					<Box
+						component="span"
+						aria-hidden
+						sx={{
+							width: 8,
+							height: 8,
+							borderRadius: "50%",
+							bgcolor: (t) => (hasErrors ? t.palette.error.main : t.palette.warning.main),
+							ml: 0.25,
+						}}
 					/>
 				)}
-				<Button size="small" onClick={onValidate} disabled={!selected}>
-					Validate
-				</Button>
-				<Button size="small" startIcon={<SaveIcon />} onClick={onSave} disabled={!canSave}>
+			</Stack>
+
+			{/* Right side buttons */}
+			<Stack direction="row" spacing={1} alignItems="center">
+				<Button
+					size="small"
+					startIcon={<SaveIcon />}
+					onClick={onSave}
+					disabled={!selected || !isDirty || saving}
+					variant="contained"
+				>
 					{saving ? "Saving..." : "Save"}
 				</Button>
 			</Stack>

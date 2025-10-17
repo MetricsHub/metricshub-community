@@ -13,7 +13,13 @@ import ClickAwayListener from "@mui/material/ClickAwayListener";
  * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void}} props The component props.
  * @returns {JSX.Element} The file tree item component.
  */
-export default function FileTreeItem({ file, onRename, onDelete }) {
+export default function FileTreeItem({
+	file,
+	onRename,
+	onDelete,
+	isDirty = false,
+	validation = null,
+}) {
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -90,12 +96,17 @@ export default function FileTreeItem({ file, onRename, onDelete }) {
 			direction="row"
 			alignItems="center"
 			justifyContent="space-between"
-			sx={{ width: "100%", pr: 1, userSelect: "none" }}
+			sx={{ width: "100%", pr: 1, userSelect: editing ? "text" : "none" }}
 		>
 			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
 				{editing ? (
-					<ClickAwayListener onClickAway={submitRename} mouseEvent="onMouseDown">
-						<Box>
+					<ClickAwayListener
+						onClickAway={submitRename}
+						mouseEvent="onClick"
+						touchEvent={false}
+						disableReactTree
+					>
+						<Box onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
 							<Box sx={{ display: "flex", alignItems: "center" }}>
 								<FileTypeIcon type="yaml" />
 								<TextField
@@ -136,7 +147,7 @@ export default function FileTreeItem({ file, onRename, onDelete }) {
 							<FileTypeIcon type="yaml" />
 							<Box
 								sx={{
-									fontWeight: 500,
+									fontWeight: isDirty ? 510 : 500,
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",
@@ -145,6 +156,29 @@ export default function FileTreeItem({ file, onRename, onDelete }) {
 							>
 								{file.name}
 							</Box>
+							{/* Unsaved/dirty indicator or error indicator */}
+							{isDirty && (
+								<Box
+									component="span"
+									title={
+										validation && validation.valid === false
+											? "Validation errors"
+											: "Unsaved changes"
+									}
+									aria-label="Unsaved changes"
+									sx={{
+										ml: 0.75,
+										width: 8,
+										height: 8,
+										borderRadius: "50%",
+										bgcolor: (t) =>
+											validation && validation.valid === false
+												? t.palette.error.main
+												: t.palette.warning.main,
+										flexShrink: 0,
+									}}
+								/>
+							)}
 						</Box>
 						<FileMeta file={file} />
 					</>

@@ -61,18 +61,23 @@ export const buildComponents = () => {
 					textTransform: "none",
 					fontWeight: 500,
 					padding: ".5em .85em",
+					transition:
+						"background-color 250ms cubic-bezier(0.4, 0, 0.2, 1), " +
+						"box-shadow 250ms cubic-bezier(0.4, 0, 0.2, 1), " +
+						"border-color 250ms cubic-bezier(0.4, 0, 0.2, 1), " +
+						"color 250ms cubic-bezier(0.4, 0, 0.2, 1)",
 				},
 				sizeSmall: {
 					fontSize: "0.875rem",
-					padding: "0.5em 0.85em",
+					padding: "0.5em 1.2em",
 				},
 				sizeMedium: {
 					fontSize: "0.9375rem",
-					padding: "0.6em 1em",
+					padding: "0.6em 1.35em",
 				},
 				sizeLarge: {
 					fontSize: "1rem",
-					padding: "0.75em 1.4em",
+					padding: "0.75em 1.7em",
 				},
 			},
 		},
