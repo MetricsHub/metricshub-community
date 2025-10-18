@@ -35,7 +35,7 @@ import org.metricshub.jawk.jrt.JRT;
 @Builder
 @EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
-public class UtilityExtensionForJawk extends AbstractExtension implements JawkExtension {
+public class UtilityExtensionForJawk extends AbstractExtension {
 
 	public static final UtilityExtensionForJawk INSTANCE = new UtilityExtensionForJawk();
 

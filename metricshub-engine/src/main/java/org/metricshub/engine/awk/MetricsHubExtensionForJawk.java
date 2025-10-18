@@ -32,8 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.ConnectorVariables;
-import org.metricshub.engine.connector.model.common.HttpMethod;
-import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
@@ -58,7 +56,7 @@ import org.metricshub.jawk.jrt.AssocArray;
 @Builder
 @EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
-public class MetricsHubExtensionForJawk extends AbstractExtension implements JawkExtension {
+public class MetricsHubExtensionForJawk extends AbstractExtension {
 
 	private SourceProcessor sourceProcessor;
 	private String hostname;
@@ -77,19 +75,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	 */
 	@JawkFunction("executeHttpRequest")
 	public String executeHttpRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(
-			HttpSource
-				.builder()
-				.type("http")
-				.method(HttpMethod.valueOf(toAwkString(argMap.get("method")).toUpperCase()))
-				.path(toAwkString(argMap.get("path")))
-				.header(toAwkString(argMap.get("header")))
-				.body(toAwkString(argMap.get("body")))
-				.authenticationToken(toAwkString(argMap.get("authenticationToken")))
-				.resultContent(ResultContent.detect(toAwkString(argMap.get("resultContent"))))
-				.forceSerialization(toAwkString(argMap.get("forceSerialization")).equals("true"))
-				.build()
-		);
+		return executeSource(Source.fromMap(HttpSource.class, argMap));
 	}
 
 	/**
@@ -101,15 +87,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	@JawkFunction("executeIpmiRequest")
 	public String executeIpmiRequest(@JawkAssocArray AssocArray... args) {
 		if (args[0] != null) {
-			return executeSource(
-				IpmiSource
-					.builder()
-					.type("ipmi")
-					.forceSerialization(toAwkString(args[0].get("forceSerialization")).equals("true"))
-					.build()
-			);
+			return executeSource(Source.fromMap(IpmiSource.class, args[0]));
 		}
-
 		return executeSource(IpmiSource.builder().forceSerialization(false).build());
 	}
 
@@ -121,14 +100,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	 */
 	@JawkFunction("executeSnmpGet")
 	public String executeSnmpGetRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(
-			SnmpGetSource
-				.builder()
-				.type("snmpGet")
-				.oid(toAwkString(argMap.get("oid")))
-				.forceSerialization(toAwkString(argMap.get("forceSerialization")).equals("true"))
-				.build()
-		);
+		return executeSource(Source.fromMap(SnmpGetSource.class, argMap));
 	}
 
 	/**
@@ -139,15 +111,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	 */
 	@JawkFunction("executeSnmpTable")
 	public String executeSnmpTableRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(
-			SnmpTableSource
-				.builder()
-				.type("snmpTable")
-				.oid(toAwkString(argMap.get("oid")))
-				.selectColumns(toAwkString(argMap.get("selectColumns")))
-				.forceSerialization(toAwkString(argMap.get("forceSerialization")).equals("true"))
-				.build()
-		);
+		return executeSource(Source.fromMap(SnmpTableSource.class, argMap));
 	}
 
 	/**
@@ -158,15 +122,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	 */
 	@JawkFunction("executeWbemRequest")
 	public String executeWbemRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(
-			WbemSource
-				.builder()
-				.type("wbem")
-				.query(toAwkString(argMap.get("query")))
-				.namespace(toAwkString(argMap.get("namespace")))
-				.forceSerialization(toAwkString(argMap.get("forceSerialization")).equals("true"))
-				.build()
-		);
+		return executeSource(Source.fromMap(WbemSource.class, argMap));
 	}
 
 	/**
@@ -177,15 +133,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 	 */
 	@JawkFunction("executeWmiRequest")
 	public String executeWmiRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(
-			WmiSource
-				.builder()
-				.type("wmi")
-				.query(toAwkString(argMap.get("query")))
-				.namespace(toAwkString(argMap.get("namespace")))
-				.forceSerialization(toAwkString(argMap.get("forceSerialization")).equals("true"))
-				.build()
-		);
+		return executeSource(Source.fromMap(WmiSource.class, argMap));
 	}
 
 	/**
@@ -217,8 +165,8 @@ public class MetricsHubExtensionForJawk extends AbstractExtension implements Jaw
 		try {
 			return ClientsExecutor
 				.executeJson2Csv(
-					toAwkString(argMap.get("jsonSource")),
-					toAwkString(argMap.get("entryKey")),
+					String.valueOf(argMap.get("jsonSource")),
+					String.valueOf(argMap.get("entryKey")),
 					toAwkListString(argMap.get("properties")),
 					toAwkString(argMap.get("separator")),
 					hostname
