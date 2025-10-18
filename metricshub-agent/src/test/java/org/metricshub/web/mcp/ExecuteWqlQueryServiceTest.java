@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WBEM_NAMESPACE;
+import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPACE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -117,7 +119,7 @@ class ExecuteWqlQueryServiceTest {
 		assertNotNull(result, "Result should not be null when executing a query");
 
 		assertEquals(
-			"No valid configuration found.".formatted(HOSTNAME),
+			"No valid wmi configuration found for %s.".formatted(HOSTNAME),
 			result.getIsError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
@@ -243,6 +245,33 @@ class ExecuteWqlQueryServiceTest {
 			wmiConfiguration,
 			newConfiguration,
 			() -> "Built configuration should match input configuration with namespace set"
+		);
+	}
+
+	@Test
+	void normalizeNamespace_core() {
+		wqlQueryService = new ExecuteWqlQueryService(agentContextHolder);
+		final String namespace = "root/custom";
+
+		assertEquals(
+			namespace,
+			wqlQueryService.normalizeNamespace("wbem", namespace),
+			() -> "Should return provided namespace root/custom"
+		);
+		assertEquals(
+			namespace,
+			wqlQueryService.normalizeNamespace("wmi", namespace),
+			() -> "Should return provided namespace root/custom"
+		);
+		assertEquals(
+			DEFAULT_WBEM_NAMESPACE,
+			wqlQueryService.normalizeNamespace("WbEm", "   "),
+			() -> "Should return default WBEM namespace when the given namespace is blank"
+		);
+		assertEquals(
+			DEFAULT_WQL_NAMESPACE,
+			wqlQueryService.normalizeNamespace("wmi", null),
+			() -> "Should return default WMI namespace when the given namespace is blank"
 		);
 	}
 }

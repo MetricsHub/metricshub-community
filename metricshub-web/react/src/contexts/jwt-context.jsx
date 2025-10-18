@@ -1,9 +1,10 @@
-import { createContext, useCallback, useEffect, useReducer } from "react";
+import * as React from "react";
 import { authApi } from "../api/auth";
 import { Issuer } from "../utils/auth";
 
-const STORAGE_KEY = "jwt";
-
+/**
+ * Action types for the auth reducer.
+ */
 var ActionType;
 (function (ActionType) {
 	ActionType["INITIALIZE"] = "INITIALIZE";
@@ -11,12 +12,18 @@ var ActionType;
 	ActionType["SIGN_OUT"] = "SIGN_OUT";
 })(ActionType || (ActionType = {}));
 
+/**
+ * Initial state for the auth context.
+ */
 const initialState = {
 	isAuthenticated: false,
 	isInitialized: false,
 	user: null,
 };
 
+/**
+ * Reducer handlers for the auth context.
+ */
 const handlers = {
 	INITIALIZE: (state, action) => {
 		const { isAuthenticated, user } = action.payload;
@@ -44,62 +51,49 @@ const handlers = {
 	}),
 };
 
+/**
+ * Reducer function for the auth context.
+ * @param {*} state  The current state
+ * @param {*} action The action to process
+ * @returns The new state
+ */
 const reducer = (state, action) =>
 	handlers[action.type] ? handlers[action.type](state, action) : state;
 
-export const AuthContext = createContext({
+/**
+ * Authentication context.
+ */
+export const AuthContext = React.createContext({
 	...initialState,
 	issuer: Issuer.JWT,
-	signIn: () => Promise.resolve(),
-	signOut: () => Promise.resolve(),
+	signIn: async () => {},
+	signOut: async () => {},
 });
 
 /**
- * Component to provide authentication context to its children
- *
- * @param {*} props  { children }
- * @returns  { AuthContext.Provider }
+ * Auth provider component.
+ * @param {*} param0 The component props
+ * @returns The auth provider component
  */
-export const AuthProvider = (props) => {
-	const { children } = props;
-	const [state, dispatch] = useReducer(reducer, initialState);
+export const AuthProvider = ({ children }) => {
+	const [state, dispatch] = React.useReducer(reducer, initialState);
 
-	/**
-	 * Initialize authentication state by checking for existing JWT in local storage
-	 * and fetching user information if JWT is present.
-	 */
-	const initialize = useCallback(async () => {
+	// On load: Fetch the user (access cookie or refresh via interceptor)
+	const initialize = React.useCallback(async () => {
 		try {
-			const jwt = globalThis.localStorage.getItem(STORAGE_KEY);
-
-			if (jwt) {
-				const user = await authApi.me();
-
-				dispatch({
-					type: ActionType.INITIALIZE,
-					payload: {
-						isAuthenticated: true,
-						isConfirmed: user.confirmed,
-						user,
-					},
-				});
-			} else {
-				dispatch({
-					type: ActionType.INITIALIZE,
-					payload: {
-						isAuthenticated: false,
-						isConfirmed: false,
-						user: null,
-					},
-				});
-			}
-		} catch (err) {
-			console.error(err);
+			const user = await authApi.me();
+			dispatch({
+				type: ActionType.INITIALIZE,
+				payload: {
+					isAuthenticated: true,
+					user,
+				},
+			});
+		} catch {
 			dispatch({
 				type: ActionType.INITIALIZE,
 				payload: {
 					isAuthenticated: false,
-					isConfirmed: false,
 					user: null,
 				},
 			});
@@ -107,43 +101,51 @@ export const AuthProvider = (props) => {
 	}, [dispatch]);
 
 	/**
-	 * Run the initialize function once when the component is mounted to set up the auth state.
+	 * Initialize auth state on component mount.
 	 */
-	useEffect(
-		() => {
-			initialize();
-		},
+	React.useEffect(() => {
+		initialize();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[],
-	);
+	}, []);
 
 	/**
-	 * Sign in a user with the provided username and password.
-	 * On successful sign-in, store the JWT in local storage and update the auth state.
+	 * Listen for forced logout (e.g. from axios interceptor)
+	 * and sign out the user.
 	 */
-	const signIn = useCallback(
+	React.useEffect(() => {
+		const onForcedLogout = () => dispatch({ type: ActionType.SIGN_OUT });
+		window.addEventListener("auth:logout", onForcedLogout);
+		return () => window.removeEventListener("auth:logout", onForcedLogout);
+	}, [dispatch]);
+
+	/**
+	 * Sign in function.
+	 * @param {string} username The username
+	 * @param {string} password The password
+	 */
+	const signIn = React.useCallback(
 		async (username, password) => {
-			const { jwt } = await authApi.signIn({ username, password });
-
-			localStorage.setItem(STORAGE_KEY, jwt);
-
+			// Backend sets HttpOnly cookies; body token (if any) is ignored
+			await authApi.signIn({ username, password });
 			const user = await authApi.me();
-
 			dispatch({
 				type: ActionType.SIGN_IN,
-				payload: {
-					user,
-				},
+				payload: { user },
 			});
 		},
 		[dispatch],
 	);
 
 	/**
-	 * Sign out the current user by removing the JWT from local storage and updating the auth state.
+	 * Sign out function.
+	 * @returns {Promise<void>}
 	 */
-	const signOut = useCallback(async () => {
-		localStorage.removeItem(STORAGE_KEY);
+	const signOut = React.useCallback(async () => {
+		try {
+			await authApi.signOut();
+		} catch {
+			// ignore network errors on logout
+		}
 		dispatch({ type: ActionType.SIGN_OUT });
 	}, [dispatch]);
 

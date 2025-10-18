@@ -27,7 +27,6 @@ import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.Resource;
-import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -70,12 +69,6 @@ public class UiConfig implements WebMvcConfigurer {
 						Resource requested = location.createRelative(resourcePath);
 						if (requested.exists() && requested.isReadable()) {
 							return requested;
-						}
-
-						// Path has a file extension? let's consider a static asset
-						if (StringUtils.getFilenameExtension(resourcePath) != null) {
-							// Return null to bypass SPA fallback so Spring returns a real 404 for missing files
-							return null;
 						}
 
 						// Fallback to the SPA entry point for client-side routes

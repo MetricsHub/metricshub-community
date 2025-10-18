@@ -21,6 +21,8 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -154,5 +156,20 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 			result.append(actualSep).append(parts[i] == null ? "" : parts[i]);
 		}
 		return result.toString();
+	}
+
+	/**
+	 * Encodes the given input string to its Base64 representation.
+	 * If the input is null, it returns an empty string.
+	 *
+	 * @param input the input string to be encoded
+	 * @return the Base64 encoded string, or an empty string if the input is null
+	 */
+	@JawkFunction("base64Encode")
+	public String base64Encode(final String input) {
+		if (input == null) {
+			return "";
+		}
+		return Base64.getEncoder().encodeToString(input.getBytes(StandardCharsets.UTF_8));
 	}
 }
