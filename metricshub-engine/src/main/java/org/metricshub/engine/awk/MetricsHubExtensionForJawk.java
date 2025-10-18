@@ -168,7 +168,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 					String.valueOf(argMap.get("jsonSource")),
 					String.valueOf(argMap.get("entryKey")),
 					toAwkListString(argMap.get("properties")),
-					toAwkString(argMap.get("separator")),
+					String.valueOf(argMap.get("separator")),
 					hostname
 				)
 				.strip();
@@ -190,7 +190,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 * @return The Jawk variable converted to a {@link List} of {@link String}.
 	 */
 	private List<String> toAwkListString(final Object arg) {
-		final String stringArg = toAwkString(arg);
+		final String stringArg = String.valueOf(arg);
 		return Arrays.asList(stringArg.split(";"));
 	}
 
