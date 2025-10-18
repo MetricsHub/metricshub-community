@@ -22,6 +22,7 @@ package org.metricshub.engine.connector.model.monitor.task.source;
  */
 
 import static com.fasterxml.jackson.annotation.Nulls.SKIP;
+import static org.metricshub.engine.common.helpers.JsonHelper.SMALL_USER_FRIENDLY_MAPPER;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.StringHelper.addNonNull;
@@ -33,6 +34,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.function.UnaryOperator;
@@ -102,6 +104,7 @@ public abstract class Source implements Serializable {
 	 * Configuration for executing an operation for each entry of the source.
 	 */
 	protected ExecuteForEachEntryOf executeForEachEntryOf;
+
 	/**
 	 * Set of references associated with the source.
 	 */
@@ -120,6 +123,18 @@ public abstract class Source implements Serializable {
 		this.key = key;
 		this.executeForEachEntryOf = executeForEachEntryOf;
 		this.references = new HashSet<>();
+	}
+
+	/**
+	 * Create a Source of specified type from a Map of key-values
+	 *
+	 * @param <T> Class of the source to create
+	 * @param clazz Class of the source
+	 * @param map Map to be converted to a source
+	 * @return a Source instance built from the specified map
+	 */
+	public static <T extends Source> T fromMap(Class<T> clazz, Map<Object, Object> map) {
+		return SMALL_USER_FRIENDLY_MAPPER.convertValue(map, clazz);
 	}
 
 	/**

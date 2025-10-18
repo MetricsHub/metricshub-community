@@ -130,6 +130,18 @@ public class JsonHelper {
 	}
 
 	/**
+	 * User-friendly mapper to create simple objects from Map
+	 */
+	public static final ObjectMapper SMALL_USER_FRIENDLY_MAPPER = JsonMapper
+		.builder()
+		.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+		.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+		.disable(MapperFeature.REQUIRE_TYPE_ID_FOR_SUBTYPES)
+		.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+		.disable(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS)
+		.build();
+
+	/**
 	 * Build a new {@link ObjectMapper} using {@link YAMLFactory}.
 	 *
 	 * @return new {@link ObjectMapper} instance.
