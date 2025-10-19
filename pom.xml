@@ -159,6 +159,29 @@
 				<module>metricshub-community-linux</module>
 			</modules>
 		</profile>
+
+		<!-- AI coding agent -->
+		<profile>
+			<id>ai</id>
+			<activation>
+				<property>
+					<name>env.AI</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>com.hubspot.maven.plugins</groupId>
+						<artifactId>prettier-maven-plugin</artifactId>
+						<configuration>
+							<nodePath>node</nodePath>
+							<npmPath>npm</npmPath>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 	</profiles>
 
 	<dependencyManagement>
