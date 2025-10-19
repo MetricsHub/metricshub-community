@@ -119,6 +119,12 @@
 				<os>
 					<family>Windows</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
 				<module>metricshub-community-windows</module>
@@ -142,6 +148,12 @@
 				<os>
 					<family>Linux</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
 				<module>metricshub-community-linux</module>
