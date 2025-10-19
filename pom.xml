@@ -113,6 +113,8 @@
 	</modules>
 
 	<profiles>
+
+		<!-- Windows build -->
 		<profile>
 			<id>windows</id>
 			<activation>
@@ -142,6 +144,8 @@
 				</plugins>
 			</build>
 		</profile>
+
+		<!-- Linux build -->
 		<profile>
 			<id>linux</id>
 			<activation>
