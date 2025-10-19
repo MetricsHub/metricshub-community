@@ -175,12 +175,23 @@
 			</activation>
 			<build>
 				<plugins>
+
+					<!-- Prettier will use local Node.js and npm-->
 					<plugin>
 						<groupId>com.hubspot.maven.plugins</groupId>
 						<artifactId>prettier-maven-plugin</artifactId>
 						<configuration>
 							<nodePath>node</nodePath>
 							<npmPath>npm</npmPath>
+						</configuration>
+					</plugin>
+
+					<!-- On Codex, merge the specific IT settings.xml with Codex settings.xml -->
+					<!-- which includes the necessary proxy settings -->
+					<plugin>
+						<artifactId>maven-invoker-plugin</artifactId>
+						<configuration>
+							<mergeUserSettings>true</mergeUserSettings>
 						</configuration>
 					</plugin>
 				</plugins>
