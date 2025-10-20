@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
  * extension accepts, injects the requested namespace, and then delegates execution to the extension.
  * Failures at any step are surfaced as an error in the returned {@link QueryResponse}.
  */
-public class ExecuteWqlQueryService {
+public class ExecuteWqlQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the query through the protocol extension.
@@ -146,7 +146,12 @@ public class ExecuteWqlQueryService {
 			.map((IConfiguration configurationCopy) ->
 				executeQuerySafe(extension, hostname, query, timeout, configurationCopy)
 			)
-			.orElseGet(() -> QueryResponse.builder().isError("No valid configuration found.").build());
+			.orElseGet(() ->
+				QueryResponse
+					.builder()
+					.isError("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
+					.build()
+			);
 	}
 
 	/**

@@ -119,7 +119,7 @@ class ExecuteWqlQueryServiceTest {
 		assertNotNull(result, "Result should not be null when executing a query");
 
 		assertEquals(
-			"No valid configuration found.".formatted(HOSTNAME),
+			"No valid wmi configuration found for %s.".formatted(HOSTNAME),
 			result.getIsError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);

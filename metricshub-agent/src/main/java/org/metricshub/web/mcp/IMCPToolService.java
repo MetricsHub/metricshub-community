@@ -1,4 +1,4 @@
-package org.metricshub.web.security.login;
+package org.metricshub.web.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,19 +21,8 @@ package org.metricshub.web.security.login;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 /**
- * This class defines the token
+ * Marker interface for MetricsHub tools.
+ * Each MCP Tool must implement this interface to be automatically registered.
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class LoginAuthenticationResponse {
-
-	private String token;
-}
+public interface IMCPToolService {}
