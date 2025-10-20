@@ -1,6 +1,5 @@
-import { Stack, Typography, Chip, Button, Box } from "@mui/material";
+import { Stack, Typography, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
-import VerifiedIcon from "@mui/icons-material/Verified";
 import { useAppSelector } from "../../hooks/store";
 
 /**

@@ -6,13 +6,17 @@ import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { shortYamlError } from "../../../utils/yaml-error";
 import { extractYamlErrorRange } from "../../../utils/yaml-lint-utils";
+import { Typography } from "@mui/material";
 
 /**
  * Container component for the configuration file editor.
  * Connects to Redux store for state management.
+ * In React 19, refs to function components are passed as a regular prop.
  * @returns The connected editor component.
  */
-const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_props, ref) {
+function ConfigEditorContainer(props) {
+	// In React 19, `ref` is a normal prop for function components
+	const forwardedRef = props?.ref;
 	const dispatch = useAppDispatch();
 	const {
 		selected,
@@ -54,47 +58,49 @@ const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_p
 	// editor view ref - set by YamlEditor via onEditorReady
 	const editorViewRef = React.useRef(null);
 
-	// validate-then-save: run validation first, then either save or open dialog listing errors
+	// validate-then-save: run validation first, then either save or show a single dialog
 	// dialog: null = closed; otherwise { open:true, message, from?, to? }
 	const wrappedSave = React.useCallback(async () => {
 		if (!canSave) return;
 		try {
-			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
+			const res = await dispatch(
+				validateConfig({ name: selected, content: local }),
+			).unwrap();
 			const result = res?.result ?? { valid: true };
 
-			// if invalid -> extract first error, compute range via util, and show dialog
-			if (result?.valid === false) {
-				const first = Array.isArray(result.errors)
-					? result.errors[0]
-					: result.error
-						? { message: result.error }
-						: null;
-
-				if (first) {
-					const { from, to, message } = extractYamlErrorRange(first, editorViewRef.current);
-					setDialog({
-						open: true,
-						message: shortYamlError(message || "Validation failed"),
-						from,
-						to,
-					});
-					return;
-				}
-
-				setDialog({ open: true, message: "Validation failed" });
+			if (result.valid) {
+				await dispatch(
+					saveConfig({ name: selected, content: local, skipValidation: false }),
+				);
 				return;
 			}
 
-			// valid → save
-			dispatch(saveConfig({ name: selected, content: local, skipValidation: false }));
+			let dlg = { open: true, message: "Validation failed" };
+
+			// TODO: replace extractYamlErrorRange with a more robust mapping that
+			// doesn't depend on the EditorView instance directly.
+			if (result.error) {
+				const { from, to, message } = extractYamlErrorRange(
+					result.error,
+					editorViewRef.current,
+				);
+				dlg = {
+					...dlg,
+					message: shortYamlError(message || dlg.message),
+					from,
+					to,
+				};
+			}
+
+			setDialog(dlg);
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}
 	}, [canSave, dispatch, selected, local]);
 
-	// expose wrappedSave to parent via ref
+	// expose wrappedSave to parent via ref prop
 	React.useImperativeHandle(
-		ref,
+		forwardedRef,
 		() => ({
 			save: wrappedSave,
 		}),
@@ -125,13 +131,16 @@ const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_p
 				height="100%"
 				fileName={selected}
 				validateFn={validateFn}
+				onEditorReady={(view) => {
+					editorViewRef.current = view;
+				}}
 			/>
 			<QuestionDialog
 				open={!!dialog?.open}
 				title="Please fix this error"
 				question={
 					<>
-						<p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{dialog?.message}</p>
+						<Typography sx={{ whiteSpace: "pre-wrap", m: 0 }}>{dialog?.message}</Typography>
 					</>
 				}
 				actionButtons={[
@@ -146,6 +155,6 @@ const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_p
 			/>
 		</>
 	);
-});
+}
 
 export default ConfigEditorContainer;
