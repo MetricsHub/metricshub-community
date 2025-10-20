@@ -194,8 +194,22 @@
 							<mergeUserSettings>true</mergeUserSettings>
 						</configuration>
 					</plugin>
+
+					<!-- On Codex, use the local Node.js/NPM install -->
+					<plugin>
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<configuration>
+							<installDirectory>${env.NVM_BIN}/..</installDirectory>
+						</configuration>
+					</plugin>
 				</plugins>
 			</build>
+
+			<properties>
+				<!-- In Codex, don't download and install Node.JS and NPM, it's already here -->
+				<skipNodeInstall>true</skipNodeInstall>
+			</properties>
 		</profile>
 	</profiles>
 
@@ -475,6 +489,11 @@
 							<additionalJOption>999</additionalJOption>
 						</additionalJOptions>
 					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>com.github.eirslett</groupId>
+					<artifactId>frontend-maven-plugin</artifactId>
+					<version>1.15.1</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>
