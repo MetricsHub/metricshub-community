@@ -48,7 +48,7 @@ import org.springframework.stereotype.Service;
  * and builds a {@link HostDetails} object that can be consumed by MCP tools.
  */
 @Service
-public class HostDetailsService {
+public class HostDetailsService implements IMCPToolService {
 
 	/**
 	 * Holds contextual information about the current agent instance.
