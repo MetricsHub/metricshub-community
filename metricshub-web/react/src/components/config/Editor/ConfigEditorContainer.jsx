@@ -63,15 +63,11 @@ function ConfigEditorContainer(props) {
 	const wrappedSave = React.useCallback(async () => {
 		if (!canSave) return;
 		try {
-			const res = await dispatch(
-				validateConfig({ name: selected, content: local }),
-			).unwrap();
+			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
 			const result = res?.result ?? { valid: true };
 
 			if (result.valid) {
-				await dispatch(
-					saveConfig({ name: selected, content: local, skipValidation: false }),
-				);
+				await dispatch(saveConfig({ name: selected, content: local, skipValidation: false }));
 				return;
 			}
 
@@ -80,10 +76,7 @@ function ConfigEditorContainer(props) {
 			// TODO: replace extractYamlErrorRange with a more robust mapping that
 			// doesn't depend on the EditorView instance directly.
 			if (result.error) {
-				const { from, to, message } = extractYamlErrorRange(
-					result.error,
-					editorViewRef.current,
-				);
+				const { from, to, message } = extractYamlErrorRange(result.error, editorViewRef.current);
 				dlg = {
 					...dlg,
 					message: shortYamlError(message || dlg.message),
