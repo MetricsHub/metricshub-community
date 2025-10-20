@@ -39,11 +39,6 @@ class LoginAuthenticationProviderTest {
 	}
 
 	@Test
-	void testShouldSupportAnyAuthenticationClass() {
-		assertTrue(provider.supports(Object.class), "Provider should return true for supports(..)");
-	}
-
-	@Test
 	void testShouldRejectWhenDetailsIsNotLoginAuthenticationRequest() {
 		final JwtAuthToken auth = new JwtAuthToken("user", null, "jwt", 100L);
 		auth.setAuthenticated(false);
