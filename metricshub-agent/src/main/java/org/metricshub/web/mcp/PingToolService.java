@@ -23,6 +23,8 @@ package org.metricshub.web.mcp;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.LongNode;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -75,6 +77,54 @@ public class PingToolService implements IMCPToolService {
 		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout
 	) {
 		return runPing(hostname, timeout != null ? timeout : DEFAULT_PING_TIMEOUT);
+	}
+
+	/**
+	 * Pings multiple hosts concurrently with the specified timeout for each host.
+	 *
+	 * @param hostnames the list of hostnames to ping
+	 * @param timeout   the timeout for each ping operation in seconds
+	 * @return a list of MultiHostToolResponse objects containing the hostname and its ping response
+	 */
+	@Tool(
+		description = "Ping multiple hosts concurrently. Returns a list of objects each containing the hostname and its" +
+		" ProtocolCheckResponse.",
+		name = "PingHosts"
+	)
+	public List<MultiHostToolResponse<ProtocolCheckResponse>> pingHosts(
+		@ToolParam(description = "The hostnames to ping") final List<String> hostnames,
+		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout
+	) {
+		if (hostnames == null || hostnames.isEmpty()) {
+			return List.of();
+		}
+
+		final long effectiveTimeout = timeout != null ? timeout : DEFAULT_PING_TIMEOUT;
+
+		final List<CompletableFuture<MultiHostToolResponse<ProtocolCheckResponse>>> futures = hostnames
+			.stream()
+			.map(hostname -> CompletableFuture.supplyAsync(() -> buildMultiHostResponse(hostname, effectiveTimeout)))
+			.toList();
+
+		CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
+
+		return futures.stream().map(CompletableFuture::join).toList();
+	}
+
+	private MultiHostToolResponse<ProtocolCheckResponse> buildMultiHostResponse(
+		final String hostname,
+		final long timeout
+	) {
+		if (hostname == null) {
+			final ProtocolCheckResponse response = ProtocolCheckResponse
+				.builder()
+				.hostname(null)
+				.errorMessage("Hostname must not be null")
+				.build();
+			return new MultiHostToolResponse<>(null, response);
+		}
+
+		return new MultiHostToolResponse<>(hostname, runPing(hostname, timeout));
 	}
 
 	/**
