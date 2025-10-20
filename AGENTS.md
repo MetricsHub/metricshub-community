@@ -16,25 +16,13 @@ This is a large multi-module Maven projet. Everything can be built from the root
 
 ## Code Format
 
-Make sure you run **Prettier** to format the code before `mvn checkstyle:check` or `mvn verify`.
-
-You never need to worry about code formatting manually.
-
-Simply run from the project root, or at the root of a specific Maven module:
+You never need to worry about code formatting manually (tabs, spaces, wrapping rules, etc.). To format the code, simply run from the project root, or at the root of a specific Maven module:
 
 ```bash
 mvn prettier:write
 ```
 
-before committing changes to ensure the code follows MetricsHub’s formatting rules.
-
-If you just want to validate the formatting (without modifying files), use:
-
-```bash
-mvn prettier:check
-```
-
-⚠️ **Note:** The build will fail if the formatting check fails. Always run `prettier:write` before pushing changes.
+⚠️ **IMPORTANT:** The build with `mvn verify` will fail if the formatting check fails. Always run `mvn prettier:write` before running any other Maven command. Run `mvn prettier:write` as often as necessary, like after each change in a source file.
 
 All source files must include the proper **AGPL-3.0 license header**.
 
@@ -89,21 +77,15 @@ Their reports are generated under `./target/failsafe-reports`.
 
 ## Code Quality Reports
 
-Code quality checks are part of the build process and include **Checkstyle**, **PMD**, and **SpotBugs**.
+Code quality checks are part of the build process and include **Checkstyle** checks.
 
 Run:
 
 ```bash
-mvn verify
+mvn checkstyle:check
 ```
 
-and fix any reported issues before committing.
-
-For each Maven module, the reports are located in:
-
-* `./target/checkstyle-result.xml`
-* `./target/pmd.xml`
-* `./target/spotbugsXml.xml`
+and fix any reported issues before committing. For each Maven module, the reports are located in `./target/checkstyle-result.xml`.
 
 ### Javadoc
 
@@ -115,27 +97,6 @@ mvn javadoc:javadoc
 ```
 
 Report: `target/reports/apidocs/index.html`
-
-### Checkstyle
-
-If you have not run `mvn prettier:write` before, you may see many Checkstyle violations.
-
-To manually run Checkstyle and generate a report in the overall repository, or just in a module:
-
-```bash
-mvn checkstyle:checkstyle
-```
-
-Report: `target/site/checkstyle.html`
-
-To print violations to the console:
-
-```bash
-mvn checkstyle:check
-```
-
-The Checkstyle rules are defined in `checkstyle.xml` at the project root.
-The build will fail if rules are violated.
 
 ## Documentation
 
@@ -171,7 +132,7 @@ Before committing and submitting your changes:
    ```
 
 2. Ensure **all unit tests** and **integration tests** pass.
-3. Check that the **Checkstyle** and **SpotBugs** analyses report no issues.
+3. Check that **Checkstyle** reports no issues.
 4. Update relevant documentation if necessary.
 
 Only then submit your changes.
