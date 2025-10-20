@@ -16,7 +16,10 @@ This is a large multi-module Maven projet. Everything can be built from the root
 
 ## Code Format
 
+Make sure you run **Prettier** to format the code before `mvn checkstyle:check` or `mvn verify`.
+
 You never need to worry about code formatting manually.
+
 Simply run from the project root, or at the root of a specific Maven module:
 
 ```bash
@@ -114,6 +117,8 @@ mvn javadoc:javadoc
 Report: `target/reports/apidocs/index.html`
 
 ### Checkstyle
+
+If you have not run `mvn prettier:write` before, you may see many Checkstyle violations.
 
 To manually run Checkstyle and generate a report in the overall repository, or just in a module:
 
