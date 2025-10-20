@@ -137,7 +137,7 @@ public class UserService {
 	 * @return The {@link JwtAuthToken} instance returned after calling
 	 */
 	public JwtAuthToken refreshSecurity(final HttpServletRequest request) {
-		final var loginAuthenticationProvider = new LoginAuthenticationProvider(jwtComponent, this, passwordEncoder);
+		final var loginAuthenticationProvider = new LoginAuthenticationProvider(jwtComponent, this);
 
 		return (JwtAuthToken) loginAuthenticationProvider.refresh(request);
 	}
