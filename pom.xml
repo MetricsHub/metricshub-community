@@ -200,7 +200,8 @@
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
 						<configuration>
-							<installDirectory>${env.NVM_BIN}/..</installDirectory>
+							<nodeVersion>${env.FRONTEND_NODE_VERSION}</nodeVersion>
+							<npmVersion>${env.FRONTEND_NPM_VERSION}</npmVersion>
 						</configuration>
 					</plugin>
 				</plugins>
@@ -208,7 +209,7 @@
 
 			<properties>
 				<!-- In Codex, don't download and install Node.JS and NPM, it's already here -->
-				<skipNodeInstall>true</skipNodeInstall>
+				<!-- <skipNodeInstall>true</skipNodeInstall> -->
 			</properties>
 		</profile>
 	</profiles>
