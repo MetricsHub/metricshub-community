@@ -130,6 +130,18 @@ Any change that affects end-user behavior must be reflected in:
 
 Make sure any new or modified feature is properly documented before submitting.
 
+## Web app
+
+MetricsHub comes with a small React Web app built with vite.js, located in the `react/` subdirectory
+of the `metricshub-web` Maven module.
+
+When modifying this component, you can run npm directly in the `metricshub-web/react` directory for
+faster results (instead of using Maven in this module):
+
+* `npm run build` to build the Web app
+* `npm run format` to format the code
+* `npm run lint` to verify the quality of the code
+
 ## Submitting changes
 
 Before committing and submitting your changes:

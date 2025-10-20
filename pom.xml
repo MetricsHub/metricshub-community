@@ -195,7 +195,7 @@
 						</configuration>
 					</plugin>
 
-					<!-- On Codex, use the local Node.js/NPM install -->
+					<!-- On Codex, we must use the same version of Node.js and npm as the local install -->
 					<plugin>
 						<groupId>com.github.eirslett</groupId>
 						<artifactId>frontend-maven-plugin</artifactId>
@@ -207,10 +207,6 @@
 				</plugins>
 			</build>
 
-			<properties>
-				<!-- In Codex, don't download and install Node.JS and NPM, it's already here -->
-				<skipNodeInstall>true</skipNodeInstall>
-			</properties>
 		</profile>
 	</profiles>
 

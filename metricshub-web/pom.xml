@@ -30,7 +30,6 @@
 						</goals>
 						<configuration>
 							<nodeVersion>v22.19.0</nodeVersion>
-							<skip>${skipNodeInstall}</skip>
 						</configuration>
 					</execution>
 
