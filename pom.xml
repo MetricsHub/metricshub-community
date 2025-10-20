@@ -599,6 +599,28 @@
 			</plugin>
 
 			<plugin>
+				<groupId>com.hubspot.maven.plugins</groupId>
+				<artifactId>prettier-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<inputGlobs>
+						<!-- These are the default patterns, you can omit
+						<inputGlobs> entirely unless you want to override them -->
+						<inputGlob>src/main/java/**/*.java</inputGlob>
+						<inputGlob>src/test/java/**/*.java</inputGlob>
+						<inputGlob>src/it/java/**/*.java</inputGlob>
+					</inputGlobs>
+				</configuration>
+			</plugin>
+
+			<plugin>
 				<artifactId>maven-checkstyle-plugin</artifactId>
 				<version>3.3.0</version>
 				<configuration>
@@ -614,28 +636,6 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>com.hubspot.maven.plugins</groupId>
-				<artifactId>prettier-maven-plugin</artifactId>
-				<executions>
-					<execution>
-						<phase>validate</phase>
-						<goals>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<inputGlobs>
-						<!-- These are the default patterns, you can omit
-						<inputGlobs> entirely unless you want to override them -->
-						<inputGlob>src/main/java/**/*.java</inputGlob>
-						<inputGlob>src/test/java/**/*.java</inputGlob>
-						<inputGlob>src/it/java/**/*.java</inputGlob>
-					</inputGlobs>
-				</configuration>
 			</plugin>
 
 			<!-- javadoc -->
