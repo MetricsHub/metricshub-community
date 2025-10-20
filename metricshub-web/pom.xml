@@ -30,14 +30,14 @@
 						</goals>
 						<configuration>
 							<nodeVersion>v22.19.0</nodeVersion>
-							<!-- <skip>${skipNodeInstall}</skip> -->
+							<skip>${skipNodeInstall}</skip>
 						</configuration>
 					</execution>
 
 					<!-- generate-resources -->
 					<!-- Run "npm ci" -->
 					<execution>
-						<id>npm-install</id>
+						<id>npm-ci</id>
 						<phase>generate-resources</phase>
 						<goals>
 							<goal>npm</goal>

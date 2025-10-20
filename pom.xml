@@ -209,7 +209,7 @@
 
 			<properties>
 				<!-- In Codex, don't download and install Node.JS and NPM, it's already here -->
-				<!-- <skipNodeInstall>true</skipNodeInstall> -->
+				<skipNodeInstall>true</skipNodeInstall>
 			</properties>
 		</profile>
 	</profiles>
