@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
  * It looks up a valid IPMI configuration for a host, fills in the runtime
  * parameters (hostname and timeout), and delegates the call to the IPMI extension.
  */
-public class ExecuteIpmiQueryService {
+public class ExecuteIpmiQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the IPMI query.

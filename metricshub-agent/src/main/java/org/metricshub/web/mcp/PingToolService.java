@@ -35,7 +35,7 @@ import org.springframework.stereotype.Service;
  * Ping tool for checking the reachability of a host.
  */
 @Service
-public class PingToolService {
+public class PingToolService implements IMCPToolService {
 
 	/**
 	 * Default timeout for ping operations in seconds.
