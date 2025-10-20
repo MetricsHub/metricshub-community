@@ -92,17 +92,17 @@ public class HttpSource extends Source {
 	/**
 	 * Builder for creating instances of {@code HttpSource}.
 	 *
-	 * @param type                 The type of the source.
-	 * @param computes             List of computations to be applied to the source.
-	 * @param forceSerialization   Flag indicating whether to force serialization.
-	 * @param method               The HTTP method for the request.
-	 * @param url                  The URL for the HTTP request.
-	 * @param path                  The Path for the HTTP request.
-	 * @param header               The header for the HTTP request.
-	 * @param body                 The body of the HTTP request.
+	 * @param type The type of the source.
+	 * @param computes List of computations to be applied to the source.
+	 * @param forceSerialization Flag indicating whether to force serialization.
+	 * @param method The HTTP method for the request.
+	 * @param url The URL for the HTTP request.
+	 * @param path The Path for the HTTP request.
+	 * @param header The header for the HTTP request.
+	 * @param body The body of the HTTP request.
 	 * @param authenticationToken The authentication token for the HTTP request.
-	 * @param resultContent        The type of content to retrieve from the HTTP response.
-	 * @param key                  The key associated with the source.
+	 * @param resultContent The type of content to retrieve from the HTTP response.
+	 * @param key The key associated with the source.
 	 * @param executeForEachEntryOf The execution context for each entry of the source.
 	 */
 	@Builder
@@ -111,7 +111,7 @@ public class HttpSource extends Source {
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
 		@JsonProperty("method") HttpMethod method,
-		@JsonProperty(value = "url") String url,
+		@JsonProperty("url") String url,
 		@JsonProperty("path") String path,
 		@JsonProperty("header") String header,
 		@JsonProperty("body") String body,

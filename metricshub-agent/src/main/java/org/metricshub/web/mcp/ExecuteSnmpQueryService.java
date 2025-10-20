@@ -45,7 +45,7 @@ import org.springframework.stereotype.Service;
  * Builds the appropriate JSON payload and returns a {@link QueryResponse} with either the result
  * or an error message when no configuration is found or execution fails.
  */
-public class ExecuteSnmpQueryService {
+public class ExecuteSnmpQueryService implements IMCPToolService {
 
 	/**
 	 * Pattern to validate integer strings.

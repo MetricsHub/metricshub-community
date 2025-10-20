@@ -44,7 +44,7 @@ import org.springframework.stereotype.Service;
  * Service that triggers the resource metrics collection for a specified hostname.
  */
 @Service
-public class TroubleshootHostService {
+public class TroubleshootHostService implements IMCPToolService {
 
 	/**
 	 * Message to be returned when the hostname is not configured in MetricsHub.
