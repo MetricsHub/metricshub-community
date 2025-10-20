@@ -87,6 +87,13 @@ class StringHelperTest {
 		assertEquals("a", StringHelper.stringify("a"));
 		assertEquals("a,b", StringHelper.stringify(List.of("a", "b")));
 		assertEquals("a,b", StringHelper.stringify(new String[] { "a", "b" }));
+		assertEquals("1,2", StringHelper.stringify(new int[] { 1, 2 }));
+	}
+
+	@Test
+	void testStringifyWithCustomSeparator() {
+		assertEquals("a|b", StringHelper.stringify(new String[] { "a", "b" }, "|"));
+		assertEquals("1|2|3", StringHelper.stringify(new int[] { 1, 2, 3 }, "|"));
 	}
 
 	@Test
