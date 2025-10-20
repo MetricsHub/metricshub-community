@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
  * </p>
  */
 @Service
-public class ListResourcesService {
+public class ListResourcesService implements IMCPToolService {
 
 	/**
 	 * Holds contextual information about the current agent instance.

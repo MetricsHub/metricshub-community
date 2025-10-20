@@ -29,7 +29,6 @@ import org.metricshub.web.security.User;
 import org.metricshub.web.security.jwt.JwtAuthToken;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.service.UserService;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -38,7 +37,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 /**
  * Authentication provider for login requests using username and password.
  */
-public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
+public class LoginAuthenticationProvider {
 
 	private final JwtComponent jwtComponent;
 	private final UserService userService;
@@ -56,13 +55,27 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 		UserService userService,
 		PasswordEncoder passwordEncoder
 	) {
-		super();
 		this.jwtComponent = jwtComponent;
 		this.userService = userService;
 		this.passwordEncoder = passwordEncoder;
 	}
 
-	@Override
+	/**
+	 * Constructor to initialize the authentication provider with necessary components.
+	 *
+	 * @param jwtComponent JWT handling component
+	 * @param userService  User service to retrieve user details
+	 */
+	public LoginAuthenticationProvider(JwtComponent jwtComponent, UserService userService) {
+		this(jwtComponent, userService, null);
+	}
+
+	/**
+	 * Authenticate the user based on the provided authentication details.
+	 *
+	 * @param authentication Authentication request containing login details
+	 * @return Authentication instance with user details and JWT
+	 */
 	public Authentication authenticate(Authentication authentication) {
 		// The application supports only LoginAuthenticationRequest
 		if (!(authentication.getDetails() instanceof LoginAuthenticationRequest)) {
@@ -135,14 +148,9 @@ public class LoginAuthenticationProvider extends DaoAuthenticationProvider {
 			throw new UnauthorizedException("Invalid token type");
 		}
 
-		final User user = findUserByUsername(claims.getSubject());
+		final var user = findUserByUsername(claims.getSubject());
 		final String newJwt = jwtComponent.generateJwt(user);
 		return new UserAndJwt(user, newJwt);
-	}
-
-	@Override
-	public boolean supports(final Class<?> authentication) {
-		return true;
 	}
 
 	/**

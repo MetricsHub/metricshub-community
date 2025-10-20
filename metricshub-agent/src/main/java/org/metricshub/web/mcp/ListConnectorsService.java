@@ -30,7 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-public class ListConnectorsService {
+public class ListConnectorsService implements IMCPToolService {
 
 	/**
 	 * Holds contextual information about the current agent instance.
