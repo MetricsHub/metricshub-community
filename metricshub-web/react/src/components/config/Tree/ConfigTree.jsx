@@ -8,6 +8,7 @@ import BackupIcon from "@mui/icons-material/Backup";
 import DownloadIcon from "@mui/icons-material/Download";
 import FileTreeItem from "./FileTreeItem";
 import BackupSetNode from "./BackupSetNode";
+import { parseBackupFileName } from "../../../utils/backupNames";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { createConfigBackup } from "../../../store/thunks/configThunks";
 import { downloadAllConfigs } from "../../../utils/downloadAllConfigs";
@@ -78,23 +79,22 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 		id === BACKUP_ROOT_ID ||
 		(typeof id === "string" && id.startsWith("__backup_set__/"));
 
-	// Split & group: normal files vs. "backup-<id>__<name>"
+	// Split & group: normal files vs. backups (folder-style only).
 	const { configFiles, backupsBySet, backupSetItemIds } = React.useMemo(() => {
 		const cfg = [];
 		const groups = {}; // id -> [{ ...meta, displayName }]
 		const setItemIds = [];
-		const rx = /^backup-(\d{8}-\d{6})__(.+)$/; // matches timestamp id and the original/backup filename
 
 		for (const f of files || []) {
 			const n = f?.name ?? "";
-			const m = rx.exec(n);
-			if (!m) {
-				cfg.push(f);
-			} else {
-				const id = m[1]; // e.g. 20251016-143917
-				const displayName = m[2]; // rest of the name shown as the file inside the backup set
+			const parsed = parseBackupFileName(n);
+			if (parsed) {
+				const { id, originalName } = parsed;
+				const displayName = originalName;
 				(groups[id] ||= []).push({ ...f, displayName });
+				continue;
 			}
+			cfg.push(f);
 		}
 
 		// Sort groups and files

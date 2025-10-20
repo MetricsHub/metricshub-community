@@ -10,7 +10,7 @@ import QuestionDialog from "../../common/QuestionDialog";
 import { useAppDispatch } from "../../../hooks/store";
 import {
 	restoreConfigFromBackup,
-	deleteConfig,
+	deleteBackupFile,
 	fetchConfigList,
 } from "../../../store/thunks/configThunks";
 
@@ -81,7 +81,7 @@ export default function BackupSetNode({
 	const doDeleteSet = async () => {
 		setDeleteSetOpen(false);
 		try {
-			await Promise.all((files || []).map((f) => dispatch(deleteConfig(f.name)).unwrap()));
+			await Promise.all((files || []).map((f) => dispatch(deleteBackupFile(f.name)).unwrap()));
 			await dispatch(fetchConfigList());
 		} catch (e) {
 			console.error("Delete backup set failed:", e);

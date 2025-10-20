@@ -11,10 +11,15 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { useAppDispatch } from "../../../hooks/store";
-import { createConfigBackup } from "../../../store/thunks/configThunks";
-import { restoreConfigFromBackup } from "../../../store/thunks/configThunks";
+import {
+	createConfigBackup,
+	restoreConfigFromBackup,
+	deleteBackupFile,
+	fetchConfigList,
+} from "../../../store/thunks/configThunks";
 import QuestionDialog from "../../common/QuestionDialog";
 import { downloadConfigFile } from "../../../utils/downloadFile";
+import { parseBackupFileName } from "../../../utils/backupNames";
 
 /**
  * File tree item component.
@@ -46,10 +51,11 @@ export default function FileTreeItem({
 	const treeItemId = itemId ?? file.name;
 	const displayName = labelName ?? file.name;
 
-	// detect backup files: "backup-<timestamp>__<original-filename>"
-	const backupMatch = /^backup-(\d{8}-\d{6})__(.+)$/.exec(file.name);
-	const isBackupFile = !!backupMatch;
-	const backupId = backupMatch?.[1] ?? null;
+	// detect backup files: flat name using backupNames utils
+	const parsed = parseBackupFileName(file.name);
+	const isBackupFile = !!parsed;
+	const backupId = parsed?.id ?? null;
+	const backupOriginal = parsed?.originalName ?? null;
 
 	React.useEffect(() => {
 		if (!editing) setDraft(file.name);
@@ -131,13 +137,13 @@ export default function FileTreeItem({
 		document.activeElement?.blur?.();
 		closeMenu();
 		// For backups: save as the displayed filename (original name). For normal files: save as-is.
-		const suggestedName = labelName ?? file.name;
+		const suggestedName = backupOriginal ?? labelName ?? file.name;
 		try {
 			await downloadConfigFile({ name: file.name, suggestedName });
 		} catch (e) {
 			console.error("Download failed:", e);
 		}
-	}, [file.name, labelName]);
+	}, [file.name, labelName, backupOriginal]);
 
 	const label = (
 		<Stack
@@ -198,7 +204,7 @@ export default function FileTreeItem({
 									whiteSpace: "nowrap",
 									overflow: "hidden",
 									textOverflow: "ellipsis",
-                                }}
+								}}
 								title={displayName}
 							>
 								{displayName}
@@ -291,9 +297,18 @@ export default function FileTreeItem({
 				)}
 
 				<MenuItem
-					onClick={() => {
+					onClick={async () => {
 						closeMenu();
-						onDelete(file.name);
+						if (isBackupFile) {
+							try {
+								await dispatch(deleteBackupFile(file.name)).unwrap();
+								await dispatch(fetchConfigList());
+							} catch (e) {
+								console.error("Delete backup failed:", e);
+							}
+						} else {
+							onDelete(file.name);
+						}
 					}}
 				>
 					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
@@ -309,7 +324,11 @@ export default function FileTreeItem({
 				onClose={() => setRestoreOpen(false)}
 				actionButtons={[
 					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
-					{ btnTitle: "Restore as copy", btnVariant: "contained", callback: () => doRestore(false) },
+					{
+						btnTitle: "Restore as copy",
+						btnVariant: "contained",
+						callback: () => doRestore(false),
+					},
 					{
 						btnTitle: "Overwrite",
 						btnColor: "error",

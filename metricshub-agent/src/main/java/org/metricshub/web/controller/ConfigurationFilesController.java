@@ -27,7 +27,6 @@ import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.service.ConfigurationFilesService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -55,9 +54,56 @@ public class ConfigurationFilesController {
 	/**
 	 * Constructor for ConfigurationFilesController.
 	 *
-	 * @param configurationFilesService the ConfigurationFilesService to handle configuration file requests.
+	 * @param configurationFilesService the ConfigurationFilesService to handle
+	 *                                  configuration file requests.
 	 */
-	@Autowired
+	// --- Backup endpoints ---
+
+	/**
+	 * Endpoint to create or update a backup file.
+	 */
+	@PutMapping(
+		value = "/backup/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.TEXT_PLAIN_VALUE
+	)
+	public ResponseEntity<ConfigurationFile> saveOrUpdateBackupFile(
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content
+	) throws ConfigFilesException {
+		return ResponseEntity.ok(configurationFilesService.saveOrUpdateBackupFile(fileName, content));
+	}
+
+	/**
+	 * Endpoint to list all backup files with their metadata.
+	 *
+	 * @return A list of ConfigurationFile representing all backup files.
+	 * @throws ConfigFilesException an IO error occurs when listing files
+	 */
+	@GetMapping(value = "/backup", produces = MediaType.APPLICATION_JSON_VALUE)
+	public List<ConfigurationFile> listBackupFiles() throws ConfigFilesException {
+		return configurationFilesService.listAllBackupFiles();
+	}
+
+	/**
+	 * Endpoint to get the content of a backup file by its name.
+	 */
+	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
+	public ResponseEntity<String> getBackupFileContent(@PathVariable("fileName") String fileName)
+		throws ConfigFilesException {
+		final String content = configurationFilesService.getBackupFileContent(fileName);
+		return ResponseEntity.ok(content);
+	}
+
+	/**
+	 * Endpoint to delete a backup file by its name.
+	 */
+	@DeleteMapping("/backup/{fileName}")
+	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName) throws ConfigFilesException {
+		configurationFilesService.deleteBackupFile(fileName);
+		return ResponseEntity.noContent().build();
+	}
+
 	public ConfigurationFilesController(final ConfigurationFilesService configurationFilesService) {
 		this.configurationFilesService = configurationFilesService;
 	}
@@ -90,10 +136,11 @@ public class ConfigurationFilesController {
 	/**
 	 * Endpoint to create or update a configuration file.
 	 *
-	 * @param fileName the name of the configuration file to create or update.
-	 * @param content  the content to write to the configuration file.
+	 * @param fileName       the name of the configuration file to create or update.
+	 * @param content        the content to write to the configuration file.
 	 * @param skipValidation if true, skips validation of the content before saving.
-	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the saved file's metadata.
+	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the
+	 *         saved file's metadata.
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
@@ -113,11 +160,14 @@ public class ConfigurationFilesController {
 
 	/**
 	 * Endpoint to validate a configuration file's content.<br>
-	 * If no content is provided in the request body, the file content on disk is fetched and validated.
+	 * If no content is provided in the request body, the file content on disk is
+	 * fetched and validated.
+	 *
 	 *
 	 * @param fileName the name of the configuration file to validate.
 	 * @param content  the content to validate; if null, validates the file on disk.
-	 * @return an {@link ConfigurationFilesService.Validation} object containing validation results.
+	 * @return an {@link ConfigurationFilesService.Validation} object containing
+	 *         validation results.
 	 * @throws ConfigFilesException if the file content cannot be read
 	 */
 	@PostMapping(
@@ -154,7 +204,8 @@ public class ConfigurationFilesController {
 	 * Endpoint to rename a configuration file.
 	 *
 	 * @param fileNewName the DTO containing the new name for the file.
-	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the renamed file's metadata.
+	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the
+	 *         renamed file's metadata.
 	 * @throws ConfigFilesException if an IO error occurs during renaming
 	 */
 	@PatchMapping(

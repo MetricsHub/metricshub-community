@@ -6,6 +6,7 @@ import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { shortYamlError } from "../../../utils/yaml-error";
 import { extractYamlErrorRange } from "../../../utils/yaml-lint-utils";
+import { isBackupFileName } from "../../../utils/backupNames";
 
 /**
  * Container component for the configuration file editor.
@@ -20,8 +21,9 @@ const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_p
 		saving,
 		dirtyByName = {},
 	} = useAppSelector((s) => s.config);
+	const isBackupSelected = !!(selected && isBackupFileName(selected));
 	const isDirty = !!(selected && dirtyByName[selected]);
-	const canSave = !!selected && isDirty && !saving;
+	const canSave = !!selected && !isBackupSelected && isDirty && !saving;
 
 	const [local, setLocal] = React.useState(storeContent);
 
@@ -118,7 +120,7 @@ const ConfigEditorContainer = React.forwardRef(function ConfigEditorContainer(_p
 		<>
 			<ConfigEditor
 				value={local}
-				readOnly={!selected}
+				readOnly={!selected || isBackupSelected}
 				onChange={onChange}
 				onSave={wrappedSave}
 				canSave={canSave}

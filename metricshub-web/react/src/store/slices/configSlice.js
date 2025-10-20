@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { isBackupFileName } from "../../utils/backupNames";
 import {
 	fetchConfigList,
 	fetchConfigContent,
@@ -41,7 +42,10 @@ const slice = createSlice({
 			if (n) {
 				const prev = state.filesByName[n] || {};
 				state.filesByName[n] = { ...prev, content: next };
-				state.dirtyByName[n] = next !== (state.originalsByName[n] ?? "");
+				// Do not mark backups as dirty; they are read-only in the editor
+				if (!isBackupFileName(n)) {
+					state.dirtyByName[n] = next !== (state.originalsByName[n] ?? "");
+				}
 			}
 		},
 		clearError(state) {
@@ -139,8 +143,11 @@ const slice = createSlice({
 
 				const prev = s.filesByName[name] || {};
 				s.filesByName[name] = { ...prev, content };
-				s.originalsByName[name] = content;
-				s.dirtyByName[name] = false;
+				// Do not treat backups as editor originals (not editable in place)
+				if (!isBackupFileName(name)) {
+					s.originalsByName[name] = content;
+					s.dirtyByName[name] = false;
+				}
 			})
 			.addCase(fetchConfigContent.rejected, (s, a) => {
 				s.loadingContent = false;
@@ -162,8 +169,10 @@ const slice = createSlice({
 				const savedContent = a.payload?.content ?? cur.content ?? s.content ?? "";
 
 				s.filesByName[name] = { ...cur, content: savedContent, localOnly: false };
-				s.originalsByName[name] = savedContent;
-				s.dirtyByName[name] = false;
+				if (!isBackupFileName(name)) {
+					s.originalsByName[name] = savedContent;
+					s.dirtyByName[name] = false;
+				}
 
 				if (s.selected === name) {
 					s.content = savedContent;

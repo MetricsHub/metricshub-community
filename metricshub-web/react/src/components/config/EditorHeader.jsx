@@ -2,6 +2,7 @@ import { Stack, Typography, Chip, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import VerifiedIcon from "@mui/icons-material/Verified";
 import { useAppSelector } from "../../hooks/store";
+import { isBackupFileName } from "../../utils/backupNames";
 
 /**
  * Editor header component showing file name, save button, and status.
@@ -14,6 +15,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
 	const fileValidation = selected ? filesByName[selected]?.validation : null;
 	const hasErrors = !!(fileValidation && fileValidation.valid === false);
+	const isBackup = !!(selected && isBackupFileName(selected));
 
 	return (
 		<Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -44,7 +46,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 					size="small"
 					startIcon={<SaveIcon />}
 					onClick={onSave}
-					disabled={!selected || !isDirty || saving}
+					disabled={!selected || isBackup || !isDirty || saving}
 					variant="contained"
 				>
 					{saving ? "Saving..." : "Save"}

@@ -29,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -45,7 +44,6 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.exception.ConfigFilesException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -60,19 +58,14 @@ public class ConfigurationFilesService {
 	 */
 	private static final Set<String> YAML_EXTENSIONS = Set.of(".yml", ".yaml");
 
-	/**
-	 * Maximum directory traversal depth when searching for configuration files.
-	 */
-	private static final int MAX_DEPTH = 1;
-
 	private final AgentContextHolder agentContextHolder;
 
 	/**
 	 * Constructor for ConfigurationFilesService.
 	 *
-	 * @param agentContextHolder the AgentContextHolder to access the agent context and configuration directory.
+	 * @param agentContextHolder the AgentContextHolder to access the agent context
+	 *                           and configuration directory.
 	 */
-	@Autowired
 	public ConfigurationFilesService(final AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
 	}
@@ -80,16 +73,18 @@ public class ConfigurationFilesService {
 	/**
 	 * Retrieves a list of all configuration files with their metadata.
 	 *
-	 * @return A list of {@link ConfigurationFile} representing all configuration files.
+	 * @return A list of {@link ConfigurationFile} representing all configuration
+	 *         files.
 	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
 	public List<ConfigurationFile> getAllConfigurationFiles() throws ConfigFilesException {
 		final Path configurationDirectory = getConfigDir();
 
-		try (
-			Stream<Path> files = Files.find(configurationDirectory, MAX_DEPTH, ConfigurationFilesService::isRegularYamlFile)
-		) {
+		// Only list top-level YAML files, excluding any subdirectories (e.g., backup)
+		try (Stream<Path> files = Files.list(configurationDirectory)) {
 			return files
+				.filter(Files::isRegularFile)
+				.filter(ConfigurationFilesService::hasYamlExtension)
 				.map(this::buildConfigurationFile)
 				.filter(Objects::nonNull)
 				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
@@ -187,7 +182,8 @@ public class ConfigurationFilesService {
 	 * @param oldName existing file name
 	 * @param newName target file name (must be .yml/.yaml and not exist)
 	 * @return the renamed ConfigurationFile with metadata
-	 * @throws ConfigFilesException if source file is not found, target exists, or IO failure while renaming
+	 * @throws ConfigFilesException if source file is not found, target exists, or
+	 *                              IO failure while renaming
 	 */
 	public ConfigurationFile renameFile(final String oldName, final String newName) throws ConfigFilesException {
 		final Path dir = getConfigDir();
@@ -215,17 +211,6 @@ public class ConfigurationFilesService {
 			log.debug("Failed to rename configuration file: '{}' -> '{}'. Exception:", source, target, e);
 			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.", e);
 		}
-	}
-
-	/**
-	 * Checks if the given path is a regular file with a YAML extension.
-	 *
-	 * @param path                The path to the file.
-	 * @param basicFileAttributes The file attributes.
-	 * @return true if the file is a regular file and has a YAML extension, false otherwise.
-	 */
-	private static boolean isRegularYamlFile(final Path path, final BasicFileAttributes basicFileAttributes) {
-		return basicFileAttributes.isRegularFile() && hasYamlExtension(path);
 	}
 
 	/**
@@ -348,6 +333,7 @@ public class ConfigurationFilesService {
 
 		/**
 		 * Factory method for a successful validation result.
+		 *
 		 * @param fileName the name of the validated file
 		 */
 		public static Validation ok(String fileName) {
@@ -356,6 +342,7 @@ public class ConfigurationFilesService {
 
 		/**
 		 * Factory method for a failed validation result.
+		 *
 		 * @param fileName the name of the validated file
 		 * @param error    the validation error message
 		 * @return a Validation instance representing a failed validation
@@ -366,7 +353,8 @@ public class ConfigurationFilesService {
 	}
 
 	/**
-	 * Semantic validation: parses YAML into JsonNode and tries to load AgentConfig.<br>
+	 * Semantic validation: parses YAML into JsonNode and tries to load
+	 * AgentConfig.<br>
 	 * Any parsing/IO/schema/engine failure => invalid.
 	 *
 	 * @param content  the content to validate; if null, validates an empty config.
@@ -385,6 +373,130 @@ public class ConfigurationFilesService {
 			return Validation.ok(fileName);
 		} catch (Exception e) {
 			return Validation.fail(fileName, safeMessage(e.getMessage()));
+		}
+	}
+
+	// === BACKUP FILE OPERATIONS ===
+	private static final String BACKUP_DIR_NAME = "backup";
+
+	/**
+	 * Returns the content of a backup file as UTF-8 text.
+	 *
+	 * @param fileName the backup file name (e.g. mybackup.yaml)
+	 * @return file content
+	 * @throws ConfigFilesException if the file is not found or cannot be read
+	 */
+	public String getBackupFileContent(final String fileName) throws ConfigFilesException {
+		final Path file = resolveBackupYaml(fileName);
+		log.info("Reading backup file: {}", file.toAbsolutePath());
+		if (!Files.exists(file)) {
+			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Backup file not found.");
+		}
+		try {
+			return Files.readString(file, StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			log.error("Failed to read backup file: '{}'. Error: {}", file, e.getMessage());
+			log.debug("Failed to read backup file: '{}'. Exception:", file, e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read backup file.", e);
+		}
+	}
+
+	/**
+	 * Saves or updates the content of a backup file (atomic write).
+	 *
+	 * @param fileName the backup file name
+	 * @param content  the content to write
+	 * @return the saved ConfigurationFile with metadata
+	 * @throws ConfigFilesException if the file cannot be written
+	 */
+	public ConfigurationFile saveOrUpdateBackupFile(final String fileName, final String content)
+		throws ConfigFilesException {
+		final Path dir = getBackupDir();
+		final Path target = resolveBackupYaml(fileName);
+		try {
+			Files.createDirectories(dir);
+			final Path tmp = Files.createTempFile(dir, fileName + ".", ".tmp");
+			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+			try {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException amnse) {
+				log.info("Atomic move not supported for backup file, falling back to non-atomic move.");
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+			return buildConfigurationFile(target);
+		} catch (IOException e) {
+			log.error("Failed to save backup file: '{}'. Error: {}", target, e.getMessage());
+			log.debug("Failed to save backup file: '{}'. Exception:", target, e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save backup file.", e);
+		}
+	}
+
+	/**
+	 * Deletes a backup file.
+	 *
+	 * @param fileName the backup file name
+	 * @throws ConfigFilesException if the file cannot be deleted
+	 */
+	public void deleteBackupFile(final String fileName) throws ConfigFilesException {
+		final Path file = resolveBackupYaml(fileName);
+		try {
+			if (!Files.deleteIfExists(file)) {
+				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Backup file not found.");
+			}
+		} catch (IOException e) {
+			log.error("Failed to delete backup file: '{}'. Error: {}", file, e.getMessage());
+			log.debug("Failed to delete backup file: '{}'. Exception:", file, e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete backup file.", e);
+		}
+	}
+
+	private Path getBackupDir() throws ConfigFilesException {
+		return getConfigDir().resolve(BACKUP_DIR_NAME);
+	}
+
+	private Path resolveBackupYaml(final String fileName) throws ConfigFilesException {
+		if (fileName == null || fileName.isBlank()) {
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "File name is required.");
+		}
+		if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "Invalid file name.");
+		}
+		final var lower = fileName.toLowerCase(Locale.ROOT);
+		if (!lower.endsWith(".yml") && !lower.endsWith(".yaml")) {
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.INVALID_EXTENSION,
+				"Only .yml or .yaml files are allowed for backup."
+			);
+		}
+		final Path normalizedBase = getBackupDir().normalize();
+		final Path resolved = normalizedBase.resolve(fileName).normalize();
+		if (!resolved.startsWith(normalizedBase)) {
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_PATH, "Invalid file path.");
+		}
+		return resolved;
+	}
+
+	/**
+	 * Lists all backup YAML files in the backup directory, returning their
+	 * metadata.
+	 *
+	 * @return List of ConfigurationFile DTOs for backup files
+	 * @throws ConfigFilesException if IO error occurs
+	 */
+	public List<ConfigurationFile> listAllBackupFiles() throws ConfigFilesException {
+		final Path backupDir = getBackupDir();
+		try (Stream<Path> files = Files.list(backupDir)) {
+			return files
+				.filter(Files::isRegularFile)
+				.filter(p -> hasYamlExtension(p))
+				.map(this::buildConfigurationFile)
+				.filter(Objects::nonNull)
+				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
+				.toList();
+		} catch (IOException e) {
+			log.error("Failed to list backup directory: '{}'. Error: {}", backupDir, e.getMessage());
+			log.debug("Failed to list backup directory: '{}'. Exception:", backupDir, e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list backup files.", e);
 		}
 	}
 }

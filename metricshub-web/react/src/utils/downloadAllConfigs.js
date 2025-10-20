@@ -1,14 +1,14 @@
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { configApi } from "../api/config";
+import { isBackupFileName } from "./backupNames";
 
 /**
  * Fetch all config files (excluding backups), zip them, and trigger a browser download.
  * @param {Array<{name:string}>} list Redux config.list
  */
 export async function downloadAllConfigs(list = []) {
-	const rxBackup = /^backup-\d{8}-\d{6}__/;
-	const originals = list.filter((f) => !rxBackup.test(f.name));
+	const originals = list.filter((f) => !isBackupFileName(f?.name || ""));
 
 	if (originals.length === 0) {
 		alert("No configuration files to download.");
