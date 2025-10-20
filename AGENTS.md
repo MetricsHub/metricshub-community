@@ -102,6 +102,17 @@ For each Maven module, the reports are located in:
 * `./target/pmd.xml`
 * `./target/spotbugsXml.xml`
 
+### Javadoc
+
+Make sure to write proper Javadoc comments for all classes and methods whether public or private.
+To generate Javadoc reports for the entire repository, or just in a module:
+
+```bash
+mvn javadoc:javadoc
+```
+
+Report: `target/reports/apidocs/index.html`
+
 ### Checkstyle
 
 To manually run Checkstyle and generate a report in the overall repository, or just in a module:
