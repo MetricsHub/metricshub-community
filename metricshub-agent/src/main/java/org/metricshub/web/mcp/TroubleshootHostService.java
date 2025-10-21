@@ -84,7 +84,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	@Tool(
 		name = "CollectMetricsForHost",
 		description = """
-		Fetch and collect metrics for the specified host using the configured protocols and credentials,
+		Fetch and collect metrics for the specified host(s) using the configured protocols and credentials,
 		and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.).
 		Returns the collected metrics and all attributes.
 		Metrics follow OpenTelemetry semantic conventions.
@@ -129,7 +129,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	@Tool(
 		name = "GetMetricsFromCacheForHost",
 		description = """
-		Retrieves metrics from the MetricsHub cache for a specified hostname.
+		Retrieves metrics from the MetricsHub cache for the specified host(s).
 		Returns the collected metrics and all attributes.
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
@@ -167,8 +167,8 @@ public class TroubleshootHostService implements IMCPToolService {
 	@Tool(
 		name = "TestAvailableConnectorsForHost",
 		description = """
-		Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host
-		using the configured credentials and return the list of connectors that work with this host.
+		Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host(s)
+		using the configured credentials and return the list of connectors that work with these hosts.
 		"""
 	)
 	public List<MultiHostToolResponse<TelemetryResult>> testAvailableConnectorsForHost(

@@ -97,7 +97,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteWqlQuery",
 		description = """
-		Executes a WQL query on a given Windows host using the specified protocol (WBEM, WMI or WinRM) and namespace.
+		Executes a WQL query on the given Windows host(s) using the specified protocol (WBEM, WMI or WinRM) and namespace.
 		Returns the result produced by the Windows provider, or an error if the query cannot be executed.
 		"""
 	)

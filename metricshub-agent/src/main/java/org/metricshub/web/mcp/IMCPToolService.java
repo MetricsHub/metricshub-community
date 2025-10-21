@@ -31,16 +31,50 @@ import java.util.function.Supplier;
  * Each MCP Tool must implement this interface to be automatically registered.
  */
 public interface IMCPToolService {
+	/**
+	 * Standard error message returned when a hostname entry is missing from the
+	 * request payload.
+	 */
 	String NULL_HOSTNAME_ERROR = "Hostname must not be null";
 
+	/**
+	 * Builds a {@link MultiHostToolResponse} describing the error generated when a
+	 * hostname parameter is {@code null}.
+	 *
+	 * @param responseSupplier supplier that produces the error payload to wrap
+	 * @param <T>              type of the tool response payload
+	 * @return a response wrapper containing the supplied error payload
+	 */
 	default <T> MultiHostToolResponse<T> buildNullHostnameResponse(final Supplier<T> responseSupplier) {
 		return MultiHostToolResponse.<T>builder().response(responseSupplier.get()).build();
 	}
 
+	/**
+	 * Resolves the executor pool size for a tool invocation, falling back to the
+	 * provided default when the requested value is {@code null} or not positive.
+	 *
+	 * @param requestedPoolSize pool size requested by the caller
+	 * @param defaultPoolSize   default pool size defined by the tool
+	 * @return the validated pool size to use for execution
+	 */
 	default int resolvePoolSize(final Integer requestedPoolSize, final int defaultPoolSize) {
 		return requestedPoolSize != null && requestedPoolSize > 0 ? requestedPoolSize : defaultPoolSize;
 	}
 
+	/**
+	 * Executes a per-host task for each hostname requested by the caller, applying
+	 * concurrency using the {@link MultiHostToolExecutor} utility.
+	 *
+	 * @param hostnames            hostnames supplied by the MCP request
+	 * @param nullHostnameSupplier supplier used when an entry in {@code hostnames}
+	 *                             is {@code null}
+	 * @param perHostTask          function producing the tool response for a given
+	 *                             hostname
+	 * @param poolSize             maximum size of the thread pool used for
+	 *                             concurrent execution
+	 * @param <T>                  type of the tool response payload
+	 * @return ordered list of responses matching the requested hostnames
+	 */
 	default <T> List<MultiHostToolResponse<T>> executeForHosts(
 		final List<String> hostnames,
 		final Supplier<MultiHostToolResponse<T>> nullHostnameSupplier,

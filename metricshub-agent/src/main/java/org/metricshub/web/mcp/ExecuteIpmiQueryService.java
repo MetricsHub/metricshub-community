@@ -73,7 +73,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteIpmiQuery",
 		description = """
-		Execute an IPMI query on the given host using the agent’s IPMI extension.
+		Execute an IPMI query on the given host(s) using the agent’s IPMI extension.
 		Resolves a valid configuration from context, applies hostname and timeout (default 10s),
 		executes the query, and returns the provider result or an error.
 		"""

@@ -101,19 +101,17 @@ public class HostDetailsService implements IMCPToolService {
 	@Tool(
 		name = "GetHostDetails",
 		description = """
-		Use this tool when you need to fetch details about how MetricsHub is monitoring a specific host.
-		The result is a structured object for the given hostname, containing:
+		Use this tool when you need to fetch details about how MetricsHub is monitoring specific host(s).
+		The result is a structured list for each requested host, where each host object contains:
 
 		- Protocols (e.g., SNMP, SSH, WMI) configured to check host reachability and provide raw data for connectors.
 		- Working connectors that have been successfully detected and are usable to collect metrics.
-		- Collectors, which are direct references to executable tools (e.g., SNMP Walk, SQL Query, SSH Command, HTTP Request)
-		that can be invoked to perform requests and validate connectivity, authentication, or data availability.
+		- Collectors, which are direct references to executable tools (e.g., SNMP Walk, SQL Query) used for connectivity, authentication, or data availability checks.
 
 		This information helps you:
 		- Decide which connector or protocol to use when troubleshooting or collecting metrics.
 		- Explain why certain data is or isn’t available for a host.
-		- Invoke the appropriate collectors as tools for targeted tests
-		(e.g., run an SNMP Walk on a specific OID subtree, or send an HTTP Request to verify response codes or payload content).
+		- Invoke the appropriate collectors for targeted tests (e.g., run an SNMP Walk or send an HTTP Request).
 
 		If the hostname does not exist in the current agent configuration, the result will contain an error message instead.
 

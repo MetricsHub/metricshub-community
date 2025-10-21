@@ -49,6 +49,8 @@ public final class MultiHostToolExecutor {
 	 * @param hostnames             the hostnames to target
 	 * @param nullHostnameSupplier  supplier used when the hostname entry is {@code null}
 	 * @param perHostTask           function executed for each non-null hostname
+	 * @param poolSize              maximum size of the thread pool used for
+	 *                              concurrent execution
 	 * @param <T>                   type of the per-host response
 	 * @return the aggregated list of responses, one per requested hostname
 	 */

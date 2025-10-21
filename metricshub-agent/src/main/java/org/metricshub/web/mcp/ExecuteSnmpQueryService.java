@@ -95,7 +95,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteSnmpQuery",
 		description = """
-		Executes an SNMP query (Get, GetNext, Walk, or Table) on a given hostname using the specified OID.
+		Executes an SNMP query (Get, GetNext, Walk, or Table) on the given host(s) using the specified OID.
 		For 'table' queries, comma-separated column indexes needs to be provided.
 		"""
 	)

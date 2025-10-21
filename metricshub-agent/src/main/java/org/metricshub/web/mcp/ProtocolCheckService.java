@@ -85,7 +85,7 @@ public class ProtocolCheckService implements IMCPToolService {
 	@Tool(
 		name = "CheckProtocol",
 		description = """
-		Determines if the specified host is accessible using a given protocol.
+		Determines if the specified hosts are accessible using a given protocol.
 		Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.
 		Provides a response detailing the host reachability status along with the response time.
 		"""

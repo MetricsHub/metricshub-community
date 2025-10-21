@@ -88,7 +88,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteJmxQuery",
 		description = """
-		Execute a JMX request on a host using the agent JMX extension.
+		Execute a JMX request on the given host(s) using the agent JMX extension.
 		Resolve a valid configuration from context, set hostname and timeout (default 10s),
 		build the request (objectName, attributes, keyProperties), execute, and return the result or an error.
 		The query is valid only if at least one attribute or one key property is specified, even if those parameters are optional.
