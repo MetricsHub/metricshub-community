@@ -104,19 +104,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<QueryResponse>builder()
-							.hostname(host)
-							.response(QueryResponse.builder().isError("No Extension found for IPMI protocol.").build())
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> buildExtensionMissingResponses(hostname));
 	}
 
 	/**
@@ -165,5 +153,33 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
 		);
+	}
+
+	/**
+	 * Builds the default response payload when the IPMI extension cannot be located
+	 * for the requested hosts.
+	 *
+	 * @param hostnames hostnames supplied by the caller
+	 * @return response entries describing the missing extension error for each
+	 *         requested host
+	 */
+	private List<MultiHostToolResponse<QueryResponse>> buildExtensionMissingResponses(final List<String> hostnames) {
+		if (hostnames == null || hostnames.isEmpty()) {
+			return List.of();
+		}
+
+		final QueryResponse extensionMissingResponse = QueryResponse
+			.builder()
+			.isError("No Extension found for IPMI protocol.")
+			.build();
+
+		return hostnames
+			.stream()
+			.map(host ->
+				host == null
+					? buildNullHostnameResponse()
+					: MultiHostToolResponse.<QueryResponse>builder().hostname(host).response(extensionMissingResponse).build()
+			)
+			.toList();
 	}
 }
