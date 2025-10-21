@@ -365,10 +365,25 @@ public class ConfigurationFilesService {
 		 * Factory method for a failed validation result.
 		 * @param fileName the name of the validated file
 		 * @param failure  the deserialization failure containing error details
+		 * @param e        an optional exception that caused the failure
+		 * @return a Validation instance representing a failed validation
+		 */
+		public static Validation fail(String fileName, DeserializationFailure failure, Exception e) {
+			if (failure.isEmpty() && e != null) {
+				failure.addError(e.getMessage());
+			}
+			return Validation.builder().fileName(fileName).isValid(false).errors(failure.getErrors()).build();
+		}
+
+		/**
+		 * Factory method for a failed validation result without an exception.
+		 *
+		 * @param fileName the name of the validated file
+		 * @param failure  the deserialization failure containing error details
 		 * @return a Validation instance representing a failed validation
 		 */
 		public static Validation fail(String fileName, DeserializationFailure failure) {
-			return Validation.builder().fileName(fileName).isValid(false).errors(failure.getErrors()).build();
+			return fail(fileName, failure, null);
 		}
 
 		@JsonIgnore
@@ -406,9 +421,9 @@ public class ConfigurationFilesService {
 			return Validation.ok(fileName);
 		} catch (JsonProcessingException e) {
 			enrichErrors(deserializationFailure, e);
-			return Validation.fail(fileName, deserializationFailure);
+			return Validation.fail(fileName, deserializationFailure, e);
 		} catch (Exception e) {
-			return Validation.fail(fileName, deserializationFailure);
+			return Validation.fail(fileName, deserializationFailure, e);
 		}
 	}
 
