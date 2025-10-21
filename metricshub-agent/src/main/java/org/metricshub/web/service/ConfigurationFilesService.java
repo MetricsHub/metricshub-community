@@ -364,11 +364,11 @@ public class ConfigurationFilesService {
 		/**
 		 * Factory method for a failed validation result.
 		 * @param fileName the name of the validated file
-		 * @param error    the validation error message
+		 * @param failure  the deserialization failure containing error details
 		 * @return a Validation instance representing a failed validation
 		 */
-		public static Validation fail(String fileName, DeserializationFailure error) {
-			return Validation.builder().fileName(fileName).isValid(false).errors(error.getErrors()).build();
+		public static Validation fail(String fileName, DeserializationFailure failure) {
+			return Validation.builder().fileName(fileName).isValid(false).errors(failure.getErrors()).build();
 		}
 
 		@JsonIgnore
@@ -377,7 +377,7 @@ public class ConfigurationFilesService {
 				return "";
 			}
 
-			return errors.stream().findFirst().map(e -> e.getMessage()).orElseGet(() -> "");
+			return errors.stream().findFirst().map(DeserializationFailure.Error::getMessage).orElseGet(() -> "");
 		}
 	}
 
