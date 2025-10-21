@@ -101,7 +101,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		Returns the result produced by the Windows provider, or an error if the query cannot be executed.
 		"""
 	)
-	public List<MultiHostToolResponse<QueryResponse>> executeQuery(
+	public MultiHostToolResponse<QueryResponse> executeQuery(
 		@ToolParam(description = "The hostname(s) to execute WQL query on.", required = true) final List<String> hostname,
 		@ToolParam(
 			description = "The protocol to use to execute the WQL query (WBEM, WMI or WinRm).",
@@ -126,7 +126,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeQueryWithExtensionSafe(extension, host, query, normalizedNamespace, timeout))
@@ -134,21 +134,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<QueryResponse>builder()
-							.hostname(host)
-							.response(
-								QueryResponse.builder().isError("No Extension found for %s protocol.".formatted(protocol)).build()
-							)
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> MultiHostToolResponse.buildError("The %s extension is not available".formatted(protocol)));
 	}
 
 	/**
@@ -231,13 +217,12 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} describing the error when the
-	 * hostname parameter is omitted.
+	 * Builds a {@link HostToolResponse} describing the error when the hostname
+	 * parameter is omitted.
 	 *
-	 * @return a response wrapper with an error payload explaining the missing
-	 *         hostname
+	 * @return a host-level response with an error payload explaining the missing hostname
 	 */
-	private MultiHostToolResponse<QueryResponse> buildNullHostnameResponse() {
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
 		);

@@ -80,7 +80,7 @@ public class PingToolService implements IMCPToolService {
 		""",
 		name = "PingHost"
 	)
-	public List<MultiHostToolResponse<ProtocolCheckResponse>> pingHost(
+	public MultiHostToolResponse<ProtocolCheckResponse> pingHost(
 		@ToolParam(description = "The hostname(s) to ping, provided as a list of strings") final List<String> hostname,
 		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout,
 		@ToolParam(
@@ -100,7 +100,7 @@ public class PingToolService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<ProtocolCheckResponse>builder()
 							.hostname(host)
 							.response(pingHostWithExtensionSafe(host, resolvedTimeout, extension))
@@ -108,30 +108,15 @@ public class PingToolService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<ProtocolCheckResponse>builder()
-							.hostname(host)
-							.response(
-								ProtocolCheckResponse.builder().hostname(host).errorMessage("The extension is not available").build()
-							)
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> MultiHostToolResponse.buildError("The ping extension is not available"));
 	}
 
 	/**
 	 * Builds a response entry for a null hostname value.
 	 *
-	 * @return a {@link MultiHostToolResponse} containing an error message indicating the
-	 *         hostname is missing
+	 * @return a {@link HostToolResponse} containing an error message indicating the hostname is missing
 	 */
-	private MultiHostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
+	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
 		);

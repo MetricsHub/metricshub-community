@@ -186,14 +186,14 @@ class TroubleshootHostServiceTest {
 	}
 
 	private TelemetryResult collectMetrics(final String connectorId) {
-		return service.collectMetricsForHost(List.of(HOSTNAME), connectorId, 1).get(0).getResponse();
+		return service.collectMetricsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
 	}
 
 	private TelemetryResult getMetricsFromCache() {
-		return service.getMetricsFromCacheForHost(List.of(HOSTNAME), 1).get(0).getResponse();
+		return service.getMetricsFromCacheForHost(List.of(HOSTNAME), 1).getHosts().get(0).getResponse();
 	}
 
 	private TelemetryResult testAvailableConnectors(final String connectorId) {
-		return service.testAvailableConnectorsForHost(List.of(HOSTNAME), connectorId, 1).get(0).getResponse();
+		return service.testAvailableConnectorsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
 	}
 }

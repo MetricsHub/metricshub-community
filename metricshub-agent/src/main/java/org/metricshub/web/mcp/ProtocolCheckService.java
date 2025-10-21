@@ -90,7 +90,7 @@ public class ProtocolCheckService implements IMCPToolService {
 		Provides a response detailing the host reachability status along with the response time.
 		"""
 	)
-	public List<MultiHostToolResponse<ProtocolCheckResponse>> checkProtocol(
+	public MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
 		@ToolParam(description = "The hostname(s) to check") final List<String> hostname,
 		@ToolParam(
 			description = "The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi",
@@ -113,7 +113,7 @@ public class ProtocolCheckService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<ProtocolCheckResponse>builder()
 							.hostname(host)
 							.response(checkWithExtension(host, timeout, extension))
@@ -121,25 +121,7 @@ public class ProtocolCheckService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<ProtocolCheckResponse>builder()
-							.hostname(host)
-							.response(
-								ProtocolCheckResponse
-									.builder()
-									.hostname(host)
-									.errorMessage(protocolIdentifier + " extension is not available")
-									.build()
-							)
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> MultiHostToolResponse.buildError(protocolIdentifier + " extension is not available"));
 	}
 
 	/**
@@ -236,13 +218,12 @@ public class ProtocolCheckService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} indicating that the hostname parameter
-	 * was not provided.
+	 * Builds a {@link HostToolResponse} indicating that the hostname parameter was
+	 * not provided.
 	 *
-	 * @return a response wrapper with an error payload highlighting the missing
-	 *         hostname
+	 * @return a host-level response with an error payload highlighting the missing hostname
 	 */
-	private MultiHostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
+	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
 		);

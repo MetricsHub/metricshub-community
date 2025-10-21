@@ -99,7 +99,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		For 'table' queries, comma-separated column indexes needs to be provided.
 		"""
 	)
-	public List<MultiHostToolResponse<QueryResponse>> executeQuery(
+	public MultiHostToolResponse<QueryResponse> executeQuery(
 		@ToolParam(description = "The hostname(s) to execute SNMP Query on.", required = true) final List<String> hostname,
 		@ToolParam(
 			description = "The SNMP query to execute: Get, GetNext, Walk or Table.",
@@ -125,7 +125,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<QueryResponse>builder()
 							.hostname(host)
 							.response(
@@ -135,19 +135,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 					resolvedPoolSize
 				);
 			})
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<QueryResponse>builder()
-							.hostname(host)
-							.response(QueryResponse.builder().isError("SNMP Extension is not available").build())
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> MultiHostToolResponse.buildError("The SNMP extension is not available"));
 	}
 
 	/**
@@ -244,13 +232,11 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} that signals a missing hostname
-	 * parameter.
+	 * Builds a {@link HostToolResponse} that signals a missing hostname parameter.
 	 *
-	 * @return a response wrapper whose payload contains an error about the null
-	 *         hostname
+	 * @return a host-level response whose payload contains an error about the null hostname
 	 */
-	private MultiHostToolResponse<QueryResponse> buildNullHostnameResponse() {
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
 		);

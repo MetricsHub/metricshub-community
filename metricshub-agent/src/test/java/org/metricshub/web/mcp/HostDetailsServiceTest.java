@@ -42,7 +42,7 @@ class HostDetailsServiceTest {
 		// An empty telemetry managers list
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of()));
 
-		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).get(0).getResponse();
+		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).getHosts().get(0).getResponse();
 
 		assertEquals("Hostname not found in the current configuration.", result.getErrorMessage());
 		assertNull(result.getCollectors());
@@ -67,7 +67,7 @@ class HostDetailsServiceTest {
 
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
-		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), 3).get(0).getResponse();
+		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), 3).getHosts().get(0).getResponse();
 
 		// No error message is displayed as the hostname exists.
 		assertTrue(result.getWorkingConnectors().isEmpty());
@@ -117,7 +117,7 @@ class HostDetailsServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// call the getHostDetails() method to test
-		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).get(0).getResponse();
+		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).getHosts().get(0).getResponse();
 
 		assertEquals(Set.of("CiscoUCSBladeSNMP", "Linux"), result.getWorkingConnectors());
 

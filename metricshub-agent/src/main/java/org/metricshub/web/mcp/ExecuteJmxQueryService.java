@@ -94,7 +94,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 		The query is valid only if at least one attribute or one key property is specified, even if those parameters are optional.
 		"""
 	)
-	public List<MultiHostToolResponse<QueryResponse>> executeQuery(
+	public MultiHostToolResponse<QueryResponse> executeQuery(
 		@ToolParam(description = "The hostname(s) to execute JMX query on.", required = true) final List<String> hostname,
 		@ToolParam(description = "The MBean object name pattern.", required = true) final String objectName,
 		@ToolParam(
@@ -121,7 +121,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<QueryResponse>builder()
 							.hostname(host)
 							.response(
@@ -131,19 +131,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() ->
-				executeForHosts(
-					hostname,
-					this::buildNullHostnameResponse,
-					host ->
-						MultiHostToolResponse
-							.<QueryResponse>builder()
-							.hostname(host)
-							.response(QueryResponse.builder().isError("No Extension found for JMX.").build())
-							.build(),
-					resolvedPoolSize
-				)
-			);
+			.orElseGet(() -> MultiHostToolResponse.buildError("The JMX extension is not available"));
 	}
 
 	/**
@@ -223,13 +211,12 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} representing the error returned when a
+	 * Builds a {@link HostToolResponse} representing the error returned when a
 	 * null hostname is supplied to the tool.
 	 *
-	 * @return a response wrapper containing an error payload for the missing host
-	 *         name
+	 * @return a host-level response containing an error payload for the missing hostname
 	 */
-	private MultiHostToolResponse<QueryResponse> buildNullHostnameResponse() {
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
 		);

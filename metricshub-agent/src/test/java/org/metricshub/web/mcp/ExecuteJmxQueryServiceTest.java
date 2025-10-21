@@ -104,10 +104,17 @@ class ExecuteJmxQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService
-			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
-			.get(0)
-			.getResponse();
+		final MultiHostToolResponse<QueryResponse> aggregatedResult = jmxQueryService.executeQuery(
+			List.of(HOSTNAME),
+			OBJECT_NAME,
+			OBJECT_ATTRIBUTES,
+			KEY_PROPERTIES,
+			TIMEOUT,
+			null
+		);
+
+		assertEquals(1, aggregatedResult.getHosts().size(), () -> "One host response expected");
+		final QueryResponse result = aggregatedResult.getHosts().get(0).getResponse();
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
@@ -125,17 +132,17 @@ class ExecuteJmxQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService
-			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
-			.get(0)
-			.getResponse();
-
-		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
-		assertEquals(
-			"No Extension found for JMX.",
-			result.getIsError(),
-			() -> "Unexpected error message when the JMX extension isn't found"
+		final MultiHostToolResponse<QueryResponse> aggregatedResult = jmxQueryService.executeQuery(
+			List.of(HOSTNAME),
+			OBJECT_NAME,
+			OBJECT_ATTRIBUTES,
+			KEY_PROPERTIES,
+			TIMEOUT,
+			null
 		);
+
+		assertEquals("The JMX extension is not available", aggregatedResult.getErrorMessage());
+		assertTrue(aggregatedResult.getHosts().isEmpty(), () -> "No per-host responses expected");
 	}
 
 	@Test
@@ -178,6 +185,7 @@ class ExecuteJmxQueryServiceTest {
 
 		final QueryResponse result = jmxQueryService
 			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, 9)
+			.getHosts()
 			.get(0)
 			.getResponse();
 
@@ -228,6 +236,7 @@ class ExecuteJmxQueryServiceTest {
 		// Call the execute query method
 		QueryResponse result = jmxQueryService
 			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
+			.getHosts()
 			.get(0)
 			.getResponse();
 

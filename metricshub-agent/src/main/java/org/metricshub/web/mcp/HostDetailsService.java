@@ -118,7 +118,7 @@ public class HostDetailsService implements IMCPToolService {
 		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
-	public List<MultiHostToolResponse<HostDetails>> getHostDetails(
+	public MultiHostToolResponse<HostDetails> getHostDetails(
 		@ToolParam(description = "The hostname(s) to look up in the agent configuration") final List<String> hostname,
 		@ToolParam(
 			description = "Optional pool size for concurrent host details lookup. Defaults to 60.",
@@ -129,8 +129,7 @@ public class HostDetailsService implements IMCPToolService {
 		return executeForHosts(
 			hostname,
 			this::buildNullHostnameResponse,
-			host ->
-				MultiHostToolResponse.<HostDetails>builder().hostname(host).response(getHostDetailsIfPresent(host)).build(),
+			host -> HostToolResponse.<HostDetails>builder().hostname(host).response(getHostDetailsIfPresent(host)).build(),
 			resolvedPoolSize
 		);
 	}
@@ -221,13 +220,12 @@ public class HostDetailsService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} signalling that the hostname argument
-	 * is missing.
+	 * Builds a {@link HostToolResponse} signalling that the hostname argument is
+	 * missing.
 	 *
-	 * @return a response wrapper containing an error payload for the null
-	 *         hostname
+	 * @return a host-level response containing an error payload for the null hostname
 	 */
-	private MultiHostToolResponse<HostDetails> buildNullHostnameResponse() {
+	private HostToolResponse<HostDetails> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			HostDetails.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
 		);

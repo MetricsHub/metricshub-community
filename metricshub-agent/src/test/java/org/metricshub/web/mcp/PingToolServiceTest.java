@@ -38,16 +38,17 @@ class PingToolServiceTest {
 	void testShouldReturnSuccessfulPingResponse() {
 		final String hostname = "localhost";
 
-		final List<MultiHostToolResponse<ProtocolCheckResponse>> responses = pingToolService.pingHost(
+		final MultiHostToolResponse<ProtocolCheckResponse> responses = pingToolService.pingHost(
 			List.of(hostname),
 			3L,
 			null
 		);
 
 		assertNotNull(responses, "Ping responses should not be null");
-		assertEquals(1, responses.size(), "Only one response should be returned");
+		assertTrue(responses.getErrorMessage() == null || responses.getErrorMessage().isEmpty(), "Error should be empty");
+		assertEquals(1, responses.getHosts().size(), "Only one response should be returned");
 
-		final MultiHostToolResponse<ProtocolCheckResponse> responseWrapper = responses.get(0);
+		final HostToolResponse<ProtocolCheckResponse> responseWrapper = responses.getHosts().get(0);
 		assertEquals(hostname, responseWrapper.getHostname(), "Hostname should match the requested hostname");
 
 		final ProtocolCheckResponse response = responseWrapper.getResponse();
@@ -62,23 +63,25 @@ class PingToolServiceTest {
 	void testShouldReturnResponsesForMultipleHosts() {
 		final List<String> hostnames = List.of("localhost", "127.0.0.1");
 
-		final List<MultiHostToolResponse<ProtocolCheckResponse>> responses = pingToolService.pingHost(hostnames, 3L, 5);
+		final MultiHostToolResponse<ProtocolCheckResponse> responses = pingToolService.pingHost(hostnames, 3L, 5);
 
 		assertNotNull(responses, "Ping responses should not be null");
-		assertEquals(hostnames.size(), responses.size(), "A response should be returned for each hostname");
+		assertEquals(hostnames.size(), responses.getHosts().size(), "A response should be returned for each hostname");
 
-		responses.forEach(responseWrapper -> {
-			assertNotNull(responseWrapper.getResponse(), "Each response wrapper should contain a response");
-			assertTrue(
-				hostnames.contains(responseWrapper.getHostname()),
-				"Hostname should be one of the requested hostnames"
-			);
-			assertEquals(
-				responseWrapper.getHostname(),
-				responseWrapper.getResponse().getHostname(),
-				"Response should contain the matching hostname"
-			);
-			assertTrue(responseWrapper.getResponse().getResponseTime() >= 0, "Duration should be non-negative");
-		});
+		responses
+			.getHosts()
+			.forEach(responseWrapper -> {
+				assertNotNull(responseWrapper.getResponse(), "Each response wrapper should contain a response");
+				assertTrue(
+					hostnames.contains(responseWrapper.getHostname()),
+					"Hostname should be one of the requested hostnames"
+				);
+				assertEquals(
+					responseWrapper.getHostname(),
+					responseWrapper.getResponse().getHostname(),
+					"Response should contain the matching hostname"
+				);
+				assertTrue(responseWrapper.getResponse().getResponseTime() >= 0, "Duration should be non-negative");
+			});
 	}
 }

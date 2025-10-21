@@ -52,16 +52,18 @@ public final class MultiHostToolExecutor {
 	 * @param poolSize              maximum size of the thread pool used for
 	 *                              concurrent execution
 	 * @param <T>                   type of the per-host response
-	 * @return the aggregated list of responses, one per requested hostname
+	 * @return the aggregated response wrapper containing entries for each requested hostname
 	 */
-	public static <T> List<MultiHostToolResponse<T>> executeForHosts(
+	public static <T> MultiHostToolResponse<T> executeForHosts(
 		final List<String> hostnames,
-		final Supplier<MultiHostToolResponse<T>> nullHostnameSupplier,
-		final Function<String, MultiHostToolResponse<T>> perHostTask,
+		final Supplier<HostToolResponse<T>> nullHostnameSupplier,
+		final Function<String, HostToolResponse<T>> perHostTask,
 		final int poolSize
 	) {
+		final MultiHostToolResponse<T> aggregatedResponse = new MultiHostToolResponse<>();
+
 		if (hostnames == null || hostnames.isEmpty()) {
-			return List.of();
+			return aggregatedResponse;
 		}
 
 		Objects.requireNonNull(nullHostnameSupplier, "nullHostnameSupplier must not be null");
@@ -70,16 +72,21 @@ public final class MultiHostToolExecutor {
 		final int resolvedPoolSize = poolSize > 0 ? poolSize : 1;
 
 		if (resolvedPoolSize <= 1) {
-			return hostnames
-				.stream()
-				.map(hostname -> hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname))
-				.collect(Collectors.toList());
+			aggregatedResponse
+				.getHosts()
+				.addAll(
+					hostnames
+						.stream()
+						.map(hostname -> hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname))
+						.collect(Collectors.toList())
+				);
+			return aggregatedResponse;
 		}
 
 		final ExecutorService executor = Executors.newFixedThreadPool(resolvedPoolSize);
 
 		try {
-			final List<CompletableFuture<MultiHostToolResponse<T>>> futures = hostnames
+			final List<CompletableFuture<HostToolResponse<T>>> futures = hostnames
 				.stream()
 				.map(hostname ->
 					CompletableFuture.supplyAsync(
@@ -91,7 +98,8 @@ public final class MultiHostToolExecutor {
 
 			CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
 
-			return futures.stream().map(CompletableFuture::join).collect(Collectors.toList());
+			aggregatedResponse.getHosts().addAll(futures.stream().map(CompletableFuture::join).collect(Collectors.toList()));
+			return aggregatedResponse;
 		} finally {
 			executor.shutdown();
 			try {

@@ -80,15 +80,12 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(
-			List.of(HOSTNAME),
-			null,
-			null
-		);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
 
+		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals(
 			"No IPMI configuration found for hostname.",
-			result.get(0).getResponse().getIsError(),
+			result.getHosts().get(0).getResponse().getIsError(),
 			() -> "Should report missing IPMI configuration"
 		);
 	}
@@ -99,17 +96,10 @@ class ExecuteIpmiQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(
-			List.of(HOSTNAME),
-			null,
-			null
-		);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
 
-		assertEquals(
-			"No Extension found for IPMI protocol.",
-			result.get(0).getResponse().getIsError(),
-			() -> "Should return `missing IPMI extension` message"
-		);
+		assertEquals("The IPMI extension is not available", result.getErrorMessage());
+		assertTrue(result.getHosts().isEmpty(), () -> "No per-host responses expected when extension is missing");
 	}
 
 	@Test
@@ -139,11 +129,12 @@ class ExecuteIpmiQueryServiceTest {
 		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class)))
 			.thenReturn("Success");
 
-		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
 
+		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals(
 			"Success",
-			result.get(0).getResponse().getResponse(),
+			result.getHosts().get(0).getResponse().getResponse(),
 			() -> "The query result should be equals to `Success`"
 		);
 	}
@@ -176,7 +167,7 @@ class ExecuteIpmiQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).get(0).getResponse();
+		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).getHosts().get(0).getResponse();
 
 		// Assertions
 		assertNotNull(result.getIsError(), () -> "Error should be returned when executor throws");

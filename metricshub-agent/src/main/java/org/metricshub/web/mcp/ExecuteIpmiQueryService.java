@@ -78,7 +78,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		executes the query, and returns the provider result or an error.
 		"""
 	)
-	public List<MultiHostToolResponse<QueryResponse>> executeQuery(
+	public MultiHostToolResponse<QueryResponse> executeQuery(
 		@ToolParam(description = "The hostname(s) to execute IPMI query on.", required = true) final List<String> hostname,
 		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout,
 		@ToolParam(
@@ -96,7 +96,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						MultiHostToolResponse
+						HostToolResponse
 							.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeIpmiQueryWithExtensionSafe(extension, host, timeout))
@@ -104,7 +104,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 					resolvedPoolSize
 				)
 			)
-			.orElseGet(() -> buildExtensionMissingResponses(hostname));
+			.orElseGet(() -> MultiHostToolResponse.buildError("The IPMI extension is not available"));
 	}
 
 	/**
@@ -143,43 +143,14 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} representing the error produced when
-	 * a null hostname is encountered.
+	 * Builds a {@link HostToolResponse} representing the error produced when a
+	 * null hostname is encountered.
 	 *
-	 * @return a response wrapper containing an error payload for the missing host
-	 *         name
+	 * @return a host-level response containing an error payload for the missing hostname
 	 */
-	private MultiHostToolResponse<QueryResponse> buildNullHostnameResponse() {
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
 			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
 		);
-	}
-
-	/**
-	 * Builds the default response payload when the IPMI extension cannot be located
-	 * for the requested hosts.
-	 *
-	 * @param hostnames hostnames supplied by the caller
-	 * @return response entries describing the missing extension error for each
-	 *         requested host
-	 */
-	private List<MultiHostToolResponse<QueryResponse>> buildExtensionMissingResponses(final List<String> hostnames) {
-		if (hostnames == null || hostnames.isEmpty()) {
-			return List.of();
-		}
-
-		final QueryResponse extensionMissingResponse = QueryResponse
-			.builder()
-			.isError("No Extension found for IPMI protocol.")
-			.build();
-
-		return hostnames
-			.stream()
-			.map(host ->
-				host == null
-					? buildNullHostnameResponse()
-					: MultiHostToolResponse.<QueryResponse>builder().hostname(host).response(extensionMissingResponse).build()
-			)
-			.toList();
 	}
 }

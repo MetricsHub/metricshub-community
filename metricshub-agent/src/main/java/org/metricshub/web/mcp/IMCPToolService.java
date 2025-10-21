@@ -38,15 +38,15 @@ public interface IMCPToolService {
 	String NULL_HOSTNAME_ERROR = "Hostname must not be null";
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} describing the error generated when a
-	 * hostname parameter is {@code null}.
+	 * Builds a {@link HostToolResponse} describing the error generated when a hostname
+	 * parameter is {@code null}.
 	 *
 	 * @param responseSupplier supplier that produces the error payload to wrap
 	 * @param <T>              type of the tool response payload
-	 * @return a response wrapper containing the supplied error payload
+	 * @return a host-level response containing the supplied error payload
 	 */
-	default <T> MultiHostToolResponse<T> buildNullHostnameResponse(final Supplier<T> responseSupplier) {
-		return MultiHostToolResponse.<T>builder().response(responseSupplier.get()).build();
+	default <T> HostToolResponse<T> buildNullHostnameResponse(final Supplier<T> responseSupplier) {
+		return HostToolResponse.<T>builder().response(responseSupplier.get()).build();
 	}
 
 	/**
@@ -73,12 +73,12 @@ public interface IMCPToolService {
 	 * @param poolSize             maximum size of the thread pool used for
 	 *                             concurrent execution
 	 * @param <T>                  type of the tool response payload
-	 * @return ordered list of responses matching the requested hostnames
+	 * @return an aggregated response wrapper matching the requested hostnames
 	 */
-	default <T> List<MultiHostToolResponse<T>> executeForHosts(
+	default <T> MultiHostToolResponse<T> executeForHosts(
 		final List<String> hostnames,
-		final Supplier<MultiHostToolResponse<T>> nullHostnameSupplier,
-		final Function<String, MultiHostToolResponse<T>> perHostTask,
+		final Supplier<HostToolResponse<T>> nullHostnameSupplier,
+		final Function<String, HostToolResponse<T>> perHostTask,
 		final int poolSize
 	) {
 		Objects.requireNonNull(nullHostnameSupplier, "nullHostnameSupplier must not be null");

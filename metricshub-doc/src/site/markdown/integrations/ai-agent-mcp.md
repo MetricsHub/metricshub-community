@@ -68,23 +68,29 @@ Once the connection is established, your AI assistant can call the `PingHost` to
 The command will return this type of response:
 
 ```
-[
-  {
-    "hostname": "server-01",
-    "response": {
+{
+  "hosts": [
+    {
       "hostname": "server-01",
-      "responseTime": 27,
-      "reachable": true
-    }
-  },
-  {
-    "hostname": "server-02",
-    "response": {
+      "response": {
+        "hostname": "server-01",
+        "responseTime": 27,
+        "reachable": true
+      }
+    },
+    {
       "hostname": "server-02",
-      "responseTime": 42,
-      "reachable": false,
-      "errorMessage": "Timed out"
+      "response": {
+        "hostname": "server-02",
+        "responseTime": 42,
+        "reachable": false,
+        "errorMessage": "Timed out"
+      }
     }
-  }
-]
+  ]
+}
 ```
+
+Each multi-host tool now returns an object with a `hosts` array containing the per-host
+responses and an optional top-level `errorMessage`. When the requested extension or
+protocol is not available, `hosts` is empty and `errorMessage` describes the problem.

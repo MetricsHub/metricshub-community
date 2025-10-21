@@ -90,7 +90,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public List<MultiHostToolResponse<TelemetryResult>> collectMetricsForHost(
+	public MultiHostToolResponse<TelemetryResult> collectMetricsForHost(
 		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
@@ -111,7 +111,7 @@ public class TroubleshootHostService implements IMCPToolService {
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
 			host ->
-				MultiHostToolResponse
+				HostToolResponse
 					.<TelemetryResult>builder()
 					.hostname(host)
 					.response(collectMetricsForHostInternal(host, connectorId))
@@ -134,7 +134,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public List<MultiHostToolResponse<TelemetryResult>> getMetricsFromCacheForHost(
+	public MultiHostToolResponse<TelemetryResult> getMetricsFromCacheForHost(
 		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
@@ -148,7 +148,7 @@ public class TroubleshootHostService implements IMCPToolService {
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
 			host ->
-				MultiHostToolResponse
+				HostToolResponse
 					.<TelemetryResult>builder()
 					.hostname(host)
 					.response(getMetricsFromCacheForHostInternal(host))
@@ -171,7 +171,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		using the configured credentials and return the list of connectors that work with these hosts.
 		"""
 	)
-	public List<MultiHostToolResponse<TelemetryResult>> testAvailableConnectorsForHost(
+	public MultiHostToolResponse<TelemetryResult> testAvailableConnectorsForHost(
 		@ToolParam(description = "The hostname of the resource we are interested in") final List<String> hostname,
 		@ToolParam(
 			description = """
@@ -190,7 +190,7 @@ public class TroubleshootHostService implements IMCPToolService {
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
 			host ->
-				MultiHostToolResponse
+				HostToolResponse
 					.<TelemetryResult>builder()
 					.hostname(host)
 					.response(testAvailableConnectorsForHostInternal(host, connectorId))
@@ -295,13 +295,13 @@ public class TroubleshootHostService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link MultiHostToolResponse} reporting the error generated when a null
+	 * Builds a {@link HostToolResponse} reporting the error generated when a null
 	 * hostname is processed by troubleshooting tools.
 	 *
-	 * @return a response wrapper containing a {@link TelemetryResult} that carries the
+	 * @return a host-level response containing a {@link TelemetryResult} that carries the
 	 *         missing-hostname error message
 	 */
-	private MultiHostToolResponse<TelemetryResult> buildNullHostnameTelemetryResponse() {
+	private HostToolResponse<TelemetryResult> buildNullHostnameTelemetryResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() -> new TelemetryResult(NULL_HOSTNAME_ERROR));
 	}
 }

@@ -21,37 +21,22 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Aggregated response wrapper for MCP tools that operate on multiple hosts.
+ * Response payload produced for a single host when executing an MCP tool.
  *
- * @param <T> the type of the payload returned for each targeted host
+ * @param <T> the type of the payload returned for the targeted host
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class MultiHostToolResponse<T> {
+public class HostToolResponse<T> {
 
-	@Builder.Default
-	private List<HostToolResponse<T>> hosts = new ArrayList<>();
-
-	private String errorMessage;
-
-	/**
-	 * Builds a {@link MultiHostToolResponse} containing only the supplied error message.
-	 *
-	 * @param message error message to propagate to the caller
-	 * @param <T>     expected response payload type
-	 * @return a response wrapper populated with the provided message
-	 */
-	public static <T> MultiHostToolResponse<T> buildError(final String message) {
-		return MultiHostToolResponse.<T>builder().errorMessage(message).build();
-	}
+	private String hostname;
+	private T response;
 }
