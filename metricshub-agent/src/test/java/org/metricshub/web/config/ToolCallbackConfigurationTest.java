@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
+import org.metricshub.web.mcp.ExecuteHttpGetQueryService;
 import org.metricshub.web.mcp.ExecuteIpmiQueryService;
 import org.metricshub.web.mcp.ExecuteJmxQueryService;
 import org.metricshub.web.mcp.ExecuteSnmpQueryService;
@@ -88,6 +89,11 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public ExecuteJmxQueryService executeJmxQueryService() {
 			return mock(ExecuteJmxQueryService.class);
+		}
+
+		@Bean
+		public ExecuteHttpGetQueryService executeHttpGetQueryService() {
+			return mock(ExecuteHttpGetQueryService.class);
 		}
 	}
 }

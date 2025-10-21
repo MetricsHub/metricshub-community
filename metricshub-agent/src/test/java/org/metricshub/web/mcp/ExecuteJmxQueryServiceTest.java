@@ -38,24 +38,23 @@ class ExecuteJmxQueryServiceTest {
 	private static final String HOSTNAME = "hostname";
 
 	/**
-	 *
+	 * Sample MBean object name used in tests.
 	 */
 	private static final String OBJECT_NAME = "org.apache.cassandra.db:type=StorageService";
 
 	/**
-	 *
+	 * Comma-separated list of MBean attributes used in tests.
 	 */
 	private static final String OBJECT_ATTRIBUTES = "LiveNodes , MovingNodes";
 
 	/**
-	 *
+	 * Comma-separated key property names used in tests (e.g., JMX query filters).
 	 */
 	private static final String KEY_PROPERTIES = "scope, path";
 
 	/**
 	 * A Timeout for the query execution
 	 */
-
 	private static final Long TIMEOUT = 10L;
 
 	private AgentContextHolder agentContextHolder;
