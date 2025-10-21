@@ -21,7 +21,11 @@ package org.metricshub.web.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -31,17 +35,27 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
+import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.deserialization.DeserializationFailure;
+import org.metricshub.agent.deserialization.PostConfigDeserializer;
+import org.metricshub.agent.deserialization.TrackingDeserializationProblemHandler;
+import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.helper.PostConfigDeserializeHelper;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.exception.ConfigFilesException;
@@ -54,6 +68,11 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class ConfigurationFilesService {
+
+	private static final Pattern LINE_ERROR_PATTERN = Pattern.compile(
+		"line (\\d+), column (\\d+)",
+		Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+	);
 
 	/**
 	 * Allowed file extensions for configuration files.
@@ -322,20 +341,6 @@ public class ConfigurationFilesService {
 		return agentContext.getConfigDirectory();
 	}
 
-	/**
-	 * Produces a trimmed, safe error message for JSON payloads.
-	 *
-	 * @param raw raw message
-	 * @return sanitized message
-	 */
-	private static String safeMessage(final String raw) {
-		if (raw == null) {
-			return "Unknown error";
-		}
-
-		return raw;
-	}
-
 	@Data
 	@Builder
 	@NoArgsConstructor
@@ -344,14 +349,16 @@ public class ConfigurationFilesService {
 
 		private String fileName;
 		private boolean isValid;
-		private String error;
+
+		@Default
+		private Set<DeserializationFailure.Error> errors = new HashSet<>();
 
 		/**
 		 * Factory method for a successful validation result.
 		 * @param fileName the name of the validated file
 		 */
 		public static Validation ok(String fileName) {
-			return Validation.builder().fileName(fileName).isValid(true).error(null).build();
+			return Validation.builder().fileName(fileName).isValid(true).build();
 		}
 
 		/**
@@ -360,8 +367,17 @@ public class ConfigurationFilesService {
 		 * @param error    the validation error message
 		 * @return a Validation instance representing a failed validation
 		 */
-		public static Validation fail(String fileName, String error) {
-			return Validation.builder().fileName(fileName).isValid(false).error(error).build();
+		public static Validation fail(String fileName, DeserializationFailure error) {
+			return Validation.builder().fileName(fileName).isValid(false).errors(error.getErrors()).build();
+		}
+
+		@JsonIgnore
+		public String getFirst() {
+			if (errors == null || errors.isEmpty()) {
+				return "";
+			}
+
+			return errors.stream().findFirst().map(e -> e.getMessage()).orElseGet(() -> "");
 		}
 	}
 
@@ -374,17 +390,72 @@ public class ConfigurationFilesService {
 	 * @return validation result
 	 */
 	public Validation validate(final String content, final String fileName) {
+		final var deserializationFailure = new DeserializationFailure();
 		final var agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null) {
-			return Validation.fail(fileName, "Configuration directory is not available.");
+			deserializationFailure.addError("Configuration directory is not available.");
+			return Validation.fail(fileName, deserializationFailure);
 		}
 
+		final var tracking = new TrackingDeserializationProblemHandler(deserializationFailure);
+
 		try {
-			final JsonNode configNode = JsonHelper.buildYamlMapper().readTree(content);
-			agentContext.loadConfiguration(configNode);
+			final var mapper = AgentContext.newAgentConfigObjectMapper(agentContext.getExtensionManager());
+			mapper.addHandler(tracking);
+			mapper.readValue(content, AgentConfig.class);
 			return Validation.ok(fileName);
+		} catch (JsonProcessingException e) {
+			enrichErrors(deserializationFailure, e);
+			return Validation.fail(fileName, deserializationFailure);
 		} catch (Exception e) {
-			return Validation.fail(fileName, safeMessage(e.getMessage()));
+			return Validation.fail(fileName, deserializationFailure);
 		}
+	}
+
+	/**
+	 * Enriches deserialization errors with line/column information from JsonProcessingException.
+	 *
+	 * @param deserializationFailure the DeserializationFailure to enrich
+	 * @param e the JsonProcessingException containing location info
+	 */
+	private static void enrichErrors(final DeserializationFailure deserializationFailure, JsonProcessingException e) {
+		if (!deserializationFailure.isEmpty()) {
+			return;
+		}
+		// errors already tracked by the problem handler
+		final JsonLocation loc = e.getLocation();
+		int line = loc != null ? loc.getLineNr() : -1;
+		int column = loc != null ? loc.getColumnNr() : -1;
+
+		// try to extract the SnakeYAML location if present in message
+		final var msg = e.getOriginalMessage();
+		final var matcher = LINE_ERROR_PATTERN.matcher(msg);
+		while (matcher.find()) {
+			line = Integer.parseInt(matcher.group(1));
+			column = Integer.parseInt(matcher.group(2));
+			deserializationFailure.addError(msg, line, column);
+		}
+
+		deserializationFailure.addError(msg, line, column);
+	}
+
+	/**
+	 * Create a new {@link ObjectMapper} instance then add to it the
+	 * {@link PostConfigDeserializer}
+	 *
+	 * @param extensionManager Manages and aggregates various types of extensions used within MetricsHub.
+	 * @return new {@link ObjectMapper} instance
+	 */
+	public static ObjectMapper newAgentConfigYamlMapper(final ExtensionManager extensionManager) {
+		final ObjectMapper objectMapper = ConfigHelper.newObjectMapper();
+
+		PostConfigDeserializeHelper.addPostDeserializeSupport(objectMapper);
+
+		// Inject the extension manager in the deserialization context
+		final var injectableValues = new InjectableValues.Std();
+		injectableValues.addValue(ExtensionManager.class, extensionManager);
+		objectMapper.setInjectableValues(injectableValues);
+
+		return objectMapper;
 	}
 }

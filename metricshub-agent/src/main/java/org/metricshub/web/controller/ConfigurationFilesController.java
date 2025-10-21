@@ -105,7 +105,7 @@ public class ConfigurationFilesController {
 		if (!skipValidation) {
 			var v = configurationFilesService.validate(content, fileName);
 			if (!v.isValid()) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getError());
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
 			}
 		}
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateFile(fileName, content));
