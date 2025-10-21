@@ -90,7 +90,3 @@ The command will return this type of response:
   ]
 }
 ```
-
-Each multi-host tool now returns an object with a `hosts` array containing the per-host
-responses and an optional top-level `errorMessage`. When the requested extension or
-protocol is not available, `hosts` is empty and `errorMessage` describes the problem.
