@@ -190,7 +190,8 @@ export const createConfigBackup = createAsyncThunk(
 );
 
 /**
- * Restore a config file from a folder-style backup name "backup-<timestamp>/<original/path>".
+ * Restore a config file from a flat backup filename
+ * "backup-<timestamp>__<original/path>" (see parseBackupFileName).
  * If overwrite is false and the original exists, we create "<name>.restored-<timestamp>.ext".
  * Returns { originalName, restoredName }.
  * @param {{backupName:string,overwrite?:boolean}} param0
