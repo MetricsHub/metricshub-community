@@ -680,9 +680,10 @@ resourceGroups:
             timeout: 120s
             authentications: [ntlm]
 ```
+
 ### Programmable Configuration
 
-You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, or parsing JSON content.
+You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, SQL databases, or parsing JSON content.
 
 To fetch and transform this data into valid configuration blocks, use [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) in the `.vm` template files located under the `/config` directory, such as:
 
@@ -690,7 +691,11 @@ To fetch and transform this data into valid configuration blocks, use [Velocity 
 * `${esc.d}file` for reading local files
 * `${esc.d}json` for parsing JSON data
 * `${esc.d}collection` for splitting strings or manipulating collections
+* `${esc.d}sql` for executing SQL queries on a database
+* `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
 * `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
+
+> Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `${esc.h}` for directives, `${esc.h}${esc.h}` for comments, and `${esc.d}` for variables.
 
 ##### `${esc.d}http.execute` tool arguments
 
@@ -708,11 +713,11 @@ Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly f
 
 > Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
 
-##### Example 1: Loading resources from an HTTP API
+##### Example: Loading resources from an HTTP API
 
 Suppose your API endpoint at `https://cmdb/servers` returns:
 
-```
+```json
 [
   {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
   {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
@@ -721,8 +726,7 @@ Suppose your API endpoint at `https://cmdb/servers` returns:
 
 You can dynamically create resource blocks using:
 
-```
-## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+```velocity
 
 resources:
 ${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
@@ -743,19 +747,26 @@ ${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
 ${esc.h}end
 ```
 
-##### Example 2: Loading resources from a local file
+##### `${esc.d}file.readAllLines` tool arguments
+
+Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
+
+| Argument   | Description                                      |
+|------------|--------------------------------------------------|
+| `filePath` | **(Required)** The path to the local file.       |
+
+##### Example: Loading resources from a local file
 
 If your CSV file contains:
 
-```
+```csv
 host1,win,wmi,user1,pass1
 host2,linux,ssh,user2,pass2
 ```
 
 Use this Velocity template to generate the resource block:
 
-```
-## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+```velocity
 
 ${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
 resources:
@@ -774,6 +785,57 @@ ${esc.h}foreach(${esc.d}line in ${esc.d}lines)
       ${esc.d}protocol:
         username: ${esc.d}username
         password: ${esc.d}password
+${esc.h}end
+```
+
+##### `${esc.d}sql.query` tool arguments
+
+Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates. It supports the following arguments:
+
+| Argument   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `query`    | **(Required)** SQL query to execute.                           |
+| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database. |
+| `username` | Name used for database authentication.                         |
+| `password` | Password used for database authentication.                     |
+| `timeout`  | (Optional) Query timeout in seconds (Default: 120).            |
+
+##### Example: Loading resources from an SQL database
+
+Consider a `hosts` table in your database with the following data:
+
+| hostname         | host_type | username | password |
+| ---------------- | --------- | -------- | -------- |
+| storage-server-1 | storage   | admin1   | pwd1     |
+| windows-server-1 | windows   | admin2   | pwd2     |
+
+You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
+
+```velocity
+
+${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
+${esc.h}set(${esc.d}user = "sa")
+${esc.h}set(${esc.d}pass = "pwd1")
+${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT hostname, host_type, username, password FROM hosts ORDER BY hostname", ${esc.d}url, ${esc.d}user, ${esc.d}pass, 120))
+resources:
+${esc.h}foreach(${esc.d}row in ${esc.d}rows)
+  ${esc.h}set(${esc.d}hostname  = ${esc.d}row.get(0))
+  ${esc.h}set(${esc.d}host_type = ${esc.d}row.get(1))
+  ${esc.h}set(${esc.d}username  = ${esc.d}row.get(2))
+  ${esc.h}set(${esc.d}password  = ${esc.d}row.get(3))
+  ${esc.h}if(${esc.d}host_type.equals("storage"))
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}host_type
+    protocols:
+      http:
+        hostname: ${esc.d}hostname
+        https: true
+        port: 443
+        username: ${esc.d}username
+        password: ${esc.d}password
+  ${esc.h}end
 ${esc.h}end
 ```
 

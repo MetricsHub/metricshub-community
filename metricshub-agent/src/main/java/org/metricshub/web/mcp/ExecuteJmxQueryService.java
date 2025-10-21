@@ -42,7 +42,7 @@ import org.springframework.stereotype.Service;
  * It finds a valid JMX configuration for a host, applies runtime parameters,
  * builds the JMX query payload, and delegates execution to the JMX extension.
  */
-public class ExecuteJmxQueryService {
+public class ExecuteJmxQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the JMX request.
