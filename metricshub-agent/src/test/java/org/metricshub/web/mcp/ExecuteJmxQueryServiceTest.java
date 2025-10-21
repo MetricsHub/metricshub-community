@@ -104,13 +104,10 @@ class ExecuteJmxQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		final QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
+			.get(0)
+			.getResponse();
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
@@ -128,13 +125,10 @@ class ExecuteJmxQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		final QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
+			.get(0)
+			.getResponse();
 
 		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
 		assertEquals(
@@ -182,13 +176,10 @@ class ExecuteJmxQueryServiceTest {
 		)
 			.thenReturn(List.of(values));
 
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		final QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, 9)
+			.get(0)
+			.getResponse();
 
 		assertEquals(
 			TextTableHelper.generateTextTable("scope;path;LiveNodes;MovingNodes", List.of(values)),
@@ -235,13 +226,10 @@ class ExecuteJmxQueryServiceTest {
 			.thenThrow(new IllegalArgumentException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
+			.get(0)
+			.getResponse();
 
 		// Assertions
 		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");

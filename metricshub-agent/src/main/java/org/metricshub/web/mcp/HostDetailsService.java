@@ -22,6 +22,7 @@ package org.metricshub.web.mcp;
  */
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +55,11 @@ public class HostDetailsService implements IMCPToolService {
 	 * Holds contextual information about the current agent instance.
 	 */
 	private final AgentContextHolder agentContextHolder;
+
+	/**
+	 * Default pool size for host details lookup.
+	 */
+	private static final int DEFAULT_HOST_DETAILS_POOL_SIZE = 60;
 
 	/**
 	 * Contains all the collectors by their protocol.
@@ -114,10 +120,21 @@ public class HostDetailsService implements IMCPToolService {
 		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
-	public HostDetails getHostDetails(
-		@ToolParam(description = "The hostname to look up in the agent configuration") final String hostname
+	public List<MultiHostToolResponse<HostDetails>> getHostDetails(
+		@ToolParam(description = "The hostname(s) to look up in the agent configuration") final List<String> hostname,
+		@ToolParam(
+			description = "Optional pool size for concurrent host details lookup. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
-		return getHostDetailsIfPresent(hostname);
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_HOST_DETAILS_POOL_SIZE);
+		return executeForHosts(
+			hostname,
+			this::buildNullHostnameResponse,
+			host ->
+				MultiHostToolResponse.<HostDetails>builder().hostname(host).response(getHostDetailsIfPresent(host)).build(),
+			resolvedPoolSize
+		);
 	}
 
 	/**
@@ -203,5 +220,18 @@ public class HostDetailsService implements IMCPToolService {
 	 */
 	public Set<String> getCollectors(final String protocol) {
 		return COLLECTOR_MAP.getOrDefault(protocol, Set.of());
+	}
+
+	/**
+	 * Builds a {@link MultiHostToolResponse} signalling that the hostname argument
+	 * is missing.
+	 *
+	 * @return a response wrapper containing an error payload for the null
+	 *         hostname
+	 */
+	private MultiHostToolResponse<HostDetails> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			HostDetails.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 }

@@ -21,8 +21,35 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.function.Supplier;
+
 /**
  * Marker interface for MetricsHub tools.
  * Each MCP Tool must implement this interface to be automatically registered.
  */
-public interface IMCPToolService {}
+public interface IMCPToolService {
+	String NULL_HOSTNAME_ERROR = "Hostname must not be null";
+
+	default <T> MultiHostToolResponse<T> buildNullHostnameResponse(final Supplier<T> responseSupplier) {
+		return MultiHostToolResponse.<T>builder().response(responseSupplier.get()).build();
+	}
+
+	default int resolvePoolSize(final Integer requestedPoolSize, final int defaultPoolSize) {
+		return requestedPoolSize != null && requestedPoolSize > 0 ? requestedPoolSize : defaultPoolSize;
+	}
+
+	default <T> List<MultiHostToolResponse<T>> executeForHosts(
+		final List<String> hostnames,
+		final Supplier<MultiHostToolResponse<T>> nullHostnameSupplier,
+		final Function<String, MultiHostToolResponse<T>> perHostTask,
+		final int poolSize
+	) {
+		Objects.requireNonNull(nullHostnameSupplier, "nullHostnameSupplier must not be null");
+		Objects.requireNonNull(perHostTask, "perHostTask must not be null");
+
+		return MultiHostToolExecutor.executeForHosts(hostnames, nullHostnameSupplier, perHostTask, poolSize);
+	}
+}

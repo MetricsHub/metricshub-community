@@ -114,7 +114,7 @@ class ExecuteWqlQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
@@ -132,7 +132,7 @@ class ExecuteWqlQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
 		assertEquals(
@@ -170,7 +170,7 @@ class ExecuteWqlQueryServiceTest {
 		when(wmiRequestExecutorMock.executeWmi(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE)))
 			.thenReturn(List.of(List.of("Value1", "Value2")));
 
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		assertEquals(
 			TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))),
@@ -210,7 +210,7 @@ class ExecuteWqlQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
 		// Assertions
 		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
@@ -273,5 +273,17 @@ class ExecuteWqlQueryServiceTest {
 			wqlQueryService.normalizeNamespace("wmi", null),
 			() -> "Should return default WMI namespace when the given namespace is blank"
 		);
+	}
+
+	private QueryResponse executeQuery(
+		final String protocol,
+		final String query,
+		final String namespace,
+		final Long timeout
+	) {
+		return wqlQueryService
+			.executeQuery(List.of(HOSTNAME), protocol, query, namespace, timeout, null)
+			.get(0)
+			.getResponse();
 	}
 }

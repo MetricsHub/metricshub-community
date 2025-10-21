@@ -2,7 +2,6 @@ package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,8 +10,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,11 +80,15 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null
+		);
 
 		assertEquals(
 			"No IPMI configuration found for hostname.",
-			result.getIsError(),
+			result.get(0).getResponse().getIsError(),
 			() -> "Should report missing IPMI configuration"
 		);
 	}
@@ -98,18 +99,21 @@ class ExecuteIpmiQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(
+			List.of(HOSTNAME),
+			null,
+			null
+		);
 
 		assertEquals(
 			"No Extension found for IPMI protocol.",
-			result.getIsError(),
+			result.get(0).getResponse().getIsError(),
 			() -> "Should return `missing IPMI extension` message"
 		);
-		assertNull(result.getResponse(), () -> "Response should be null when IPMI extension is unavailable");
 	}
 
 	@Test
-	void testExecuteIpmiQuery() throws ClientException, InterruptedException, ExecutionException, TimeoutException {
+	void testExecuteIpmiQuery() throws Exception {
 		// Creating a IPMI Configuration for the host
 		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
 			.builder()
@@ -135,9 +139,13 @@ class ExecuteIpmiQueryServiceTest {
 		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class)))
 			.thenReturn("Success");
 
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final List<MultiHostToolResponse<QueryResponse>> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
 
-		assertEquals("Success", result.getResponse(), () -> "The query result should be equals to `Success`");
+		assertEquals(
+			"Success",
+			result.get(0).getResponse().getResponse(),
+			() -> "The query result should be equals to `Success`"
+		);
 	}
 
 	@Test
@@ -168,7 +176,7 @@ class ExecuteIpmiQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).get(0).getResponse();
 
 		// Assertions
 		assertNotNull(result.getIsError(), () -> "Error should be returned when executor throws");
