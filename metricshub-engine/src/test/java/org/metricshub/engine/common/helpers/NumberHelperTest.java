@@ -61,11 +61,7 @@ class NumberHelperTest {
 		assertEquals(5, getPositiveOrDefault(5, defaultValue), () -> "Positive integer: should return input");
 		assertEquals(defaultValue, getPositiveOrDefault(0, defaultValue), () -> "Zero: should return default");
 		assertEquals(defaultValue, getPositiveOrDefault(-3, defaultValue), () -> "Negative: should return default");
-		assertEquals(
-			0.1,
-			getPositiveOrDefault(0.1, defaultValue),
-			() -> "Double 0.1 should return input"
-		);
+		assertEquals(0.1, getPositiveOrDefault(0.1, defaultValue), () -> "Double 0.1 should return input");
 		assertEquals(1.9, getPositiveOrDefault(1.9, defaultValue), () -> "Double 1.9 truncates to 1: should return input");
 	}
 }
