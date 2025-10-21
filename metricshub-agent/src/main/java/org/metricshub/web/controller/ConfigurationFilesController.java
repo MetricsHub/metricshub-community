@@ -82,7 +82,7 @@ public class ConfigurationFilesController {
 	 */
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getConfigurationFileContent(@PathVariable("fileName") String fileName)
-			throws ConfigFilesException {
+		throws ConfigFilesException {
 		final String content = configurationFilesService.getFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -99,10 +99,10 @@ public class ConfigurationFilesController {
 	 */
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
-			@PathVariable("fileName") String fileName,
-			@RequestBody(required = false) String content,
-			@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation)
-			throws ConfigFilesException {
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content,
+		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+	) throws ConfigFilesException {
 		if (!skipValidation) {
 			var v = configurationFilesService.validate(content, fileName);
 			if (!v.isValid()) {
@@ -124,10 +124,15 @@ public class ConfigurationFilesController {
 	 *         validation results.
 	 * @throws ConfigFilesException if the file content cannot be read
 	 */
-	@PostMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
+	@PostMapping(
+		value = "/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.TEXT_PLAIN_VALUE
+	)
 	public ResponseEntity<ConfigurationFilesService.Validation> validateConfigurationFile(
-			@PathVariable("fileName") String fileName,
-			@RequestBody(required = false) String content) throws ConfigFilesException {
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content
+	) throws ConfigFilesException {
 		if (content == null) {
 			content = configurationFilesService.getFileContent(fileName);
 		}
@@ -143,7 +148,7 @@ public class ConfigurationFilesController {
 	 */
 	@DeleteMapping("/{fileName}")
 	public ResponseEntity<Void> deleteConfigurationFile(@PathVariable("fileName") String fileName)
-			throws ConfigFilesException {
+		throws ConfigFilesException {
 		configurationFilesService.deleteFile(fileName);
 		// Returns 204 No Content
 		return ResponseEntity.noContent().build();
@@ -157,20 +162,30 @@ public class ConfigurationFilesController {
 	 *         renamed file's metadata.
 	 * @throws ConfigFilesException if an IO error occurs during renaming
 	 */
-	@PatchMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+	@PatchMapping(
+		value = "/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.APPLICATION_JSON_VALUE
+	)
 	public ResponseEntity<ConfigurationFile> renameConfigurationFile(
-			@PathVariable("fileName") String oldName,
-			@Valid @RequestBody FileNewName fileNewName) throws ConfigFilesException {
+		@PathVariable("fileName") String oldName,
+		@Valid @RequestBody FileNewName fileNewName
+	) throws ConfigFilesException {
 		return ResponseEntity.ok(configurationFilesService.renameFile(oldName, fileNewName.getNewName()));
 	}
 
 	/**
 	 * Endpoint to create or update a backup file.
 	 */
-	@PutMapping(value = "/backup/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
+	@PutMapping(
+		value = "/backup/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.TEXT_PLAIN_VALUE
+	)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateBackupFile(
-			@PathVariable("fileName") String fileName,
-			@RequestBody(required = false) String content) throws ConfigFilesException {
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content
+	) throws ConfigFilesException {
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateBackupFile(fileName, content));
 	}
 
@@ -190,7 +205,7 @@ public class ConfigurationFilesController {
 	 */
 	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> getBackupFileContent(@PathVariable("fileName") String fileName)
-			throws ConfigFilesException {
+		throws ConfigFilesException {
 		final String content = configurationFilesService.getBackupFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -199,8 +214,7 @@ public class ConfigurationFilesController {
 	 * Endpoint to delete a backup file by its name.
 	 */
 	@DeleteMapping("/backup/{fileName}")
-	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName)
-			throws ConfigFilesException {
+	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName) throws ConfigFilesException {
 		configurationFilesService.deleteBackupFile(fileName);
 		return ResponseEntity.noContent().build();
 	}
