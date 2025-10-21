@@ -120,7 +120,7 @@ class ExecuteJmxQueryServiceTest {
 
 		assertEquals(
 			"No valid configuration found for JMX on %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -241,9 +241,9 @@ class ExecuteJmxQueryServiceTest {
 			.getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}

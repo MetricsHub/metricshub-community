@@ -100,7 +100,7 @@ class ExecuteSnmpQueryServiceTest {
 
 		assertEquals(
 			"No SNMP configuration found for %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Should return `missing SNMP configuration` message"
 		);
 	}
@@ -148,14 +148,14 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		QueryResponse result = executeQuery("get", OID, null, TIMEOUT).getHosts().get(0).getResponse();
 
-		assertNull(result.getIsError(), () -> "Error should be null on successful GET");
+		assertNull(result.getError(), () -> "Error should be null on successful GET");
 		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "GET should return `Success`");
 
 		// Test a wrong SNMP query type
 		result = executeQuery("aw", OID, null, TIMEOUT).getHosts().get(0).getResponse();
 
 		assertTrue(
-			result.getIsError().contains("Unknown SNMP query"),
+			result.getError().contains("Unknown SNMP query"),
 			() -> "Should return `unknown SNMP query type` message"
 		);
 	}
@@ -193,7 +193,7 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = executeQuery("getNext", OID, null, TIMEOUT).getHosts().get(0).getResponse();
 
-		assertNull(result.getIsError(), () -> "Error should be null on successful GETNEXT");
+		assertNull(result.getError(), () -> "Error should be null on successful GETNEXT");
 		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "GETNEXT should return `Success`");
 	}
 
@@ -224,7 +224,7 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final QueryResponse result = executeQuery("walk", OID, null, TIMEOUT).getHosts().get(0).getResponse();
 
-		assertNull(result.getIsError(), () -> "Error should be null on successful WALK");
+		assertNull(result.getError(), () -> "Error should be null on successful WALK");
 		assertEquals(SUCCESS_MESSAGE, result.getResponse(), () -> "WALK should return `Success`");
 	}
 
@@ -263,7 +263,7 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		QueryResponse result = executeQuery("table", OID, "1, 3, 5 ,", TIMEOUT).getHosts().get(0).getResponse();
 
-		assertNull(result.getIsError(), () -> "Error should be null on successful TABLE");
+		assertNull(result.getError(), () -> "Error should be null on successful TABLE");
 		assertEquals(
 			TextTableHelper.generateTextTable("1;3;5", List.of(List.of("Column1", "Column2", "Column3"))),
 			result.getResponse(),
@@ -286,7 +286,7 @@ class ExecuteSnmpQueryServiceTest {
 
 		// Wrong column value
 		result = executeQuery("table", OID, "1, 3, a", TIMEOUT).getHosts().get(0).getResponse();
-		assertNull(result.getIsError(), () -> "Error should be null on successful TABLE");
+		assertNull(result.getError(), () -> "Error should be null on successful TABLE");
 		assertEquals(
 			TextTableHelper.generateTextTable("1;3", List.of(List.of("Column1", "Column3"))),
 			result.getResponse(),
@@ -298,7 +298,7 @@ class ExecuteSnmpQueryServiceTest {
 
 		assertEquals(
 			"At least one valid column index must be provided for SNMP Table queries.",
-			result.getIsError(),
+			result.getError(),
 			"Should return `missing columns` message"
 		);
 	}

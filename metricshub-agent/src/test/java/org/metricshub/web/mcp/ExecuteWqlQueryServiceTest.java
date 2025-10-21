@@ -128,7 +128,7 @@ class ExecuteWqlQueryServiceTest {
 
 		assertEquals(
 			"No valid wmi configuration found for %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -224,9 +224,9 @@ class ExecuteWqlQueryServiceTest {
 		QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT).getHosts().get(0).getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}

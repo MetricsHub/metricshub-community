@@ -162,7 +162,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		if (!SNMP_METHODS.contains(queryType.toLowerCase())) {
 			return QueryResponse
 				.builder()
-				.isError("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
+				.error("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
 				.build();
 		}
 
@@ -178,7 +178,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			if (columnsNode.isEmpty()) {
 				return QueryResponse
 					.builder()
-					.isError("At least one valid column index must be provided for SNMP Table queries.")
+					.error("At least one valid column index must be provided for SNMP Table queries.")
 					.build();
 			}
 
@@ -195,8 +195,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			.map((IConfiguration configuration) ->
 				executeQuerySafe(extension, hostname, queryType, timeout, queryNode, configuration)
 			)
-			.orElseGet(() ->
-				QueryResponse.builder().isError("No SNMP configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() -> QueryResponse.builder().error("No SNMP configuration found for %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -226,7 +225,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("Failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
+				.error("Failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
 				.build();
 		}
 	}
@@ -238,7 +237,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	 */
 	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 

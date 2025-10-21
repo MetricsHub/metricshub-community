@@ -29,7 +29,7 @@ import lombok.Data;
 /**
  * Represents the result of a query execution.
  * <p>
- * Contains either a successful {@code response} or an {@code isError} message
+ * Contains either a successful {@code response} or an {@code error} message
  * describing why the query failed.
  * </p>
  */
@@ -38,7 +38,7 @@ public class QueryResponse {
 	/**
 	 * Error message if the query failed, otherwise {@code null}.
 	 */
-	private final String isError;
+	private final String error;
 
 	/**
 	 * The successful response payload if the query succeeded, otherwise {@code null}.

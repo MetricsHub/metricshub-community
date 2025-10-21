@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import org.metricshub.engine.common.helpers.NumberHelper;
 
 /**
  * Marker interface for MetricsHub tools.
@@ -58,7 +59,7 @@ public interface IMCPToolService {
 	 * @return the validated pool size to use for execution
 	 */
 	default int resolvePoolSize(final Integer requestedPoolSize, final int defaultPoolSize) {
-		return requestedPoolSize != null && requestedPoolSize > 0 ? requestedPoolSize : defaultPoolSize;
+		return NumberHelper.getPositiveOrDefault(requestedPoolSize, defaultPoolSize).intValue();
 	}
 
 	/**

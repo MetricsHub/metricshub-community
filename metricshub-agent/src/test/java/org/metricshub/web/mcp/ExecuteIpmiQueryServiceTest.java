@@ -85,7 +85,7 @@ class ExecuteIpmiQueryServiceTest {
 		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals(
 			"No IPMI configuration found for hostname.",
-			result.getHosts().get(0).getResponse().getIsError(),
+			result.getHosts().get(0).getResponse().getError(),
 			() -> "Should report missing IPMI configuration"
 		);
 	}
@@ -170,9 +170,9 @@ class ExecuteIpmiQueryServiceTest {
 		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).getHosts().get(0).getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error should be returned when executor throws");
+		assertNotNull(result.getError(), () -> "Error should be returned when executor throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should include the thrown text"
 		);
 	}

@@ -133,12 +133,11 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 				} catch (Exception e) {
 					return QueryResponse
 						.builder()
-						.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+						.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 						.build();
 				}
 			})
-			.orElseGet(() ->
-				QueryResponse.builder().isError("No IPMI configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() -> QueryResponse.builder().error("No IPMI configuration found for %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -150,7 +149,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	 */
 	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 }

@@ -166,7 +166,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 				executeQuerySafe(extension, configurationCopy, hostname, objectName, attributes, keyProperties, timeout)
 			)
 			.orElseGet(() ->
-				QueryResponse.builder().isError("No valid configuration found for JMX on %s.".formatted(hostname)).build()
+				QueryResponse.builder().error("No valid configuration found for JMX on %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -205,7 +205,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
+				.error("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
 				.build();
 		}
 	}
@@ -218,7 +218,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	 */
 	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 

@@ -171,7 +171,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 			.orElseGet(() ->
 				QueryResponse
 					.builder()
-					.isError("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
+					.error("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
 					.build()
 			);
 	}
@@ -211,7 +211,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+				.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 				.build();
 		}
 	}
@@ -224,7 +224,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 	 */
 	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			QueryResponse.builder().isError(NULL_HOSTNAME_ERROR).build()
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
 		);
 	}
 
