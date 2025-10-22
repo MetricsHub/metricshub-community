@@ -147,7 +147,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 			.map((IProtocolExtension extension) ->
 				executeForHosts(
 					urls,
-					this::buildNullUrlResponse,
+					ExecuteHttpGetQueryService::buildNullUrlResponse,
 					targetUrl -> executeForUrl(extension, targetUrl, headers, body, timeout),
 					resolvedPoolSize
 				)
@@ -160,7 +160,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 	 *
 	 * @return host response containing the {@link #NULL_URL_ERROR} message
 	 */
-	private HostToolResponse<QueryResponse> buildNullUrlResponse() {
+	private static HostToolResponse<QueryResponse> buildNullUrlResponse() {
 		return buildUrlErrorResponse(NULL_URL_ERROR);
 	}
 
@@ -170,7 +170,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 	 * @param errorMessage message describing the URL validation failure
 	 * @return host response encapsulating the error message
 	 */
-	private HostToolResponse<QueryResponse> buildUrlErrorResponse(final String errorMessage) {
+	private static HostToolResponse<QueryResponse> buildUrlErrorResponse(final String errorMessage) {
 		return HostToolResponse
 			.<QueryResponse>builder()
 			.response(QueryResponse.builder().error(errorMessage).build())
@@ -194,22 +194,24 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		final String body,
 		final Long timeout
 	) {
+		final HttpTarget httpTarget;
 		try {
-			final HttpTarget httpTarget = resolveTarget(targetUrl);
-			final QueryResponse response = executeHttpQueryWithExtensionSafe(
-				extension,
-				httpTarget.hostname(),
-				HTTP_GET,
-				httpTarget.url(),
-				headers,
-				body,
-				timeout
-			);
-
-			return HostToolResponse.<QueryResponse>builder().hostname(httpTarget.hostname()).response(response).build();
-		} catch (IllegalArgumentException exception) {
+			httpTarget = resolveTarget(targetUrl);
+		} catch (Exception exception) {
 			return buildUrlErrorResponse(exception.getMessage());
 		}
+
+		final QueryResponse response = executeHttpQueryWithExtensionSafe(
+			extension,
+			httpTarget.hostname(),
+			HTTP_GET,
+			httpTarget.url(),
+			headers,
+			body,
+			timeout
+		);
+
+		return HostToolResponse.<QueryResponse>builder().hostname(httpTarget.hostname()).response(response).build();
 	}
 
 	/**
@@ -232,7 +234,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		final String normalizedUrl = normalizeUrl(trimmedUrl);
 
 		try {
-			final URL parsedUrl = new URL(normalizedUrl);
+			final var parsedUrl = new URL(normalizedUrl);
 			parsedUrl.toURI();
 
 			final String hostname = parsedUrl.getHost();
@@ -260,7 +262,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 	 * @param url URL to normalize
 	 * @return original URL when already prefixed with HTTP/HTTPS, otherwise the HTTPS-prefixed variant
 	 */
-	private String normalizeUrl(final String url) {
+	private static String normalizeUrl(final String url) {
 		final String lowerCaseUrl = url.toLowerCase(Locale.ROOT);
 		if (lowerCaseUrl.startsWith(HTTP_PROTOCOL_PREFIX) || lowerCaseUrl.startsWith(HTTPS_PROTOCOL_PREFIX)) {
 			return url;

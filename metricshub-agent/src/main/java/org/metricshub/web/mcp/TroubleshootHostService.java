@@ -91,7 +91,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		"""
 	)
 	public MultiHostToolResponse<TelemetryResult> collectMetricsForHost(
-		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final List<
+		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
 		@ToolParam(
@@ -135,7 +135,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		"""
 	)
 	public MultiHostToolResponse<TelemetryResult> getMetricsFromCacheForHost(
-		@ToolParam(description = "The hostname of the resource we are interested in", required = true) final List<
+		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
 		@ToolParam(
@@ -172,7 +172,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		"""
 	)
 	public MultiHostToolResponse<TelemetryResult> testAvailableConnectorsForHost(
-		@ToolParam(description = "The hostname of the resource we are interested in") final List<String> hostname,
+		@ToolParam(description = "The hostname(s) of the resource we are interested in") final List<String> hostname,
 		@ToolParam(
 			description = """
 			Optional: The identifier of a specific connector to use for the test.
