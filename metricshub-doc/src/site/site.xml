@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="Documentation">
+<project name="Documentation" combine.self="override">
 
 	<skin>
 		<groupId>org.sentrysoftware.maven</groupId>
