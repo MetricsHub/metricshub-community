@@ -31,24 +31,49 @@ import com.fasterxml.jackson.databind.deser.ValueInstantiator;
 import com.fasterxml.jackson.databind.jsontype.TypeIdResolver;
 import java.io.IOException;
 
+/**
+ * Jackson {@link DeserializationProblemHandler} that records deserialization issues in a
+ * {@link DeserializationFailure} instance instead of throwing immediately.
+ */
 public class TrackingDeserializationProblemHandler extends DeserializationProblemHandler {
 
+	/**
+	 * Accumulator receiving the details of the encountered deserialization issues.
+	 */
 	private final DeserializationFailure failure;
 
+	/**
+	 * Create a handler that registers issues in the provided {@link DeserializationFailure} container.
+	 *
+	 * @param failure accumulator for errors detected during deserialization
+	 */
 	public TrackingDeserializationProblemHandler(DeserializationFailure failure) {
 		this.failure = failure;
 	}
 
+	/**
+	 * Record a problem using the current location from the {@link JsonParser}.
+	 *
+	 * @param p Jackson parser providing location information
+	 * @param message error description to record
+	 */
 	private void register(JsonParser p, String message) {
 		JsonLocation loc = p.currentLocation();
 		failure.addError(message, loc.getLineNr(), loc.getColumnNr());
 	}
 
+	/**
+	 * Record a problem using the current location from the {@link DeserializationContext}.
+	 *
+	 * @param ctxt context providing parser and location information
+	 * @param message error description to record
+	 */
 	private void register(DeserializationContext ctxt, String message) {
 		JsonLocation loc = ctxt.getParser().currentLocation();
 		failure.addError(message, loc.getLineNr(), loc.getColumnNr());
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleWeirdStringValue(
 		DeserializationContext ctxt,
@@ -69,6 +94,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleWeirdNumberValue(
 		DeserializationContext ctxt,
@@ -89,6 +115,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleWeirdNativeValue(
 		DeserializationContext ctxt,
@@ -100,6 +127,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleUnexpectedToken(
 		DeserializationContext ctxt,
@@ -112,6 +140,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleInstantiationProblem(
 		DeserializationContext ctxt,
@@ -123,6 +152,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public Object handleMissingInstantiator(
 		DeserializationContext ctxt,
@@ -135,6 +165,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return NOT_HANDLED;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public JavaType handleUnknownTypeId(
 		DeserializationContext ctxt,
@@ -147,6 +178,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		return null;
 	}
 
+	/** {@inheritDoc} */
 	@Override
 	public JavaType handleMissingTypeId(
 		DeserializationContext ctxt,

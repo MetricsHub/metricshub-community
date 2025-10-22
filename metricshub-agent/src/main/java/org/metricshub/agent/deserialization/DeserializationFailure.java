@@ -29,29 +29,56 @@ import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Container for deserialization errors detected while reading configuration files.
+ *
+ * <p>This class collects {@link Error} instances that capture the human-readable message along with
+ * optional line and column information.</p>
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeserializationFailure {
 
+	/**
+	 * Collected {@link Error} entries describing the encountered deserialization issues.
+	 */
 	@Default
 	private final Set<Error> errors = new HashSet<>();
 
+	/**
+	 * Register a new error message with location information.
+	 *
+	 * @param message description of the failure
+	 * @param line the line number where the error occurred (1-based)
+	 * @param column the column number where the error occurred (1-based)
+	 */
 	public void addError(String message, int line, int column) {
 		errors.add(new Error(message, line, column));
 	}
 
+	/**
+	 * Register a new error message without location details.
+	 *
+	 * @param message description of the failure
+	 */
 	public void addError(String message) {
 		errors.add(new Error(message, null, null));
 	}
 
+	/**
+	 * Immutable representation of a single deserialization error.
+	 */
 	@Data
 	@AllArgsConstructor
 	public static class Error {
 
+		/** message describing the error. */
 		private String message;
+		/** optional line where the error occurred. */
 		private Integer line;
+		/** optional column where the error occurred. */
 		private Integer column;
 	}
 
