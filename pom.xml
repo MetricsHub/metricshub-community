@@ -624,7 +624,6 @@
 				<artifactId>maven-checkstyle-plugin</artifactId>
 				<version>3.3.0</version>
 				<configuration>
-					<sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
 					<configLocation>checkstyle.xml</configLocation>
 				</configuration>
 				<executions>
