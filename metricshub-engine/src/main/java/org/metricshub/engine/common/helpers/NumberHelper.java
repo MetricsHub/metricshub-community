@@ -158,6 +158,6 @@ public class NumberHelper {
 	 * @return {@code n} if positive, otherwise {@code defaultValue}
 	 */
 	public static Number getPositiveOrDefault(final Number n, @NonNull final Number defaultValue) {
-		return n != null && n.longValue() > 0.0 ? n : defaultValue;
+		return n != null && n.doubleValue() > 0.0 ? n : defaultValue;
 	}
 }
