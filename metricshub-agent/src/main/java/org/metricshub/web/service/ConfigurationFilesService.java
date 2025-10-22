@@ -443,7 +443,9 @@ public class ConfigurationFilesService {
 			enrichErrors(deserializationFailure, e);
 			return Validation.fail(fileName, deserializationFailure, e);
 		} catch (Exception e) {
-			enrichErrors(deserializationFailure, e.getMessage());
+			if (deserializationFailure.isEmpty()) {
+				enrichErrors(deserializationFailure, e.getMessage());
+			}
 			return Validation.fail(fileName, deserializationFailure, e);
 		}
 	}
