@@ -117,7 +117,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		name = "ExecuteHttpGetQuery",
 		description = """
 		Execute an HTTP GET request on the provided URL(s) using the agent HTTP extension.
-		Resolve a valid configuration from context, derive the hostname, and set timeout (default 10s),
+		Resolve a valid configuration from context and set timeout (default 10s),
 		build the request (method=GET, url, optional headers/body), execute, and return the result or an error.
 
 		Headers must be provided as a single string where each header is "key: value",
