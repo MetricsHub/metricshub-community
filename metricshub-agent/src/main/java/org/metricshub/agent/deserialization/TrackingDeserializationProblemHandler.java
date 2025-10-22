@@ -83,13 +83,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 	) throws IOException {
 		register(
 			ctxt,
-			"Weird string value for type " +
-			targetType.getSimpleName() +
-			": " +
-			failureMsg +
-			" (value=" +
-			valueToConvert +
-			")"
+			"Weird string value for type %s: %s (value=%s)".formatted(targetType.getSimpleName(), failureMsg, valueToConvert)
 		);
 		return NOT_HANDLED;
 	}
@@ -104,13 +98,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 	) throws IOException {
 		register(
 			ctxt,
-			"Weird number value for type " +
-			targetType.getSimpleName() +
-			": " +
-			failureMsg +
-			" (value=" +
-			valueToConvert +
-			")"
+			"Weird number value for type %s: %s (value=%s)".formatted(targetType.getSimpleName(), failureMsg, valueToConvert)
 		);
 		return NOT_HANDLED;
 	}
@@ -123,7 +111,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		Object valueToConvert,
 		JsonParser p
 	) throws IOException {
-		register(p, "Weird native value for type " + targetType + ": " + valueToConvert);
+		register(p, "Weird native value for type %s: value=%s".formatted(targetType, valueToConvert));
 		return NOT_HANDLED;
 	}
 
@@ -136,7 +124,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		JsonParser p,
 		String failureMsg
 	) throws IOException {
-		register(p, "Unexpected token " + t + " for type " + targetType + ": " + failureMsg);
+		register(p, "Unexpected token %s for type %s: %s".formatted(t, targetType, failureMsg));
 		return NOT_HANDLED;
 	}
 
@@ -148,7 +136,14 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		Object argument,
 		Throwable t
 	) throws IOException {
-		register(ctxt, "Instantiation problem for type " + instClass.getSimpleName() + ": " + t.getMessage());
+		register(
+			ctxt,
+			"Instantiation problem for type %s with argument %s: %s".formatted(
+					instClass.getSimpleName(),
+					argument,
+					t.getMessage()
+				)
+		);
 		return NOT_HANDLED;
 	}
 
@@ -161,7 +156,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		JsonParser p,
 		String msg
 	) throws IOException {
-		register(p, "Missing instantiator for " + instClass.getSimpleName() + ": " + msg);
+		register(p, "Missing instantiator for %s: %s".formatted(instClass.getSimpleName(), msg));
 		return NOT_HANDLED;
 	}
 
@@ -174,7 +169,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		TypeIdResolver idResolver,
 		String failureMsg
 	) throws IOException {
-		register(ctxt, "Unknown type id '" + subTypeId + "' for base type " + baseType + ": " + failureMsg);
+		register(ctxt, "Unknown type id '%s' for base type %s: %s".formatted(subTypeId, baseType, failureMsg));
 		return null;
 	}
 
@@ -186,7 +181,7 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		TypeIdResolver idResolver,
 		String failureMsg
 	) throws IOException {
-		register(ctxt, "Missing type id for base type " + baseType + ": " + failureMsg);
+		register(ctxt, "Missing type id for base type %s: %s".formatted(baseType, failureMsg));
 		return null;
 	}
 }
