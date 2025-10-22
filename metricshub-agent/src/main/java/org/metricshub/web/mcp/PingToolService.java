@@ -95,7 +95,7 @@ public class PingToolService implements IMCPToolService {
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(PING_EXTENSION_TYPE)
-			.map(extension ->
+			.map((IProtocolExtension extension) ->
 				executeForHosts(
 					hostname,
 					this::buildNullHostnameResponse,

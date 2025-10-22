@@ -30,18 +30,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import lombok.NoArgsConstructor;
+import org.metricshub.engine.common.helpers.NumberHelper;
 
 /**
  * Utility methods for executing MCP tool actions concurrently against multiple hosts.
  */
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class MultiHostToolExecutor {
-
-	/**
-	 * Utility class constructor hidden to prevent instantiation.
-	 */
-	private MultiHostToolExecutor() {
-		// utility class
-	}
 
 	/**
 	 * Executes a per-host task concurrently for each hostname provided.
@@ -69,7 +65,7 @@ public final class MultiHostToolExecutor {
 		Objects.requireNonNull(nullHostnameSupplier, "nullHostnameSupplier must not be null");
 		Objects.requireNonNull(perHostTask, "perHostTask must not be null");
 
-		final int resolvedPoolSize = poolSize > 0 ? poolSize : 1;
+		final var resolvedPoolSize = NumberHelper.getPositiveOrDefault(poolSize, 1).intValue();
 
 		if (resolvedPoolSize <= 1) {
 			aggregatedResponse

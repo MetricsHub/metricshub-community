@@ -24,6 +24,11 @@ package org.metricshub.web.mcp;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.util.List;
+import java.util.Locale;
 import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -38,8 +43,8 @@ import org.springframework.stereotype.Service;
 /**
  * Service that executes HTTP requests (GET by default) through the MetricsHub agent.
  * <p>
- * It resolves a valid HTTP configuration for a target host from the agent context,
- * applies runtime parameters (hostname, timeout), builds a minimal HTTP request payload
+ * It resolves a valid HTTP configuration for target URLs from the agent context,
+ * extracts the hostname, applies runtime parameters (timeout), builds a minimal HTTP request payload
  * (method, URL, headers, body, resultContent), and delegates execution to the HTTP extension.
  * </p>
  * <p>
@@ -47,7 +52,7 @@ import org.springframework.stereotype.Service;
  * if the provided timeout is {@code null} or not positive.
  * </p>
  */
-public class ExecuteHttpGetQueryService {
+public class ExecuteHttpGetQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the HTTP request.
@@ -58,6 +63,31 @@ public class ExecuteHttpGetQueryService {
 	 * HTTP GET method
 	 */
 	private static final String HTTP_GET = "GET";
+
+	/**
+	 * Default pool size for HTTP queries.
+	 */
+	private static final int DEFAULT_HTTP_POOL_SIZE = 60;
+
+	/**
+	 * Error message returned when an URL entry is missing from the request payload.
+	 */
+	private static final String NULL_URL_ERROR = "URL must not be null";
+
+	/**
+	 * Error message returned when an URL entry is blank.
+	 */
+	private static final String BLANK_URL_ERROR = "URL must not be blank";
+
+	/**
+	 * HTTP protocol prefix.
+	 */
+	private static final String HTTP_PROTOCOL_PREFIX = "http://";
+
+	/**
+	 * HTTPS protocol prefix.
+	 */
+	private static final String HTTPS_PROTOCOL_PREFIX = "https://";
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -77,8 +107,7 @@ public class ExecuteHttpGetQueryService {
 	/**
 	 * Run an HTTP GET on the resolved host configuration.
 	 *
-	 * @param hostname target host used to resolve configuration
-	 * @param url      target URL (e.g. http://example.com/health)
+	 * @param urls     target URLs (e.g. http://example.com/health)
 	 * @param headers  headers as newline-separated "key: value" pairs (use "\n")
 	 * @param body     optional request body (often ignored for GET)
 	 * @param timeout  timeout in seconds; defaults to {@value #DEFAULT_QUERY_TIMEOUT} if null/≤0
@@ -87,8 +116,8 @@ public class ExecuteHttpGetQueryService {
 	@Tool(
 		name = "ExecuteHttpGetQuery",
 		description = """
-		Execute an HTTP GET request on a host using the agent HTTP extension.
-		Resolve a valid configuration from context, set hostname and timeout (default 10s),
+		Execute an HTTP GET request on the provided URL(s) using the agent HTTP extension.
+		Resolve a valid configuration from context and set timeout (default 10s),
 		build the request (method=GET, url, optional headers/body), execute, and return the result or an error.
 
 		Headers must be provided as a single string where each header is "key: value",
@@ -96,25 +125,152 @@ public class ExecuteHttpGetQueryService {
 		Accept: application/json\\nAuthorization: Bearer abc123
 		"""
 	)
-	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute HTTP Get query on.", required = true) final String hostname,
-		@ToolParam(description = "The url to execute HTTP GET query on.", required = true) final String url,
+	public MultiHostToolResponse<QueryResponse> executeQuery(
+		@ToolParam(description = "The URL(s) to execute HTTP GET query on.", required = true) final List<String> urls,
 		@ToolParam(
 			description = "Headers as newline-separated \"key: value\" pairs",
 			required = false
 		) final String headers,
 		@ToolParam(description = "Optional request body", required = false) final String body,
-		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout
+		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent HTTP queries. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_HTTP_POOL_SIZE);
+
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("http")
 			.map((IProtocolExtension extension) ->
-				executeHttpQueryWithExtensionSafe(extension, hostname, HTTP_GET, url, headers, body, timeout)
+				executeForHosts(
+					urls,
+					ExecuteHttpGetQueryService::buildNullUrlResponse,
+					targetUrl -> executeForUrl(extension, targetUrl, headers, body, timeout),
+					resolvedPoolSize
+				)
 			)
-			.orElse(QueryResponse.builder().error("No Extension found for HTTP.").build());
+			.orElseGet(() -> MultiHostToolResponse.buildError("The HTTP extension is not available"));
 	}
+
+	/**
+	 * Builds the {@link HostToolResponse} returned when an URL entry is missing from the input list.
+	 *
+	 * @return host response containing the {@link #NULL_URL_ERROR} message
+	 */
+	private static HostToolResponse<QueryResponse> buildNullUrlResponse() {
+		return buildUrlErrorResponse(NULL_URL_ERROR);
+	}
+
+	/**
+	 * Wraps the provided error message in a {@link HostToolResponse} containing a {@link QueryResponse}.
+	 *
+	 * @param errorMessage message describing the URL validation failure
+	 * @return host response encapsulating the error message
+	 */
+	private static HostToolResponse<QueryResponse> buildUrlErrorResponse(final String errorMessage) {
+		return HostToolResponse
+			.<QueryResponse>builder()
+			.response(QueryResponse.builder().error(errorMessage).build())
+			.build();
+	}
+
+	/**
+	 * Resolves the hostname and normalized URL for the provided raw value and executes the HTTP query.
+	 *
+	 * @param extension HTTP protocol extension used to perform the request
+	 * @param targetUrl raw URL provided in the tool invocation
+	 * @param headers newline-separated header entries; may be {@code null}
+	 * @param body optional request body; may be {@code null}
+	 * @param timeout timeout in seconds, falling back to {@value #DEFAULT_QUERY_TIMEOUT} when {@code null} or non-positive
+	 * @return host response containing either the successful query response or the URL validation error
+	 */
+	private HostToolResponse<QueryResponse> executeForUrl(
+		final IProtocolExtension extension,
+		final String targetUrl,
+		final String headers,
+		final String body,
+		final Long timeout
+	) {
+		final HttpTarget httpTarget;
+		try {
+			httpTarget = resolveTarget(targetUrl);
+		} catch (Exception exception) {
+			return buildUrlErrorResponse(exception.getMessage());
+		}
+
+		final QueryResponse response = executeHttpQueryWithExtensionSafe(
+			extension,
+			httpTarget.hostname(),
+			HTTP_GET,
+			httpTarget.url(),
+			headers,
+			body,
+			timeout
+		);
+
+		return HostToolResponse.<QueryResponse>builder().hostname(httpTarget.hostname()).response(response).build();
+	}
+
+	/**
+	 * Validates the supplied URL string, normalizes the scheme, and extracts the hostname.
+	 *
+	 * @param rawUrl user-provided URL value
+	 * @return {@link HttpTarget} describing the resolved hostname and normalized URL
+	 * @throws IllegalArgumentException when the URL is {@code null}, blank, malformed, or missing a hostname
+	 */
+	private HttpTarget resolveTarget(final String rawUrl) {
+		if (rawUrl == null) {
+			throw new IllegalArgumentException(NULL_URL_ERROR);
+		}
+
+		if (rawUrl.isBlank()) {
+			throw new IllegalArgumentException(BLANK_URL_ERROR);
+		}
+
+		final String trimmedUrl = rawUrl.trim();
+		final String normalizedUrl = normalizeUrl(trimmedUrl);
+
+		try {
+			final var parsedUrl = new URL(normalizedUrl);
+			parsedUrl.toURI();
+
+			final String hostname = parsedUrl.getHost();
+			if (hostname == null || hostname.isBlank()) {
+				throw new IllegalArgumentException("Hostname could not be resolved from URL: %s".formatted(trimmedUrl));
+			}
+
+			return new HttpTarget(hostname, normalizedUrl);
+		} catch (MalformedURLException malformedURLException) {
+			throw new IllegalArgumentException(
+				"Malformed URL '%s': %s".formatted(trimmedUrl, malformedURLException.getMessage())
+			);
+		} catch (URISyntaxException uriSyntaxException) {
+			throw new IllegalArgumentException(
+				"URL '%s' contains invalid characters: %s".formatted(trimmedUrl, uriSyntaxException.getMessage())
+			);
+		} catch (Exception exception) {
+			throw new IllegalArgumentException("Invalid URL '%s': %s".formatted(trimmedUrl, exception.getMessage()));
+		}
+	}
+
+	/**
+	 * Ensures the provided URL includes a supported scheme, defaulting to HTTPS when missing.
+	 *
+	 * @param url URL to normalize
+	 * @return original URL when already prefixed with HTTP/HTTPS, otherwise the HTTPS-prefixed variant
+	 */
+	private static String normalizeUrl(final String url) {
+		final String lowerCaseUrl = url.toLowerCase(Locale.ROOT);
+		if (lowerCaseUrl.startsWith(HTTP_PROTOCOL_PREFIX) || lowerCaseUrl.startsWith(HTTPS_PROTOCOL_PREFIX)) {
+			return url;
+		}
+		return HTTPS_PROTOCOL_PREFIX + url;
+	}
+
+	private record HttpTarget(String hostname, String url) {}
 
 	/**
 	 * Resolves a valid HTTP configuration for {@code hostname}, prepares the query payload,
