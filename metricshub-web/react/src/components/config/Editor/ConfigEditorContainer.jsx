@@ -15,7 +15,6 @@ import { Typography } from "@mui/material";
  * @returns The connected editor component.
  */
 function ConfigEditorContainer(props) {
-	// In React 19, `ref` is a normal prop for function components
 	const forwardedRef = props?.ref;
 	const dispatch = useAppDispatch();
 	const {
