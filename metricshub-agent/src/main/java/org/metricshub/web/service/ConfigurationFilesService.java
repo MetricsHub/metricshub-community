@@ -443,6 +443,7 @@ public class ConfigurationFilesService {
 			enrichErrors(deserializationFailure, e);
 			return Validation.fail(fileName, deserializationFailure, e);
 		} catch (Exception e) {
+			enrichErrors(deserializationFailure, e.getMessage());
 			return Validation.fail(fileName, deserializationFailure, e);
 		}
 	}
@@ -457,22 +458,39 @@ public class ConfigurationFilesService {
 		if (!deserializationFailure.isEmpty()) {
 			return;
 		}
+
+		// try to extract the SnakeYAML location if present in message
+		final String msg = e.getOriginalMessage();
+
+		// first try to extract line/column from the message
+		if (enrichErrors(deserializationFailure, msg)) {
+			return;
+		}
+
 		// errors already tracked by the problem handler
 		final JsonLocation loc = e.getLocation();
 		int line = loc != null ? loc.getLineNr() : -1;
 		int column = loc != null ? loc.getColumnNr() : -1;
 
-		// try to extract the SnakeYAML location if present in message
-		final var msg = e.getOriginalMessage();
-		final var matcher = LINE_ERROR_PATTERN.matcher(msg);
-		if (matcher.find()) {
-			line = Integer.parseInt(matcher.group(1));
-			column = Integer.parseInt(matcher.group(2));
-			deserializationFailure.addError(msg, line, column);
-		}
-
 		// Whatsoever, add the original message
 		deserializationFailure.addError(msg, line, column);
+	}
+
+	/**
+	 * Enriches deserialization errors by parsing line/column info from the error message.
+	 *
+	 * @param deserializationFailure the DeserializationFailure to enrich
+	 * @param msg the error message potentially containing line/column info
+	 * @return true if line/column info was found and added, false otherwise
+	 */
+	private static boolean enrichErrors(final DeserializationFailure deserializationFailure, final String msg) {
+		final var matcher = LINE_ERROR_PATTERN.matcher(msg);
+		var found = false;
+		while (matcher.find()) {
+			deserializationFailure.addError(msg, Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)));
+			found = true;
+		}
+		return found;
 	}
 
 	/**
