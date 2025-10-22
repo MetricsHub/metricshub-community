@@ -1,11 +1,33 @@
-# MetricsHub
 
-![GitHub release (with filter)](https://img.shields.io/github/v/release/metricshub/metricshub-community)
-![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/maven-deploy.yml)
-![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community)
-![License](https://img.shields.io/github/license/metricshub/metricshub-community)
+---
 
-## Structure
+<div align=center>
+
+[![Website](https://img.shields.io/website?up_message=available&down_message=down&url=https%3A%2F%2Fmetricshub.com&style=for-the-badge)](https://metricshub.com)
+![GitHub release (with filter)](https://img.shields.io/github/v/release/metricshub/metricshub-community?style=for-the-badge)
+![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/maven-deploy.yml?style=for-the-badge)
+![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community?style=for-the-badge)
+![License](https://img.shields.io/github/license/metricshub/metricshub-community?style=for-the-badge)
+
+<a href="https://metricshub.com" target="_blank">
+	<picture>
+	<source media="(prefers-color-scheme: dark)" srcset="metricshub-doc/src/site/resources/images/logo-dark.svg">
+	<source media="(prefers-color-scheme: light)" srcset="metricshub-doc/src/site/resources/images/logo-light.svg">
+	<img alt="MetricsHub" src="metricshub-doc/src/site/resources/images/logo-light.svg" width="250">
+	</picture>
+</a>
+<h4>MetricsHub®, is an open-source metrics collection tool that leverages OpenTelemetry for vendor-neutral observability.</h4>
+</div>
+
+---
+
+## How to Install (Red Hat, Debian Linux)
+
+```shell-session
+curl -fsSL https://get.metricshub.com | bash
+```
+
+## Project Structure
 
 This is a multi-module project:
 
