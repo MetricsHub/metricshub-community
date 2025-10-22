@@ -88,6 +88,6 @@ public class DeserializationFailure {
 	 * @return true if there are no errors, false otherwise
 	 */
 	public boolean isEmpty() {
-		return errors == null || errors.isEmpty();
+		return errors.isEmpty();
 	}
 }

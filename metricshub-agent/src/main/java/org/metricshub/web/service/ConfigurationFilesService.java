@@ -69,6 +69,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class ConfigurationFilesService {
 
+	/**
+	 * Pattern to extract line and column information from error messages.
+	 */
 	private static final Pattern LINE_ERROR_PATTERN = Pattern.compile(
 		"line (\\d+), column (\\d+)",
 		Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
@@ -468,6 +471,7 @@ public class ConfigurationFilesService {
 			deserializationFailure.addError(msg, line, column);
 		}
 
+		// Whatsoever, add the original message
 		deserializationFailure.addError(msg, line, column);
 	}
 
