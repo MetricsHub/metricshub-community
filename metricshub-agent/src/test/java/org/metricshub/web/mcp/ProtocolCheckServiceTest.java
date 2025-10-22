@@ -73,7 +73,10 @@ class ProtocolCheckServiceTest {
 
 	@Test
 	void testHttpProtocolIsReachable() {
-		ProtocolCheckResponse result = protocolCheckService.checkProtocol(HOSTNAME, httpExtension.getIdentifier(), TIMEOUT);
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
+			.getHosts()
+			.get(0)
+			.getResponse();
 		assertNotNull(result, "Result should not be null");
 		assertTrue(result.isReachable(), "Protocol should be reachable");
 		assertEquals(HOSTNAME, result.getHostname(), "Hostname should match");
@@ -84,7 +87,10 @@ class ProtocolCheckServiceTest {
 		// Simulate unreachable host
 		doReturn(Optional.of(Boolean.FALSE)).when(httpExtension).checkProtocol(any());
 
-		ProtocolCheckResponse result = protocolCheckService.checkProtocol(HOSTNAME, httpExtension.getIdentifier(), TIMEOUT);
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		assertNotNull(result, "Result should not be null");
 		assertFalse(result.isReachable(), "Protocol should be unreachable");
@@ -97,7 +103,10 @@ class ProtocolCheckServiceTest {
 		// Simulate extension not returning a result
 		doReturn(Optional.empty()).when(httpExtension).checkProtocol(any());
 
-		ProtocolCheckResponse result = protocolCheckService.checkProtocol(HOSTNAME, httpExtension.getIdentifier(), TIMEOUT);
+		ProtocolCheckResponse result = checkProtocol(protocolCheckService, httpExtension.getIdentifier())
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		assertNotNull(result, "Result should not be null");
 		assertFalse(result.isReachable(), "Protocol should not be reachable");
@@ -114,14 +123,19 @@ class ProtocolCheckServiceTest {
 			.thenReturn(ExtensionManager.builder().withProtocolExtensions(java.util.List.of()).build());
 
 		ProtocolCheckService missingExtService = new ProtocolCheckService(agentContextHolder);
-		ProtocolCheckResponse result = missingExtService.checkProtocol(HOSTNAME, httpExtension.getIdentifier(), TIMEOUT);
-
-		assertNotNull(result, "Result should not be null");
-		assertFalse(result.isReachable(), "Protocol should not be reachable");
-		assertEquals(
-			"http extension is not available",
-			result.getErrorMessage(),
-			"Error message should indicate missing extension"
+		MultiHostToolResponse<ProtocolCheckResponse> result = checkProtocol(
+			missingExtService,
+			httpExtension.getIdentifier()
 		);
+
+		assertEquals("http extension is not available", result.getErrorMessage());
+		assertTrue(result.getHosts().isEmpty(), "No host responses should be returned when extension missing");
+	}
+
+	private MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
+		final ProtocolCheckService service,
+		final String protocolIdentifier
+	) {
+		return service.checkProtocol(List.of(HOSTNAME), protocolIdentifier, TIMEOUT, null);
 	}
 }

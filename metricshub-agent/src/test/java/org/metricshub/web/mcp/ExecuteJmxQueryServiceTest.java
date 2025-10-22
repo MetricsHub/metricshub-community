@@ -103,19 +103,23 @@ class ExecuteJmxQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
+		final MultiHostToolResponse<QueryResponse> aggregatedResult = jmxQueryService.executeQuery(
+			List.of(HOSTNAME),
 			OBJECT_NAME,
 			OBJECT_ATTRIBUTES,
 			KEY_PROPERTIES,
-			TIMEOUT
+			TIMEOUT,
+			null
 		);
+
+		assertEquals(1, aggregatedResult.getHosts().size(), () -> "One host response expected");
+		final QueryResponse result = aggregatedResult.getHosts().get(0).getResponse();
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
 		assertEquals(
 			"No valid configuration found for JMX on %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -127,20 +131,17 @@ class ExecuteJmxQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
+		final MultiHostToolResponse<QueryResponse> aggregatedResult = jmxQueryService.executeQuery(
+			List.of(HOSTNAME),
 			OBJECT_NAME,
 			OBJECT_ATTRIBUTES,
 			KEY_PROPERTIES,
-			TIMEOUT
+			TIMEOUT,
+			null
 		);
 
-		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
-		assertEquals(
-			"No Extension found for JMX.",
-			result.getIsError(),
-			() -> "Unexpected error message when the JMX extension isn't found"
-		);
+		assertEquals("The JMX extension is not available", aggregatedResult.getErrorMessage());
+		assertTrue(aggregatedResult.getHosts().isEmpty(), () -> "No per-host responses expected");
 	}
 
 	@Test
@@ -181,13 +182,11 @@ class ExecuteJmxQueryServiceTest {
 		)
 			.thenReturn(List.of(values));
 
-		final QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		final QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, 9)
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		assertEquals(
 			TextTableHelper.generateTextTable("scope;path;LiveNodes;MovingNodes", List.of(values)),
@@ -234,18 +233,16 @@ class ExecuteJmxQueryServiceTest {
 			.thenThrow(new IllegalArgumentException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = jmxQueryService.executeQuery(
-			HOSTNAME,
-			OBJECT_NAME,
-			OBJECT_ATTRIBUTES,
-			KEY_PROPERTIES,
-			TIMEOUT
-		);
+		QueryResponse result = jmxQueryService
+			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, null)
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}
