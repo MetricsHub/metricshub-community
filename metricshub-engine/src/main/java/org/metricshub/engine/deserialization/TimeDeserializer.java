@@ -53,7 +53,10 @@ public class TimeDeserializer extends JsonDeserializer<Long> {
 		try {
 			return interpretValueOf(parser.getValueAsString());
 		} catch (IllegalArgumentException e) {
-			throw new IOException(e.getMessage());
+			var location = parser.currentLocation();
+			throw new IOException(
+				"line %s, column %s: %s".formatted(location.getLineNr(), location.getColumnNr(), e.getMessage())
+			);
 		}
 	}
 

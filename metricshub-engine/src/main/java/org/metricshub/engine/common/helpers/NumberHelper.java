@@ -149,4 +149,15 @@ public class NumberHelper {
 	public static String formatNumber(final Number n) {
 		return DECIMAL_FORMAT.format(n);
 	}
+
+	/**
+	 * Returns the given number if it is positive; otherwise returns the default value.
+	 *
+	 * @param n             the number to check
+	 * @param defaultValue  the fallback value to return
+	 * @return {@code n} if positive, otherwise {@code defaultValue}
+	 */
+	public static Number getPositiveOrDefault(final Number n, @NonNull final Number defaultValue) {
+		return n != null && n.doubleValue() > 0.0 ? n : defaultValue;
+	}
 }

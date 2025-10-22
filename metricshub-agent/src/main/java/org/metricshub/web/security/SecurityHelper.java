@@ -40,6 +40,11 @@ public class SecurityHelper {
 	public static final String TOKEN_KEY = "metricshub-jwt";
 
 	/**
+	 * Refresh token key used in cookies and headers.
+	 */
+	public static final String REFRESH_TOKEN_KEY = "metricshub-refresh-jwt";
+
+	/**
 	 * APP User role
 	 */
 	public static final String ROLE_APP_USER = "ROLE_APP_USER";

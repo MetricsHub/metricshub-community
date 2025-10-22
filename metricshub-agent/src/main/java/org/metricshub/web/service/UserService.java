@@ -24,6 +24,7 @@ package org.metricshub.web.service;
 import static org.metricshub.agent.helper.AgentConstants.USER_INFO_SEPARATOR;
 import static org.metricshub.agent.helper.AgentConstants.USER_PREFIX;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.KeyStore.PasswordProtection;
@@ -120,13 +121,25 @@ public class UserService {
 	 * @param authenticationRequest Login request defining username and password
 	 * @return {@link JwtAuthToken} instance
 	 */
-	public JwtAuthToken performSecurity(LoginAuthenticationRequest authenticationRequest) {
+	public JwtAuthToken performSecurity(final LoginAuthenticationRequest authenticationRequest) {
 		final var usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
 			authenticationRequest.getUsername(),
 			authenticationRequest.getPassword()
 		);
 
 		return setDetailsAndAuthenticate(authenticationRequest, usernamePasswordAuthenticationToken);
+	}
+
+	/**
+	 * Refresh the security token using the request containing the refresh token cookie
+	 *
+	 * @param request HTTP request containing the refresh token in a cookie
+	 * @return The {@link JwtAuthToken} instance returned after calling
+	 */
+	public JwtAuthToken refreshSecurity(final HttpServletRequest request) {
+		final var loginAuthenticationProvider = new LoginAuthenticationProvider(jwtComponent, this);
+
+		return (JwtAuthToken) loginAuthenticationProvider.refresh(request);
 	}
 
 	/**

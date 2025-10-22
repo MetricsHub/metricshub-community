@@ -113,12 +113,20 @@
 	</modules>
 
 	<profiles>
+
+		<!-- Windows build -->
 		<profile>
 			<id>windows</id>
 			<activation>
 				<os>
 					<family>Windows</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
 				<module>metricshub-community-windows</module>
@@ -136,16 +144,69 @@
 				</plugins>
 			</build>
 		</profile>
+
+		<!-- Linux build -->
 		<profile>
 			<id>linux</id>
 			<activation>
 				<os>
 					<family>Linux</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
 				<module>metricshub-community-linux</module>
 			</modules>
+		</profile>
+
+		<!-- AI coding agent -->
+		<profile>
+			<id>ai</id>
+			<activation>
+				<property>
+					<name>env.AI</name>
+					<value>true</value>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+
+					<!-- Prettier will use local Node.js and npm-->
+					<plugin>
+						<groupId>com.hubspot.maven.plugins</groupId>
+						<artifactId>prettier-maven-plugin</artifactId>
+						<configuration>
+							<nodePath>node</nodePath>
+							<npmPath>npm</npmPath>
+						</configuration>
+					</plugin>
+
+					<!-- On Codex, merge the specific IT settings.xml with Codex settings.xml -->
+					<!-- which includes the necessary proxy settings -->
+					<plugin>
+						<artifactId>maven-invoker-plugin</artifactId>
+						<configuration>
+							<mergeUserSettings>true</mergeUserSettings>
+						</configuration>
+					</plugin>
+
+					<!-- On Codex, we must use the same version of Node.js and npm as the local install -->
+					<plugin>
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<configuration>
+							<nodeVersion>${env.FRONTEND_NODE_VERSION}</nodeVersion>
+							<npmVersion>${env.FRONTEND_NPM_VERSION}</npmVersion>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+
 		</profile>
 	</profiles>
 
@@ -242,12 +303,12 @@
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-core</artifactId>
-				<version>6.2.7</version>
+				<version>6.2.12</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-context</artifactId>
-				<version>6.2.7</version>
+				<version>6.2.12</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
@@ -257,7 +318,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>snmp-java</artifactId>
-				<version>2.1.01</version>
+				<version>2.1.02</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
@@ -302,7 +363,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>4.1.00</version>
+				<version>5.0.00-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -426,6 +487,11 @@
 						</additionalJOptions>
 					</configuration>
 				</plugin>
+				<plugin>
+					<groupId>com.github.eirslett</groupId>
+					<artifactId>frontend-maven-plugin</artifactId>
+					<version>1.15.1</version>
+				</plugin>
 			</plugins>
 		</pluginManagement>
 
@@ -533,30 +599,11 @@
 			</plugin>
 
 			<plugin>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.3.0</version>
-				<configuration>
-					<sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
-					<configLocation>checkstyle.xml</configLocation>
-				</configuration>
-				<executions>
-					<execution>
-						<id>validate</id>
-						<phase>validate</phase>
-						<goals>
-							<goal>checkstyle</goal>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
 				<groupId>com.hubspot.maven.plugins</groupId>
 				<artifactId>prettier-maven-plugin</artifactId>
 				<executions>
 					<execution>
-						<phase>validate</phase>
+						<phase>verify</phase>
 						<goals>
 							<goal>check</goal>
 						</goals>
@@ -571,6 +618,23 @@
 						<inputGlob>src/it/java/**/*.java</inputGlob>
 					</inputGlobs>
 				</configuration>
+			</plugin>
+
+			<plugin>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<configLocation>checkstyle.xml</configLocation>
+				</configuration>
+				<executions>
+					<execution>
+						<id>validate</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 
 			<!-- javadoc -->

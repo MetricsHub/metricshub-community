@@ -2,6 +2,7 @@ package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.metricshub.engine.common.helpers.NumberHelper.getPositiveOrDefault;
 
 import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
@@ -50,5 +51,17 @@ class NumberHelperTest {
 	void testFormatNumber() {
 		assertEquals("10.05", NumberHelper.formatNumber(10.05));
 		assertEquals("        10.05", NumberHelper.formatNumber(10.05, "%10s%s"));
+	}
+
+	@Test
+	void testGetPositiveOrDefault() {
+		final Number defaultValue = 42;
+
+		assertEquals(defaultValue, getPositiveOrDefault(null, defaultValue), () -> "Null input: should return default");
+		assertEquals(5, getPositiveOrDefault(5, defaultValue), () -> "Positive integer: should return input");
+		assertEquals(defaultValue, getPositiveOrDefault(0, defaultValue), () -> "Zero: should return default");
+		assertEquals(defaultValue, getPositiveOrDefault(-3, defaultValue), () -> "Negative: should return default");
+		assertEquals(0.1, getPositiveOrDefault(0.1, defaultValue), () -> "Double 0.1 should return input");
+		assertEquals(1.9, getPositiveOrDefault(1.9, defaultValue), () -> "Double 1.9 truncates to 1: should return input");
 	}
 }

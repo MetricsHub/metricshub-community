@@ -5,13 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import org.junit.jupiter.api.Test;
-import org.metricshub.web.mcp.ExecuteSnmpQueryService;
-import org.metricshub.web.mcp.HostDetailsService;
-import org.metricshub.web.mcp.ListConnectorsService;
-import org.metricshub.web.mcp.ListResourcesService;
 import org.metricshub.web.mcp.PingToolService;
-import org.metricshub.web.mcp.ProtocolCheckService;
-import org.metricshub.web.mcp.TroubleshootHostService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,36 +34,6 @@ class ToolCallbackConfigurationTest {
 		@Bean
 		public PingToolService pingToolService() {
 			return mock(PingToolService.class);
-		}
-
-		@Bean
-		public ProtocolCheckService protocolCheckService() {
-			return mock(ProtocolCheckService.class);
-		}
-
-		@Bean
-		public ListResourcesService listResourcesService() {
-			return mock(ListResourcesService.class);
-		}
-
-		@Bean
-		public TroubleshootHostService troubleshootHostService() {
-			return mock(TroubleshootHostService.class);
-		}
-
-		@Bean
-		public ListConnectorsService listConnectorsService() {
-			return mock(ListConnectorsService.class);
-		}
-
-		@Bean
-		public HostDetailsService hostDetailsService() {
-			return mock(HostDetailsService.class);
-		}
-
-		@Bean
-		public ExecuteSnmpQueryService executeSnmpQueryService() {
-			return mock(ExecuteSnmpQueryService.class);
 		}
 	}
 }

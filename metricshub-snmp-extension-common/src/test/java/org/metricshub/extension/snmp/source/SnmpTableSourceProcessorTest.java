@@ -89,7 +89,7 @@ public class SnmpTableSourceProcessorTest {
 
 		doThrow(new InterruptedException("Test exception"))
 			.when(snmpRequestExecutor)
-			.executeSNMPTable("test_oid", new String[] { "column1", "column2" }, snmpConfiguration, "hostname", true);
+			.executeSNMPTable("test_oid", new String[] { "column1", "column2" }, snmpConfiguration, "hostname", true, null);
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
@@ -117,7 +117,8 @@ public class SnmpTableSourceProcessorTest {
 				new String[] { "column1", "column2" },
 				snmpConfiguration,
 				"hostname",
-				true
+				true,
+				null
 			)
 		)
 			.thenReturn(expectedResult);

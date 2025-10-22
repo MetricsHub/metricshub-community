@@ -185,16 +185,13 @@ const slice = createSlice({
 
 			.addCase(validateConfig.fulfilled, (s, a) => {
 				// global selected validation
-				s.validation = a.payload.result || null;
+				const result = a.payload?.result ?? null;
+				s.validation = result;
 				// also store per-file validation so file list/tree can show errors per file
-				try {
-					const name = a.payload?.name;
-					if (name) {
-						const prev = s.filesByName[name] || {};
-						s.filesByName[name] = { ...prev, validation: a.payload.result || null };
-					}
-				} catch {
-					// ignore
+				const name = a.payload?.name;
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					s.filesByName[name] = { ...prev, validation: result };
 				}
 			})
 			.addCase(validateConfig.rejected, (s, a) => {

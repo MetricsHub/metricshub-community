@@ -1,8 +1,8 @@
-package org.metricshub.extension.jawk;
+package org.metricshub.web.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Jawk Extension
+ * MetricsHub Agent
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -22,32 +22,7 @@ package org.metricshub.extension.jawk;
  */
 
 /**
- * An exception class for handling runtime exceptions in the JawkSoruce extension.
+ * Marker interface for MetricsHub tools.
+ * Each MCP Tool must implement this interface to be automatically registered.
  */
-public class JawkSourceExtensionRuntimeException extends RuntimeException {
-
-	/**
-	 * Default serial version UID
-	 */
-	private static final long serialVersionUID = 1L;
-
-	/**
-	 * Constructs a new {@link JawkSourceExtensionRuntimeException} with the specified message.
-	 *
-	 * @param message the message
-	 */
-	public JawkSourceExtensionRuntimeException(final String message) {
-		super(message);
-	}
-
-	/**
-	 * Constructs a new {@link JawkSourceExtensionRuntimeException} with the specified message and
-	 * cause.
-	 *
-	 * @param message the message
-	 * @param cause   the cause
-	 */
-	public JawkSourceExtensionRuntimeException(final String message, final Throwable cause) {
-		super(message, cause);
-	}
-}
+public interface IMCPToolService {}

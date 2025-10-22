@@ -61,6 +61,11 @@ function ConfigurationPage() {
 		dispatch(fetchConfigList());
 	}, [dispatch]);
 
+	/**
+	 * Sync selected file with URL parameter.
+	 * Fetch content if not already cached.
+	 * @type {React.EffectCallback}
+	 */
 	React.useEffect(() => {
 		const target = routeName ? decodeURIComponent(routeName) : null;
 
@@ -88,6 +93,9 @@ function ConfigurationPage() {
 		}
 	}, [routeName, selected, filesByName, list, dispatch]);
 
+	/**
+	 * Auto-navigate to first file if none is selected and files are available.
+	 */
 	React.useEffect(() => {
 		if (!routeName && list?.length > 0) {
 			navigate(paths.configurationFile(list[0].name), { replace: true });

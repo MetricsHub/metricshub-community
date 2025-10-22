@@ -49,6 +49,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(value = "/api/config-files")
 public class ConfigurationFilesController {
 
+	/** Service handling configuration file operations. */
 	private ConfigurationFilesService configurationFilesService;
 
 	/**
@@ -106,7 +107,7 @@ public class ConfigurationFilesController {
 		if (!skipValidation) {
 			var v = configurationFilesService.validate(content, fileName);
 			if (!v.isValid()) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getError());
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
 			}
 		}
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateFile(fileName, content));
