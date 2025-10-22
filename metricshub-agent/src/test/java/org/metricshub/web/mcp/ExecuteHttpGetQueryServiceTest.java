@@ -117,7 +117,7 @@ class ExecuteHttpGetQueryServiceTest {
 
 		assertEquals(
 			"No valid configuration found for HTTP on %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -134,7 +134,7 @@ class ExecuteHttpGetQueryServiceTest {
 		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
 		assertEquals(
 			"No Extension found for HTTP.",
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when the HTTP extension isn't found"
 		);
 	}
@@ -206,9 +206,9 @@ class ExecuteHttpGetQueryServiceTest {
 		final QueryResponse result = httpQueryService.executeQuery(HOSTNAME, HTTP_URL, HTTP_HEADER, HTTP_BODY, TIMEOUT);
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred when executing the HTTP"),
+			result.getError().contains("An error has occurred when executing the HTTP"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}

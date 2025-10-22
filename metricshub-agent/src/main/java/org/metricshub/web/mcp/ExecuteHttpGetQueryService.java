@@ -113,7 +113,7 @@ public class ExecuteHttpGetQueryService {
 			.map((IProtocolExtension extension) ->
 				executeHttpQueryWithExtensionSafe(extension, hostname, HTTP_GET, url, headers, body, timeout)
 			)
-			.orElse(QueryResponse.builder().isError("No Extension found for HTTP.").build());
+			.orElse(QueryResponse.builder().error("No Extension found for HTTP.").build());
 	}
 
 	/**
@@ -155,7 +155,7 @@ public class ExecuteHttpGetQueryService {
 				)
 			)
 			.orElseGet(() ->
-				QueryResponse.builder().isError("No valid configuration found for HTTP on %s.".formatted(hostname)).build()
+				QueryResponse.builder().error("No valid configuration found for HTTP on %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -187,7 +187,7 @@ public class ExecuteHttpGetQueryService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError(
+				.error(
 					"An error has occurred when executing the HTTP %s request on %s: %s.".formatted(
 							method,
 							hostname,

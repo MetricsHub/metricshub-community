@@ -2,7 +2,6 @@ package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WBEM_NAMESPACE;
 import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPACE;
