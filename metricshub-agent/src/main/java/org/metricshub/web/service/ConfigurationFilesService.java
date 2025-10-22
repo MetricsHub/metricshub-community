@@ -35,7 +35,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -361,7 +361,7 @@ public class ConfigurationFilesService {
 
 		/** Errors gathered during validation when {@link #isValid} is {@code false}. */
 		@Default
-		private Set<DeserializationFailure.Error> errors = new HashSet<>();
+		private Set<DeserializationFailure.Error> errors = new LinkedHashSet<>();
 
 		/**
 		 * Factory method for a successful validation result.
@@ -462,7 +462,7 @@ public class ConfigurationFilesService {
 		// try to extract the SnakeYAML location if present in message
 		final var msg = e.getOriginalMessage();
 		final var matcher = LINE_ERROR_PATTERN.matcher(msg);
-		while (matcher.find()) {
+		if (matcher.find()) {
 			line = Integer.parseInt(matcher.group(1));
 			column = Integer.parseInt(matcher.group(2));
 			deserializationFailure.addError(msg, line, column);
