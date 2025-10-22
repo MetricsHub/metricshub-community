@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.service.ConfigurationFilesService;
@@ -154,7 +155,7 @@ class ConfigurationFilesControllerTest {
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.valid").value(true))
-			.andExpect(jsonPath("$.error").doesNotExist());
+			.andExpect(jsonPath("$.errors").isEmpty());
 	}
 
 	@Test
@@ -165,8 +166,10 @@ class ConfigurationFilesControllerTest {
 		result.put("valid", false).putArray("errors").add("Invalid YAML");
 
 		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("x: 2\n");
+		final DeserializationFailure failure = new DeserializationFailure();
+		failure.addError("Invalid YAML");
 		when(configurationFilesService.validate("x: 2\n", METRICSHUB_YAML_FILE_NAME))
-			.thenReturn(ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, "Invalid YAML"));
+			.thenReturn(ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, failure));
 
 		mockMvc
 			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
@@ -174,7 +177,7 @@ class ConfigurationFilesControllerTest {
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.fileName").value(METRICSHUB_YAML_FILE_NAME))
 			.andExpect(jsonPath("$.valid").value(false))
-			.andExpect(jsonPath("$.error").value("Invalid YAML"));
+			.andExpect(jsonPath("$.errors[0].message").value("Invalid YAML"));
 	}
 
 	@Test

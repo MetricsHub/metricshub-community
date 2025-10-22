@@ -61,6 +61,7 @@ public class AwkExecutor {
 	 * <p>
 	 *
 	 * @param awkScript Script to compile
+	 * @param awkEngine The Awk engine used to compile the script
 	 * @return the corresponding AwkTuples
 	 * @throws AwkException when unable to compile the script
 	 */
@@ -127,7 +128,6 @@ public class AwkExecutor {
 	 *
 	 * @param awkScript The AWK_PLUS_UTILITY script to process and interpret
 	 * @param awkInput The input to modify via the AWK_PLUS_UTILITY script
-	 * @param awkEngine The Awk engine where the script needs to be executed
 	 * @return The result of the AWK_PLUS_UTILITY script
 	 * @throws AwkException if execution fails
 	 */
