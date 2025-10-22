@@ -32,18 +32,18 @@ import picocli.CommandLine.IParameterExceptionHandler;
  */
 public class PrintParameterExceptionHandlerService implements IParameterExceptionHandler {
 
-        static final String HELP_HINT = "Run metricshub --help to display usage.";
+	static final String HELP_HINT = "Run metricshub --help to display usage.";
 
-        @Override
-        public int handleParseException(CommandLine.ParameterException exception, String[] args) {
-                final CommandLine commandLine = exception.getCommandLine();
-                commandLine.getErr().println(commandLine.getColorScheme().errorText(exception.getMessage()));
-                commandLine.getErr().println(commandLine.getColorScheme().errorText(HELP_HINT));
+	@Override
+	public int handleParseException(CommandLine.ParameterException exception, String[] args) {
+		final CommandLine commandLine = exception.getCommandLine();
+		commandLine.getErr().println(commandLine.getColorScheme().errorText(exception.getMessage()));
+		commandLine.getErr().println(commandLine.getColorScheme().errorText(HELP_HINT));
 
-                if (commandLine.getExitCodeExceptionMapper() != null) {
-                        return commandLine.getExitCodeExceptionMapper().getExitCode(exception);
-                }
+		if (commandLine.getExitCodeExceptionMapper() != null) {
+			return commandLine.getExitCodeExceptionMapper().getExitCode(exception);
+		}
 
-                return CommandLine.ExitCode.USAGE;
-        }
+		return CommandLine.ExitCode.USAGE;
+	}
 }

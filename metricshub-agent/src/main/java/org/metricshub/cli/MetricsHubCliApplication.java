@@ -58,9 +58,9 @@ public class MetricsHubCliApplication {
 		// As this is poorly documented, we keep this for future improvement.
 		// cli.setOut(new PrintWriter(AnsiConsole.out(), true, StandardCharsets.UTF_8)); // NOSONAR on commented code
 
-                // Set the exception handlers
-                cli.setExecutionExceptionHandler(new PrintExceptionMessageHandlerService());
-                cli.setParameterExceptionHandler(new PrintParameterExceptionHandlerService());
+		// Set the exception handlers
+		cli.setExecutionExceptionHandler(new PrintExceptionMessageHandlerService());
+		cli.setParameterExceptionHandler(new PrintParameterExceptionHandlerService());
 
 		// Allow case insensitive enum values
 		cli.setCaseInsensitiveEnumValuesAllowed(true);

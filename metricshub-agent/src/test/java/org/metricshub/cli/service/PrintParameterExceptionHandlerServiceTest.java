@@ -32,22 +32,22 @@ import picocli.CommandLine;
 
 class PrintParameterExceptionHandlerServiceTest {
 
-        @Test
-        void shouldPrintErrorMessageAndHelpHintWithoutUsage() {
-                final CommandLine cli = new CommandLine(new MetricsHubCliService());
-                cli.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF));
-                cli.setParameterExceptionHandler(new PrintParameterExceptionHandlerService());
+	@Test
+	void shouldPrintErrorMessageAndHelpHintWithoutUsage() {
+		final CommandLine cli = new CommandLine(new MetricsHubCliService());
+		cli.setColorScheme(CommandLine.Help.defaultColorScheme(CommandLine.Help.Ansi.OFF));
+		cli.setParameterExceptionHandler(new PrintParameterExceptionHandlerService());
 
-                final StringWriter errWriter = new StringWriter();
-                cli.setErr(new PrintWriter(errWriter, true));
+		final StringWriter errWriter = new StringWriter();
+		cli.setErr(new PrintWriter(errWriter, true));
 
-                final int exitCode = cli.execute("example-host");
+		final int exitCode = cli.execute("example-host");
 
-                assertEquals(CommandLine.ExitCode.USAGE, exitCode);
+		assertEquals(CommandLine.ExitCode.USAGE, exitCode);
 
-                final String errorOutput = errWriter.toString();
-                assertTrue(errorOutput.contains("Missing required option: '--type=TYPE'"));
-                assertTrue(errorOutput.contains(PrintParameterExceptionHandlerService.HELP_HINT));
-                assertFalse(errorOutput.contains("Usage"));
-        }
+		final String errorOutput = errWriter.toString();
+		assertTrue(errorOutput.contains("Missing required option: '--type=TYPE'"));
+		assertTrue(errorOutput.contains(PrintParameterExceptionHandlerService.HELP_HINT));
+		assertFalse(errorOutput.contains("Usage"));
+	}
 }
