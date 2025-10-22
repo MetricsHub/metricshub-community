@@ -84,6 +84,9 @@ public class ConfigurationFilesService {
 	 */
 	private static final int MAX_DEPTH = 1;
 
+	/**
+	 * Provides access to the current {@link AgentContext} used for configuration processing.
+	 */
 	private final AgentContextHolder agentContextHolder;
 
 	/**
@@ -341,20 +344,28 @@ public class ConfigurationFilesService {
 		return agentContext.getConfigDirectory();
 	}
 
+	/**
+	 * Result object returned by {@link ConfigurationFilesService#validate(String, String)}.
+	 * It carries the evaluated file name, the validation status and any collected errors.
+	 */
 	@Data
 	@Builder
 	@NoArgsConstructor
 	@AllArgsConstructor
 	public static class Validation {
 
+		/** Name of the validated file. */
 		private String fileName;
+		/** Flag indicating whether validation succeeded. */
 		private boolean isValid;
 
+		/** Errors gathered during validation when {@link #isValid} is {@code false}. */
 		@Default
 		private Set<DeserializationFailure.Error> errors = new HashSet<>();
 
 		/**
 		 * Factory method for a successful validation result.
+		 *
 		 * @param fileName the name of the validated file
 		 */
 		public static Validation ok(String fileName) {
@@ -363,6 +374,7 @@ public class ConfigurationFilesService {
 
 		/**
 		 * Factory method for a failed validation result.
+		 *
 		 * @param fileName the name of the validated file
 		 * @param failure  the deserialization failure containing error details
 		 * @param e        an optional exception that caused the failure
@@ -386,6 +398,11 @@ public class ConfigurationFilesService {
 			return fail(fileName, failure, null);
 		}
 
+		/**
+		 * Retrieve the message of the first recorded error.
+		 *
+		 * @return the message of the first error or an empty string when none are recorded
+		 */
 		@JsonIgnore
 		public String getFirst() {
 			if (errors == null || errors.isEmpty()) {

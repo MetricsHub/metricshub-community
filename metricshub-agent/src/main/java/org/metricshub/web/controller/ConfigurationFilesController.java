@@ -50,6 +50,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(value = "/api/config-files")
 public class ConfigurationFilesController {
 
+	/** Service handling configuration file operations. */
 	private ConfigurationFilesService configurationFilesService;
 
 	/**
