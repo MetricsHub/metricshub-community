@@ -46,7 +46,7 @@ import org.springframework.stereotype.Service;
  * </p>
  */
 @Service
-public class ProtocolCheckService {
+public class ProtocolCheckService implements IMCPToolService {
 
 	/**
 	 * Default timeout to be used for protocol check
