@@ -4,8 +4,6 @@ import { setContent } from "../../../store/slices/configSlice";
 import { saveConfig, validateConfig } from "../../../store/thunks/configThunks";
 import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
-import { shortYamlError } from "../../../utils/yaml-error";
-import { extractYamlErrorRange } from "../../../utils/yaml-lint-utils";
 import { Typography } from "@mui/material";
 
 /**
@@ -70,21 +68,18 @@ function ConfigEditorContainer(props) {
 				return;
 			}
 
-			let dlg = { open: true, message: "Validation failed" };
-
-			// TODO: replace extractYamlErrorRange with a more robust mapping that
-			// doesn't depend on the EditorView instance directly.
-			if (result.error) {
-				const { from, to, message } = extractYamlErrorRange(result.error, editorViewRef.current);
-				dlg = {
-					...dlg,
-					message: shortYamlError(message || dlg.message),
-					from,
-					to,
-				};
+			// Prefer first error message from array; fallback to generic string
+			if (Array.isArray(result.errors) && result.errors.length > 0) {
+				const first = result.errors[0];
+				setDialog({
+					open: true,
+					message: String(first?.message || first?.msg || "Validation failed"),
+				});
+			} else if (result.error) {
+				setDialog({ open: true, message: String(result.error) });
+			} else {
+				setDialog({ open: true, message: "Validation failed" });
 			}
-
-			setDialog(dlg);
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}

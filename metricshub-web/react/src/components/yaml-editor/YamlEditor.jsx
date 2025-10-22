@@ -7,7 +7,6 @@ import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
 import "./lint-fallback.css";
-import { shortYamlError } from "../../utils/yaml-error";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
@@ -57,7 +56,7 @@ export default function YamlEditor({
 	 * @returns {Array} Array of CodeMirror extensions for validation.
 	 */
 	const validationExtension = React.useMemo(
-		() => buildYamlLinterExtension(validateFn, fileName, shortYamlError, 400),
+		() => buildYamlLinterExtension(validateFn, fileName, 400),
 		[validateFn, fileName],
 	);
 
