@@ -79,7 +79,16 @@ const NavBar = ({ toggleTheme }) => {
 					<Box sx={{ display: "flex", gap: 2.5, height: "100%" }}>
 						{/* Logo + Status */}
 						<Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-							<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
+							<Box
+								component="a"
+								href="https://metricshub.com/"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="Open MetricsHub website in a new tab"
+								sx={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+							>
+								<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
+							</Box>
 							<StatusText sx={{ ml: 0.5 }} />
 							<OtelStatusIcon />
 						</Box>
