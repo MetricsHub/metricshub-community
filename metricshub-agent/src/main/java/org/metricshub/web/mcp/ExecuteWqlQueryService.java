@@ -24,6 +24,7 @@ package org.metricshub.web.mcp;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.util.List;
 import java.util.Optional;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.NumberHelper;
@@ -36,19 +37,24 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service
 /**
  * Service that executes a WQL query through the given {@link IProtocolExtension}.
  * The service resolves host configurations from the agent context, keeps only those that the
  * extension accepts, injects the requested namespace, and then delegates execution to the extension.
  * Failures at any step are surfaced as an error in the returned {@link QueryResponse}.
  */
+@Service
 public class ExecuteWqlQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the query through the protocol extension.
 	 */
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
+
+	/**
+	 * Default pool size for WQL queries.
+	 */
+	private static final int DEFAULT_WQL_POOL_SIZE = 60;
 
 	/**
 	 * Default WQL Namespace
@@ -91,28 +97,44 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteWqlQuery",
 		description = """
-		Executes a WQL query on a given Windows host using the specified protocol (WBEM, WMI or WinRM) and namespace.
+		Executes a WQL query on the given Windows host(s) using the specified protocol (WBEM, WMI or WinRM) and namespace.
 		Returns the result produced by the Windows provider, or an error if the query cannot be executed.
 		"""
 	)
-	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute WQL query on.", required = true) final String hostname,
+	public MultiHostToolResponse<QueryResponse> executeQuery(
+		@ToolParam(description = "The hostname(s) to execute WQL query on.", required = true) final List<String> hostname,
 		@ToolParam(
 			description = "The protocol to use to execute the WQL query (WBEM, WMI or WinRm).",
 			required = true
 		) final String protocol,
 		@ToolParam(description = "The WQL query to execute.", required = true) final String query,
 		@ToolParam(description = "The namespace to use.", required = false) final String namespace,
-		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout
+		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent WQL queries. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final String normalizedNamespace = normalizeNamespace(protocol, namespace);
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_WQL_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
 			.map((IProtocolExtension extension) ->
-				executeQueryWithExtensionSafe(extension, hostname, query, normalizeNamespace(protocol, namespace), timeout)
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<QueryResponse>builder()
+							.hostname(host)
+							.response(executeQueryWithExtensionSafe(extension, host, query, normalizedNamespace, timeout))
+							.build(),
+					resolvedPoolSize
+				)
 			)
-			.orElse(QueryResponse.builder().isError("No Extension found for %s protocol.".formatted(protocol)).build());
+			.orElseGet(() -> MultiHostToolResponse.buildError("The %s extension is not available".formatted(protocol)));
 	}
 
 	/**
@@ -149,13 +171,19 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 			.orElseGet(() ->
 				QueryResponse
 					.builder()
-					.isError("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
+					.error("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
 					.build()
 			);
 	}
 
 	/**
-	 * Executes the query using the provided extension and configuration. The method sets the hostname
+	 * Executes the WQL query using the provided extension and configuration.
+	 * <p>
+	 * The hostname and timeout are applied to the configuration copy before the
+	 * extension is invoked. Any exception raised by the extension is translated
+	 * into an error response so callers always receive a {@link QueryResponse}.
+	 * </p>
+	 *
 	 * @param extension         the protocol extension to use for execution
 	 * @param hostname          the target host
 	 * @param query             the query string to execute
@@ -183,9 +211,21 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+				.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 				.build();
 		}
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} describing the error when the hostname
+	 * parameter is omitted.
+	 *
+	 * @return a host-level response with an error payload explaining the missing hostname
+	 */
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 
 	/**

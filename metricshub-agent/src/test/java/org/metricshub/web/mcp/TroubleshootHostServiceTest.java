@@ -3,7 +3,6 @@ package org.metricshub.web.mcp;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.times;
@@ -20,19 +19,10 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.extension.ExtensionManager;
-import org.metricshub.engine.strategy.collect.CollectStrategy;
-import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
-import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
-import org.metricshub.engine.strategy.detection.DetectionStrategy;
-import org.metricshub.engine.strategy.discovery.DiscoveryStrategy;
-import org.metricshub.engine.strategy.simple.SimpleStrategy;
 import org.metricshub.engine.telemetry.MonitorsVo;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpExtension;
-import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
-import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
-import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.TelemetryResult;
 import org.mockito.MockedStatic;
@@ -79,7 +69,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final var result = service.collectMetricsForHost(HOSTNAME, null);
+			final var result = collectMetrics(null);
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
@@ -100,54 +90,18 @@ class TroubleshootHostServiceTest {
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
 				.thenReturn(telemetryManagerMock);
 
-			doNothing()
-				.when(telemetryManagerMock)
-				.run(
-					any(DetectionStrategy.class),
-					any(DiscoveryStrategy.class),
-					any(SimpleStrategy.class),
-					any(HardwarePostDiscoveryStrategy.class),
-					any(HardwareMonitorNameGenerationStrategy.class)
-				);
-
-			doNothing()
-				.when(telemetryManagerMock)
-				.run(
-					any(PrepareCollectStrategy.class),
-					any(ProtocolHealthCheckStrategy.class),
-					any(CollectStrategy.class),
-					any(SimpleStrategy.class),
-					any(HardwarePostCollectStrategy.class),
-					any(HardwareMonitorNameGenerationStrategy.class)
-				);
-
 			final var expected = new MonitorsVo();
 			when(telemetryManagerMock.getVo()).thenReturn(expected);
 
 			assertEquals(
 				new TelemetryResult(expected),
-				service.collectMetricsForHost(HOSTNAME, null),
+				collectMetrics(null),
 				"Unexpected result when triggering resource detection."
 			);
 
-			verify(telemetryManagerMock, times(1))
-				.run(
-					any(DetectionStrategy.class),
-					any(DiscoveryStrategy.class),
-					any(SimpleStrategy.class),
-					any(HardwarePostDiscoveryStrategy.class),
-					any(HardwareMonitorNameGenerationStrategy.class)
-				);
+			verify(telemetryManagerMock, times(1)).run(any(), any(), any(), any(), any());
 
-			verify(telemetryManagerMock, times(1))
-				.run(
-					any(PrepareCollectStrategy.class),
-					any(ProtocolHealthCheckStrategy.class),
-					any(CollectStrategy.class),
-					any(SimpleStrategy.class),
-					any(HardwarePostCollectStrategy.class),
-					any(HardwareMonitorNameGenerationStrategy.class)
-				);
+			verify(telemetryManagerMock, times(1)).run(any(), any(), any(), any(), any(), any());
 		}
 	}
 
@@ -157,7 +111,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final var result = service.testAvailableConnectorsForHost(HOSTNAME, null);
+			final var result = testAvailableConnectors(null);
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
@@ -173,7 +127,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.empty());
-			final var result = service.getMetricsFromCacheForHost(HOSTNAME);
+			final var result = getMetricsFromCache();
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
@@ -189,7 +143,7 @@ class TroubleshootHostServiceTest {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
 				.thenReturn(Optional.of(telemetryManager));
-			final var result = service.getMetricsFromCacheForHost(HOSTNAME);
+			final var result = getMetricsFromCache();
 
 			assertNotNull(result, "Result should not be null when telemetry manager is found.");
 		}
@@ -206,17 +160,27 @@ class TroubleshootHostServiceTest {
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
 				.thenReturn(telemetryManagerMock);
 
-			doNothing().when(telemetryManagerMock).run(any(DetectionStrategy.class));
-
 			final var expected = new MonitorsVo();
 			when(telemetryManagerMock.getVo()).thenReturn(expected);
 
 			assertEquals(
 				new TelemetryResult(expected),
-				service.testAvailableConnectorsForHost(HOSTNAME, null),
+				testAvailableConnectors(null),
 				"Unexpected result when triggering resource detection."
 			);
-			verify(telemetryManagerMock, times(1)).run(any(DetectionStrategy.class));
+			verify(telemetryManagerMock, times(1)).run(any(), any(), any(), any(), any());
 		}
+	}
+
+	private TelemetryResult collectMetrics(final String connectorId) {
+		return service.collectMetricsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
+	}
+
+	private TelemetryResult getMetricsFromCache() {
+		return service.getMetricsFromCacheForHost(List.of(HOSTNAME), 1).getHosts().get(0).getResponse();
+	}
+
+	private TelemetryResult testAvailableConnectors(final String connectorId) {
+		return service.testAvailableConnectorsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
 	}
 }
