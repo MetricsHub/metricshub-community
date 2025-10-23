@@ -4,9 +4,22 @@ import { Box, IconButton, Menu, MenuItem, TextField, Stack } from "@mui/material
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
+import BackupIcon from "@mui/icons-material/Backup";
+import RestoreIcon from "@mui/icons-material/Restore";
+import DownloadIcon from "@mui/icons-material/Download";
 import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
+import { useAppDispatch } from "../../../hooks/store";
+import {
+	createConfigBackup,
+	restoreConfigFromBackup,
+	deleteBackupFile,
+	fetchConfigList,
+} from "../../../store/thunks/configThunks";
+import QuestionDialog from "../../common/QuestionDialog";
+import { downloadConfigFile } from "../../../utils/downloadFile";
+import { parseBackupFileName } from "../../../utils/backupNames";
 
 /**
  * File tree item component.
@@ -19,7 +32,11 @@ export default function FileTreeItem({
 	onDelete,
 	isDirty = false,
 	validation = null,
+	itemId, // optional selection id
+	labelName, // optional display name
+	onSelect, // optional, used to navigate after restore
 }) {
+	const dispatch = useAppDispatch();
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -28,32 +45,28 @@ export default function FileTreeItem({
 	const cancelledRef = React.useRef(false);
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
 
-	/**
-	 * Reset draft name when file changes (but not when editing).
-	 */
+	// restore dialog
+	const [restoreOpen, setRestoreOpen] = React.useState(false);
+
+	const treeItemId = itemId ?? file.name;
+	const displayName = labelName ?? file.name;
+
+	// detect backup files: flat name using backupNames utils
+	const parsed = parseBackupFileName(file.name);
+	const isBackupFile = !!parsed;
+	const backupId = parsed?.id ?? null;
+	const backupOriginal = parsed?.originalName ?? null;
+
 	React.useEffect(() => {
 		if (!editing) setDraft(file.name);
 	}, [file.name, editing]);
 
-	/**
-	 * Open the action menu.
-	 * @param {*} e The click event.
-	 */
 	const openMenu = (e) => {
 		e.stopPropagation();
 		setMenuAnchor(e.currentTarget);
 	};
-
-	/**
-	 * Close the action menu.
-	 * @returns {void}
-	 */
 	const closeMenu = () => setMenuAnchor(null);
 
-	/**
-	 * Start renaming the file.
-	 * @returns {void}
-	 */
 	const startRename = () => {
 		closeMenu();
 		rowRef.current?.blur?.();
@@ -61,10 +74,6 @@ export default function FileTreeItem({
 		requestAnimationFrame(() => inputRef.current?.select());
 	};
 
-	/**
-	 * Cancel renaming the file.
-	 * @returns {void}
-	 */
 	const cancelRename = () => {
 		cancelledRef.current = true;
 		setDraft(file.name);
@@ -72,9 +81,6 @@ export default function FileTreeItem({
 		rowRef.current?.blur?.();
 	};
 
-	/**
-	 * Submit the rename action.
-	 */
 	const submitRename = React.useCallback(() => {
 		if (cancelledRef.current) {
 			cancelledRef.current = false;
@@ -89,6 +95,55 @@ export default function FileTreeItem({
 		onRename?.(file.name, next);
 		setEditing(false);
 	}, [draft, file.name, onRename]);
+
+	const backupThisFile = React.useCallback(async () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		setTimeout(async () => {
+			try {
+				await dispatch(createConfigBackup({ kind: "file", name: file.name })).unwrap();
+			} catch (e) {
+				console.error("Backup failed:", e);
+			}
+		}, 0);
+	}, [dispatch, file.name]);
+
+	const askRestore = React.useCallback(() => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		setRestoreOpen(true);
+	}, []);
+
+	const doRestore = React.useCallback(
+		async (overwrite) => {
+			setRestoreOpen(false);
+			setTimeout(async () => {
+				try {
+					const res = await dispatch(
+						restoreConfigFromBackup({ backupName: file.name, overwrite }),
+					).unwrap();
+					console.info("Restored:", res);
+					if (onSelect && res?.restoredName) onSelect(res.restoredName);
+					else if (onSelect && res?.originalName) onSelect(res.originalName);
+				} catch (e) {
+					console.error("Restore failed:", e);
+				}
+			}, 0);
+		},
+		[dispatch, file.name, onSelect],
+	);
+
+	const downloadThisFile = React.useCallback(async () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		// For backups: save as the displayed filename (original name). For normal files: save as-is.
+		const suggestedName = backupOriginal ?? labelName ?? file.name;
+		try {
+			await downloadConfigFile({ name: file.name, suggestedName });
+		} catch (e) {
+			console.error("Download failed:", e);
+		}
+	}, [file.name, labelName, backupOriginal]);
 
 	const label = (
 		<Stack
@@ -132,9 +187,7 @@ export default function FileTreeItem({
 										}
 										e.stopPropagation();
 									}}
-									slotProps={{
-										htmlInput: { "aria-label": "Rename file" },
-									}}
+									slotProps={{ htmlInput: { "aria-label": "Rename file" } }}
 									sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
 								/>
 							</Box>
@@ -152,11 +205,10 @@ export default function FileTreeItem({
 									overflow: "hidden",
 									textOverflow: "ellipsis",
 								}}
-								title={file.name}
+								title={displayName}
 							>
-								{file.name}
+								{displayName}
 							</Box>
-							{/* Unsaved/dirty indicator or error indicator */}
 							{isDirty && (
 								<Box
 									component="span"
@@ -190,7 +242,7 @@ export default function FileTreeItem({
 					size="small"
 					aria-label="More actions"
 					onClick={openMenu}
-					onMouseDown={(e) => e.preventDefault()} // prevent focus/expand
+					onMouseDown={(e) => e.preventDefault()}
 				>
 					<MoreVertIcon fontSize="small" />
 				</IconButton>
@@ -201,7 +253,7 @@ export default function FileTreeItem({
 	return (
 		<>
 			<TreeItem
-				itemId={file.name}
+				itemId={treeItemId ?? file.name}
 				label={label}
 				slotProps={{
 					content: {
@@ -219,20 +271,72 @@ export default function FileTreeItem({
 				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
-				<MenuItem onClick={startRename}>
-					<DriveFileRenameOutlineIcon fontSize="small" style={{ marginRight: 8 }} />
-					Rename
+				{!isBackupFile && (
+					<MenuItem onClick={startRename}>
+						<DriveFileRenameOutlineIcon fontSize="small" style={{ marginRight: 8 }} />
+						Rename
+					</MenuItem>
+				)}
+
+				{/* Download available for both normal and backup files */}
+				<MenuItem onClick={downloadThisFile}>
+					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
+					Download
 				</MenuItem>
+
+				{!isBackupFile ? (
+					<MenuItem onClick={backupThisFile}>
+						<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
+						Backup
+					</MenuItem>
+				) : (
+					<MenuItem onClick={askRestore}>
+						<RestoreIcon fontSize="small" style={{ marginRight: 8 }} />
+						Restore{backupId ? ` (${backupId})` : ""}
+					</MenuItem>
+				)}
+
 				<MenuItem
-					onClick={() => {
+					onClick={async () => {
 						closeMenu();
-						onDelete(file.name);
+						if (isBackupFile) {
+							try {
+								await dispatch(deleteBackupFile(file.name)).unwrap();
+								await dispatch(fetchConfigList());
+							} catch (e) {
+								console.error("Delete backup failed:", e);
+							}
+						} else {
+							onDelete(file.name);
+						}
 					}}
 				>
 					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
 					Delete
 				</MenuItem>
 			</Menu>
+
+			{/* Restore confirmation dialog */}
+			<QuestionDialog
+				open={restoreOpen}
+				title="Restore from backup"
+				question={"Do you want to overwrite the original file?\n\n"}
+				onClose={() => setRestoreOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
+					{
+						btnTitle: "Restore as copy",
+						btnVariant: "contained",
+						callback: () => doRestore(false),
+					},
+					{
+						btnTitle: "Overwrite",
+						btnColor: "error",
+						btnVariant: "contained",
+						callback: () => doRestore(true),
+					},
+				]}
+			/>
 		</>
 	);
 }

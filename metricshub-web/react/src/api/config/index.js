@@ -39,6 +39,24 @@ class ConfigApi {
 	}
 
 	/**
+	 * List backup files.
+	 * @param {{ signal?: AbortSignal }} opts Axios request options
+	 * @returns {Promise<Array<{name:string,size?:number,lastModificationTime?:string}>>}
+	 */
+	listBackups(opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/backup`,
+				method: "GET",
+				signal,
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
+	}
+
+	/**
 	 * Get the raw YAML content of a file.
 	 * @param {string} name  The file name
 	 * @param {{ signal?: AbortSignal }} opts Axios request options
@@ -139,6 +157,68 @@ class ConfigApi {
 				data: { newName },
 			})
 				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
+	}
+
+	/**
+	 * Save or update a backup file (PUT /api/config-files/backup/{fileName})
+	 * @param {string} fileName
+	 * @param {string} content
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<Object>} // ConfigurationFile
+	 */
+	saveOrUpdateBackupFile(fileName, content, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/backup/${encodeURIComponent(fileName)}`,
+				method: "PUT",
+				signal,
+				data: content ?? "",
+				headers: { "Content-Type": "text/plain", Accept: "application/json" },
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
+	}
+
+	/**
+	 * Get the content of a backup file (GET /api/config-files/backup/{fileName})
+	 * @param {string} fileName
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<string>}
+	 */
+	getBackupFileContent(fileName, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/backup/${encodeURIComponent(fileName)}`,
+				method: "GET",
+				signal,
+				responseType: "text",
+				headers: { Accept: "text/plain" },
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
+	}
+
+	/**
+	 * Delete a backup file (DELETE /api/config-files/backup/{fileName})
+	 * @param {string} fileName
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<null|any>}
+	 */
+	deleteBackupFile(fileName, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/backup/${encodeURIComponent(fileName)}`,
+				method: "DELETE",
+				signal,
+			})
+				.then((res) => resolve(res))
 				.catch((e) => reject(normalizeError(e)));
 		});
 	}
