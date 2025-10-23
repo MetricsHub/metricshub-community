@@ -64,33 +64,32 @@ export default function EditorHeader({ selected, saving, onSave }) {
 			</Stack>
 
 			{/* Right side buttons */}
-<Stack direction="row" spacing={1} alignItems="center">
-	<Button
-		size="small"
-		startIcon={<SaveIcon />}
-		onClick={onSave}
-		disabled={!selected || isBackup || !isDirty || saving}
-		variant="contained"
-	>
-		Save
-	</Button>
-</Stack>
+			<Stack direction="row" spacing={1} alignItems="center">
+				<Button
+					size="small"
+					startIcon={<SaveIcon />}
+					onClick={onSave}
+					disabled={!selected || isBackup || !isDirty || saving}
+					variant="contained"
+				>
+					Save
+				</Button>
+			</Stack>
 
-{nonPosErrors.length > 0 && (
-	<Box
-		sx={{
-			color: (t) => t.palette.error.main,
-			typography: "body2",
-			whiteSpace: "pre-wrap",
-			maxHeight: 96,
-			overflow: "auto",
-			mt: 0.5,
-		}}
-	>
-		{nonPosErrors.join("\n")}
-	</Box>
-)}
-
+			{nonPosErrors.length > 0 && (
+				<Box
+					sx={{
+						color: (t) => t.palette.error.main,
+						typography: "body2",
+						whiteSpace: "pre-wrap",
+						maxHeight: 96,
+						overflow: "auto",
+						mt: 0.5,
+					}}
+				>
+					{nonPosErrors.join("\n")}
+				</Box>
+			)}
 		</>
 	);
 }

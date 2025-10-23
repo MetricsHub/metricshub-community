@@ -71,14 +71,24 @@ public class ConfigurationFilesService {
 	 * Pattern to extract line and column information from error messages.
 	 */
 	private static final Pattern LINE_ERROR_PATTERN = Pattern.compile(
-			"line (\\d+), column (\\d+)",
-			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE);
+		"line (\\d+), column (\\d+)",
+		Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+	);
 
 	/**
 	 * Allowed file extensions for configuration files.
 	 */
 	private static final Set<String> YAML_EXTENSIONS = Set.of(".yml", ".yaml");
 
+	/**
+	 * Maximum directory traversal depth when searching for configuration files.
+	 */
+	private static final int MAX_DEPTH = 1;
+
+	/**
+	 * Provides access to the current {@link AgentContext} used for configuration
+	 * processing.
+	 */
 	private final AgentContextHolder agentContextHolder;
 
 	/**
@@ -104,18 +114,16 @@ public class ConfigurationFilesService {
 		// Only list top-level YAML files, excluding any subdirectories (e.g., backup)
 		try (Stream<Path> files = Files.list(configurationDirectory)) {
 			return files
-					.filter(Files::isRegularFile)
-					.filter(ConfigurationFilesService::hasYamlExtension)
-					.map((Path p) -> buildConfigurationFile(p))
-					.filter(Objects::nonNull)
-					.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
-					.toList();
+				.filter(Files::isRegularFile)
+				.filter(ConfigurationFilesService::hasYamlExtension)
+				.map((Path p) -> buildConfigurationFile(p))
+				.filter(Objects::nonNull)
+				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
+				.toList();
 		} catch (Exception e) {
-			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory,
-					e.getMessage());
+			log.error("Failed to list configuration directory: '{}'. Error: {}", configurationDirectory, e.getMessage());
 			log.debug("Failed to list configuration directory: '{}'. Exception:", configurationDirectory, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list configuration files.",
-					e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list configuration files.", e);
 		}
 	}
 
@@ -139,8 +147,7 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to read configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to read configuration file: '{}'. Exception:", file, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read configuration file.",
-					e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to read configuration file.", e);
 		}
 	}
 
@@ -175,8 +182,7 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to save configuration file: '{}'. Error: {}", target, e.getMessage());
 			log.debug("Failed to save configuration file: '{}'. Exception:", target, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save configuration file.",
-					e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to save configuration file.", e);
 		}
 	}
 
@@ -192,14 +198,12 @@ public class ConfigurationFilesService {
 
 		try {
 			if (!Files.deleteIfExists(file)) {
-				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND,
-						"Configuration file not found.");
+				throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Configuration file not found.");
 			}
 		} catch (IOException e) {
 			log.error("Failed to delete configuration file: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to delete configuration file: '{}'. Exception:", file, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete configuration file.",
-					e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to delete configuration file.", e);
 		}
 	}
 
@@ -217,8 +221,7 @@ public class ConfigurationFilesService {
 		final Path source = resolveSafeYaml(dir, oldName);
 
 		if (!Files.exists(source)) {
-			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND,
-					"Source configuration file not found.");
+			throw new ConfigFilesException(ConfigFilesException.Code.FILE_NOT_FOUND, "Source configuration file not found.");
 		}
 
 		final Path target = resolveSafeYaml(dir, newName);
@@ -237,8 +240,7 @@ public class ConfigurationFilesService {
 		} catch (IOException e) {
 			log.error("Failed to rename configuration file: '{}' -> '{}'. Error: {}", source, target, e.getMessage());
 			log.debug("Failed to rename configuration file: '{}' -> '{}'. Exception:", source, target, e);
-			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.",
-					e);
+			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to rename configuration file.", e);
 		}
 	}
 
@@ -251,11 +253,11 @@ public class ConfigurationFilesService {
 	private ConfigurationFile buildConfigurationFile(final Path path) {
 		try {
 			return ConfigurationFile
-					.builder()
-					.name(path.getFileName().toString())
-					.size(Files.size(path))
-					.lastModificationTime(Files.getLastModifiedTime(path).toString())
-					.build();
+				.builder()
+				.name(path.getFileName().toString())
+				.size(Files.size(path))
+				.lastModificationTime(Files.getLastModifiedTime(path).toString())
+				.build();
 		} catch (IOException e) {
 			log.error("Failed to read configuration file metadata: '{}'. Error: {}", path, e.getMessage());
 			log.debug("Failed to read configuration file metadata: '{}'. Exception:", path, e);
@@ -304,8 +306,9 @@ public class ConfigurationFilesService {
 
 		if (!hasYamlExtension(fileName.toLowerCase(Locale.ROOT))) {
 			throw new ConfigFilesException(
-					ConfigFilesException.Code.INVALID_EXTENSION,
-					"Only .yml or .yaml files are allowed.");
+				ConfigFilesException.Code.INVALID_EXTENSION,
+				"Only .yml or .yaml files are allowed."
+			);
 		}
 
 		final Path normalizedBase = baseDir.normalize();
@@ -328,8 +331,9 @@ public class ConfigurationFilesService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		if (agentContext == null || agentContext.getConfigDirectory() == null) {
 			throw new ConfigFilesException(
-					ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE,
-					"Configuration directory is not available.");
+				ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE,
+				"Configuration directory is not available."
+			);
 		}
 		return agentContext.getConfigDirectory();
 	}
@@ -473,7 +477,7 @@ public class ConfigurationFilesService {
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
 	public ConfigurationFile saveOrUpdateBackupFile(final String fileName, final String content)
-			throws ConfigFilesException {
+		throws ConfigFilesException {
 		final Path dir = getBackupDir();
 		final Path target = resolveBackupYaml(fileName);
 		try {
@@ -527,8 +531,9 @@ public class ConfigurationFilesService {
 		final var lower = fileName.toLowerCase(Locale.ROOT);
 		if (!lower.endsWith(".yml") && !lower.endsWith(".yaml")) {
 			throw new ConfigFilesException(
-					ConfigFilesException.Code.INVALID_EXTENSION,
-					"Only .yml or .yaml files are allowed for backup.");
+				ConfigFilesException.Code.INVALID_EXTENSION,
+				"Only .yml or .yaml files are allowed for backup."
+			);
 		}
 		final Path normalizedBase = getBackupDir().normalize();
 		final Path resolved = normalizedBase.resolve(fileName).normalize();
@@ -549,16 +554,86 @@ public class ConfigurationFilesService {
 		final Path backupDir = getBackupDir();
 		try (Stream<Path> files = Files.list(backupDir)) {
 			return files
-					.filter(Files::isRegularFile)
-					.filter(p -> hasYamlExtension(p))
-					.map(this::buildConfigurationFile)
-					.filter(Objects::nonNull)
-					.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
-					.toList();
+				.filter(Files::isRegularFile)
+				.filter(p -> hasYamlExtension(p))
+				.map(this::buildConfigurationFile)
+				.filter(Objects::nonNull)
+				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
+				.toList();
 		} catch (IOException e) {
 			log.error("Failed to list backup directory: '{}'. Error: {}", backupDir, e.getMessage());
 			log.debug("Failed to list backup directory: '{}'. Exception:", backupDir, e);
 			throw new ConfigFilesException(ConfigFilesException.Code.IO_FAILURE, "Failed to list backup files.", e);
 		}
+	}
+
+	/**
+	 * Enriches deserialization errors with line/column information from
+	 * JsonProcessingException.
+	 *
+	 * @param deserializationFailure the DeserializationFailure to enrich
+	 * @param e                      the JsonProcessingException containing location
+	 *                               info
+	 */
+	private static void enrichErrors(final DeserializationFailure deserializationFailure, JsonProcessingException e) {
+		if (!deserializationFailure.isEmpty()) {
+			return;
+		}
+
+		// try to extract the SnakeYAML location if present in message
+		final String msg = e.getOriginalMessage();
+
+		// first try to extract line/column from the message
+		if (enrichErrors(deserializationFailure, msg)) {
+			return;
+		}
+
+		// errors already tracked by the problem handler
+		final JsonLocation loc = e.getLocation();
+		int line = loc != null ? loc.getLineNr() : -1;
+		int column = loc != null ? loc.getColumnNr() : -1;
+
+		// Whatsoever, add the original message
+		deserializationFailure.addError(msg, line, column);
+	}
+
+	/**
+	 * Enriches deserialization errors by parsing line/column info from the error
+	 * message.
+	 *
+	 * @param deserializationFailure the DeserializationFailure to enrich
+	 * @param msg                    the error message potentially containing
+	 *                               line/column info
+	 * @return true if line/column info was found and added, false otherwise
+	 */
+	private static boolean enrichErrors(final DeserializationFailure deserializationFailure, final String msg) {
+		final var matcher = LINE_ERROR_PATTERN.matcher(msg);
+		var found = false;
+		while (matcher.find()) {
+			deserializationFailure.addError(msg, Integer.parseInt(matcher.group(1)), Integer.parseInt(matcher.group(2)));
+			found = true;
+		}
+		return found;
+	}
+
+	/**
+	 * Create a new {@link ObjectMapper} instance then add to it the
+	 * {@link PostConfigDeserializer}
+	 *
+	 * @param extensionManager Manages and aggregates various types of extensions
+	 *                         used within MetricsHub.
+	 * @return new {@link ObjectMapper} instance
+	 */
+	public static ObjectMapper newAgentConfigYamlMapper(final ExtensionManager extensionManager) {
+		final ObjectMapper objectMapper = ConfigHelper.newObjectMapper();
+
+		PostConfigDeserializeHelper.addPostDeserializeSupport(objectMapper);
+
+		// Inject the extension manager in the deserialization context
+		final var injectableValues = new InjectableValues.Std();
+		injectableValues.addValue(ExtensionManager.class, extensionManager);
+		objectMapper.setInjectableValues(injectableValues);
+
+		return objectMapper;
 	}
 }
