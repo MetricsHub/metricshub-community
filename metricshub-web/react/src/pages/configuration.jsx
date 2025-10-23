@@ -264,16 +264,42 @@ function ConfigurationPage() {
 			</Left>
 
 			<Right>
-				<Stack sx={{ p: 1.5, gap: 1 }}>
-					<EditorHeader
-						selected={selected}
-						saving={saving}
-						validation={validation}
-						onValidate={onValidate}
-						onSave={() => editorRef.current?.save?.()}
-						canSave={!!selected && !saving}
-					/>
-					<Box sx={{ height: "calc(100vh - 160px)" }}>
+				<Stack
+					sx={{
+						px: 1.5,
+						pt: 0,
+						pb: 1.5,
+						gap: 1,
+						height: "100%",
+						overflow: "auto",
+						minHeight: 0,
+					}}
+				>
+					<Box
+						sx={{
+							position: "sticky",
+							top: 0,
+							zIndex: (t) => t.zIndex.appBar,
+							mx: -1.5,
+							px: 1.5,
+							py: 1,
+							bgcolor: "background.default",
+							borderBottom: 1,
+							borderColor: "divider",
+						}}
+					>
+						<EditorHeader
+							selected={selected}
+							saving={saving}
+							validation={validation}
+							onValidate={onValidate}
+							onSave={() => editorRef.current?.save?.()}
+							canSave={!!selected && !saving}
+						/>
+					</Box>
+
+					{/* Let the editor take the remaining space without vh hacks */}
+					<Box sx={{ flex: 1, minHeight: 0 }}>
 						<ConfigEditorContainer ref={editorRef} />
 					</Box>
 					{loadingContent && (
