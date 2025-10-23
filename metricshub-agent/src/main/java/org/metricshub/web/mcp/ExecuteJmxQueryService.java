@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Arrays;
+import java.util.List;
 import lombok.NonNull;
 import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -36,18 +37,23 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service
 /**
  * Service that executes ad-hoc JMX requests through the MetricsHub agent.
  * It finds a valid JMX configuration for a host, applies runtime parameters,
  * builds the JMX query payload, and delegates execution to the JMX extension.
  */
+@Service
 public class ExecuteJmxQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the JMX request.
 	 */
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
+
+	/**
+	 * Default pool size for JMX queries.
+	 */
+	private static final int DEFAULT_JMX_POOL_SIZE = 60;
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -82,14 +88,14 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteJmxQuery",
 		description = """
-		Execute a JMX request on a host using the agent JMX extension.
+		Execute a JMX request on the given host(s) using the agent JMX extension.
 		Resolve a valid configuration from context, set hostname and timeout (default 10s),
 		build the request (objectName, attributes, keyProperties), execute, and return the result or an error.
 		The query is valid only if at least one attribute or one key property is specified, even if those parameters are optional.
 		"""
 	)
-	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute JMX query on.", required = true) final String hostname,
+	public MultiHostToolResponse<QueryResponse> executeQuery(
+		@ToolParam(description = "The hostname(s) to execute JMX query on.", required = true) final List<String> hostname,
 		@ToolParam(description = "The MBean object name pattern.", required = true) final String objectName,
 		@ToolParam(
 			description = "Comma-separated list of attributes to fetch from the MBean.",
@@ -99,16 +105,33 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 			description = "Comma-separated list of key properties to include in the result set.",
 			required = false
 		) final String keyProperties,
-		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout
+		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent JMX queries. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_JMX_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("jmx")
 			.map((IProtocolExtension extension) ->
-				executeJmxQueryWithExtensionSafe(extension, hostname, objectName, attributes, keyProperties, timeout)
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<QueryResponse>builder()
+							.hostname(host)
+							.response(
+								executeJmxQueryWithExtensionSafe(extension, host, objectName, attributes, keyProperties, timeout)
+							)
+							.build(),
+					resolvedPoolSize
+				)
 			)
-			.orElse(QueryResponse.builder().isError("No Extension found for JMX.").build());
+			.orElseGet(() -> MultiHostToolResponse.buildError("The JMX extension is not available"));
 	}
 
 	/**
@@ -143,7 +166,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 				executeQuerySafe(extension, configurationCopy, hostname, objectName, attributes, keyProperties, timeout)
 			)
 			.orElseGet(() ->
-				QueryResponse.builder().isError("No valid configuration found for JMX on %s.".formatted(hostname)).build()
+				QueryResponse.builder().error("No valid configuration found for JMX on %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -182,9 +205,21 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
+				.error("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
 				.build();
 		}
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} representing the error returned when a
+	 * null hostname is supplied to the tool.
+	 *
+	 * @return a host-level response containing an error payload for the missing hostname
+	 */
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 
 	/**

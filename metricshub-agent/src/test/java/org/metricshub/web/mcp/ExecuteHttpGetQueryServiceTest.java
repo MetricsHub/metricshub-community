@@ -1,7 +1,6 @@
 package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -111,13 +110,20 @@ class ExecuteHttpGetQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = httpQueryService.executeQuery(HOSTNAME, HTTP_URL, HTTP_HEADER, HTTP_BODY, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of(HTTP_URL),
+			HTTP_HEADER,
+			HTTP_BODY,
+			TIMEOUT,
+			null
+		);
 
-		assertNotNull(result, "Result should not be null when executing a query");
-
+		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
+		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
+		assertEquals(HOSTNAME, hostResponse.getHostname(), () -> "Hostname should be propagated");
 		assertEquals(
 			"No valid configuration found for HTTP on %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			hostResponse.getResponse().getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -129,12 +135,18 @@ class ExecuteHttpGetQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = httpQueryService.executeQuery(HOSTNAME, HTTP_URL, HTTP_HEADER, HTTP_BODY, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of(HTTP_URL),
+			HTTP_HEADER,
+			HTTP_BODY,
+			TIMEOUT,
+			null
+		);
 
-		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
+		assertTrue(result.getHosts().isEmpty(), () -> "No host response should be returned when extension is missing");
 		assertEquals(
-			"No Extension found for HTTP.",
-			result.getIsError(),
+			"The HTTP extension is not available",
+			result.getErrorMessage(),
 			() -> "Unexpected error message when the HTTP extension isn't found"
 		);
 	}
@@ -167,9 +179,43 @@ class ExecuteHttpGetQueryServiceTest {
 		when(httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class)))
 			.thenReturn(SUCCESS_RESPONSE);
 
-		final QueryResponse result = httpQueryService.executeQuery(HOSTNAME, HTTP_URL, HTTP_HEADER, HTTP_BODY, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of(HTTP_URL),
+			HTTP_HEADER,
+			HTTP_BODY,
+			TIMEOUT,
+			null
+		);
 
-		assertEquals(SUCCESS_RESPONSE, result.getResponse(), () -> "HTTP GET response mismatch for mocked value `Success`");
+		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
+		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
+		assertEquals(HOSTNAME, hostResponse.getHostname(), () -> "Hostname should be propagated");
+		assertEquals(
+			SUCCESS_RESPONSE,
+			hostResponse.getResponse().getResponse(),
+			() -> "HTTP GET response mismatch for mocked value `Success`"
+		);
+	}
+
+	@Test
+	void testExecuteHttpGetRequestWithBlankUrl() {
+		setup();
+
+		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of("   "),
+			null,
+			null,
+			TIMEOUT,
+			null
+		);
+
+		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response for blank URL input");
+		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
+		assertEquals(
+			"URL must not be blank",
+			hostResponse.getResponse().getError(),
+			() -> "Expected blank URL error to be returned"
+		);
 	}
 
 	@Test
@@ -203,12 +249,18 @@ class ExecuteHttpGetQueryServiceTest {
 			.thenThrow(new IllegalArgumentException("An error has occurred"));
 
 		// Call the execute query method
-		final QueryResponse result = httpQueryService.executeQuery(HOSTNAME, HTTP_URL, HTTP_HEADER, HTTP_BODY, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of(HTTP_URL),
+			HTTP_HEADER,
+			HTTP_BODY,
+			TIMEOUT,
+			null
+		);
 
-		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
+		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
 		assertTrue(
-			result.getIsError().contains("An error has occurred when executing the HTTP"),
+			hostResponse.getResponse().getError().contains("An error has occurred when executing the HTTP"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}
