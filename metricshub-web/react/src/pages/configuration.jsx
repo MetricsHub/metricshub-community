@@ -1,5 +1,6 @@
 // src/pages/configuration.jsx
 import * as React from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 
@@ -10,7 +11,6 @@ import { useAppDispatch, useAppSelector } from "../hooks/store";
 import {
 	fetchConfigList,
 	fetchConfigContent,
-	saveConfig,
 	validateConfig,
 	deleteConfig,
 	renameConfig,
@@ -28,13 +28,16 @@ import ConfigTree from "../components/config/Tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
+import { paths } from "../paths";
 
 /**
  * Configuration page component.
- * @returns The configuration page with a split view: tree on the left, YAML editor on the right.
+ * URL is the source of truth for selection: /configuration/:name
  */
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
+	const { name: routeName } = useParams();
 	const {
 		list,
 		filesByName,
@@ -59,27 +62,53 @@ function ConfigurationPage() {
 	}, [dispatch]);
 
 	/**
+	 * Sync selected file with URL parameter.
+	 * Fetch content if not already cached.
+	 * @type {React.EffectCallback}
+	 */
+	React.useEffect(() => {
+		const target = routeName ? decodeURIComponent(routeName) : null;
+
+		if (!target) {
+			if (selected) dispatch(selectFile(null));
+			return;
+		}
+
+		if (target !== selected) {
+			const cached = filesByName?.[target];
+			const isLocalOnly = list.find((f) => f.name === target)?.localOnly;
+
+			dispatch(selectFile(target));
+			if (cached || isLocalOnly) {
+				dispatch(setContent(cached?.content ?? ""));
+			} else {
+				dispatch(fetchConfigContent(target));
+			}
+		}
+	}, [routeName, selected, filesByName, list, dispatch]);
+
+	/**
+	 * Auto-navigate to first file if none is selected and files are available.
+	 */
+	React.useEffect(() => {
+		if (!routeName && list?.length > 0) {
+			navigate(paths.configurationFile(list[0].name), { replace: true });
+		}
+	}, [routeName, list, navigate]);
+
+	/**
 	 * Handle selection of a configuration file from the tree.
 	 * Fetches content if not already cached.
 	 */
 	const onSelect = React.useCallback(
 		(name) => {
-			dispatch(selectFile(name));
-			const cached = filesByName?.[name];
-			if (cached) {
-				dispatch(setContent(cached.content ?? ""));
-				return;
+			if (!name) return;
+			const url = paths.configurationFile(name);
+			if (url !== window.location.pathname) {
+				navigate(url, { replace: false });
 			}
-			// if the list entry is flagged localOnly, also avoid backend and show whatever we have
-			const meta = list.find((f) => f.name === name);
-			if (meta?.localOnly) {
-				dispatch(setContent(filesByName?.[name]?.content ?? ""));
-				return;
-			}
-			// otherwise fetch from backend
-			dispatch(fetchConfigContent(name));
 		},
-		[dispatch, filesByName, list],
+		[navigate],
 	);
 
 	/**
@@ -94,20 +123,11 @@ function ConfigurationPage() {
 			} else {
 				dispatch(renameConfig({ oldName, newName }));
 			}
+			if (routeName && decodeURIComponent(routeName) === oldName) {
+				navigate(paths.configurationFile(newName), { replace: true });
+			}
 		},
-		[dispatch, list],
-	);
-
-	/**
-	 * Handle saving the current configuration file.
-	 * No-op if no file is selected or already saving.
-	 */
-	const onSave = React.useCallback(
-		(doc) => {
-			if (!selected) return;
-			dispatch(saveConfig({ name: selected, content: doc, skipValidation: false }));
-		},
-		[dispatch, selected],
+		[dispatch, list, routeName, navigate],
 	);
 
 	/**
@@ -156,8 +176,13 @@ function ConfigurationPage() {
 		} else {
 			dispatch(deleteConfig(deleteTarget));
 		}
+		if (selected === deleteTarget) {
+			navigate(paths.configuration, { replace: true });
+		}
 		setDeleteOpen(false);
-	}, [dispatch, deleteTarget, list]);
+	}, [dispatch, deleteTarget, list, selected, navigate]);
+
+	const editorRef = React.useRef(null);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -166,6 +191,8 @@ function ConfigurationPage() {
 					<Stack direction="row" spacing={1} alignItems="center">
 						<Button
 							size="small"
+							variant="outlined"
+							color="inherit"
 							startIcon={<RefreshIcon />}
 							onClick={() => dispatch(fetchConfigList())}
 						>
@@ -174,11 +201,12 @@ function ConfigurationPage() {
 
 						<Button
 							size="small"
-							//variant="outlined"
+							color="inherit"
+							variant="outlined"
 							component="label"
 							startIcon={<UploadFileIcon />}
 						>
-							Upload
+							Import
 							<input
 								type="file"
 								accept=".yaml,.yml"
@@ -190,6 +218,8 @@ function ConfigurationPage() {
 									reader.onload = (evt) => {
 										const content = evt.target.result;
 										dispatch(addLocalFile({ name: file.name, content }));
+										// Navigate to new local file so URL reflects selection
+										navigate(paths.configurationFile(file.name), { replace: false });
 									};
 									reader.readAsText(file);
 								}}
@@ -234,11 +264,11 @@ function ConfigurationPage() {
 						saving={saving}
 						validation={validation}
 						onValidate={onValidate}
-						onSave={() => onSave(content)}
+						onSave={() => editorRef.current?.save?.()}
 						canSave={!!selected && !saving}
 					/>
 					<Box sx={{ height: "calc(100vh - 160px)" }}>
-						<ConfigEditorContainer />
+						<ConfigEditorContainer ref={editorRef} />
 					</Box>
 					{loadingContent && (
 						<Stack direction="row" alignItems="center" spacing={1}>

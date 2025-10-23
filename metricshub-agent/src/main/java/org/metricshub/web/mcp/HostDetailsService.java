@@ -22,6 +22,7 @@ package org.metricshub.web.mcp;
  */
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +55,11 @@ public class HostDetailsService implements IMCPToolService {
 	 * Holds contextual information about the current agent instance.
 	 */
 	private final AgentContextHolder agentContextHolder;
+
+	/**
+	 * Default pool size for host details lookup.
+	 */
+	private static final int DEFAULT_HOST_DETAILS_POOL_SIZE = 60;
 
 	/**
 	 * Contains all the collectors by their protocol.
@@ -95,29 +101,37 @@ public class HostDetailsService implements IMCPToolService {
 	@Tool(
 		name = "GetHostDetails",
 		description = """
-		Use this tool when you need to fetch details about how MetricsHub is monitoring a specific host.
-		The result is a structured object for the given hostname, containing:
+		Use this tool when you need to fetch details about how MetricsHub is monitoring specific host(s).
+		The result is a structured list for each requested host, where each host object contains:
 
 		- Protocols (e.g., SNMP, SSH, WMI) configured to check host reachability and provide raw data for connectors.
 		- Working connectors that have been successfully detected and are usable to collect metrics.
-		- Collectors, which are direct references to executable tools (e.g., SNMP Walk, SQL Query, SSH Command, HTTP Request)
-		that can be invoked to perform requests and validate connectivity, authentication, or data availability.
+		- Collectors, which are direct references to executable tools (e.g., SNMP Walk, SQL Query) used for connectivity, authentication, or data availability checks.
 
 		This information helps you:
 		- Decide which connector or protocol to use when troubleshooting or collecting metrics.
 		- Explain why certain data is or isn’t available for a host.
-		- Invoke the appropriate collectors as tools for targeted tests
-		(e.g., run an SNMP Walk on a specific OID subtree, or send an HTTP Request to verify response codes or payload content).
+		- Invoke the appropriate collectors for targeted tests (e.g., run an SNMP Walk or send an HTTP Request).
 
 		If the hostname does not exist in the current agent configuration, the result will contain an error message instead.
 
 		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
-	public HostDetails getHostDetails(
-		@ToolParam(description = "The hostname to look up in the agent configuration") final String hostname
+	public MultiHostToolResponse<HostDetails> getHostDetails(
+		@ToolParam(description = "The hostname(s) to look up in the agent configuration") final List<String> hostname,
+		@ToolParam(
+			description = "Optional pool size for concurrent host details lookup. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
-		return getHostDetailsIfPresent(hostname);
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_HOST_DETAILS_POOL_SIZE);
+		return executeForHosts(
+			hostname,
+			this::buildNullHostnameResponse,
+			host -> HostToolResponse.<HostDetails>builder().hostname(host).response(getHostDetailsIfPresent(host)).build(),
+			resolvedPoolSize
+		);
 	}
 
 	/**
@@ -203,5 +217,17 @@ public class HostDetailsService implements IMCPToolService {
 	 */
 	public Set<String> getCollectors(final String protocol) {
 		return COLLECTOR_MAP.getOrDefault(protocol, Set.of());
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} signalling that the hostname argument is
+	 * missing.
+	 *
+	 * @return a host-level response containing an error payload for the null hostname
+	 */
+	private HostToolResponse<HostDetails> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			HostDetails.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 }

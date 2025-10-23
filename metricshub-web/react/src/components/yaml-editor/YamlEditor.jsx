@@ -6,6 +6,8 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
+import "./lint-fallback.css";
+import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
@@ -15,8 +17,21 @@ const LOCAL_STORAGE_KEY = "yaml-editor-doc";
  * @param {{value?:string,onChange?:(val:string)=>void,onSave?:(val:string)=>void,height?:string,readOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The YAML editor component.
  */
-export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
+export default function YamlEditor({
+	value,
+	onChange,
+	onSave,
+	canSave = true,
+	fileName,
+	validateFn,
+	height = "100%",
+	readOnly = false,
+	onEditorReady,
+}) {
 	const theme = useTheme();
+
+	// expose editor view for parent components (used to scroll to error locations)
+	const viewRef = React.useRef(null);
 
 	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -37,9 +52,14 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	}, [doc]);
 
 	/**
-	 * CodeMirror extensions, memoized to avoid re-creating on every render.
-	 * Includes YAML language support, linting, history, and keymaps.
+	 * Validation extensions for CodeMirror based on provided validateFn and fileName.
+	 * @returns {Array} Array of CodeMirror extensions for validation.
 	 */
+	const validationExtension = React.useMemo(
+		() => buildYamlLinterExtension(validateFn, fileName, 400),
+		[validateFn, fileName],
+	);
+
 	const extensions = React.useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
@@ -47,13 +67,14 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 				key: "Mod-s",
 				preventDefault: true,
 				run: (view) => {
+					if (!canSave) return true;
 					onSave(view.state.doc.toString());
 					return true;
 				},
 			});
 		}
-		return [cmYaml(), history(), keymap.of(km)];
-	}, [onSave]);
+		return [cmYaml(), history(), keymap.of(km), ...validationExtension];
+	}, [onSave, canSave, validationExtension]);
 
 	/**
 	 * Handle document changes.
@@ -69,7 +90,6 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 
 	return (
 		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
-			{/* Editor container only (no toolbar/header/buttons) */}
 			<Box
 				sx={{
 					flex: 1,
@@ -86,6 +106,10 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 					editable={!readOnly}
 					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
 					theme={theme.palette.mode}
+					onCreateEditor={(editor) => {
+						viewRef.current = editor.view;
+						onEditorReady?.(editor.view);
+					}}
 				/>
 			</Box>
 		</Box>
