@@ -128,18 +128,18 @@ export default function YamlEditor({
 					onChange={handleChange}
 					extensions={extensions}
 					editable={!readOnly}
-					basicSetup={{ 
-						lineNumbers: true, 
-						highlightActiveLine: true, 
+					basicSetup={{
+						lineNumbers: true,
+						highlightActiveLine: true,
 						foldGutter: true,
 						searchKeymap: false,  // Disable default search
 						search: false,        // Disable search module
 					}}
 					theme={theme.palette.mode}
-					 onCreateEditor={(view) => {
-   viewRef.current = view;          // <-- this is the EditorView
-   onEditorReady?.(view);
- }}
+					onCreateEditor={(view) => {
+						viewRef.current = view;          // <-- this is the EditorView
+						onEditorReady?.(view);
+					}}
 				/>
 			</Box>
 		</Box>

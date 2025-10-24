@@ -41,11 +41,11 @@ export default function SearchPanel({ onClose, viewRef }) {
 			const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 			const regex = new RegExp(escaped, "gi");
 			const matches = [...text.matchAll(regex)];
-			
+
 			console.log("Search query:", query);
 			console.log("Document length:", text.length);
 			console.log("Matches found:", matches.length);
-			
+
 			matchesRef.current = matches;
 			setTotalMatches(matches.length);
 
@@ -57,7 +57,7 @@ export default function SearchPanel({ onClose, viewRef }) {
 				setCurrentMatch(1);
 				const from = match.index;
 				const to = match.index + match[0].length;
-				
+
 				editorView.dispatch({
 					selection: { anchor: from, head: to },
 					effects: [
@@ -105,7 +105,7 @@ export default function SearchPanel({ onClose, viewRef }) {
 			// Scroll to and select the match with proper viewport centering
 			const from = match.index;
 			const to = match.index + match[0].length;
-			
+
 			editorView.dispatch({
 				selection: { anchor: from, head: to },
 				effects: [

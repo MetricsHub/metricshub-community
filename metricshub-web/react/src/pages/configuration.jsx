@@ -263,7 +263,7 @@ function ConfigurationPage() {
 				</Stack>
 			</Left>
 
-			<Right>
+			<Right disableScroll>
 				<Stack
 					sx={{
 						px: 1.5,
