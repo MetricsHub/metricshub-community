@@ -91,7 +91,7 @@ export default function BackupSetNode({
 	const groupItemId = `__backup_set__/${id}`;
 	const groupLabel = (
 		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", pr: 1 }}
 		>
 			<Box sx={{ display: "flex", alignItems: "center" }}>
 				<FileTypeIcon type="folder" />

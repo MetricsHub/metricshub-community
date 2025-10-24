@@ -46,7 +46,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 
 	const folderLabel = (
 		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", pr: 1 }}
 		>
 			<Box sx={{ display: "flex", alignItems: "center" }}>
 				<FileTypeIcon type="folder" />
