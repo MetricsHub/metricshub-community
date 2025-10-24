@@ -6,8 +6,10 @@ import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
+import { Prec } from "@codemirror/state";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
+import SearchPanel from "./SearchPanel";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
@@ -32,6 +34,9 @@ export default function YamlEditor({
 
 	// expose editor view for parent components (used to scroll to error locations)
 	const viewRef = React.useRef(null);
+
+	// Search panel state
+	const [searchOpen, setSearchOpen] = React.useState(false);
 
 	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -73,7 +78,20 @@ export default function YamlEditor({
 				},
 			});
 		}
-		return [cmYaml(), history(), keymap.of(km), ...validationExtension];
+		// Override Ctrl+F to open our custom search panel with high precedence
+		const customSearchKeymap = Prec.highest(
+			keymap.of([
+				{
+					key: "Mod-f",
+					preventDefault: true,
+					run: () => {
+						setSearchOpen(true);
+						return true;
+					},
+				},
+			])
+		);
+		return [cmYaml(), history(), keymap.of(km), customSearchKeymap, ...validationExtension];
 	}, [onSave, canSave, validationExtension]);
 
 	/**
@@ -89,7 +107,13 @@ export default function YamlEditor({
 	);
 
 	return (
-		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
+		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
+			{searchOpen && (
+				<SearchPanel
+					onClose={() => setSearchOpen(false)}
+					viewRef={viewRef}
+				/>
+			)}
 			<Box
 				sx={{
 					flex: 1,
@@ -104,12 +128,18 @@ export default function YamlEditor({
 					onChange={handleChange}
 					extensions={extensions}
 					editable={!readOnly}
-					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
-					theme={theme.palette.mode}
-					onCreateEditor={(editor) => {
-						viewRef.current = editor.view;
-						onEditorReady?.(editor.view);
+					basicSetup={{ 
+						lineNumbers: true, 
+						highlightActiveLine: true, 
+						foldGutter: true,
+						searchKeymap: false,  // Disable default search
+						search: false,        // Disable search module
 					}}
+					theme={theme.palette.mode}
+					 onCreateEditor={(view) => {
+   viewRef.current = view;          // <-- this is the EditorView
+   onEditorReady?.(view);
+ }}
 				/>
 			</Box>
 		</Box>
