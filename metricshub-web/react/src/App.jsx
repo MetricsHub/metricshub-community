@@ -10,6 +10,7 @@ import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
+import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
@@ -48,6 +49,8 @@ const AppLayout = ({ authed, toggleTheme }) => {
 	return (
 		<>
 			{authed && <NavBar toggleTheme={toggleTheme} />}
+			{/* Global unsaved changes guard */}
+			<UnsavedChangesGuard />
 			{/* Child pages render here */}
 			<Outlet />
 		</>
