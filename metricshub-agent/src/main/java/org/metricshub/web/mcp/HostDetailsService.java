@@ -95,6 +95,7 @@ public class HostDetailsService implements IMCPToolService {
 	 * If the hostname is not found, the result contains an error message instead.
 	 *
 	 * @param hostname the hostname to look up
+	 * @param poolSize optional pool size for concurrent host details lookup; defaults to {@value #DEFAULT_HOST_DETAILS_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link HostDetails} with protocol, connector, and collector information,
 	 *         or an error message if the host cannot be found
 	 */

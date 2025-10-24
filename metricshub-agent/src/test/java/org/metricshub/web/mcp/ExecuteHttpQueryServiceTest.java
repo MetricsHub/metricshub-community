@@ -1,6 +1,7 @@
 package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,12 +28,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-class ExecuteHttpGetQueryServiceTest {
+class ExecuteHttpQueryServiceTest {
 
 	/**
 	 * Hostname against which the HTTP request is executed.
 	 */
 	private static final String HOSTNAME = "hostname";
+
+	/**
+	 * HTTP GET method.
+	 */
+	private static final String HTTP_GET = "GET";
 
 	/**
 	 * Target HTTP URL used in tests.
@@ -67,7 +73,7 @@ class ExecuteHttpGetQueryServiceTest {
 	private AgentContextHolder agentContextHolder;
 	private AgentContext agentContext;
 	private ExtensionManager extensionManager;
-	private ExecuteHttpGetQueryService httpQueryService;
+	private ExecuteHttpQueryService httpQueryService;
 
 	@InjectMocks
 	private HttpExtension httpExtension;
@@ -90,7 +96,7 @@ class ExecuteHttpGetQueryServiceTest {
 		when(agentContext.getExtensionManager()).thenReturn(extensionManager);
 
 		// Injecting the agent context holder in the HTTP query service.
-		httpQueryService = new ExecuteHttpGetQueryService(agentContextHolder);
+		httpQueryService = new ExecuteHttpQueryService(agentContextHolder);
 	}
 
 	@Test
@@ -112,6 +118,7 @@ class ExecuteHttpGetQueryServiceTest {
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
+			HTTP_GET,
 			HTTP_HEADER,
 			HTTP_BODY,
 			TIMEOUT,
@@ -137,6 +144,7 @@ class ExecuteHttpGetQueryServiceTest {
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
+			HTTP_GET,
 			HTTP_HEADER,
 			HTTP_BODY,
 			TIMEOUT,
@@ -181,6 +189,7 @@ class ExecuteHttpGetQueryServiceTest {
 
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
+			null,
 			HTTP_HEADER,
 			HTTP_BODY,
 			TIMEOUT,
@@ -198,11 +207,69 @@ class ExecuteHttpGetQueryServiceTest {
 	}
 
 	@Test
+	void testExecuteHttpPostRequest() throws Exception {
+		setup();
+		// Creating a HTTP Configuration for the host
+		HttpConfiguration httpConfiguration = HttpConfiguration
+			.builder()
+			.hostname(HOSTNAME)
+			.username("username")
+			.password("password".toCharArray())
+			.build();
+
+		// Creating a host configuration with the HTTP configuration
+		HostConfiguration hostConfiguration = HostConfiguration
+			.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
+			.build();
+
+		// Creating a telemetry manager with a host configuration
+		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+
+		// Mocking agent context
+		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
+
+		// Mocking executeHttp query on HTTP request executor
+		when(httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class)))
+			.thenReturn(SUCCESS_RESPONSE);
+
+		MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
+			List.of(HTTP_URL),
+			"post",
+			HTTP_HEADER,
+			HTTP_BODY,
+			TIMEOUT,
+			null
+		);
+
+		assertEquals(0, result.getHosts().size(), () -> "No host is expected to respond as HTTP POST is disabled.");
+		assertEquals(
+			"The HTTP POST method is disabled.",
+			result.getErrorMessage(),
+			() -> "Expected message `HTTP POST disabled`"
+		);
+
+		System.setProperty("metricshub.tools.http.post.enabled", "true");
+
+		result = httpQueryService.executeQuery(List.of(HTTP_URL), "post", HTTP_HEADER, HTTP_BODY, TIMEOUT, null);
+		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
+		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
+		assertEquals(HOSTNAME, hostResponse.getHostname(), () -> "Hostname should be propagated");
+		assertEquals(
+			SUCCESS_RESPONSE,
+			hostResponse.getResponse().getResponse(),
+			() -> "HTTP GET response mismatch for mocked value `Success`"
+		);
+	}
+
+	@Test
 	void testExecuteHttpGetRequestWithBlankUrl() {
 		setup();
 
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of("   "),
+			null,
 			null,
 			null,
 			TIMEOUT,
@@ -251,6 +318,7 @@ class ExecuteHttpGetQueryServiceTest {
 		// Call the execute query method
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
+			HTTP_GET,
 			HTTP_HEADER,
 			HTTP_BODY,
 			TIMEOUT,
@@ -268,7 +336,7 @@ class ExecuteHttpGetQueryServiceTest {
 	@Test
 	void testCreateQueryNode() {
 		// Minimal input → defaults applied (method defaults to GET, resultContent defaults)
-		JsonNode queryNode = ExecuteHttpGetQueryService.createQueryNode(null, HTTP_URL, null, null);
+		JsonNode queryNode = ExecuteHttpQueryService.createQueryNode(HTTP_GET, HTTP_URL, null, null);
 		assertEquals("GET", queryNode.get("method").asText(), () -> "method should default to GET when null");
 		assertEquals(HTTP_URL, queryNode.get("url").asText(), () -> "url must match");
 		assertNull(queryNode.get("header"), () -> "header field should be absent when null");
@@ -280,7 +348,7 @@ class ExecuteHttpGetQueryServiceTest {
 		);
 
 		// Full input → all fields present and respected (method uppercased)
-		queryNode = ExecuteHttpGetQueryService.createQueryNode("get", HTTP_URL, HTTP_HEADER, HTTP_BODY);
+		queryNode = ExecuteHttpQueryService.createQueryNode(HTTP_GET, HTTP_URL, HTTP_HEADER, HTTP_BODY);
 		assertEquals("GET", queryNode.get("method").asText(), () -> "method should be uppercased");
 		assertEquals(HTTP_URL, queryNode.get("url").asText(), () -> "url must match");
 		assertEquals(HTTP_HEADER, queryNode.get("header").asText(), () -> "header should match input string");
@@ -289,6 +357,37 @@ class ExecuteHttpGetQueryServiceTest {
 			"all_with_status",
 			queryNode.get("resultContent").asText(),
 			() -> "resultContent should default to all_with_status"
+		);
+	}
+
+	@Test
+	void testResolveHttpMethod() {
+		assertEquals(
+			HTTP_GET,
+			ExecuteHttpQueryService.resolveHttpMethod(null),
+			() -> "Resolved method should be GET when method is null"
+		);
+		assertEquals(
+			HTTP_GET,
+			ExecuteHttpQueryService.resolveHttpMethod(HTTP_GET),
+			() -> "Resolved method should be GET when method is GET"
+		);
+		assertEquals("POST", ExecuteHttpQueryService.resolveHttpMethod("post"), () -> "Resolved method should be POST");
+	}
+
+	@Test
+	void testIsHttpMethodPermitted() {
+		System.clearProperty("metricshub.tools.http.post.enabled");
+		assertTrue(ExecuteHttpQueryService.isHttpMethodPermitted(HTTP_GET), () -> "HTTP GET is expected to be permitted");
+		assertFalse(
+			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
+			() -> "HTTP POST is not expected to be permitted when property isn't enabled"
+		);
+
+		System.setProperty("metricshub.tools.http.post.enabled", "true");
+		assertTrue(
+			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
+			() -> "HTTP POST is expected to be permitted when property is enabled"
 		);
 	}
 }

@@ -79,6 +79,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 *
 	 * @param hostname    the hostname for which to trigger resource collection
 	 * @param connectorId the identifier of a specific connector to use for collecting metrics.
+	 * @param poolSize    optional pool size for concurrent metric collection; defaults to {@value #DEFAULT_TROUBLESHOOT_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a message indicating the result of the operation
 	 */
 	@Tool(
