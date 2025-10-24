@@ -9,7 +9,7 @@ import { paths } from "../../paths";
 import { useNavigate, NavLink } from "react-router-dom";
 import { AppBar, Box, CssBaseline, Toolbar, Typography, Button } from "@mui/material";
 
-import { useAppDispatch } from "../../hooks/store";
+import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
 
 import StatusText from "./status/status-text";
@@ -36,6 +36,15 @@ const NavBar = ({ toggleTheme }) => {
 	}, [signOut, navigate]);
 
 	const dispatch = useAppDispatch();
+
+	// Config dirty/error status for navbar dot indicator
+	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
+	const filesByName = useAppSelector((s) => s.config?.filesByName) || {};
+	const hasDirty = Object.values(dirtyByName).some(Boolean);
+	const hasError = Object.values(filesByName).some((v) => {
+		const val = v?.validation;
+		return val && val.valid === false;
+	});
 	useEffect(() => {
 		dispatch(fetchApplicationStatus());
 		const id = setInterval(() => dispatch(fetchApplicationStatus()), STATUS_REFRESH_MS);
@@ -99,7 +108,24 @@ const NavBar = ({ toggleTheme }) => {
 								Explorer
 							</Button>
 							<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
-								Configuration
+								<Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
+									<span>Configuration</span>
+									{(hasDirty || hasError) && (
+										<Box
+											component="span"
+											aria-label={hasError ? "Configuration has errors" : "Unsaved configuration changes"}
+											title={hasError ? "Configuration has errors" : "Unsaved configuration changes"}
+											sx={{
+												ml: 0.25,
+												width: 8,
+												height: 8,
+												borderRadius: "50%",
+												bgcolor: (t) => (hasError ? t.palette.error.main : t.palette.warning.main),
+												flexShrink: 0,
+											}}
+										/>
+									)}
+								</Box>
 							</Button>
 						</Box>
 					</Box>
