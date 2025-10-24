@@ -21,7 +21,9 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
 import org.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
 import org.springframework.ai.tool.annotation.Tool;
@@ -29,18 +31,23 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service
 /**
  * Service that runs IPMI queries through the MetricsHub agent.
  * It looks up a valid IPMI configuration for a host, fills in the runtime
  * parameters (hostname and timeout), and delegates the call to the IPMI extension.
  */
+@Service
 public class ExecuteIpmiQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the IPMI query.
 	 */
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
+
+	/**
+	 * Default pool size for IPMI queries.
+	 */
+	private static final int DEFAULT_IPMI_POOL_SIZE = 60;
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -67,21 +74,38 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteIpmiQuery",
 		description = """
-		Execute an IPMI query on the given host using the agent’s IPMI extension.
+		Execute an IPMI query on the given host(s) using the agent’s IPMI extension.
 		Resolves a valid configuration from context, applies hostname and timeout (default 10s),
 		executes the query, and returns the provider result or an error.
 		"""
 	)
-	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute IPMI query on.", required = true) final String hostname,
-		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout
+	public MultiHostToolResponse<QueryResponse> executeQuery(
+		@ToolParam(description = "The hostname(s) to execute IPMI query on.", required = true) final List<String> hostname,
+		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent IPMI queries. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_IPMI_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("ipmi")
-			.map((IProtocolExtension extension) -> executeIpmiQueryWithExtensionSafe(extension, hostname, timeout))
-			.orElse(QueryResponse.builder().isError("No Extension found for IPMI protocol.").build());
+			.map((IProtocolExtension extension) ->
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<QueryResponse>builder()
+							.hostname(host)
+							.response(executeIpmiQueryWithExtensionSafe(extension, host, timeout))
+							.build(),
+					resolvedPoolSize
+				)
+			)
+			.orElseGet(() -> MultiHostToolResponse.buildError("The IPMI extension is not available"));
 	}
 
 	/**
@@ -103,19 +127,30 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
-			.map(configuration -> {
+			.map((IConfiguration configuration) -> {
 				configuration.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
 				try {
 					return QueryResponse.builder().response(extension.executeQuery(configuration, null)).build();
 				} catch (Exception e) {
 					return QueryResponse
 						.builder()
-						.isError("An error has occurred when executing the query: %s".formatted(e.getMessage()))
+						.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 						.build();
 				}
 			})
-			.orElseGet(() ->
-				QueryResponse.builder().isError("No IPMI configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() -> QueryResponse.builder().error("No IPMI configuration found for %s.".formatted(hostname)).build()
 			);
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} representing the error produced when a
+	 * null hostname is encountered.
+	 *
+	 * @return a host-level response containing an error payload for the missing hostname
+	 */
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 }

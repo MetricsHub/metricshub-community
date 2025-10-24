@@ -2,7 +2,6 @@ package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -11,13 +10,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.agent.context.AgentContext;
-import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -83,11 +79,12 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
 
+		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
 		assertEquals(
 			"No IPMI configuration found for hostname.",
-			result.getIsError(),
+			result.getHosts().get(0).getResponse().getError(),
 			() -> "Should report missing IPMI configuration"
 		);
 	}
@@ -98,18 +95,14 @@ class ExecuteIpmiQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
 
-		assertEquals(
-			"No Extension found for IPMI protocol.",
-			result.getIsError(),
-			() -> "Should return `missing IPMI extension` message"
-		);
-		assertNull(result.getResponse(), () -> "Response should be null when IPMI extension is unavailable");
+		assertEquals("The IPMI extension is not available", result.getErrorMessage());
+		assertTrue(result.getHosts().isEmpty(), () -> "No per-host responses expected when extension is missing");
 	}
 
 	@Test
-	void testExecuteIpmiQuery() throws ClientException, InterruptedException, ExecutionException, TimeoutException {
+	void testExecuteIpmiQuery() throws Exception {
 		// Creating a IPMI Configuration for the host
 		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
 			.builder()
@@ -135,9 +128,14 @@ class ExecuteIpmiQueryServiceTest {
 		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class)))
 			.thenReturn("Success");
 
-		final QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
 
-		assertEquals("Success", result.getResponse(), () -> "The query result should be equals to `Success`");
+		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
+		assertEquals(
+			"Success",
+			result.getHosts().get(0).getResponse().getResponse(),
+			() -> "The query result should be equals to `Success`"
+		);
 	}
 
 	@Test
@@ -168,12 +166,12 @@ class ExecuteIpmiQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = ipmiQueryService.executeQuery(HOSTNAME, null);
+		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).getHosts().get(0).getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error should be returned when executor throws");
+		assertNotNull(result.getError(), () -> "Error should be returned when executor throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should include the thrown text"
 		);
 	}

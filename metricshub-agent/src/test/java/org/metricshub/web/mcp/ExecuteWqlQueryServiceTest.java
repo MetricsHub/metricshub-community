@@ -2,7 +2,6 @@ package org.metricshub.web.mcp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WBEM_NAMESPACE;
 import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPACE;
@@ -114,13 +113,21 @@ class ExecuteWqlQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> resultWrapper = executeQuery(
+			WMI_IDENTIFIER,
+			WQL_QUERY,
+			NAMESPACE,
+			TIMEOUT
+		);
+
+		assertEquals(1, resultWrapper.getHosts().size(), () -> "One host response expected");
+		final QueryResponse result = resultWrapper.getHosts().get(0).getResponse();
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
 		assertEquals(
 			"No valid wmi configuration found for %s.".formatted(HOSTNAME),
-			result.getIsError(),
+			result.getError(),
 			() -> "Unexpected error message when host has no configurations. "
 		);
 	}
@@ -132,14 +139,14 @@ class ExecuteWqlQueryServiceTest {
 		extensionManager.setProtocolExtensions(List.of());
 
 		// Calling execute query
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final MultiHostToolResponse<QueryResponse> result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
-		assertNull(result.getResponse(), () -> "Response shouldn't be null.");
 		assertEquals(
-			"No Extension found for wmi protocol.",
-			result.getIsError(),
+			"The %s extension is not available".formatted(WMI_IDENTIFIER),
+			result.getErrorMessage(),
 			() -> "Unexpected error message when the WMI extension isn't found"
 		);
+		assertTrue(result.getHosts().isEmpty(), () -> "No host responses expected when extension missing");
 	}
 
 	@Test
@@ -170,7 +177,10 @@ class ExecuteWqlQueryServiceTest {
 		when(wmiRequestExecutorMock.executeWmi(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE)))
 			.thenReturn(List.of(List.of("Value1", "Value2")));
 
-		final QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT)
+			.getHosts()
+			.get(0)
+			.getResponse();
 
 		assertEquals(
 			TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))),
@@ -210,12 +220,12 @@ class ExecuteWqlQueryServiceTest {
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
-		QueryResponse result = wqlQueryService.executeQuery(HOSTNAME, WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
+		QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT).getHosts().get(0).getResponse();
 
 		// Assertions
-		assertNotNull(result.getIsError(), () -> "Error message should be returned when an exception is throws");
+		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
 		assertTrue(
-			result.getIsError().contains("An error has occurred"),
+			result.getError().contains("An error has occurred"),
 			() -> "Error message should contain 'An error has occurred'"
 		);
 	}
@@ -273,5 +283,14 @@ class ExecuteWqlQueryServiceTest {
 			wqlQueryService.normalizeNamespace("wmi", null),
 			() -> "Should return default WMI namespace when the given namespace is blank"
 		);
+	}
+
+	private MultiHostToolResponse<QueryResponse> executeQuery(
+		final String protocol,
+		final String query,
+		final String namespace,
+		final Long timeout
+	) {
+		return wqlQueryService.executeQuery(List.of(HOSTNAME), protocol, query, namespace, timeout, null);
 	}
 }
