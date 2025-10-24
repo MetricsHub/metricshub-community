@@ -83,6 +83,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	 * @param attributes    comma-separated attributes to read
 	 * @param keyProperties comma-separated key properties to include
 	 * @param timeout       timeout in seconds; defaults to 10 if {@code null} or ≤ 0
+	 * @param poolSize      optional pool size for concurrent JMX queries; defaults to {@value #DEFAULT_JMX_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return {@link QueryResponse} with the provider payload on success, or an error message
 	 */
 	@Tool(

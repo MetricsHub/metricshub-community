@@ -90,6 +90,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	 * @param oid       SNMP OID used in the request
 	 * @param columns   comma-separated column indexes; required when {@code queryType} is {@code "table"}, ignored otherwise
 	 * @param timeout   the timeout of the query execution in seconds
+	 * @param poolSize      optional pool size for concurrent SNMP queries; defaults to {@value #DEFAULT_SNMP_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link QueryResponse} containing the result or an error message
 	 */
 	@Tool(

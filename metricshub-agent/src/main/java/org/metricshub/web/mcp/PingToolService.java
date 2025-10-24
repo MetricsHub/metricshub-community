@@ -70,6 +70,7 @@ public class PingToolService implements IMCPToolService {
 	 *
 	 * @param hostname the hostnames to ping
 	 * @param timeout  the timeout for the ping operation in seconds
+	 * @param poolSize      optional pool size for concurrent ICMP queries; defaults to {@value #DEFAULT_PING_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a list of ProtocolCheckResponse results for each hostname
 	 */
 	@Tool(

@@ -69,6 +69,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 	 *
 	 * @param hostname target host to query
 	 * @param timeout  timeout in seconds; defaults to 10 when {@code null} or ≤ 0
+	 * @param poolSize optional pool size for concurrent IPMI queries; defaults to {@value #DEFAULT_IPMI_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link QueryResponse} containing the provider payload or an error message
 	 */
 	@Tool(
