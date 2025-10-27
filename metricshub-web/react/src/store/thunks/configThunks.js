@@ -1,8 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { configApi } from "../../api/config";
-import { timestampId } from "../../utils/backup";
-import { parseBackupFileName, isBackupFileName } from "../../utils/backupNames";
-import { createBackupSet } from "../../services/backupService";
+import { isBackupFileName } from "../../utils/backupNames";
+import { createBackupSet, restoreBackupFile } from "../../services/backupService";
 
 /**
  * Fetch the list of configuration files.
@@ -172,37 +171,14 @@ export const restoreConfigFromBackup = createAsyncThunk(
 	"config/restoreFromBackup",
 	async ({ backupName, overwrite = false }, { getState, dispatch, rejectWithValue }) => {
 		try {
-			if (!backupName) throw new Error("Missing backup file name");
-			const parsed = parseBackupFileName(backupName);
-			if (!parsed) throw new Error("Not a backup file");
-			const { originalName } = parsed;
-
-			// Get backup content: prefer cache else fetch
 			const state = getState();
-			const cached = state?.config?.filesByName?.[backupName]?.content;
-			const content =
-				cached != null ? String(cached) : String(await configApi.getBackupFileContent(backupName));
-
-			// Determine target name
-			let restoreName = originalName;
-			if (!overwrite) {
-				const list = Array.isArray(state?.config?.list) ? state.config.list : [];
-				const exists = list.some((f) => f.name === originalName);
-				if (exists) {
-					const id = timestampId();
-					const parts = originalName.split("/");
-					const base = parts.pop();
-					const dot = base.lastIndexOf(".");
-					const withSuffix =
-						dot > 0
-							? `${base.slice(0, dot)}.restored-${id}${base.slice(dot)}`
-							: `${base}.restored-${id}`;
-					restoreName = [...parts, withSuffix].join("/");
-				}
-			}
+			const { originalName, restoreName, content } = await restoreBackupFile(
+				backupName,
+				overwrite,
+				state,
+			);
 
 			await dispatch(saveConfig({ name: restoreName, content, skipValidation: true })).unwrap();
-
 			await dispatch(fetchConfigList());
 
 			return { originalName, restoredName: restoreName };

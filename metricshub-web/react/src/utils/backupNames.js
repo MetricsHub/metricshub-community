@@ -37,16 +37,6 @@ export function isBackupFileName(fileName) {
 	return parseBackupFileName(fileName) !== null;
 }
 
-/**
- * Convert a backup filename to a display-friendly label (original path).
- * @param {string} fileName
- * @returns {string}
- */
-export function backupDisplayName(fileName) {
-	const parsed = parseBackupFileName(fileName);
-	return parsed ? parsed.originalName : fileName;
-}
-
 export const backupNameConstants = {
 	PREFIX: BACKUP_PREFIX,
 	DELIMITER: BACKUP_DELIMITER,
