@@ -61,7 +61,7 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
 
 	/**
-	 *
+	 * Set of supported HTTP methods for the service.
 	 */
 	private static final Set<String> HTTP_METHODS = Set.of("GET", "POST");
 
@@ -101,7 +101,7 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 	private AgentContextHolder agentContextHolder;
 
 	/**
-	 * Constructor for ExecuteHttpGetQueryService
+	 * Constructor for ExecuteHttpQueryService
 	 *
 	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
 	 */

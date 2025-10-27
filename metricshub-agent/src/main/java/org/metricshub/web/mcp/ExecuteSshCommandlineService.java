@@ -89,33 +89,35 @@ public class ExecuteSshCommandlineService implements IMCPToolService {
 		@ToolParam(description = "The commandline to execute.", required = true) final String commandline,
 		@ToolParam(description = "Optional timeout in seconds (default: 10s).", required = false) final Long timeout,
 		@ToolParam(
-			description = "Optional pool size for concurrent HTTP queries. Defaults to 60.",
+			description = "Optional pool size for concurrent SSH queries. Defaults to 60.",
 			required = false
 		) final Integer poolSize
 	) {
+		// If SSH isn't enabled for the MCP tools, return an error message.
+		if (!isSshEnabledForMCP()) {
+			return MultiHostToolResponse.buildError("The SSH connections are disabled for MCP.");
+		}
+
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_SSH_POOL_SIZE);
 
-		// If SSH isn't enabled for the MCP tools, return an error message.
-		return !isSshEnabledForMCP()
-			? MultiHostToolResponse.buildError("The SSH connections are disabled for MCP.")
-			: agentContextHolder
-				.getAgentContext()
-				.getExtensionManager()
-				.findExtensionByType("ssh")
-				.map((IProtocolExtension extension) ->
-					executeForHosts(
-						hostnames,
-						this::buildNullHostnameResponse,
-						host ->
-							HostToolResponse
-								.<QueryResponse>builder()
-								.hostname(host)
-								.response(executeSshCommandlineWithExtensionSafe(extension, host, commandline, timeout))
-								.build(),
-						resolvedPoolSize
-					)
+		return agentContextHolder
+			.getAgentContext()
+			.getExtensionManager()
+			.findExtensionByType("ssh")
+			.map((IProtocolExtension extension) ->
+				executeForHosts(
+					hostnames,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<QueryResponse>builder()
+							.hostname(host)
+							.response(executeSshCommandlineWithExtensionSafe(extension, host, commandline, timeout))
+							.build(),
+					resolvedPoolSize
 				)
-				.orElseGet(() -> MultiHostToolResponse.buildError("No Extension found for SSH."));
+			)
+			.orElseGet(() -> MultiHostToolResponse.buildError("No Extension found for SSH."));
 	}
 
 	/**
