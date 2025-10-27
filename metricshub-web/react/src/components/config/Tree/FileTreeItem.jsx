@@ -19,7 +19,7 @@ import {
 	fetchConfigList,
 } from "../../../store/thunks/configThunks";
 import QuestionDialog from "../../common/QuestionDialog";
-import { downloadConfigFile } from "../../../utils/downloadFile";
+import { downloadConfigFile } from "../../../services/downloadService";
 import { parseBackupFileName } from "../../../utils/backupNames";
 
 /**

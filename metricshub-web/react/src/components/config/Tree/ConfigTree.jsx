@@ -11,7 +11,7 @@ import BackupSetNode from "./BackupSetNode";
 import { parseBackupFileName } from "../../../utils/backupNames";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { createConfigBackup } from "../../../store/thunks/configThunks";
-import { downloadAllConfigs } from "../../../utils/downloadAllConfigs";
+import { downloadAllConfigs } from "../../../services/downloadService";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
