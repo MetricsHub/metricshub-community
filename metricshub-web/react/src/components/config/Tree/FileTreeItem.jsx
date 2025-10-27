@@ -1,6 +1,6 @@
 import * as React from "react";
 import { TreeItem } from "@mui/x-tree-view";
-import { Box, IconButton, Menu, MenuItem, TextField, Stack } from "@mui/material";
+import { Box, IconButton, Menu, MenuItem, TextField, Stack, Typography } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -230,17 +230,14 @@ export default function FileTreeItem({
 					<>
 						<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
 							<FileTypeIcon type="yaml" />
-							<Box
-								sx={{
-									fontWeight: isDirty ? 510 : 500,
-									whiteSpace: "nowrap",
-									overflow: "hidden",
-									textOverflow: "ellipsis",
-								}}
+							<Typography
+								component="span"
+								noWrap
 								title={displayName}
+								sx={{ fontWeight: isDirty ? 510 : 500, overflow: "hidden", textOverflow: "ellipsis" }}
 							>
 								{displayName}
-							</Box>
+							</Typography>
 							{isDirty && (
 								<Box
 									component="span"
@@ -305,31 +302,31 @@ export default function FileTreeItem({
 			>
 				{!isBackupFile && (
 					<MenuItem onClick={startRename}>
-						<DriveFileRenameOutlineIcon fontSize="small" style={{ marginRight: 8 }} />
+						<DriveFileRenameOutlineIcon fontSize="small" sx={{ mr: 1 }} />
 						Rename
 					</MenuItem>
 				)}
 
 				{/* Download available for both normal and backup files */}
 				<MenuItem onClick={downloadThisFile}>
-					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
+					<DownloadIcon fontSize="small" sx={{ mr: 1 }} />
 					Download
 				</MenuItem>
 
 				{!isBackupFile ? (
 					<MenuItem onClick={backupThisFile}>
-						<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
+						<BackupIcon fontSize="small" sx={{ mr: 1 }} />
 						Backup
 					</MenuItem>
 				) : (
 					<MenuItem onClick={askRestore}>
-						<RestoreIcon fontSize="small" style={{ marginRight: 8 }} />
+						<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 						Restore{backupId ? ` (${backupId})` : ""}
 					</MenuItem>
 				)}
 
 				<MenuItem onClick={handleDeleteClick}>
-					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete
 				</MenuItem>
 			</Menu>
