@@ -13,6 +13,7 @@ import {
 	deleteBackupFile,
 	fetchConfigList,
 } from "../../../store/thunks/configThunks";
+import { useSnackbar } from "../../common/GlobalSnackbar";
 
 /**
  * Renders one backup set folder (e.g. "backup-20251016-153012") with its kebab menu (Restore all / Delete backup)
@@ -43,50 +44,61 @@ export default function BackupSetNode({
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
 	const [restoreAllOpen, setRestoreAllOpen] = React.useState(false);
 	const [deleteSetOpen, setDeleteSetOpen] = React.useState(false);
+	const { show: showSnackbar } = useSnackbar();
 
-	const openMenu = (e) => {
+	// Handlers memoized to avoid unnecessary re-renders
+	const openMenu = React.useCallback((e) => {
 		e.stopPropagation();
 		setMenuAnchor(e.currentTarget);
-	};
-	const closeMenu = () => {
+	}, []);
+
+	const closeMenu = React.useCallback(() => {
 		setMenuAnchor(null);
 		// IMPORTANT: do NOT clear the set id here — this component IS the set
-	};
+	}, []);
 
-	const askRestoreAll = () => {
+	const askRestoreAll = React.useCallback(() => {
 		document.activeElement?.blur?.();
 		closeMenu();
 		setRestoreAllOpen(true);
-	};
-	const askDeleteSet = () => {
+	}, [closeMenu]);
+
+	const askDeleteSet = React.useCallback(() => {
 		document.activeElement?.blur?.();
 		closeMenu();
 		setDeleteSetOpen(true);
-	};
+	}, [closeMenu]);
 
-	const doRestoreAll = async (overwrite) => {
-		setRestoreAllOpen(false);
-		try {
-			await Promise.all(
-				(files || []).map((f) =>
-					dispatch(restoreConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
-				),
-			);
-			await dispatch(fetchConfigList());
-		} catch (e) {
-			console.error("Restore all failed:", e);
-		}
-	};
+	const doRestoreAll = React.useCallback(
+		async (overwrite) => {
+			setRestoreAllOpen(false);
+			try {
+				await Promise.all(
+					(files || []).map((f) =>
+						dispatch(restoreConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
+					),
+				);
+				await dispatch(fetchConfigList());
+			} catch (e) {
+				console.error("Restore all failed:", e);
+				showSnackbar("Restore all failed", { severity: "error" });
+			}
+		},
+		[dispatch, files, showSnackbar],
+	);
 
-	const doDeleteSet = async () => {
+	const doDeleteSet = React.useCallback(async () => {
 		setDeleteSetOpen(false);
 		try {
 			await Promise.all((files || []).map((f) => dispatch(deleteBackupFile(f.name)).unwrap()));
 			await dispatch(fetchConfigList());
 		} catch (e) {
 			console.error("Delete backup set failed:", e);
+			showSnackbar("Delete backup set failed", { severity: "error" });
 		}
-	};
+	}, [dispatch, files, showSnackbar]);
+
+	const preventMouseDown = React.useCallback((e) => e.preventDefault(), []);
 
 	const groupItemId = `__backup_set__/${id}`;
 	const groupLabel = (
@@ -101,7 +113,7 @@ export default function BackupSetNode({
 				size="small"
 				aria-label="More actions"
 				onClick={openMenu}
-				onMouseDown={(e) => e.preventDefault()}
+				onMouseDown={preventMouseDown}
 			>
 				<MoreVertIcon fontSize="small" />
 			</IconButton>

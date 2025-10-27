@@ -10,6 +10,7 @@ import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
+import GlobalSnackbarProvider from "./components/common/GlobalSnackbar";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
@@ -94,42 +95,47 @@ export default function App() {
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
-			<ReduxProvider store={store}>
-				<AuthProvider>
-					<AuthConsumer>
-						{(auth) =>
-							auth.isInitialized ? (
-								<BrowserRouter>
-									<React.Suspense fallback={<SplashScreen />}>
-										<Routes>
-											<Route path={paths.login} element={<LoginPage />} />
-											{/* App routes with NavBar */}
-											<Route
-												element={
-													<AppLayout
-														authed={auth.isAuthenticated}
-														toggleTheme={() =>
-															setMode((prev) => (prev === "light" ? "dark" : "light"))
-														}
+			<GlobalSnackbarProvider>
+				<ReduxProvider store={store}>
+					<AuthProvider>
+						<AuthConsumer>
+							{(auth) =>
+								auth.isInitialized ? (
+									<BrowserRouter>
+										<React.Suspense fallback={<SplashScreen />}>
+											<Routes>
+												<Route path={paths.login} element={<LoginPage />} />
+												{/* App routes with NavBar */}
+												<Route
+													element={
+														<AppLayout
+															authed={auth.isAuthenticated}
+															toggleTheme={() =>
+																setMode((prev) => (prev === "light" ? "dark" : "light"))
+															}
+														/>
+													}
+												>
+													<Route path={paths.explorer} element={<Explorer />} />
+													<Route path={paths.configuration} element={<Configuration />} />
+													<Route
+														path={`${paths.configuration}/:name`}
+														element={<Configuration />}
 													/>
-												}
-											>
-												<Route path={paths.explorer} element={<Explorer />} />
-												<Route path={paths.configuration} element={<Configuration />} />
-												<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
-												{/* Fallback */}
-												<Route path="*" element={<Navigate to={paths.explorer} replace />} />
-											</Route>
-										</Routes>
-									</React.Suspense>
-								</BrowserRouter>
-							) : (
-								<SplashScreen />
-							)
-						}
-					</AuthConsumer>
-				</AuthProvider>
-			</ReduxProvider>
+													{/* Fallback */}
+													<Route path="*" element={<Navigate to={paths.explorer} replace />} />
+												</Route>
+											</Routes>
+										</React.Suspense>
+									</BrowserRouter>
+								) : (
+									<SplashScreen />
+								)
+							}
+						</AuthConsumer>
+					</AuthProvider>
+				</ReduxProvider>
+			</GlobalSnackbarProvider>
 		</ThemeProvider>
 	);
 }
