@@ -167,14 +167,14 @@ export default function FileTreeItem({
 				showSnackbar("Backup deleted", { severity: "success" });
 			} catch (e) {
 				console.error("Delete backup failed:", e);
-				showSnackbar("Delete backup failed", { severity: "error" });
+				showSnackbar("Failed to delete backup file", { severity: "error" });
 			}
 		} else {
 			onDelete(file.name);
 		}
 	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete]);
 
-	// Prevent default on mousedown for the menu button (stable reference)
+	// Prevent default on mousedown for the menu button
 	const preventMouseDownDefault = React.useCallback((e) => e.preventDefault(), []);
 
 	const label = (
@@ -234,7 +234,11 @@ export default function FileTreeItem({
 								component="span"
 								noWrap
 								title={displayName}
-								sx={{ fontWeight: isDirty ? 510 : 500, overflow: "hidden", textOverflow: "ellipsis" }}
+								sx={{
+									fontWeight: isDirty ? 510 : 500,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+								}}
 							>
 								{displayName}
 							</Typography>

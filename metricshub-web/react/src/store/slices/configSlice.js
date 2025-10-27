@@ -38,13 +38,13 @@ const slice = createSlice({
 		setContent(state, action) {
 			const next = action.payload ?? "";
 			state.content = next;
-			const n = state.selected;
-			if (n) {
-				const prev = state.filesByName[n] || {};
-				state.filesByName[n] = { ...prev, content: next };
+			const name = state.selected;
+			if (name) {
+				const prev = state.filesByName[name] || {};
+				state.filesByName[name] = { ...prev, content: next };
 				// Do not mark backups as dirty; they are read-only in the editor
-				if (!isBackupFileName(n)) {
-					state.dirtyByName[n] = next !== (state.originalsByName[n] ?? "");
+				if (!isBackupFileName(name)) {
+					state.dirtyByName[name] = next !== (state.originalsByName[name] ?? "");
 				}
 			}
 		},
