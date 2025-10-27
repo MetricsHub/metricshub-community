@@ -63,25 +63,26 @@ export default function FileTreeItem({
 		if (!editing) setDraft(file.name);
 	}, [file.name, editing]);
 
-	const openMenu = (e) => {
+	const openMenu = React.useCallback((e) => {
 		e.stopPropagation();
 		setMenuAnchor(e.currentTarget);
-	};
-	const closeMenu = () => setMenuAnchor(null);
+	}, []);
 
-	const startRename = () => {
+	const closeMenu = React.useCallback(() => setMenuAnchor(null), []);
+
+	const startRename = React.useCallback(() => {
 		closeMenu();
 		rowRef.current?.blur?.();
 		setEditing(true);
 		requestAnimationFrame(() => inputRef.current?.select());
-	};
+	}, [closeMenu]);
 
-	const cancelRename = () => {
+	const cancelRename = React.useCallback(() => {
 		cancelledRef.current = true;
 		setDraft(file.name);
 		setEditing(false);
 		rowRef.current?.blur?.();
-	};
+	}, [file.name]);
 
 	const submitRename = React.useCallback(() => {
 		if (cancelledRef.current) {
@@ -110,13 +111,13 @@ export default function FileTreeItem({
 				showSnackbar("Backup failed", { severity: "error" });
 			}
 		}, 0);
-	}, [dispatch, file.name, showSnackbar]);
+	}, [dispatch, file.name, showSnackbar, closeMenu]);
 
 	const askRestore = React.useCallback(() => {
 		document.activeElement?.blur?.();
 		closeMenu();
 		setRestoreOpen(true);
-	}, []);
+	}, [closeMenu]);
 
 	const doRestore = React.useCallback(
 		async (overwrite) => {
@@ -154,7 +155,27 @@ export default function FileTreeItem({
 			console.error("Download failed:", e);
 			showSnackbar("Download failed", { severity: "error" });
 		}
-	}, [file.name, labelName, backupOriginal, showSnackbar]);
+	}, [file.name, labelName, backupOriginal, showSnackbar, closeMenu]);
+
+	// Stable handler for Delete menu action
+	const handleDeleteClick = React.useCallback(async () => {
+		closeMenu();
+		if (isBackupFile) {
+			try {
+				await dispatch(deleteBackupFile(file.name)).unwrap();
+				await dispatch(fetchConfigList());
+				showSnackbar("Backup deleted", { severity: "success" });
+			} catch (e) {
+				console.error("Delete backup failed:", e);
+				showSnackbar("Delete backup failed", { severity: "error" });
+			}
+		} else {
+			onDelete(file.name);
+		}
+	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete]);
+
+	// Prevent default on mousedown for the menu button (stable reference)
+	const preventMouseDownDefault = React.useCallback((e) => e.preventDefault(), []);
 
 	const label = (
 		<Stack
@@ -253,7 +274,7 @@ export default function FileTreeItem({
 					size="small"
 					aria-label="More actions"
 					onClick={openMenu}
-					onMouseDown={(e) => e.preventDefault()}
+					onMouseDown={preventMouseDownDefault}
 				>
 					<MoreVertIcon fontSize="small" />
 				</IconButton>
@@ -307,23 +328,7 @@ export default function FileTreeItem({
 					</MenuItem>
 				)}
 
-				<MenuItem
-					onClick={async () => {
-						closeMenu();
-						if (isBackupFile) {
-							try {
-								await dispatch(deleteBackupFile(file.name)).unwrap();
-								await dispatch(fetchConfigList());
-								showSnackbar("Backup deleted", { severity: "success" });
-							} catch (e) {
-								console.error("Delete backup failed:", e);
-								showSnackbar("Delete backup failed", { severity: "error" });
-							}
-						} else {
-							onDelete(file.name);
-						}
-					}}
-				>
+				<MenuItem onClick={handleDeleteClick}>
 					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
 					Delete
 				</MenuItem>
