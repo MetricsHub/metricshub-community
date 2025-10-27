@@ -184,11 +184,11 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
 				<MenuItem onClick={handleBackupAll}>
-					<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
+					<BackupIcon fontSize="small" sx={{ mr: 1 }} />
 					Backup all
 				</MenuItem>
 				<MenuItem onClick={handleDownloadAll}>
-					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
+					<DownloadIcon fontSize="small" sx={{ mr: 1 }} />
 					Download all
 				</MenuItem>
 			</Menu>

@@ -11,6 +11,7 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { useAppDispatch } from "../../../hooks/store";
+import { useSnackbar } from "../../common/GlobalSnackbar";
 import {
 	createConfigBackup,
 	restoreConfigFromBackup,
@@ -44,6 +45,7 @@ export default function FileTreeItem({
 	const containerRef = React.useRef(null);
 	const cancelledRef = React.useRef(false);
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
+	const { show: showSnackbar } = useSnackbar();
 
 	// restore dialog
 	const [restoreOpen, setRestoreOpen] = React.useState(false);
@@ -102,11 +104,13 @@ export default function FileTreeItem({
 		setTimeout(async () => {
 			try {
 				await dispatch(createConfigBackup({ kind: "file", name: file.name })).unwrap();
+				showSnackbar(`Backup created for ${file.name}`, { severity: "success" });
 			} catch (e) {
 				console.error("Backup failed:", e);
+				showSnackbar("Backup failed", { severity: "error" });
 			}
 		}, 0);
-	}, [dispatch, file.name]);
+	}, [dispatch, file.name, showSnackbar]);
 
 	const askRestore = React.useCallback(() => {
 		document.activeElement?.blur?.();
@@ -122,15 +126,21 @@ export default function FileTreeItem({
 					const res = await dispatch(
 						restoreConfigFromBackup({ backupName: file.name, overwrite }),
 					).unwrap();
-					console.info("Restored:", res);
 					if (onSelect && res?.restoredName) onSelect(res.restoredName);
 					else if (onSelect && res?.originalName) onSelect(res.originalName);
+					const targetName = res?.restoredName || res?.originalName || file.name;
+					if (overwrite) {
+						showSnackbar(`Restored and overwrote ${targetName}`, { severity: "success" });
+					} else {
+						showSnackbar(`Restored as copy ${targetName}`, { severity: "success" });
+					}
 				} catch (e) {
 					console.error("Restore failed:", e);
+					showSnackbar("Restore failed", { severity: "error" });
 				}
 			}, 0);
 		},
-		[dispatch, file.name, onSelect],
+		[dispatch, file.name, onSelect, showSnackbar],
 	);
 
 	const downloadThisFile = React.useCallback(async () => {
@@ -142,8 +152,9 @@ export default function FileTreeItem({
 			await downloadConfigFile({ name: file.name, suggestedName });
 		} catch (e) {
 			console.error("Download failed:", e);
+			showSnackbar("Download failed", { severity: "error" });
 		}
-	}, [file.name, labelName, backupOriginal]);
+	}, [file.name, labelName, backupOriginal, showSnackbar]);
 
 	const label = (
 		<Stack
@@ -303,8 +314,10 @@ export default function FileTreeItem({
 							try {
 								await dispatch(deleteBackupFile(file.name)).unwrap();
 								await dispatch(fetchConfigList());
+								showSnackbar("Backup deleted", { severity: "success" });
 							} catch (e) {
 								console.error("Delete backup failed:", e);
+								showSnackbar("Delete backup failed", { severity: "error" });
 							}
 						} else {
 							onDelete(file.name);
