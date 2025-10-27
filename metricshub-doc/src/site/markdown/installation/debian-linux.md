@@ -90,7 +90,7 @@ You can install **MetricsHub Community Edition** in two ways:
 
 #### Option 1: Automatic (Recommended)
 
-The easiest way to install **MetricsHub** is with the official installation script:
+Run the following command to install **MetricsHub Community**:
 
 ```shell-session
 curl -fsSL https://get.metricshub.com | bash
@@ -98,11 +98,11 @@ curl -fsSL https://get.metricshub.com | bash
 
 This command will:
 
-* Download the latest **MetricsHub Community Edition**
+* Download the latest version of **MetricsHub Community Edition**
 * Install it to `${esc.d}HOME/metricshub`
 * Run a version check to confirm successful installation
 
-After installation, you can verify it:
+Finally, run the below command to ensure **MetricsHub Community** is properly installed:
 
 ```shell-session
 ${esc.d}HOME/metricshub/bin/metricshub --version
