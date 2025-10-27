@@ -16,6 +16,30 @@ import { downloadAllConfigs } from "../../../utils/downloadAllConfigs";
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
 
+// Memoized label for folder-like tree items (left aligned icon + name, optional kebab on the right)
+const FolderLabel = React.memo(function FolderLabel({ name, onMenuClick }) {
+	return (
+		<Box
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+		>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<FileTypeIcon type="folder" />
+				<span>{name}</span>
+			</Box>
+			{onMenuClick && (
+				<IconButton
+					size="small"
+					aria-label="More actions"
+					onClick={onMenuClick}
+					onMouseDown={(e) => e.preventDefault()}
+				>
+					<MoreVertIcon fontSize="small" />
+				</IconButton>
+			)}
+		</Box>
+	);
+});
+
 /**
  * Configuration tree component.
  *
@@ -29,12 +53,12 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 
 	// config root kebab
 	const [rootMenuAnchor, setRootMenuAnchor] = React.useState(null);
-	const openRootMenu = (e) => {
+	const openRootMenu = React.useCallback((e) => {
 		e.stopPropagation();
 		setRootMenuAnchor(e.currentTarget);
-	};
-	const closeRootMenu = () => setRootMenuAnchor(null);
-	const handleBackupAll = async () => {
+	}, []);
+	const closeRootMenu = React.useCallback(() => setRootMenuAnchor(null), []);
+	const handleBackupAll = React.useCallback(async () => {
 		document.activeElement?.blur?.();
 		closeRootMenu();
 		try {
@@ -42,42 +66,19 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 		} catch (e) {
 			console.error("Backup all failed:", e);
 		}
-	};
+	}, [closeRootMenu, dispatch]);
 
-	const folderLabel = (
-		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
-		>
-			<Box sx={{ display: "flex", alignItems: "center" }}>
-				<FileTypeIcon type="folder" />
-				<span>config</span>
-			</Box>
-			<IconButton
-				size="small"
-				aria-label="More actions"
-				onClick={openRootMenu}
-				onMouseDown={(e) => e.preventDefault()}
-			>
-				<MoreVertIcon fontSize="small" />
-			</IconButton>
-		</Box>
-	);
+	const handleDownloadAll = React.useCallback(async () => {
+		closeRootMenu();
+		await downloadAllConfigs(list);
+	}, [closeRootMenu, list]);
 
-	const backupFolderLabel = (
-		<Box sx={{ display: "flex", alignItems: "center" }}>
-			<FileTypeIcon type="folder" />
-			<span>backup</span>
-		</Box>
-	);
+	// Deprecated inline labels replaced by <FolderLabel /> to avoid duplication and re-renders
 
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
 	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
 
 	// helpers to detect non-file (folder) ids
-	const isFolderId = (id) =>
-		id === ROOT_ID ||
-		id === BACKUP_ROOT_ID ||
-		(typeof id === "string" && id.startsWith("__backup_set__/"));
 
 	// Split & group: normal files vs. backups (folder-style only).
 	const { configFiles, backupsBySet, backupSetItemIds } = React.useMemo(() => {
@@ -107,6 +108,21 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 		return { configFiles: cfg, backupsBySet: groups, backupSetItemIds: setItemIds };
 	}, [files]);
 
+	const onTreeSelectionChange = React.useCallback(
+		(_, id) => {
+			// ignore folder nodes entirely; only leaf (file) items should select
+			if (
+				!id ||
+				id === ROOT_ID ||
+				id === BACKUP_ROOT_ID ||
+				(typeof id === "string" && id.startsWith("__backup_set__/"))
+			)
+				return;
+			onSelect(id);
+		},
+		[onSelect],
+	);
+
 	return (
 		<Stack sx={{ p: 0 }}>
 			<SimpleTreeView
@@ -114,16 +130,12 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 				aria-label="Configuration files"
 				multiSelect={false}
 				selectedItems={selectedIds}
-				onSelectedItemsChange={(_, id) => {
-					// ignore folder nodes entirely; only leaf (file) items should select
-					if (!id || isFolderId(id)) return;
-					onSelect(id);
-				}}
+				onSelectedItemsChange={onTreeSelectionChange}
 				sx={{ "& .MuiTreeItem-content": { py: 0.25 } }}
 			>
 				<TreeItem
 					itemId={ROOT_ID}
-					label={folderLabel}
+					label={<FolderLabel name="config" onMenuClick={openRootMenu} />}
 					sx={{ "& .MuiTreeItem-label": { fontWeight: 400 } }}
 				>
 					{configFiles.map((f) => (
@@ -141,7 +153,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 
 				<TreeItem
 					itemId={BACKUP_ROOT_ID}
-					label={backupFolderLabel}
+					label={<FolderLabel name="backup" />}
 					sx={{ "& .MuiTreeItem-label": { fontWeight: 400 } }}
 				>
 					{Object.keys(backupsBySet)
@@ -175,12 +187,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 					<BackupIcon fontSize="small" style={{ marginRight: 8 }} />
 					Backup all
 				</MenuItem>
-				<MenuItem
-					onClick={async () => {
-						closeRootMenu();
-						await downloadAllConfigs(list);
-					}}
-				>
+				<MenuItem onClick={handleDownloadAll}>
 					<DownloadIcon fontSize="small" style={{ marginRight: 8 }} />
 					Download all
 				</MenuItem>

@@ -15,13 +15,37 @@ import {
 } from "../../../store/thunks/configThunks";
 import { useSnackbar } from "../../common/GlobalSnackbar";
 
+// Memoized label for the backup group to avoid unnecessary re-renders between parent updates
+const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick }) {
+	const preventMouseDown = React.useCallback((e) => e.preventDefault(), []);
+
+	return (
+		<Box
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+		>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<FileTypeIcon type="folder" />
+				<span>{`backup-${id}`}</span>
+			</Box>
+			<IconButton
+				size="small"
+				aria-label="More actions"
+				onClick={onMenuClick}
+				onMouseDown={preventMouseDown}
+			>
+				<MoreVertIcon fontSize="small" />
+			</IconButton>
+		</Box>
+	);
+});
+
 /**
  * Renders one backup set folder (e.g. "backup-20251016-153012") with its kebab menu (Restore all / Delete backup)
  * and its file children.
  *
  * @param {{
  *   id: string, // timestamp id e.g. "20251016-153012"
- *   files: Array<{name:string,size:number,lastModificationTime:string}> & {displayName:string}[],
+ *   files?: Array<{name:string,size:number,lastModificationTime:string}> & {displayName:string}[],
  *   dirtyByName: Record<string, boolean>,
  *   filesByName: Record<string, {validation?:any}>,
  *   onSelect: (name:string)=>void,
@@ -31,7 +55,7 @@ import { useSnackbar } from "../../common/GlobalSnackbar";
  */
 export default function BackupSetNode({
 	id,
-	files,
+	files = [],
 	dirtyByName,
 	filesByName,
 	onSelect,
@@ -98,31 +122,11 @@ export default function BackupSetNode({
 		}
 	}, [dispatch, files, showSnackbar]);
 
-	const preventMouseDown = React.useCallback((e) => e.preventDefault(), []);
-
 	const groupItemId = `__backup_set__/${id}`;
-	const groupLabel = (
-		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
-		>
-			<Box sx={{ display: "flex", alignItems: "center" }}>
-				<FileTypeIcon type="folder" />
-				<span>{`backup-${id}`}</span>
-			</Box>
-			<IconButton
-				size="small"
-				aria-label="More actions"
-				onClick={openMenu}
-				onMouseDown={preventMouseDown}
-			>
-				<MoreVertIcon fontSize="small" />
-			</IconButton>
-		</Box>
-	);
 
 	return (
 		<>
-			<TreeItem itemId={groupItemId} label={groupLabel}>
+			<TreeItem itemId={groupItemId} label={<BackupGroupLabel id={id} onMenuClick={openMenu} />}>
 				{files.map((f) => (
 					<FileTreeItem
 						key={f.name}
@@ -130,7 +134,7 @@ export default function BackupSetNode({
 						itemId={f.name}
 						labelName={f.displayName}
 						isDirty={!!dirtyByName?.[f.name]}
-						validation={filesByName[f.name]?.validation}
+						validation={filesByName?.[f.name]?.validation}
 						onSelect={onSelect}
 						onRename={onRename}
 						onDelete={onDelete}
@@ -149,11 +153,11 @@ export default function BackupSetNode({
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
 				<MenuItem onClick={askRestoreAll}>
-					<RestoreIcon fontSize="small" style={{ marginRight: 8 }} />
+					<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 					Restore all
 				</MenuItem>
 				<MenuItem onClick={askDeleteSet}>
-					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete backup
 				</MenuItem>
 			</Menu>
