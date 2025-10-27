@@ -89,7 +89,7 @@ class ExecuteSshCommandlineServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Enable SSH on MCP tools
-		System.setProperty("metricshub.tools.ssh.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = sshCommandlineService.executeQuery(
@@ -154,7 +154,7 @@ class ExecuteSshCommandlineServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Enable SSH on MCP tools
-		System.setProperty("metricshub.tools.ssh.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 
 		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class)))
 			.thenReturn(SUCCESS_RESPONSE);
@@ -201,7 +201,7 @@ class ExecuteSshCommandlineServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Enable SSH on MCP tools
-		System.setProperty("metricshub.tools.ssh.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 
 		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class)))
 			.thenThrow(new IllegalArgumentException("An error has occurred"));
@@ -248,7 +248,7 @@ class ExecuteSshCommandlineServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Disable SSH on MCP tools
-		System.setProperty("metricshub.tools.ssh.enabled", "false");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "false");
 
 		final MultiHostToolResponse<QueryResponse> result = sshCommandlineService.executeQuery(
 			List.of(HOSTNAME),
@@ -267,16 +267,16 @@ class ExecuteSshCommandlineServiceTest {
 
 	@Test
 	void testIsSshEnabledForMCP() {
-		System.clearProperty("metricshub.tools.ssh.enabled");
+		System.clearProperty("metricshub.mcp.tool.ssh.enabled");
 		assertFalse(
 			ExecuteSshCommandlineService.isSshEnabledForMCP(),
 			() -> "SSH is disabled, the response should be false"
 		);
 
-		System.setProperty("metricshub.tools.ssh.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 		assertTrue(ExecuteSshCommandlineService.isSshEnabledForMCP(), () -> "SSH is enabled, the response should be true");
 
-		System.setProperty("metricshub.tools.ssh.enabled", "false");
+		System.setProperty("metricshub.mcp.tool.ssh.enabled", "false");
 		assertFalse(
 			ExecuteSshCommandlineService.isSshEnabledForMCP(),
 			() -> "SSH is disabled, the response should be false"

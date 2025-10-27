@@ -439,6 +439,6 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 	 *         {@code metricshub.tools.http.post.enabled} is {@code true}; otherwise {@code false}
 	 */
 	static boolean isHttpMethodPermitted(@NonNull String method) {
-		return HTTP_GET.equals(method) || Boolean.getBoolean("metricshub.tools.http.post.enabled");
+		return HTTP_GET.equals(method) || Boolean.getBoolean("metricshub.mcp.tool.http.post.enabled");
 	}
 }

@@ -203,6 +203,6 @@ public class ExecuteSshCommandlineService implements IMCPToolService {
 	 * @return {@code true} if SSH tool is enabled; otherwise {@code false}.
 	 */
 	static boolean isSshEnabledForMCP() {
-		return Boolean.getBoolean("metricshub.tools.ssh.enabled");
+		return Boolean.getBoolean("metricshub.mcp.tool.ssh.enabled");
 	}
 }

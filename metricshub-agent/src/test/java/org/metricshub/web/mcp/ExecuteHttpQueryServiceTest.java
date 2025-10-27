@@ -250,7 +250,7 @@ class ExecuteHttpQueryServiceTest {
 			() -> "Expected message `HTTP POST disabled`"
 		);
 
-		System.setProperty("metricshub.tools.http.post.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.http.post.enabled", "true");
 
 		result = httpQueryService.executeQuery(List.of(HTTP_URL), "post", HTTP_HEADER, HTTP_BODY, TIMEOUT, null);
 		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
@@ -377,14 +377,14 @@ class ExecuteHttpQueryServiceTest {
 
 	@Test
 	void testIsHttpMethodPermitted() {
-		System.clearProperty("metricshub.tools.http.post.enabled");
+		System.clearProperty("metricshub.mcp.tool.http.post.enabled");
 		assertTrue(ExecuteHttpQueryService.isHttpMethodPermitted(HTTP_GET), () -> "HTTP GET is expected to be permitted");
 		assertFalse(
 			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
 			() -> "HTTP POST is not expected to be permitted when property isn't enabled"
 		);
 
-		System.setProperty("metricshub.tools.http.post.enabled", "true");
+		System.setProperty("metricshub.mcp.tool.http.post.enabled", "true");
 		assertTrue(
 			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
 			() -> "HTTP POST is expected to be permitted when property is enabled"
