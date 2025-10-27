@@ -185,7 +185,7 @@ jobs:
         path: ./metricshub-doc/target/site
 
     - name: Upload Linux Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
         name: metricshub-community-linux-package-${{ inputs.releaseVersion }}
@@ -194,7 +194,7 @@ jobs:
           ./metricshub-community-linux/target/metricshub-community-linux-${{ inputs.releaseVersion }}.buildinfo
 
     - name: Upload Windows Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: ${{ matrix.os == 'windows-latest' }}
       with:
         name: metricshub-community-windows-package-${{ inputs.releaseVersion }}
@@ -203,7 +203,7 @@ jobs:
           ./metricshub-community-windows/target/metricshub-community-windows-${{ inputs.releaseVersion }}.buildinfo
 
     - name: Upload Site Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
         name: metricshub-site-${{ inputs.releaseVersion }}
@@ -212,7 +212,7 @@ jobs:
           ./metricshub-doc/target/metricshub-doc-${{ inputs.releaseVersion }}.buildinfo
 
     - name: Upload Docker Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
         name: metricshub-community-docker-package-${{ inputs.releaseVersion }}
