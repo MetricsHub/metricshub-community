@@ -59,7 +59,7 @@ public class HttpExtension implements IProtocolExtension {
 	/**
 	 * The identifier for the Http protocol.
 	 */
-	private static final String IDENTIFIER = "http";
+	public static final String IDENTIFIER = "http";
 
 	private HttpRequestExecutor httpRequestExecutor;
 

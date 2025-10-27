@@ -90,6 +90,7 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
+import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
@@ -114,23 +115,31 @@ public class ConfigHelper {
 
 	/**
 	 * Get the default output directory for logging.<br>
-	 * On Windows, if the LOCALAPPDATA path is not valid then the output directory will be located
+	 * On Windows, the output directory is the local logs folder (relative to the working directory)
+	 * if it is writable. If not, and if the LOCALAPPDATA path is not valid, then the output directory will be located
 	 * under the installation directory.<br>
 	 * On Linux, the output directory is located under the installation directory.
 	 *
 	 * @return {@link Path} instance
 	 */
 	public static Path getDefaultOutputDirectory() {
+		var subDirectory = getSubDirectory(LOG_DIRECTORY_NAME, true);
 		if (LocalOsHandler.isWindows()) {
+			try {
+				if (Files.isWritable(subDirectory)) {
+					return subDirectory;
+				}
+			} catch (Exception ignored) {}
+
 			final String localAppDataPath = System.getenv("LOCALAPPDATA");
 
 			// Make sure the LOCALAPPDATA path is valid
 			if (localAppDataPath != null && !localAppDataPath.isBlank()) {
-				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, "logs"));
+				return createDirectories(Paths.get(localAppDataPath, PRODUCT_WIN_DIR_NAME, LOG_DIRECTORY_NAME));
 			}
 		}
 
-		return getSubDirectory(LOG_DIRECTORY_NAME, true);
+		return subDirectory;
 	}
 
 	/**
@@ -1151,6 +1160,7 @@ public class ConfigHelper {
 			.configuredConnectorId(configuredConnectorId)
 			.connectorVariables(resourceConfig.getConnectorVariables())
 			.resolveHostnameToFqdn(resourceConfig.getResolveHostnameToFqdn())
+			.attributes(attributes)
 			.build();
 	}
 
@@ -1206,7 +1216,8 @@ public class ConfigHelper {
 	 */
 	public static Map<String, MetricDefinition> fetchMetricDefinitions(
 		final ConnectorStore connectorStore,
-		final String connectorId
+		final String connectorId,
+		final String monitorType
 	) {
 		final Map<String, MetricDefinition> metricDefinitions = new HashMap<>();
 
@@ -1216,6 +1227,14 @@ public class ConfigHelper {
 				final Map<String, MetricDefinition> connectorMetricDefinitions = connector.getMetrics();
 				if (connectorMetricDefinitions != null) {
 					metricDefinitions.putAll(connectorMetricDefinitions);
+				}
+				final MonitorJob monitorJob = connector.getMonitors().get(monitorType);
+				// For Connector and Host monitor types, there are no monitor jobs
+				if (monitorJob != null) {
+					final Map<String, MetricDefinition> monitorMetrics = monitorJob.getMetrics();
+					if (monitorMetrics != null) {
+						metricDefinitions.putAll(monitorMetrics);
+					}
 				}
 			}
 		}

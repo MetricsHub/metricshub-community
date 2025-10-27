@@ -11,15 +11,21 @@ You can configure AI-based assistants that support the MCP SSE transport, such a
 
 The following tools are currently available:
 
-| Tool Name                        | Parameters                                                                                                                                            | Description                                                                                                                                                                                                   |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CheckProtocol`                  | <ul><li>`hostname` (string, **required**)</li> <li>`protocol` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 10s)</li></ul> | Determines if the specified host is accessible using a given protocol. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.                                           |
-| `CollectMetricsForHost`          | <ul><li>`hostname` (string, **required**)</li> <li>`connectorId` (string, _optional_)</li></ul>                                                       | Fetch and collect metrics for the specified host using the configured protocols and credentials, and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.)                         |
-| `GetMetricsFromCacheForHost`     | <ul><li>`hostname` (string, **required**)</li></ul>                                                                                                   | Retrieve metrics from the cache for the specified host                                                                                                                                                        |
-| `ListConnectors`                 | No parameters.                                                                                                                                        | Lists all connectors supported by MetricsHub including their identifiers and information.                                                                                                                     |
-| `ListHosts`                      | No parameters.                                                                                                                                        | Retrieves all configured hosts (Resources) in the MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics.                                                                                                                            |
-| `PingHost`                       | <ul><li>`hostname` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li></ul>                                             | Checks if a host is reachable via ping and returns its response time and status.                                                                                                                              |
-| `TestAvailableConnectorsForHost` | <ul><li>`hostname` (string, **required**)</li> <li>`connectorId` (string, _optional_)</li></ul>                                                       | Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host using the configured credentials and return the list of connectors that work with this host. |
+| Tool Name                        | Parameters                                                                                                                                                                                                                                                                                                                                                                        | Description                                                                                                                                                                                                      |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CheckProtocol`                  | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`protocol` (string, **required**)</li> <li>`timeout` (integer, _optional_, default: _10s_)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                                                                                                              | Determines if the specified hosts are accessible using a given protocol. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.                                            |
+| `CollectMetricsForHost`          | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`connectorId` (string, _optional_)</li> <li>`poolSize` (integer, _optional_, default: _20 threads_)</li></ul>                                                                                                                                                                                                      | Fetch and collect metrics for the specified hosts using the configured protocols and credentials, and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.)                           |
+| `ExecuteHttpGetQueryService`     | <ul><li>`url` (list&lt;string&gt;, **required**)</li> <li>`headers` (string, _optional_)</li> <li>`body` (string, _optional_)</li> <li>`timeout` (integer, _optional_, default: _10s_)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                                                                                 | Executes HTTP GET requests for one or more URLs and optionally includes custom headers, a request body, a timeout value, and concurrent execution settings.                                                      |
+| `ExecuteIpmiQueryService`        | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`timeout` (integer, _optional_, default: _10s_)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                                                                                                                                                         | Executes an IPMI query on the given hosts with the given timeout.                                                                                                                                                |
+| `ExecuteSnmpQueryService`        | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`queryType` (string, **required**)</li> <li>`oid` (string, **required**)</li> <li>`columns` (string, _optional_)</li> <li>`timeout` (integer, _optional_, default: _10s_)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                               | Executes an SNMP query (Get, GetNext, Walk, or Table) on the given hosts using the specified OID. For `table` queries, comma-separated column indexes need to be provided.                                       |
+| `ExecuteWqlQueryService`         | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`protocol` (string, **required**)</li> <li>`query` (string, **required**)</li> <li>`namespace` (string, _optional_, default: _root/cimv2_ for WBEM and _root\cimv2_ otherwise)</li> <li>`timeout` (integer, _optional_, default: _10s_)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul> | Executes a WQL/CIM query on Windows or WBEM-compatible hosts using the specified protocol (WBEM, WMI, or WinRM) and namespace.                                                                                   |
+| `GetHostDetails`                 | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                                                                                                                                                                                                                  | Fetch, for the given hosts, the configured protocols used to check their reachability, the connectors successfully detected as working, and the collectors available to perform requests on the hosts.           |
+| `GetMetricsFromCacheForHost`     | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`poolSize` (integer, _optional_, default: _20 threads_)</li></ul>                                                                                                                                                                                                                                                  | Retrieve metrics from the cache for the specified hosts                                                                                                                                                          |
+| `ListConnectors`                 | No parameters.                                                                                                                                                                                                                                                                                                                                                                    | Lists all connectors supported by MetricsHub including their identifiers and information.                                                                                                                        |
+| `ListHosts`                      | No parameters.                                                                                                                                                                                                                                                                                                                                                                    | Retrieves all configured hosts (Resources) in the MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics.                                                      |
+| `PingHost`                       | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`timeout` (integer, _optional_, default: 4s)</li> <li>`poolSize` (integer, _optional_, default: _60 threads_)</li></ul>                                                                                                                                                                                            | Checks if one or more hosts are reachable via ping and returns their response time and status.                                                                                                                   |
+| `TestAvailableConnectorsForHost` | <ul><li>`hostname` (list&lt;string&gt;, **required**)</li> <li>`connectorId` (string, _optional_)</li> <li>`poolSize` (integer, _optional_, default: _20 threads_)</li></ul>                                                                                                                                                                                                      | Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified hosts using the configured credentials and return the list of connectors that work with these hosts. |
+
 
 To get started, simply connect your AI assistant to the **MetricsHub MCP Server** using the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Once the connection is established, the available tools will be automatically published and ready for use.
 
@@ -55,7 +61,7 @@ Once the connection is established, your AI assistant can call the `PingHost` to
   "params": {
     "name": "PingHost",
     "arguments": {
-      "arg0": "server-01"
+      "arg0": ["server-01", "server-02"]
     }
   }
 }
@@ -65,8 +71,24 @@ The command will return this type of response:
 
 ```
 {
-  "hostname": "server-01",
-  "responseTime": 27,
-  "reachable": true
+  "hosts": [
+    {
+      "hostname": "server-01",
+      "response": {
+        "hostname": "server-01",
+        "responseTime": 27,
+        "reachable": true
+      }
+    },
+    {
+      "hostname": "server-02",
+      "response": {
+        "hostname": "server-02",
+        "responseTime": 42,
+        "reachable": false,
+        "errorMessage": "Timed out"
+      }
+    }
+  ]
 }
 ```

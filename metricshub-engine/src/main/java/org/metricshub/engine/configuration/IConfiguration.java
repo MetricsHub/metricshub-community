@@ -69,4 +69,18 @@ public interface IConfiguration {
 	 * @return a new {@code IConfiguration} instance that is a deep copy of the original.
 	 */
 	IConfiguration copy();
+
+	/**
+	 * Return the value of the property in parameter, if it references an actual property name.
+	 * @param property The name of the property.
+	 * @return The value of the property.
+	 */
+	String getProperty(String property);
+
+	/**
+	 * Check if the protocol in parameter corresponds to the {@code IConfiguration} instance.
+	 * @param protocol The name of the protocol to check.
+	 * @return true if the protocol corresponds to the {@code IConfiguration} instance, false otherwise.
+	 */
+	boolean isCorrespondingProtocol(String protocol);
 }

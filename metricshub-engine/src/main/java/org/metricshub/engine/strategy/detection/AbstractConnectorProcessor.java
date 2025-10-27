@@ -25,10 +25,20 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOSTNAME_
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -41,11 +51,15 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
@@ -80,6 +94,9 @@ public abstract class AbstractConnectorProcessor {
 
 	@NonNull
 	protected ExtensionManager extensionManager;
+
+	// Create a YAML ObjectMapper to serialize CriterionTestResult to YAML format
+	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
 
 	/**
 	 * Run the Detection job and returns the detected {@link ConnectorTestResult}
@@ -397,20 +414,161 @@ public abstract class AbstractConnectorProcessor {
 			return connectorTestResult;
 		}
 
-		for (final Criterion criterion : criteria) {
-			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
-			if (!criterionTestResult.isSuccess()) {
-				log.debug(
-					"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
-					hostname,
-					connector.getConnectorIdentity().getCompiledFilename(),
-					criterionTestResult.getMessage()
-				);
-			}
+		// Retrieve emulation input directory and read recorded criterion from it
+		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
 
+		// Persist source output if required and if not SNMP source
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+
+		int criterionId = 1;
+
+		for (final Criterion criterion : criteria) {
+			CriterionTestResult criterionTestResult = null;
+
+			// CHECKSTYLE:OFF
+			if (
+				StringHelper.nonNullNonBlank(emulationInputDirectory) &&
+				!(criterion instanceof SnmpGetCriterion) &&
+				!(criterion instanceof SnmpGetNextCriterion)
+			) {
+				criterionTestResult =
+					readEmulatedCriterionResult(connector.getCompiledFilename(), criterion, emulationInputDirectory, criterionId)
+						.orElseGet(CriterionTestResult::empty);
+			} else {
+				criterionTestResult = processCriterion(criterion, connector);
+				if (!criterionTestResult.isSuccess()) {
+					log.debug(
+						"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
+						hostname,
+						connector.getConnectorIdentity().getCompiledFilename(),
+						criterionTestResult.getMessage()
+					);
+				}
+				if (
+					StringHelper.nonNullNonBlank(recordOutputDirectory) &&
+					!(criterion instanceof SnmpGetCriterion) &&
+					!(criterion instanceof SnmpGetNextCriterion)
+				) {
+					persist(criterionTestResult, connector.getCompiledFilename(), criterion, recordOutputDirectory, criterionId);
+				}
+				// CHECKSTYLE:ON
+			}
+			criterionId++;
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
 		}
 
 		return connectorTestResult;
+	}
+
+	/**
+	 * Persists the {@link CriterionTestResult} to a YAML file.
+	 *
+	 * @param result the {@link CriterionTestResult} to persist
+	 * @param connectorId the identifier of the connector defining the criterion
+	 * @param criterion the {@link Criterion} that was processed
+	 * @param recordOutputDirectory the directory to store the results
+	 * @param criterionId the id of the criterion to persist
+	 */
+	private void persist(
+		final CriterionTestResult result,
+		final String connectorId,
+		final Criterion criterion,
+		final String recordOutputDirectory,
+		final int criterionId
+	) {
+		final Path criterionResultOutputDirectory = Paths.get(recordOutputDirectory);
+		try {
+			Files.createDirectories(criterionResultOutputDirectory);
+
+			final String fileName = String.format(
+				"%s_%s_%s_criterion%d.yaml",
+				telemetryManager.getHostname(),
+				connectorId,
+				criterion.getType(),
+				criterionId
+			);
+
+			final Path file = criterionResultOutputDirectory.resolve(fileName);
+
+			try (
+				BufferedWriter out = Files.newBufferedWriter(
+					file,
+					StandardCharsets.UTF_8,
+					StandardOpenOption.CREATE,
+					StandardOpenOption.TRUNCATE_EXISTING
+				)
+			) {
+				YAML_MAPPER.writeValue(out, result);
+				out.newLine();
+			}
+		} catch (IOException e) {
+			log.warn(
+				"Hostname {} - Could not write ConnectorTestResult to {}. Error: {}",
+				telemetryManager.getHostname(),
+				criterionResultOutputDirectory,
+				e.getMessage()
+			);
+			log.debug(
+				"Hostname {} - Could not write ConnectorTestResult to {}",
+				telemetryManager.getHostname(),
+				criterionResultOutputDirectory,
+				e
+			);
+		}
+	}
+
+	/**
+	 * Reads a {@link CriterionTestResult} from the emulated criterion output directory.
+	 *
+	 * @param connectorId the identifier of the connector defining the criterion
+	 * @param criterion the {@link Criterion} to load results for
+	 * @param emulationModeCriterionOutputDirectory directory containing emulated results
+	 * @param criterionId the id of the criterion to load
+	 * @return An {@link Optional} with the {@link CriterionTestResult} if found, or empty otherwise
+	 */
+	private Optional<CriterionTestResult> readEmulatedCriterionResult(
+		final String connectorId,
+		final Criterion criterion,
+		final String emulationModeCriterionOutputDirectory,
+		final int criterionId
+	) {
+		final Path outDir = Paths.get(emulationModeCriterionOutputDirectory);
+		final String expectedFileName = String.format(
+			"%s_%s_%s_criterion%d.yaml",
+			telemetryManager.getHostname(),
+			connectorId,
+			criterion.getType(),
+			criterionId
+		);
+
+		final Path expectedFile = outDir.resolve(expectedFileName);
+
+		if (!Files.exists(expectedFile)) {
+			log.debug(
+				"Hostname {} - No emulated CriterionTestResult found for {}",
+				telemetryManager.getHostname(),
+				expectedFileName
+			);
+			return Optional.empty();
+		}
+
+		try (BufferedReader in = Files.newBufferedReader(expectedFile, StandardCharsets.UTF_8)) {
+			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
+			return Optional.of(result);
+		} catch (IOException e) {
+			log.warn(
+				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
+				telemetryManager.getHostname(),
+				expectedFileName,
+				e.getMessage()
+			);
+			log.debug(
+				"Hostname {} - Could not read CriterionTestResult from {}",
+				telemetryManager.getHostname(),
+				expectedFileName,
+				e
+			);
+			return Optional.empty();
+		}
 	}
 }

@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.08-SNAPSHOT</version>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-community-windows</artifactId>
@@ -18,6 +18,12 @@
 			<artifactId>metricshub-agent</artifactId>
 			<version>${project.version}</version>
 			<classifier>dist</classifier>
+			<type>zip</type>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-web</artifactId>
+			<version>${project.version}</version>
 			<type>zip</type>
 		</dependency>
 		<dependency>
@@ -131,6 +137,17 @@
 						<configuration>
 							<outputDirectory>${project.build.directory}/jpackage/metricshub</outputDirectory>
 							<includeArtifactIds>metricshub-agent</includeArtifactIds>
+						</configuration>
+					</execution>
+					<execution>
+						<id>unpack-metricshub-web</id>
+						<phase>process-resources</phase>
+						<goals>
+							<goal>unpack-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${project.build.directory}/jpackage/metricshub</outputDirectory>
+							<includeArtifactIds>metricshub-web</includeArtifactIds>
 						</configuration>
 					</execution>
 					<execution>
@@ -334,6 +351,8 @@
 								<argument>jawk=metricshub-jawk.properties</argument>
 								<argument>--add-launcher</argument>
 								<argument>apikey=metricshub-apikey.properties</argument>
+								<argument>--add-launcher</argument>
+								<argument>user=metricshub-user.properties</argument>
 								<argument>@jpackage.txt</argument>
 							</arguments>
 							<workingDirectory>${project.build.directory}/jpackage</workingDirectory>

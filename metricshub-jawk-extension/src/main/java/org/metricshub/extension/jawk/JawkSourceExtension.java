@@ -4,7 +4,7 @@ package org.metricshub.extension.jawk;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Jawk Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright (C) 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -24,20 +24,11 @@ package org.metricshub.extension.jawk;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.awk.UniformPrintStream;
+import org.metricshub.engine.awk.AwkExecutor;
+import org.metricshub.engine.awk.MetricsHubExtensionForJawk;
+import org.metricshub.engine.awk.UtilityExtensionForJawk;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.connector.model.monitor.task.source.JawkSource;
@@ -48,13 +39,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.jawk.backend.AVM;
-import org.metricshub.jawk.ext.JawkExtension;
-import org.metricshub.jawk.frontend.AwkParser;
-import org.metricshub.jawk.frontend.AwkSyntaxTree;
-import org.metricshub.jawk.intermediate.AwkTuples;
-import org.metricshub.jawk.util.AwkSettings;
-import org.metricshub.jawk.util.ScriptSource;
+import org.metricshub.jawk.Awk;
 
 /**
  * This class implements the {@link ICompositeSourceScriptExtension} contract, reports the supported features,
@@ -62,9 +47,6 @@ import org.metricshub.jawk.util.ScriptSource;
  */
 @Slf4j
 public class JawkSourceExtension implements ICompositeSourceScriptExtension {
-
-	// script to AwkTuple
-	private static final Map<String, AwkTuples> AWK_CODE_MAP = new ConcurrentHashMap<>();
 
 	@Override
 	public boolean isValidSource(final Source source) {
@@ -120,110 +102,33 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final EmbeddedFile embeddedFile = maybeEmbeddedFile.get();
 		final String awkScript = embeddedFile.getContentAsString();
 
-		log.debug("Hostname {} - Awk Operation. AWK Script:\n{}\n", hostname, awkScript);
-
-		final AwkSettings settings = new AwkSettings();
+		log.debug("Hostname {} - Awk Operation. Awk Script:\n{}\n", hostname, awkScript);
 
 		final String input = jawkSource.getInput();
-		if (input != null && !input.isEmpty()) {
-			final String inputContent = SourceUpdaterProcessor.replaceSourceReferenceContent(
+		final String inputContent = (input != null && !input.isEmpty())
+			? SourceUpdaterProcessor.replaceSourceReferenceContent(
 				input,
 				telemetryManager,
 				connectorId,
 				"Awk",
 				source.getKey()
-			);
+			)
+			: input;
 
-			if (inputContent != null && !inputContent.isEmpty()) {
-				settings.setInput(new ByteArrayInputStream(inputContent.getBytes(StandardCharsets.UTF_8)));
-			}
-		}
+		// Instantiate the MetricsHub extension for Jawk with the proper context
+		MetricsHubExtensionForJawk extension = new MetricsHubExtensionForJawk(sourceProcessor, hostname, connectorId);
 
-		// Create the OutputStream
-		final ByteArrayOutputStream resultBytesStream = new ByteArrayOutputStream();
-		final UniformPrintStream resultStream = new UniformPrintStream(resultBytesStream);
-		settings.setOutputStream(resultStream);
-
-		// We don't want to see error messages because of formatting issues
-		settings.setCatchIllegalFormatExceptions(true);
-
-		// We force \n as the Record Separator (RS) because even if running on Windows
-		// we're passing Java strings, where end of lines are simple \n
-		settings.setDefaultRS("\n");
-
-		final MetricsHubExtensionForJawk metricsHubExtensionForJawk = MetricsHubExtensionForJawk
-			.builder()
-			.sourceProcessor(sourceProcessor)
-			.hostname(telemetryManager.getHostname())
-			.connectorId(connectorId)
-			.build();
-
-		final Map<String, JawkExtension> extensions = Arrays
-			.stream(metricsHubExtensionForJawk.extensionKeywords())
-			.collect(Collectors.toConcurrentMap(key -> key, key -> metricsHubExtensionForJawk));
-
-		// Interpret
-		final AVM avm = new AVM(settings, extensions);
-
+		// Execute
 		try {
-			final AwkTuples tuple = AWK_CODE_MAP.computeIfAbsent(awkScript, code -> getIntermediateCode(code, extensions));
-			avm.interpret(tuple);
-
-			// Result
+			Awk awkEngine = new Awk(extension, UtilityExtensionForJawk.INSTANCE);
+			String result = AwkExecutor.executeAwk(awkScript, inputContent, awkEngine);
 			final SourceTable sourceTable = new SourceTable();
-			sourceTable.setRawData(resultBytesStream.toString(StandardCharsets.UTF_8));
-			sourceTable.setTable(SourceTable.csvToTable(sourceTable.getRawData(), TABLE_SEP));
+			sourceTable.setRawData(result);
+			sourceTable.setTable(SourceTable.csvToTable(result, TABLE_SEP));
 			return sourceTable;
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(connectorId, source.getKey(), "AwkSource script", hostname, e);
 			return SourceTable.empty();
 		}
-	}
-
-	/**
-	 * Generates the "Awk Tuples", i.e. the intermediate Awk code
-	 * that can be interpreted afterward.
-	 *
-	 * @param script Awk script source code to be converted to intermediate code
-	 * @param extensions The extensions to be used by the {@link AwkParser}
-	 * @return The actual AwkTuples to be interpreted
-	 * @throws JawkSourceExtensionRuntimeException when the Awk script is wrong or an error occurs during the parsing
-	 */
-	public static AwkTuples getIntermediateCode(final String script, final Map<String, JawkExtension> extensions)
-		throws JawkSourceExtensionRuntimeException {
-		// All scripts need to be prefixed with an extra statement that sets the Record Separator (RS)
-		// to the "normal" end-of-line (\n), because Jawk uses line.separator System property, which
-		// is \r\n on Windows, thus preventing it from splitting lines properly.
-		final ScriptSource awkHeader = new ScriptSource("Header", new StringReader("BEGIN { ORS = RS = \"\\n\"; }"), false);
-		final ScriptSource awkSource = new ScriptSource("Body", new StringReader(script), false);
-		final List<ScriptSource> sourceList = new ArrayList<>();
-		sourceList.add(awkHeader);
-		sourceList.add(awkSource);
-
-		// Parse the Awk script
-		final AwkTuples tuples = new AwkTuples();
-		final AwkParser parser = new AwkParser(false, false, extensions);
-		final AwkSyntaxTree ast;
-		try {
-			ast = parser.parse(sourceList);
-
-			// Produce the intermediate code
-			if (ast != null) {
-				// 1st pass to tie actual parameters to back-referenced formal parameters
-				ast.semanticAnalysis();
-
-				// 2nd pass to tie actual parameters to forward-referenced formal parameters
-				ast.semanticAnalysis();
-				if (ast.populateTuples(tuples) != 0) {
-					throw new ParseException("Syntax problem with the Awk script", 0);
-				}
-				tuples.postProcess();
-				parser.populateGlobalVariableNameToOffsetMappings(tuples);
-			}
-		} catch (Exception e) {
-			throw new JawkSourceExtensionRuntimeException(e.getMessage(), e);
-		}
-
-		return tuples;
 	}
 }

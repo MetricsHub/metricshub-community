@@ -21,22 +21,14 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.KeyStore.PasswordProtection;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TimeZone;
+import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.context.AgentContext;
-import org.metricshub.agent.helper.AgentConstants;
-import org.metricshub.agent.security.PasswordEncrypt;
-import org.metricshub.engine.security.SecurityManager;
-import org.metricshub.web.security.ApiKeyRegistry;
-import org.metricshub.web.security.ApiKeyRegistry.ApiKey;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -48,9 +40,6 @@ import org.springframework.context.ConfigurableApplicationContext;
 @SpringBootApplication
 @Slf4j
 public class MetricsHubAgentServer {
-	static {
-		TimeZone.setDefault(TimeZone.getTimeZone("UTC"));
-	}
 
 	private static ConfigurableApplicationContext context;
 
@@ -64,14 +53,11 @@ public class MetricsHubAgentServer {
 			// Install the SLF4J bridge for Java Util Logging (JUL)
 			installJavaUtilLoggingBridge();
 
-			final Set<String> args = new HashSet<>();
-
-			// Fill the args set with the necessary web configuration parameters
-			final Map<String, String> webConfig = agentContext.getAgentConfig().getWebConfig();
-			webConfig.forEach((key, value) -> args.add("--" + key + "=" + value));
+			final Map<String, String> mergedWebConfig = mergeWebConfiguration(agentContext.getAgentConfig());
+			final String[] applicationArguments = buildApplicationArguments(mergedWebConfig);
 
 			// Get the application port number
-			final var applicationPort = webConfig.getOrDefault("server.port", "8080");
+			final var applicationPort = mergedWebConfig.getOrDefault("server.port", "8080");
 
 			// Build the Spring application context with the provided AgentContextHolder
 			// and the application arguments then run it
@@ -79,14 +65,10 @@ public class MetricsHubAgentServer {
 				new SpringApplicationBuilder()
 					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) -> {
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
-						applicationContext
-							.getBeanFactory()
-							.registerSingleton("apiKeyRegistry", new ApiKeyRegistry(resolveApiKeys()));
+						final var beanFactory = applicationContext.getBeanFactory();
+						beanFactory.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
 					})
-					.run(args.toArray(String[]::new));
+					.run(applicationArguments);
 
 			log.info("Started Spring application - Tomcat started on port: {}", applicationPort);
 		} catch (Exception e) {
@@ -95,44 +77,45 @@ public class MetricsHubAgentServer {
 	}
 
 	/**
-	 * Resolves API keys from the KeyStore.
+	 * Merge the default MetricsHub web configuration with a user-provided configuration.
 	 *
-	 * @return a map of API key names to their corresponding {@link ApiKey} objects
+	 * @param agentConfig the agent configuration that may contain web overrides
+	 * @return a new {@link Map} containing the merged configuration
 	 */
-	private static Map<String, ApiKey> resolveApiKeys() {
-		final Map<String, ApiKey> apiKeys = new HashMap<>();
-		try {
-			final var keyStoreFile = PasswordEncrypt.getKeyStoreFile(true);
-			final var ks = SecurityManager.loadKeyStore(keyStoreFile);
+	static Map<String, String> mergeWebConfiguration(final AgentConfig agentConfig) {
+		Objects.requireNonNull(agentConfig, "agentConfig must not be null");
 
-			final var aliases = ks.aliases();
-			while (aliases.hasMoreElements()) {
-				final var alias = aliases.nextElement();
-				if (!alias.startsWith(AgentConstants.API_KEY_PREFIX)) {
-					continue;
-				}
+		final Map<String, String> mergedConfiguration = new LinkedHashMap<>(AgentConfig.empty().getWebConfig());
 
-				final var entry = ks.getEntry(alias, new PasswordProtection(new char[] { 's', 'e', 'c', 'r', 'e', 't' }));
-				if (entry instanceof KeyStore.SecretKeyEntry secreKeyEntry) {
-					final var secretKey = secreKeyEntry.getSecretKey();
-					final var apiKeyId = new String(secretKey.getEncoded(), StandardCharsets.UTF_8);
-
-					final var parts = apiKeyId.split("__");
-					final var key = parts[0];
-					LocalDateTime expirationDateTime = null;
-					if (parts.length > 1) {
-						expirationDateTime = LocalDateTime.parse(parts[1]);
-					}
-					final var apiKeyAlias = alias.substring(AgentConstants.API_KEY_PREFIX.length());
-					apiKeys.put(apiKeyAlias, new ApiKey(apiKeyAlias, key, expirationDateTime));
-				}
-			}
-		} catch (Exception e) {
-			log.error("Failed to resolve API keys from KeyStore");
-			log.debug("Exception details: ", e);
+		final Map<String, String> userWebConfig = agentConfig.getWebConfig();
+		if (userWebConfig == null) {
+			return mergedConfiguration;
 		}
 
-		return apiKeys;
+		userWebConfig.forEach((key, value) -> {
+			if (value != null) {
+				mergedConfiguration.put(key, value);
+			}
+		});
+
+		return mergedConfiguration;
+	}
+
+	/**
+	 * Build the Spring application arguments from the provided web configuration.
+	 *
+	 * @param webConfiguration the merged web configuration
+	 * @return the application arguments to pass to Spring Boot
+	 */
+	private static String[] buildApplicationArguments(final Map<String, String> webConfiguration) {
+		final List<String> arguments = new ArrayList<>();
+		webConfiguration.forEach((key, value) -> {
+			if (value != null) {
+				arguments.add("--" + key + "=" + value);
+			}
+		});
+
+		return arguments.toArray(String[]::new);
 	}
 
 	/**

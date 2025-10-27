@@ -2,7 +2,10 @@ package org.metricshub.extension.http;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
@@ -73,5 +76,40 @@ class HttpConfigurationTest {
 
 		// Ensure that the copied configuration is a distinct object
 		assert (httpConfiguration != httpConfigurationCopy);
+	}
+
+	@Test
+	void testGetProperty() {
+		final HttpConfiguration httpConfiguration = HttpConfiguration
+			.builder()
+			.username("myUsername")
+			.password("myPassword".toCharArray())
+			.https(true)
+			.port(443)
+			.timeout(100L)
+			.hostname("myHostname")
+			.build();
+
+		assertNull(httpConfiguration.getProperty(null));
+		assertNull(httpConfiguration.getProperty(""));
+		assertNull(httpConfiguration.getProperty("badProperty"));
+
+		assertEquals("myPassword", httpConfiguration.getProperty("password"));
+		assertEquals("myUsername", httpConfiguration.getProperty("username"));
+		assertEquals("true", httpConfiguration.getProperty("https"));
+		assertEquals("443", httpConfiguration.getProperty("port"));
+		assertEquals("100", httpConfiguration.getProperty("timeout"));
+		assertEquals("myHostname", httpConfiguration.getProperty("hostname"));
+	}
+
+	@Test
+	void testIsCorrespondingProtocol() {
+		final HttpConfiguration httpConfiguration = new HttpConfiguration();
+		assertFalse(httpConfiguration.isCorrespondingProtocol(null));
+		assertFalse(httpConfiguration.isCorrespondingProtocol(""));
+		assertFalse(httpConfiguration.isCorrespondingProtocol("snmp"));
+		assertTrue(httpConfiguration.isCorrespondingProtocol("HTTP"));
+		assertTrue(httpConfiguration.isCorrespondingProtocol("http"));
+		assertTrue(httpConfiguration.isCorrespondingProtocol("HtTp"));
 	}
 }

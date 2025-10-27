@@ -14,7 +14,6 @@ import static org.metricshub.engine.constants.Constants.VALUE_VAL1;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL2;
 import static org.metricshub.engine.constants.Constants.VALUE_VAL3;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 
 import java.io.IOException;
@@ -26,6 +25,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -43,8 +43,10 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Append;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ArrayTranslate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Awk;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Convert;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Decode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Divide;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.DuplicateColumn;
+import org.metricshub.engine.connector.model.monitor.task.source.compute.Encode;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExcludeMatchingLines;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Extract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.ExtractPropertyFromWbemPath;
@@ -63,6 +65,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -955,7 +959,7 @@ class ComputeProcessorTest {
 		expected.get(2).add(FOO);
 		assertEquals(expected, table);
 
-		// index > size + 1  => out of bounds nothing changed
+		// index > size + 1 => out of bounds nothing changed
 		append.setColumn(15);
 		append.setValue(FOO);
 		computeProcessor.process(append);
@@ -1382,10 +1386,10 @@ class ComputeProcessorTest {
 	void testCheckSubstringArguments() {
 		assertTrue(ComputeProcessor.checkSubstringArguments(1, 3, 3));
 
-		//noinspection ConstantConditions
+		// noinspection ConstantConditions
 		assertFalse(ComputeProcessor.checkSubstringArguments(null, 3, 3));
 
-		//noinspection ConstantConditions
+		// noinspection ConstantConditions
 		assertFalse(ComputeProcessor.checkSubstringArguments(1, null, 3));
 
 		assertFalse(ComputeProcessor.checkSubstringArguments(0, 3, 3));
@@ -2219,7 +2223,6 @@ class ComputeProcessorTest {
 
 	/**
 	 * Creates and returns a new source table represented as a list of lists of strings.
-	 *
 	 * This method constructs a source table with three lines, each containing a combination of predefined values:
 	 * <ol>
 	 * <li>Line 1: ["FOO", "1", "2", "3"]</li>
@@ -2429,7 +2432,8 @@ class ComputeProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().connectorStore(connectorStoreMock).build();
 
-		doReturn(store).when(connectorStoreMock).getStore();
+		// regular (instance) stubbing stays as-is
+		Mockito.doReturn(store).when(connectorStoreMock).getStore();
 
 		computeProcessor.setConnectorId(connectorId);
 		computeProcessor.setTelemetryManager(telemetryManager);
@@ -2446,32 +2450,8 @@ class ComputeProcessorTest {
 
 		final String embeddedFileName = "${file::1}";
 
-		Awk awkOK = Awk
-			.builder()
-			.script(embeddedFileName)
-			.keep("^" + FOO)
-			.exclude("^" + BAR)
-			.separators(TABLE_SEP)
-			.selectColumns(ONE_TWO_THREE)
-			.build();
-
-		doReturn(
-			"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\nBAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\nBAZ;ID3;NAME3;MANUFACTURER3;NUMBER_OF_DISKS3"
-		)
-			.when(clientsExecutorMock)
-			.executeAwkScript(any(), any());
-
-		computeProcessor.process(awkOK);
-		String expectedRawData = "FOO;ID1;NAME1;";
-		List<List<String>> expectedTable = Arrays.asList(Arrays.asList(FOO, ID1, NAME1));
-		assertEquals(expectedTable, sourceTable.getTable());
-		assertEquals(expectedRawData, sourceTable.getRawData());
-
-		final List<List<String>> osCommandResultTable = List.of(List.of("OS command result"));
-		sourceTable.setTable(osCommandResultTable);
-		sourceTable.setRawData(null);
-		awkOK =
-			Awk
+		try (MockedStatic<AwkExecutor> awkStatic = Mockito.mockStatic(AwkExecutor.class)) {
+			Awk awkOK = Awk
 				.builder()
 				.script(embeddedFileName)
 				.keep("^" + FOO)
@@ -2479,45 +2459,93 @@ class ComputeProcessorTest {
 				.separators(TABLE_SEP)
 				.selectColumns(ONE_TWO_THREE)
 				.build();
-		doReturn(null).when(clientsExecutorMock).executeAwkScript(any(), any());
 
-		computeProcessor.process(awkOK);
-		assertEquals(Collections.emptyList(), sourceTable.getTable());
+			// 1) Return a multi-line CSV string
+			awkStatic
+				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.thenReturn(
+					"FOO;ID1;NAME1;MANUFACTURER1;NUMBER_OF_DISKS1\n" +
+					"BAR;ID2;NAME2;MANUFACTURER2;NUMBER_OF_DISKS2\n" +
+					"BAZ;ID3;NAME3;MANUFACTURER3;NUMBER_OF_DISKS3"
+				);
 
-		sourceTable.setTable(osCommandResultTable);
-		sourceTable.setRawData(null);
-		awkOK =
-			Awk
-				.builder()
-				.script(embeddedFileName)
-				.keep("^" + FOO)
-				.exclude("^" + BAR)
-				.separators(TABLE_SEP)
-				.selectColumns(ONE_TWO_THREE)
-				.build();
-		doReturn(EMPTY).when(clientsExecutorMock).executeAwkScript(any(), any());
+			computeProcessor.process(awkOK);
+			String expectedRawData = "FOO;ID1;NAME1;";
+			List<List<String>> expectedTable = Arrays.asList(Arrays.asList(FOO, ID1, NAME1));
+			assertEquals(expectedTable, sourceTable.getTable());
+			assertEquals(expectedRawData, sourceTable.getRawData());
 
-		computeProcessor.process(awkOK);
-		assertEquals(Collections.emptyList(), sourceTable.getTable());
+			// 2) Return null
+			final List<List<String>> osCommandResultTable = List.of(List.of("OS command result"));
+			sourceTable.setTable(osCommandResultTable);
+			sourceTable.setRawData(null);
 
-		sourceTable.setRawData(null);
-		sourceTable.setTable(table);
-		doReturn(SourceTable.tableToCsv(table, TABLE_SEP, true)).when(clientsExecutorMock).executeAwkScript(any(), any());
+			awkOK =
+				Awk
+					.builder()
+					.script(embeddedFileName)
+					.keep("^" + FOO)
+					.exclude("^" + BAR)
+					.separators(TABLE_SEP)
+					.selectColumns(ONE_TWO_THREE)
+					.build();
 
-		computeProcessor.process(
-			Awk.builder().script(embeddedFileName).exclude(ID1).keep(ID2).separators(TABLE_SEP).selectColumns("2,3").build()
-		);
-		assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
-		assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any())).thenReturn(null);
 
-		// Let's try with a space character in the selectColumns list
-		doReturn(SourceTable.tableToCsv(table, TABLE_SEP, true)).when(clientsExecutorMock).executeAwkScript(any(), any());
+			computeProcessor.process(awkOK);
+			assertEquals(Collections.emptyList(), sourceTable.getTable());
 
-		computeProcessor.process(
-			Awk.builder().script(embeddedFileName).exclude(ID1).keep(ID2).separators(TABLE_SEP).selectColumns("2, 3").build()
-		);
-		assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
-		assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+			// 3) Return EMPTY
+			sourceTable.setTable(osCommandResultTable);
+			sourceTable.setRawData(null);
+
+			awkOK =
+				Awk
+					.builder()
+					.script(embeddedFileName)
+					.keep("^" + FOO)
+					.exclude("^" + BAR)
+					.separators(TABLE_SEP)
+					.selectColumns(ONE_TWO_THREE)
+					.build();
+
+			awkStatic.when(() -> AwkExecutor.executeAwk(any(), any())).thenReturn(EMPTY);
+
+			computeProcessor.process(awkOK);
+			assertEquals(Collections.emptyList(), sourceTable.getTable());
+
+			// 4) Return CSV matching `table`, then filter/select
+			sourceTable.setRawData(null);
+			sourceTable.setTable(table);
+
+			awkStatic
+				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
+
+			computeProcessor.process(
+				Awk.builder().script(embeddedFileName).exclude(ID1).keep(ID2).separators(TABLE_SEP).selectColumns("2,3").build()
+			);
+			assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
+			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+
+			// 5) Same but with space in selectColumns
+			awkStatic
+				.when(() -> AwkExecutor.executeAwk(any(), any()))
+				.thenReturn(SourceTable.tableToCsv(table, TABLE_SEP, true));
+
+			computeProcessor.process(
+				Awk
+					.builder()
+					.script(embeddedFileName)
+					.exclude(ID1)
+					.keep(ID2)
+					.separators(TABLE_SEP)
+					.selectColumns("2, 3")
+					.build()
+			);
+			assertEquals("NAME2;MANUFACTURER2;", sourceTable.getRawData());
+			assertEquals(Arrays.asList(Arrays.asList(NAME2, MANUFACTURER2)), sourceTable.getTable());
+		} // static mock automatically closed here
 	}
 
 	@Test
@@ -2541,8 +2569,6 @@ class ComputeProcessorTest {
 			.separators(TABLE_SEP)
 			.selectColumns(ONE_TWO_THREE)
 			.build();
-
-		doCallRealMethod().when(clientsExecutorMock).executeAwkScript(any(), any());
 
 		computeProcessor.process(awkOK);
 		final List<List<String>> expectedTable = Arrays.asList(Arrays.asList(ID1, NAME1, MANUFACTURER1));
@@ -2961,7 +2987,7 @@ class ComputeProcessorTest {
 			sourceTable.getTable()
 		);
 
-		// Test translate with  ReferenceTranslationTable
+		// Test translate with ReferenceTranslationTable
 
 		final ITranslationTable translationTable = new ReferenceTranslationTable("${translation::translationTableName}");
 		translate.setTranslationTable(translationTable);
@@ -3150,5 +3176,93 @@ class ComputeProcessorTest {
 
 		// Verify the converted table matches our expected values
 		assertEquals(expected, sourceTable.getTable());
+	}
+
+	@Test
+	void testEncodeAndDecode() {
+		// Prepare the sourceTable table with values to encode.
+		final List<List<String>> baseTable = Arrays.asList(
+			Arrays.asList("ID1", "testEncode"),
+			Arrays.asList("ID2", "username:password"),
+			Arrays.asList("ID3", "123//;AB&CD")
+		);
+
+		// Set up the source table with our input data.
+		sourceTable.setTable(
+			Arrays.asList(
+				Arrays.asList("ID1", "testEncode"),
+				Arrays.asList("ID2", "username:password"),
+				Arrays.asList("ID3", "123//;AB&CD")
+			)
+		);
+
+		// Wrong type of encoding.
+		final Encode encodeWrongEncoding = Encode.builder().column(2).encoding("WrongEncoding").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeWrongEncoding);
+
+		// Verify there is no change.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// Wrong type of decoding.
+		final Decode decodeWrongEncoding = Decode.builder().column(2).encoding("WrongEncoding").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeWrongEncoding);
+
+		// Verify there is no change.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// Base64 encoding.
+		final Encode encodeBase64 = Encode.builder().column(2).encoding("Base64").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeBase64);
+
+		// Define the expected results.
+		List<List<String>> expected = Arrays.asList(
+			Arrays.asList("ID1", "dGVzdEVuY29kZQ=="),
+			Arrays.asList("ID2", "dXNlcm5hbWU6cGFzc3dvcmQ="),
+			Arrays.asList("ID3", "MTIzLy87QUImQ0Q=")
+		);
+
+		// Verify the converted table matches our expected values.
+		assertEquals(expected, sourceTable.getTable());
+
+		// Base64 decoding.
+		final Decode decodeBase64 = Decode.builder().column(2).encoding("Base64").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeBase64);
+
+		// Verify the converted table matches the base table.
+		assertEquals(baseTable, sourceTable.getTable());
+
+		// URL encoding.
+		final Encode encodeUrl = Encode.builder().column(2).encoding("URL").build();
+
+		// Execute the Encode compute.
+		computeProcessor.process(encodeUrl);
+
+		// Define the expected results.
+		expected =
+			Arrays.asList(
+				Arrays.asList("ID1", "testEncode"),
+				Arrays.asList("ID2", "username%3Apassword"),
+				Arrays.asList("ID3", "123%2F%2F%3BAB%26CD")
+			);
+
+		// Verify the converted table matches our expected values.
+		assertEquals(expected, sourceTable.getTable());
+
+		// URL decoding.
+		final Decode decodeURL = Decode.builder().column(2).encoding("URL").build();
+
+		// Execute the Decode compute.
+		computeProcessor.process(decodeURL);
+
+		// Verify the converted table matches the base table.
+		assertEquals(baseTable, sourceTable.getTable());
 	}
 }

@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.08-SNAPSHOT</version>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-engine</artifactId>
@@ -41,16 +41,6 @@
 		<dependency>
 			<groupId>org.metricshub</groupId>
 			<artifactId>jawk</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-simple</artifactId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.metricshub</groupId>

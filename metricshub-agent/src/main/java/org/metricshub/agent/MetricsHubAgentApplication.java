@@ -23,7 +23,6 @@ package org.metricshub.agent;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
-import java.util.Locale;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
@@ -44,9 +43,6 @@ import picocli.CommandLine.Option;
 @Data
 @Slf4j
 public class MetricsHubAgentApplication implements Runnable {
-	static {
-		Locale.setDefault(Locale.US);
-	}
 
 	/**
 	 * Default milliseconds await delay for the DirectoryWatcherTask.
