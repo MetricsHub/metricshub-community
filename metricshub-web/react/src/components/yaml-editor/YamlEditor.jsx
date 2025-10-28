@@ -5,11 +5,9 @@ import { useTheme } from "@mui/material/styles";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
-import { keymap } from "@codemirror/view";
-import { Prec } from "@codemirror/state";
+import { keymap, EditorView } from "@codemirror/view";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
-import SearchPanel from "./SearchPanel";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
@@ -35,8 +33,7 @@ export default function YamlEditor({
 	// expose editor view for parent components (used to scroll to error locations)
 	const viewRef = React.useRef(null);
 
-	// Search panel state
-	const [searchOpen, setSearchOpen] = React.useState(false);
+	// Removed custom search panel state to restore default CodeMirror Ctrl+F behavior
 
 	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -78,20 +75,19 @@ export default function YamlEditor({
 				},
 			});
 		}
-		// Override Ctrl+F to open our custom search panel with high precedence
-		const customSearchKeymap = Prec.highest(
-			keymap.of([
-				{
-					key: "Mod-f",
-					preventDefault: true,
-					run: () => {
-						setSearchOpen(true);
-						return true;
-					},
-				},
-			])
-		);
-		return [cmYaml(), history(), keymap.of(km), customSearchKeymap, ...validationExtension];
+
+		// Ensure search navigation centers/follows the current match reliably,
+		// even in complex layouts. We specifically listen for the userEvent
+		// "select.search" which the @codemirror/search plugin sets when
+		// moving between results (Next/Prev).
+		const followSearchSelection = EditorView.updateListener.of((update) => {
+			if (update.transactions.some((tr) => tr.isUserEvent("select.search"))) {
+				const pos = update.state.selection.main.head;
+				update.view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: "center" }) });
+			}
+		});
+
+		return [cmYaml(), history(), keymap.of(km), followSearchSelection, ...validationExtension];
 	}, [onSave, canSave, validationExtension]);
 
 	/**
@@ -108,19 +104,13 @@ export default function YamlEditor({
 
 	return (
 		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
-			{searchOpen && (
-				<SearchPanel
-					onClose={() => setSearchOpen(false)}
-					viewRef={viewRef}
-				/>
-			)}
 			<Box
 				sx={{
 					flex: 1,
 					minHeight: 0,
 					borderTop: 0,
 					".cm-editor": { height: "100%" },
-					".cm-scroller": { overflow: "auto" },
+					".cm-scroller": { overflow: "auto", overscrollBehavior: "contain" },
 				}}
 			>
 				<CodeMirror
@@ -132,8 +122,9 @@ export default function YamlEditor({
 						lineNumbers: true,
 						highlightActiveLine: true,
 						foldGutter: true,
-						searchKeymap: false,  // Disable default search
-						search: false,        // Disable search module
+						// Re-enable default search behavior and keymap (Ctrl/Cmd+F)
+						searchKeymap: true,
+						search: true,
 					}}
 					theme={theme.palette.mode}
 					onCreateEditor={(view) => {

@@ -271,6 +271,9 @@ function ConfigurationPage() {
 						pb: 1.5,
 						gap: 1,
 						height: "100%",
+						// Allow right pane to scroll for non-editor content (e.g., messages),
+						// while we also keep the editor itself fully height-constrained so
+						// CodeMirror remains the primary scroll area for the document.
 						overflow: "auto",
 						minHeight: 0,
 					}}
