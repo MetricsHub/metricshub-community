@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.NonNull;
@@ -39,12 +40,12 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-@Service
 /**
  * Service that executes SNMP queries (GET/GETNEXT/WALK/TABLE) using the agent's SNMP extension.
  * Builds the appropriate JSON payload and returns a {@link QueryResponse} with either the result
  * or an error message when no configuration is found or execution fails.
  */
+@Service
 public class ExecuteSnmpQueryService implements IMCPToolService {
 
 	/**
@@ -61,6 +62,11 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	 * Default timeout of the query execution in seconds
 	 */
 	private static final Long DEFAULT_TIMEOUT = 10L;
+
+	/**
+	 * Default pool size for SNMP queries.
+	 */
+	private static final int DEFAULT_SNMP_POOL_SIZE = 60;
 	/**
 	 * Holds contextual information about the current agent instance.
 	 */
@@ -89,28 +95,47 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	@Tool(
 		name = "ExecuteSnmpQuery",
 		description = """
-		Executes an SNMP query (Get, GetNext, Walk, or Table) on a given hostname using the specified OID.
+		Executes an SNMP query (Get, GetNext, Walk, or Table) on the given host(s) using the specified OID.
 		For 'table' queries, comma-separated column indexes needs to be provided.
 		"""
 	)
-	public QueryResponse executeQuery(
-		@ToolParam(description = "The hostname to execute SNMP Query on.", required = true) final String hostname,
+	public MultiHostToolResponse<QueryResponse> executeQuery(
+		@ToolParam(description = "The hostname(s) to execute SNMP Query on.", required = true) final List<String> hostname,
 		@ToolParam(
 			description = "The SNMP query to execute: Get, GetNext, Walk or Table.",
 			required = true
 		) final String queryType,
 		@ToolParam(description = "The SNMP OID to use in the request.", required = true) final String oid,
 		@ToolParam(description = "The columns to select on the SNMP Table query.", required = false) final String columns,
-		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout
+		@ToolParam(description = "The timeout for the query in seconds.", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent SNMP queries. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_SNMP_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType("snmp")
-			.map((IProtocolExtension extension) ->
-				executeQueryWithExtension(extension, hostname.trim(), queryType.trim(), oid.trim(), columns, timeout)
-			)
-			.orElse(QueryResponse.builder().isError("SNMP Extension is not available").build());
+			.map((IProtocolExtension extension) -> {
+				final String sanitizedQueryType = queryType.trim();
+				final String sanitizedOid = oid.trim();
+				return executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<QueryResponse>builder()
+							.hostname(host)
+							.response(
+								executeQueryWithExtension(extension, host.trim(), sanitizedQueryType, sanitizedOid, columns, timeout)
+							)
+							.build(),
+					resolvedPoolSize
+				);
+			})
+			.orElseGet(() -> MultiHostToolResponse.buildError("The SNMP extension is not available"));
 	}
 
 	/**
@@ -137,7 +162,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		if (!SNMP_METHODS.contains(queryType.toLowerCase())) {
 			return QueryResponse
 				.builder()
-				.isError("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
+				.error("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
 				.build();
 		}
 
@@ -153,7 +178,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			if (columnsNode.isEmpty()) {
 				return QueryResponse
 					.builder()
-					.isError("At least one valid column index must be provided for SNMP Table queries.")
+					.error("At least one valid column index must be provided for SNMP Table queries.")
 					.build();
 			}
 
@@ -170,8 +195,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			.map((IConfiguration configuration) ->
 				executeQuerySafe(extension, hostname, queryType, timeout, queryNode, configuration)
 			)
-			.orElseGet(() ->
-				QueryResponse.builder().isError("No SNMP configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() -> QueryResponse.builder().error("No SNMP configuration found for %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -201,9 +225,20 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		} catch (Exception e) {
 			return QueryResponse
 				.builder()
-				.isError("Failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
+				.error("Failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
 				.build();
 		}
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} that signals a missing hostname parameter.
+	 *
+	 * @return a host-level response whose payload contains an error about the null hostname
+	 */
+	private HostToolResponse<QueryResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			QueryResponse.builder().error(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 
 	/**

@@ -13,6 +13,31 @@ import {
 	deleteBackupFile,
 	fetchConfigList,
 } from "../../../store/thunks/configThunks";
+import { useSnackbar } from "../../common/GlobalSnackbar";
+
+// Memoized label for the backup group to avoid unnecessary re-renders between parent updates
+const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick }) {
+	const preventMouseDown = React.useCallback((e) => e.preventDefault(), []);
+
+	return (
+		<Box
+			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+		>
+			<Box sx={{ display: "flex", alignItems: "center" }}>
+				<FileTypeIcon type="folder" />
+				<span>{`backup-${id}`}</span>
+			</Box>
+			<IconButton
+				size="small"
+				aria-label="More actions"
+				onClick={onMenuClick}
+				onMouseDown={preventMouseDown}
+			>
+				<MoreVertIcon fontSize="small" />
+			</IconButton>
+		</Box>
+	);
+});
 
 /**
  * Renders one backup set folder (e.g. "backup-20251016-153012") with its kebab menu (Restore all / Delete backup)
@@ -20,7 +45,7 @@ import {
  *
  * @param {{
  *   id: string, // timestamp id e.g. "20251016-153012"
- *   files: Array<{name:string,size:number,lastModificationTime:string}> & {displayName:string}[],
+ *   files?: Array<{name:string,size:number,lastModificationTime:string}> & {displayName:string}[],
  *   dirtyByName: Record<string, boolean>,
  *   filesByName: Record<string, {validation?:any}>,
  *   onSelect: (name:string)=>void,
@@ -30,7 +55,7 @@ import {
  */
 export default function BackupSetNode({
 	id,
-	files,
+	files = [],
 	dirtyByName,
 	filesByName,
 	onSelect,
@@ -43,74 +68,65 @@ export default function BackupSetNode({
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
 	const [restoreAllOpen, setRestoreAllOpen] = React.useState(false);
 	const [deleteSetOpen, setDeleteSetOpen] = React.useState(false);
+	const { show: showSnackbar } = useSnackbar();
 
-	const openMenu = (e) => {
+	// Handlers memoized to avoid unnecessary re-renders
+	const openMenu = React.useCallback((e) => {
 		e.stopPropagation();
 		setMenuAnchor(e.currentTarget);
-	};
-	const closeMenu = () => {
+	}, []);
+
+	const closeMenu = React.useCallback(() => {
 		setMenuAnchor(null);
 		// IMPORTANT: do NOT clear the set id here — this component IS the set
-	};
+	}, []);
 
-	const askRestoreAll = () => {
+	const askRestoreAll = React.useCallback(() => {
 		document.activeElement?.blur?.();
 		closeMenu();
 		setRestoreAllOpen(true);
-	};
-	const askDeleteSet = () => {
+	}, [closeMenu]);
+
+	const askDeleteSet = React.useCallback(() => {
 		document.activeElement?.blur?.();
 		closeMenu();
 		setDeleteSetOpen(true);
-	};
+	}, [closeMenu]);
 
-	const doRestoreAll = async (overwrite) => {
-		setRestoreAllOpen(false);
-		try {
-			await Promise.all(
-				(files || []).map((f) =>
-					dispatch(restoreConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
-				),
-			);
-			await dispatch(fetchConfigList());
-		} catch (e) {
-			console.error("Restore all failed:", e);
-		}
-	};
+	const doRestoreAll = React.useCallback(
+		async (overwrite) => {
+			setRestoreAllOpen(false);
+			try {
+				await Promise.all(
+					(files || []).map((f) =>
+						dispatch(restoreConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
+					),
+				);
+				await dispatch(fetchConfigList());
+			} catch (e) {
+				console.error("Restore all failed:", e);
+				showSnackbar("Restore all failed", { severity: "error" });
+			}
+		},
+		[dispatch, files, showSnackbar],
+	);
 
-	const doDeleteSet = async () => {
+	const doDeleteSet = React.useCallback(async () => {
 		setDeleteSetOpen(false);
 		try {
 			await Promise.all((files || []).map((f) => dispatch(deleteBackupFile(f.name)).unwrap()));
 			await dispatch(fetchConfigList());
 		} catch (e) {
 			console.error("Delete backup set failed:", e);
+			showSnackbar("Delete backup set failed", { severity: "error" });
 		}
-	};
+	}, [dispatch, files, showSnackbar]);
 
 	const groupItemId = `__backup_set__/${id}`;
-	const groupLabel = (
-		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", pr: 1 }}
-		>
-			<Box sx={{ display: "flex", alignItems: "center" }}>
-				<FileTypeIcon type="folder" />
-				<span>{`backup-${id}`}</span>
-			</Box>
-			<IconButton
-				size="small"
-				aria-label="More actions"
-				onClick={openMenu}
-				onMouseDown={(e) => e.preventDefault()}
-			>
-				<MoreVertIcon fontSize="small" />
-			</IconButton>
-		</Box>
-	);
 
 	return (
 		<>
-			<TreeItem itemId={groupItemId} label={groupLabel}>
+			<TreeItem itemId={groupItemId} label={<BackupGroupLabel id={id} onMenuClick={openMenu} />}>
 				{files.map((f) => (
 					<FileTreeItem
 						key={f.name}
@@ -118,7 +134,7 @@ export default function BackupSetNode({
 						itemId={f.name}
 						labelName={f.displayName}
 						isDirty={!!dirtyByName?.[f.name]}
-						validation={filesByName[f.name]?.validation}
+						validation={filesByName?.[f.name]?.validation}
 						onSelect={onSelect}
 						onRename={onRename}
 						onDelete={onDelete}
@@ -137,11 +153,11 @@ export default function BackupSetNode({
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
 				<MenuItem onClick={askRestoreAll}>
-					<RestoreIcon fontSize="small" style={{ marginRight: 8 }} />
+					<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 					Restore all
 				</MenuItem>
 				<MenuItem onClick={askDeleteSet}>
-					<DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete backup
 				</MenuItem>
 			</Menu>

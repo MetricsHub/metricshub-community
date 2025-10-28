@@ -1,11 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { configApi } from "../../api/config";
-import { timestampId } from "../../utils/backup";
-import {
-	encodeBackupFileName,
-	parseBackupFileName,
-	isBackupFileName,
-} from "../../utils/backupNames";
+import { isBackupFileName } from "../../utils/backupNames";
+import { createBackupSet, restoreBackupFile } from "../../services/backupService";
 
 /**
  * Fetch the list of configuration files.
@@ -15,10 +11,20 @@ export const fetchConfigList = createAsyncThunk(
 	"config/fetchList",
 	async (_, { rejectWithValue }) => {
 		try {
-			// Fetch config files and backups separately and merge
+			// Fetch config files and backups separately and merge.
+			// We intentionally swallow errors from listBackups():
+			// - Backup storage may be unavailable (e.g., missing backups folder, permissions, or disabled in this environment)
+			// - Backups are optional; the main config list should still load even if backups are unavailable
+			// We log a warning to aid debugging but continue with an empty backups array.
 			const [configs, backups] = await Promise.all([
 				configApi.list(),
-				configApi.listBackups().catch(() => []),
+				configApi.listBackups().catch((err) => {
+					console.warn(
+						"config/fetchList: backup listing failed; continuing without backups:",
+						err?.message || err,
+					);
+					return [];
+				}),
 			]);
 			// Merge and return; server already returns flat names
 			return [...(configs || []), ...(backups || [])];
@@ -133,56 +139,20 @@ export const createConfigBackup = createAsyncThunk(
 	"config/createBackup",
 	async ({ kind, name } = {}, { getState, dispatch, rejectWithValue }) => {
 		try {
-			if (kind !== "file" && kind !== "all") throw new Error("kind must be 'file' or 'all'");
+			const state = getState().config ?? {};
+			const { list = [], filesByName = {}, originalsByName = {}, selected } = state;
 
-			const state = getState();
-			const cfg = state.config ?? {};
-			const filesByName = cfg.filesByName ?? {};
-			const originalsByName = cfg.originalsByName ?? {};
-			const list = Array.isArray(cfg.list) ? cfg.list : [];
-
-			const id = timestampId(new Date()); // e.g. 20251016-150220
-
-			// resolve content: prefer editor cache, then originals, else fetch from backend
-			const resolveContent = async (fname) => {
-				const cached = filesByName[fname]?.content;
-				if (cached != null) return String(cached);
-				const orig = originalsByName[fname];
-				if (orig != null) return String(orig);
-				const fetched = await configApi.getContent(fname);
-				return String(fetched ?? "");
-			};
-
-			let originalsOnly = [];
-			if (kind === "file") {
-				const target = name ?? cfg.selected;
-				if (!target) throw new Error("No file selected/name provided for file backup");
-
-				const content = await resolveContent(target);
-				const backupName = encodeBackupFileName(id, target);
-				await configApi.saveOrUpdateBackupFile(backupName, content);
-				originalsOnly = [{ name: target }];
-			} else {
-				// Exclude any entries that already look like backup files
-				originalsOnly = list.filter((meta) => !isBackupFileName(meta?.name || ""));
-
-				if (originalsOnly.length === 0) {
-					await dispatch(fetchConfigList());
-					return { id, count: 0 };
-				}
-
-				await Promise.all(
-					originalsOnly.map(async (meta) => {
-						const fname = meta.name;
-						const content = await resolveContent(fname);
-						const backupName = encodeBackupFileName(id, fname);
-						await configApi.saveOrUpdateBackupFile(backupName, content);
-					}),
-				);
-			}
+			const effectiveName = name ?? selected;
+			const { id, count } = await createBackupSet(
+				list,
+				filesByName,
+				originalsByName,
+				kind,
+				effectiveName,
+			);
 
 			await dispatch(fetchConfigList());
-			return { id, count: originalsOnly.length };
+			return { id, count };
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}
@@ -201,37 +171,14 @@ export const restoreConfigFromBackup = createAsyncThunk(
 	"config/restoreFromBackup",
 	async ({ backupName, overwrite = false }, { getState, dispatch, rejectWithValue }) => {
 		try {
-			if (!backupName) throw new Error("Missing backup file name");
-			const parsed = parseBackupFileName(backupName);
-			if (!parsed) throw new Error("Not a backup file");
-			const { originalName } = parsed;
-
-			// Get backup content: prefer cache else fetch
 			const state = getState();
-			const cached = state?.config?.filesByName?.[backupName]?.content;
-			const content =
-				cached != null ? String(cached) : String(await configApi.getBackupFileContent(backupName));
-
-			// Determine target name
-			let restoreName = originalName;
-			if (!overwrite) {
-				const list = Array.isArray(state?.config?.list) ? state.config.list : [];
-				const exists = list.some((f) => f.name === originalName);
-				if (exists) {
-					const id = timestampId();
-					const parts = originalName.split("/");
-					const base = parts.pop();
-					const dot = base.lastIndexOf(".");
-					const withSuffix =
-						dot > 0
-							? `${base.slice(0, dot)}.restored-${id}${base.slice(dot)}`
-							: `${base}.restored-${id}`;
-					restoreName = [...parts, withSuffix].join("/");
-				}
-			}
+			const { originalName, restoreName, content } = await restoreBackupFile(
+				backupName,
+				overwrite,
+				state,
+			);
 
 			await dispatch(saveConfig({ name: restoreName, content, skipValidation: true })).unwrap();
-
 			await dispatch(fetchConfigList());
 
 			return { originalName, restoredName: restoreName };

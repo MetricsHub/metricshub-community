@@ -21,27 +21,22 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@Data
-@Builder
 /**
- * Represents the result of a query execution.
- * <p>
- * Contains either a successful {@code response} or an {@code error} message
- * describing why the query failed.
- * </p>
+ * Response payload produced for a single host when executing an MCP tool.
+ *
+ * @param <T> the type of the payload returned for the targeted host
  */
-public class QueryResponse {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class HostToolResponse<T> {
 
-	/**
-	 * Error message if the query failed, otherwise {@code null}.
-	 */
-	private final String error;
-
-	/**
-	 * The successful response payload if the query succeeded, otherwise {@code null}.
-	 */
-	private final String response;
+	private String hostname;
+	private T response;
 }

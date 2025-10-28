@@ -21,6 +21,7 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -54,6 +55,11 @@ public class ProtocolCheckService implements IMCPToolService {
 	private static final long DEFAULT_PROTOCOL_CHECK_TIMEOUT = 10L;
 
 	/**
+	 * Default pool size for protocol checks.
+	 */
+	private static final int DEFAULT_PROTOCOL_CHECK_POOL_SIZE = 60;
+
+	/**
 	 * Holds contextual information about the current agent instance.
 	 */
 	private AgentContextHolder agentContextHolder;
@@ -79,31 +85,43 @@ public class ProtocolCheckService implements IMCPToolService {
 	@Tool(
 		name = "CheckProtocol",
 		description = """
-		Determines if the specified host is accessible using a given protocol.
+		Determines if the specified hosts are accessible using a given protocol.
 		Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.
 		Provides a response detailing the host reachability status along with the response time.
 		"""
 	)
-	public ProtocolCheckResponse checkProtocol(
-		@ToolParam(description = "The hostname to check") final String hostname,
+	public MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
+		@ToolParam(description = "The hostname(s) to check") final List<String> hostname,
 		@ToolParam(
 			description = "The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi",
 			required = true
 		) final String protocol,
-		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout
+		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent protocol checks. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
+		final String protocolIdentifier = protocol;
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_PROTOCOL_CHECK_POOL_SIZE);
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
-			.map((IProtocolExtension extension) -> checkWithExtension(hostname, timeout, extension))
-			.orElse(
-				ProtocolCheckResponse
-					.builder()
-					.hostname(hostname)
-					.errorMessage(protocol + " extension is not available")
-					.build()
-			);
+			.map((IProtocolExtension extension) ->
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<ProtocolCheckResponse>builder()
+							.hostname(host)
+							.response(checkWithExtension(host, timeout, extension))
+							.build(),
+					resolvedPoolSize
+				)
+			)
+			.orElseGet(() -> MultiHostToolResponse.buildError(protocolIdentifier + " extension is not available"));
 	}
 
 	/**
@@ -147,20 +165,16 @@ public class ProtocolCheckService implements IMCPToolService {
 		final Long timeout,
 		final IProtocolExtension extension
 	) {
-		// Fetch the available configurations for the host
 		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
 			hostname,
 			agentContextHolder
 		);
 
-		// Iterate through each configuration until one succeeds
 		for (final IConfiguration configuration : configurations) {
 			IConfiguration validConfiguration = configuration;
 
 			if (!extension.isValidConfiguration(configuration)) {
-				// Attempt to build a compatible configuration using shared fields
 				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
-				// If building failed, skip or continue depending on the context
 				if (validConfiguration == null) {
 					continue;
 				}
@@ -171,7 +185,6 @@ public class ProtocolCheckService implements IMCPToolService {
 				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
 			);
 
-			// Build the telemetry manager based on this configuration
 			final var telemetryManager = TelemetryManager
 				.builder()
 				.hostConfiguration(
@@ -184,13 +197,9 @@ public class ProtocolCheckService implements IMCPToolService {
 				.hostProperties(HostProperties.builder().mustCheckSshStatus(protocol.equalsIgnoreCase("ssh")).build())
 				.build();
 
-			// Record the start time to compute response time
 			final long startTime = System.currentTimeMillis();
-
-			// Attempt the protocol check
 			final Optional<Boolean> response = extension.checkProtocol(telemetryManager);
 
-			// If a response is present and host is reachable, return a positive result
 			if (response.isPresent()) {
 				final boolean isUp = response.get();
 				if (isUp) {
@@ -205,7 +214,18 @@ public class ProtocolCheckService implements IMCPToolService {
 			}
 		}
 
-		// No configuration succeeded: host is considered unreachable
 		return ProtocolCheckResponse.builder().hostname(hostname).isReachable(false).build();
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} indicating that the hostname parameter was
+	 * not provided.
+	 *
+	 * @return a host-level response with an error payload highlighting the missing hostname
+	 */
+	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 }

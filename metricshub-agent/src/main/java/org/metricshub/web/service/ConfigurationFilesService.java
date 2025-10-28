@@ -81,9 +81,9 @@ public class ConfigurationFilesService {
 	private static final Set<String> YAML_EXTENSIONS = Set.of(".yml", ".yaml");
 
 	/**
-	 * Maximum directory traversal depth when searching for configuration files.
+	 * Name of the backup directory for configuration files.
 	 */
-	private static final int MAX_DEPTH = 1;
+	private static final String BACKUP_DIR_NAME = "backup";
 
 	/**
 	 * Provides access to the current {@link AgentContext} used for configuration
@@ -116,7 +116,7 @@ public class ConfigurationFilesService {
 			return files
 				.filter(Files::isRegularFile)
 				.filter(ConfigurationFilesService::hasYamlExtension)
-				.map((Path p) -> buildConfigurationFile(p))
+				.map(this::buildConfigurationFile)
 				.filter(Objects::nonNull)
 				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
 				.toList();
@@ -273,7 +273,7 @@ public class ConfigurationFilesService {
 	 */
 	private static boolean hasYamlExtension(Path path) {
 		// Make sure the file has a valid yaml extension
-		final var fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+		final var fileName = path.getFileName().toString();
 		return hasYamlExtension(fileName);
 	}
 
@@ -284,7 +284,8 @@ public class ConfigurationFilesService {
 	 * @return true if the file name has a valid YAML extension, false otherwise
 	 */
 	private static boolean hasYamlExtension(final String fileName) {
-		return YAML_EXTENSIONS.stream().anyMatch(fileName::endsWith);
+		final String lower = fileName.toLowerCase(Locale.ROOT);
+		return YAML_EXTENSIONS.stream().anyMatch(lower::endsWith);
 	}
 
 	/**
@@ -297,28 +298,8 @@ public class ConfigurationFilesService {
 	 * @throws ConfigFilesException if the file name is invalid or resolution fails
 	 */
 	private Path resolveSafeYaml(final Path baseDir, final String fileName) throws ConfigFilesException {
-		if (fileName == null || fileName.isBlank()) {
-			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "File name is required.");
-		}
-		if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
-			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "Invalid file name.");
-		}
-
-		if (!hasYamlExtension(fileName.toLowerCase(Locale.ROOT))) {
-			throw new ConfigFilesException(
-				ConfigFilesException.Code.INVALID_EXTENSION,
-				"Only .yml or .yaml files are allowed."
-			);
-		}
-
-		final Path normalizedBase = baseDir.normalize();
-		final Path resolved = normalizedBase.resolve(fileName).normalize();
-
-		// Security check: ensure the resolved path is within the base directory
-		if (!resolved.startsWith(normalizedBase)) {
-			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_PATH, "Invalid file path.");
-		}
-		return resolved;
+		ensureYamlExtension(fileName, "Only .yml or .yaml files are allowed.");
+		return resolveWithinDir(baseDir, fileName);
 	}
 
 	/**
@@ -445,9 +426,6 @@ public class ConfigurationFilesService {
 		}
 	}
 
-	// === BACKUP FILE OPERATIONS ===
-	private static final String BACKUP_DIR_NAME = "backup";
-
 	/**
 	 * Returns the content of a backup file as UTF-8 text.
 	 *
@@ -519,25 +497,75 @@ public class ConfigurationFilesService {
 		}
 	}
 
+	/**
+	 * Ensures the backup directory is available.
+	 *
+	 * @return backup directory path
+	 * @throws ConfigFilesException if the directory is not available
+	 */
 	private Path getBackupDir() throws ConfigFilesException {
 		return getConfigDir().resolve(BACKUP_DIR_NAME);
 	}
 
+	/**
+	 * Resolves and validates a backup YAML file name within the backup directory
+	 * (no traversal, correct extension).
+	 *
+	 * @param fileName simple file name (no path)
+	 * @return resolved path
+	 * @throws ConfigFilesException if the file name is invalid or resolution fails
+	 */
 	private Path resolveBackupYaml(final String fileName) throws ConfigFilesException {
+		ensureYamlExtension(fileName, "Only .yml or .yaml files are allowed for backup.");
+		return resolveWithinDir(getBackupDir(), fileName);
+	}
+
+	/**
+	 * Validates that the given file name is a simple name without path traversal
+	 * or separators and is not blank.
+	 *
+	 * @param fileName the file name to validate
+	 * @throws ConfigFilesException if the file name is null/blank, contains path
+	 *                              separators or parent directory references
+	 */
+	private static void validateSimpleFileName(final String fileName) throws ConfigFilesException {
 		if (fileName == null || fileName.isBlank()) {
 			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "File name is required.");
 		}
 		if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
 			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_FILE_NAME, "Invalid file name.");
 		}
-		final var lower = fileName.toLowerCase(Locale.ROOT);
-		if (!lower.endsWith(".yml") && !lower.endsWith(".yaml")) {
-			throw new ConfigFilesException(
-				ConfigFilesException.Code.INVALID_EXTENSION,
-				"Only .yml or .yaml files are allowed for backup."
-			);
+	}
+
+	/**
+	 * Ensures a file has a YAML extension, otherwise throws a
+	 * {@link ConfigFilesException} with the provided message.
+	 *
+	 * @param fileName     the file name to validate
+	 * @param errorMessage the error message to use when the extension is invalid
+	 * @throws ConfigFilesException when the file does not end with .yml or .yaml
+	 */
+	private static void ensureYamlExtension(final String fileName, final String errorMessage)
+		throws ConfigFilesException {
+		validateSimpleFileName(fileName);
+		if (!hasYamlExtension(fileName)) {
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_EXTENSION, errorMessage);
 		}
-		final Path normalizedBase = getBackupDir().normalize();
+	}
+
+	/**
+	 * Resolves a simple file name within a base directory, ensuring no path
+	 * traversal and that the result stays within the base directory.
+	 *
+	 * @param baseDir  the directory to resolve against
+	 * @param fileName the simple file name (no path separators)
+	 * @return the normalized, resolved path
+	 * @throws ConfigFilesException if the file name is invalid or would escape the
+	 *                              base directory
+	 */
+	private static Path resolveWithinDir(final Path baseDir, final String fileName) throws ConfigFilesException {
+		validateSimpleFileName(fileName);
+		final Path normalizedBase = baseDir.normalize();
 		final Path resolved = normalizedBase.resolve(fileName).normalize();
 		if (!resolved.startsWith(normalizedBase)) {
 			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_PATH, "Invalid file path.");
@@ -554,6 +582,11 @@ public class ConfigurationFilesService {
 	 */
 	public List<ConfigurationFile> listAllBackupFiles() throws ConfigFilesException {
 		final Path backupDir = getBackupDir();
+		// If backup directory does not exist, return an empty list instead of throwing
+		// an exception to avoid a 500 on the frontend.
+		if (!Files.exists(backupDir) || !Files.isDirectory(backupDir)) {
+			return List.of();
+		}
 		try (Stream<Path> files = Files.list(backupDir)) {
 			return files
 				.filter(Files::isRegularFile)
