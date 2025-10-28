@@ -58,11 +58,18 @@
 		<dependency>
 			<groupId>org.metricshub</groupId>
 			<artifactId>simple-http-java</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.codehaus.plexus</groupId>
 			<artifactId>plexus-utils</artifactId>
 			<version>4.0.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>metricshub-jdbc-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
@@ -87,6 +94,11 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
@@ -152,7 +164,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.61</minimum>
+											<minimum>0.66</minimum>
 										</limit>
 									</limits>
 								</rule>
@@ -184,7 +196,6 @@
 									<include>org.apache.velocity:velocity-engine-core</include>
 									<include>org.apache.velocity.tools:velocity-tools-generic</include>
 									<include>org.apache.commons:commons-lang3</include>
-									<include>org.metricshub:simple-http-java</include>
 									<include>org.metricshub:metricshub-programmable-configuration-extension</include>
 								</includes>
 							</artifactSet>

@@ -23,6 +23,7 @@ package org.metricshub.web.mcp;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.LongNode;
+import java.util.List;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -35,12 +36,17 @@ import org.springframework.stereotype.Service;
  * Ping tool for checking the reachability of a host.
  */
 @Service
-public class PingToolService {
+public class PingToolService implements IMCPToolService {
 
 	/**
 	 * Default timeout for ping operations in seconds.
 	 */
 	private static final long DEFAULT_PING_TIMEOUT = 4L;
+
+	/**
+	 * Default thread pool size for ping operations.
+	 */
+	private static final int DEFAULT_PING_POOL_SIZE = 60;
 
 	/**
 	 * The type of the ping extension.
@@ -60,39 +66,61 @@ public class PingToolService {
 	}
 
 	/**
-	 * Pings a host with a specified timeout to check if it is reachable.
+	 * Pings one or more hosts with a specified timeout to check if they are reachable.
 	 *
-	 * @param hostname the hostname to ping
+	 * @param hostname the hostnames to ping
 	 * @param timeout  the timeout for the ping operation in seconds
-	 * @return a ProtocolCheckResponse containing the hostname, response time, and whether it is reachable or not
+	 * @param poolSize      optional pool size for concurrent ICMP queries; defaults to {@value #DEFAULT_PING_POOL_SIZE} when {@code null} or ≤ 0
+	 * @return a list of ProtocolCheckResponse results for each hostname
 	 */
 	@Tool(
-		description = "Ping a host to check if it is reachable. Returns a ProtocolCheckResponse with the hostname, duration of the ping in milliseconds, and whether it is reachable or not.",
+		description = """
+		Ping one or more hosts to check if they are reachable.
+		Returns a list of ProtocolCheckResponse entries with the hostname,
+		duration of the ping in milliseconds, and whether it is reachable or not.
+		""",
 		name = "PingHost"
 	)
-	public ProtocolCheckResponse pingHost(
-		@ToolParam(description = "The hostname to ping") final String hostname,
-		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout
+	public MultiHostToolResponse<ProtocolCheckResponse> pingHost(
+		@ToolParam(description = "The hostname(s) to ping, provided as a list of strings") final List<String> hostname,
+		@ToolParam(description = "The timeout for the ping operation in seconds", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent ping execution. Defaults to 60.",
+			required = false
+		) final Integer poolSize
 	) {
-		return runPing(hostname, timeout != null ? timeout : DEFAULT_PING_TIMEOUT);
-	}
+		final long resolvedTimeout = timeout != null ? timeout : DEFAULT_PING_TIMEOUT;
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_PING_POOL_SIZE);
 
-	/**
-	 * Pings a host with a specified timeout.
-	 *
-	 * @param hostname the hostname to ping
-	 * @param timeout  the timeout for the ping operation in seconds
-	 * @return a ProtocolCheckResponse containing the hostname, response time, and whether it is reachable or not
-	 */
-	private ProtocolCheckResponse runPing(final String hostname, final long timeout) {
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(PING_EXTENSION_TYPE)
-			.map((IProtocolExtension extension) -> pingHostWithExtensionSafe(hostname, timeout, extension))
-			.orElse(
-				ProtocolCheckResponse.builder().hostname(hostname).errorMessage("The extension is not available").build()
-			);
+			.map((IProtocolExtension extension) ->
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<ProtocolCheckResponse>builder()
+							.hostname(host)
+							.response(pingHostWithExtensionSafe(host, resolvedTimeout, extension))
+							.build(),
+					resolvedPoolSize
+				)
+			)
+			.orElseGet(() -> MultiHostToolResponse.buildError("The ping extension is not available"));
+	}
+
+	/**
+	 * Builds a response entry for a null hostname value.
+	 *
+	 * @return a {@link HostToolResponse} containing an error message indicating the hostname is missing
+	 */
+	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		);
 	}
 
 	/**

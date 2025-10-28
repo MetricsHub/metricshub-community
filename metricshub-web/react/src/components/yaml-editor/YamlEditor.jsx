@@ -1,47 +1,45 @@
-import React, { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { Box, Stack, Typography, IconButton, Tooltip, Chip } from "@mui/material";
-import SaveIcon from "@mui/icons-material/Save";
-import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import React from "react";
+import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap } from "@codemirror/view";
-import YAML from "yaml";
+import "./lint-fallback.css";
+import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 
-const DEFAULT_YAML = `# Example
-service:
-  name: metricshub
-  port: 8080
-  enabled: true
-`;
-
 /**
- * YAML Editor component
- * Props:
- * - value?: string
- * - onChange?: (val: string) => void
- * - onSave?: (val: string) => void
- * - height?: CSS height (default "100%")
- * - readOnly?: boolean (default false)
+ * YAML Editor component.
+ *
+ * @param {{value?:string,onChange?:(val:string)=>void,onSave?:(val:string)=>void,height?:string,readOnly?:boolean}} props The component props.
+ * @returns {JSX.Element} The YAML editor component.
  */
-export default function YamlEditor({ value, onChange, onSave, height = "100%", readOnly = false }) {
+export default function YamlEditor({
+	value,
+	onChange,
+	onSave,
+	canSave = true,
+	fileName,
+	validateFn,
+	height = "100%",
+	readOnly = false,
+	onEditorReady,
+}) {
 	const theme = useTheme();
 
-	const [doc, setDoc] = useState(() => {
+	// expose editor view for parent components (used to scroll to error locations)
+	const viewRef = React.useRef(null);
+
+	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-		return stored ?? value ?? DEFAULT_YAML;
+		return stored ?? value;
 	});
 
-	const [validateResult, setValidateResult] = useState(null); // "ok" | "error" | null
-	const [showValidateCue, setShowValidateCue] = useState(false);
-	const debounceRef = useRef(null); // for live validation debounce
-
 	// Sync external value if provided
-	useEffect(() => {
+	React.useEffect(() => {
 		if (value != null) {
 			setDoc(value);
 			localStorage.setItem(LOCAL_STORAGE_KEY, value);
@@ -49,131 +47,56 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 	}, [value]);
 
 	// Save to localStorage on every change
-	useEffect(() => {
+	React.useEffect(() => {
 		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
 	}, [doc]);
 
-	// Cleanup timers on unmount
-	useEffect(() => {
-		return () => {
-			if (debounceRef.current) clearTimeout(debounceRef.current);
-		};
-	}, []);
-
 	/**
-	 * CodeMirror extensions, memoized to avoid re-creating on every render.
-	 * Includes YAML language support, linting, history, and keymaps.
+	 * Validation extensions for CodeMirror based on provided validateFn and fileName.
+	 * @returns {Array} Array of CodeMirror extensions for validation.
 	 */
-	const extensions = useMemo(() => {
+	const validationExtension = React.useMemo(
+		() => buildYamlLinterExtension(validateFn, fileName, 400),
+		[validateFn, fileName],
+	);
+
+	const extensions = React.useMemo(() => {
 		const km = [...defaultKeymap, ...historyKeymap];
 		if (onSave) {
 			km.unshift({
 				key: "Mod-s",
 				preventDefault: true,
 				run: (view) => {
+					if (!canSave) return true;
 					onSave(view.state.doc.toString());
 					return true;
 				},
 			});
 		}
-		return [cmYaml(), history(), keymap.of(km)];
-	}, [onSave]);
+		return [cmYaml(), history(), keymap.of(km), ...validationExtension];
+	}, [onSave, canSave, validationExtension]);
 
 	/**
 	 * Handle document changes.
 	 * Updates local state, performs live validation, and calls onChange prop if provided.
 	 */
-	const handleChange = useCallback(
+	const handleChange = React.useCallback(
 		(val) => {
-			setShowValidateCue(false);
 			setDoc(val);
 			onChange?.(val);
 		},
 		[onChange],
 	);
 
-	/** Runs actual validation (chip feedback) */
-	const runValidation = useCallback(() => {
-		try {
-			if (doc.trim()) YAML.parse(doc);
-			setValidateResult("ok");
-		} catch {
-			setValidateResult("error");
-		}
-		setShowValidateCue(true);
-	}, [doc]);
-
-	/** Debounce validation: run 1 second after user stops typing */
-	useEffect(() => {
-		if (debounceRef.current) clearTimeout(debounceRef.current);
-		debounceRef.current = setTimeout(runValidation, 1000);
-	}, [doc, runValidation]);
-
-	/**
-	 * Format the YAML document.
-	 * Parses and re-serializes the YAML to ensure consistent formatting.
-	 * If parsing fails, sets error state and shows validation cue.
-	 */
-	const handleFormat = useCallback(() => {
-		try {
-			const obj = doc.trim() ? YAML.parse(doc) : {};
-			const formatted = YAML.stringify(obj, { indent: 2, lineWidth: 100 });
-			setDoc(formatted);
-			onChange?.(formatted);
-		} catch {
-			setValidateResult("error");
-			setShowValidateCue(true);
-		}
-	}, [doc, onChange]);
-
-	const handleSave = useCallback(() => {
-		onSave?.(doc);
-	}, [onSave, doc]);
-
 	return (
 		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
-			{/* Top toolbar */}
-			<Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 0.5 }}>
-				<Typography variant="subtitle2" sx={{ flex: 1 }}>
-					YAML Editor
-				</Typography>
-
-				{/* Feedback chip */}
-				{showValidateCue && (
-					<Chip
-						size="small"
-						label={validateResult === "ok" ? "Valid YAML" : "Invalid YAML"}
-						color={validateResult === "ok" ? "success" : "error"}
-						variant="filled"
-						sx={{ mr: 0.5 }}
-					/>
-				)}
-
-				{/* Format */}
-				<Tooltip title="Format YAML">
-					<IconButton size="small" onClick={handleFormat} aria-label="Format YAML">
-						<AutoFixHighIcon />
-					</IconButton>
-				</Tooltip>
-
-				{/* Save */}
-				{onSave && (
-					<Tooltip title="Save">
-						<IconButton size="small" onClick={handleSave} aria-label="Save YAML">
-							<SaveIcon />
-						</IconButton>
-					</Tooltip>
-				)}
-			</Stack>
-
-			{/* Editor container */}
 			<Box
 				sx={{
 					flex: 1,
 					minHeight: 0,
-					borderTop: 1,
-					borderColor: theme.palette.divider,
+					borderTop: 0,
 					".cm-editor": { height: "100%" },
+					".cm-scroller": { overflow: "auto" },
 				}}
 			>
 				<CodeMirror
@@ -183,6 +106,10 @@ export default function YamlEditor({ value, onChange, onSave, height = "100%", r
 					editable={!readOnly}
 					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
 					theme={theme.palette.mode}
+					onCreateEditor={(editor) => {
+						viewRef.current = editor.view;
+						onEditorReady?.(editor.view);
+					}}
 				/>
 			</Box>
 		</Box>

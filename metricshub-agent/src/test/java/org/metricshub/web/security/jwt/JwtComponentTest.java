@@ -22,13 +22,14 @@ class JwtComponentTest {
 	private JwtComponent jwtComponent;
 
 	@BeforeEach
-	void setup() throws Exception {
+	void setup() {
 		jwtComponent = new JwtComponent();
 
 		// Provide a strong enough secret for HS256 (>= 256 bits)
 		jwtComponent.secret = "this_is_a_very_long_and_secure_test_secret_key_32bytes_min";
 		jwtComponent.initSecretKey();
 		jwtComponent.shortExpire = 3600L;
+		jwtComponent.longExpire = 86400L;
 	}
 
 	@Test
@@ -98,5 +99,43 @@ class JwtComponentTest {
 			"Parsing an invalid token should throw UnauthorizedException"
 		);
 		assertNotNull(ex.getMessage(), "Exception should contain a message");
+	}
+
+	@Test
+	void testShouldGenerateRefreshJwtAndDetectType() {
+		final User user = new User();
+		user.setUsername("bob");
+
+		final String refresh = jwtComponent.generateRefreshJwt(user);
+		assertNotNull(refresh, "Refresh JWT should not be null");
+
+		final Claims claims = jwtComponent.getAllClaimsFromToken(refresh);
+		assertAll(
+			() -> assertEquals("bob", claims.getSubject(), "Subject should match username"),
+			() -> assertNotNull(claims.getIssuedAt(), "iat should be present"),
+			() -> assertNotNull(claims.getExpiration(), "exp should be present"),
+			() -> assertEquals("refresh", String.valueOf(claims.get("type")), "type=refresh must be present")
+		);
+
+		assertTrue(jwtComponent.isRefreshToken(claims), "isRefreshToken should return true for refresh tokens");
+	}
+
+	@Test
+	void testShouldGetRefreshTokenFromRequestCookie() {
+		final MockHttpServletRequest request = new MockHttpServletRequest();
+		request.setCookies(new Cookie(SecurityHelper.REFRESH_TOKEN_KEY, "cookie-refresh"));
+
+		final String fromCookie = jwtComponent.getRefreshTokenFromRequestCookie(request);
+		assertEquals("cookie-refresh", fromCookie, "Should extract refresh token from cookie");
+	}
+
+	@Test
+	void testShouldReturnNullWhenRefreshCookieMissing() {
+		final MockHttpServletRequest request = new MockHttpServletRequest();
+		// Only access cookie present, no refresh cookie
+		request.setCookies(new Cookie(SecurityHelper.TOKEN_KEY, "cookie-access"));
+
+		final String fromRefreshCookie = jwtComponent.getRefreshTokenFromRequestCookie(request);
+		assertNull(fromRefreshCookie, "Should return null when refresh token cookie is absent");
 	}
 }

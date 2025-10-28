@@ -1,41 +1,62 @@
-import { useCallback, useEffect, useState } from "react";
+import * as React from "react";
 import { useAuth } from "../hooks/use-auth";
 import { paths } from "../paths";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 /**
- * AuthGuard component to protect routes
+ * Auth guard component that protects routes that require authentication.
  *
- * @param {*} param0  { children }
- * @returns children if authenticated, otherwise redirects to login
+ * @param {*} param0  The component props
+ * @returns The auth guard component
  */
 export const AuthGuard = ({ children }) => {
-	const { isAuthenticated } = useAuth();
-	const [checked, setChecked] = useState(false);
+	const { isAuthenticated, isInitialized } = useAuth();
+	const [checked, setChecked] = React.useState(false);
 	const navigate = useNavigate();
+	const location = useLocation();
 
-	const check = useCallback(() => {
-		if (!isAuthenticated) {
-			const searchParams = new URLSearchParams({
-				returnTo: globalThis.location.href,
-			}).toString();
-			const href = paths.login + `?${searchParams}`;
-			navigate(href, { replace: true });
-		} else {
+	/**
+	 * capture the first URL that required authentication
+	 */
+	const returnToRef = React.useRef(null);
+	if (!returnToRef.current) {
+		returnToRef.current = `${location.pathname}${location.search}${location.hash}`;
+	}
+
+	/**
+	 * Check authentication status and redirect if necessary.
+	 */
+	const check = React.useCallback(() => {
+		if (!isInitialized) return; // wait for initialize to complete once
+		// if we're already on the login page, don't redirect again
+		if (location.pathname === paths.login) {
 			setChecked(true);
+			return;
 		}
-	}, [isAuthenticated, navigate]);
 
-	// Only check on mount
-	useEffect(() => {
+		// Not authenticated, redirect to login
+		if (!isAuthenticated) {
+			const returnTo = returnToRef.current || "/";
+			const searchParams = new URLSearchParams({ returnTo }).toString();
+			navigate(`${paths.login}?${searchParams}`, { replace: true });
+			setChecked(false);
+			return;
+		}
+
+		// authenticated, allow render
+		setChecked(true);
+	}, [isAuthenticated, isInitialized, navigate, location.pathname]);
+
+	/**
+	 * Run check on mount and when auth state changes.
+	 */
+	React.useEffect(() => {
 		check();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [check]);
 
 	if (!checked) {
 		return null;
 	}
 
-	// User is authenticated
 	return <>{children}</>;
 };

@@ -1,8 +1,8 @@
-package org.metricshub.extension.jawk;
+package org.metricshub.web.dto;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Jawk Extension
+ * MetricsHub Agent
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,26 +21,19 @@ package org.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AccessLevel;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * This class contains the keywords used in the Jawk extension.
+ * DTO for renaming a file.
  */
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-public class KeyWords {
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class FileNewName {
 
-	// Protocol commands and requests
-	public static final String EXECUTE_HTTP_REQUEST = "executeHttpRequest";
-	public static final String EXECUTE_IPMI_REQUEST = "executeIpmiRequest";
-	public static final String EXECUTE_SNMP_GET = "executeSnmpGet";
-	public static final String EXECUTE_SNMP_TABLE = "executeSnmpTable";
-	public static final String EXECUTE_WBEM_REQUEST = "executeWbemRequest";
-	public static final String EXECUTE_WMI_REQUEST = "executeWmiRequest";
-
-	// Computes
-	public static final String JSON_2CSV = "json2csv";
-
-	// General functions
-	public static final String GET_VARIABLE = "getVariable";
+	@NotBlank(message = "Field 'newName' is required")
+	private String newName;
 }
