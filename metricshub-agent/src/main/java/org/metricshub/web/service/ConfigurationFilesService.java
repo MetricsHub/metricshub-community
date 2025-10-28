@@ -582,6 +582,11 @@ public class ConfigurationFilesService {
 	 */
 	public List<ConfigurationFile> listAllBackupFiles() throws ConfigFilesException {
 		final Path backupDir = getBackupDir();
+		// If backup directory does not exist, return an empty list instead of throwing
+		// an exception to avoid a 500 on the frontend.
+		if (!Files.exists(backupDir) || !Files.isDirectory(backupDir)) {
+			return List.of();
+		}
 		try (Stream<Path> files = Files.list(backupDir)) {
 			return files
 				.filter(Files::isRegularFile)
