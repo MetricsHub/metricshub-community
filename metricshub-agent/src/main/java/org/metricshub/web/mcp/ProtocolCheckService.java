@@ -80,6 +80,7 @@ public class ProtocolCheckService implements IMCPToolService {
 	 * @param hostname the target host to check
 	 * @param protocol the name of the protocol to check (e.g., http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, wmi)
 	 * @param timeout optional timeout for the HTTP check in seconds
+	 * @param poolSize optional pool size for concurrent protocol checks; defaults to {@value #DEFAULT_PROTOCOL_CHECK_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
 	 */
 	@Tool(
