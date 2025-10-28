@@ -11,7 +11,7 @@ import { useTheme } from "@mui/material/styles";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
-import GlobalSnackbarProvider from "./components/common/GlobalSnackbar";
+import GlobalSnackbarProvider from "./contexts/global-snackbar-context";
 
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
@@ -98,8 +98,8 @@ export default function App() {
 	return (
 		<ThemeProvider theme={theme}>
 			<CssBaseline />
-			<GlobalSnackbarProvider>
-				<ReduxProvider store={store}>
+			<ReduxProvider store={store}>
+				<GlobalSnackbarProvider>
 					<AuthProvider>
 						<AuthConsumer>
 							{(auth) =>
@@ -137,8 +137,8 @@ export default function App() {
 							}
 						</AuthConsumer>
 					</AuthProvider>
-				</ReduxProvider>
-			</GlobalSnackbarProvider>
+				</GlobalSnackbarProvider>
+			</ReduxProvider>
 		</ThemeProvider>
 	);
 }

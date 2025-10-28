@@ -92,6 +92,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 	 * @param query     the WQL query string to execute
 	 * @param namespace the WMI namespace to use
 	 * @param timeout   the timeout for the query execution in seconds (default: 10s)
+	 * @param poolSize      optional pool size for concurrent WQL queries; defaults to {@value #DEFAULT_WQL_POOL_SIZE} when {@code null} or ≤ 0
 	 * @return a {@link QueryResponse} containing the extension response or an error
 	 */
 	@Tool(

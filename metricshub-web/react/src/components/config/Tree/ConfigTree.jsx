@@ -81,7 +81,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 	// helpers to detect non-file (folder) ids
 
 	// Split & group: normal files vs. backups (folder-style only).
-	const { configFiles, backupsBySet, backupSetItemIds } = React.useMemo(() => {
+	const { configFiles, backupsBySet } = React.useMemo(() => {
 		const cfg = [];
 		const groups = {}; // id -> [{ ...meta, displayName }]
 		const setItemIds = [];
@@ -126,7 +126,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 	return (
 		<Stack sx={{ p: 0 }}>
 			<SimpleTreeView
-				defaultExpandedItems={[ROOT_ID, BACKUP_ROOT_ID, ...backupSetItemIds]}
+				defaultExpandedItems={[ROOT_ID, BACKUP_ROOT_ID]}
 				aria-label="Configuration files"
 				multiSelect={false}
 				selectedItems={selectedIds}
