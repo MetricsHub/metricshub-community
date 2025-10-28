@@ -13,7 +13,7 @@ import {
 	deleteBackupFile,
 	fetchConfigList,
 } from "../../../store/thunks/configThunks";
-import { useSnackbar } from "../../common/GlobalSnackbar";
+import { useSnackbar } from "../../../hooks/use-snackbar";
 
 // Memoized label for the backup group to avoid unnecessary re-renders between parent updates
 const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick }) {

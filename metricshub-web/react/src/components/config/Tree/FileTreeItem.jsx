@@ -11,7 +11,7 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { useAppDispatch } from "../../../hooks/store";
-import { useSnackbar } from "../../common/GlobalSnackbar";
+import { useSnackbar } from "../../../hooks/use-snackbar";
 import {
 	createConfigBackup,
 	restoreConfigFromBackup,

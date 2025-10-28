@@ -55,25 +55,12 @@ export default function EditorHeader({ selected, saving, onSave }) {
 						size="small"
 						startIcon={<SaveIcon />}
 						onClick={onSave}
-						disabled={!selected || !isDirty || saving}
+						disabled={!selected || isBackup || !isDirty || saving}
 						variant="contained"
 					>
 						{saving ? "Saving..." : "Save"}
 					</Button>
 				</Stack>
-			</Stack>
-
-			{/* Right side buttons */}
-			<Stack direction="row" spacing={1} alignItems="center">
-				<Button
-					size="small"
-					startIcon={<SaveIcon />}
-					onClick={onSave}
-					disabled={!selected || isBackup || !isDirty || saving}
-					variant="contained"
-				>
-					Save
-				</Button>
 			</Stack>
 
 			{nonPosErrors.length > 0 && (
