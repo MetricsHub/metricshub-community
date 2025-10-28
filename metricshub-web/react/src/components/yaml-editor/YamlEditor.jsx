@@ -76,14 +76,20 @@ export default function YamlEditor({
 			});
 		}
 
-		// Ensure search navigation centers/follows the current match reliably,
-		// even in complex layouts. We specifically listen for the userEvent
-		// "select.search" which the @codemirror/search plugin sets when
-		// moving between results (Next/Prev).
+		// Ensure search navigation follows matches even when the editor is
+		// nested in other scrollable containers. Using DOM scrollIntoView will
+		// scroll ancestor containers as needed, not just the CM scroller.
 		const followSearchSelection = EditorView.updateListener.of((update) => {
-			if (update.transactions.some((tr) => tr.isUserEvent("select.search"))) {
-				const pos = update.state.selection.main.head;
-				update.view.dispatch({ effects: EditorView.scrollIntoView(pos, { y: "center" }) });
+			if (!update.transactions.length) return;
+			const isSearchMove = update.transactions.some((tr) => tr.isUserEvent("select.search"));
+			if (!isSearchMove) return;
+			const range = update.state.selection.main;
+			const domAt = update.view.domAtPos(range.head);
+			let el = domAt?.node || null;
+			if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
+			if (el && el.scrollIntoView) {
+				// Scroll ancestors as well so the active match is centered reliably
+				el.scrollIntoView({ block: "center", inline: "nearest" });
 			}
 		});
 
