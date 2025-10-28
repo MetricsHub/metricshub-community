@@ -21,4 +21,14 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+/**
+ * Record representing a protocol and hostname pair for MCP tool operations.
+ * <p>
+ * This record is used to encapsulate protocol-specific hostname information
+ * for various monitoring and query operations in the MetricsHub MCP tools.
+ * </p>
+ *
+ * @param protocol the protocol name (e.g., "http", "ssh", "snmp")
+ * @param hostname the target hostname for the protocol operation
+ */
 public record ProtocolHostname(String protocol, String hostname) {}

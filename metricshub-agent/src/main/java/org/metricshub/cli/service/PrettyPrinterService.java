@@ -244,7 +244,8 @@ public class PrettyPrinterService {
 			metricDefinitions =
 				ConfigHelper.fetchMetricDefinitions(
 					telemetryManager.getConnectorStore(),
-					monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID)
+					monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID),
+					monitor.getType()
 				);
 		}
 

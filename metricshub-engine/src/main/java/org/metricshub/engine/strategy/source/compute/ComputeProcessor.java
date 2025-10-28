@@ -65,6 +65,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
@@ -398,7 +399,7 @@ public class ComputeProcessor implements IComputeProcessor {
 		log.debug("Hostname {} - Compute Operation [{}]. AWK Script:\n{}\n", hostname, computeKey, awkScript);
 
 		try {
-			String awkResult = clientsExecutor.executeAwkScript(awkScript, input);
+			String awkResult = AwkExecutor.executeAwk(awkScript, input);
 
 			if (awkResult == null || awkResult.isEmpty()) {
 				log.warn(

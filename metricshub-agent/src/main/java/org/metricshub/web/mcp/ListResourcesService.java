@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
  * </p>
  */
 @Service
-public class ListResourcesService {
+public class ListResourcesService implements IMCPToolService {
 
 	/**
 	 * Holds contextual information about the current agent instance.
@@ -103,15 +103,15 @@ public class ListResourcesService {
 	 * @param resources the resources in the group to process
 	 * @return a map where the key is the resource ID and the value contains its details
 	 */
-	private Map<String, ResourceDetails> listResourceGroupConfiguredResources(
+	private static Map<String, ResourceDetails> listResourceGroupConfiguredResources(
 		final String resourceGroupKey,
-		Map<String, ResourceConfig> resources
+		final Map<String, ResourceConfig> resources
 	) {
 		final Map<String, ResourceDetails> result = new HashMap<>();
 
 		resources.forEach((String resourceKey, ResourceConfig resourceConfig) -> {
 			// Create a resource details object for the host
-			final ResourceDetails resourceDetails = ResourceDetails
+			final var resourceDetails = ResourceDetails
 				.builder()
 				.resourceGroupKey(resourceGroupKey)
 				.protocols(resolveHostConfigurations(resourceConfig.getProtocols()))
@@ -129,7 +129,7 @@ public class ListResourcesService {
 	 * @param configurations the map of protocol names to their configurations
 	 * @return a set of protocol and hostname pairs extracted from the configurations
 	 */
-	private Set<ProtocolHostname> resolveHostConfigurations(Map<String, IConfiguration> configurations) {
+	private static Set<ProtocolHostname> resolveHostConfigurations(final Map<String, IConfiguration> configurations) {
 		// Initialize a set for the protocol hostnames
 		final Set<ProtocolHostname> protocolNames = new HashSet<>();
 

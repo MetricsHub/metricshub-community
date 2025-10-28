@@ -37,6 +37,9 @@ node_modules
 ### Eclipse Metadata ###
 .metadata/
 
+### Eclipse checkstyle plugin ###
+.checkstyle
+
 ### MacOS ###
 .DS_Store
 

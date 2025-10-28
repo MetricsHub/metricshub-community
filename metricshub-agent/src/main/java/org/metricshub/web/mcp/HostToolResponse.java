@@ -1,8 +1,8 @@
-package org.metricshub.engine.awk;
+package org.metricshub.web.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Engine
+ * MetricsHub Agent
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,25 +21,22 @@ package org.metricshub.engine.awk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.OutputStream;
-import java.io.PrintStream;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Overrides the println method of {@link PrintStream}
+ * Response payload produced for a single host when executing an MCP tool.
+ *
+ * @param <T> the type of the payload returned for the targeted host
  */
-public class UniformPrintStream extends PrintStream {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class HostToolResponse<T> {
 
-	/**
-	 * Construct a new instance of the {@link UniformPrintStream}.
-	 *
-	 * @param out {@link OutputStream} that needs to be passed to super class
-	 */
-	public UniformPrintStream(OutputStream out) {
-		super(out);
-	}
-
-	@Override
-	public void println() {
-		this.write('\n');
-	}
+	private String hostname;
+	private T response;
 }

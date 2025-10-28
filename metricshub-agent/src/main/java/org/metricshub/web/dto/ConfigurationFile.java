@@ -1,8 +1,8 @@
-package org.metricshub.extension.jawk;
+package org.metricshub.web.dto;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Jawk Extension
+ * MetricsHub Agent
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,33 +21,21 @@ package org.metricshub.extension.jawk;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
- * An exception class for handling runtime exceptions in the JawkSoruce extension.
+ * DTO representing a configuration file with its metadata.
  */
-public class JawkSourceExtensionRuntimeException extends RuntimeException {
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ConfigurationFile {
 
-	/**
-	 * Default serial version UID
-	 */
-	private static final long serialVersionUID = 1L;
-
-	/**
-	 * Constructs a new {@link JawkSourceExtensionRuntimeException} with the specified message.
-	 *
-	 * @param message the message
-	 */
-	public JawkSourceExtensionRuntimeException(final String message) {
-		super(message);
-	}
-
-	/**
-	 * Constructs a new {@link JawkSourceExtensionRuntimeException} with the specified message and
-	 * cause.
-	 *
-	 * @param message the message
-	 * @param cause   the cause
-	 */
-	public JawkSourceExtensionRuntimeException(final String message, final Throwable cause) {
-		super(message, cause);
-	}
+	private String name;
+	private long size;
+	private String lastModificationTime;
 }

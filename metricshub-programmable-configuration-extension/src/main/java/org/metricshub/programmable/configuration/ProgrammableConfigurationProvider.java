@@ -68,6 +68,7 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 	private static final Map<String, Object> TOOLS = new HashMap<>();
 
 	static {
+		TOOLS.put("sql", new SqlTool());
 		TOOLS.put("http", new HttpTool());
 		TOOLS.put("json", new JsonTool());
 		TOOLS.put("xml", new XmlTool());
@@ -130,7 +131,9 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		try {
 			var loader = new VelocityConfigurationLoader(path, TOOLS);
 			final String yaml = loader.generateYaml();
+
 			if (yaml != null) {
+				log.debug("Generated YAML from template '{}':\n{}", path, yaml);
 				return Optional.of(YAML_MAPPER.readTree(yaml));
 			}
 		} catch (Exception e) {
