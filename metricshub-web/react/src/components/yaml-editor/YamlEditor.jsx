@@ -10,6 +10,7 @@ import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
+const SAVE_DEBOUNCE_MS = 400; // reduce localStorage IO (align with validation debounce)
 
 /**
  * YAML Editor component.
@@ -48,9 +49,16 @@ export default function YamlEditor({
 		}
 	}, [value]);
 
-	// Save to localStorage on every change
+	// Save to localStorage on change with debounce to reduce IO
 	React.useEffect(() => {
-		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
+		const id = setTimeout(() => {
+			try {
+				localStorage.setItem(LOCAL_STORAGE_KEY, doc);
+			} catch {
+				// Local storage is best-effort: ignore errors (quota, private mode, blocked storage)
+			}
+		}, SAVE_DEBOUNCE_MS);
+		return () => clearTimeout(id);
 	}, [doc]);
 
 	/**

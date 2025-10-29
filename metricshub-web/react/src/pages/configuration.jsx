@@ -11,7 +11,6 @@ import { useAppDispatch, useAppSelector } from "../hooks/store";
 import {
 	fetchConfigList,
 	fetchConfigContent,
-	validateConfig,
 	deleteConfig,
 	renameConfig,
 } from "../store/thunks/configThunks";
@@ -23,7 +22,7 @@ import {
 	deleteLocalFile,
 } from "../store/slices/configSlice";
 import EditorHeader from "../components/config/EditorHeader";
-import ConfigEditorContainer from "../components/config/Editor/ConfigEditorContainer";
+import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
 import ConfigTree from "../components/config/Tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
@@ -42,11 +41,9 @@ function ConfigurationPage() {
 		list,
 		filesByName,
 		selected,
-		content,
 		loadingList,
 		loadingContent,
 		saving,
-		validation,
 		error,
 	} = useAppSelector((s) => s.config);
 
@@ -136,29 +133,10 @@ function ConfigurationPage() {
 		[dispatch, list, routeName, navigate],
 	);
 
-	/**
-	 * Whether we have already auto-selected a file.
-	 */
-	const didAutoSelect = React.useRef(false);
+	// Auto-select is handled via routeName: when no route is set and list is available,
+	// we navigate to the first file in the dedicated effect above.
 
-	/**
-	 * Auto-select the first file in the list if none is selected.
-	 */
-	React.useEffect(() => {
-		if (didAutoSelect.current) return;
-		if (!selected && list?.length > 0) {
-			didAutoSelect.current = true;
-			onSelect(list[0].name);
-		}
-	}, [list, selected, onSelect]);
-
-	/**
-	 * Handle validation request from the editor header.
-	 */
-	const onValidate = React.useCallback(() => {
-		if (!selected) return;
-		dispatch(validateConfig({ name: selected, content }));
-	}, [dispatch, selected, content]);
+	// Validation is handled elsewhere; header no longer triggers validation directly.
 
 	/**
 	 * Open the delete confirmation dialog for a given file.
@@ -294,10 +272,7 @@ function ConfigurationPage() {
 						<EditorHeader
 							selected={selected}
 							saving={saving}
-							validation={validation}
-							onValidate={onValidate}
 							onSave={() => editorRef.current?.save?.()}
-							canSave={!!selected && !saving}
 						/>
 					</Box>
 

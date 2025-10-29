@@ -31,7 +31,7 @@ const NavBar = ({ toggleTheme }) => {
 		try {
 			await signOut();
 		} finally {
-			navigate(paths?.auth?.login ?? "/login", { replace: true });
+			navigate(paths.login, { replace: true });
 		}
 	}, [signOut, navigate]);
 
