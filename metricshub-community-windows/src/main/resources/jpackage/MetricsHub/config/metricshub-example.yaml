@@ -1,0 +1,411 @@
+# MetricsHub Configuration
+
+# Default logger level
+loggerLevel: error
+
+# Internal collect interval
+collectPeriod: 1m
+
+# Internal OTLP Exporter configuration
+otel:
+  # MetricsHub Default configuration
+  # otel.exporter.otlp.metrics.endpoint: http://localhost:4317
+  # otel.exporter.otlp.metrics.protocol: grpc # Options include grpc and http/protobuf
+
+# Simple resource configuration
+resources:
+
+  #═══════════════════════════════════════════════════
+  # SNMP v1 protocol configuration
+  #═══════════════════════════════════════════════════
+
+  # server-01:
+  #   attributes:
+  #     host.name: server-01
+  #     host.type: linux
+  #   protocols:
+  #     snmp:
+  #       version: v1
+  #       community: public
+  #       port: 161
+  #       timeout: 120
+
+# Resource Groups configuration
+resourceGroups:
+
+  # Resource Group identifier
+  data-center-1:
+
+     # Adds additional static attributes to all the resources in the group
+    attributes:
+      site: data center 1 # Customize this value with your own site naming convention. (Dedicating 1 collector to 1 site is a good practice.)
+
+    # Adds additional static metrics to all the resources in the group.
+    metrics:
+      hw.site.carbon_intensity: 230 # in g/kWh
+      # Carbon dioxide produced per kilowatt-hour.
+      # The average is 230g/kWh for Europe.
+      # The average is 309g/kWh for Texas, USA.
+      # The average is 40g/kWh for Ontario, Canada.
+      # The average is 712g/kWh for Queensland, Australia.
+      # Source: https://app.electricitymap.org/map
+
+      hw.site.electricity_cost: 0.12 # in $/kWh
+      # Electricity cost per kilowatt-hour. 
+      # The average is $0.12/kWh for non-household in Europe.
+      # The average is $0.159/kWh for non-household in the USA.
+      # The average is $0.117/kWh for non-household in Canada.
+      # The average is $0.225/kWh for non-household in Australia.
+      # Source: https://www.globalpetrolprices.com/electricity_prices/
+
+      hw.site.pue: 1.8
+      # Power Usage Effectiveness. A ratio describing how efficiently a computer data center uses energy. The ideal ratio is 1.
+
+    # Some resource templates can be found below:
+    resources:
+      localhost:
+        attributes:
+          host.name: localhost
+          host.type: windows
+        protocols:
+          wmi:
+            timeout: 120
+
+      #═══════════════════════════════════════════════════
+      # IPMI protocol configuration    
+      #═══════════════════════════════════════════════════
+
+      # server-1:
+      #   attributes:
+      #     host.name: server-1
+      #     host.type: oob
+      #   protocols:
+      #     ipmi:
+      #       username: username
+      #       password: password
+      #       timeout: 120
+
+      #═══════════════════════════════════════════════════
+      # WMI protocol configuration     
+      #═══════════════════════════════════════════════════
+
+      # server-2:
+      #   attributes:
+      #     host.name: server-2
+      #     host.type: win
+      #   protocols:
+      #     wmi:
+      #       timeout: 120
+
+      #═══════════════════════════════════════════════════
+      # WMI protocol configuration with credentials      
+      #═══════════════════════════════════════════════════
+
+      # server-3:
+      #   attributes:
+      #     host.name: server-3
+      #     host.type: win
+      #   protocols:
+      #     wmi:
+      #       username: server-3\username
+      #       password: password
+      #       timeout: 120
+      #   additionalConnectors:
+      #     ConnectorId:
+      #       uses: WindowsService
+      #       force: true
+      #       variables:
+      #         var1: value1
+      #         var2: value2
+
+      #═══════════════════════════════════════════════════
+      # SNMP v1 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-4:
+      #   attributes:
+      #     host.name: server-4
+      #     host.type: linux
+      #   protocols:
+      #     snmp:
+      #       version: v1
+      #       community: public
+      #       port: 161
+      #       timeout: 120
+      #   connectors: [ "!SunF15K" ]
+
+      #═══════════════════════════════════════════════════
+      # SNMP v2c protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-5:
+      #   attributes:
+      #     host.name: server-5
+      #     host.type: oob
+      #   protocols:
+      #     snmp:
+      #       version: v2c
+      #       community: public
+      #       port: 161
+      #       timeout: 120
+
+      #═══════════════════════════════════════════════════
+      # WBEM protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-6:
+      #   attributes:
+      #     host.name: server-6
+      #     host.type: storage
+      #   protocols:
+      #     wbem:
+      #       protocol: https
+      #       port: 5989
+      #       timeout: 120
+      #       username: admin
+      #       password: password
+
+      #═══════════════════════════════════════════════════
+      # HTTP protocol configuration    
+      #═══════════════════════════════════════════════════
+
+      # server-7:
+      #   attributes:
+      #     host.name: server-7
+      #     host.type: storage
+      #   protocols:
+      #     http:
+      #       https: true
+      #       port: 443
+      #       username: username
+      #       password: password
+      #   connectors:
+      #   - +PureStorageREST
+
+      #═══════════════════════════════════════════════════
+      # SSH protocol configuration     
+      #═══════════════════════════════════════════════════
+
+      # server-8:
+      #   attributes:
+      #     host.name: server-8
+      #     host.type: linux
+      #   protocols:
+      #     ssh:
+      #       timeout: 120
+      #       port: 22
+      #       useSudo: true
+      #       useSudoCommands: [ isi, isi_for_array ]
+      #       sudoCommand: sudo
+      #       username: myusername
+      #       password: mypwd
+      #       privateKey: /tmp/ssh-key.txt
+
+      #═══════════════════════════════════════════════════
+      # OSCommand configuration        
+      #═══════════════════════════════════════════════════
+
+      # server-9:
+      #   attributes:
+      #     host.name: server-9
+      #     host.type: linux
+      #   protocols:
+      #     osCommand:
+      #       timeout: 120
+      #       useSudo: true
+      #       useSudoCommands: [ ]
+      #       sudoCommand: sudo
+
+      #═══════════════════════════════════════════════════
+      # WinRM configuration            
+      #═══════════════════════════════════════════════════
+
+      # server-10:
+      #   attributes:
+      #     host.name: server-10
+      #     host.type: win
+      #   protocols:
+      #     winrm:
+      #       timeout: 120
+      #       username: myusername
+      #       password: mypwd
+      #       port: 5985
+      #       protocol: http
+      #       authentications: [ntlm, kerberos]
+
+      #═══════════════════════════════════════════════════
+      # ESXi Host Configuration through WBEM service
+      # Authentication certificate will be requested
+      # from the specified VMware vCenter server
+      #═══════════════════════════════════════════════════
+
+      # server-11:
+      #   attributes:
+      #     host.name: server-11
+      #     host.type: oob
+      #   protocols:
+      #     wbem:
+      #       protocol: https
+      #       port: 5989
+      #       timeout: 120
+      #       username: admin
+      #       password: password
+      #       vcenter: vcenter-server # Optional, for multi-tier authentication only
+
+      #═══════════════════════════════════════════════════
+      # ICMP Ping protocol configuration    
+      #═══════════════════════════════════════════════════
+
+      # server-12:
+      #   attributes:
+      #     host.name: server-12
+      #     host.type: storage
+      #   protocols:
+      #     ping:
+      #       timeout: 10s
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 SHA protocol configuration  
+      #═══════════════════════════════════════════════════
+
+      # server-13:
+      #   attributes:
+      #     host.name: server-13
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: SHA
+      #       privacy: AES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 SHA256 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-14:
+      #   attributes:
+      #     host.name: server-14
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: SHA256
+      #       privacy: AES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 SHA512 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-15:
+      #   attributes:
+      #     host.name: server-15
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: SHA512
+      #       privacy: DES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 SHA224 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-16:
+      #   attributes:
+      #     host.name: server-16
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: SHA224
+      #       privacy: DES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 SHA384 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-17:
+      #   attributes:
+      #     host.name: server-17
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: SHA384
+      #       privacy: DES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # SNMP v3 MD5 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # server-18:
+      #   attributes:
+      #     host.name: server-18
+      #     host.type: linux
+      #   protocols:
+      #     snmpv3:
+      #       port: 161
+      #       timeout: 120s
+      #       contextName: <snmp-v3-context>
+      #       authType: MD5
+      #       privacy: DES
+      #       username: <username>
+      #       privacyPassword: <privacy-password>
+      #       password: <auth-password>
+
+      #═══════════════════════════════════════════════════
+      # JDBC Configuration
+      #═══════════════════════════════════════════════════
+      # server-19:
+      #   attributes:
+      #     host.name: server-19
+      #     host.type: win
+      #   protocols:
+      #     jdbc:
+      #       username: dbuser
+      #       password: dbpassword
+      #       url: jdbc:mysql://server-14:3306/mydatabase
+      #       timeout: 120s
+      #       port: 3306
+      #       type: mysql
+      #       database: mydatabase
+
+      #═══════════════════════════════════════════════════
+      # Host Group SNMP v1 protocol configuration
+      #═══════════════════════════════════════════════════
+
+      # group-1:
+      #   attributes:
+      #     host.name: [server-20, server-21, server-22]
+      #     host.type: linux
+      #   protocols:
+      #     snmp:
+      #       version: v1
+      #       community: public
+      #       port: 161
+      #       timeout: 120

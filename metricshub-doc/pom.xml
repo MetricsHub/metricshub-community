@@ -3,9 +3,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-doc</artifactId>
@@ -16,8 +16,8 @@
 
 	<properties>
 		<communityVersion>${project.version}</communityVersion>
-		<enterpriseVersion>1.1.00</enterpriseVersion>
-		<otelVersion>0.116.0</otelVersion>
+		<enterpriseVersion>3.0.01</enterpriseVersion>
+		<otelVersion>0.136.0</otelVersion>
 	</properties>
 
 	<dependencies>
@@ -117,9 +117,9 @@
 
 			<!-- Generate reference through the MetricsHub Connector Maven Plugin -->
 			<plugin>
-				<groupId>org.sentrysoftware.maven</groupId>
+				<groupId>org.metricshub.maven</groupId>
 				<artifactId>metricshub-connector-maven-plugin</artifactId>
-				<version>1.0.08</version>
+				<version>1.0.12</version>
 				<configuration>
 					<sourceDirectory>${project.basedir}/../metricshub-agent/target/connectors</sourceDirectory>
 					<defaultPlatformIconFilename>default.png</defaultPlatformIconFilename>

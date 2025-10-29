@@ -1,0 +1,63 @@
+Running Command File (/usr/sbin/stm/ui/config/.stmrc).
+
+-- Information --
+Support Tools Manager
+
+
+Version A.28.00
+
+Product Number B4708AA
+
+(C) Copyright Hewlett Packard Co. 1995-2001
+All Rights Reserved
+
+Use of this program is subject to the licensing restrictions described
+in "Help-->On Version".  HP shall not be liable for any damages resulting
+from misuse or unauthorized use of this program.
+
+cstm>selclass type memory;wait;information;wait;infolog
+-- Updating Map --
+Updating Map...
+-- Converting a (1192) byte raw log file to text. --
+Preparing the Information Tool Log for MEMORY on path 49 File ...
+
+.... diderot.some.domain.net  :  10.0.10.254 .... 
+
+-- Information Tool Log for MEMORY on path 49 --
+
+Log creation time: Fri Jul 27 02:27:58 2012
+
+Hardware path: 49
+
+
+Basic Memory Description
+
+    Module Type: MEMORY
+    Total Configured Memory   : 384 MB
+    Page Size: 4096 Bytes
+
+    Memory interleaving is supported on this machine and is ON.
+
+Memory Board Inventory 
+
+   DIMM Slot      Size (MB)
+   ---------      ---------
+          00            256
+          01            128
+   ---------      ---------
+   System Total (MB):   384
+
+Memory Error Log Summary 
+
+    The memory error log is empty.
+
+Page Deallocation Table (PDT)
+
+    PDT Entries Used: 0  
+    PDT Entries Free: 50  
+    PDT Total Size: 50  
+-- Information Tool Log for MEMORY on path 49 --
+View   - To View the file.
+Print  - To Print the file.
+SaveAs - To Save the file.
+Enter Done, Help, Print, SaveAs, or View: [Done] #.

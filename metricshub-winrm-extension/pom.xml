@@ -3,9 +3,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-winrm-extension</artifactId>
@@ -15,11 +15,11 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-win-extension-common</artifactId>
 		</dependency>
 		<dependency>
@@ -37,8 +37,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>winrm</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>winrm-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -73,11 +73,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
@@ -99,6 +94,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -110,6 +106,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -170,14 +167,16 @@
 						<configuration>
 							<artifactSet>
 								<excludes>
-									<exclude>org.sentrysoftware:xflat</exclude>
-									<exclude>org.sentrysoftware:wbem</exclude>
-									<exclude>org.sentrysoftware:vcenter</exclude>
-									<exclude>org.sentrysoftware:tablejoin</exclude>
-									<exclude>org.sentrysoftware:printf4j</exclude>
-									<exclude>org.sentrysoftware:metricshub-engine</exclude>
-									<exclude>org.sentrysoftware:jflat</exclude>
-									<exclude>org.sentrysoftware:jawk</exclude>
+									<exclude>org.metricshub:xflat</exclude>
+									<exclude>org.metricshub:wbem-java</exclude>
+									<exclude>org.metricshub:vcenter-java</exclude>
+									<exclude>org.metricshub:tablejoin</exclude>
+									<exclude>org.metricshub:printf4j</exclude>
+									<exclude>org.metricshub:metricshub-engine</exclude>
+									<exclude>org.metricshub:jflat</exclude>
+									<exclude>org.metricshub:jawk</exclude>
+									<exclude>org.metricshub:snmp-java</exclude>
+									<exclude>org.metricshub:ssh-java</exclude>
 								</excludes>
 							</artifactSet>
 							<transformers>

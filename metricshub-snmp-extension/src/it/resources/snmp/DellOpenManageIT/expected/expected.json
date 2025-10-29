@@ -29,7 +29,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "battery",
     "id" : "DellOpenManage_battery_1.1",
@@ -61,7 +60,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "connector",
     "id" : "connector_DellOpenManage",
@@ -123,7 +121,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "cpu",
     "id" : "DellOpenManage_cpu_1.1",
@@ -190,7 +187,7 @@
       "model" : "PowerEdge R630",
       "id" : "1",
       "type" : "Computer",
-      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102 "
+      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102"
     },
     "conditionalCollection" : {
       "hw.enclosure.energy" : "3191749"
@@ -199,7 +196,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "enclosure",
     "id" : "DellOpenManage_enclosure_1",
@@ -274,7 +270,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.1",
@@ -349,7 +344,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.10",
@@ -424,7 +418,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.11",
@@ -499,7 +492,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.12",
@@ -574,7 +566,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.13",
@@ -649,7 +640,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.14",
@@ -724,7 +714,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.2",
@@ -799,7 +788,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.3",
@@ -874,7 +862,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.4",
@@ -949,7 +936,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.5",
@@ -1024,7 +1010,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.6",
@@ -1099,7 +1084,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.7",
@@ -1174,7 +1158,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.8",
@@ -1249,7 +1232,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.9",
@@ -1259,25 +1241,15 @@
   }, {
     "metrics" : { },
     "attributes" : {
-      "id" : "localhost",
-      "is_endpoint" : "true",
-      "location" : "local",
-      "name" : "localhost"
+      "host.type" : "compute",
+      "os.type" : "linux"
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : {
-      "type" : "host",
-      "attributes" : {
-        "host.type" : "compute",
-        "os.type" : "linux",
-        "host.id" : "localhost"
-      }
-    },
     "discoveryTime" : 1709802895345,
     "type" : "host",
-    "id" : "localhost",
+    "id" : "endpoint_host_localhost",
     "endpointHost" : true,
     "endpoint" : true,
     "is_endpoint" : true
@@ -1337,7 +1309,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.1",
@@ -1400,7 +1371,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.10",
@@ -1463,7 +1433,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.11",
@@ -1526,7 +1495,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.12",
@@ -1589,7 +1557,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.2",
@@ -1652,7 +1619,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.3",
@@ -1715,7 +1681,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.4",
@@ -1778,7 +1743,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.5",
@@ -1841,7 +1805,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.6",
@@ -1904,7 +1867,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.7",
@@ -1967,7 +1929,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.8",
@@ -2030,7 +1991,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.9",
@@ -2069,7 +2029,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "other_device",
     "id" : "DellOpenManage_other_device_1",
@@ -2108,7 +2067,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "other_device",
     "id" : "DellOpenManage_other_device_SDCardDevice-1.1",
@@ -2155,7 +2113,6 @@
       "StatusInformation" : "AC Switch On - AC Power On"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "power_supply",
     "id" : "DellOpenManage_power_supply_1.1",
@@ -2202,7 +2159,6 @@
       "StatusInformation" : "AC Switch On - AC Power On"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "power_supply",
     "id" : "DellOpenManage_power_supply_1.2",
@@ -2277,7 +2233,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.1",
@@ -2352,7 +2307,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.2",
@@ -2427,7 +2381,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.3",
@@ -2465,7 +2418,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.1",
@@ -2503,7 +2455,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.10",
@@ -2541,7 +2492,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.11",
@@ -2579,7 +2529,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.12",
@@ -2617,7 +2566,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.13",
@@ -2655,7 +2603,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.14",
@@ -2693,7 +2640,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.15",
@@ -2731,7 +2677,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.16",
@@ -2769,7 +2714,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.17",
@@ -2807,7 +2751,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.18",
@@ -2845,7 +2788,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.19",
@@ -2883,7 +2825,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.2",
@@ -2921,7 +2862,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.20",
@@ -2959,7 +2899,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.21",
@@ -2997,7 +2936,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.22",
@@ -3046,7 +2984,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.23",
@@ -3095,7 +3032,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.24",
@@ -3133,7 +3069,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.3",
@@ -3171,7 +3106,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.4",
@@ -3209,7 +3143,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.5",
@@ -3247,7 +3180,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.6",
@@ -3285,7 +3217,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.7",
@@ -3323,7 +3254,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.8",
@@ -3361,7 +3291,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709802894810,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.9",

@@ -44,7 +44,15 @@
 			<appender-ref ref="Console" />
 		</Root>
 		<!--	Requests handling logger	-->
-		<logger name="org.sentrysoftware" level="off">
+		<logger name="org.metricshub" level="off">
+			<appender-ref ref="Routing">
+				<ThreadContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
+					<KeyValuePair key="loggerLevel" value="OFF" />
+				</ThreadContextMapFilter>
+			</appender-ref>
+		</logger>
+		<!--	Requests handling logger	-->
+		<logger name="org.springframework" level="off">
 			<appender-ref ref="Routing">
 				<ThreadContextMapFilter onMatch="DENY" onMismatch="ACCEPT">
 					<KeyValuePair key="loggerLevel" value="OFF" />
@@ -52,7 +60,7 @@
 			</appender-ref>
 		</logger>
 		<!--	Agent logger	-->
-		<logger name="org.sentrysoftware.metricshub.agent" level="trace">
+		<logger name="org.metricshub.agent" level="trace">
 			<appender-ref ref="Console" />
 		</logger>
 	</Loggers>

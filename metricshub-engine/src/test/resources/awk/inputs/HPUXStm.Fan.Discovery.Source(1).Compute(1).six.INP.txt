@@ -1,0 +1,312 @@
+Running Command File (/usr/sbin/stm/ui/config/.stmrc).
+
+-- Information --
+Support Tools Manager
+
+
+Version A.49.10
+
+Product Number B4708AA
+
+(C) Copyright Hewlett Packard Co. 1995-2005
+All Rights Reserved
+
+Use of this program is subject to the licensing restrictions described
+in "Help-->On Version".  HP shall not be liable for any damages resulting
+from misuse or unauthorized use of this program.
+
+cstm>select device 1;info;wait;infolog;cds
+-- Updating Map --
+Updating Map...
+-- Converting a (14712) byte raw log file to text. --
+Preparing the Information Tool Log for system on path system File ...
+
+.... thoreau.some.domain.net  :  10.0.10.221 .... 
+
+-- Information Tool Log for system on path system --
+
+Log creation time: Wed Dec 19 16:00:57 2012
+
+Hardware path: system
+
+
+System Information for (thoreau)
+   HPUX Model Number......: L1000
+   HPUX Model String......: 9000/800/L1000-5X
+   Original Product Number:  A5576B
+   Current Product Number.: 
+   System Serial Number...: USS412452H
+   Hversion...............: 0x5d80
+   Sversion...............: 0x491
+   Software Capabilities..: 0x100000f0
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+CPU Information:
+   Number of CPUs in the system = 1
+
+CPU Map
+cpu  -----------------------------------------
+slot | 00 | 01 | 02 | 03 | 04 | 05 | 06 | 07 |
+state|caM |    |    |    |    |    |    |    |
+     -----------------------------------------
+08 | 09 | 10 | 11 | 12 | 13 | 14 | 15 |
+state|    |    |    |    |    |    |    |    |
+     -----------------------------------------
+     c - Configured                  (CPU powered on)
+     d - De-configured               (CPU powered off)
+     a - Active                      (configured and processes running)
+     i - Inactive                    (configured and idle)
+     M - Monarch CPU                 (always Active)
+     C - Marked for re-configuration (Configured after next boot)
+     D - Marked for de-configuration (De-configured after next boot)
+
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+Cabinet 0
+
+Cabinet 0 Hardware Inventory:
+   Component                        Present   Failure    State
+   ---------                        -------   -------   -------
+   Cabinet Fans (blowers)               8         0     unknown
+   Cabinet Power Supplies               2         1     unknown
+   I/O Power Supplies                   0                      
+   BackPlane Power Supplies             0                      
+
+   unknown - Firmware is unable to determine the state of the hardware.
+
+Cabinet 0 Slot Locations:
+                   Hardware Component Map (locations 00-31)
+       -----------------------------------------------------------------
+       |0|0|0|0|0|0|0|0|0|0|1|1|1|1|1|1|1|1|1|1|2|2|2|2|2|2|2|2|2|2|3|3|
+       |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+       |-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|-|
+cf(b)  |p|p|p|p|p|p|p|p| | | | | | | | | | | | | | | | | | | | | | | | |
+cps    |p|F| | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+       -----------------------------------------------------------------
+       s - Slot available for the hardware component.
+       p - Component present at the marked location.
+       F - Component failed at the marked location.
+cf(b)- Cabinet Fan (blower)
+cps  - Cabinet Power Supply
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+Field Replaceable Unit Identification Data (FRUID)
+Total FRUID's found = 9
+
+FRU Handle: 0x1
+
+FRU Physical Location:   0x00ffff0001ffff69
+   FRU Source          = 0x6 (platform entity)
+   Source Detail       = 0x9 (backplane)
+   Cabinet Location    = 0x0
+   Level 4 (Impl. Dep.)= 0x0
+   Level 5 (Impl. Dep.)= 0x1
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:           SYS_BD 0x20202020 20202020 20205359 535f4244
+Part Number..........: A5191-60016      0x41353139 312d3630 303136
+Serial Number........: A56405408430     0x41353634 30353430 38343330
+Engineering Date Code: 4048             0x34303438      
+Art Work Revision....: A4               0x4134          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....: USS412452H       0x55535334 31323435 32482020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x2
+
+FRU Physical Location:   0x00ffff0002ffff69
+   FRU Source          = 0x6 (platform entity)
+   Source Detail       = 0x9 (backplane)
+   Cabinet Location    = 0x0
+   Level 4 (Impl. Dep.)= 0x0
+   Level 5 (Impl. Dep.)= 0x2
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:          IO_BP   0x20202020 20202020 20494f5f 42502020
+Part Number..........: A5191-60002      0x41353139 312d3630 303032
+Serial Number........: 52SCHN9XET       0x35325343 484e3958 45542020
+Engineering Date Code: 4035             0x34303335      
+Art Work Revision....: A2               0x4132          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x3
+
+FRU Physical Location:   0x000000ffff01ff85
+   FRU Source          = 0x8 (I/O device)
+   Source Detail       = 0x5 (I/O device adapter)
+   Cabinet Location    = 0x0
+   Card Cage Location  = 0x0
+   Backplane Location  = 0x0
+   I/O Slot Number     = 0x1
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............: LAN_SCSI_CORE_IO 0x4c414e5f 53435349 5f434f52 455f494f
+Part Number..........: A5191-60211      0x41353139 312d3630 323131
+Serial Number........:   52SCHJ9UT3     0x20203532 5343484a 39555433
+Engineering Date Code: 4106             0x34313036      
+Art Work Revision....: B                0x4220          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x4
+
+FRU Physical Location:   0x000000ffff02ff85
+   FRU Source          = 0x8 (I/O device)
+   Source Detail       = 0x5 (I/O device adapter)
+   Cabinet Location    = 0x0
+   Card Cage Location  = 0x0
+   Backplane Location  = 0x0
+   I/O Slot Number     = 0x2
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:      GSP_CORE_IO 0x20202020 20475350 5f434f52 455f494f
+Part Number..........: A6144-60012      0x41363134 342d3630 303132
+Serial Number........: 52SCHG9Q5E       0x35325343 48473951 35452020
+Engineering Date Code: 4120             0x34313230      
+Art Work Revision....: C                0x4320          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x5
+
+FRU Physical Location:   0x00ffff0004ffff69
+   FRU Source          = 0x6 (platform entity)
+   Source Detail       = 0x9 (backplane)
+   Cabinet Location    = 0x0
+   Level 4 (Impl. Dep.)= 0x0
+   Level 5 (Impl. Dep.)= 0x4
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:   DISK_BACKPLANE 0x20204449 534b5f42 41434b50 4c414e45
+Part Number..........: A5191-60004      0x41353139 312d3630 303034
+Serial Number........:   52SCHJA0MS     0x20203532 5343484a 41304d53
+Engineering Date Code: 3933             0x33393333      
+Art Work Revision....: A3               0x4133          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x6
+
+FRU Physical Location:   0x00ffffffffffff67
+   FRU Source          = 0x6 (platform entity)
+   Source Detail       = 0x7 (power monitor)
+   Cabinet Location    = 0x0
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:         PLAT_MON 0x20202020 20202020 504c4154 5f4d4f4e
+Part Number..........: A5191-60010      0x41353139 312d3630 303130
+Serial Number........:   52SSHG0275     0x20203532 53534847 30323735
+Engineering Date Code: 4122             0x34313232      
+Art Work Revision....: A4               0x4134          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x7
+
+FRU Physical Location:   0x00ffffffff02ff43
+   FRU Source          = 0x4 (power entity)
+   Source Detail       = 0x3 (low voltage DC power)
+   Cabinet Location    = 0x0
+   Slot Number         = 0x2
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:  POWER_CONVERTER 0x20504f57 45525f43 4f4e5645 52544552
+Part Number..........:   0950-3470      0x20203039 35302d33 343730
+Serial Number........: 70010CA00794     0x37303031 30434130 30373934
+Engineering Date Code:                  0x20202020      
+Art Work Revision....:                  0x2020          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x8
+
+FRU Physical Location:   0x0000ff00000aff74
+   FRU Source          = 0x7 (memory)
+   Source Detail       = 0x4 (SIMM or DIMM)
+   Cabinet Location    = 0x0
+   Card Cage Location  = 0x0
+   Cell Location       = 0x0
+   Extender Location   = 0x0
+   DIMMS Rank          = 0xa
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:         DIMM_256 0x20202020 20202020 44494d4d 5f323536
+Part Number..........: A5797-60001      0x41353739 372d3630 303031
+Serial Number........: A56E03562654     0x41353645 30333536 32363534
+Engineering Date Code: 3938             0x33393338      
+Art Work Revision....: A4               0x4134          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+
+=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=-+-=
+
+
+FRU Handle: 0x9
+
+FRU Physical Location:   0x0000ff00000bff74
+   FRU Source          = 0x7 (memory)
+   Source Detail       = 0x4 (SIMM or DIMM)
+   Cabinet Location    = 0x0
+   Card Cage Location  = 0x0
+   Cell Location       = 0x0
+   Extender Location   = 0x0
+   DIMMS Rank          = 0xb
+
+FRUID Field            ascii            hex
+-----------            -----            ---
+FRU Name.............:         DIMM_256 0x20202020 20202020 44494d4d 5f323536
+Part Number..........: A5797-60001      0x41353739 372d3630 303031
+Serial Number........: A56E03562907     0x41353645 30333536 32393037
+Engineering Date Code: 3938             0x33393338      
+Art Work Revision....: A4               0x4134          
+Scan Revision........:                  0x0000          
+FRUID Definition Rev.: A                0x41            
+FRU Specific Info....:                  0x20202020 20202020 20202020 20202020
+-- Information Tool Log for system on path system --
+View   - To View the file.
+Print  - To Print the file.
+SaveAs - To Save the file.
+Enter Done, Help, Print, SaveAs, or View: [Done] #.

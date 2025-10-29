@@ -22,7 +22,7 @@ and provide the password to encrypt.
 
 ## Using Encrypted Passwords
 
-You can paste the encrypted password in your `metricshub.yaml` configuration file:
+You can paste the encrypted password in your configuration file:
 
 ```yaml
 resourceGroups:
@@ -42,7 +42,7 @@ resourceGroups:
 
 ## The *Master Password*
 
-On first use, the `metricshub-encrypt` command will create the **security/metricshub-keystore.p12** file to store a unique and random *master password*. This *master password* is used to encrypt passwords with `metricshub-encrypt`, and decrypt them from **config/metricshub.yaml**.
+On first use, the `metricshub-encrypt` command will create the **security/metricshub-keystore.p12** file to store a unique and random *master password*. This *master password* is used to encrypt passwords with `metricshub-encrypt`, and decrypt them from **config/<your_configuration_file>**.
 
 The **metricshub-keystore.p12** file must not be modified, as this would prevent decryption from working. Any password encrypted with a given **metricshub-keystore.p12** *master password* must be decrypted with the exact same **metricshub-keystore.p12** file.
 

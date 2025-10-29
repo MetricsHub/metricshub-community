@@ -79,6 +79,14 @@ To get additional details about the operations performed by the *MetricsHub Engi
 
 ## Examples
 
+### Java Application, JMX
+
+```batch
+$ metricshub CASSANDRA-01 -t linux --jmx --jmx-port 7199
+```
+
+This command will connect to the `CASSANDRA-01` database server using the `JMX` protocol on port `7199`. If a known JMX server is running on this host, `metricshub` will leverage it to discover database components and collect various metrics.
+
 ### Linux, SNMP v1
 
 ```batch
@@ -128,7 +136,7 @@ This command will connect to the `CISC03` SAN switch (`sto`rage) using `SNMP` ve
 ### Storage System, SNMP v3
 
 ```batch
-$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retryIntervals 5,10,15 --snmpv3-privacy-password MyPrivacySECRET
+$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retry-intervals 5000,10000,15000 --snmpv3-privacy-password MyPrivacySECRET
 ```
 
 This command will connect to the `STOR02` storage system (`storage`) using `SNMP` version `3`.
@@ -136,7 +144,7 @@ This command will connect to the `STOR02` storage system (`storage`) using `SNMP
 ### Windows, JDBC (MySQL)
 
 ```batch
-$ metricshub WIN06 -t win --jdbc --jdbc-username USERA --jdbc-password MYSECRET --jdbc-port 3306 --jdbc-database MyDB --jdbc-type mysql -c +MySql
+$ metricshub WIN06 -t win --jdbc --jdbc-username USERA --jdbc-password MYSECRET --jdbc-port 3306 --jdbc-type mysql -c +MySql
 ```
 
 This command will connect to the `WIN06` `Win`dows system using the `JDBC` configuration to access the database and execute SQL queries as `USERA`.
@@ -302,7 +310,7 @@ Use the `--monitors` option to filter the monitor types according to the specifi
 To display only specific monitor types, use the `--monitors` option with a `+` sign before each monitor type you want to include. For example, to display only memory and file system monitors:
 
 ```batch
-$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retryIntervals 5,10,15 --snmpv3-privacy-password MyPrivacySECRET --monitors +memory,+file_system
+$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retry-intervals 5000,10000,15000 --snmpv3-privacy-password MyPrivacySECRET --monitors +memory,+file_system
 ```
 
 ### Example 2: Exclude a Set of Monitor Types
@@ -310,6 +318,6 @@ $ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USER
 To exclude specific monitor types, use the `--monitors` option with a `!` sign before each monitor type you want to exclude. For example, to exclude CPU and disk monitors:
 
 ```batch
-$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retryIntervals 5,10,15 --snmpv3-privacy-password MyPrivacySECRET --monitors !cpu,!disk
+$ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retry-intervals 5000,10000,15000 --snmpv3-privacy-password MyPrivacySECRET --monitors !cpu,!disk
 ```
 

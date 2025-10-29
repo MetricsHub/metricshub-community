@@ -1,0 +1,11 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  jmxSource:
+    type: jmx
+    objectName: org.metricshub.extension.jmx:type=JmxMBean,scope=*
+    attributes: [ Name ]
+    keyProperties: [ scope ]
+    forceSerialization: false

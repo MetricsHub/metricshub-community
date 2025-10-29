@@ -1,31 +1,118 @@
-keywords: agent, configuration, protocols, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
+keywords: agent, configuration, protocols, jmx, snmp, wbem, wmi, ping, ipmi, ssh, http, os command, winrm, sites
 description: How to configure the MetricsHub Agent to collect metrics from a variety of resources with various protocols.
 
 # Monitoring Configuration
 
-<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=3|id=toc} -->
 
-**MetricsHub** extracts metrics from the resources configured in the `config/metricshub.yaml` file.
-These **resources** can be hosts, applications, or other components running in your IT infrastructure.
+**MetricsHub** extracts metrics from the resources defined in the configuration file(s). These **resources** can be hosts, applications, or any components running in your IT infrastructure.
 Each **resource** is typically associated with a physical location, such as a data center or server room, or a logical location, like a business unit.
 In **MetricsHub**, these locations are referred to as **sites**.
 In highly distributed infrastructures, multiple resources can be organized into **resource groups** to simplify management and monitoring.
 
-To reflect this organization, you are asked to define your **resource group** first, followed by your **site** and its corresponding **resources** in the `config/metricshub.yaml` file stored in:
+To reflect this organization, you are asked to define your **resource group** first, followed by your **site** and its corresponding **resources** in one or multiple `.yaml` or `.yml` configuration file(s) stored in:
 
 > * `C:\ProgramData\MetricsHub\config` on Windows systems
 > * `./metricshub/lib/config` on Linux systems
 
 > **Important**: We recommend using an editor supporting the
-[Schemastore](https://www.schemastore.org/json#editors) to edit **MetricsHub**'s configuration YAML
+[Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML
  files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
-## Step 1: Configure resource groups
+## Step 1: Structure your configuration
+
+Before diving into your monitoring setup, take a moment to choose the right configuration structure. A thoughtful approach will make ongoing maintenance and updates much easier.
+
+Starting from version 2.0.00, you can choose between:
+
+* One single `metricshub.yaml` configuration file(ideal for small-scale environment)
+* Multiple configuration files. Recommended for larger environments with hundreds or thousands of systems, this structure allows you to:
+  * separate concerns (e.g., global settings, license, monitored site, monitored resource)
+  * dynamically manage configuration through templating or automation scripts.
+
+> Note: If you’re currently using a single configuration file and plan to split it into multiple files, refer to the [Upgrades Notes](../upgrade.md#support-for-multiple-configuration-files) for guidance.
+
+### Recommendations for multiple configuration files
+
+For clear and maintainable configurations, we recommend the following structure:
+
+```
+config/
+├── global-settings.yaml         # Collect period, logging, otel settings, etc.
+├── license.yaml                 # License configuration for the Enterprise edition
+├── <site>-resources.yaml        # Defines all resources monitored at the <site> location
+├── <resource-id>-resource.yaml  # Your resource configuration
+├── resources.vm                 # Your programmatic resources configuration (.vm extension)
+├── ...
+```
+
+Each file must contain a valid fragment of the complete configuration. The **MetricsHub Agent** parses all the `.yaml` or `.yml` files with valid syntax found in the `config/` directory`.
+
+> **To prevent configuration conflicts, duplicates, or unintended overrides**:
+
+* Move backup or example files to a subfolder such as `config/examples/` or `config/backups/`.
+* Disable unused files by renaming them with a non-YAML extension (e.g., `.bak`, `.txt`, or `.disabled`).
+
+#### Examples
+
+**`global-settings.yaml`**
+
+```yaml
+collectPeriod: 1m
+loggerLevel: info
+enableSelfMonitoring: true
+```
+
+**`license.yaml`**
+
+```yaml
+license:
+  product: MetricsHub Enterprise
+  organization: YOUR_ORGANIZATION
+  expiresOn: EXPIRATION_DATE
+  resources: NUMBER_OF_RESOURCES
+  key: YOUR_LICENSE_KEY
+```
+
+**`paris-resources.yaml`**
+
+```yaml
+resourceGroups:
+  paris:
+    attributes:
+      site: paris-dc
+    resources:
+      server-1:
+        attributes:
+          host.name: paris-server-1
+          host.type: linux
+        protocols:
+          ssh:
+            username: root
+            password: changeme
+```
+
+**`paris-server-2-resource.yaml`**
+
+```yaml
+resources:
+  server-2:
+    attributes:
+      site: paris-dc
+      host.name: paris-server-2
+      host.type: linux
+    protocols:
+      ssh:
+        username: root
+        password: changeme
+```
+
+## Step 2: Configure resource groups
 
 > Note: For centralized infrastructures, `resourceGroups` are not required.
- Simply configure resources as explained in [Step 2](./configure-monitoring.html#step-2-configure-resources).
+ Simply configure resources as explained in [Step 3](./configure-monitoring.md#step-3-configure-resources).
 
 Create a resource group for each site to be monitored under the `resourceGroups:` section:
 
@@ -52,11 +139,13 @@ resourceGroups:
 
 At this stage, you can configure sustainability metrics reporting. For more details, refer to the [Sustainability](configure-sustainability-metrics.html) page.
 
-## Step 2: Configure resources
+## Step 3: Configure resources
+
+### Manual Configuration
 
 **Resources** can either be configured:
 
-* under the `resources` section located at the top of the `config/metricshub.yaml` file *(recommended for centralized infrastructures)*
+* under the `resources` section located at the top of the configuration file *(recommended for centralized infrastructures)*
 
     ```yaml
     attribute:
@@ -88,7 +177,7 @@ At this stage, you can configure sustainability metrics reporting. For more deta
 The syntax to adopt for configuring your resources will differ whether your resources have unique
 or similar characteristics (such as device type, protocols, and credentials).
 
-### Syntax for unique resources
+#### Syntax for unique resources
 
 ```yaml
 resources:
@@ -99,7 +188,7 @@ resources:
     <protocol-configuration> 
 ```
 
-### Syntax for resources sharing similar characteristics
+#### Syntax for resources sharing similar characteristics
 
 ```yaml
 resources:
@@ -127,10 +216,10 @@ Whatever the syntax adopted, replace:
   * [`vms`](https://metricshub.com/docs/latest/connectors/tags/hpe.html) for HP Open VMS systems.
   Check out the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html) to find out which type corresponds to your system.
 * `<protocol-configuration>` with the protocol(s) **MetricsHub** will use to communicate with the resources:
- [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
+ [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`jmx`](./configure-monitoring.md#jmx), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
  Refer to [Protocols and Credentials](./configure-monitoring.html#protocols-and-credentials) for more details.
 
-> Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the `config/metricshub.yaml` file to call your environment variables.
+> Note: You can use the `${esc.d}{env::ENV_VARIABLE_NAME}` syntax in the configuration file to call your environment variables.
 
 **Example**
 
@@ -166,9 +255,9 @@ resourceGroups:
         <protocol-configuration>
 ```
 
-### Protocols and credentials
+#### Protocols and credentials
 
-#### HTTP
+##### HTTP
 
 Use the parameters below to configure the HTTP protocol:
 
@@ -202,7 +291,7 @@ resourceGroups:
             timeout: 60
 ```
 
-#### ICMP Ping
+##### ICMP Ping
 
 Use the parameters below to configure the ICMP ping protocol:
 
@@ -229,7 +318,7 @@ resourceGroups:
             timeout: 10s
 ```
 
-#### IPMI
+##### IPMI
 
 Use the parameters below to configure the IPMI protocol:
 
@@ -258,7 +347,7 @@ resourceGroups:
             password: mypwd
 ```
 
-#### JDBC
+##### JDBC
 
 Use the parameters below to configure JDBC to connect to a database:
 
@@ -291,14 +380,44 @@ resourceGroups:
             hostname: my-host-02
             username: dbuser
             password: dbpassword
-            url: jdbc:mysql://my-host-02:3306/mydatabase
+            url: jdbc:mysql://my-host-02:3306
             timeout: 120s
             type: mysql
             port: 3306
-            database: mydatabase
 ```
 
-#### OS commands
+##### JMX
+
+Use the parameters below to configure the JMX protocol:
+
+| Parameter | Description                                                                                       |
+|-----------|---------------------------------------------------------------------------------------------------|
+| jmx       | JMX configuration used to access the host.                                                        |
+| hostname  | The name or IP address of the resource. If not specified, the `host.name` attribute will be used. |
+| timeout   | How long until the JMX query times out (Default: 30s).                                            |
+| username  | Name used to authenticate against the JMX service.                                                |
+| password  | Password used to authenticate against the JMX service.                                            |
+| port      | The port number used to connect to the JMX service (Default: 1099).                               |
+
+**Example**
+
+```yaml
+resourceGroups:
+  boston:
+    attributes:
+      site: boston
+    resources:
+      db-host:
+        attributes:
+          host.name: cassandra-01
+          host.type: linux
+        protocols:
+          jmx:
+            timeout: 30s
+            port: 7199
+```
+
+##### OS commands
 
 Use the parameters below to configure OS Commands that are executed locally:
 
@@ -331,7 +450,7 @@ resourceGroups:
             sudoCommand: sudo
 ```
 
-#### SSH
+##### SSH
 
 Use the parameters below to configure the SSH protocol:
 
@@ -373,7 +492,7 @@ resourceGroups:
 
 ```
 
-#### SNMP
+##### SNMP
 
 Use the parameters below to configure the SNMP protocol:
 
@@ -417,23 +536,23 @@ resourceGroups:
             timeout: 120s
 ```
 
-#### SNMP version 3
+##### SNMP version 3
 
 Use the parameters below to configure the SNMP version 3 protocol:
 
-| Parameter       | Description                                                                                          |
-|-----------------|------------------------------------------------------------------------------------------------------|
-| snmpv3          | Protocol used to access the host using SNMP version 3.                                               |
-| hostname        | The name or IP address of the resource. If not specified, the `host.name` attribute will be used.    |
-| timeout         | How long until the SNMP request times out (Default: 120s).                                           |
-| port            | The SNMP port number used to perform SNMP version 3 queries (Default: 161).                          |
-| contextName     | The name of the SNMP version 3 context, used to identify the collection of management information.   |
-| authType        | The SNMP version 3 authentication protocol (MD5, SHA or NoAuth) to ensure message authenticity.      |
-| privacy         | The SNMP version 3 privacy protocol (DES, AES or NONE) used to encrypt messages for confidentiality. |
-| username        | The username used for SNMP version 3 authentication.                                                 |
-| privacyPassword | The password used to encrypt SNMP version 3 messages for confidentiality.                            |
-| password        | The password used for SNMP version 3 authentication.                                                 |
-| retryIntervals  | The intervals (in milliseconds) between SNMP request retries.                                        |
+| Parameter       | Description                                                                                                                     |
+|-----------------|---------------------------------------------------------------------------------------------------------------------------------|
+| snmpv3          | Protocol used to access the host using SNMP version 3.                                                                          |
+| hostname        | The name or IP address of the resource. If not specified, the `host.name` attribute will be used.                               |
+| timeout         | How long until the SNMP request times out (Default: 120s).                                                                      |
+| port            | The SNMP port number used to perform SNMP version 3 queries (Default: 161).                                                     |
+| contextName     | The name of the SNMP version 3 context, used to identify the collection of management information.                              |
+| authType        | The SNMP version 3 authentication protocol (MD5, SHA, SHA224, SHA256, SHA512, SHA384 or NoAuth) to ensure message authenticity. |
+| privacy         | The SNMP version 3 privacy protocol (DES, AES, AES192, AES256 or NONE) used to encrypt messages for confidentiality.            |
+| username        | The username used for SNMP version 3 authentication.                                                                            |
+| privacyPassword | The password used to encrypt SNMP version 3 messages for confidentiality.                                                       |
+| password        | The password used for SNMP version 3 authentication.                                                                            |
+| retryIntervals  | The intervals (in milliseconds) between SNMP request retries.                                                                   |
 
 **Example**
 
@@ -459,7 +578,7 @@ resourceGroups:
             password: myAuthPassword 
 ```
 
-#### WBEM
+##### WBEM
 
 Use the parameters below to configure the WBEM protocol:
 
@@ -495,7 +614,7 @@ resourceGroups:
             password: mypwd
 ```
 
-#### WMI
+##### WMI
 
 Use the parameters below to configure the WMI protocol:
 
@@ -526,7 +645,6 @@ resourceGroups:
             password: mypwd
 ```
 
-#### WinRM
 
 Use the parameters below to configure the WinRM protocol:
 
@@ -563,7 +681,165 @@ resourceGroups:
             authentications: [ntlm]
 ```
 
-## Step 3: Configure additional settings
+### Programmable Configuration
+
+You can write simple [Velocity scripts](https://velocity.apache.org) to automatically configure your monitoring resources by pulling data from an HTTP portal (like NetBox), reading local files, SQL databases, or parsing JSON content.
+
+To fetch and transform this data into valid configuration blocks, use [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html) in the `.vm` template files located under the `/config` directory, such as:
+
+* `${esc.d}http` for making HTTP requests
+* `${esc.d}file` for reading local files
+* `${esc.d}json` for parsing JSON data
+* `${esc.d}collection` for splitting strings or manipulating collections
+* `${esc.d}sql` for executing SQL queries on a database
+* `${esc.d}env` for retrieving environment variables. Use `${esc.d}env.get("<ENV_VARIABLE_NAME>")`, where `<ENV_VARIABLE_NAME>` is the name of your system environment variable.
+* `${esc.d}date`, `${esc.d}number`, `${esc.d}esc`, and many others.
+
+> Reminder: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `${esc.h}` for directives, `${esc.h}${esc.h}` for comments, and `${esc.d}` for variables.
+
+##### `${esc.d}http.execute` tool arguments
+
+Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates. It supports the following arguments:
+
+| Argument   | Description                                                    |
+|------------|----------------------------------------------------------------|
+| `url`      | **(Required)** The HTTP(S) endpoint to call.                   |
+| `method`   | HTTP method (`GET`, `POST`, etc.). (Default: `GET`).           |
+| `username` | Username used for authentication.                              |
+| `password` | Password used for authentication.                              |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs. |
+| `body`     | Payload to send with the request (e.g., for `POST`).           |
+| `timeout`  | Request timeout in seconds. (Default: `60`).                   |
+
+> Note: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
+
+##### Example: Loading resources from an HTTP API
+
+Suppose your API endpoint at `https://cmdb/servers` returns:
+
+```json
+[
+  {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
+  {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
+]
+```
+
+You can dynamically create resource blocks using:
+
+```velocity
+
+resources:
+${esc.h}set(${esc.d}hostList = ${esc.d}json.parse(${esc.d}http.get({ "url": "https://cmdb/servers" }).body).root())
+
+${esc.h}foreach(${esc.d}host in ${esc.d}hostList)
+  ${esc.h}if(${esc.d}host.OSType == "win")
+  ${esc.d}host.hostname:
+    attributes:
+      host.name: ${esc.d}host.hostname
+      host.type: windows
+    protocols:
+      ping:
+      wmi:
+        timeout: 120
+        username: ${esc.d}host.adminUsername
+        password: ${esc.d}http.get({ "url": "https://passwords/servers/${esc.d}{host.hostname}/password" }).body
+  ${esc.h}end
+${esc.h}end
+```
+
+##### `${esc.d}file.readAllLines` tool arguments
+
+Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
+
+| Argument   | Description                                      |
+|------------|--------------------------------------------------|
+| `filePath` | **(Required)** The path to the local file.       |
+
+##### Example: Loading resources from a local file
+
+If your CSV file contains:
+
+```csv
+host1,win,wmi,user1,pass1
+host2,linux,ssh,user2,pass2
+```
+
+Use this Velocity template to generate the resource block:
+
+```velocity
+
+${esc.h}set(${esc.d}lines = ${esc.d}file.readAllLines("/opt/data/resources.csv"))
+resources:
+${esc.h}foreach(${esc.d}line in ${esc.d}lines)
+  ${esc.h}set(${esc.d}fields = ${esc.d}collection.split(${esc.d}line))
+  ${esc.h}set(${esc.d}hostname = ${esc.d}fields.get(0))
+  ${esc.h}set(${esc.d}hostType = ${esc.d}fields.get(1))
+  ${esc.h}set(${esc.d}protocol = ${esc.d}fields.get(2))
+  ${esc.h}set(${esc.d}username = ${esc.d}fields.get(3))
+  ${esc.h}set(${esc.d}password = ${esc.d}fields.get(4))
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}hostType
+    protocols:
+      ${esc.d}protocol:
+        username: ${esc.d}username
+        password: ${esc.d}password
+${esc.h}end
+```
+
+##### `${esc.d}sql.query` tool arguments
+
+Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries directly from templates. It supports the following arguments:
+
+| Argument   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `query`    | **(Required)** SQL query to execute.                           |
+| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database. |
+| `username` | Name used for database authentication.                         |
+| `password` | Password used for database authentication.                     |
+| `timeout`  | (Optional) Query timeout in seconds (Default: 120).            |
+
+##### Example: Loading resources from an SQL database
+
+Consider a `hosts` table in your database with the following data:
+
+| hostname         | host_type | username | password |
+| ---------------- | --------- | -------- | -------- |
+| storage-server-1 | storage   | admin1   | pwd1     |
+| windows-server-1 | windows   | admin2   | pwd2     |
+
+You can dynamically create resource blocks by querying the database using ${esc.d}sql.query:
+
+```velocity
+
+${esc.h}set(${esc.d}url = "jdbc:h2:mem:management_db")
+${esc.h}set(${esc.d}user = "sa")
+${esc.h}set(${esc.d}pass = "pwd1")
+${esc.h}set(${esc.d}rows = ${esc.d}sql.query("SELECT hostname, host_type, username, password FROM hosts ORDER BY hostname", ${esc.d}url, ${esc.d}user, ${esc.d}pass, 120))
+resources:
+${esc.h}foreach(${esc.d}row in ${esc.d}rows)
+  ${esc.h}set(${esc.d}hostname  = ${esc.d}row.get(0))
+  ${esc.h}set(${esc.d}host_type = ${esc.d}row.get(1))
+  ${esc.h}set(${esc.d}username  = ${esc.d}row.get(2))
+  ${esc.h}set(${esc.d}password  = ${esc.d}row.get(3))
+  ${esc.h}if(${esc.d}host_type.equals("storage"))
+  ${esc.d}hostname:
+    attributes:
+      host.name: ${esc.d}hostname
+      host.type: ${esc.d}host_type
+    protocols:
+      http:
+        hostname: ${esc.d}hostname
+        https: true
+        port: 443
+        username: ${esc.d}username
+        password: ${esc.d}password
+  ${esc.h}end
+${esc.h}end
+```
+
+## Step 4: Configure additional settings
 
 ### Customize resource hostname
 
@@ -651,8 +927,41 @@ Follow the structure below to declare your monitor:
 ```
 
 Refer to:
-- [Monitors](https://sentrysoftware.org/metricshub-community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
-- [Monitoring the health of a Web service](https://metricshub.com/usecases/monitoring-the-health-of-a-web-service/) for a practical example that demonstrates how to use this feature effectively.
+
+* [Monitors](https://metricshub.org/community-connectors/develop/monitors.html) for more information on how to configure custom resource monitoring.
+* [Monitoring the health of a Web service](https://metricshub.com/usecases/monitoring-the-health-of-a-web-service/) for a practical example that demonstrates how to use this feature effectively.
+
+### OTLP Exporter settings
+
+**MetricsHub** sends collected metrics to an OTLP Receiver using **gRPC** or **HTTP/Protobuf**.
+
+* In the **Enterprise Edition**, telemetry is **automatically sent** to the embedded *OpenTelemetry Collector*. You can also configure it to send metrics directly to observability platforms that support **native OTLP ingestion**. A working example is provided in the `metricshub-example.yaml` file.
+* In the **Community Edition**, you need to manually configure the OTLP Exporter settings in the [MetricsHub configuration file](#step-1-structure-your-configuration) under the `otel` section.
+
+The table below describes the available OTLP Exporter properties:
+
+| Property                                                    | Description                                                                                                                                                                                                                    |
+|-------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **`otel.exporter.otlp.metrics.endpoint`**                   | The OTLP metrics endpoint URL. <p><p></p>Must be an `http` or `https` URL, depending on whether TLS is used.</p><p></p><p>**Default:** `http://localhost:4317` (gRPC) / `http://localhost:4318/v1/metrics` (HTTP/Protobuf)</p> |
+| **`otel.exporter.otlp.metrics.protocol`**                   | Transport protocol for OTLP metric requests.<p></p><p>Possible Values: `grpc`, `http/protobuf`.</p><p></p><p>**Default:** `grpc`</p>                                                                                           |
+| **`otel.exporter.otlp.metrics.certificate`**                | Path to a PEM-formatted file containing trusted certificates for verifying the OTLP server’s TLS credentials.<p></p><p>**Default:** Uses the host platform’s trusted root certificates</p>                                     |
+| **`otel.exporter.otlp.metrics.headers`**                    | Custom headers to send with OTLP metric requests, typically for authentication.<p></p><p>**Default:** Not set</p>                                                                                                              |
+| **`otel.exporter.otlp.metrics.timeout`**                    | Timeout for OTLP metric requests (in seconds).<p></p><p>**Default:** `10` </p>                                                                                                                                                 |
+| **`otel.exporter.otlp.metrics.pool.size`**                  | Exporter pool size.<p></p><p> This setting directly determines how many metric export operations can run in parallel.</p><p></p><p>**Default:** `20`</p>                                                                       |
+| **`otel.exporter.otlp.metrics.append_resource_attributes`** | When enabled, all resource attributes will be added as attributes on each exported metric.<p></p><p>**Default:** `false`</p>                                                                                                   |
+
+#### Example
+
+To send **MetricsHub** metrics via **gRPC** to an `OTLP Receiver` at `https://localhost:4317`, including an *Authorization* header, configure the following in the [MetricsHub configuration file](#step-1-structure-your-configuration):
+
+```yaml
+otel:
+  otel.exporter.otlp.metrics.endpoint: https://localhost:4317
+  otel.exporter.otlp.metrics.protocol: grpc
+  otel.exporter.otlp.metrics.headers: Authorization=<value>
+```
+
+This configuration ensures that metrics are securely transmitted to the specified endpoint.
 
 ### Basic Authentication settings
 
@@ -660,21 +969,17 @@ Refer to:
 
 In the Enterprise Edition, the **MetricsHub**'s internal `OTLP Exporter` authenticates itself with the *OpenTelemetry Collector*'s [OTLP gRPC Receiver](send-telemetry.md#otlp-grpc) by including the HTTP `Authorization` request header with the credentials.
 
-These settings are already configured in the `config/metricshub.yaml` file of **MetricsHub Enterprise Edition**. Changing them is **not recommended** unless you are familiar with managing communication between the **MetricsHub** `OTLP Exporter` and the *OpenTelemetry Collector*'s `OTLP Receiver`.
+These settings are already configured in the **MetricsHub Enterprise Edition** configuration file. Changing them is **not recommended** unless you are familiar with managing communication between the **MetricsHub** `OTLP Exporter` and the *OpenTelemetry Collector*'s `OTLP Receiver`.
 
-To override the default value of the *Basic Authentication Header*, configure the `otel.exporter.otlp.metrics.headers` and `otel.exporter.otlp.logs.headers` parameters under the `otel` section:
+To override the default value of the *Basic Authentication Header*, configure the `otel.exporter.otlp.metrics.headers` parameter under the `otel` section:
 
 ```yaml
-# Internal OpenTelemetry SDK configuration
+# Internal OpenTelemetry configuration
 otel:
-  # OpenTelemetry SDK Autoconfigure properties
-  # https://github.com/open-telemetry/opentelemetry-java/tree/main/sdk-extensions/autoconfigure
-  # MetricsHub Default configuration
-  otel.metrics.exporter: otlp
   otel.exporter.otlp.metrics.endpoint: https://localhost:4317
   otel.exporter.otlp.metrics.protocol: grpc
   otel.exporter.otlp.metrics.headers: Authorization=Basic <base64-username-password>
-  otel.exporter.otlp.logs.headers: Authorization=Basic <base64-username-password>
+
 resourceGroups: # ...
 ```
 
@@ -684,12 +989,11 @@ where `<base64-username-password>` credentials are built by first joining your u
 
 #### Community Edition authentication
 
-If your `OTLP Receiver` requires authentication headers, configure the `otel.exporter.otlp.metrics.headers` and `otel.exporter.otlp.logs.headers` parameters under the `otel` section:
+If your `OTLP Receiver` requires authentication headers, configure the `otel.exporter.otlp.metrics.headers` parameter under the `otel` section:
 
 ```yaml
 otel:
   otel.exporter.otlp.metrics.headers: <custom-header1>
-  otel.exporter.otlp.logs.headers: <custom-header2>
 
 resourceGroups: # ...
 ```
@@ -844,7 +1148,7 @@ For more information about the `metricshub` command, refer to [MetricsHub CLI (m
 
 #### Patch Connectors
 
-By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the `metricshub.yaml` configuration file.
+By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by adding a custom directory for additional connectors. This can be done by specifying a patch directory in the [MetricsHub configuration file](#step-1-structure-your-configuration).
 
 To configure an additional connector directory, set the `patchDirectory` property to the path of your custom connectors directory, as shown in the example below:
 
@@ -870,7 +1174,7 @@ Refer to the [Connectors directory](../metricshub-connectors-directory.html#) an
 
 ##### Procedure
 
-In the `config/metricshub.yaml` file, locate the resource for which you wish to customize data collection and specify the `variables` attribute available under the `additionalConnectors` section:
+In the MetricsHub configuration file, locate the resource for which you wish to customize data collection and specify the `variables` attribute available under the `additionalConnectors` section:
 
 ```yaml
 resources:
@@ -886,16 +1190,17 @@ resources:
           <variable-name>: <value>
 ```
 
-| Property                 | Description                                                                                                                    |
-|--------------------------|--------------------------------------------------------------------------------------------------------------------------------|
-| `<connector-custom-id>`  | Custom ID for this additional connector.                                                                                       |
-| `uses`                   | *(Optional)* Provide an ID for this additional connector. If not specified, the key ID will be used.                           |
-| `force`                  | *(Optional)* Set to `false` if you want the connector to only be activated when detected (Default: `true` - always activated). |
-| `variables`              | Specify the connector variable to be used and its value (Format: `<variable-name>: <value>`).                                  |
+| Property                | Description                                                                                                                    |
+|-------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| `<connector-custom-id>` | Custom ID for this additional connector.                                                                                       |
+| `uses`                  | *(Optional)* Provide an ID for this additional connector. If not specified, the key ID will be used.                           |
+| `force`                 | *(Optional)* Set to `false` if you want the connector to only be activated when detected (Default: `true` - always activated). |
+| `variables`             | Specify the connector variable to be used and its value (Format: `<variable-name>: <value>`).                                  |
 
 > Note: If a connector is added under the `additionalConnectors` section with missing or unspecified variables, those variables will automatically be populated with default values defined by the connector itself.
 
 For practical examples demonstrating effective use of this feature, refer to the following pages:
+
 * [Monitoring a process command line](https://metricshub.com/usecases/monitoring-a-process-on-windows/)
 * [Monitoring a service running on Linux](https://metricshub.com/usecases/monitoring-a-service-running-on-linux/).
 
@@ -911,7 +1216,7 @@ You can apply monitor inclusion or exclusion in data collection for the followin
 * All the resources within a specific resource group. A resource group is a container that holds resources to be monitored and generally refers to a site or a specific location.
 * A specific resource
 
-This is done by  adding the `monitorFilters` parameter in the relevant section of the `config/metricshub.yaml` file as described below:
+This is done by  adding the `monitorFilters` parameter in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Filter monitors                                    | Add monitorFilters                                      |
 |----------------------------------------------------|---------------------------------------------------------|
@@ -1157,7 +1462,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 1. **Global configuration** (applies to all resources):
 
-   Add `stateSetCompression` to the root of the `config/metricshub.yaml` file:
+   Add `stateSetCompression` to the root of the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    stateSetCompression: suppressZeros # set to "none" to disable the StateSet compression
@@ -1166,7 +1471,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 2. **Per resource group** (applies to all resources within a specific group):
 
-   Add `stateSetCompression` within a specific `resourceGroup` in `config/metricshub.yaml`:
+   Add `stateSetCompression` within a specific `resourceGroup` in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1177,7 +1482,7 @@ To configure the StateSet compression level, you can apply the `stateSetCompress
 
 3. **Per resource** (applies to a specific resource):
 
-   Add `stateSetCompression` for an individual resource in `config/metricshub.yaml`:
+   Add `stateSetCompression` for an individual resource in the [MetricsHub configuration file](#step-1-structure-your-configuration):
 
    ```yaml
    resourceGroups:
@@ -1217,7 +1522,7 @@ In this case, only the `degraded` state is reported, and the zero values for `ok
 
 The self-monitoring feature helps you track **MetricsHub**'s performance by providing metrics like job duration. These metrics offer detailed insights into task execution times, helping identify bottlenecks or inefficiencies and optimizing performance.
 
-To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the `config/metricshub.yaml` file as described below:
+To enable this feature, set the `enableSelfMonitoring` parameter to `true` in the relevant section of the [MetricsHub configuration file](#step-1-structure-your-configuration) as described below:
 
 | Self-Monitoring                                    | Set enableSelfMonitoring to true                        |
 |----------------------------------------------------|---------------------------------------------------------|
@@ -1261,3 +1566,4 @@ Timeouts, durations and periods are specified with the below format:
 | m    | minutes                       | 90m, 1m15s |
 | h    | hours                         | 1h, 1h30m  |
 | d    | days (based on a 24-hour day) | 1d         |
+

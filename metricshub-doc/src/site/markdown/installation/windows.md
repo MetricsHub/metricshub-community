@@ -5,6 +5,8 @@ description: How to install MetricsHub on Windows.
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+> MetricsHub supports Windows 2012R2 and higher.
+
 ## Enterprise Edition
 
 ### Download
@@ -20,13 +22,16 @@ MetricsHub operates using the configuration located in the `ProgramData\MetricsH
 
 ### Configure
 
-* In the **C:\ProgramData\MetricsHub\config\metricshub.yaml** file, configure the [resources to be monitored.](../configuration/configure-monitoring.html#configure-resources)
-* In the **C:\ProgramData\MetricsHub\otel\otel-config.yaml** file, specify where the _OpenTelemetry Collector_ should [send the collected data.](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29)
+After installing **MetricsHub**, you need to:
+
+* [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
+* [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
+* [define the OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
 
 To assist with the setup process, two configuration examples are provided for guidance in the installation directory (`C:\Program Files\MetricsHub`):
 
-* .\config\metricshub-config-example.yaml, a configuration example of the MetricsHub agent.
-* .\otel\otel-config-example.yaml, a configuration example of the OpenTelemetry Collector.
+* `.\config\metricshub-config-example.yaml`, a configuration example of the MetricsHub agent.
+* `.\otel\otel-config-example.yaml`, a configuration example of the OpenTelemetry Collector.
 
 ### Start
 
@@ -48,20 +53,21 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
 
 ### Download
 
-Download the Windows package, `metricshub-windows-${communityVersion}.zip`, from the [MetricsHub Release v${communityVersion}](https://github.com/sentrysoftware/metricshub/releases/tag/v${communityVersion}) page.
+Download the Windows package, `metricshub-community-windows-${communityVersion}.zip`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page.
 
 ### Install
 
-Unzip the content of `metricshub-windows-${communityVersion}.zip` into a program folder, like `C:\Program Files`. There is no need to create a specific subdirectory for `MetricsHub` as the zip archive already contains a `MetricsHub` directory.
+Unzip the content of `metricshub-community-windows-${communityVersion}.zip` into a program folder, like `C:\Program Files`. There is no need to create a specific subdirectory for `MetricsHub` as the zip archive already contains a `MetricsHub` directory.
 
 > Note: You will need administrative privileges to unzip into `C:\Program Files`.
 
 ### Configure
 
-In the `C:\ProgramData\MetricsHub\config\metricshub.yaml` file, configure:
+After installing **MetricsHub**, you need to:
 
-* the [resources to be monitored.](../configuration/configure-monitoring.html#configure-resources)
-* the [OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
+* [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
+* [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
+* [define the OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
 
 To assist with the setup process, the configuration example `.\config\metricshub-example.yaml` is provided for guidance in the installation directory (typically, `C:\Program Files\MetricsHub`).
 
@@ -75,8 +81,6 @@ MetricsHubServiceManager
 ```
 
 > Note: Run `CMD.EXE` or `Windows Terminal` with elevated privileges (**Run As Administrator**).
-
-This will start **MetricsHub** with the default configuration file `C:\ProgramData\MetricsHub\config\metricshub.yaml`.
 
 Run the command below to start **MetricsHub** with an alternate configuration file:
 

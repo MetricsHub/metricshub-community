@@ -4,39 +4,28 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.sentrysoftware</groupId>
-	<artifactId>metricshub-parent</artifactId>
-	<version>1.0.02-SNAPSHOT</version>
+	<parent>
+		<groupId>org.metricshub</groupId>
+		<artifactId>oss-parent</artifactId>
+		<version>4</version>
+	</parent>
+
+	<artifactId>metricshub-community</artifactId>
+	<version>1.0.09-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
-	<name>MetricsHub</name>
+	<name>MetricsHub Community</name>
 
 	<description>Universal Metrics Collection for OpenTelemetry</description>
 
 	<url>https://metricshub.com</url>
 	<inceptionYear>2023</inceptionYear>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
-
 	<scm>
-		<connection>scm:git:https://github.com/sentrysoftware/metricshub.git</connection>
-		<url>https://github.com/sentrysoftware/metricshub</url>
+		<connection>scm:git:https://github.com/metricshub/metricshub-community.git</connection>
+		<url>https://github.com/metricshub/metricshub-community</url>
 	</scm>
-
-	<organization>
-		<name>Sentry Software</name>
-		<url>https://sentrysoftware.com</url>
-	</organization>
 
 	<licenses>
 		<license>
@@ -46,24 +35,22 @@
 		</license>
 	</licenses>
 
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/metricshub/metricshub-community/issues/</url>
+	</issueManagement>
+
 	<developers>
 		<developer>
 			<name>Bertrand Martin (@bertysentry)</name>
-			<email>bertrand@sentrysoftware.com</email>
+			<email>bertrand@metricshub.com</email>
 			<roles>
 				<role>maintainer</role>
 			</roles>
 		</developer>
 		<developer>
 			<name>Nassim Boutekedjiret (@NassimBtk)</name>
-			<email>nassim@sentrysoftware.com</email>
-			<roles>
-				<role>maintainer</role>
-			</roles>
-		</developer>
-		<developer>
-			<name>Alex Gilbert (@alexdgilbert)</name>
-			<email>alex@sentrysoftware.com</email>
+			<email>nassim@metricshub.com</email>
 			<roles>
 				<role>maintainer</role>
 			</roles>
@@ -92,13 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.08</community-connectors.version>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<community-connectors.version>1.0.15-SNAPSHOT</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
-		<hwgraf.version>4</hwgraf.version>
-		<metricshub-jre.version>1.0.01</metricshub-jre.version>
-		<project.build.outputTimestamp>2025-02-03T13:45:18Z</project.build.outputTimestamp>
-
+		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
+		<project.build.outputTimestamp>2025-09-29T13:33:23Z</project.build.outputTimestamp>
 	</properties>
 
 	<modules>
@@ -119,119 +103,137 @@
 		<module>metricshub-internaldb-extension</module>
 		<module>metricshub-jawk-extension</module>
 		<module>metricshub-jdbc-extension</module>
+		<module>metricshub-jmx-extension</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-agent</module>
 		<module>metricshub-doc</module>
+		<module>metricshub-yaml-configuration-extension</module>
+		<module>metricshub-programmable-configuration-extension</module>
+		<module>metricshub-web</module>
 	</modules>
 
 	<profiles>
+
+		<!-- Windows build -->
 		<profile>
 			<id>windows</id>
 			<activation>
 				<os>
 					<family>Windows</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
-				<module>metricshub-windows</module>
+				<module>metricshub-community-windows</module>
 			</modules>
 			<build>
+				<!-- No need to deploy artifacts from the windows build -->
 				<plugins>
 					<plugin>
-						<artifactId>maven-deploy-plugin</artifactId>
+						<groupId>org.sonatype.central</groupId>
+						<artifactId>central-publishing-maven-plugin</artifactId>
 						<configuration>
-							<skip>true</skip>
-						</configuration>
-					</plugin>
-					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<configuration>
-							<skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
+							<skipPublishing>true</skipPublishing>
 						</configuration>
 					</plugin>
 				</plugins>
 			</build>
 		</profile>
+
+		<!-- Linux build -->
 		<profile>
 			<id>linux</id>
 			<activation>
 				<os>
 					<family>Linux</family>
 				</os>
+				<property>
+					<!-- Activate only if env var AI is not "true" -->
+					<!-- to make sure this module is not built in Codex -->
+					<name>env.AI</name>
+					<value>!true</value>
+				</property>
 			</activation>
 			<modules>
-				<module>metricshub-linux</module>
+				<module>metricshub-community-linux</module>
 			</modules>
 		</profile>
-		<!-- Profile for releasing the project -->
+
+		<!-- AI coding agent -->
 		<profile>
-			<id>release</id>
+			<id>ai</id>
+			<activation>
+				<property>
+					<name>env.AI</name>
+					<value>true</value>
+				</property>
+			</activation>
 			<build>
 				<plugins>
 
-					<!-- gpg to sign the released artifacts -->
+					<!-- Prettier will use local Node.js and npm-->
 					<plugin>
-						<artifactId>maven-gpg-plugin</artifactId>
-						<version>3.1.0</version>
-						<executions>
-							<execution>
-								<id>sign-artifacts</id>
-								<phase>verify</phase>
-								<goals>
-									<goal>sign</goal>
-								</goals>
-								<configuration>
-									<updateReleaseInfo>true</updateReleaseInfo>
-									<gpgArguments>
-										<arg>--pinentry-mode</arg>
-										<arg>loopback</arg>
-									</gpgArguments>
-								</configuration>
-							</execution>
-						</executions>
+						<groupId>com.hubspot.maven.plugins</groupId>
+						<artifactId>prettier-maven-plugin</artifactId>
+						<configuration>
+							<nodePath>node</nodePath>
+							<npmPath>npm</npmPath>
+						</configuration>
 					</plugin>
 
-					<!-- nexus-staging (Sonatype) -->
+					<!-- On Codex, merge the specific IT settings.xml with Codex settings.xml -->
+					<!-- which includes the necessary proxy settings -->
 					<plugin>
-						<groupId>org.sonatype.plugins</groupId>
-						<artifactId>nexus-staging-maven-plugin</artifactId>
-						<extensions>true</extensions>
+						<artifactId>maven-invoker-plugin</artifactId>
 						<configuration>
-							<serverId>ossrh</serverId>
-							<nexusUrl>https://s01.oss.sonatype.org</nexusUrl>
-							<autoReleaseAfterClose>${env.AUTO_RELEASE_AFTER_CLOSE}</autoReleaseAfterClose>
+							<mergeUserSettings>true</mergeUserSettings>
+						</configuration>
+					</plugin>
+
+					<!-- On Codex, we must use the same version of Node.js and npm as the local install -->
+					<plugin>
+						<groupId>com.github.eirslett</groupId>
+						<artifactId>frontend-maven-plugin</artifactId>
+						<configuration>
+							<nodeVersion>${env.FRONTEND_NODE_VERSION}</nodeVersion>
+							<npmVersion>${env.FRONTEND_NPM_VERSION}</npmVersion>
 						</configuration>
 					</plugin>
 				</plugins>
 			</build>
+
 		</profile>
 	</profiles>
 
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-engine</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-win-extension-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-snmp-extension-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-classloader-agent</artifactId>
 				<version>${project.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>metricshub-it-common</artifactId>
 				<version>${project.version}</version>
 			</dependency>
@@ -253,8 +255,13 @@
 				<version>2.0.11</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>metricshub-community-connectors</artifactId>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jul-to-slf4j</artifactId>
+				<version>2.0.11</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>community-connectors</artifactId>
 				<version>${community-connectors.version}</version>
 				<classifier>sources</classifier>
 			</dependency>
@@ -262,108 +269,101 @@
 				<groupId>javax.xml.bind</groupId>
 				<artifactId>jaxb-api</artifactId>
 				<version>2.4.0-b180830.0359</version>
-				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter-engine</artifactId>
-				<version>5.9.2</version>
+				<version>6.0.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter-api</artifactId>
-				<version>5.9.2</version>
+				<version>6.0.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.junit.jupiter</groupId>
 				<artifactId>junit-jupiter-params</artifactId>
-				<version>5.9.2</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.mockito</groupId>
-				<artifactId>mockito-core</artifactId>
-				<version>5.7.0</version>
+				<version>6.0.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.mockito</groupId>
 				<artifactId>mockito-junit-jupiter</artifactId>
-				<version>5.15.2</version>
+				<version>5.20.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.mockito</groupId>
-				<artifactId>mockito-inline</artifactId>
-				<version>5.2.0</version>
+				<artifactId>mockito-core</artifactId>
+				<version>5.20.0</version>
 				<scope>test</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-core</artifactId>
-				<version>6.0.3</version>
+				<version>6.2.12</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-context</artifactId>
-				<version>6.0.3</version>
+				<version>6.2.12</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>tablejoin</artifactId>
-				<version>1.0.01</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>snmp</artifactId>
-				<version>1.0.01</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>wmi</artifactId>
 				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>http</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>snmp-java</artifactId>
+				<version>2.1.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>wbem</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>wmi-java</artifactId>
+				<version>1.0.05</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>ipmi</artifactId>
-				<version>1.2.00</version>
-			</dependency>
-			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>ssh</artifactId>
+				<groupId>org.metricshub</groupId>
+				<artifactId>simple-http-java</artifactId>
 				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
+				<artifactId>wbem-java</artifactId>
+				<version>1.0.02</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>ipmi-java</artifactId>
+				<version>1.2.01</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>ssh-java</artifactId>
+				<version>1.0.03</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
 				<artifactId>jflat</artifactId>
-				<version>1.0.01</version>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>xflat</artifactId>
-				<version>1.0.01</version>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>winrm</artifactId>
-				<version>1.0.01</version>
+				<groupId>org.metricshub</groupId>
+				<artifactId>winrm-java</artifactId>
+				<version>1.1.02</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
+				<groupId>org.metricshub</groupId>
 				<artifactId>jawk</artifactId>
-				<version>3.3.03</version>
+				<version>5.0.00-SNAPSHOT</version>
 			</dependency>
 			<dependency>
 				<groupId>info.picocli</groupId>
@@ -373,22 +373,22 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-databind</artifactId>
-				<version>2.14.1</version>
+				<version>2.18.2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
-				<version>2.14.1</version>
+				<version>2.18.2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-core</artifactId>
-				<version>2.14.1</version>
+				<version>2.18.2</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson.dataformat</groupId>
 				<artifactId>jackson-dataformat-yaml</artifactId>
-				<version>2.14.1</version>
+				<version>2.18.2</version>
 			</dependency>
 			<dependency>
 				<groupId>org.snmp4j</groupId>
@@ -403,7 +403,7 @@
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-lang3</artifactId>
-				<version>3.12.0</version>
+				<version>3.18.0</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
@@ -413,53 +413,42 @@
 			<dependency>
 				<groupId>org.fusesource.jansi</groupId>
 				<artifactId>jansi</artifactId>
-				<version>2.3.4</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-api</artifactId>
-				<version>1.45.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-sdk</artifactId>
-				<version>1.45.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-exporter-otlp</artifactId>
-				<version>1.45.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-				<version>1.45.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-sdk-testing</artifactId>
-				<version>1.45.0</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
-				<groupId>io.opentelemetry</groupId>
-				<artifactId>opentelemetry-sdk-common</artifactId>
-				<version>1.45.0</version>
+				<version>2.4.2</version>
 			</dependency>
 			<dependency>
 				<groupId>io.grpc</groupId>
 				<artifactId>grpc-netty-shaded</artifactId>
-				<version>1.69.0</version>
+				<version>1.71.0</version>
 			</dependency>
 			<dependency>
-				<groupId>org.sentrysoftware</groupId>
-				<artifactId>vcenter</artifactId>
-				<version>1.0.01</version>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-protobuf</artifactId>
+				<version>1.71.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.grpc</groupId>
+				<artifactId>grpc-stub</artifactId>
+				<version>1.71.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.google.protobuf</groupId>
+				<artifactId>protobuf-java</artifactId>
+				<version>4.29.3</version>
+			</dependency>
+			<dependency>
+				<groupId>org.metricshub</groupId>
+				<artifactId>vcenter-java</artifactId>
+				<version>1.0.02</version>
 			</dependency>
 			<dependency>
 				<groupId>io.opentelemetry.instrumentation</groupId>
 				<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 				<version>2.0.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.opentelemetry.proto</groupId>
+				<artifactId>opentelemetry-proto</artifactId>
+				<version>1.5.0-alpha</version>
 			</dependency>
 			<dependency>
 				<groupId>com.h2database</groupId>
@@ -473,79 +462,8 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.13.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-surefire-plugin</artifactId>
-					<version>3.0.0-M5</version>
-				</plugin>
-				<plugin>
-					<groupId>org.jacoco</groupId>
-					<artifactId>jacoco-maven-plugin</artifactId>
-					<version>0.8.10</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-failsafe-plugin</artifactId>
-					<version>3.0.0-M5</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-resources-plugin</artifactId>
-					<version>3.2.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-assembly-plugin</artifactId>
-					<version>3.3.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>buildnumber-maven-plugin</artifactId>
-					<version>1.4</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-dependency-plugin</artifactId>
-					<version>3.2.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>exec-maven-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>build-helper-maven-plugin</artifactId>
-					<version>3.2.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-enforcer-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-site-plugin</artifactId>
-					<version>3.12.1</version>
-				</plugin>
-				<plugin>
-					<groupId>com.googlecode.maven-download-plugin</groupId>
-					<artifactId>download-maven-plugin</artifactId>
-					<version>1.6.7</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-antrun-plugin</artifactId>
-					<version>3.0.0</version>
-				</plugin>
-				<plugin>
 					<groupId>com.hubspot.maven.plugins</groupId>
 					<artifactId>prettier-maven-plugin</artifactId>
-					<version>0.21</version>
 					<configuration>
 						<prettierJavaVersion>2.5.0</prettierJavaVersion>
 						<ignoreConfigFile>false</ignoreConfigFile>
@@ -558,7 +476,6 @@
 				</plugin>
 				<plugin>
 					<artifactId>maven-javadoc-plugin</artifactId>
-					<version>3.6.3</version>
 					<configuration>
 						<detectJavaApiLink>false</detectJavaApiLink>
 						<source>${maven.compiler.target}</source>
@@ -571,32 +488,36 @@
 					</configuration>
 				</plugin>
 				<plugin>
-					<artifactId>maven-deploy-plugin</artifactId>
-					<version>3.1.1</version>
-				</plugin>
-				<plugin>
-					<groupId>org.sonatype.plugins</groupId>
-					<artifactId>nexus-staging-maven-plugin</artifactId>
-					<version>1.6.13</version>
-				</plugin>
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-shade-plugin</artifactId>
-					<version>3.5.2</version>
+					<groupId>com.github.eirslett</groupId>
+					<artifactId>frontend-maven-plugin</artifactId>
+					<version>1.15.1</version>
 				</plugin>
 			</plugins>
 		</pluginManagement>
 
 		<plugins>
+			<!-- maven-dependency-plugin -->
+			<!--  Sets a property pointing to the artifact file for each project dependency -->
+			<!--  This is required by the maven-surefire-plugin for the mockito javaagent -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 
 			<!-- license -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>license-maven-plugin</artifactId>
-				<version>2.3.0</version>
 				<configuration>
 					<licenseName>agpl_v3</licenseName>
-					<copyrightOwners>Sentry Software</copyrightOwners>
+					<copyrightOwners>MetricsHub</copyrightOwners>
 					<copyrightStringFormat>Copyright %1$s %2$s</copyrightStringFormat>
 					<includes>
 						<include>main/java/**/*.java</include>
@@ -617,24 +538,6 @@
 						</goals>
 						<configuration>
 							<failOnMissingHeader>true</failOnMissingHeader>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-
-			<!-- artifact (Reproducible Build) -->
-			<plugin>
-				<artifactId>maven-artifact-plugin</artifactId>
-				<version>3.5.0</version>
-				<executions>
-					<execution>
-						<id>buildinfo</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>buildinfo</goal>
-						</goals>
-						<configuration>
-							<reproducible>true</reproducible>
 						</configuration>
 					</execution>
 				</executions>
@@ -673,88 +576,6 @@
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>build-helper-maven-plugin</artifactId>
 				<executions>
-					<!-- Parse the version into its components -->
-					<execution>
-						<id>parse-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>parse-cc-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${community-connectors.version}</versionString>
-							<formattedPropertyPrefix>formattedCcVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-hwgraf-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${hwgraf.version}</versionString>
-							<formattedPropertyPrefix>formattedHwGrafVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-ddog-version</id>
-						<phase>initialize</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>1.0.00</versionString>
-							<formattedPropertyPrefix>formattedDDogVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<!-- Same as above, but when run with simple `mvn site` -->
-					<execution>
-						<id>parse-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>parse-cc-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${community-connectors.version}</versionString>
-							<formattedPropertyPrefix>formattedCcVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-hwgraf-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>${hwgraf.version}</versionString>
-							<formattedPropertyPrefix>formattedHwGrafVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
-					<execution>
-						<id>parse-ddog-version-for-site</id>
-						<phase>pre-site</phase>
-						<goals>
-							<goal>parse-version</goal>
-						</goals>
-						<configuration>
-							<versionString>1.0.00</versionString>
-							<formattedPropertyPrefix>formattedDDogVersion</formattedPropertyPrefix>
-						</configuration>
-					</execution>
 					<execution>
 						<id>build-no-snapshot-version</id>
 						<phase>initialize</phase>
@@ -778,30 +599,11 @@
 			</plugin>
 
 			<plugin>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-				<version>3.3.0</version>
-				<configuration>
-					<sourceEncoding>${project.build.sourceEncoding}</sourceEncoding>
-					<configLocation>checkstyle.xml</configLocation>
-				</configuration>
-				<executions>
-					<execution>
-						<id>validate</id>
-						<phase>validate</phase>
-						<goals>
-							<goal>checkstyle</goal>
-							<goal>check</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
 				<groupId>com.hubspot.maven.plugins</groupId>
 				<artifactId>prettier-maven-plugin</artifactId>
 				<executions>
 					<execution>
-						<phase>validate</phase>
+						<phase>verify</phase>
 						<goals>
 							<goal>check</goal>
 						</goals>
@@ -818,6 +620,23 @@
 				</configuration>
 			</plugin>
 
+			<plugin>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<version>3.3.0</version>
+				<configuration>
+					<configLocation>checkstyle.xml</configLocation>
+				</configuration>
+				<executions>
+					<execution>
+						<id>validate</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 			<!-- javadoc -->
 			<plugin>
 				<artifactId>maven-javadoc-plugin</artifactId>
@@ -831,42 +650,7 @@
 				</executions>
 			</plugin>
 
-			<!-- Maven Deploy Plugin-->
-			<plugin>
-				<artifactId>maven-deploy-plugin</artifactId>
-			</plugin>
-
-			<!-- Maven Source Plugin -->
-			<plugin>
-				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.1</version>
-				<executions>
-					<execution>
-						<id>attach-sources</id>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
 		</plugins>
 	</build>
-
-	<reporting>
-		<plugins>
-			<plugin>
-				<artifactId>maven-javadoc-plugin</artifactId>
-				<reportSets>
-					<reportSet>
-						<reports>
-							<report>javadoc</report>
-						</reports>
-					</reportSet>
-				</reportSets>
-			</plugin>
-		</plugins>
-	</reporting>
-
 
 </project>

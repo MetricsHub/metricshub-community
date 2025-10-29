@@ -5,6 +5,8 @@ description: How to install MetricsHub on Debian Linux.
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+> MetricsHub supports Debian v10.
+
 ## Enterprise Edition
 
 ### Download
@@ -24,7 +26,7 @@ When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and 
 
 ### Configure
 
-* In the **./lib/config/metricshub.yaml** file, located under the `/opt/metricshub` installation directory, configure the [resources to be monitored.](../configuration/configure-monitoring.html#configure-resources)
+* In the **./lib/config/** directory, located under the `/opt/metricshub` installation directory, create your configuration file(s) and define the [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
 * In the **./lib/otel/otel-config.yaml** file, located under the `/opt/metricshub` installation directory, specify where the _OpenTelemetry Collector_ should [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
 
 To assist with the setup process, two configuration examples are provided for guidance in the installation directory (`./metricshub`):
@@ -39,7 +41,6 @@ To start the **MetricsHub Enterprise** service, run the command below:
 ```shell-session
 systemctl start metricshub-enterprise-service
 ```
-This will start **MetricsHub** with the default **MetricsHub Enterprise Agent** configuration file, **./lib/config/metricshub.yaml**.
 
 ### Stop
 
@@ -78,52 +79,86 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
 
 ## Community Edition
 
-### Download
-
-Download the Linux package, `metricshub-linux-${communityVersion}.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/sentrysoftware/metricshub/releases/tag/v${communityVersion}) page using the following command:
-
-```shell-session
-wget -P /tmp https://github.com/sentrysoftware/metricshub/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}.tar.gz
-```
-
 ### Install
 
-Unzip and untar the content of `metricshub-linux-${communityVersion}.tar.gz` into a program directory, like `/opt`. There is no need to create a specific subdirectory for `metricshub` as the archive already contains a `metricshub` directory.
+You can install **MetricsHub Community Edition** in two ways:
+
+1. **Automatically** using the official installation script (recommended)
+2. **Manually** by downloading and extracting the `.tar.gz` package
+
+> Note: Both methods that are outlined below will install **MetricsHub** to the `${esc.d}HOME/metricshub` directory.
+
+#### Option 1: Automatic (Recommended)
+
+Run the following command to install **MetricsHub Community**:
 
 ```shell-session
-cd /opt
-sudo tar xzf /tmp/metricshub-linux-${communityVersion}.tar.gz
+curl -fsSL https://get.metricshub.com | bash
+```
+
+This command will:
+
+* Download the latest version of **MetricsHub Community Edition**
+* Install it to `${esc.d}HOME/metricshub`
+* Run a version check to confirm successful installation
+
+Finally, run the below command to ensure **MetricsHub Community** is properly installed:
+
+```shell-session
+${esc.d}HOME/metricshub/bin/metricshub --version
+```
+
+#### Option 2: Manual
+
+If you prefer a manual setup, follow these steps:
+
+##### Download
+
+Download the Linux package `metricshub-community-linux-${communityVersion}.tar.gz` from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page:
+
+```shell-session
+wget -P /tmp https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}.tar.gz
+```
+
+##### Unpack
+
+Unzip and untar the content of `metricshub-community-linux-${communityVersion}.tar.gz` into a program directory, like `${esc.d}HOME`. There is no need to create a specific subdirectory for `metricshub` as the archive already contains a `metricshub` directory.
+
+```shell-session
+cd ${esc.d}HOME
+tar xzf /tmp/metricshub-community-linux-${communityVersion}.tar.gz
 ```
 
 ### Configure
 
-In the `./lib/config/metricshub.yaml` file, located under the `./metricshub` installation directory, configure:
+After installing **MetricsHub**, you need to:
 
-* the [resources to be monitored.](../configuration/configure-monitoring.html#configure-resources)
-* the [OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
+* [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
+* [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
+* [define the OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the **MetricsHub** signals.
 
 To assist with the setup process, the configuration example `./lib/config/metricshub-example.yaml` is provided for guidance in the installation directory (`./metricshub`).
 
 ### Start
 
-To start **MetricsHub** in an interactive terminal with the default configuration file `./lib/config/metricshub.yaml`, run the command below:
+To start **MetricsHub** in an interactive terminal, run the command below:
 
 ```shell-session
-cd /opt/metricshub/bin
+cd ${esc.d}HOME/metricshub/bin
 ./service
 ```
 
 To start **MetricsHub** with an alternate configuration file, run the command below:
 
 ```shell-session
-cd /opt/metricshub/bin
+cd ${esc.d}HOME/metricshub/bin
 ./service --config <PATH>
 ```
 
 Example:
 
 ```shell-session
-cd /opt/metricshub/bin
+cd ${esc.d}HOME/metricshub/bin
 ./service --config config/my-metricshub.yaml
 ```
 
@@ -138,7 +173,7 @@ To start **MetricsHub** as a **Linux service**, follow the steps below:
   Description=MetricsHub Service
 
   [Service]
-  ExecStart=/opt/metricshub/bin/service
+  ExecStart=${esc.d}HOME/metricshub/bin/service
   Restart=on-failure
 
   [Install]
@@ -210,10 +245,10 @@ where `<metricshub-service>` should be replaced with the actual service name. Fo
 ### Uninstall
 
 1. Stop the **MetricsHub Service**.
-2. Remove the entire `metricshub` directory.
+2. Navigate to the directory where **MetricsHub** is located (e.g., `${esc.d}HOME`) and remove the entire `metricshub` directory.
 
    ```shell-session
-   rm -rf /opt/metricshub
+   rm -rf ${esc.d}HOME/metricshub
    ```
 
 If the **MetricsHub Service** was set up as a **Linux Service**, delete the file `/etc/systemd/system/metricshub-service.service` and run the below command to reload `systemd`:

@@ -4,9 +4,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-jdbc-extension</artifactId>   
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId> 
+			<groupId>org.metricshub</groupId> 
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -61,11 +61,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
 			<scope>test</scope>
@@ -74,12 +69,12 @@
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
-			<version>8.0.33</version>
+			<version>9.2.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
-			<version>42.7.4</version>
+			<version>42.7.7</version>
 		</dependency>
 	</dependencies>
 
@@ -98,6 +93,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -109,6 +105,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -152,7 +149,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/jdbc/*JdbcConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/jdbc/*JdbcConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -170,7 +167,7 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:metricshub-jdbc-extension</include>
+									<include>org.metricshub:metricshub-jdbc-extension</include>
 									<include>com.mysql:mysql-connector-j</include>
 									<include>org.postgresql:postgresql</include>
 									<include>com.h2database:*</include>

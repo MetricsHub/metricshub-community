@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project name="Documentation">
+<project name="Documentation" combine.self="override">
 
 	<skin>
 		<groupId>org.sentrysoftware.maven</groupId>
@@ -8,18 +8,11 @@
 	</skin>
 
 	<bannerLeft>
-		<name>MetricsHub</name>
+		<name>MetricsHub&reg;</name>
 		<src>images/metricshub-logo.png</src>
 		<href>https://metricshub.com</href>
 		<alt>MetricsHub Official Website</alt>
 	</bannerLeft>
-
-	<bannerRight>
-		<name>Sentry Software</name>
-		<src>images/sentry-logo-white.png</src>
-		<href>https://sentrysoftware.com</href>
-		<alt>Sentry Software Official Website</alt>
-	</bannerRight>
 
 	<custom>
 
@@ -28,7 +21,11 @@
 		<keywords>monitoring, observability, opentelemetry, otel</keywords>
 
 		<social>
-			<twitter>sentrysoftware</twitter>
+			<custom>
+				<title>Contribute on GitHub</title>
+				<href>https://github.com/metricshub</href>
+				<icon>fa-brands fa-github</icon>
+			</custom>
 			<linkedin>metricshub</linkedin>
 			<custom>
 				<title>Join us on Slack!</title>
@@ -40,27 +37,27 @@
 		<additionalLinks>
 			<link>
 				<name>Terms of Service</name>
-				<href>https://sentrysoftware.com/legal/general.html</href>
+				<href>https://metricshub.com/legal/general.html</href>
 			</link>
 			<link>
 				<name>Privacy Policy</name>
-				<href>https://sentrysoftware.com/legal/privacy.html</href>
+				<href>https://metricshub.com/legal/privacy.html</href>
 			</link>
 			<link>
 				<name>Cookie Policy</name>
-				<href>https://sentrysoftware.com/legal/cookies.html</href>
+				<href>https://metricshub.com/legal/cookies.html</href>
 			</link>
 			<link>
 				<name>Disclaimer</name>
-				<href>https://sentrysoftware.com/legal/disclaimer.html</href>
+				<href>https://metricshub.com/legal/disclaimer.html</href>
 			</link>
 			<link>
 				<name>Trademarks</name>
-				<href>https://sentrysoftware.com/legal/trademarks.html</href>
+				<href>https://metricshub.com/legal/trademarks.html</href>
 			</link>
 			<link>
 				<name>Code of Ethics</name>
-				<href>https://sentrysoftware.com/legal/ethics.html</href>
+				<href>https://metricshub.com/legal/ethics.html</href>
 			</link>
 		</additionalLinks>
 
@@ -69,14 +66,11 @@
 	<body>
 
 		<links>
-			<item name="Open Sentry" href="https://sentrysoftware.org" />
-			<item name="&lt;i class='fa-brands fa-github'&gt;&lt;/i&gt; GitHub" href="https://github.com/sentrysoftware/metricshub" />
-			<item name="OpenTelemetry" href="https://opentelemetry.io" />
+			<item name="MetricsHub" href="https://metricshub.com" />
+			<item name="Pricing" href="https://metricshub.com/pricing" />
+			<item name="Download" href="https://metricshub.com/download" />
+			<item name="Support Desk" href="https://support.metricshub.com" />
 		</links>
-
-		<breadcrumbs>
-			<item name="MetricsHub&lt;sup&gt;&reg;&lt;/sup&gt;" href="https://metricshub.com" />
-		</breadcrumbs>
 
 		<menu name="Introduction">
 			<item name="Overview" href="index.html" />
@@ -93,15 +87,23 @@
 			<item name="On Windows" href="installation/windows.html "/>
 		</menu>
 
+		<menu name="Upgrade">
+			<item name="Upgrade Notes" href="upgrade.html" />
+		</menu>
+
 		<menu name="Configuration">
 			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
 			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
 			<item name="Password Encryption" href="security/passwords.html" />
+			<item name="API Keys" href="security/api-keys.html" />
 		</menu>
 
-		<menu name="Integration">
+		<menu name="Integrations">
+			<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />
+			<item name="BMC Helix" href="integrations/bmc-helix.html" />
+			<item name="Datadog" href="integrations/datadog.html" />
 			<item name="Prometheus" href="prometheus/prometheus.html">
-				<item name="Prometheus AlertManager" href="prometheus/alertmanager.html" />
+				<item name="Prometheus Alertmanager" href="prometheus/alertmanager.html" />
 				<item name="Grafana Dashboards" href="prometheus/grafana.html" />
 			</item>
 		</menu>
@@ -112,6 +114,18 @@
 			<item name="Health Check (Enterprise Edition)" href="guides/status.html" />
 		</menu>
 
+		<menu name="Custom Monitoring">
+			<item name="Overview" href="custom/index.html"/>
+			<item name="Database Query" href="custom/database-query.html"/>
+			<item name="JMX Query" href="custom/jmx-query.html"/>
+			<item name="Linux Service" href="custom/linux-service.html"/>
+			<item name="Linux Process" href="custom/linux-process.html"/>
+			<item name="SNMP Polling" href="custom/snmp-polling.html"/>
+			<item name="Web Request" href="custom/web-request.html"/>
+			<item name="Windows Process" href="custom/windows-process.html"/>
+			<item name="Windows Service" href="custom/windows-service.html"/>
+		</menu>
+
 		<menu name="Troubleshooting">
 			<item name="Overview" href="troubleshooting/index.html"/>
 			<item name="Degraded Performance" href="troubleshooting/degraded-performance.html"/>
@@ -119,10 +133,12 @@
 			<item name="No Data in Observability Platforms" href="troubleshooting/no-data-observability-platforms.html"/>
 			<item name="MetricsHub Logs" href="troubleshooting/metricshub-logs.html"/>
 			<item name="OTel Logs" href="troubleshooting/otel-logs.html"/>
+			<item name="Self-Observability" href="troubleshooting/self-observability.html"/>
 			<item name="Protocol CLIs" href="troubleshooting/cli/index.html">
 				<item name="HTTP CLI" href="troubleshooting/cli/http.html"/>
 				<item name="IPMI CLI" href="troubleshooting/cli/ipmi.html"/>
 				<item name="JDBC CLI" href="troubleshooting/cli/jdbc.html"/>
+				<item name="JMX CLI" href="troubleshooting/cli/jmx.html"/>
 				<item name="Ping CLI" href="troubleshooting/cli/ping.html"/>
 				<item name="SNMP CLI" href="troubleshooting/cli/snmp.html"/>
 				<item name="SNMPv3 CLI" href="troubleshooting/cli/snmpv3.html"/>

@@ -15,7 +15,7 @@ If you need more comprehensive details to troubleshoot your issues, you can enab
 
 ## Enabling the logging mode
 
-In the **config/metricshub.yaml** file, add the `loggerLevel` parameter just before the `resourceGroups` section:
+In the **config/<your_configuration_file>**, add the `loggerLevel` parameter just before the `resourceGroups` section:
 
 ```yaml
 loggerLevel: debug
@@ -33,13 +33,13 @@ Set the `loggerLevel` parameter to:
 
 The output files are saved by default in the **logs** directory located under the **MetricsHub** directory:
 
-* On Windows, the output files are stored in the **%LOCALAPPDATA%\MetricsHub** folder of the account running the application:
+* On Windows, output files are stored in the local logs folder (if it exists and is writable). Otherwise, they are saved in the %LOCALAPPDATA%\MetricsHub folder of the account running the application.
   * When the Local System account starts the MetricsHub Agent service, the output files are stored under **C:\Windows\System32\config\systemprofile\AppData\Local\MetricsHub\logs**.
   * When a specific user starts the MetricsHub Agent service, the output files are stored under **C:\Users\\<username\>\AppData\Local\MetricsHub\logs**.
 
 * On Linux, the output files are stored in the installation directory: **/opt/metricshub/logs**.
 
-To specify a different output directory, edit the **metricshub.yaml** file and add the `outputDirectory` parameter before the `resourceGroups` section:
+To specify a different output directory, edit your MetricsHub configuration file and add the `outputDirectory` parameter before the `resourceGroups` section:
 
 ```yaml
 loggerLevel: debug

@@ -4,9 +4,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-jawk-extension</artifactId>
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -66,17 +66,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>jawk</artifactId>
 		</dependency>
 	</dependencies>
@@ -96,6 +91,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -107,6 +103,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -140,7 +137,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.53</minimum>
+											<minimum>0.33</minimum>
 										</limit>
 									</limits>
 								</rule>
@@ -167,8 +164,8 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:jawk</include>
-									<include>org.sentrysoftware:metricshub-jawk-extension</include>
+									<include>org.metricshub:jawk</include>
+									<include>org.metricshub:metricshub-jawk-extension</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>

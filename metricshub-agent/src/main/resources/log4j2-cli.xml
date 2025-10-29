@@ -11,7 +11,7 @@
 		<Root level="off">
 			<AppenderRef ref="Console" />
 		</Root>
-		<logger name="org.sentrysoftware" level="error" additivity="false">
+		<logger name="org.metricshub" level="error" additivity="false">
 			<AppenderRef ref="Console" />
 		</logger>
 	</Loggers>

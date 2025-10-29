@@ -4,9 +4,9 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-oscommand-extension</artifactId>
@@ -16,7 +16,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -34,8 +34,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>ssh</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>ssh-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -70,17 +70,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-it-common</artifactId>
 			<classifier>tests</classifier>
 			<scope>test</scope>
@@ -106,6 +101,7 @@
 		</testResources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -117,6 +113,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -160,7 +157,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/oscommand/*CommandLineConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/oscommand/*CommandLineConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -223,8 +220,8 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:ssh</include>
-									<include>org.sentrysoftware:metricshub-oscommand-extension</include>
+									<include>org.metricshub:ssh-java</include>
+									<include>org.metricshub:metricshub-oscommand-extension</include>
 									<include>org.connectbot:sshlib</include>
 								</includes>
 							</artifactSet>

@@ -3,9 +3,9 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>1.0.09-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-wbem-extension</artifactId>
@@ -21,7 +21,7 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
+			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-engine</artifactId>
 		</dependency>
 		<dependency>
@@ -39,8 +39,8 @@
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>wbem</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>wbem-java</artifactId>
 			<exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
@@ -53,8 +53,8 @@
 			</exclusions>
 		</dependency>
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>vcenter</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>vcenter-java</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -88,11 +88,6 @@
 			<artifactId>mockito-junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
 	</dependencies>
 
 	<build>
@@ -104,6 +99,7 @@
 		</resources>
 
 		<plugins>
+
 			<!-- surefire -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -115,6 +111,7 @@
 					<classpathDependencyExcludes>
 						<classpathDependencyExclude>org.apache.logging.log4j:log4j-slf4j-impl</classpathDependencyExclude>
 					</classpathDependencyExcludes>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -158,7 +155,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/extension/wbem/*WbemConfigurationBuilder*</exclude>
+						<exclude>org/metricshub/extension/wbem/*WbemConfigurationBuilder*</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -176,11 +173,12 @@
 						<configuration>
 							<artifactSet>
 								<includes>
-									<include>org.sentrysoftware:wbem</include>
-									<include>org.sentrysoftware:vcenter</include>
+									<include>org.metricshub:wbem-java</include>
+									<include>org.metricshub:vcenter-java</include>
 									<include>com.vmware:vijava</include>
 									<include>dom4j:dom4j</include>
-									<include>org.sentrysoftware:metricshub-wbem-extension</include>
+									<include>org.metricshub:metricshub-wbem-extension</include>
+									<include>javax.xml.bind:jaxb-api</include>
 								</includes>
 								<excludes>
 									<exclude>org/slf4j/**</exclude>

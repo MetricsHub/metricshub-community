@@ -18,23 +18,23 @@ After completing this quick start, you will have:
 
 ### On Linux
 
-1. Download the latest package `metricshub-linux-${communityVersion}.tar.gz` using `wget` and save it under `/tmp`:
+1. Download the latest package `metricshub-community-linux-${communityVersion}.tar.gz` using `wget` and save it under `/tmp`:
    
    ```shell
-   sudo wget -O /tmp/metricshub-linux-${communityVersion}.tar.gz https://github.com/sentrysoftware/metricshub/releases/download/v${communityVersion}/metricshub-linux-${communityVersion}.tar.gz
+   sudo wget -O /tmp/metricshub-community-linux-${communityVersion}.tar.gz https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}.tar.gz
    ```
 
-2. Run the below command to unzip `/tmp/metricshub-linux-${communityVersion}.tar.gz` under `/opt`:
+2. Run the below command to unzip `/tmp/metricshub-community-linux-${communityVersion}.tar.gz` under `/opt`:
 
    ```shell
-   sudo tar -xzvf /tmp/metricshub-linux-${communityVersion}.tar.gz -C /opt/
+   sudo tar -xzvf /tmp/metricshub-community-linux-${communityVersion}.tar.gz -C /opt/
    ```
 
 There is no need to create a specific subdirectory for `metricshub` as the archive already contains a `metricshub` directory.
 
 ### On Windows
 
-1. Download the latest package, `metricshub-windows-${communityVersion}.zip`, from the [MetricsHub Releases](https://github.com/sentrysoftware/metricshub/releases/) page
+1. Download the latest package, `metricshub-community-windows-${communityVersion}.zip`, from the [MetricsHub Releases](https://github.com/metricshub/metricshub-community/releases/) page
 
 2. Right-click on the archive, select **Extract All...**, enter `C:\Program Files\`, and click **Extract**. This will place the `MetricsHub` directory in `C:\Program Files\`.
 
@@ -76,7 +76,7 @@ There is no need to create a specific subdirectory for `metricshub` as the archi
 
 #### On Linux
 
-Run the below command to create your configuration file: 
+Run the below command to create your configuration file:
 
    ```shell
    sudo cp /opt/metricshub/lib/config/metricshub-example.yaml /opt/metricshub/lib/config/metricshub.yaml
@@ -123,8 +123,7 @@ resources:
         timeout: 120
 ```
 
-
-Open the `/opt/metricshub/lib/config/metricshub.yaml` or `C:\ProgramData\MetricsHub\config\metricshub.yaml` file and search for the above section to verify that the configuration is active. 
+Open the `/opt/metricshub/lib/config/metricshub.yaml` or `C:\ProgramData\MetricsHub\config\metricshub.yaml` file and search for the above section to verify that the configuration is active.
 
 If you wish to use a protocol other than `WMI` (such as `HTTP`, `PING`, `SNMP`, `SSH`, `IPMI`, `WBEM`, or `WinRM`), refer to the configuration examples provided in `C:\ProgramData\MetricsHub\config\metricshub.yaml`.
 
@@ -136,6 +135,7 @@ Add the below configuration under the `otel` section to push metrics to Promethe
 otel:
   otel.exporter.otlp.metrics.endpoint: http://localhost:9090/api/v1/otlp/v1/metrics
   otel.exporter.otlp.metrics.protocol: http/protobuf
+  otel.exporter.otlp.metrics.append_resource_attributes: true
 ```
 
 ## Step 4: Start Prometheus and MetricsHub
@@ -207,9 +207,12 @@ Several log files are created as soon as the MetricsHub Agent is started:
 * a global `MetricsHub` log file
 * one log file per configured host.
 
-They are stored under:
-* `makefile /opt/metricshub/lib/logs` (Linux environments)
-* or `C:\Users\{Username}\AppData\Local\metricshub\logs` (Windows environments). 
+The log files are stored in the following locations, depending on the environment:
+
+* Linux: /opt/metricshub/lib/logs
+* Windows:
+  * ./logs (relative to the working directory, if writable)
+  * %LOCALAPPDATA%\MetricsHub\logs (if ./logs is not writable)
 
 You can configure the log level in the `metricshub.yaml` file by setting the `loggerLevel` parameter to:
 

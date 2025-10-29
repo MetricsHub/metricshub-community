@@ -1,0 +1,18 @@
+# Enables the debug mode of the core engine (Default: error). Possible values are: all, trace, debug, info, warn, error, or fatal.
+loggerLevel: error
+
+# Sets the number of jobs that MetricsHub can run simultaneously (Default: 20).
+jobPoolSize: 20
+
+# Sets the debug output directory for all the monitored resources.
+outputDirectory: ${env::JAVA_HOME}
+
+# Sets the collect period that MetricsHub uses to collects metrics from the monitored resources (Default: 2m).
+collectPeriod: 1m
+
+# Sets the cycle that MetricsHub uses to perform discoveries and detect new components in your monitored environment. By default, MetricsHub runs a discovery after 30 collects.
+discoveryCycle: 30
+
+# Disables gRPC protocol in unit tests
+otel:
+  otel.exporter.otlp.metrics.protocol: noop

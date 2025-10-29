@@ -36,7 +36,7 @@ metrics:
       - failed
       - ok
 
-  metricshub.host.up.response_time:
+  metricshub.host.response_time:
     description: Response time for protocol check.
     type: Gauge
     unit: s

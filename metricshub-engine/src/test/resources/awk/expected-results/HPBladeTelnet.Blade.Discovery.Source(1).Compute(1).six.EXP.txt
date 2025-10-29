@@ -1,0 +1,7 @@
+MSHW;1;FERMAT-PNET; ProLiant BL260c G5;;
+MSHW;2;fermat-2.some.domain; ProLiant BL260c G5;;
+MSHW;3;[Unknown]; ProLiant BL260c G5;;
+MSHW;4;FERMAT-4; ProLiant BL260c G5;;
+MSHW;5;FERMAT-NODE5; ProLiant BL260c G5;;
+MSHW;6;FERMAT-SP2010; ProLiant BL260c G5;;
+MSHW;7;FERMAT-CMDB; ProLiant BL260c G5;;
