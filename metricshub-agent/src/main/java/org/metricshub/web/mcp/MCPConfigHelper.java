@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -178,5 +179,35 @@ public class MCPConfigHelper {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	/**
+	 * Flattens a multi-host result where each host response contains a list of payloads into a single list of per-item host responses.
+	 * For every {@code HostToolResponse<List<T>>} entry, this method emits one {@code HostToolResponse<T>} per item while preserving
+	 * the original hostname and propagating the top-level error message.
+	 *
+	 * @param hostsExecutionResults aggregated results containing per-host lists of items
+	 * @param <T>                   the item type carried by each host response
+	 * @return a {@link MultiHostToolResponse} with one {@code HostToolResponse<T>} per item and the original error message
+	 */
+	public static <T> MultiHostToolResponse<T> flattenHostsResult(
+		final MultiHostToolResponse<List<T>> hostsExecutionResults
+	) {
+		List<HostToolResponse<T>> flatHosts = hostsExecutionResults
+			.getHosts()
+			.stream()
+			.filter(Objects::nonNull)
+			.flatMap(response -> {
+				String host = response.getHostname();
+				List<T> details = Optional.ofNullable(response.getResponse()).orElse(List.of());
+				return details.stream().map(hd -> HostToolResponse.<T>builder().hostname(host).response(hd).build());
+			})
+			.toList();
+
+		return MultiHostToolResponse
+			.<T>builder()
+			.errorMessage(hostsExecutionResults.getErrorMessage())
+			.hosts(flatHosts)
+			.build();
 	}
 }

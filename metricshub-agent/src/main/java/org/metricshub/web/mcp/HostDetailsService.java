@@ -90,15 +90,14 @@ public class HostDetailsService implements IMCPToolService {
 	}
 
 	/**
-	 * Retrieves host details for the given hostname.
-	 * Looks up the {@link org.metricshub.engine.telemetry.TelemetryManager} and builds a {@link HostDetails}
-	 * containing the configured protocols, working connectors, and collectors.
-	 * If the hostname is not found, the result contains an error message instead.
+	 * Retrieves host details for the given hostname(s).
+	 * Looks up matching {@link TelemetryManager} instances per hostname and returns one {@link HostDetails}
+	 * per manager. Unknown hostnames yield an entry with an error message.
 	 *
-	 * @param hostname the hostname to look up
-	 * @param poolSize optional pool size for concurrent host details lookup; defaults to {@value #DEFAULT_HOST_DETAILS_POOL_SIZE} when {@code null} or ≤ 0
-	 * @return a {@link HostDetails} with protocol, connector, and collector information,
-	 *         or an error message if the host cannot be found
+	 * @param hostname the hostname(s) to look up
+	 * @param poolSize optional pool size for concurrent lookup; defaults to {@value #DEFAULT_HOST_DETAILS_POOL_SIZE} when {@code null} or ≤ 0
+	 * @return a {@link MultiHostToolResponse} where each input hostname maps to one or more {@link HostDetails},
+	 *         or to an error message if the host cannot be found
 	 */
 	@Tool(
 		name = "GetHostDetails",
@@ -120,7 +119,7 @@ public class HostDetailsService implements IMCPToolService {
 		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
-	public MultiHostToolResponse<List<HostDetails>> getHostDetails(
+	public MultiHostToolResponse<HostDetails> getHostDetails(
 		@ToolParam(description = "The hostname(s) to look up in the agent configuration") final List<String> hostname,
 		@ToolParam(
 			description = "Optional pool size for concurrent host details lookup. Defaults to 60.",
@@ -128,7 +127,7 @@ public class HostDetailsService implements IMCPToolService {
 		) final Integer poolSize
 	) {
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_HOST_DETAILS_POOL_SIZE);
-		return executeForHosts(
+		final MultiHostToolResponse<List<HostDetails>> hostsExecutionResults = executeForHosts(
 			hostname,
 			this::buildNullHostnameResponse,
 			host -> {
@@ -148,22 +147,17 @@ public class HostDetailsService implements IMCPToolService {
 			},
 			resolvedPoolSize
 		);
+
+		return MCPConfigHelper.flattenHostsResult(hostsExecutionResults);
 	}
 
 	/**
-	 * Builds a {@link HostDetails} object for the given hostname if it is present in the agent configuration.
-	 * <p>
-	 * This method looks up the {@link TelemetryManager} associated with the host, extracts:
-	 * <ul>
-	 *   <li>the working connectors declared for this host,</li>
-	 *   <li>the configured "host up" protocols,</li>
-	 *   <li>and the collectors associated with those protocols.</li>
-	 * </ul>
-	 * If no telemetry manager can be found for the hostname, a {@link HostDetails} is returned
-	 * containing an error message.
+	 * Builds a {@link HostDetails} object from a {@link TelemetryManager}.
+	 * Extracts the working connectors, the configured "host up" protocols, and the
+	 * collectors associated with those protocols.
 	 *
-	 * @param hostname the hostname to look up in the current configuration
-	 * @return a populated {@link HostDetails} instance, or one containing an error message if the host is not found
+	 * @param telemetryManager the telemetry manager associated with a host
+	 * @return a populated {@link HostDetails} instance
 	 */
 	private HostDetails getHostDetailsIfPresent(final TelemetryManager telemetryManager) {
 		// Collect connector IDs from the "connector" monitor group (empty if none present).
@@ -222,8 +216,7 @@ public class HostDetailsService implements IMCPToolService {
 	}
 
 	/**
-	 * Builds a {@link HostToolResponse} signalling that the hostname argument is
-	 * missing.
+	 * Builds a {@link HostToolResponse} signalling that the hostname argument is missing.
 	 *
 	 * @return a host-level response containing an error payload for the null hostname
 	 */

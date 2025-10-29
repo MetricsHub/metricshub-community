@@ -1,6 +1,8 @@
 package org.metricshub.web.mcp;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -42,12 +44,7 @@ class HostDetailsServiceTest {
 		// An empty telemetry managers list
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of()));
 
-		List<HostDetails> hostResults = hostDetailsService
-			.getHostDetails(List.of(HOSTNAME), null)
-			.getHosts()
-			.get(0)
-			.getResponse();
-		final HostDetails result = hostResults.get(0);
+		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).getHosts().get(0).getResponse();
 
 		assertEquals("Hostname not found in the current configuration.", result.getErrorMessage());
 		assertNull(result.getCollectors());
@@ -72,12 +69,7 @@ class HostDetailsServiceTest {
 
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
-		List<HostDetails> hostResults = hostDetailsService
-			.getHostDetails(List.of(HOSTNAME), 3)
-			.getHosts()
-			.get(0)
-			.getResponse();
-		final HostDetails result = hostResults.get(0);
+		HostDetails result = hostDetailsService.getHostDetails(List.of(HOSTNAME), 3).getHosts().get(0).getResponse();
 
 		// No error message is displayed as the hostname exists.
 		assertTrue(result.getWorkingConnectors().isEmpty());
@@ -90,58 +82,149 @@ class HostDetailsServiceTest {
 	void returnsProtocolsConnectorsAndCollectorsWhenPresent() {
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 
-		// Populating the telemetry manager
-		HostConfiguration hostConfiguration = HostConfiguration
+		// Populating the telemetry managers
+		final HostConfiguration snmpHostConfiguration = HostConfiguration
+			.builder()
+			.hostname(HOSTNAME)
+			.configurations(Map.of())
+			.build();
+
+		final HostConfiguration sshHostConfiguration = HostConfiguration
 			.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
 
 		// Create a telemetry Manager
-		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
+		TelemetryManager snmpTelemetryManager = TelemetryManager.builder().hostConfiguration(snmpHostConfiguration).build();
+		TelemetryManager sshTelemetryManager = TelemetryManager.builder().hostConfiguration(sshHostConfiguration).build();
 
 		// Create host up metrics
-		Map<String, AbstractMetric> metrics = Map.of(
+		Map<String, AbstractMetric> snmpMetrics = Map.of(
 			"metricshub.host.up{protocol=\"snmp\"}",
-			NumberMetric.builder().attributes(Map.of("protocol", "snmp")).build(),
+			NumberMetric.builder().attributes(Map.of("protocol", "snmp")).build()
+		);
+		Map<String, AbstractMetric> sshMetrics = Map.of(
 			"metricshub.host.up{protocol=\"ssh\"}",
 			NumberMetric.builder().attributes(Map.of("protocol", "ssh")).build()
 		);
 
 		// Create two connector monitors and an endpoint monitor
 		Monitor monitor1 = Monitor.builder().attributes(Map.of("connector_id", "CiscoUCSBladeSNMP")).build();
-		Monitor monitor2 = Monitor.builder().attributes(Map.of("connector_id", "Linux")).build();
-		Monitor endpointHostMonitor = Monitor.builder().isEndpoint(true).metrics(metrics).build();
+		Monitor endpointHostMonitor = Monitor.builder().isEndpoint(true).metrics(snmpMetrics).build();
 
+		Monitor monitor2 = Monitor.builder().attributes(Map.of("connector_id", "Linux")).build();
+		Monitor endpointHostMonitor2 = Monitor.builder().isEndpoint(true).metrics(sshMetrics).build();
 		// Inject the created monitors within the telemetry manager
-		telemetryManager.setMonitors(
-			Map.of(
-				"connector",
-				Map.of("monitor1", monitor1, "monitor2", monitor2),
-				"host",
-				Map.of("endpointMonitor", endpointHostMonitor)
-			)
+		snmpTelemetryManager.setMonitors(
+			Map.of("connector", Map.of("monitor1", monitor1), "host", Map.of("endpointMonitor", endpointHostMonitor))
+		);
+		sshTelemetryManager.setMonitors(
+			Map.of("connector", Map.of("monitor2", monitor2), "host", Map.of("endpointMonitor", endpointHostMonitor2))
 		);
 
-		// Mock TelemetryManager in the Agent Context
-		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
+		// Mock TelemetryManagers in the Agent Context
+		when(agentContext.getTelemetryManagers())
+			.thenReturn(Map.of("Paris", Map.of("HostId1", snmpTelemetryManager, "HostId2", sshTelemetryManager)));
 
 		// call the getHostDetails() method to test
-		List<HostDetails> hostResults = hostDetailsService
-			.getHostDetails(List.of(HOSTNAME), null)
-			.getHosts()
-			.get(0)
-			.getResponse();
-		final HostDetails result = hostResults.get(0);
+		List<HostToolResponse<HostDetails>> results = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).getHosts();
 
-		assertEquals(Set.of("CiscoUCSBladeSNMP", "Linux"), result.getWorkingConnectors());
+		assertEquals(2, results.size());
 
-		assertEquals(Set.of("snmp", "ssh"), result.getConfiguredProtocols());
+		// Pull out the payloads (you may have >2 if multiple managers; we only care about snmp/ssh)
+		List<HostDetails> details = results.stream().map(HostToolResponse::getResponse).toList();
 
-		assertTrue(result.getCollectors().contains("CommandLine via SSH"));
-		assertTrue(result.getCollectors().contains("SNMP Get"));
-		assertTrue(result.getCollectors().contains("SNMP Walk"));
-		assertTrue(result.getCollectors().size() >= 5);
-		assertNull(result.getErrorMessage());
+		HostDetails snmp = details
+			.stream()
+			.filter(h -> h.getConfiguredProtocols().contains("snmp"))
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("No SNMP HostDetails found"));
+
+		HostDetails ssh = details
+			.stream()
+			.filter(h -> h.getConfiguredProtocols().contains("ssh"))
+			.findFirst()
+			.orElseThrow(() -> new AssertionError("No SSH HostDetails found"));
+
+		// Ensure they are distinct objects
+		assertNotSame(snmp, ssh, "SNMP and SSH HostDetails should be different");
+
+		// SNMP-side assertions
+		assertAll(
+			"SNMP host assertions",
+			() ->
+				assertEquals(
+					Set.of("CiscoUCSBladeSNMP"),
+					snmp.getWorkingConnectors(),
+					() -> "SNMP host: expected workingConnectors=[CiscoUCSBladeSNMP] but was " + snmp.getWorkingConnectors()
+				),
+			() ->
+				assertEquals(
+					Set.of("snmp"),
+					snmp.getConfiguredProtocols(),
+					() -> "SNMP host: expected configuredProtocols=[snmp] but was " + snmp.getConfiguredProtocols()
+				),
+			() ->
+				assertTrue(
+					snmp.getCollectors().contains("SNMP Get"),
+					() -> "SNMP host: expected collectors to contain 'SNMP Get' but had " + snmp.getCollectors()
+				),
+			() ->
+				assertTrue(
+					snmp.getCollectors().contains("SNMP Walk"),
+					() -> "SNMP host: expected collectors to contain 'SNMP Walk' but had " + snmp.getCollectors()
+				),
+			() ->
+				assertTrue(
+					snmp.getCollectors().size() >= 4,
+					() ->
+						"SNMP host: expected at least 4 collectors but had " +
+						snmp.getCollectors().size() +
+						" -> " +
+						snmp.getCollectors()
+				),
+			() ->
+				assertNull(
+					snmp.getErrorMessage(),
+					() -> "SNMP host: expected no errorMessage but was '" + snmp.getErrorMessage() + "'"
+				)
+		);
+
+		// SSH-side assertions
+		assertAll(
+			"SSH host assertions",
+			() ->
+				assertEquals(
+					Set.of("Linux"),
+					ssh.getWorkingConnectors(),
+					() -> "SSH host: expected workingConnectors=[Linux] but was " + ssh.getWorkingConnectors()
+				),
+			() ->
+				assertEquals(
+					Set.of("ssh"),
+					ssh.getConfiguredProtocols(),
+					() -> "SSH host: expected configuredProtocols=[ssh] but was " + ssh.getConfiguredProtocols()
+				),
+			() ->
+				assertTrue(
+					ssh.getCollectors().contains("CommandLine via SSH"),
+					() -> "SSH host: expected collectors to contain 'CommandLine via SSH' but had " + ssh.getCollectors()
+				),
+			() ->
+				assertTrue(
+					ssh.getCollectors().size() >= 1,
+					() ->
+						"SSH host: expected at least 1 collector but had " +
+						ssh.getCollectors().size() +
+						" -> " +
+						ssh.getCollectors()
+				),
+			() ->
+				assertNull(
+					ssh.getErrorMessage(),
+					() -> "SSH host: expected no errorMessage but was '" + ssh.getErrorMessage() + "'"
+				)
+		);
 	}
 }

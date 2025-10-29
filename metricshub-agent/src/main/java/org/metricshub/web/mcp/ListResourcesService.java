@@ -70,7 +70,7 @@ public class ListResourcesService implements IMCPToolService {
 		description = """
 		Retrieves all configured hosts (Resources) in this MetricsHub Agent instance for which we will be able to execute MetricsHub connectors and collect metrics
 		(hardware, system, storage, database, etc.).
-		Returns a lookup of host resources with their protocols and attributes. Host resources are indexed by a unique key managed by MetricsHub, which is not the hostname. 
+		Returns a lookup of host resources with their protocols and attributes. Host resources are indexed by a unique key managed by MetricsHub, which is not the hostname.
 		To get the hostname, you need to read the `hostname` provided in the protocol object which defines the protocol name and the hostname.
 		"""
 	)
