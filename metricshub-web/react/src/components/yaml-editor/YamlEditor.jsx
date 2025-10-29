@@ -118,7 +118,9 @@ export default function YamlEditor({
 					minHeight: 0,
 					borderTop: 0,
 					".cm-editor": { height: "100%" },
-					".cm-scroller": { overflow: "auto", overscrollBehavior: "contain" },
+					// Allow scroll chaining so the parent container can scroll when the editor
+					// can't (fixes mouse wheel not scrolling when editor is focused)
+					".cm-scroller": { overflow: "auto", overscrollBehavior: "auto" },
 				}}
 			>
 				<CodeMirror
