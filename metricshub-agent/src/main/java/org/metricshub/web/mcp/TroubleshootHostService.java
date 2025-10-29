@@ -21,8 +21,8 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
@@ -91,7 +91,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public MultiHostToolResponse<TelemetryResult> collectMetricsForHost(
+	public MultiHostToolResponse<List<TelemetryResult>> collectMetricsForHost(
 		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
@@ -111,12 +111,24 @@ public class TroubleshootHostService implements IMCPToolService {
 		return executeForHosts(
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
-			host ->
-				HostToolResponse
-					.<TelemetryResult>builder()
-					.hostname(host)
-					.response(collectMetricsForHostInternal(host, connectorId))
-					.build(),
+			host -> {
+				final List<TelemetryResult> telemetryResults = new ArrayList<>();
+				final List<TelemetryManager> telemetryManagers = MCPConfigHelper.findTelemetryManagerByHostname(
+					host,
+					agentContextHolder
+				);
+				if (telemetryManagers.isEmpty()) {
+					return HostToolResponse
+						.<List<TelemetryResult>>builder()
+						.hostname(host)
+						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
+						.build();
+				}
+				telemetryManagers.forEach(telemetryManager ->
+					telemetryResults.add(collectMetricsForHostInternal(telemetryManager, connectorId))
+				);
+				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
+			},
 			resolvedPoolSize
 		);
 	}
@@ -135,7 +147,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		Metrics follow OpenTelemetry semantic conventions.
 		"""
 	)
-	public MultiHostToolResponse<TelemetryResult> getMetricsFromCacheForHost(
+	public MultiHostToolResponse<List<TelemetryResult>> getMetricsFromCacheForHost(
 		@ToolParam(description = "The hostname(s) of the resource we are interested in", required = true) final List<
 			String
 		> hostname,
@@ -148,12 +160,24 @@ public class TroubleshootHostService implements IMCPToolService {
 		return executeForHosts(
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
-			host ->
-				HostToolResponse
-					.<TelemetryResult>builder()
-					.hostname(host)
-					.response(getMetricsFromCacheForHostInternal(host))
-					.build(),
+			host -> {
+				final List<TelemetryResult> telemetryResults = new ArrayList<>();
+				final List<TelemetryManager> telemetryManagers = MCPConfigHelper.findTelemetryManagerByHostname(
+					host,
+					agentContextHolder
+				);
+				if (telemetryManagers.isEmpty()) {
+					return HostToolResponse
+						.<List<TelemetryResult>>builder()
+						.hostname(host)
+						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
+						.build();
+				}
+				telemetryManagers.forEach(telemetryManager ->
+					telemetryResults.add(getMetricsFromCacheForHostInternal(telemetryManager))
+				);
+				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
+			},
 			resolvedPoolSize
 		);
 	}
@@ -172,7 +196,7 @@ public class TroubleshootHostService implements IMCPToolService {
 		using the configured credentials and return the list of connectors that work with these hosts.
 		"""
 	)
-	public MultiHostToolResponse<TelemetryResult> testAvailableConnectorsForHost(
+	public MultiHostToolResponse<List<TelemetryResult>> testAvailableConnectorsForHost(
 		@ToolParam(description = "The hostname(s) of the resource we are interested in") final List<String> hostname,
 		@ToolParam(
 			description = """
@@ -190,12 +214,24 @@ public class TroubleshootHostService implements IMCPToolService {
 		return executeForHosts(
 			hostname,
 			this::buildNullHostnameTelemetryResponse,
-			host ->
-				HostToolResponse
-					.<TelemetryResult>builder()
-					.hostname(host)
-					.response(testAvailableConnectorsForHostInternal(host, connectorId))
-					.build(),
+			host -> {
+				final List<TelemetryResult> telemetryResults = new ArrayList<>();
+				final List<TelemetryManager> telemetryManagers = MCPConfigHelper.findTelemetryManagerByHostname(
+					host,
+					agentContextHolder
+				);
+				if (telemetryManagers.isEmpty()) {
+					return HostToolResponse
+						.<List<TelemetryResult>>builder()
+						.hostname(host)
+						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
+						.build();
+				}
+				telemetryManagers.forEach(telemetryManager ->
+					telemetryResults.add(testAvailableConnectorsForHostInternal(telemetryManager, connectorId))
+				);
+				return HostToolResponse.<List<TelemetryResult>>builder().hostname(host).response(telemetryResults).build();
+			},
 			resolvedPoolSize
 		);
 	}
@@ -207,16 +243,11 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param connectorId optional connector identifier to narrow the troubleshoot scope
 	 * @return a {@link TelemetryResult} containing either the collected metrics or an error message
 	 */
-	private TelemetryResult collectMetricsForHostInternal(final String hostname, final String connectorId) {
-		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
-			hostname,
-			agentContextHolder
-		);
-		if (maybeTelemetryManager.isEmpty()) {
-			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
-		}
-
-		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
+	private TelemetryResult collectMetricsForHostInternal(
+		final TelemetryManager telemetryManager,
+		final String connectorId
+	) {
+		final var newTelemetryManager = MCPConfigHelper.newFrom(telemetryManager, connectorId);
 
 		final var clientsExecutor = new ClientsExecutor(newTelemetryManager);
 		final long discoveryTime = System.currentTimeMillis();
@@ -250,16 +281,8 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param hostname the hostname whose cached metrics are requested
 	 * @return a {@link TelemetryResult} populated with the cached value or an error message when the host is not configured
 	 */
-	private TelemetryResult getMetricsFromCacheForHostInternal(final String hostname) {
-		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
-			hostname,
-			agentContextHolder
-		);
-		if (maybeTelemetryManager.isEmpty()) {
-			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
-		}
-
-		return new TelemetryResult(maybeTelemetryManager.get().getVo());
+	private TelemetryResult getMetricsFromCacheForHostInternal(final TelemetryManager telemetryManager) {
+		return new TelemetryResult(telemetryManager.getVo());
 	}
 
 	/**
@@ -269,16 +292,11 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @param connectorId optional connector identifier to restrict testing to a single connector
 	 * @return a {@link TelemetryResult} reporting detection outcomes or an error when the host is not configured
 	 */
-	private TelemetryResult testAvailableConnectorsForHostInternal(final String hostname, final String connectorId) {
-		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
-			hostname,
-			agentContextHolder
-		);
-		if (maybeTelemetryManager.isEmpty()) {
-			return new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(hostname));
-		}
-
-		final var newTelemetryManager = MCPConfigHelper.newFrom(maybeTelemetryManager.get(), connectorId);
+	private TelemetryResult testAvailableConnectorsForHostInternal(
+		final TelemetryManager telemetryManager,
+		final String connectorId
+	) {
+		final var newTelemetryManager = MCPConfigHelper.newFrom(telemetryManager, connectorId);
 
 		final var clientsExecutor = new ClientsExecutor(newTelemetryManager);
 		final long detectionTime = System.currentTimeMillis();
@@ -302,7 +320,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a host-level response containing a {@link TelemetryResult} that carries the
 	 *         missing-hostname error message
 	 */
-	private HostToolResponse<TelemetryResult> buildNullHostnameTelemetryResponse() {
-		return IMCPToolService.super.buildNullHostnameResponse(() -> new TelemetryResult(NULL_HOSTNAME_ERROR));
+	private HostToolResponse<List<TelemetryResult>> buildNullHostnameTelemetryResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() -> List.of(new TelemetryResult(NULL_HOSTNAME_ERROR)));
 	}
 }

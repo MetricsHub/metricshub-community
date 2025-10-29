@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
@@ -68,12 +67,12 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
 			final var result = collectMetrics(null);
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
-				result,
+				result.get(0),
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
 		}
@@ -84,7 +83,7 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
@@ -95,7 +94,7 @@ class TroubleshootHostServiceTest {
 
 			assertEquals(
 				new TelemetryResult(expected),
-				collectMetrics(null),
+				collectMetrics(null).get(0),
 				"Unexpected result when triggering resource detection."
 			);
 
@@ -110,12 +109,12 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
 			final var result = testAvailableConnectors(null);
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
-				result,
+				result.get(0),
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
 		}
@@ -126,12 +125,12 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
 			final var result = getMetricsFromCache();
 
 			assertEquals(
 				new TelemetryResult(TroubleshootHostService.HOSTNAME_NOT_CONFIGURED_MSG.formatted(HOSTNAME)),
-				result,
+				result.get(0),
 				"Unexpected result when no telemetry manager is found for the hostname."
 			);
 		}
@@ -142,7 +141,7 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
 			final var result = getMetricsFromCache();
 
 			assertNotNull(result, "Result should not be null when telemetry manager is found.");
@@ -154,7 +153,7 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
@@ -165,22 +164,22 @@ class TroubleshootHostServiceTest {
 
 			assertEquals(
 				new TelemetryResult(expected),
-				testAvailableConnectors(null),
+				testAvailableConnectors(null).get(0),
 				"Unexpected result when triggering resource detection."
 			);
 			verify(telemetryManagerMock, times(1)).run(any(), any(), any(), any(), any());
 		}
 	}
 
-	private TelemetryResult collectMetrics(final String connectorId) {
+	private List<TelemetryResult> collectMetrics(final String connectorId) {
 		return service.collectMetricsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
 	}
 
-	private TelemetryResult getMetricsFromCache() {
+	private List<TelemetryResult> getMetricsFromCache() {
 		return service.getMetricsFromCacheForHost(List.of(HOSTNAME), 1).getHosts().get(0).getResponse();
 	}
 
-	private TelemetryResult testAvailableConnectors(final String connectorId) {
+	private List<TelemetryResult> testAvailableConnectors(final String connectorId) {
 		return service.testAvailableConnectorsForHost(List.of(HOSTNAME), connectorId, 1).getHosts().get(0).getResponse();
 	}
 }

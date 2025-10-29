@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -104,12 +105,12 @@ public class MCPConfigHelper {
 	}
 
 	/**
-	 * Finds a {@link TelemetryManager} by its hostname within the provided agent context.
+	 * Finds a and return a list of {@link TelemetryManager}(s) by hostname within the provided agent context.
 	 * @param hostname      the hostname to search for
 	 * @param contextHolder the agent context holder containing telemetry managers
-	 * @return an {@link Optional} containing the found {@link TelemetryManager}, or empty if not found
+	 * @return a {@link List} containing the found {@link TelemetryManager}(s)
 	 */
-	public static Optional<TelemetryManager> findTelemetryManagerByHostname(
+	public static List<TelemetryManager> findTelemetryManagerByHostname(
 		final String hostname,
 		final AgentContextHolder contextHolder
 	) {
@@ -120,7 +121,7 @@ public class MCPConfigHelper {
 			.stream()
 			.flatMap((Map<String, TelemetryManager> innerMap) -> innerMap.values().stream())
 			.filter((TelemetryManager telemetryManager) -> hostname.equalsIgnoreCase(telemetryManager.getHostname()))
-			.findFirst();
+			.toList();
 	}
 
 	/**

@@ -21,6 +21,7 @@ package org.metricshub.web.mcp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -119,7 +120,7 @@ public class HostDetailsService implements IMCPToolService {
 		In addition to verification, collectors may also be used (where explicitly permitted) to perform safe remote actions for corrective purposes.
 		"""
 	)
-	public MultiHostToolResponse<HostDetails> getHostDetails(
+	public MultiHostToolResponse<List<HostDetails>> getHostDetails(
 		@ToolParam(description = "The hostname(s) to look up in the agent configuration") final List<String> hostname,
 		@ToolParam(
 			description = "Optional pool size for concurrent host details lookup. Defaults to 60.",
@@ -130,7 +131,21 @@ public class HostDetailsService implements IMCPToolService {
 		return executeForHosts(
 			hostname,
 			this::buildNullHostnameResponse,
-			host -> HostToolResponse.<HostDetails>builder().hostname(host).response(getHostDetailsIfPresent(host)).build(),
+			host -> {
+				final List<HostDetails> hostResponses = new ArrayList<>();
+				final List<TelemetryManager> telemetryManagers = MCPConfigHelper.findTelemetryManagerByHostname(
+					host,
+					agentContextHolder
+				);
+				if (telemetryManagers.isEmpty()) {
+					final List<HostDetails> hostDetails = List.of(
+						HostDetails.builder().errorMessage("Hostname not found in the current configuration.").build()
+					);
+					return HostToolResponse.<List<HostDetails>>builder().hostname(host).response(hostDetails).build();
+				}
+				telemetryManagers.forEach(telemetryManager -> hostResponses.add(getHostDetailsIfPresent(telemetryManager)));
+				return HostToolResponse.<List<HostDetails>>builder().hostname(host).response(hostResponses).build();
+			},
 			resolvedPoolSize
 		);
 	}
@@ -150,21 +165,7 @@ public class HostDetailsService implements IMCPToolService {
 	 * @param hostname the hostname to look up in the current configuration
 	 * @return a populated {@link HostDetails} instance, or one containing an error message if the host is not found
 	 */
-	private HostDetails getHostDetailsIfPresent(final String hostname) {
-		// Try to find a telemetry manager for the given host.
-		final Optional<TelemetryManager> maybeTelemetryManager = MCPConfigHelper.findTelemetryManagerByHostname(
-			hostname,
-			agentContextHolder
-		);
-
-		// If a telemetry manager isn't found, return an error message.
-		if (maybeTelemetryManager.isEmpty()) {
-			return HostDetails.builder().errorMessage("Hostname not found in the current configuration.").build();
-		}
-
-		// Retrieve the telemetry manager of the host.
-		final TelemetryManager telemetryManager = maybeTelemetryManager.get();
-
+	private HostDetails getHostDetailsIfPresent(final TelemetryManager telemetryManager) {
 		// Collect connector IDs from the "connector" monitor group (empty if none present).
 		final Set<String> connectors = Optional
 			.ofNullable(telemetryManager.getMonitors())
@@ -226,9 +227,9 @@ public class HostDetailsService implements IMCPToolService {
 	 *
 	 * @return a host-level response containing an error payload for the null hostname
 	 */
-	private HostToolResponse<HostDetails> buildNullHostnameResponse() {
+	private HostToolResponse<List<HostDetails>> buildNullHostnameResponse() {
 		return IMCPToolService.super.buildNullHostnameResponse(() ->
-			HostDetails.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+			List.of(HostDetails.builder().errorMessage(NULL_HOSTNAME_ERROR).build())
 		);
 	}
 }

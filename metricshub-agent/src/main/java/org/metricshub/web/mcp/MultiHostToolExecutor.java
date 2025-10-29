@@ -74,7 +74,7 @@ public final class MultiHostToolExecutor {
 					hostnames
 						.stream()
 						.map(hostname -> hostname == null ? nullHostnameSupplier.get() : perHostTask.apply(hostname))
-						.collect(Collectors.toList())
+						.toList()
 				);
 			return aggregatedResponse;
 		}
@@ -90,7 +90,7 @@ public final class MultiHostToolExecutor {
 						executor
 					)
 				)
-				.collect(Collectors.toList());
+				.toList();
 
 			CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
 
