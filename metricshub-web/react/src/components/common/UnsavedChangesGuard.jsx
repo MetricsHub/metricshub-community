@@ -8,21 +8,21 @@ import { useAppSelector } from "../../hooks/store";
  * - On in-app navigation: shows custom dialog with Stay / Discard / Save (when possible)
  */
 export default function UnsavedChangesGuard() {
-    const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
-    const hasAnyDirty = Object.values(dirtyByName).some(Boolean);
+	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
+	const hasAnyDirty = Object.values(dirtyByName).some(Boolean);
 
-    // Show native Stay/Leave prompt when closing/reloading the tab or window
-    useBeforeUnload(
-        React.useCallback(
-            (e) => {
-                if (hasAnyDirty) {
-                    e.preventDefault();
-                    e.returnValue = ""; // required by some browsers
-                }
-            },
-            [hasAnyDirty],
-        ),
-    );
+	// Show native Stay/Leave prompt when closing/reloading the tab or window
+	useBeforeUnload(
+		React.useCallback(
+			(e) => {
+				if (hasAnyDirty) {
+					e.preventDefault();
+					e.returnValue = ""; // required by some browsers
+				}
+			},
+			[hasAnyDirty],
+		),
+	);
 
-    return null;
+	return null;
 }

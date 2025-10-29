@@ -195,7 +195,7 @@ export default function FileTreeItem({
 					>
 						<Box onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
 							<Box sx={{ display: "flex", alignItems: "center" }}>
-								<FileTypeIcon type="yaml" />
+								<FileTypeIcon type={isBackupFile ? "backup" : "file"} />
 								<TextField
 									inputRef={inputRef}
 									value={draft}
@@ -229,7 +229,7 @@ export default function FileTreeItem({
 				) : (
 					<>
 						<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-							<FileTypeIcon type="yaml" />
+							<FileTypeIcon type={isBackupFile ? "backup" : "file"} />
 							<Typography
 								component="span"
 								noWrap
@@ -291,7 +291,7 @@ export default function FileTreeItem({
 				slotProps={{
 					content: {
 						ref: rowRef,
-						sx: { "&.Mui-focusVisible": { backgroundColor: "transparent" } },
+						sx: { width: "100%", "&.Mui-focusVisible": { backgroundColor: "transparent" } },
 					},
 				}}
 			/>

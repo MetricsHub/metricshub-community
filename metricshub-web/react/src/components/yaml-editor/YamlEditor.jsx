@@ -109,7 +109,9 @@ export default function YamlEditor({
 	);
 
 	return (
-		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}>
+		<Box
+			sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}
+		>
 			<Box
 				sx={{
 					flex: 1,
@@ -134,7 +136,7 @@ export default function YamlEditor({
 					}}
 					theme={theme.palette.mode}
 					onCreateEditor={(view) => {
-						viewRef.current = view;          // <-- this is the EditorView
+						viewRef.current = view; // <-- this is the EditorView
 						onEditorReady?.(view);
 					}}
 				/>

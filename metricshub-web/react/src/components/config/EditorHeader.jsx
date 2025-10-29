@@ -2,6 +2,7 @@ import { Stack, Typography, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backupNames";
+import FileTypeIcon from "./Tree/icons/FileTypeIcons";
 
 /**
  * Editor header component showing file name, save button, and status.
@@ -29,7 +30,8 @@ export default function EditorHeader({ selected, saving, onSave }) {
 		<>
 			<Stack direction="row" alignItems="center" justifyContent="space-between">
 				{/* File name + unsaved indicator */}
-				<Stack direction="row" alignItems="center" spacing={1}>
+				<Stack direction="row" alignItems="center" spacing={0}>
+					{selected && <FileTypeIcon type={isBackup ? "backup" : "file"} />}
 					<Typography variant="subtitle1" sx={{ fontWeight: isDirty ? 510 : 500 }}>
 						{selected ?? "Select a file to edit"}
 					</Typography>

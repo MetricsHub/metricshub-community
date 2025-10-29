@@ -93,7 +93,6 @@ export const Right = ({ children, disableScroll = false, ...rest }) => (
 	</Box>
 );
 
-
 export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 	const isSmall = useMediaQuery("(max-width:900px)");
 

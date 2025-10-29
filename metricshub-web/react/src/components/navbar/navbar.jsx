@@ -113,8 +113,12 @@ const NavBar = ({ toggleTheme }) => {
 									{(hasDirty || hasError) && (
 										<Box
 											component="span"
-											aria-label={hasError ? "Configuration has errors" : "Unsaved configuration changes"}
-											title={hasError ? "Configuration has errors" : "Unsaved configuration changes"}
+											aria-label={
+												hasError ? "Configuration has errors" : "Unsaved configuration changes"
+											}
+											title={
+												hasError ? "Configuration has errors" : "Unsaved configuration changes"
+											}
 											sx={{
 												ml: 0.25,
 												width: 8,
