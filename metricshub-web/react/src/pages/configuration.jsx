@@ -37,15 +37,8 @@ function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 	const { name: routeName } = useParams();
-	const {
-		list,
-		filesByName,
-		selected,
-		loadingList,
-		loadingContent,
-		saving,
-		error,
-	} = useAppSelector((s) => s.config);
+	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
+		useAppSelector((s) => s.config);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null);

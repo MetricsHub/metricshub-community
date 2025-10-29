@@ -20,10 +20,10 @@ export default function EditorHeader({ selected, saving, onSave }) {
 	// Non-positional errors (line/column <= 0 or missing) are shown under the header
 	const nonPosErrors = Array.isArray(fileValidation?.errors)
 		? fileValidation.errors.filter((e) => {
-			const ln = Number(e?.line);
-			const col = Number(e?.column);
-			return !Number.isFinite(ln) || !Number.isFinite(col) || ln <= 0 || col <= 0;
-		})
+				const ln = Number(e?.line);
+				const col = Number(e?.column);
+				return !Number.isFinite(ln) || !Number.isFinite(col) || ln <= 0 || col <= 0;
+			})
 		: [];
 
 	return (
