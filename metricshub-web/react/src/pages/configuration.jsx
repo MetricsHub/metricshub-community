@@ -23,7 +23,7 @@ import {
 } from "../store/slices/configSlice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
-import ConfigTree from "../components/config/Tree/ConfigTree";
+import ConfigTree from "../components/config/tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";

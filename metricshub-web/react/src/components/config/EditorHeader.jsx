@@ -2,7 +2,7 @@ import { Stack, Typography, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backupNames";
-import FileTypeIcon from "./Tree/icons/FileTypeIcons";
+import FileTypeIcon from "./tree/icons/FileTypeIcons";
 
 /**
  * Editor header component showing file name, save button, and status.
@@ -20,10 +20,10 @@ export default function EditorHeader({ selected, saving, onSave }) {
 	// Non-positional errors (line/column <= 0 or missing) are shown under the header
 	const nonPosErrors = Array.isArray(fileValidation?.errors)
 		? fileValidation.errors.filter((e) => {
-				const ln = Number(e?.line);
-				const col = Number(e?.column);
-				return !Number.isFinite(ln) || !Number.isFinite(col) || ln <= 0 || col <= 0;
-			})
+			const ln = Number(e?.line);
+			const col = Number(e?.column);
+			return !Number.isFinite(ln) || !Number.isFinite(col) || ln <= 0 || col <= 0;
+		})
 		: [];
 
 	return (

@@ -6,12 +6,12 @@ import { Stack, Box, IconButton, Menu, MenuItem } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import BackupIcon from "@mui/icons-material/Backup";
 import DownloadIcon from "@mui/icons-material/Download";
-import FileTreeItem from "./FileTreeItem";
-import BackupSetNode from "./BackupSetNode";
-import { parseBackupFileName } from "../../../utils/backupNames";
-import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import { createConfigBackup } from "../../../store/thunks/configThunks";
-import { downloadAllConfigs } from "../../../services/downloadService";
+import FileTreeItem from "./FileTreeItem.jsx";
+import BackupSetNode from "./BackupSetNode.jsx";
+import { parseBackupFileName } from "../../../utils/backupNames.js";
+import { useAppDispatch, useAppSelector } from "../../../hooks/store.js";
+import { createConfigBackup } from "../../../store/thunks/configThunks.js";
+import { downloadAllConfigs } from "../../../services/downloadService.js";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
