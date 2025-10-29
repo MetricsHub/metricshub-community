@@ -53,10 +53,10 @@ public class VelocityConfigurationLoader {
 			// Initialize VelocityEngine
 			final var velocityEngine = new VelocityEngine();
 			var props = new Properties();
-			props.setProperty("resource.loader", "file");
-			props.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-			props.setProperty("file.resource.loader.path", vmPath.getParent().toString());
-			props.setProperty("file.resource.loader.cache", "false");
+			props.setProperty("resource.loaders", "file");
+			props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+			props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
+			props.setProperty("resource.loader.file.cache", "false");
 			velocityEngine.init(props);
 
 			// Load template

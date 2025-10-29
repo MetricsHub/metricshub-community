@@ -11,7 +11,6 @@ import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
@@ -25,6 +24,7 @@ import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpExtension;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.TelemetryResult;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 
 class TroubleshootHostServiceTest {
@@ -68,7 +68,14 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 			final var result = collectMetrics(null);
 
 			assertEquals(
@@ -84,11 +91,18 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
 				.thenReturn(telemetryManagerMock);
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 
 			final var expected = new MonitorsVo();
 			when(telemetryManagerMock.getVo()).thenReturn(expected);
@@ -110,7 +124,14 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 			final var result = testAvailableConnectors(null);
 
 			assertEquals(
@@ -126,7 +147,14 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.empty());
+				.thenReturn(List.of());
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 			final var result = getMetricsFromCache();
 
 			assertEquals(
@@ -142,7 +170,14 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 			final var result = getMetricsFromCache();
 
 			assertNotNull(result, "Result should not be null when telemetry manager is found.");
@@ -154,11 +189,18 @@ class TroubleshootHostServiceTest {
 		try (MockedStatic<MCPConfigHelper> mockedMCPConfigHelper = mockStatic(MCPConfigHelper.class)) {
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.findTelemetryManagerByHostname(HOSTNAME, agentContextHolder))
-				.thenReturn(Optional.of(telemetryManager));
+				.thenReturn(List.of(telemetryManager));
 			final TelemetryManager telemetryManagerMock = mock(TelemetryManager.class);
 			mockedMCPConfigHelper
 				.when(() -> MCPConfigHelper.newFrom(telemetryManager, null))
 				.thenReturn(telemetryManagerMock);
+			mockedMCPConfigHelper
+				.when(() ->
+					MCPConfigHelper.<HostDetails>flattenHostsResult(
+						ArgumentMatchers.<MultiHostToolResponse<List<HostDetails>>>any()
+					)
+				)
+				.thenCallRealMethod();
 
 			final var expected = new MonitorsVo();
 			when(telemetryManagerMock.getVo()).thenReturn(expected);
