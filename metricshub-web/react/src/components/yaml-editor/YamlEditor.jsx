@@ -5,11 +5,12 @@ import { useTheme } from "@mui/material/styles";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
-import { keymap } from "@codemirror/view";
+import { keymap, EditorView } from "@codemirror/view";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
+const SAVE_DEBOUNCE_MS = 400; // reduce localStorage IO (align with validation debounce)
 
 /**
  * YAML Editor component.
@@ -33,6 +34,8 @@ export default function YamlEditor({
 	// expose editor view for parent components (used to scroll to error locations)
 	const viewRef = React.useRef(null);
 
+	// Removed custom search panel state to restore default CodeMirror Ctrl+F behavior
+
 	const [doc, setDoc] = React.useState(() => {
 		const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
 		return stored ?? value;
@@ -46,9 +49,16 @@ export default function YamlEditor({
 		}
 	}, [value]);
 
-	// Save to localStorage on every change
+	// Save to localStorage on change with debounce to reduce IO
 	React.useEffect(() => {
-		localStorage.setItem(LOCAL_STORAGE_KEY, doc);
+		const id = setTimeout(() => {
+			try {
+				localStorage.setItem(LOCAL_STORAGE_KEY, doc);
+			} catch {
+				// Local storage is best-effort: ignore errors (quota, private mode, blocked storage)
+			}
+		}, SAVE_DEBOUNCE_MS);
+		return () => clearTimeout(id);
 	}, [doc]);
 
 	/**
@@ -73,7 +83,25 @@ export default function YamlEditor({
 				},
 			});
 		}
-		return [cmYaml(), history(), keymap.of(km), ...validationExtension];
+
+		// Ensure search navigation follows matches even when the editor is
+		// nested in other scrollable containers. Using DOM scrollIntoView will
+		// scroll ancestor containers as needed, not just the CM scroller.
+		const followSearchSelection = EditorView.updateListener.of((update) => {
+			if (!update.transactions.length) return;
+			const isSearchMove = update.transactions.some((tr) => tr.isUserEvent("select.search"));
+			if (!isSearchMove) return;
+			const range = update.state.selection.main;
+			const domAt = update.view.domAtPos(range.head);
+			let el = domAt?.node || null;
+			if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
+			if (el && el.scrollIntoView) {
+				// Scroll ancestors as well so the active match is centered reliably
+				el.scrollIntoView({ block: "center", inline: "nearest" });
+			}
+		});
+
+		return [cmYaml(), history(), keymap.of(km), followSearchSelection, ...validationExtension];
 	}, [onSave, canSave, validationExtension]);
 
 	/**
@@ -89,14 +117,18 @@ export default function YamlEditor({
 	);
 
 	return (
-		<Box sx={{ height, display: "flex", flexDirection: "column", minHeight: 0 }}>
+		<Box
+			sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}
+		>
 			<Box
 				sx={{
 					flex: 1,
 					minHeight: 0,
 					borderTop: 0,
 					".cm-editor": { height: "100%" },
-					".cm-scroller": { overflow: "auto" },
+					// Allow scroll chaining so the parent container can scroll when the editor
+					// can't (fixes mouse wheel not scrolling when editor is focused)
+					".cm-scroller": { overflow: "auto", overscrollBehavior: "auto" },
 				}}
 			>
 				<CodeMirror
@@ -104,11 +136,18 @@ export default function YamlEditor({
 					onChange={handleChange}
 					extensions={extensions}
 					editable={!readOnly}
-					basicSetup={{ lineNumbers: true, highlightActiveLine: true, foldGutter: true }}
+					basicSetup={{
+						lineNumbers: true,
+						highlightActiveLine: true,
+						foldGutter: true,
+						// Re-enable default search behavior and keymap (Ctrl/Cmd+F)
+						searchKeymap: true,
+						search: true,
+					}}
 					theme={theme.palette.mode}
-					onCreateEditor={(editor) => {
-						viewRef.current = editor.view;
-						onEditorReady?.(editor.view);
+					onCreateEditor={(view) => {
+						viewRef.current = view; // <-- this is the EditorView
+						onEditorReady?.(view);
 					}}
 				/>
 			</Box>

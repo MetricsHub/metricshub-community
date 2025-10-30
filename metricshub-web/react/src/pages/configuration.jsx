@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import RefreshIcon from "@mui/icons-material/Autorenew";
 
 import { withAuthGuard } from "../hocs/with-auth-guard";
 import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
@@ -11,7 +11,6 @@ import { useAppDispatch, useAppSelector } from "../hooks/store";
 import {
 	fetchConfigList,
 	fetchConfigContent,
-	validateConfig,
 	deleteConfig,
 	renameConfig,
 } from "../store/thunks/configThunks";
@@ -23,8 +22,8 @@ import {
 	deleteLocalFile,
 } from "../store/slices/configSlice";
 import EditorHeader from "../components/config/EditorHeader";
-import ConfigEditorContainer from "../components/config/Editor/ConfigEditorContainer";
-import ConfigTree from "../components/config/Tree/ConfigTree";
+import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
+import ConfigTree from "../components/config/tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -38,17 +37,8 @@ function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 	const { name: routeName } = useParams();
-	const {
-		list,
-		filesByName,
-		selected,
-		content,
-		loadingList,
-		loadingContent,
-		saving,
-		validation,
-		error,
-	} = useAppSelector((s) => s.config);
+	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
+		useAppSelector((s) => s.config);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null);
@@ -136,29 +126,10 @@ function ConfigurationPage() {
 		[dispatch, list, routeName, navigate],
 	);
 
-	/**
-	 * Whether we have already auto-selected a file.
-	 */
-	const didAutoSelect = React.useRef(false);
+	// Auto-select is handled via routeName: when no route is set and list is available,
+	// we navigate to the first file in the dedicated effect above.
 
-	/**
-	 * Auto-select the first file in the list if none is selected.
-	 */
-	React.useEffect(() => {
-		if (didAutoSelect.current) return;
-		if (!selected && list?.length > 0) {
-			didAutoSelect.current = true;
-			onSelect(list[0].name);
-		}
-	}, [list, selected, onSelect]);
-
-	/**
-	 * Handle validation request from the editor header.
-	 */
-	const onValidate = React.useCallback(() => {
-		if (!selected) return;
-		dispatch(validateConfig({ name: selected, content }));
-	}, [dispatch, selected, content]);
+	// Validation is handled elsewhere; header no longer triggers validation directly.
 
 	/**
 	 * Open the delete confirmation dialog for a given file.
@@ -263,17 +234,43 @@ function ConfigurationPage() {
 				</Stack>
 			</Left>
 
-			<Right>
-				<Stack sx={{ p: 1.5, gap: 1 }}>
-					<EditorHeader
-						selected={selected}
-						saving={saving}
-						validation={validation}
-						onValidate={onValidate}
-						onSave={() => editorRef.current?.save?.()}
-						canSave={!!selected && !saving}
-					/>
-					<Box sx={{ height: "calc(100vh - 160px)" }}>
+			<Right disableScroll>
+				<Stack
+					sx={{
+						px: 1.5,
+						pt: 0,
+						pb: 1.5,
+						gap: 1,
+						height: "100%",
+						// Allow right pane to scroll for non-editor content (e.g., messages),
+						// while we also keep the editor itself fully height-constrained so
+						// CodeMirror remains the primary scroll area for the document.
+						overflow: "auto",
+						minHeight: 0,
+					}}
+				>
+					<Box
+						sx={{
+							position: "sticky",
+							top: 0,
+							zIndex: (t) => t.zIndex.appBar,
+							mx: -1.5,
+							px: 1.5,
+							py: 1,
+							bgcolor: "background.default",
+							borderBottom: 1,
+							borderColor: "divider",
+						}}
+					>
+						<EditorHeader
+							selected={selected}
+							saving={saving}
+							onSave={() => editorRef.current?.save?.()}
+						/>
+					</Box>
+
+					{/* Let the editor take the remaining space without vh hacks */}
+					<Box sx={{ flex: 1, minHeight: 0 }}>
 						<ConfigEditorContainer ref={editorRef} />
 					</Box>
 					{loadingContent && (

@@ -81,11 +81,11 @@ export const Left = ({ children, ...rest }) => (
  * @param {*} param0 children - content to render
  * @returns JSX.Element
  */
-export const Right = ({ children, ...rest }) => (
+export const Right = ({ children, disableScroll = false, ...rest }) => (
 	<Box
 		{...rest}
 		sx={(t) => ({
-			...Scrollbar(t),
+			...(disableScroll ? { overflow: "hidden", height: "100%", minWidth: 0 } : Scrollbar(t)),
 			...rest.sx,
 		})}
 	>

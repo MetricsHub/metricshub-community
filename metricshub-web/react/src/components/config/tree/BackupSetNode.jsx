@@ -21,7 +21,13 @@ const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick 
 
 	return (
 		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				width: "100%",
+				pr: 1,
+			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center" }}>
 				<FileTypeIcon type="folder" />
@@ -126,7 +132,11 @@ export default function BackupSetNode({
 
 	return (
 		<>
-			<TreeItem itemId={groupItemId} label={<BackupGroupLabel id={id} onMenuClick={openMenu} />}>
+			<TreeItem
+				itemId={groupItemId}
+				label={<BackupGroupLabel id={id} onMenuClick={openMenu} />}
+				slotProps={{ content: { sx: { width: "100%" } } }}
+			>
 				{files.map((f) => (
 					<FileTreeItem
 						key={f.name}
