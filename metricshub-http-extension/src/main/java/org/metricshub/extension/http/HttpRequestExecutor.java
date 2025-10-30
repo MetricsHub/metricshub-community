@@ -45,6 +45,7 @@ import org.metricshub.extension.http.utils.HttpRequest;
 import org.metricshub.extension.http.utils.UrlHelper;
 import org.metricshub.http.HttpClient;
 import org.metricshub.http.HttpResponse;
+import org.slf4j.event.Level;
 
 /**
  * Executes HTTP requests configured through {@link HttpRequest} objects.
@@ -144,23 +145,25 @@ public class HttpRequestExecutor {
 		// Build the full URL
 		final String fullUrl = UrlHelper.format(protocol, hostname, httpConfiguration.getPort(), path, url);
 
-		LoggingHelper.trace(() ->
-			log.trace(
-				"Executing HTTP request: {} {}\n- hostname: {}\n- url: {}\n- path: {}\n" + // NOSONAR
-				"- Protocol: {}\n- Port: {}\n" +
-				"- Request-headers:\n{}\n- Request-body:\n{}\n- Timeout: {} s\n- Get-result-content: {}\n",
-				method,
-				fullUrl,
-				hostname,
-				url,
-				path,
-				protocol,
-				httpConfiguration.getPort(),
-				StringHelper.prettyHttpHeaders(headerContentProtected),
-				bodyContentProtected,
-				httpConfiguration.getTimeout().intValue(),
-				httpRequest.getResultContent()
-			)
+		LoggingHelper.logWithHiddenPassword(
+			Level.TRACE,
+			() ->
+				String.format(
+					"Executing HTTP request: %s %s\n- hostname: %s\n- url: %s\n- path: %s\n" + // NOSONAR
+					"- Protocol: %s\n- Port: %d\n" +
+					"- Request-headers:\n%s\n- Request-body:\n%s\n- Timeout: %d s\n- Get-result-content: %s\n",
+					method,
+					fullUrl,
+					hostname,
+					url,
+					path,
+					protocol,
+					httpConfiguration.getPort(),
+					StringHelper.prettyHttpHeaders(headerContentProtected),
+					bodyContentProtected,
+					httpConfiguration.getTimeout().intValue(),
+					httpRequest.getResultContent()
+				)
 		);
 
 		return RetryOperation
@@ -285,28 +288,30 @@ public class HttpRequestExecutor {
 					throw new IllegalArgumentException("Unsupported ResultContent: " + resultContent);
 			}
 
-			LoggingHelper.trace(() ->
-				log.trace(
-					"Executed HTTP request: {} {}\n- Hostname: {}\n- Url: {}\n- Path: {}\n- Protocol: {}\n- Port: {}\n" + // NOSONAR
-					"- Request-headers:\n{}\n- Request-body:\n{}\n- Timeout: {} s\n" +
-					"- get-result-content: {}\n- response-status: {}\n- response-headers:\n{}\n" +
-					"- response-body:\n{}\n- response-time: {}\n",
-					method,
-					fullUrl,
-					hostname,
-					url,
-					path,
-					protocol,
-					httpConfiguration.getPort(),
-					StringHelper.prettyHttpHeaders(headerContentProtected),
-					bodyContentProtected,
-					httpConfiguration.getTimeout().intValue(),
-					resultContent,
-					statusCode,
-					httpResponse.getHeader(),
-					httpResponse.getBody(),
-					responseTime
-				)
+			LoggingHelper.logWithHiddenPassword(
+				Level.TRACE,
+				() ->
+					String.format(
+						"Executed HTTP request: %s %s\n- Hostname: %s\n- Url: %s\n- Path: %s\n- Protocol: %s\n- Port: %d\n" + // NOSONAR
+						"- Request-headers:\n%s\n- Request-body:\n%s\n- Timeout: %d s\n" +
+						"- get-result-content: %s\n- response-status: %d\n- response-headers:\n%s\n" +
+						"- response-body:\n%s\n- response-time: %d%n\n",
+						method,
+						fullUrl,
+						hostname,
+						url,
+						path,
+						protocol,
+						httpConfiguration.getPort(),
+						StringHelper.prettyHttpHeaders(headerContentProtected),
+						bodyContentProtected,
+						httpConfiguration.getTimeout().intValue(),
+						resultContent,
+						statusCode,
+						httpResponse.getHeader(),
+						httpResponse.getBody(),
+						responseTime
+					)
 			);
 
 			return result;
