@@ -25,6 +25,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.NonNull;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.AbstractStrategy;
@@ -93,6 +94,26 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 		// CHECKSTYLE:OFF
 		protocolExtensions.forEach(protocolExtension -> {
+			if (StringHelper.nonNullNonBlank(telemetryManager.getEmulationInputDirectory())) {
+				final MetricFactory metricFactory = new MetricFactory();
+				final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+				final Long strategyTime = telemetryManager.getStrategyTime();
+				// In emulation mode, collect metricshub.host.up metric directly as "1.0"
+				metricFactory.collectNumberMetric(
+					endpointHostMonitor,
+					UP_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+					UP,
+					strategyTime
+				);
+				//In emulation mode, collect metricshub.host.response_time metric directly as "1.0"
+				metricFactory.collectNumberMetric(
+					endpointHostMonitor,
+					RESPONSE_TIME_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+					UP,
+					strategyTime
+				);
+				return; // Skip to next extension
+			}
 			// Record the start time before launching protocol checks
 			final long startTime = System.currentTimeMillis();
 			protocolExtension
