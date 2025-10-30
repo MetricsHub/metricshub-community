@@ -271,6 +271,39 @@ This will provide a list as below:
 
 This list displays the internal name (**id**) of each connector, its applicable system types and its display name.
 
+### Additional Connectors
+
+Some connectors are parameterizable through variables so you can tailor their behavior without writing code. These are called Additional Connectors.
+
+Example: `LinuxProcess` (category: System) monitors Linux processes. It accepts regex-driven filters to select which processes to include:
+- matchname: process name
+- matchcommand: command line
+- matchuser: effective user
+
+By default, these filters are set to `.*` (match everything), so the connector inspects all processes unless you narrow it down.
+
+- Example 1: match by name
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess --variable matchname=grafana
+```
+
+- Example 2: combine multiple filters
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess --variable matchname=grafana --variable matchcommand=grafana --variable matchuser=root
+```
+
+- Example 3: use defaults (inspect all processes)
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess
+```
+
+- Example 4: enable via connectors list (equivalent to Example 3)
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --connectors +LinuxProcess
+```
+
+Note: Additional Connectors are not discovered automatically. You must explicitly enable them with `--connectors +LinuxProcess` or `--additional-connector LinuxProcess`.
+
 ### Patch Connectors
 
 By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by configuring a custom directory for additional connectors. This can be done by specifying the `--patch-directory` option as bellow:
