@@ -79,7 +79,9 @@ const NavBar = ({ toggleTheme }) => {
 				sx={(t) => ({
 					bgcolor: t.palette.background.default,
 					color: t.palette.text.primary,
-					borderBottom: `1px solid ${t.palette.divider}`,
+					borderBottom: 1,
+					borderColor:
+						t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
 				})}
 			>

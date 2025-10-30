@@ -72,6 +72,8 @@ export const buildComponents = () => {
 						backgroundColor: theme.palette.action.disabledBackground,
 						color: theme.palette.action.disabled,
 						boxShadow: "none",
+						border: "1px solid",
+						borderColor: theme.palette.divider,
 					},
 				}),
 				sizeSmall: {
