@@ -1,17 +1,17 @@
 // src/components/config/Tree/ConfigTree.jsx
 import * as React from "react";
-import { SimpleTreeView, TreeItem } from "@mui/x-tree-view";
+import { SimpleTreeView, TreeItem, treeItemClasses } from "@mui/x-tree-view";
 import FileTypeIcon from "./icons/FileTypeIcons.jsx";
 import { Stack, Box, IconButton, Menu, MenuItem } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import BackupIcon from "@mui/icons-material/Backup";
 import DownloadIcon from "@mui/icons-material/Download";
-import FileTreeItem from "./FileTreeItem";
-import BackupSetNode from "./BackupSetNode";
-import { parseBackupFileName } from "../../../utils/backupNames";
-import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import { createConfigBackup } from "../../../store/thunks/configThunks";
-import { downloadAllConfigs } from "../../../services/downloadService";
+import FileTreeItem from "./FileTreeItem.jsx";
+import BackupSetNode from "./BackupSetNode.jsx";
+import { parseBackupFileName } from "../../../utils/backupNames.js";
+import { useAppDispatch, useAppSelector } from "../../../hooks/store.js";
+import { createConfigBackup } from "../../../store/thunks/configThunks.js";
+import { downloadAllConfigs } from "../../../services/downloadService.js";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";
@@ -20,7 +20,13 @@ const BACKUP_ROOT_ID = "__backup_root__";
 const FolderLabel = React.memo(function FolderLabel({ name, onMenuClick }) {
 	return (
 		<Box
-			sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}
+			sx={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "space-between",
+				width: "100%",
+				pr: 1,
+			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center" }}>
 				<FileTypeIcon type="folder" />
@@ -131,7 +137,10 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 				multiSelect={false}
 				selectedItems={selectedIds}
 				onSelectedItemsChange={onTreeSelectionChange}
-				sx={{ "& .MuiTreeItem-content": { py: 0.25 } }}
+				sx={{
+					[`& .${treeItemClasses.content}`]: { py: 0.25, width: "100%" },
+					[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
+				}}
 			>
 				<TreeItem
 					itemId={ROOT_ID}

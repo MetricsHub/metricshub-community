@@ -3,6 +3,7 @@ import * as React from "react";
 import { Box } from "@mui/material";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
+import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
 
 /**
  * Icon component for file types in the config tree.
@@ -12,6 +13,7 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/DescriptionOutlined
 const ICONS = {
 	folder: FolderOutlinedIcon,
 	file: InsertDriveFileOutlinedIcon,
+	backup: ArchiveOutlinedIcon,
 };
 
 /**
