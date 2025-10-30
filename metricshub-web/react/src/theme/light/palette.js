@@ -12,7 +12,7 @@ export const buildPalette = () => {
 		action: {
 			active: neutral[800],
 			disabled: alpha(neutral[900], 0.38),
-			disabledBackground: alpha(neutral[900], 0.12),
+			disabledBackground: alpha(neutral[900], 0.18),
 			focus: blue.main,
 			hover: alpha(neutral[900], 0.12),
 			selected: alpha(neutral[900], 0.22),
