@@ -4,6 +4,7 @@ import { setContent } from "../../../store/slices/configSlice";
 import { saveConfig, validateConfig } from "../../../store/thunks/configThunks";
 import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
+import { isBackupFileName } from "../../../utils/backupNames";
 import { Typography } from "@mui/material";
 
 /**
@@ -21,8 +22,9 @@ function ConfigEditorContainer(props) {
 		saving,
 		dirtyByName = {},
 	} = useAppSelector((s) => s.config);
+	const isBackupSelected = !!(selected && isBackupFileName(selected));
 	const isDirty = !!(selected && dirtyByName[selected]);
-	const canSave = !!selected && isDirty && !saving;
+	const canSave = !!selected && !isBackupSelected && isDirty && !saving;
 
 	const [local, setLocal] = React.useState(storeContent);
 
@@ -111,7 +113,7 @@ function ConfigEditorContainer(props) {
 		<>
 			<ConfigEditor
 				value={local}
-				readOnly={!selected}
+				readOnly={!selected || isBackupSelected}
 				onChange={onChange}
 				onSave={wrappedSave}
 				canSave={canSave}

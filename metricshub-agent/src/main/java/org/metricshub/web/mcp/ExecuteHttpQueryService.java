@@ -29,8 +29,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import lombok.NonNull;
 import org.metricshub.engine.common.helpers.NumberHelper;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.web.AgentContextHolder;
@@ -52,12 +53,17 @@ import org.springframework.stereotype.Service;
  * if the provided timeout is {@code null} or not positive.
  * </p>
  */
-public class ExecuteHttpGetQueryService implements IMCPToolService {
+public class ExecuteHttpQueryService implements IMCPToolService {
 
 	/**
 	 * Default timeout in seconds used when executing the HTTP request.
 	 */
 	private static final long DEFAULT_QUERY_TIMEOUT = 10L;
+
+	/**
+	 * Set of supported HTTP methods for the service.
+	 */
+	private static final Set<String> HTTP_METHODS = Set.of("GET", "POST");
 
 	/**
 	 * HTTP GET method
@@ -95,30 +101,32 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 	private AgentContextHolder agentContextHolder;
 
 	/**
-	 * Constructor for ExecuteHttpGetQueryService
+	 * Constructor for ExecuteHttpQueryService
 	 *
 	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
 	 */
 	@Autowired
-	public ExecuteHttpGetQueryService(AgentContextHolder agentContextHolder) {
+	public ExecuteHttpQueryService(AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
 	}
 
 	/**
-	 * Run an HTTP GET on the resolved host configuration.
+	 * Run an HTTP request on the resolved host configuration.
 	 *
 	 * @param urls     target URLs (e.g. http://example.com/health)
+	 * @param method   HTTP method to execute (default: GET)
 	 * @param headers  headers as newline-separated "key: value" pairs (use "\n")
 	 * @param body     optional request body (often ignored for GET)
 	 * @param timeout  timeout in seconds; defaults to {@value #DEFAULT_QUERY_TIMEOUT} if null/≤0
+	 * @param poolSize optional pool size for concurrent HTTP queries; defaults to {@value #DEFAULT_HTTP_POOL_SIZE} if null/≤0
 	 * @return provider response or error
 	 */
 	@Tool(
-		name = "ExecuteHttpGetQuery",
+		name = "ExecuteHttpQuery",
 		description = """
-		Execute an HTTP GET request on the provided URL(s) using the agent HTTP extension.
+		Execute an HTTP request on the provided URL(s) using the agent HTTP extension.
 		Resolve a valid configuration from context and set timeout (default 10s),
-		build the request (method=GET, url, optional headers/body), execute, and return the result or an error.
+		build the request (method, url, optional headers/body), execute, and return the result or an error.
 
 		Headers must be provided as a single string where each header is "key: value",
 		separated by a line break (newline, "\n"). Example:
@@ -126,7 +134,11 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		"""
 	)
 	public MultiHostToolResponse<QueryResponse> executeQuery(
-		@ToolParam(description = "The URL(s) to execute HTTP GET query on.", required = true) final List<String> urls,
+		@ToolParam(description = "The URL(s) to execute HTTP query on.", required = true) final List<String> urls,
+		@ToolParam(
+			description = "The HTTP method to execute (GET or POST, default: GET).",
+			required = false
+		) final String method,
 		@ToolParam(
 			description = "Headers as newline-separated \"key: value\" pairs",
 			required = false
@@ -139,20 +151,28 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		) final Integer poolSize
 	) {
 		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_HTTP_POOL_SIZE);
+		final String resolvedHttpMethod = resolveHttpMethod(method);
 
-		return agentContextHolder
-			.getAgentContext()
-			.getExtensionManager()
-			.findExtensionByType("http")
-			.map((IProtocolExtension extension) ->
-				executeForHosts(
-					urls,
-					ExecuteHttpGetQueryService::buildNullUrlResponse,
-					targetUrl -> executeForUrl(extension, targetUrl, headers, body, timeout),
-					resolvedPoolSize
+		// If the method is not taken
+		if (!HTTP_METHODS.contains(resolvedHttpMethod)) {
+			return MultiHostToolResponse.buildError("The HTTP method %s is not supported".formatted(resolvedHttpMethod));
+		}
+
+		return !isHttpMethodPermitted(resolvedHttpMethod)
+			? MultiHostToolResponse.buildError("The HTTP %s method is disabled.".formatted(resolvedHttpMethod))
+			: agentContextHolder
+				.getAgentContext()
+				.getExtensionManager()
+				.findExtensionByType("http")
+				.map((IProtocolExtension extension) ->
+					executeForHosts(
+						urls,
+						ExecuteHttpQueryService::buildNullUrlResponse,
+						targetUrl -> executeForUrl(extension, targetUrl, resolvedHttpMethod, headers, body, timeout),
+						resolvedPoolSize
+					)
 				)
-			)
-			.orElseGet(() -> MultiHostToolResponse.buildError("The HTTP extension is not available"));
+				.orElseGet(() -> MultiHostToolResponse.buildError("The HTTP extension is not available"));
 	}
 
 	/**
@@ -182,14 +202,16 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 	 *
 	 * @param extension HTTP protocol extension used to perform the request
 	 * @param targetUrl raw URL provided in the tool invocation
-	 * @param headers newline-separated header entries; may be {@code null}
-	 * @param body optional request body; may be {@code null}
-	 * @param timeout timeout in seconds, falling back to {@value #DEFAULT_QUERY_TIMEOUT} when {@code null} or non-positive
+	 * @param method    HTTP method to execute (e.g., GET, POST); assumed validated upstream
+	 * @param headers   newline-separated header entries; may be {@code null}
+	 * @param body      optional request body; may be {@code null}
+	 * @param timeout   timeout in seconds, falling back to {@value #DEFAULT_QUERY_TIMEOUT} when {@code null} or non-positive
 	 * @return host response containing either the successful query response or the URL validation error
 	 */
 	private HostToolResponse<QueryResponse> executeForUrl(
 		final IProtocolExtension extension,
 		final String targetUrl,
+		final String method,
 		final String headers,
 		final String body,
 		final Long timeout
@@ -204,7 +226,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		final QueryResponse response = executeHttpQueryWithExtensionSafe(
 			extension,
 			httpTarget.hostname(),
-			HTTP_GET,
+			method,
 			httpTarget.url(),
 			headers,
 			body,
@@ -334,6 +356,10 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		final String method,
 		final Long timeout
 	) {
+		if (!isHttpMethodPermitted(method)) {
+			return QueryResponse.builder().error("The selected HTTP Request is disabled for security purposes.").build();
+		}
+
 		// add hostname and timeout to the valid configuration
 		configurationCopy.setHostname(hostname);
 		configurationCopy.setTimeout(NumberHelper.getPositiveOrDefault(timeout, DEFAULT_QUERY_TIMEOUT).longValue());
@@ -378,7 +404,7 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		final var queryNode = JsonNodeFactory.instance.objectNode();
 
 		// Set the specified HTTP method, or GET otherwise.
-		queryNode.set("method", new TextNode(StringHelper.getValue(() -> method, HTTP_GET).toUpperCase()));
+		queryNode.set("method", new TextNode(method));
 
 		queryNode.set("url", new TextNode(url));
 
@@ -393,5 +419,26 @@ public class ExecuteHttpGetQueryService implements IMCPToolService {
 		queryNode.set("resultContent", new TextNode("all_with_status"));
 
 		return queryNode;
+	}
+
+	/**
+	 * Resolves the HTTP method.
+	 *
+	 * @param method HTTP method; when non-{@code null}, its uppercase form is returned
+	 * @return the method in uppercase if {@code method} is non-{@code null}, {@code HTTP_GET} otherwise
+	 */
+	static String resolveHttpMethod(final String method) {
+		return method != null ? method.toUpperCase() : HTTP_GET;
+	}
+
+	/**
+	 * Determines whether the given HTTP method is permitted by the agent settings.
+	 *
+	 * @param method HTTP method (non-null, already normalized to uppercase)
+	 * @return {@code true} if {@code method} equals {@code HTTP_GET}, or if the system property
+	 *         {@code metricshub.tools.http.post.enabled} is {@code true}; otherwise {@code false}
+	 */
+	static boolean isHttpMethodPermitted(@NonNull String method) {
+		return HTTP_GET.equals(method) || Boolean.getBoolean("metricshub.mcp.tool.http.post.enabled");
 	}
 }

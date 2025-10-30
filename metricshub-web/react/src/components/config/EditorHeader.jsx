@@ -1,6 +1,8 @@
 import { Stack, Typography, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import { useAppSelector } from "../../hooks/store";
+import { isBackupFileName } from "../../utils/backupNames";
+import FileTypeIcon from "./tree/icons/FileTypeIcons";
 
 /**
  * Editor header component showing file name, save button, and status.
@@ -13,6 +15,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
 	const fileValidation = selected ? filesByName[selected]?.validation : null;
 	const hasErrors = !!(fileValidation && fileValidation.valid === false);
+	const isBackup = !!(selected && isBackupFileName(selected));
 
 	// Non-positional errors (line/column <= 0 or missing) are shown under the header
 	const nonPosErrors = Array.isArray(fileValidation?.errors)
@@ -27,7 +30,8 @@ export default function EditorHeader({ selected, saving, onSave }) {
 		<>
 			<Stack direction="row" alignItems="center" justifyContent="space-between">
 				{/* File name + unsaved indicator */}
-				<Stack direction="row" alignItems="center" spacing={1}>
+				<Stack direction="row" alignItems="center" spacing={0}>
+					{selected && <FileTypeIcon type={isBackup ? "backup" : "file"} />}
 					<Typography variant="subtitle1" sx={{ fontWeight: isDirty ? 510 : 500 }}>
 						{selected ?? "Select a file to edit"}
 					</Typography>
@@ -46,14 +50,13 @@ export default function EditorHeader({ selected, saving, onSave }) {
 						/>
 					)}
 				</Stack>
-
 				{/* Right side buttons */}
 				<Stack direction="row" spacing={1} alignItems="center">
 					<Button
 						size="small"
 						startIcon={<SaveIcon />}
 						onClick={onSave}
-						disabled={!selected || !isDirty || saving}
+						disabled={!selected || isBackup || !isDirty || saving}
 						variant="contained"
 					>
 						{saving ? "Saving..." : "Save"}
@@ -72,11 +75,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 						mt: 0.5,
 					}}
 				>
-					{nonPosErrors.map((e, i) => (
-						<Box key={i} sx={{ mb: i < nonPosErrors.length - 1 ? 0.5 : 0 }}>
-							{String(e?.message ?? "Validation error")}
-						</Box>
-					))}
+					{nonPosErrors.join("\n")}
 				</Box>
 			)}
 		</>

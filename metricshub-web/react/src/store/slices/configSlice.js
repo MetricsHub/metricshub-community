@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { isBackupFileName } from "../../utils/backupNames";
 import {
 	fetchConfigList,
 	fetchConfigContent,
@@ -20,6 +21,10 @@ const initialState = {
 	error: null,
 	dirtyByName: {},
 	originalsByName: {},
+	backups: {
+		order: [],
+		setsById: {},
+	},
 };
 
 const slice = createSlice({
@@ -33,11 +38,14 @@ const slice = createSlice({
 		setContent(state, action) {
 			const next = action.payload ?? "";
 			state.content = next;
-			const n = state.selected;
-			if (n) {
-				const prev = state.filesByName[n] || {};
-				state.filesByName[n] = { ...prev, content: next };
-				state.dirtyByName[n] = next !== (state.originalsByName[n] ?? "");
+			const name = state.selected;
+			if (name) {
+				const prev = state.filesByName[name] || {};
+				state.filesByName[name] = { ...prev, content: next };
+				// Do not mark backups as dirty; they are read-only in the editor
+				if (!isBackupFileName(name)) {
+					state.dirtyByName[name] = next !== (state.originalsByName[name] ?? "");
+				}
 			}
 		},
 		clearError(state) {
@@ -97,6 +105,16 @@ const slice = createSlice({
 				state.validation = null;
 			}
 		},
+		deleteBackupSet(state, action) {
+			const id = action.payload;
+			if (!id) return;
+			delete state.backups.setsById[id];
+			state.backups.order = state.backups.order.filter((x) => x !== id);
+		},
+		clearBackups(state) {
+			state.backups.order = [];
+			state.backups.setsById = {};
+		},
 	},
 	extraReducers: (b) => {
 		b.addCase(fetchConfigList.pending, (s) => {
@@ -125,8 +143,11 @@ const slice = createSlice({
 
 				const prev = s.filesByName[name] || {};
 				s.filesByName[name] = { ...prev, content };
-				s.originalsByName[name] = content;
-				s.dirtyByName[name] = false;
+				// Do not treat backups as editor originals (not editable in place)
+				if (!isBackupFileName(name)) {
+					s.originalsByName[name] = content;
+					s.dirtyByName[name] = false;
+				}
 			})
 			.addCase(fetchConfigContent.rejected, (s, a) => {
 				s.loadingContent = false;
@@ -145,10 +166,17 @@ const slice = createSlice({
 				if (i >= 0) s.list[i] = meta;
 				else s.list.push(meta);
 				const cur = s.filesByName[name] || {};
-				s.filesByName[name] = { ...cur, localOnly: false };
-				const savedContent = cur.content ?? s.content ?? "";
-				s.originalsByName[name] = savedContent;
-				s.dirtyByName[name] = false;
+				const savedContent = a.payload?.content ?? cur.content ?? s.content ?? "";
+
+				s.filesByName[name] = { ...cur, content: savedContent, localOnly: false };
+				if (!isBackupFileName(name)) {
+					s.originalsByName[name] = savedContent;
+					s.dirtyByName[name] = false;
+				}
+
+				if (s.selected === name) {
+					s.content = savedContent;
+				}
 			})
 			.addCase(saveConfig.rejected, (s, a) => {
 				s.saving = false;
@@ -198,6 +226,14 @@ const slice = createSlice({
 	},
 });
 
-export const { select, setContent, clearError, addLocalFile, renameLocalFile, deleteLocalFile } =
-	slice.actions;
+export const {
+	select,
+	setContent,
+	clearError,
+	addLocalFile,
+	renameLocalFile,
+	deleteLocalFile,
+	deleteBackupSet,
+	clearBackups,
+} = slice.actions;
 export const configReducer = slice.reducer;
