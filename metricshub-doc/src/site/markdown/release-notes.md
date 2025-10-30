@@ -11,81 +11,81 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                                                     |
-| ------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [**#89**](https://github.com/MetricsHub/metricshub-enterprise/issues/89)  | Red Hat and Debian ARM64 installable packages are now available |
+| ID                                                                       | Description                                                     |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| [**#89**](https://github.com/MetricsHub/metricshub-enterprise/issues/89) | Red Hat and Debian ARM64 installable packages are now available |
 
 #### Changes and Improvements
 
-| ID                                                                          | Description                                                                                                                                 |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**#116**](https://github.com/MetricsHub/metricshub-enterprise/issues/116)   | Upgraded OpenTelemetry Collector Contrib to version [0.138.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.138.0) |
+| ID                                                                         | Description                                                                                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [**#116**](https://github.com/MetricsHub/metricshub-enterprise/issues/116) | Upgraded OpenTelemetry Collector Contrib to version [0.138.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.138.0) |
 
 ### MetricsHub Enterprise Connectors v110
 
 #### What's New
 
-| ID                                                                        | Description                                                                                                                   |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| [**#92**](https://github.com/MetricsHub/enterprise-connectors/issues/92)  | Added support for **[Cisco UCS C885A](./connectors/ciscoucsc885a.html)** rack servers via Redfish API                         |
-| [**#96**](https://github.com/MetricsHub/enterprise-connectors/issues/96)  | Added support for **[Dell PowerFlex 3](./connectors/dellpowerflexrestv3.html)** storage systems via REST API                  |
-| [**#96**](https://github.com/MetricsHub/enterprise-connectors/issues/96)  | Added support for **[Dell PowerFlex 4](./connectors/dellpowerflexrestv4.html)** storage systems via REST API                  |
-| [**#99**](https://github.com/MetricsHub/enterprise-connectors/issues/99)  | Added performance and capacity metrics for **[Dell EMC PowerStore](./connectors/dellemcpowerstorerest.html)** storage systems |
+| ID                                                                       | Description                                                                                                                   |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| [**#92**](https://github.com/MetricsHub/enterprise-connectors/issues/92) | Added support for **[Cisco UCS C885A](./connectors/ciscoucsc885a.html)** rack servers via Redfish API                         |
+| [**#96**](https://github.com/MetricsHub/enterprise-connectors/issues/96) | Added support for **[Dell PowerFlex 3](./connectors/dellpowerflexrestv3.html)** storage systems via REST API                  |
+| [**#96**](https://github.com/MetricsHub/enterprise-connectors/issues/96) | Added support for **[Dell PowerFlex 4](./connectors/dellpowerflexrestv4.html)** storage systems via REST API                  |
+| [**#99**](https://github.com/MetricsHub/enterprise-connectors/issues/99) | Added performance and capacity metrics for **[Dell EMC PowerStore](./connectors/dellemcpowerstorerest.html)** storage systems |
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                                                                                                                                                                                  |
-| -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**#111**](https://github.com/MetricsHub/enterprise-connectors/issues/111) | **[Dell XtremIO - REST](./connectors/dellemcxtremiorest.html)**: The Storage System Subscribed and Configured Capacity metrics are now reported                                                                                              |
-| [**#136**](https://github.com/MetricsHub/enterprise-connectors/issues/136) | **[EMC Isilon Cluster (REST)](./connectors/emcisilonrest.html)**: Added vendor and model attributes to the Storage System metrics                                                                                                             |
+| ID                                                                         | Description                                                                                                                                     |
+| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**#111**](https://github.com/MetricsHub/enterprise-connectors/issues/111) | **[Dell XtremIO - REST](./connectors/dellemcxtremiorest.html)**: The Storage System Subscribed and Configured Capacity metrics are now reported |
+| [**#136**](https://github.com/MetricsHub/enterprise-connectors/issues/136) | **[EMC Isilon Cluster (REST)](./connectors/emcisilonrest.html)**: Added vendor and model attributes to the Storage System metrics               |
 
 #### Fixed Issues
 
-| ID                                                                         | Description                                                                                                                                                                                                                  |
-| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**#114**](https://github.com/MetricsHub/enterprise-connectors/issues/114) | **[HPE iLO 6 (ProLiant Gen11)](./connectors/hpeilo6rest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication                              |
-| [**#115**](https://github.com/MetricsHub/enterprise-connectors/issues/115) | **[HPE iLO 5 (ProLiant Gen10)](./connectors/hpegen10ilorest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication                             |
-| [**#116**](https://github.com/MetricsHub/enterprise-connectors/issues/116) | **[HPE iLO4 (ProLiant Gen8 or Gen9)](./connectors/hpegen9ilorest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication                      |
-| [**#119**](https://github.com/MetricsHub/enterprise-connectors/issues/119) | **[NetApp Filer (REST)](./connectors/netapprestv2.html)**: Storage System capacity metrics are inaccurately reported                                                                                                        |
+| ID                                                                         | Description                                                                                                                                                                                                |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**#114**](https://github.com/MetricsHub/enterprise-connectors/issues/114) | **[HPE iLO 6 (ProLiant Gen11)](./connectors/hpeilo6rest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication          |
+| [**#115**](https://github.com/MetricsHub/enterprise-connectors/issues/115) | **[HPE iLO 5 (ProLiant Gen10)](./connectors/hpegen10ilorest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication      |
+| [**#116**](https://github.com/MetricsHub/enterprise-connectors/issues/116) | **[HPE iLO4 (ProLiant Gen8 or Gen9)](./connectors/hpegen9ilorest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication |
+| [**#119**](https://github.com/MetricsHub/enterprise-connectors/issues/119) | **[NetApp Filer (REST)](./connectors/netapprestv2.html)**: Storage System capacity metrics are inaccurately reported                                                                                       |
 
 ### MetricsHub Community Edition v1.0.09
 
 #### What's New
 
-| ID                                                                         | Description                                                                                                                                                                                                 |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [**#766**](https://github.com/MetricsHub/metricshub-community/issues/766)   | [MCP Tools](./integrations/ai-agent-mcp.md) now support running custom requests (SNMP GET, HTTP GET, WMI, IPMI, etc.).                                               |
-| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851)   | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-recommended).                          |
+| ID                                                                        | Description                                                                                                                                 |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**#766**](https://github.com/MetricsHub/metricshub-community/issues/766) | [MCP Tools](./integrations/ai-agent-mcp.md) now support running custom requests (SNMP GET, HTTP GET, WMI, IPMI, etc.).                      |
+| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851) | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-recommended). |
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                                                                                                                          |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [**#771**](https://github.com/MetricsHub/metricshub-community/issues/771)  | Metrics metadata can now be included directly within [monitoring jobs](./custom/index.md).                                                                                          |
-| [**#834**](https://github.com/MetricsHub/metricshub-community/issues/834)  | [Programmable Configurations](./configuration/configure-monitoring.md#programmable-configuration) now support SQL queries.                                                          |
-| [**#837**](https://github.com/MetricsHub/metricshub-community/issues/837)  | [MCP Tools](./integrations/ai-agent-mcp.md) are now able to report information for multiple hosts through a single query.                                                            |
+| ID                                                                        | Description                                                                                                                |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [**#771**](https://github.com/MetricsHub/metricshub-community/issues/771) | Metrics metadata can now be included directly within [monitoring jobs](./custom/index.md).                                 |
+| [**#834**](https://github.com/MetricsHub/metricshub-community/issues/834) | [Programmable Configurations](./configuration/configure-monitoring.md#programmable-configuration) now support SQL queries. |
+| [**#837**](https://github.com/MetricsHub/metricshub-community/issues/837) | [MCP Tools](./integrations/ai-agent-mcp.md) are now able to report information for multiple hosts through a single query.  |
 
 #### Fixed Issues
 
-| ID                                                                         | Description                                                                                                 |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| [**#843**](https://github.com/MetricsHub/metricshub-community/issues/843)  | Connectors may fail to load due to unmanaged external scripts                                               |
-| [**#869**](https://github.com/MetricsHub/metricshub-community/issues/869)  | Security Vulnerability CVE-2025-41249                                                                       |
+| ID                                                                        | Description                                                   |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [**#843**](https://github.com/MetricsHub/metricshub-community/issues/843) | Connectors may fail to load due to unmanaged external scripts |
+| [**#869**](https://github.com/MetricsHub/metricshub-community/issues/869) | Security Vulnerability CVE-2025-41249                         |
 
 #### Documentation Updates
 
-| ID                                                                         | Description                                                                                                                                                                                |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [**#849**](https://github.com/MetricsHub/metricshub-community/issues/849)  | Clarified Velocity Template Syntax in the [Programmable Configuration example](./configuration/configure-monitoring.md#example-loading-resources-from-an-http-api).                       |
+| ID                                                                        | Description                                                                                                                                                         |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [**#849**](https://github.com/MetricsHub/metricshub-community/issues/849) | Clarified Velocity Template Syntax in the [Programmable Configuration example](./configuration/configure-monitoring.md#example-loading-resources-from-an-http-api). |
 
 ### MetricsHub Community Connectors v1.0.15
 
 #### Fixed Issues
 
-| ID                                                                         | Description                                                                                                                                            |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [**#283**](https://github.com/MetricsHub/community-connectors/issues/283)  | **[Linux System](./connectors/linux.html)**: Unreliable interface name parsing when using `ls -l /sys/class/net` description                           |
-| [**#291**](https://github.com/MetricsHub/community-connectors/issues/291)  | **[Linux System](./connectors/linux.html)**: Negative `system.network.bandwidth.limit` reported                                                        |
+| ID                                                                        | Description                                                                                                                  |
+| ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [**#283**](https://github.com/MetricsHub/community-connectors/issues/283) | **[Linux System](./connectors/linux.html)**: Unreliable interface name parsing when using `ls -l /sys/class/net` description |
+| [**#291**](https://github.com/MetricsHub/community-connectors/issues/291) | **[Linux System](./connectors/linux.html)**: Negative `system.network.bandwidth.limit` reported                              |
 
 ## MetricsHub Enterprise Edition v3.0.01
 
