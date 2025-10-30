@@ -80,8 +80,7 @@ const NavBar = ({ toggleTheme }) => {
 					bgcolor: t.palette.background.default,
 					color: t.palette.text.primary,
 					borderBottom: 1,
-					borderColor:
-						t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
+					borderColor: t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
 				})}
 			>
