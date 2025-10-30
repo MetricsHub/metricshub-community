@@ -7,7 +7,17 @@ import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 
 import { useNavigate, NavLink } from "react-router-dom";
-import { AppBar, Box, CssBaseline, Toolbar, Typography, Button } from "@mui/material";
+import {
+	AppBar,
+	Box,
+	CssBaseline,
+	Toolbar,
+	Typography,
+	Button,
+	IconButton,
+	Tooltip,
+} from "@mui/material";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
@@ -142,6 +152,18 @@ const NavBar = ({ toggleTheme }) => {
 							</Typography>
 						)}
 						<StatusDetailsMenu />
+						{/* Docs link button */}
+						<Tooltip title="Documentation" arrow enterDelay={200}>
+							<IconButton
+								component="a"
+								href="https://metricshub.com/docs/latest/"
+								target="_blank"
+								rel="noopener noreferrer"
+								aria-label="Open MetricsHub documentation in a new tab"
+							>
+								<MenuBookOutlinedIcon />
+							</IconButton>
+						</Tooltip>
 						<Logout onClick={handleSignOut} />
 						<ToggleTheme onClick={toggleTheme} />
 					</Box>
