@@ -67,6 +67,13 @@ export const buildComponents = () => {
 						"border-color 250ms cubic-bezier(0.4, 0, 0.2, 1), " +
 						"color 250ms cubic-bezier(0.4, 0, 0.2, 1)",
 				},
+				contained: ({ theme }) => ({
+					"&.Mui-disabled": {
+						backgroundColor: theme.palette.action.disabledBackground,
+						color: theme.palette.action.disabled,
+						boxShadow: "none",
+					},
+				}),
 				sizeSmall: {
 					fontSize: "0.875rem",
 					padding: "0.5em 1.2em",

@@ -7,16 +7,7 @@ import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 
 import { useNavigate, NavLink } from "react-router-dom";
-import {
-	AppBar,
-	Box,
-	CssBaseline,
-	Toolbar,
-	Typography,
-	Button,
-	IconButton,
-	Tooltip,
-} from "@mui/material";
+import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
@@ -25,8 +16,7 @@ import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThun
 import StatusText from "./status/status-text";
 import StatusDetailsMenu from "./status/status-details-menu";
 import OtelStatusIcon from "./status/otel-status-icon";
-import Logout from "./logout";
-import ToggleTheme from "./toggle-theme";
+import ProfileMenu from "./profile-menu";
 
 // Refresh status every 30 seconds
 const STATUS_REFRESH_MS = 30000;
@@ -146,11 +136,6 @@ const NavBar = ({ toggleTheme }) => {
 
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
-						{user && (
-							<Typography variant="body1" sx={{ mr: 1 }}>
-								{`Signed in as ${user.username}`}
-							</Typography>
-						)}
 						<StatusDetailsMenu />
 						{/* Docs link button */}
 						<Tooltip title="Documentation" arrow enterDelay={200}>
@@ -164,8 +149,11 @@ const NavBar = ({ toggleTheme }) => {
 								<MenuBookOutlinedIcon />
 							</IconButton>
 						</Tooltip>
-						<Logout onClick={handleSignOut} />
-						<ToggleTheme onClick={toggleTheme} />
+						<ProfileMenu
+							username={user?.username}
+							onSignOut={handleSignOut}
+							onToggleTheme={toggleTheme}
+						/>
 					</Box>
 				</Toolbar>
 			</AppBar>
