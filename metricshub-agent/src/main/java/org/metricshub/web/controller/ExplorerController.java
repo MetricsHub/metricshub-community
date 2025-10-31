@@ -21,6 +21,51 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
+import org.metricshub.web.dto.ExplorerNode;
+import org.metricshub.web.service.ExplorerService;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * REST controller that exposes endpoints related to the Explorer view.
+ * <p>
+ * Currently provides a single endpoint to retrieve the complete resource
+ * hierarchy
+ * observed by the agent, structured as a children-only tree suitable for
+ * consumption by frontend components (e.g., React MUI TreeView).
+ * </p>
+ */
+@RestController
+@RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
 public class ExplorerController {
 
+	private final ExplorerService explorerService;
+
+	/**
+	 * Creates a new controller backed by the given service.
+	 *
+	 * @param explorerService service that assembles the hierarchy from the current
+	 *                        AgentContext
+	 */
+	public ExplorerController(final ExplorerService explorerService) {
+		this.explorerService = explorerService;
+	}
+
+	/**
+	 * Retrieves the complete resource hierarchy as a children-only tree.
+	 * <p>
+	 * The response contains two top-level nodes: "resource-groups" and
+	 * "resources". Each resource node lists its monitor types as leaf nodes.
+	 * </p>
+	 *
+	 * @return a list containing two root {@link ExplorerNode} items representing
+	 *         resource groups and top-level resources
+	 */
+	@GetMapping("/hierarchy")
+	public List<ExplorerNode> hierarchy() {
+		return explorerService.getHierarchy();
+	}
 }
