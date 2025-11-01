@@ -11,15 +11,27 @@ description: How to install MetricsHub on Debian Linux.
 
 ### Download
 
-From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb** and copy into `/usr/local`.
+From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate Debian package for your system architecture and copy it into `/usr/local`:
+
+* For **amd64** (x86_64) systems: **metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb**
+* For **arm64** (aarch64) systems: **metricshub-enterprise-debian-${enterpriseVersion}-arm64.deb**
 
 ### Install
 
 Once you have downloaded the Debian package, run the following `dpkg` command:
 
+**For amd64 systems:**
+
 ```shell-session
 cd /usr/local
 sudo dpkg -i metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb
+```
+
+**For arm64 systems:**
+
+```shell-session
+cd /usr/local
+sudo dpkg -i metricshub-enterprise-debian-${enterpriseVersion}-arm64.deb
 ```
 
 When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and the **MetricsHub Enterprise Agent** is started as a service.
@@ -62,7 +74,9 @@ sudo dpkg -r metricshub
 
 If you have installed a previous version of **MetricsHub Enterprise** and want to upgrade to the latest version **${enterpriseVersion}**, follow these steps:
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb** and copy the file into the `/usr/local` directory.
+1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate Debian package for your system architecture and copy the file into the `/usr/local` directory:
+   * For **amd64** systems: **metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb**
+   * For **arm64** systems: **metricshub-enterprise-debian-${enterpriseVersion}-arm64.deb**
 
 2. Run the following command to stop the **MetricsHub Enterprise** service:
 
@@ -70,11 +84,20 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
    systemctl stop metricshub-enterprise-service
    ```
 
-3. Run the following `dpkg` command:
+3. Run the following `dpkg` command with the appropriate package for your architecture:
+
+   **For amd64 systems:**
 
    ```shell-session
    cd /usr/local
    sudo dpkg -i metricshub-enterprise-debian-${enterpriseVersion}-amd64.deb
+   ```
+
+   **For arm64 systems:**
+
+   ```shell-session
+   cd /usr/local
+   sudo dpkg -i metricshub-enterprise-debian-${enterpriseVersion}-arm64.deb
    ```
 
 ## Community Edition
