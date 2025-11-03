@@ -271,6 +271,47 @@ This will provide a list as below:
 
 This list displays the internal name (**id**) of each connector, its applicable system types and its display name.
 
+### Customize Data Collection
+
+**MetricsHub** allows you to customize data collection on your Windows or Linux servers, specifying exactly which processes or services to monitor. This customization is achieved by configuring the following connector variables:
+
+| Connector Variable | Available for                                                                                                                      | Usage                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `matchCommand`     | [Linux - Processes (ps)](../connectors/linuxprocess.html) <br/> [Windows - Processes (WMI)](../connectors/windowsprocess.html)     | Used to specify the command lines to monitor on a Linux or Windows server. |
+| `matchName`        | [Linux - Processes (ps)](../connectors/linuxprocess.html) <br/>[Windows - Processes (WMI)](../connectors/windowsprocess.html)      | Used to specify the processes to monitor on a Linux or Windows server.     |
+| `matchUser`        | [Linux - Processes (ps)](../connectors/linuxprocess.html)                                                                          | Used to specify the users to include.                                      |
+| `serviceNames`     | [Linux - Service (systemctl)](../connectors/linuxservice.html) <br/> [Windows - Services (WMI)](../connectors/windowsservice.html) | Used to specify the services to monitor on a Linux or Windows server.      |
+
+#### LinuxProcess Examples
+
+By default, all variables use `.*`, meaning the LinuxProcess connector includes every process unless you narrow it down.
+
+- Example 1: match by name
+
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess --variable matchName=grafana
+```
+
+- Example 2: combine multiple filters
+
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess --variable matchName=grafana --variable matchCommand=grafana --variable matchUser=root
+```
+
+- Example 3: use defaults (inspect all processes)
+
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --additional-connector LinuxProcess
+```
+
+- Example 4: enable via connectors list (equivalent to Example 3)
+
+```batch
+metricshub SERVER01 -t linux --ssh --ssh-username user --ssh-password pass --connectors +LinuxProcess
+```
+
+> Note: Additional Connectors are not discovered automatically. You must explicitly enable them with `--connectors +LinuxProcess` or `--additional-connector LinuxProcess`.
+
 ### Patch Connectors
 
 By default, **MetricsHub** loads connectors from the `connectors` subdirectory within its installation directory. However, you can extend this functionality by configuring a custom directory for additional connectors. This can be done by specifying the `--patch-directory` option as bellow:
