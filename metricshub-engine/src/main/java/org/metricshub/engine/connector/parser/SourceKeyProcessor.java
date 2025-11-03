@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
 import java.util.LinkedHashSet;
+import java.util.Map.Entry;
 import java.util.Set;
 
 /**
@@ -91,13 +92,13 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		if (monitorsNode != null && !monitorsNode.isNull()) {
 			// Traverse the monitors until the source nodes and set the key of each source node
 			monitorsNode
-				.fields()
-				.forEachRemaining(monitorEntry -> {
+				.properties()
+				.forEach((Entry <String, JsonNode> monitorEntry) -> {
 					final String monitorName = monitorEntry.getKey();
 					final JsonNode monitorJobsNode = monitorEntry.getValue();
 					monitorJobsNode
-						.fields()
-						.forEachRemaining(monitorJobEntry -> {
+						.properties()
+						.forEach((Entry <String, JsonNode> monitorJobEntry) -> {
 							final String monitorJobType = monitorJobEntry.getKey();
 							// Make sure the node is a monitor job node (discovery, collect, simple)
 							if (MONITOR_JOB_TYPES.contains(monitorJobType)) {
@@ -105,8 +106,8 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 								final JsonNode sourcesNode = monitorJobNode.get("sources");
 								if (sourcesNode != null && !sourcesNode.isNull()) {
 									sourcesNode
-										.fields()
-										.forEachRemaining(sourceEntry -> {
+										.properties()
+										.forEach((Entry <String, JsonNode> sourceEntry) -> {
 											final String sourceName = sourceEntry.getKey();
 											final JsonNode sourceNode = sourceEntry.getValue();
 											final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
@@ -137,8 +138,8 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 		if (surroundingNode != null && !surroundingNode.isNull()) {
 			// Loop over the source nodes and set the key property on each source node
 			surroundingNode
-				.fields()
-				.forEachRemaining(sourceNodeEntry -> {
+				.properties()
+				.forEach((Entry <String, JsonNode> sourceNodeEntry) -> {
 					final String sourceName = sourceNodeEntry.getKey();
 					final JsonNode sourceNode = sourceNodeEntry.getValue();
 					final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;

@@ -117,7 +117,7 @@ public class CustomDeserializer extends DelegatingDeserializer {
 
 		// If object? continue the traversal
 		if (jsonNode.isObject()) {
-			jsonNode.fields().forEachRemaining(entry -> references(entry.getValue(), refs, predicate));
+			jsonNode.properties().forEach(entry -> references(entry.getValue(), refs, predicate));
 		} else if (jsonNode.isArray()) {
 			// if array? traverse each value in the array
 			for (int i = 0; i < jsonNode.size(); i++) {
