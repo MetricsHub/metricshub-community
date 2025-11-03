@@ -103,6 +103,7 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 	/**
 	 * Collects emulation metrics when running in emulation mode.
+	 * @param protocolExtension the protocol extension for which to collect emulated metrics
 	 */
 	private void collectEmulationMetrics(final IProtocolExtension protocolExtension) {
 		final MetricFactory metricFactory = new MetricFactory();
@@ -128,6 +129,7 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 	/**
 	 * Executes the protocol check and collects metricshub.host.up and metricshub.host.response_time metrics.
+	 * @param protocolExtension the protocol extension to check and collect metrics for
 	 */
 	private void checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
 		// Record the start time before launching protocol checks
