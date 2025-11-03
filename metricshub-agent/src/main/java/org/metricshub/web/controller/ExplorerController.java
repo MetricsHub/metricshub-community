@@ -68,4 +68,20 @@ public class ExplorerController {
 	public List<ExplorerNode> hierarchy() {
 		return explorerService.getHierarchy();
 	}
+
+	/**
+	 * Retrieves all configured resources as a flat, children-only structure.
+	 * <p>
+	 * Each resource node contains its monitor types as leaf children. This
+	 * response omits the top-level grouping nodes and is suitable for views that
+	 * simply need the list of resources.
+	 * </p>
+	 *
+	 * @return a list of {@link ExplorerNode} representing all resources known to
+	 *         the agent
+	 */
+	@GetMapping("/resources")
+	public List<ExplorerNode> resources() {
+		return explorerService.getResources();
+	}
 }

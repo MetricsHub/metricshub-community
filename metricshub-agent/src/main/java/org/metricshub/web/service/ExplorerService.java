@@ -112,6 +112,36 @@ public class ExplorerService {
 	}
 
 	/**
+	 * Builds and returns a flat list of all configured resources as
+	 * {@link ExplorerNode}s, each with its monitor types as children (children-only
+	 * structure).
+	 * <p>
+	 * Unlike {@link #getHierarchy()}, this method does not include the two
+	 * top-level grouping nodes. It aggregates resources from all groups (including
+	 * top-level/un-grouped) and sorts them by hostname.
+	 * </p>
+	 *
+	 * @return list of resource nodes, or an empty list if no telemetry managers are
+	 *         available
+	 */
+	public List<ExplorerNode> getResources() {
+		final AgentContext agentContext = agentContextHolder.getAgentContext();
+		if (agentContext == null || agentContext.getTelemetryManagers() == null) {
+			return List.of();
+		}
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+
+		return telemetryManagers
+			.values()
+			.stream()
+			.flatMap(groupMap -> groupMap.values().stream())
+			.sorted(Comparator.comparing(tm -> safeHostname(tm), String.CASE_INSENSITIVE_ORDER))
+			.map(this::buildResourceNode)
+			.collect(Collectors.toList());
+	}
+
+	/**
 	 * Creates a node for a specific resource group and populates it with the
 	 * group's resources.
 	 *
