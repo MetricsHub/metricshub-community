@@ -93,12 +93,12 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 			// Traverse the monitors until the source nodes and set the key of each source node
 			monitorsNode
 				.properties()
-				.forEach((Entry <String, JsonNode> monitorEntry) -> {
+				.forEach((Entry<String, JsonNode> monitorEntry) -> {
 					final String monitorName = monitorEntry.getKey();
 					final JsonNode monitorJobsNode = monitorEntry.getValue();
 					monitorJobsNode
 						.properties()
-						.forEach((Entry <String, JsonNode> monitorJobEntry) -> {
+						.forEach((Entry<String, JsonNode> monitorJobEntry) -> {
 							final String monitorJobType = monitorJobEntry.getKey();
 							// Make sure the node is a monitor job node (discovery, collect, simple)
 							if (MONITOR_JOB_TYPES.contains(monitorJobType)) {
@@ -107,7 +107,7 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 								if (sourcesNode != null && !sourcesNode.isNull()) {
 									sourcesNode
 										.properties()
-										.forEach((Entry <String, JsonNode> sourceEntry) -> {
+										.forEach((Entry<String, JsonNode> sourceEntry) -> {
 											final String sourceName = sourceEntry.getKey();
 											final JsonNode sourceNode = sourceEntry.getValue();
 											final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
@@ -139,7 +139,7 @@ public class SourceKeyProcessor extends AbstractNodeProcessor {
 			// Loop over the source nodes and set the key property on each source node
 			surroundingNode
 				.properties()
-				.forEach((Entry <String, JsonNode> sourceNodeEntry) -> {
+				.forEach((Entry<String, JsonNode> sourceNodeEntry) -> {
 					final String sourceName = sourceNodeEntry.getKey();
 					final JsonNode sourceNode = sourceNodeEntry.getValue();
 					final ObjectNode sourceObjectNode = (ObjectNode) sourceNode;
