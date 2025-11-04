@@ -17,11 +17,12 @@ import StatusText from "./status/status-text";
 import StatusDetailsMenu from "./status/status-details-menu";
 import OtelStatusIcon from "./status/otel-status-icon";
 import ProfileMenu from "./profile-menu";
+import ToggleTheme from "./toggle-theme";
 
 // Refresh status every 30 seconds
 const STATUS_REFRESH_MS = 30000;
 
-const NavBar = ({ toggleTheme }) => {
+const NavBar = ({ onToggleTheme }) => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
@@ -50,6 +51,10 @@ const NavBar = ({ toggleTheme }) => {
 		const id = setInterval(() => dispatch(fetchApplicationStatus()), STATUS_REFRESH_MS);
 		return () => clearInterval(id);
 	}, [dispatch]);
+
+	const handleToggleTheme = React.useCallback(() => {
+		onToggleTheme?.();
+	}, [onToggleTheme]);
 
 	const navBtnSx = {
 		alignSelf: "stretch",
@@ -136,7 +141,7 @@ const NavBar = ({ toggleTheme }) => {
 					</Box>
 
 					{/* ================= RIGHT SIDE ================= */}
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
 						<StatusDetailsMenu />
 						{/* Docs link button */}
 						<Tooltip title="Documentation" arrow enterDelay={200}>
@@ -150,11 +155,8 @@ const NavBar = ({ toggleTheme }) => {
 								<MenuBookOutlinedIcon />
 							</IconButton>
 						</Tooltip>
-						<ProfileMenu
-							username={user?.username}
-							onSignOut={handleSignOut}
-							onToggleTheme={toggleTheme}
-						/>
+						<ToggleTheme onClick={handleToggleTheme} />
+						<ProfileMenu username={user?.username} onSignOut={handleSignOut} />
 					</Box>
 				</Toolbar>
 			</AppBar>

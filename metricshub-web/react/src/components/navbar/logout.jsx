@@ -8,15 +8,15 @@ import LogoutIcon from "@mui/icons-material/Logout";
  * @param {{ onClick: () => void }} props onClick - callback executed on click
  * @returns {JSX.Element}
  */
-const Logout = ({ onClick }) => {
+const LogoutMenuItem = ({ onClick }) => {
 	return (
 		<MenuItem onClick={onClick}>
 			<ListItemIcon>
 				<LogoutIcon fontSize="small" />
 			</ListItemIcon>
-			<ListItemText>Log out</ListItemText>
+			<ListItemText>Sign out</ListItemText>
 		</MenuItem>
 	);
 };
 
-export default React.memo(Logout);
+export default React.memo(LogoutMenuItem);
