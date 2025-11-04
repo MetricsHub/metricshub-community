@@ -22,35 +22,38 @@ package org.metricshub.web.dto;
  */
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Minimal, UI-agnostic tree node model used by the Explorer hierarchy endpoint.
- * <p>
- * This type intentionally contains only a display name and optional children so
- * the
- * frontend can render it with any tree widget (e.g., MUI TreeView) without
- * backend-specific concerns.
- * </p>
+ * Generic DTO describing a node in the agent telemetry hierarchy.
+ * Exposing metrics, attributes and children
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ExplorerNode {
+public class AgentTelemetry {
 
-	/**
-	 * Human-readable label to display for this node in the UI.
-	 */
 	private String name;
 
 	/**
-	 * Optional list of child nodes. Empty for leaves.
+	 * One of: "resource", "connector", "monitor", "resource-group", "agent",
+	 * "resource-groups", "resources", "connectors", "monitors".
 	 */
+	private String type;
+
 	@Builder.Default
-	private List<ExplorerNode> children = new ArrayList<>();
+	private Map<String, String> attributes = new HashMap<>();
+
+	@Builder.Default
+	private Map<String, Object> metrics = new HashMap<>();
+
+	@Builder.Default
+	private List<AgentTelemetry> children = new ArrayList<>();
 }

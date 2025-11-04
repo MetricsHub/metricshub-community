@@ -1,5 +1,3 @@
-package org.metricshub.web.service;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
@@ -21,198 +19,361 @@ package org.metricshub.web.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
+package org.metricshub.web.service;
+
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY;
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
+import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
+import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
+import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
+
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
-import org.metricshub.agent.context.AgentContext;
-import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
-import org.metricshub.web.dto.ExplorerNode;
+import org.metricshub.web.dto.AgentTelemetry;
 import org.springframework.stereotype.Service;
 
 /**
  * Service responsible for building a light-weight hierarchy representation of
  * the configured/active resources from the AgentContext's telemetry managers.
- * <p>
- * The resulting structure is designed to be simple and UI-agnostic
- * (children-only
- * nodes with a single display name), allowing the frontend to render it in any
- * tree component without tight coupling to backend types.
- * </p>
+ * This service also helps to browse the agent resource groups, resources,
+ * connectors, and monitors in order
+ * to report attributes and metrics for each level of the hierarchy.
  */
 @Service
 public class ExplorerService {
 
-	private final AgentContextHolder agentContextHolder;
+	/**
+	 * Type for the "monitor" node.
+	 */
+	private static final String MONITOR_TYPE = "monitor";
 
 	/**
-	 * Creates a new service using the provided agent context holder.
+	 * Type for the "agent" node.
+	 */
+	private static final String AGENT_TYPE = "agent";
+
+	/**
+	 * Type for the "resource" node.
+	 */
+	private static final String RESOURCE_TYPE = "resource";
+
+	/**
+	 * Key for the "connectors" container node.
+	 */
+	private static final String CONNECTORS_KEY = "connectors";
+
+	/**
+	 * Key for the "resource-group" container node.
+	 */
+	private static final String RESOURCE_GROUP_KEY = "resource-group";
+
+	/**
+	 * Type for the "connector" node.
+	 */
+	private static final String CONNECTOR_TYPE = "connector";
+
+	/**
+	 * Key for the "monitors" container node.
+	 */
+	private static final String MONITORS_KEY = "monitors";
+
+	/**
+	 * Key for the "resources" container node.
+	 */
+	private static final String RESOURCES_KEY = "resources";
+
+	/**
+	 * Key for the "resource-groups" container node.
+	 */
+	private static final String RESOURCE_GROUPS_KEY = "resource-groups";
+
+	private AgentContextHolder agentContextHolder;
+
+	/**
+	 * Creates a new {@link ExplorerService} instance.
 	 *
-	 * @param agentContextHolder holder that provides access to the current
-	 *                           {@link AgentContext}
+	 * @param agentContextHolder holder providing access to the current
+	 *                           {@link org.metricshub.agent.context.AgentContext}
 	 */
 	public ExplorerService(final AgentContextHolder agentContextHolder) {
 		this.agentContextHolder = agentContextHolder;
 	}
 
 	/**
-	 * Builds and returns the complete hierarchy structure as a tree of
-	 * {@link org.metricshub.web.dto.ExplorerNode}.
-	 * <p>
-	 * The tree contains two top-level branches:
-	 * <ul>
-	 * <li><b>resource-groups</b>: groups and their resources</li>
-	 * <li><b>resources</b>: top-level resources (not in any group)</li>
-	 * </ul>
-	 * Each resource node lists its monitor types as leaf nodes.
-	 * </p>
+	 * Build the complete hierarchy tree under the current agent.
 	 *
-	 * @return a list with two root nodes (resource-groups, resources). Returns an
-	 *         empty list if the AgentContext or its telemetry managers are not
-	 *         available.
+	 * @return root node describing the agent hierarchy
 	 */
-	public List<ExplorerNode> getHierarchy() {
-		final AgentContext agentContext = agentContextHolder.getAgentContext();
-		if (agentContext == null || agentContext.getTelemetryManagers() == null) {
-			return List.of();
+	public AgentTelemetry getHierarchy() {
+		final var agentContext = agentContextHolder.getAgentContext();
+		final Map<String, String> agentAttributes = agentContext.getAgentInfo().getAttributes();
+		final String agentName = agentAttributes.getOrDefault(
+				AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY,
+				agentAttributes.getOrDefault(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "MetricsHub"));
+
+		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).type(AGENT_TYPE).build();
+
+		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null) {
+			telemetryManagers = Map.of();
 		}
 
-		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		// Resource Groups (excluding top-level group key)
+		final AgentTelemetry resourceGroupsNode = AgentTelemetry
+				.builder()
+				.name(RESOURCE_GROUPS_KEY)
+				.type(RESOURCE_GROUPS_KEY)
+				.build();
 
-		// Build group branch (excluding the virtual top-level group key)
-		final List<ExplorerNode> groupChildren = telemetryManagers
-			.entrySet()
-			.stream()
-			.filter(e -> !Objects.equals(e.getKey(), ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY))
-			.sorted(Map.Entry.comparingByKey(String.CASE_INSENSITIVE_ORDER))
-			.map(e -> buildResourceGroupNode(e.getKey(), e.getValue()))
-			.collect(Collectors.toCollection(ArrayList::new));
-
-		// Build top-level resources branch
-		final Map<String, TelemetryManager> topLevelResources = telemetryManagers.getOrDefault(
-			ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
-			Collections.emptyMap()
-		);
-		final List<ExplorerNode> topResourcesChildren = new ArrayList<>();
-		topResourcesChildren.addAll(buildResourcesNodes(topLevelResources));
-
-		final ExplorerNode resourceGroupsRoot = ExplorerNode
-			.builder()
-			.name("resource-groups")
-			.children(groupChildren)
-			.build();
-		final ExplorerNode resourcesRoot = ExplorerNode.builder().name("resources").children(topResourcesChildren).build();
-
-		return List.of(resourceGroupsRoot, resourcesRoot);
-	}
-
-	/**
-	 * Builds and returns a flat list of all configured resources as
-	 * {@link ExplorerNode}s, each with its monitor types as children (children-only
-	 * structure).
-	 * <p>
-	 * Unlike {@link #getHierarchy()}, this method does not include the two
-	 * top-level grouping nodes. It aggregates resources from all groups (including
-	 * top-level/un-grouped) and sorts them by hostname.
-	 * </p>
-	 *
-	 * @return list of resource nodes, or an empty list if no telemetry managers are
-	 *         available
-	 */
-	public List<ExplorerNode> getResources() {
-		final AgentContext agentContext = agentContextHolder.getAgentContext();
-		if (agentContext == null || agentContext.getTelemetryManagers() == null) {
-			return List.of();
-		}
-
-		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
-
-		return telemetryManagers
-			.values()
-			.stream()
-			.flatMap(groupMap -> groupMap.values().stream())
-			.sorted(Comparator.comparing(tm -> safeHostname(tm), String.CASE_INSENSITIVE_ORDER))
-			.map(this::buildResourceNode)
-			.collect(Collectors.toList());
-	}
-
-	/**
-	 * Creates a node for a specific resource group and populates it with the
-	 * group's resources.
-	 *
-	 * @param groupName              the resource group name
-	 * @param groupTelemetryManagers telemetry managers indexed by resource id for
-	 *                               the group
-	 * @return a node named after the group containing its resources
-	 */
-	private ExplorerNode buildResourceGroupNode(
-		final String groupName,
-		final Map<String, TelemetryManager> groupTelemetryManagers
-	) {
-		final List<ExplorerNode> resources = buildResourcesNodes(groupTelemetryManagers);
-		return ExplorerNode.builder().name(groupName).children(resources).build();
-	}
-
-	/**
-	 * Builds resource nodes (one per telemetry manager) sorted by hostname.
-	 *
-	 * @param tms map of resource id to {@link TelemetryManager}
-	 * @return a list of resource nodes, or an empty list if input is null/empty
-	 */
-	private List<ExplorerNode> buildResourcesNodes(final Map<String, TelemetryManager> tms) {
-		if (tms == null || tms.isEmpty()) {
-			return List.of();
-		}
-		return tms
-			.values()
-			.stream()
-			.sorted(Comparator.comparing(tm -> safeHostname(tm), String.CASE_INSENSITIVE_ORDER))
-			.map(this::buildResourceNode)
-			.collect(Collectors.toList());
-	}
-
-	/**
-	 * Builds a single resource node with its monitor type leaf nodes.
-	 *
-	 * @param tm the telemetry manager associated with the resource
-	 * @return the resource node
-	 */
-	private ExplorerNode buildResourceNode(final TelemetryManager tm) {
-		final String resourceName = safeHostname(tm);
-
-		// Child: monitors (by type). Keep it lightweight with children-only nodes.
-		final List<ExplorerNode> monitorTypeNodes = tm.getMonitors() == null
-			? List.of()
-			: tm
-				.getMonitors()
-				.keySet()
+		telemetryManagers
+				.entrySet()
 				.stream()
-				.sorted(String.CASE_INSENSITIVE_ORDER)
-				.map(mt -> ExplorerNode.builder().name(mt).children(List.of()).build())
-				.collect(Collectors.toList());
+				.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> resourceGroupsNode.getChildren()
+						.add(buildResourceGroupNode(entry.getKey(), entry.getValue())));
 
-		return ExplorerNode.builder().name(resourceName).children(monitorTypeNodes).build();
+		// Top-level Resources
+		final Map<String, TelemetryManager> topLevelResources = telemetryManagers.getOrDefault(
+				TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
+				Map.of());
+		final AgentTelemetry topLevelResourcesNode = AgentTelemetry
+				.builder()
+				.name(RESOURCES_KEY)
+				.type(RESOURCES_KEY)
+				.build();
+		buildResources(topLevelResourcesNode, topLevelResources);
+
+		root.getChildren().add(resourceGroupsNode);
+		root.getChildren().add(topLevelResourcesNode);
+		return root;
 	}
 
 	/**
-	 * Safely retrieves the resource hostname from a telemetry manager, falling back
-	 * to "unknown" if not available.
+	 * Build a flat resources container listing all configured resources across
+	 * all resource-groups (including top-level), each with its connectors and
+	 * monitor types as children following the existing structure.
 	 *
-	 * @param tm the telemetry manager
-	 * @return the hostname or "unknown" when absent
+	 * @return a "resources" container node with all resources as children
 	 */
-	private static String safeHostname(final TelemetryManager tm) {
-		try {
-			final String hn = tm.getHostname();
-			if (hn != null && !hn.isBlank()) {
-				return hn;
-			}
-		} catch (Exception ignored) {}
-		return "unknown";
+	public AgentTelemetry getResources() {
+		final var agentContext = agentContextHolder.getAgentContext();
+		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null) {
+			telemetryManagers = Map.of();
+		}
+
+		final AgentTelemetry resourcesNode = AgentTelemetry.builder().name(RESOURCES_KEY).type(RESOURCES_KEY).build();
+
+		// Iterate by resource-group key for deterministic ordering, then by resource
+		// key
+		telemetryManagers
+				.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> buildResources(resourcesNode, entry.getValue()));
+
+		return resourcesNode;
+	}
+
+	/**
+	 * Builds a resource-group node along with its nested {@code resources}
+	 * container.
+	 *
+	 * @param groupName the display name/key of the resource group
+	 * @param groupTms  the map of resource keys to their {@link TelemetryManager}
+	 *                  instances for this group
+	 * @return a {@link AgentTelemetry} representing the resource-group subtree
+	 */
+	private static AgentTelemetry buildResourceGroupNode(
+			final String groupName,
+			final Map<String, TelemetryManager> groupTms) {
+		final AgentTelemetry groupNode = AgentTelemetry.builder().name(groupName).type(RESOURCE_GROUP_KEY).build();
+		final AgentTelemetry resourcesContainer = AgentTelemetry.builder().name(RESOURCES_KEY).type(RESOURCES_KEY)
+				.build();
+		buildResources(resourcesContainer, groupTms);
+		groupNode.getChildren().add(resourcesContainer);
+		return groupNode;
+	}
+
+	/**
+	 * Populates the provided {@code resources} container with resource nodes built
+	 * from the given map.
+	 *
+	 * @param resourcesContainer the container DTO to which resource children will
+	 *                           be appended
+	 * @param tms                a map of resource key to {@link TelemetryManager}
+	 */
+	private static void buildResources(final AgentTelemetry resourcesContainer,
+			final Map<String, TelemetryManager> tms) {
+		if (tms == null || tms.isEmpty()) {
+			return;
+		}
+		tms
+				.entrySet()
+				.stream()
+				.sorted(Entry.comparingByKey())
+				.forEach((Entry<String, TelemetryManager> entry) -> {
+					final String resourceKey = entry.getKey();
+					final TelemetryManager tm = entry.getValue();
+					resourcesContainer.getChildren().add(buildResourceNode(resourceKey, tm));
+				});
+	}
+
+	/**
+	 * Builds a single resource node including its connectors subtree.
+	 *
+	 * @param resourceKey the resource identifier (as configured)
+	 * @param tm          the {@link TelemetryManager} for this resource
+	 * @return a {@link AgentTelemetry} representing the resource subtree
+	 */
+	private static AgentTelemetry buildResourceNode(final String resourceKey, final TelemetryManager tm) {
+		final AgentTelemetry resourceNode = AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build();
+
+		final AgentTelemetry connectorsContainer = AgentTelemetry
+				.builder()
+				.name(CONNECTORS_KEY)
+				.type(CONNECTORS_KEY)
+				.build();
+
+		buildConnectors(connectorsContainer, tm);
+
+		resourceNode.getChildren().add(connectorsContainer);
+
+		return resourceNode;
+	}
+
+	/**
+	 * Populates the provided {@code connectors} container with connector nodes and
+	 * their monitor type lists.
+	 * <p>
+	 * Monitor types are grouped by {@code connector_id} and exclude {@code host}
+	 * and
+	 * {@code connector} monitor types.
+	 * </p>
+	 *
+	 * @param connectorsContainer the container DTO to which connector children will
+	 *                            be appended
+	 * @param tm                  the {@link TelemetryManager} providing monitors
+	 *                            for this resource
+	 */
+	private static void buildConnectors(final AgentTelemetry connectorsContainer, final TelemetryManager tm) {
+		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
+		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
+			return;
+		}
+
+		// Collect monitors by connector-id to later build monitor type lists per
+		// connector
+		final Map<String, Set<String>> connectorIdToMonitorTypes = groupMonitorTypesByConnectorId(tm,
+				connectorMonitors);
+
+		connectorMonitors
+				.values()
+				.stream()
+				.sorted((Monitor a, Monitor b) -> {
+					final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+					final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+					return an.compareToIgnoreCase(bn);
+				})
+				.forEach((Monitor connectorMonitor) -> buildConnectorNode(connectorsContainer,
+						connectorIdToMonitorTypes, connectorMonitor));
+	}
+
+	/**
+	 * Builds a single connector node including its monitor types list.
+	 *
+	 * @param connectorsContainer       The "connectors" container node.
+	 * @param connectorIdToMonitorTypes The map of connector IDs to their monitor
+	 *                                  types.
+	 * @param connectorMonitor          The connector monitor to build the node for.
+	 */
+	private static void buildConnectorNode(
+			final AgentTelemetry connectorsContainer,
+			final Map<String, Set<String>> connectorIdToMonitorTypes,
+			Monitor connectorMonitor) {
+		final String connectorId = connectorMonitor
+				.getAttributes()
+				.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
+		final String connectorName = connectorMonitor.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
+
+		final AgentTelemetry connectorNode = AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build();
+
+		final AgentTelemetry monitorsContainer = AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build();
+		final Set<String> monitorTypes = connectorIdToMonitorTypes.getOrDefault(connectorId, Set.of());
+		monitorTypes
+				.stream()
+				.sorted(String::compareToIgnoreCase)
+				.forEach(type -> monitorsContainer.getChildren()
+						.add(AgentTelemetry.builder().name(type).type(MONITOR_TYPE).build()));
+
+		connectorNode.getChildren().add(monitorsContainer);
+		connectorsContainer.getChildren().add(connectorNode);
+	}
+
+	/**
+	 * Computes the set of monitor types per connector identifier present in the
+	 * given {@link TelemetryManager}.
+	 * <p>
+	 * Excludes monitors of type {@code host} and {@code connector}. Ensures all
+	 * connector monitors are represented even if they have no matching monitor
+	 * types.
+	 * </p>
+	 *
+	 * @param tm                the {@link TelemetryManager} to inspect
+	 * @param connectorMonitors map of connector monitors to consider
+	 * @return a map of {@code connector_id} to the set of monitor types
+	 */
+	private static Map<String, Set<String>> groupMonitorTypesByConnectorId(
+			final TelemetryManager tm,
+			final Map<String, Monitor> connectorMonitors) {
+		final Map<String, Set<String>> result = new HashMap<>();
+
+		if (tm.getMonitors() == null || tm.getMonitors().isEmpty()) {
+			return result;
+		}
+
+		// Flatten all monitors and group types by connector-id, excluding host and
+		// connector monitors
+		tm
+				.getMonitors()
+				.values()
+				.stream()
+				.filter(Objects::nonNull)
+				.flatMap(map -> map.values().stream())
+				.filter(Objects::nonNull)
+				.filter(m -> !HOST.getKey().equalsIgnoreCase(m.getType()))
+				.filter(m -> !CONNECTOR.getKey().equalsIgnoreCase(m.getType()))
+				.forEach((Monitor monitor) -> {
+					final String connectorId = monitor.getAttributes().get(MONITOR_ATTRIBUTE_CONNECTOR_ID);
+					if (connectorId == null || connectorId.isBlank()) {
+						return;
+					}
+					result.computeIfAbsent(connectorId, k -> new HashSet<>()).add(monitor.getType());
+				});
+
+		// Ensure that each listed connector-id exists, even if no non-connector/host
+		// monitor types were found
+		if (connectorMonitors != null && !connectorMonitors.isEmpty()) {
+			final Set<String> connectorIds = connectorMonitors
+					.values()
+					.stream()
+					.map(m -> m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId()))
+					.collect(Collectors.toSet());
+			connectorIds.forEach(id -> result.computeIfAbsent(id, k -> new HashSet<>()));
+		}
+
+		return result;
 	}
 }
