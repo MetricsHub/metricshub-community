@@ -1,20 +1,8 @@
 import React from "react";
-import { useTheme } from "@mui/material/styles";
-import {
-	IconButton,
-	Menu,
-	MenuItem,
-	ListItemIcon,
-	ListItemText,
-	Tooltip,
-	Divider,
-	Typography,
-	Box,
-} from "@mui/material";
+import { IconButton, Menu, Tooltip, Divider, Typography, Box } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LogoutIcon from "@mui/icons-material/Logout";
-import LightModeIcon from "@mui/icons-material/LightMode";
-import DarkModeIcon from "@mui/icons-material/DarkMode";
+import ToggleTheme from "./toggle-theme";
+import Logout from "./logout";
 
 /**
  * Profile menu with username, theme toggle, and logout.
@@ -26,7 +14,6 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
  * @returns {JSX.Element}
  */
 const ProfileMenu = ({ username, onToggleTheme, onSignOut }) => {
-	const theme = useTheme();
 	const [anchorEl, setAnchorEl] = React.useState(null);
 	const open = Boolean(anchorEl);
 
@@ -44,12 +31,6 @@ const ProfileMenu = ({ username, onToggleTheme, onSignOut }) => {
 		handleClose();
 		onSignOut?.();
 	}, [handleClose, onSignOut]);
-
-	const isDark = React.useMemo(() => theme.palette.mode === "dark", [theme.palette.mode]);
-	const themeLabel = React.useMemo(
-		() => (isDark ? "Switch to light mode" : "Switch to dark mode"),
-		[isDark],
-	);
 
 	return (
 		<>
@@ -89,21 +70,9 @@ const ProfileMenu = ({ username, onToggleTheme, onSignOut }) => {
 				</Box>
 				<Divider />
 
-				<MenuItem onClick={handleToggleTheme}>
-					<ListItemIcon
-						sx={{ color: theme.palette.mode === "light" ? theme.palette.warning.main : undefined }}
-					>
-						{isDark ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
-					</ListItemIcon>
-					<ListItemText>{themeLabel}</ListItemText>
-				</MenuItem>
+				<ToggleTheme onClick={handleToggleTheme} />
 
-				<MenuItem onClick={handleLogout}>
-					<ListItemIcon>
-						<LogoutIcon fontSize="small" />
-					</ListItemIcon>
-					<ListItemText>Log out</ListItemText>
-				</MenuItem>
+				<Logout onClick={handleLogout} />
 			</Menu>
 		</>
 	);
