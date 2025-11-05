@@ -196,6 +196,63 @@ public class ExplorerService {
 	}
 
 	/**
+	 * Build the connectors container for a single resource by name.
+	 * Returns a "connectors" node whose children are the connectors under the
+	 * resource, each including its monitor types.
+	 *
+	 * @param resourceName the configured resource key/name to locate
+	 * @return a connectors container node for the resource; empty if resource isn't
+	 *         found or has no connectors
+	 */
+	public AgentTelemetry getResourceConnectors(final String resourceName) {
+		final AgentTelemetry connectorsNode = AgentTelemetry.builder().name(CONNECTORS_KEY).type(CONNECTORS_KEY).build();
+		if (resourceName == null || resourceName.isBlank()) {
+			return connectorsNode;
+		}
+		final AgentTelemetry resourceNode = getResource(resourceName);
+		return resourceNode
+			.getChildren()
+			.stream()
+			.filter(child -> CONNECTORS_KEY.equals(child.getType()))
+			.findFirst()
+			.orElse(connectorsNode);
+	}
+
+	/**
+	 * Build the details for a single connector under a given resource by name.
+	 * Returns a connector node with its "monitors" child container listing monitor
+	 * types. If the resource or connector isn't found, returns an empty connector
+	 * node with the provided connector name.
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @return the connector node with details, or an empty connector node if not
+	 *         found
+	 */
+	public AgentTelemetry getResourceConnector(final String resourceName, final String connectorName) {
+		final AgentTelemetry empty = AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build();
+		if (resourceName == null || resourceName.isBlank() || connectorName == null || connectorName.isBlank()) {
+			return empty;
+		}
+		final AgentTelemetry resourceNode = getResource(resourceName);
+		final AgentTelemetry connectorsNode = resourceNode
+			.getChildren()
+			.stream()
+			.filter(child -> CONNECTORS_KEY.equals(child.getType()))
+			.findFirst()
+			.orElse(null);
+		if (connectorsNode == null) {
+			return empty;
+		}
+		return connectorsNode
+			.getChildren()
+			.stream()
+			.filter(conn -> connectorName.equals(conn.getName()))
+			.findFirst()
+			.orElse(empty);
+	}
+
+	/**
 	 * Build a flat resources container listing all configured resources across
 	 * all resource-groups (including top-level), each with its connectors and
 	 * monitor types as children following the existing structure.

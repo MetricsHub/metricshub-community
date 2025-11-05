@@ -85,4 +85,31 @@ public class ExplorerController {
 	public AgentTelemetry getResource(@PathVariable("resourceName") final String resourceName) {
 		return explorerService.getResource(resourceName);
 	}
+
+	/**
+	 * Retrieves the list of connectors for a single resource as a children-only
+	 * tree under a top-level "connectors" container node.
+	 *
+	 * @param resourceName the resource key/name
+	 * @return the connectors container node for the resource
+	 */
+	@GetMapping("/resources/{resourceName}/connectors")
+	public AgentTelemetry getResourceConnectors(@PathVariable("resourceName") final String resourceName) {
+		return explorerService.getResourceConnectors(resourceName);
+	}
+
+	/**
+	 * Retrieves details for a single connector under a given resource.
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @return a connector node, including its monitors container
+	 */
+	@GetMapping("/resources/{resourceName}/connectors/{connectorName}")
+	public AgentTelemetry getResourceConnector(
+		@PathVariable("resourceName") final String resourceName,
+		@PathVariable("connectorName") final String connectorName
+	) {
+		return explorerService.getResourceConnector(resourceName, connectorName);
+	}
 }
