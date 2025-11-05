@@ -163,8 +163,7 @@ public class ExplorerService {
 
 	/**
 	 * Build the details for a single resource by name, including its connectors and
-	 * monitor types, mirroring the structure used in the hierarchy/resources
-	 * endpoints.
+	 * monitor types.
 	 *
 	 * @param resourceName the configured resource key/name to locate
 	 * @return a resource node with connectors and monitor types as children; when
