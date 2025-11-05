@@ -25,6 +25,7 @@ import org.metricshub.web.dto.AgentTelemetry;
 import org.metricshub.web.service.ExplorerService;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -72,5 +73,16 @@ public class ExplorerController {
 	@GetMapping("/resources")
 	public AgentTelemetry getResources() {
 		return explorerService.getResources();
+	}
+
+	/**
+	 * Retrieves details for a single resource by name.
+	 *
+	 * @param resourceName the resource key/name
+	 * @return a resource node, including its connectors and monitor types
+	 */
+	@GetMapping("/resources/{resourceName}")
+	public AgentTelemetry getResource(@PathVariable("resourceName") final String resourceName) {
+		return explorerService.getResource(resourceName);
 	}
 }
