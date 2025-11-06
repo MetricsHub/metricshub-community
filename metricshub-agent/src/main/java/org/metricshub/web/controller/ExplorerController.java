@@ -151,20 +151,4 @@ public class ExplorerController {
 	) {
 		return explorerService.getResourceConnectorMonitorsByType(resourceName, connectorName, monitorType);
 	}
-
-	/**
-	 * Alias endpoint with resource-group path that returns the same list of monitor
-	 * instances.
-	 * The group parameter is currently not used to filter; behavior matches
-	 * /resources/... endpoint.
-	 */
-	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}/connectors/{connectorName}/monitors/{monitorType}")
-	public List<AgentTelemetry> getResourceGroupResourceConnectorMonitorsByType(
-		@PathVariable("groupName") final String groupName,
-		@PathVariable("resourceName") final String resourceName,
-		@PathVariable("connectorName") final String connectorName,
-		@PathVariable("monitorType") final String monitorType
-	) {
-		return explorerService.getResourceConnectorMonitorsByType(resourceName, connectorName, monitorType);
-	}
 }
