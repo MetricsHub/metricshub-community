@@ -21,6 +21,7 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
 import org.metricshub.web.dto.AgentTelemetry;
 import org.metricshub.web.service.ExplorerService;
 import org.springframework.http.MediaType;
@@ -111,5 +112,59 @@ public class ExplorerController {
 		@PathVariable("connectorName") final String connectorName
 	) {
 		return explorerService.getResourceConnector(resourceName, connectorName);
+	}
+
+	/**
+	 * Retrieves the list of monitor types for a single connector under a given
+	 * resource
+	 * as a children-only tree under a top-level "monitors" container node.
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @return the monitors container node for the connector (children are monitor
+	 *         types)
+	 */
+	@GetMapping("/resources/{resourceName}/connectors/{connectorName}/monitors")
+	public AgentTelemetry getResourceConnectorMonitors(
+		@PathVariable("resourceName") final String resourceName,
+		@PathVariable("connectorName") final String connectorName
+	) {
+		return explorerService.getResourceConnectorMonitors(resourceName, connectorName);
+	}
+
+	/**
+	 * Retrieves the list of monitor instances for the given type under a specific
+	 * connector.
+	 * Response is a flat list of general structures (attributes + metrics, no
+	 * children).
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @param monitorType   the monitor type key
+	 * @return list of monitor DTOs (no children)
+	 */
+	@GetMapping("/resources/{resourceName}/connectors/{connectorName}/monitors/{monitorType}")
+	public List<AgentTelemetry> getResourceConnectorMonitorsByType(
+		@PathVariable("resourceName") final String resourceName,
+		@PathVariable("connectorName") final String connectorName,
+		@PathVariable("monitorType") final String monitorType
+	) {
+		return explorerService.getResourceConnectorMonitorsByType(resourceName, connectorName, monitorType);
+	}
+
+	/**
+	 * Alias endpoint with resource-group path that returns the same list of monitor
+	 * instances.
+	 * The group parameter is currently not used to filter; behavior matches
+	 * /resources/... endpoint.
+	 */
+	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}/connectors/{connectorName}/monitors/{monitorType}")
+	public List<AgentTelemetry> getResourceGroupResourceConnectorMonitorsByType(
+		@PathVariable("groupName") final String groupName,
+		@PathVariable("resourceName") final String resourceName,
+		@PathVariable("connectorName") final String connectorName,
+		@PathVariable("monitorType") final String monitorType
+	) {
+		return explorerService.getResourceConnectorMonitorsByType(resourceName, connectorName, monitorType);
 	}
 }

@@ -30,6 +30,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_A
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_NAME;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -276,6 +277,131 @@ public class ExplorerService {
 					"Connector not found: " + connectorName + " for resource: " + resourceName
 				)
 			);
+	}
+
+	/**
+	 * Build the monitors container for a given connector under a resource.
+	 * Returns a "monitors" node whose children are the monitor types available
+	 * under the specified connector. Children are type="monitor" and name is the
+	 * monitor type.
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @return a monitors container node; if no monitors exist, the container will
+	 *         be empty
+	 * @throws org.springframework.web.server.ResponseStatusException (404) when the
+	 *                                                                resource or
+	 *                                                                connector is
+	 *                                                                not found
+	 */
+	public AgentTelemetry getResourceConnectorMonitors(final String resourceName, final String connectorName) {
+		// Reuse existing connector building logic and extract its monitors container
+		final AgentTelemetry connectorNode = getResourceConnector(resourceName, connectorName);
+		return connectorNode
+			.getChildren()
+			.stream()
+			.filter(child -> MONITORS_KEY.equals(child.getType()))
+			.findFirst()
+			.orElse(AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build());
+	}
+
+	/**
+	 * Build the list of monitor instances for a given type under a specific
+	 * connector and resource.
+	 * Response is a flat list of AgentTelemetry nodes (no children) each carrying
+	 * attributes and metrics.
+	 *
+	 * @param resourceName  the resource key/name
+	 * @param connectorName the connector id or display name
+	 * @param monitorType   the monitor type key (e.g., "cpu", "disk")
+	 * @return list of monitor DTOs with attributes and metrics
+	 * @throws org.springframework.web.server.ResponseStatusException (404) when the
+	 *                                                                resource or
+	 *                                                                connector is
+	 *                                                                not found
+	 */
+	public java.util.List<AgentTelemetry> getResourceConnectorMonitorsByType(
+		final String resourceName,
+		final String connectorName,
+		final String monitorType
+	) {
+		// Locate TelemetryManager for the resource (inline to avoid extra helpers)
+		final var agentContext = agentContextHolder.getAgentContext();
+		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+		}
+		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+		}
+		TelemetryManager tm = null;
+		for (Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
+			final Map<String, TelemetryManager> groupTms = entry.getValue();
+			if (groupTms == null || groupTms.isEmpty()) {
+				continue;
+			}
+			tm = groupTms.get(resourceName);
+			if (tm != null) {
+				break;
+			}
+		}
+		if (tm == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+		}
+
+		// Resolve connector id from connector monitors (inline)
+		if (connectorName == null || connectorName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Connector not found: " + connectorName);
+		}
+		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
+		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Connector not found: " + connectorName);
+		}
+		String connectorId = null;
+		for (Monitor m : connectorMonitors.values()) {
+			final String id = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId());
+			final String name = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, id);
+			if (connectorName.equals(name) || connectorName.equals(id)) {
+				connectorId = id;
+				break;
+			}
+		}
+		if (connectorId == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Connector not found: " + connectorName);
+		}
+		final String resolvedConnectorId = connectorId;
+
+		final Map<String, Monitor> monitorsByType = tm.findMonitorsByType(monitorType);
+		final java.util.List<AgentTelemetry> result = new ArrayList<>();
+		if (monitorsByType == null || monitorsByType.isEmpty()) {
+			return result;
+		}
+
+		monitorsByType
+			.values()
+			.stream()
+			.filter(Objects::nonNull)
+			.filter(m -> resolvedConnectorId.equals(m.getAttributes().get(MONITOR_ATTRIBUTE_CONNECTOR_ID)))
+			.sorted((a, b) -> {
+				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+				return an.compareToIgnoreCase(bn);
+			})
+			.forEach(m -> {
+				final String name = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, m.getId());
+				final AgentTelemetry at = AgentTelemetry.builder().name(name).type(MONITOR_TYPE).build();
+				// copy attributes
+				if (m.getAttributes() != null) {
+					at.getAttributes().putAll(m.getAttributes());
+				}
+				// copy metrics as plain values
+				if (m.getMetrics() != null) {
+					m.getMetrics().forEach((k, v) -> at.getMetrics().put(k, v == null ? null : v.getValue()));
+				}
+				result.add(at);
+			});
+
+		return result;
 	}
 
 	/**
