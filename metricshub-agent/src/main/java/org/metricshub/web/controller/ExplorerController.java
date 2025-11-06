@@ -151,4 +151,27 @@ public class ExplorerController {
 	) {
 		return explorerService.getResourceConnectorMonitorsByType(resourceName, connectorName, monitorType);
 	}
+
+	/**
+	 * Retrieves all configured resource-groups as a children-only tree under a
+	 * single top-level "resource-groups" container node.
+	 *
+	 * @return the resource-groups container with all groups as children
+	 */
+	@GetMapping("/resource-groups")
+	public AgentTelemetry getResourceGroups() {
+		return explorerService.getResourceGroups();
+	}
+
+	/**
+	 * Retrieves details for a single resource-group by name.
+	 * Response is a general structure with attributes, metrics, and children.
+	 *
+	 * @param groupName the resource-group key/name
+	 * @return a resource-group node including its nested "resources" container
+	 */
+	@GetMapping("/resource-groups/{groupName}")
+	public AgentTelemetry getResourceGroup(@PathVariable("groupName") final String groupName) {
+		return explorerService.getResourceGroup(groupName);
+	}
 }

@@ -432,6 +432,68 @@ public class ExplorerService {
 	}
 
 	/**
+	 * Build a flat resource-groups container listing all configured resource groups
+	 * (excluding the top-level virtual group), each with its nested resources
+	 * container as children.
+	 *
+	 * @return a "resource-groups" container node with all groups as children
+	 */
+	public AgentTelemetry getResourceGroups() {
+		final var agentContext = agentContextHolder.getAgentContext();
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+
+		final AgentTelemetry resourceGroupsNode = AgentTelemetry
+			.builder()
+			.name(RESOURCE_GROUPS_KEY)
+			.type(RESOURCE_GROUPS_KEY)
+			.build();
+
+		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
+			return resourceGroupsNode;
+		}
+
+		telemetryManagers
+			.entrySet()
+			.stream()
+			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
+			.sorted(Map.Entry.comparingByKey())
+			.forEach(entry -> resourceGroupsNode.getChildren().add(buildResourceGroupNode(entry.getKey(), entry.getValue())));
+
+		return resourceGroupsNode;
+	}
+
+	/**
+	 * Build the details for a single resource-group by name, including its nested
+	 * resources container.
+	 *
+	 * @param groupName the resource-group key/name to locate
+	 * @return a resource-group node with a "resources" container as child
+	 * @throws org.springframework.web.server.ResponseStatusException (400) when the
+	 *                                                                name is blank
+	 *                                                                or (404) when
+	 *                                                                the group is
+	 *                                                                not found
+	 */
+	public AgentTelemetry getResourceGroup(final String groupName) {
+		if (groupName == null || groupName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final var agentContext = agentContextHolder.getAgentContext();
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final Map<String, TelemetryManager> groupTms = telemetryManagers.get(groupName);
+		if (groupTms == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		return buildResourceGroupNode(groupName, groupTms);
+	}
+
+	/**
 	 * Builds a resource-group node along with its nested {@code resources}
 	 * container.
 	 *
