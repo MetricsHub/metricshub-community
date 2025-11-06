@@ -163,7 +163,7 @@
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 3191.749,
+        "value" : 1.14902964E10,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
@@ -202,7 +202,7 @@
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 3191.749,
+        "value" : 1.14902964E10,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
@@ -232,7 +232,7 @@
       "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102"
     },
     "conditionalCollection" : {
-      "hw.enclosure.energy" : "3191749"
+      "hw.enclosure.energy" : "1.14902964E13"
     },
     "legacyTextParameters" : {
       "StatusInformation" : ""
@@ -2674,7 +2674,7 @@
     "attributes" : {
       "__display_id" : "1",
       "hw.parent.type" : "enclosure",
-      "name" : "ESM: 1 ()",
+      "name" : "ESM: 1",
       "connector_id" : "DellOpenManage",
       "additional_label" : "",
       "device_type" : "ESM",
@@ -2726,7 +2726,7 @@
     "attributes" : {
       "__display_id" : "SDCardDevice-1.1",
       "hw.parent.type" : "enclosure",
-      "name" : "vFlash: SDCardDevice-1.1 ()",
+      "name" : "vFlash: SDCardDevice-1.1",
       "connector_id" : "DellOpenManage",
       "additional_label" : "",
       "device_type" : "vFlash",
@@ -3652,7 +3652,7 @@
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 228000.0,
+        "value" : 228.0,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
@@ -3700,7 +3700,7 @@
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 224000.0,
+        "value" : 224.0,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true

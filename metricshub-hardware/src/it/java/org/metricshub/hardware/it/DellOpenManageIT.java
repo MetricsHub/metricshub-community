@@ -22,6 +22,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration.SnmpVersion;
 import org.metricshub.extension.snmp.SnmpExtension;
+import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.hardware.strategy.HardwareStrategy;
@@ -107,6 +108,7 @@ class DellOpenManageIT {
 				new ProtocolHealthCheckStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 				new CollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 				new HardwarePostCollectStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
+				new HardwareMonitorNameGenerationStrategy(telemetryManager, collectTime, clientsExecutor, extensionManager),
 				new HardwareStrategy(telemetryManager, collectTime)
 			)
 			.verifyExpected("snmp/DellOpenManageIT/expected/expected.json");
