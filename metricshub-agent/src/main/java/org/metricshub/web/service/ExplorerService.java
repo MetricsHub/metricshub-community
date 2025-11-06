@@ -41,7 +41,9 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.AgentTelemetry;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Service responsible for building a light-weight hierarchy representation of
@@ -174,10 +176,10 @@ public class ExplorerService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (resourceName == null || resourceName.isBlank()) {
-			return AgentTelemetry.builder().name(resourceName).type(RESOURCE_TYPE).build();
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
-			return AgentTelemetry.builder().name(resourceName).type(RESOURCE_TYPE).build();
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 
 		for (Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
@@ -191,8 +193,8 @@ public class ExplorerService {
 			}
 		}
 
-		// Not found: return an empty resource node using the requested name
-		return AgentTelemetry.builder().name(resourceName).type(RESOURCE_TYPE).build();
+		// Not found
+		throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 	}
 
 	/**
@@ -207,7 +209,7 @@ public class ExplorerService {
 	public AgentTelemetry getResourceConnectors(final String resourceName) {
 		final AgentTelemetry connectorsNode = AgentTelemetry.builder().name(CONNECTORS_KEY).type(CONNECTORS_KEY).build();
 		if (resourceName == null || resourceName.isBlank()) {
-			return connectorsNode;
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 		final AgentTelemetry resourceNode = getResource(resourceName);
 		return resourceNode
@@ -230,9 +232,11 @@ public class ExplorerService {
 	 *         found
 	 */
 	public AgentTelemetry getResourceConnector(final String resourceName, final String connectorName) {
-		final AgentTelemetry empty = AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build();
 		if (resourceName == null || resourceName.isBlank() || connectorName == null || connectorName.isBlank()) {
-			return empty;
+			throw new ResponseStatusException(
+				HttpStatus.NOT_FOUND,
+				"Connector not found: " + connectorName + " for resource: " + resourceName
+			);
 		}
 		final AgentTelemetry resourceNode = getResource(resourceName);
 		final AgentTelemetry connectorsNode = resourceNode
@@ -242,14 +246,22 @@ public class ExplorerService {
 			.findFirst()
 			.orElse(null);
 		if (connectorsNode == null) {
-			return empty;
+			throw new ResponseStatusException(
+				HttpStatus.NOT_FOUND,
+				"Connector not found: " + connectorName + " for resource: " + resourceName
+			);
 		}
 		return connectorsNode
 			.getChildren()
 			.stream()
 			.filter(conn -> connectorName.equals(conn.getName()))
 			.findFirst()
-			.orElse(empty);
+			.orElseThrow(() ->
+				new ResponseStatusException(
+					HttpStatus.NOT_FOUND,
+					"Connector not found: " + connectorName + " for resource: " + resourceName
+				)
+			);
 	}
 
 	/**
