@@ -226,7 +226,7 @@ public abstract class AbstractITJob implements ITJob {
 			final String expected = expectedEntry.getValue();
 			final String expectedKey = expectedEntry.getKey();
 
-			final String actual = expectedMonitor.getConditionalCollection().get(expectedKey);
+			final String actual = actualMonitor.getConditionalCollection().get(expectedKey);
 
 			assertEquals(
 				expected,
@@ -251,7 +251,7 @@ public abstract class AbstractITJob implements ITJob {
 			final String expected = expectedEntry.getValue();
 			final String expectedKey = expectedEntry.getKey();
 
-			final String actual = expectedMonitor.getLegacyTextParameters().get(expectedKey);
+			final String actual = actualMonitor.getLegacyTextParameters().get(expectedKey);
 
 			assertEquals(
 				expected,
