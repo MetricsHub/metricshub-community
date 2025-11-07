@@ -64,7 +64,7 @@ description: Learn more about the new features, changes and improvements, and bu
 | ID                                                                        | Description                                                                                                                                                |
 |---------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**#766**](https://github.com/MetricsHub/metricshub-community/issues/766) | AI Agents: A new set of [MCP Tools](./integrations/ai-agent-mcp.md) is now available to run custom requests (`SNMP GET`, `HTTP GET`, `WMI`, `IPMI`, etc.). |
-| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851) | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-28recommended-29).           |
+| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851) | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-28recommended-29)            |
 
 #### Changes and Improvements
 
