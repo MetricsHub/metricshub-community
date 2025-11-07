@@ -29,12 +29,6 @@ Create the required local directories for configuration and logs:
 mkdir -p /opt/metricshub/{logs,config,otel}
 ```
 
-> **Note:** The container runs as a non-root user with UID `1000` (`metricshub`). To avoid permission issues, make sure the container has access to the directories by updating ownership and permissions:
-
-```bash
-chown -R 1000:1000 /opt/metricshub && chmod -R 775 /opt/metricshub
-```
-
 Next, download the example configuration files to help you get started:
 
 ```shell-session
@@ -48,13 +42,19 @@ wget -O ./config/metricshub.yaml https://metricshub.com/docs/latest/resources/co
 * [Configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
 * In the **./otel/otel-config.yaml** file, specify where the _OpenTelemetry Collector_ should [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
 
+> **Note:** The container runs as a non-root user with UID `1000` (`metricshub`). To avoid permission issues, make sure the container has access to the directories by updating ownership and permissions:
+
+```bash
+chown -R 1000:1000 /opt/metricshub && chmod -R 775 /opt/metricshub
+```
+
 ### Start
 
 To start **MetricsHub Enterprise** using the local configuration files, run the following command from **/opt/metricshub** directory:
 
 ```bash
 # Run docker using local configuration files as volumes
-docker run -d \
+cd /opt/metricshub && docker run -d \
   --name=metricshub-enterprise \
   -p 24375:24375 -p 13133:13133 \
   -v $(pwd)/config:/opt/metricshub/lib/config \
