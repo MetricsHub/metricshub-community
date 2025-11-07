@@ -496,6 +496,126 @@ public class ExplorerService {
 	}
 
 	/**
+	 * Build resources container for a specific resource-group.
+	 * Response is a general structure (name="resources", type="resources") with
+	 * children-only, where children are shallow resource nodes (no connectors).
+	 *
+	 * @param groupName the resource-group key/name
+	 * @return a "resources" container node with shallow resource children
+	 * @throws org.springframework.web.server.ResponseStatusException (404) when the
+	 *                                                                group is not
+	 *                                                                found or name
+	 *                                                                is blank
+	 */
+	public AgentTelemetry getResourceGroupResources(final String groupName) {
+		if (groupName == null || groupName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final var agentContext = agentContextHolder.getAgentContext();
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final Map<String, TelemetryManager> groupTms = telemetryManagers.get(groupName);
+		if (groupTms == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final AgentTelemetry resourcesNode = AgentTelemetry.builder().name(RESOURCES_KEY).type(RESOURCES_KEY).build();
+		buildResourcesShallow(resourcesNode, groupTms);
+		return resourcesNode;
+	}
+
+	/**
+	 * Build a shallow resource node for a resource inside a specific group.
+	 * Response is a general structure with attributes, metrics, and children (all
+	 * shallow / empty by default).
+	 *
+	 * @param groupName    the resource-group key/name
+	 * @param resourceName the resource key/name
+	 * @return a shallow resource node
+	 * @throws org.springframework.web.server.ResponseStatusException (404) when the
+	 *                                                                group or
+	 *                                                                resource is
+	 *                                                                not found, or
+	 *                                                                names are
+	 *                                                                blank
+	 */
+	public AgentTelemetry getResourceGroupResource(final String groupName, final String resourceName) {
+		final var agentContext = agentContextHolder.getAgentContext();
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final Map<String, TelemetryManager> groupTms = telemetryManagers.get(groupName);
+		if (groupTms == null || groupTms.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+		}
+
+		final TelemetryManager tm = groupTms.get(resourceName);
+		if (tm == null) {
+			throw new ResponseStatusException(
+				HttpStatus.NOT_FOUND,
+				"Resource not found: " + resourceName + " in group: " + groupName
+			);
+		}
+
+		// Return the resource with its immediate children (connectors), but no
+		// grandchildren (no monitors under connectors)
+		return buildResourceNodeWithShallowConnectors(resourceName, tm);
+	}
+
+	/**
+	 * Builds a resource node that includes only its immediate children (connectors)
+	 * without adding monitor containers/types under each connector.
+	 */
+	private static AgentTelemetry buildResourceNodeWithShallowConnectors(
+		final String resourceKey,
+		final TelemetryManager tm
+	) {
+		final AgentTelemetry resourceNode = AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build();
+
+		// Attach connectors directly under the resource (skip the "connectors"
+		// category)
+		attachShallowConnectors(resourceNode, tm);
+		return resourceNode;
+	}
+
+	/**
+	 * Populates the provided container with connector nodes only
+	 */
+
+	/**
+	 * Adds connector nodes directly under the provided parent (skipping the
+	 * "connectors" category container). Connectors are shallow.
+	 */
+	private static void attachShallowConnectors(final AgentTelemetry parent, final TelemetryManager tm) {
+		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
+		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
+			return;
+		}
+
+		connectorMonitors
+			.values()
+			.stream()
+			.sorted((Monitor a, Monitor b) -> {
+				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+				return an.compareToIgnoreCase(bn);
+			})
+			.forEach((Monitor connectorMonitor) -> {
+				final String connectorId = connectorMonitor
+					.getAttributes()
+					.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
+				final String connectorName = connectorMonitor.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
+				parent.getChildren().add(AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build());
+			});
+	}
+
+	/**
 	 * Builds a resource-group node along with its nested {@code resources}
 	 * container.
 	 *

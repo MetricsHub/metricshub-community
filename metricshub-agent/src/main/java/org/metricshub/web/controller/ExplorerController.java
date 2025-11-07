@@ -174,4 +174,34 @@ public class ExplorerController {
 	public AgentTelemetry getResourceGroup(@PathVariable("groupName") final String groupName) {
 		return explorerService.getResourceGroup(groupName);
 	}
+
+	/**
+	 * Retrieves all resources for a specific resource-group as a children-only
+	 * tree under a top-level "resources" container node. Children are shallow
+	 * resource nodes (no connectors).
+	 *
+	 * @param groupName the resource-group key/name
+	 * @return the resources container for the group
+	 */
+	@GetMapping("/resource-groups/{groupName}/resources")
+	public AgentTelemetry getResourceGroupResources(@PathVariable("groupName") final String groupName) {
+		return explorerService.getResourceGroupResources(groupName);
+	}
+
+	/**
+	 * Retrieves a shallow resource node inside a specific resource-group.
+	 * Response is a general structure (attributes + metrics maps present, children
+	 * empty).
+	 *
+	 * @param groupName    the resource-group key/name
+	 * @param resourceName the resource key/name
+	 * @return the shallow resource node
+	 */
+	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}")
+	public AgentTelemetry getResourceGroupResource(
+		@PathVariable("groupName") final String groupName,
+		@PathVariable("resourceName") final String resourceName
+	) {
+		return explorerService.getResourceGroupResource(groupName, resourceName);
+	}
 }
