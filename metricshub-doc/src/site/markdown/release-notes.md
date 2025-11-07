@@ -91,9 +91,9 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Fixed Issues
 
-| ID                                                                        | Description                                                                         |
-|---------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
-| [**#297**](https://github.com/MetricsHub/community-connectors/issues/297) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)**: Fans are not detected |
+| ID                                                                        | Description                                                                                    |
+|---------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| [**#297**](https://github.com/MetricsHub/community-connectors/issues/297) | **[Ethernet Switch with Sensors (SNMP)](./connectors/mib2switch.html)**: Fans are not detected |
 
 ### MetricsHub Community Connectors v1.0.15
 
@@ -725,11 +725,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                                                                                                                   |
-|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                    |
-| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                   |
-| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html)**: Added support for Arista platforms |
+| ID                                                                         | Description                                                                                                                                                                             |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                              |
+| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                             |
+| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./connectors/mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html)**: Added support for Arista platforms |
 
 #### Fixed Issues
 
