@@ -54,7 +54,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 | ID                                                                        | Description                                                                                                                                  |
 |---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| [**#930**](https://github.com/MetricsHub/metricshub-community/issues/930) | Reduced memory footprint when exporting metrics to the OpenTelemetry Collector                                                               |
+| [**#930**](https://github.com/MetricsHub/metricshub-community/issues/930) | Exporting metrics to the OpenTelemetry Collector now consumes less memory                                                                    |
 | [**#941**](https://github.com/MetricsHub/metricshub-community/issues/941) | MetricsHub Community is bundled with Community Connectors [v1.0.16](https://github.com/MetricsHub/community-connectors/releases/tag/v1.0.16) |
 
 ### MetricsHub Community Edition v1.0.09
@@ -725,11 +725,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                                                                                                                       |
-|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                        |
-| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                       |
-| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html):** connectors now support Arista platforms |
+| ID                                                                         | Description                                                                                                                                                                   |
+|----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                    |
+| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                   |
+| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html):**: Added support for Arista platforms |
 
 #### Fixed Issues
 
