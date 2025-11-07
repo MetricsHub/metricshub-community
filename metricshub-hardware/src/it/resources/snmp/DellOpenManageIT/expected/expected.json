@@ -1616,7 +1616,6 @@
     },
     "attributes" : {
       "os.type" : "linux",
-      "agent.host.name" : "192.168.1.18",
       "host.name" : "localhost",
       "host.type" : "compute"
     },
