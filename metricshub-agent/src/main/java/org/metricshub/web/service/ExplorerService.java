@@ -457,7 +457,7 @@ public class ExplorerService {
 			.stream()
 			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
 			.sorted(Map.Entry.comparingByKey())
-			.forEach(entry -> resourceGroupsNode.getChildren().add(buildResourceGroupNode(entry.getKey(), entry.getValue())));
+			.forEach(entry -> resourceGroupsNode.getChildren().add(buildShallowResourceGroupNode(entry.getKey())));
 
 		return resourceGroupsNode;
 	}
@@ -490,7 +490,9 @@ public class ExplorerService {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
 		}
 
-		return buildResourceGroupNode(groupName, groupTms);
+		final AgentTelemetry groupNode = buildShallowResourceGroupNode(groupName);
+		buildResourcesShallow(groupNode, groupTms);
+		return groupNode;
 	}
 
 	/**
@@ -514,6 +516,13 @@ public class ExplorerService {
 	}
 
 	/**
+	 * Builds a shallow resource-group node (no children attached).
+	 */
+	private static AgentTelemetry buildShallowResourceGroupNode(final String groupName) {
+		return AgentTelemetry.builder().name(groupName).type(RESOURCE_GROUP_KEY).build();
+	}
+
+	/**
 	 * Populates the provided {@code resources} container with resource nodes built
 	 * from the given map.
 	 *
@@ -533,6 +542,24 @@ public class ExplorerService {
 				final String resourceKey = entry.getKey();
 				final TelemetryManager tm = entry.getValue();
 				resourcesContainer.getChildren().add(buildResourceNode(resourceKey, tm));
+			});
+	}
+
+	/**
+	 * Populates the provided parent with shallow resource nodes (no
+	 * connectors/children).
+	 */
+	private static void buildResourcesShallow(final AgentTelemetry parent, final Map<String, TelemetryManager> tms) {
+		if (tms == null || tms.isEmpty()) {
+			return;
+		}
+		tms
+			.entrySet()
+			.stream()
+			.sorted(Entry.comparingByKey())
+			.forEach((Entry<String, TelemetryManager> entry) -> {
+				final String resourceKey = entry.getKey();
+				parent.getChildren().add(AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build());
 			});
 	}
 
