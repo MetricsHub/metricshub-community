@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.11-SNAPSHOT</version>
+		<version>1.0.11</version>
 	</parent>
 	<artifactId>metricshub-it-common</artifactId>
 	<name>MetricsHub IT Common</name>
