@@ -729,7 +729,7 @@ description: Learn more about the new features, changes and improvements, and bu
 |----------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                    |
 | [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                   |
-| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html):**: Added support for Arista platforms |
+| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html)**: Added support for Arista platforms |
 
 #### Fixed Issues
 
