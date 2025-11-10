@@ -33,8 +33,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_A
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -101,7 +101,7 @@ public class ExplorerService {
 	 */
 	private static final String RESOURCE_GROUPS_KEY = "resource-groups";
 
-	private AgentContextHolder agentContextHolder;
+	private final AgentContextHolder agentContextHolder;
 
 	/**
 	 * Creates a new {@link ExplorerService} instance.
@@ -122,9 +122,8 @@ public class ExplorerService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		final Map<String, String> agentAttributes = agentContext.getAgentInfo().getAttributes();
 		final String agentName = agentAttributes.getOrDefault(
-			AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY,
-			agentAttributes.getOrDefault(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "MetricsHub")
-		);
+				AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY,
+				agentAttributes.getOrDefault(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "MetricsHub"));
 
 		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).type(AGENT_TYPE).build();
 
@@ -135,28 +134,28 @@ public class ExplorerService {
 
 		// Resource Groups (excluding top-level group key)
 		final AgentTelemetry resourceGroupsNode = AgentTelemetry
-			.builder()
-			.name(RESOURCE_GROUPS_KEY)
-			.type(RESOURCE_GROUPS_KEY)
-			.build();
+				.builder()
+				.name(RESOURCE_GROUPS_KEY)
+				.type(RESOURCE_GROUPS_KEY)
+				.build();
 
 		telemetryManagers
-			.entrySet()
-			.stream()
-			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
-			.sorted(Map.Entry.comparingByKey())
-			.forEach(entry -> resourceGroupsNode.getChildren().add(buildResourceGroupNode(entry.getKey(), entry.getValue())));
+				.entrySet()
+				.stream()
+				.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> resourceGroupsNode.getChildren()
+						.add(buildResourceGroupNode(entry.getKey(), entry.getValue())));
 
 		// Top-level Resources
 		final Map<String, TelemetryManager> topLevelResources = telemetryManagers.getOrDefault(
-			TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
-			Map.of()
-		);
+				TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
+				Map.of());
 		final AgentTelemetry topLevelResourcesNode = AgentTelemetry
-			.builder()
-			.name(RESOURCES_KEY)
-			.type(RESOURCES_KEY)
-			.build();
+				.builder()
+				.name(RESOURCES_KEY)
+				.type(RESOURCES_KEY)
+				.build();
 		buildResources(topLevelResourcesNode, topLevelResources);
 
 		root.getChildren().add(resourceGroupsNode);
@@ -180,13 +179,13 @@ public class ExplorerService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (resourceName == null || resourceName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource name is required");
 		}
 		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 
-		for (Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
+		for (Map.Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
 			final Map<String, TelemetryManager> groupTms = entry.getValue();
 			if (groupTms == null || groupTms.isEmpty()) {
 				continue;
@@ -216,17 +215,18 @@ public class ExplorerService {
 	 *                                                                blank
 	 */
 	public AgentTelemetry getResourceConnectors(final String resourceName) {
-		final AgentTelemetry connectorsNode = AgentTelemetry.builder().name(CONNECTORS_KEY).type(CONNECTORS_KEY).build();
+		final AgentTelemetry connectorsNode = AgentTelemetry.builder().name(CONNECTORS_KEY).type(CONNECTORS_KEY)
+				.build();
 		if (resourceName == null || resourceName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource name is required");
 		}
 		final AgentTelemetry resourceNode = getResource(resourceName);
 		return resourceNode
-			.getChildren()
-			.stream()
-			.filter(child -> CONNECTORS_KEY.equals(child.getType()))
-			.findFirst()
-			.orElse(connectorsNode);
+				.getChildren()
+				.stream()
+				.filter(child -> CONNECTORS_KEY.equals(child.getType()))
+				.findFirst()
+				.orElse(connectorsNode);
 	}
 
 	/**
@@ -247,36 +247,32 @@ public class ExplorerService {
 	 *                                                                blank
 	 */
 	public AgentTelemetry getResourceConnector(final String resourceName, final String connectorName) {
-		if (resourceName == null || resourceName.isBlank() || connectorName == null || connectorName.isBlank()) {
-			throw new ResponseStatusException(
-				HttpStatus.NOT_FOUND,
-				"Connector not found: " + connectorName + " for resource: " + resourceName
-			);
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource name is required");
+		}
+		if (connectorName == null || connectorName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Connector name is required");
 		}
 		final AgentTelemetry resourceNode = getResource(resourceName);
 		final AgentTelemetry connectorsNode = resourceNode
-			.getChildren()
-			.stream()
-			.filter(child -> CONNECTORS_KEY.equals(child.getType()))
-			.findFirst()
-			.orElse(null);
+				.getChildren()
+				.stream()
+				.filter(child -> CONNECTORS_KEY.equals(child.getType()))
+				.findFirst()
+				.orElse(null);
 		if (connectorsNode == null) {
 			throw new ResponseStatusException(
-				HttpStatus.NOT_FOUND,
-				"Connector not found: " + connectorName + " for resource: " + resourceName
-			);
+					HttpStatus.NOT_FOUND,
+					"Connector not found: " + connectorName + " for resource: " + resourceName);
 		}
 		return connectorsNode
-			.getChildren()
-			.stream()
-			.filter(conn -> connectorName.equals(conn.getName()))
-			.findFirst()
-			.orElseThrow(() ->
-				new ResponseStatusException(
-					HttpStatus.NOT_FOUND,
-					"Connector not found: " + connectorName + " for resource: " + resourceName
-				)
-			);
+				.getChildren()
+				.stream()
+				.filter(conn -> connectorName.equalsIgnoreCase(conn.getName()))
+				.findFirst()
+				.orElseThrow(() -> new ResponseStatusException(
+						HttpStatus.NOT_FOUND,
+						"Connector not found: " + connectorName + " for resource: " + resourceName));
 	}
 
 	/**
@@ -295,14 +291,13 @@ public class ExplorerService {
 	 *                                                                not found
 	 */
 	public AgentTelemetry getResourceConnectorMonitors(final String resourceName, final String connectorName) {
-		// Reuse existing connector building logic and extract its monitors container
 		final AgentTelemetry connectorNode = getResourceConnector(resourceName, connectorName);
 		return connectorNode
-			.getChildren()
-			.stream()
-			.filter(child -> MONITORS_KEY.equals(child.getType()))
-			.findFirst()
-			.orElse(AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build());
+				.getChildren()
+				.stream()
+				.filter(child -> MONITORS_KEY.equals(child.getType()))
+				.findFirst()
+				.orElse(AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build());
 	}
 
 	/**
@@ -320,22 +315,21 @@ public class ExplorerService {
 	 *                                                                connector is
 	 *                                                                not found
 	 */
-	public java.util.List<AgentTelemetry> getResourceConnectorMonitorsByType(
-		final String resourceName,
-		final String connectorName,
-		final String monitorType
-	) {
+	public List<AgentTelemetry> getResourceConnectorMonitorsByType(
+			final String resourceName,
+			final String connectorName,
+			final String monitorType) {
 		// Locate TelemetryManager for the resource (inline to avoid extra helpers)
 		final var agentContext = agentContextHolder.getAgentContext();
 		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (resourceName == null || resourceName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource name is required");
 		}
 		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName);
 		}
 		TelemetryManager tm = null;
-		for (Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
+		for (Map.Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
 			final Map<String, TelemetryManager> groupTms = entry.getValue();
 			if (groupTms == null || groupTms.isEmpty()) {
 				continue;
@@ -351,7 +345,7 @@ public class ExplorerService {
 
 		// Resolve connector id from connector monitors (inline)
 		if (connectorName == null || connectorName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Connector not found: " + connectorName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Connector name is required");
 		}
 		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
 		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
@@ -359,9 +353,10 @@ public class ExplorerService {
 		}
 		String connectorId = null;
 		for (Monitor m : connectorMonitors.values()) {
-			final String id = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId());
-			final String name = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, id);
-			if (connectorName.equals(name) || connectorName.equals(id)) {
+			final Map<String, String> attrs = m.getAttributes();
+			final String id = attrs == null ? m.getId() : attrs.getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId());
+			final String name = attrs == null ? id : attrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, id);
+			if (connectorName.equalsIgnoreCase(name) || connectorName.equalsIgnoreCase(id)) {
 				connectorId = id;
 				break;
 			}
@@ -372,34 +367,43 @@ public class ExplorerService {
 		final String resolvedConnectorId = connectorId;
 
 		final Map<String, Monitor> monitorsByType = tm.findMonitorsByType(monitorType);
-		final java.util.List<AgentTelemetry> result = new ArrayList<>();
+		final List<AgentTelemetry> result = new ArrayList<>();
 		if (monitorsByType == null || monitorsByType.isEmpty()) {
 			return result;
 		}
 
 		monitorsByType
-			.values()
-			.stream()
-			.filter(Objects::nonNull)
-			.filter(m -> resolvedConnectorId.equals(m.getAttributes().get(MONITOR_ATTRIBUTE_CONNECTOR_ID)))
-			.sorted((a, b) -> {
-				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
-				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
-				return an.compareToIgnoreCase(bn);
-			})
-			.forEach(m -> {
-				final String name = m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, m.getId());
-				final AgentTelemetry at = AgentTelemetry.builder().name(name).type(MONITOR_TYPE).build();
-				// copy attributes
-				if (m.getAttributes() != null) {
-					at.getAttributes().putAll(m.getAttributes());
-				}
-				// copy metrics as plain values
-				if (m.getMetrics() != null) {
-					m.getMetrics().forEach((k, v) -> at.getMetrics().put(k, v == null ? null : v.getValue()));
-				}
-				result.add(at);
-			});
+				.values()
+				.stream()
+				.filter(Objects::nonNull)
+				.filter(m -> {
+					final Map<String, String> attrs = m.getAttributes();
+					return attrs != null && resolvedConnectorId.equals(attrs.get(MONITOR_ATTRIBUTE_CONNECTOR_ID));
+				})
+				.sorted((a, b) -> {
+					final Map<String, String> aAttrs = a.getAttributes();
+					final Map<String, String> bAttrs = b.getAttributes();
+					final String an = aAttrs == null ? a.getId()
+							: aAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+					final String bn = bAttrs == null ? b.getId()
+							: bAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+					return an.compareToIgnoreCase(bn);
+				})
+				.forEach(m -> {
+					final Map<String, String> attrs = m.getAttributes();
+					final String name = attrs == null ? m.getId()
+							: attrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, m.getId());
+					final AgentTelemetry at = AgentTelemetry.builder().name(name).type(MONITOR_TYPE).build();
+					// copy attributes
+					if (attrs != null) {
+						at.getAttributes().putAll(attrs);
+					}
+					// copy metrics as plain values
+					if (m.getMetrics() != null) {
+						m.getMetrics().forEach((k, v) -> at.getMetrics().put(k, v == null ? null : v.getValue()));
+					}
+					result.add(at);
+				});
 
 		return result;
 	}
@@ -423,10 +427,10 @@ public class ExplorerService {
 		// Iterate by resource-group key for deterministic ordering, then by resource
 		// key
 		telemetryManagers
-			.entrySet()
-			.stream()
-			.sorted(Map.Entry.comparingByKey())
-			.forEach(entry -> buildResources(resourcesNode, entry.getValue()));
+				.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> buildResources(resourcesNode, entry.getValue()));
 
 		return resourcesNode;
 	}
@@ -443,21 +447,21 @@ public class ExplorerService {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 
 		final AgentTelemetry resourceGroupsNode = AgentTelemetry
-			.builder()
-			.name(RESOURCE_GROUPS_KEY)
-			.type(RESOURCE_GROUPS_KEY)
-			.build();
+				.builder()
+				.name(RESOURCE_GROUPS_KEY)
+				.type(RESOURCE_GROUPS_KEY)
+				.build();
 
 		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
 			return resourceGroupsNode;
 		}
 
 		telemetryManagers
-			.entrySet()
-			.stream()
-			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
-			.sorted(Map.Entry.comparingByKey())
-			.forEach(entry -> resourceGroupsNode.getChildren().add(buildShallowResourceGroupNode(entry.getKey())));
+				.entrySet()
+				.stream()
+				.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
+				.sorted(Map.Entry.comparingByKey())
+				.forEach(entry -> resourceGroupsNode.getChildren().add(buildShallowResourceGroupNode(entry.getKey())));
 
 		return resourceGroupsNode;
 	}
@@ -476,7 +480,7 @@ public class ExplorerService {
 	 */
 	public AgentTelemetry getResourceGroup(final String groupName) {
 		if (groupName == null || groupName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource group name is required");
 		}
 
 		final var agentContext = agentContextHolder.getAgentContext();
@@ -509,7 +513,7 @@ public class ExplorerService {
 	 */
 	public AgentTelemetry getResourceGroupResources(final String groupName) {
 		if (groupName == null || groupName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource group not found: " + groupName);
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource group name is required");
 		}
 
 		final var agentContext = agentContextHolder.getAgentContext();
@@ -544,6 +548,12 @@ public class ExplorerService {
 	 *                                                                blank
 	 */
 	public AgentTelemetry getResourceGroupResource(final String groupName, final String resourceName) {
+		if (groupName == null || groupName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource group name is required");
+		}
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Resource name is required");
+		}
 		final var agentContext = agentContextHolder.getAgentContext();
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (telemetryManagers == null || telemetryManagers.isEmpty()) {
@@ -558,13 +568,11 @@ public class ExplorerService {
 		final TelemetryManager tm = groupTms.get(resourceName);
 		if (tm == null) {
 			throw new ResponseStatusException(
-				HttpStatus.NOT_FOUND,
-				"Resource not found: " + resourceName + " in group: " + groupName
-			);
+					HttpStatus.NOT_FOUND,
+					"Resource not found: " + resourceName + " in group: " + groupName);
 		}
 
-		// Return the resource with its immediate children (connectors), but no
-		// grandchildren (no monitors under connectors)
+		// Return the resource with its immediate shallow connectors container
 		return buildResourceNodeWithShallowConnectors(resourceName, tm);
 	}
 
@@ -573,25 +581,15 @@ public class ExplorerService {
 	 * without adding monitor containers/types under each connector.
 	 */
 	private static AgentTelemetry buildResourceNodeWithShallowConnectors(
-		final String resourceKey,
-		final TelemetryManager tm
-	) {
+			final String resourceKey,
+			final TelemetryManager tm) {
 		final AgentTelemetry resourceNode = AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build();
-
-		// Attach connectors directly under the resource (skip the "connectors"
-		// category)
+		// Shallow representation: connectors directly under resource (no connectors
+		// container, no monitors subtree)
 		attachShallowConnectors(resourceNode, tm);
 		return resourceNode;
 	}
 
-	/**
-	 * Populates the provided container with connector nodes only
-	 */
-
-	/**
-	 * Adds connector nodes directly under the provided parent (skipping the
-	 * "connectors" category container). Connectors are shallow.
-	 */
 	private static void attachShallowConnectors(final AgentTelemetry parent, final TelemetryManager tm) {
 		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
 		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
@@ -599,20 +597,33 @@ public class ExplorerService {
 		}
 
 		connectorMonitors
-			.values()
-			.stream()
-			.sorted((Monitor a, Monitor b) -> {
-				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
-				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
-				return an.compareToIgnoreCase(bn);
-			})
-			.forEach((Monitor connectorMonitor) -> {
-				final String connectorId = connectorMonitor
-					.getAttributes()
-					.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
-				final String connectorName = connectorMonitor.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
-				parent.getChildren().add(AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build());
-			});
+				.values()
+				.stream()
+				.sorted((Monitor a, Monitor b) -> {
+					final Map<String, String> aAttrs = a.getAttributes();
+					final Map<String, String> bAttrs = b.getAttributes();
+					final String an = aAttrs == null ? a.getId()
+							: aAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+					final String bn = bAttrs == null ? b.getId()
+							: bAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+					return an.compareToIgnoreCase(bn);
+				})
+				.forEach((Monitor connectorMonitor) -> {
+					final Map<String, String> attrs = connectorMonitor.getAttributes();
+					final String connectorId = attrs == null
+							? connectorMonitor.getId()
+							: attrs.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
+					final String connectorName = attrs == null
+							? connectorId
+							: attrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
+					final AgentTelemetry connectorNode = AgentTelemetry.builder().name(connectorName)
+							.type(CONNECTOR_TYPE).build();
+					// Provide an empty monitors container to enable GET monitors discovery in
+					// shallow views
+					connectorNode.getChildren()
+							.add(AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build());
+					parent.getChildren().add(connectorNode);
+				});
 	}
 
 	/**
@@ -625,11 +636,11 @@ public class ExplorerService {
 	 * @return a {@link AgentTelemetry} representing the resource-group subtree
 	 */
 	private static AgentTelemetry buildResourceGroupNode(
-		final String groupName,
-		final Map<String, TelemetryManager> groupTms
-	) {
+			final String groupName,
+			final Map<String, TelemetryManager> groupTms) {
 		final AgentTelemetry groupNode = AgentTelemetry.builder().name(groupName).type(RESOURCE_GROUP_KEY).build();
-		final AgentTelemetry resourcesContainer = AgentTelemetry.builder().name(RESOURCES_KEY).type(RESOURCES_KEY).build();
+		final AgentTelemetry resourcesContainer = AgentTelemetry.builder().name(RESOURCES_KEY).type(RESOURCES_KEY)
+				.build();
 		buildResources(resourcesContainer, groupTms);
 		groupNode.getChildren().add(resourcesContainer);
 		return groupNode;
@@ -650,19 +661,20 @@ public class ExplorerService {
 	 *                           be appended
 	 * @param tms                a map of resource key to {@link TelemetryManager}
 	 */
-	private static void buildResources(final AgentTelemetry resourcesContainer, final Map<String, TelemetryManager> tms) {
+	private static void buildResources(final AgentTelemetry resourcesContainer,
+			final Map<String, TelemetryManager> tms) {
 		if (tms == null || tms.isEmpty()) {
 			return;
 		}
 		tms
-			.entrySet()
-			.stream()
-			.sorted(Entry.comparingByKey())
-			.forEach((Entry<String, TelemetryManager> entry) -> {
-				final String resourceKey = entry.getKey();
-				final TelemetryManager tm = entry.getValue();
-				resourcesContainer.getChildren().add(buildResourceNode(resourceKey, tm));
-			});
+				.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByKey())
+				.forEach((Map.Entry<String, TelemetryManager> entry) -> {
+					final String resourceKey = entry.getKey();
+					final TelemetryManager tm = entry.getValue();
+					resourcesContainer.getChildren().add(buildResourceNode(resourceKey, tm));
+				});
 	}
 
 	/**
@@ -674,13 +686,13 @@ public class ExplorerService {
 			return;
 		}
 		tms
-			.entrySet()
-			.stream()
-			.sorted(Entry.comparingByKey())
-			.forEach((Entry<String, TelemetryManager> entry) -> {
-				final String resourceKey = entry.getKey();
-				parent.getChildren().add(AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build());
-			});
+				.entrySet()
+				.stream()
+				.sorted(Map.Entry.comparingByKey())
+				.forEach((Map.Entry<String, TelemetryManager> entry) -> {
+					final String resourceKey = entry.getKey();
+					parent.getChildren().add(AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build());
+				});
 	}
 
 	/**
@@ -694,10 +706,10 @@ public class ExplorerService {
 		final AgentTelemetry resourceNode = AgentTelemetry.builder().name(resourceKey).type(RESOURCE_TYPE).build();
 
 		final AgentTelemetry connectorsContainer = AgentTelemetry
-			.builder()
-			.name(CONNECTORS_KEY)
-			.type(CONNECTORS_KEY)
-			.build();
+				.builder()
+				.name(CONNECTORS_KEY)
+				.type(CONNECTORS_KEY)
+				.build();
 
 		buildConnectors(connectorsContainer, tm);
 
@@ -728,19 +740,23 @@ public class ExplorerService {
 
 		// Collect monitors by connector-id to later build monitor type lists per
 		// connector
-		final Map<String, Set<String>> connectorIdToMonitorTypes = groupMonitorTypesByConnectorId(tm, connectorMonitors);
+		final Map<String, Set<String>> connectorIdToMonitorTypes = groupMonitorTypesByConnectorId(tm,
+				connectorMonitors);
 
 		connectorMonitors
-			.values()
-			.stream()
-			.sorted((Monitor a, Monitor b) -> {
-				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
-				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
-				return an.compareToIgnoreCase(bn);
-			})
-			.forEach((Monitor connectorMonitor) ->
-				buildConnectorNode(connectorsContainer, connectorIdToMonitorTypes, connectorMonitor)
-			);
+				.values()
+				.stream()
+				.sorted((Monitor a, Monitor b) -> {
+					final Map<String, String> aAttrs = a.getAttributes();
+					final Map<String, String> bAttrs = b.getAttributes();
+					final String an = aAttrs == null ? a.getId()
+							: aAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
+					final String bn = bAttrs == null ? b.getId()
+							: bAttrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
+					return an.compareToIgnoreCase(bn);
+				})
+				.forEach((Monitor connectorMonitor) -> buildConnectorNode(connectorsContainer,
+						connectorIdToMonitorTypes, connectorMonitor));
 	}
 
 	/**
@@ -752,25 +768,25 @@ public class ExplorerService {
 	 * @param connectorMonitor          The connector monitor to build the node for.
 	 */
 	private static void buildConnectorNode(
-		final AgentTelemetry connectorsContainer,
-		final Map<String, Set<String>> connectorIdToMonitorTypes,
-		Monitor connectorMonitor
-	) {
-		final String connectorId = connectorMonitor
-			.getAttributes()
-			.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
-		final String connectorName = connectorMonitor.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
+			final AgentTelemetry connectorsContainer,
+			final Map<String, Set<String>> connectorIdToMonitorTypes,
+			Monitor connectorMonitor) {
+		final Map<String, String> attrs = connectorMonitor.getAttributes();
+		final String connectorId = attrs == null
+				? connectorMonitor.getId()
+				: attrs.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
+		final String connectorName = attrs == null ? connectorId
+				: attrs.getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
 
 		final AgentTelemetry connectorNode = AgentTelemetry.builder().name(connectorName).type(CONNECTOR_TYPE).build();
 
 		final AgentTelemetry monitorsContainer = AgentTelemetry.builder().name(MONITORS_KEY).type(MONITORS_KEY).build();
 		final Set<String> monitorTypes = connectorIdToMonitorTypes.getOrDefault(connectorId, Set.of());
 		monitorTypes
-			.stream()
-			.sorted(String::compareToIgnoreCase)
-			.forEach(type ->
-				monitorsContainer.getChildren().add(AgentTelemetry.builder().name(type).type(MONITOR_TYPE).build())
-			);
+				.stream()
+				.sorted(String::compareToIgnoreCase)
+				.forEach(type -> monitorsContainer.getChildren()
+						.add(AgentTelemetry.builder().name(type).type(MONITOR_TYPE).build()));
 
 		connectorNode.getChildren().add(monitorsContainer);
 		connectorsContainer.getChildren().add(connectorNode);
@@ -790,42 +806,42 @@ public class ExplorerService {
 	 * @return a map of {@code connector_id} to the set of monitor types
 	 */
 	private static Map<String, Set<String>> groupMonitorTypesByConnectorId(
-		final TelemetryManager tm,
-		final Map<String, Monitor> connectorMonitors
-	) {
+			final TelemetryManager tm,
+			final Map<String, Monitor> connectorMonitors) {
 		final Map<String, Set<String>> result = new HashMap<>();
 
-		if (tm.getMonitors() == null || tm.getMonitors().isEmpty()) {
-			return result;
+		if (tm.getMonitors() != null && !tm.getMonitors().isEmpty()) {
+			tm
+					.getMonitors()
+					.values()
+					.stream()
+					.filter(Objects::nonNull)
+					.flatMap(map -> map.values().stream())
+					.filter(Objects::nonNull)
+					.filter(m -> !HOST.getKey().equalsIgnoreCase(m.getType()))
+					.filter(m -> !CONNECTOR.getKey().equalsIgnoreCase(m.getType()))
+					.forEach((Monitor monitor) -> {
+						final Map<String, String> attrs = monitor.getAttributes();
+						if (attrs == null) {
+							return;
+						}
+						final String cId = attrs.get(MONITOR_ATTRIBUTE_CONNECTOR_ID);
+						if (cId == null || cId.isBlank()) {
+							return;
+						}
+						result.computeIfAbsent(cId, k -> new HashSet<>()).add(monitor.getType());
+					});
 		}
 
-		// Flatten all monitors and group types by connector-id, excluding host and
-		// connector monitors
-		tm
-			.getMonitors()
-			.values()
-			.stream()
-			.filter(Objects::nonNull)
-			.flatMap(map -> map.values().stream())
-			.filter(Objects::nonNull)
-			.filter(m -> !HOST.getKey().equalsIgnoreCase(m.getType()))
-			.filter(m -> !CONNECTOR.getKey().equalsIgnoreCase(m.getType()))
-			.forEach((Monitor monitor) -> {
-				final String connectorId = monitor.getAttributes().get(MONITOR_ATTRIBUTE_CONNECTOR_ID);
-				if (connectorId == null || connectorId.isBlank()) {
-					return;
-				}
-				result.computeIfAbsent(connectorId, k -> new HashSet<>()).add(monitor.getType());
-			});
-
-		// Ensure that each listed connector-id exists, even if no non-connector/host
-		// monitor types were found
 		if (connectorMonitors != null && !connectorMonitors.isEmpty()) {
 			final Set<String> connectorIds = connectorMonitors
-				.values()
-				.stream()
-				.map(m -> m.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId()))
-				.collect(Collectors.toSet());
+					.values()
+					.stream()
+					.map(m -> {
+						final Map<String, String> a = m.getAttributes();
+						return a == null ? m.getId() : a.getOrDefault(MONITOR_ATTRIBUTE_ID, m.getId());
+					})
+					.collect(Collectors.toSet());
 			connectorIds.forEach(id -> result.computeIfAbsent(id, k -> new HashSet<>()));
 		}
 
