@@ -44,12 +44,13 @@ const SplashScreen = () => {
 
 /**
  * App layout component
+ * @param {{ authed: boolean, onToggleTheme: () => void }} props
  * @returns JSX.Element
  */
-const AppLayout = ({ authed, toggleTheme }) => {
+const AppLayout = ({ authed, onToggleTheme }) => {
 	return (
 		<>
-			{authed && <NavBar toggleTheme={toggleTheme} />}
+			{authed && <NavBar onToggleTheme={onToggleTheme} />}
 			{/* Global unsaved changes guard */}
 			<UnsavedChangesGuard />
 			{/* Child pages render here */}
@@ -113,7 +114,7 @@ export default function App() {
 													element={
 														<AppLayout
 															authed={auth.isAuthenticated}
-															toggleTheme={() =>
+															onToggleTheme={() =>
 																setMode((prev) => (prev === "light" ? "dark" : "light"))
 															}
 														/>

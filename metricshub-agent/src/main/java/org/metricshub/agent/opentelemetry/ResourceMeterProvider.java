@@ -21,6 +21,7 @@ package org.metricshub.agent.opentelemetry;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.opentelemetry.proto.metrics.v1.ResourceMetrics;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -48,11 +49,23 @@ public class ResourceMeterProvider {
 
 	/**
 	 * Records the metrics for all resource meters and exports them.
+	 * Metric recorders are cleared immediately after recording (before async export) to prevent memory leaks.
+	 * This is safe because the metrics are already serialized into ResourceMetrics protobuf objects.
 	 *
 	 * @param logContextSetter The log context setter to use for asynchronous logging.
 	 */
 	public void exportMetrics(final LogContextSetter logContextSetter) {
-		metricsExporter.export(meters.stream().map(ResourceMeter::recordSafe).toList(), logContextSetter);
+		// First, record all metrics into protobuf ResourceMetrics objects
+		// This extracts all data from the recorders into immutable protobuf structures
+		final List<ResourceMetrics> recordedMetrics = meters.stream().map(ResourceMeter::recordSafe).toList();
+
+		// Now we can safely clear the recorders - the data is already captured in recordedMetrics
+		// This prevents memory leaks without risking data loss, even though export is async
+		meters.forEach(ResourceMeter::clearRecorders);
+
+		// Export the already-recorded metrics asynchronously
+		// Since the data is in recordedMetrics (not in recorders), clearing recorders doesn't affect export
+		metricsExporter.export(recordedMetrics, logContextSetter);
 	}
 
 	/**

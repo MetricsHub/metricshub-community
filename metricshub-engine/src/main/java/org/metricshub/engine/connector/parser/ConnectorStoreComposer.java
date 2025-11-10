@@ -317,8 +317,8 @@ public class ConnectorStoreComposer {
 
 		// Iterate over the variables and extract description and defaultValue
 		variablesNode
-			.fields()
-			.forEachRemaining((Entry<String, JsonNode> entry) -> {
+			.properties()
+			.forEach((Entry<String, JsonNode> entry) -> {
 				final String variableName = entry.getKey();
 				final JsonNode variableValue = entry.getValue();
 

@@ -7,16 +7,7 @@ import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 
 import { useNavigate, NavLink } from "react-router-dom";
-import {
-	AppBar,
-	Box,
-	CssBaseline,
-	Toolbar,
-	Typography,
-	Button,
-	IconButton,
-	Tooltip,
-} from "@mui/material";
+import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
@@ -25,13 +16,13 @@ import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThun
 import StatusText from "./status/status-text";
 import StatusDetailsMenu from "./status/status-details-menu";
 import OtelStatusIcon from "./status/otel-status-icon";
-import Logout from "./logout";
+import ProfileMenu from "./profile-menu";
 import ToggleTheme from "./toggle-theme";
 
 // Refresh status every 30 seconds
 const STATUS_REFRESH_MS = 30000;
 
-const NavBar = ({ toggleTheme }) => {
+const NavBar = ({ onToggleTheme }) => {
 	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
@@ -61,6 +52,10 @@ const NavBar = ({ toggleTheme }) => {
 		return () => clearInterval(id);
 	}, [dispatch]);
 
+	const handleToggleTheme = React.useCallback(() => {
+		onToggleTheme?.();
+	}, [onToggleTheme]);
+
 	const navBtnSx = {
 		alignSelf: "stretch",
 		height: "100%",
@@ -89,7 +84,8 @@ const NavBar = ({ toggleTheme }) => {
 				sx={(t) => ({
 					bgcolor: t.palette.background.default,
 					color: t.palette.text.primary,
-					borderBottom: `1px solid ${t.palette.divider}`,
+					borderBottom: 1,
+					borderColor: t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
 				})}
 			>
@@ -145,12 +141,7 @@ const NavBar = ({ toggleTheme }) => {
 					</Box>
 
 					{/* ================= RIGHT SIDE ================= */}
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, ml: "auto" }}>
-						{user && (
-							<Typography variant="body1" sx={{ mr: 1 }}>
-								{`Signed in as ${user.username}`}
-							</Typography>
-						)}
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
 						<StatusDetailsMenu />
 						{/* Docs link button */}
 						<Tooltip title="Documentation" arrow enterDelay={200}>
@@ -164,8 +155,8 @@ const NavBar = ({ toggleTheme }) => {
 								<MenuBookOutlinedIcon />
 							</IconButton>
 						</Tooltip>
-						<Logout onClick={handleSignOut} />
-						<ToggleTheme onClick={toggleTheme} />
+						<ToggleTheme onClick={handleToggleTheme} />
+						<ProfileMenu username={user?.username} onSignOut={handleSignOut} />
 					</Box>
 				</Toolbar>
 			</AppBar>
