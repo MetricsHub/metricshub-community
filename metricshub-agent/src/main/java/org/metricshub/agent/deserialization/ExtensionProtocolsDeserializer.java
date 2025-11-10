@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -62,15 +63,17 @@ public class ExtensionProtocolsDeserializer extends JsonDeserializer<Map<String,
 
 		if (node != null) {
 			// Retrieve the ExtensionManager from the context
-			final ExtensionManager extensionManager = (ExtensionManager) context.findInjectableValue(
+			final var extensionManager = (ExtensionManager) context.findInjectableValue(
 				ExtensionManager.class.getName(),
+				null,
+				null,
 				null,
 				null
 			);
 
 			node
-				.fields()
-				.forEachRemaining(entry -> {
+				.properties()
+				.forEach((Entry<String, JsonNode> entry) -> {
 					final String protocolName = entry.getKey();
 					final JsonNode protocolConfigNode = entry.getValue();
 

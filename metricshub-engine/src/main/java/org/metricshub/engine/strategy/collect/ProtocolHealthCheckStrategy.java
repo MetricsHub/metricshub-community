@@ -25,6 +25,7 @@ import java.util.List;
 import lombok.Builder;
 import lombok.NonNull;
 import org.metricshub.engine.client.ClientsExecutor;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.AbstractStrategy;
@@ -91,39 +92,76 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 		// Call the extensions to check the protocol health
 		final List<IProtocolExtension> protocolExtensions = extensionManager.findProtocolCheckExtensions(telemetryManager);
 
-		// CHECKSTYLE:OFF
 		protocolExtensions.forEach(protocolExtension -> {
-			// Record the start time before launching protocol checks
-			final long startTime = System.currentTimeMillis();
-			protocolExtension
-				.checkProtocol(telemetryManager)
-				.ifPresent(isUp -> {
-					// Calculate the response time of each protocol check.
-					final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
-					final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-					final Long strategyTime = telemetryManager.getStrategyTime();
-					final MetricFactory metricFactory = new MetricFactory();
-					Double up = DOWN;
-					if (Boolean.TRUE.equals(isUp)) {
-						up = UP;
-						// Collect protocol check response time metric if response up is true
-						metricFactory.collectNumberMetric(
-							endpointHostMonitor,
-							RESPONSE_TIME_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
-							responseTime,
-							strategyTime
-						);
-					}
-					// Collect protocol check metric
+			if (StringHelper.nonNullNonBlank(telemetryManager.getEmulationInputDirectory())) {
+				collectEmulationMetrics(protocolExtension);
+				return;
+			}
+			checkAndCollectProtocolMetrics(protocolExtension);
+		});
+	}
+
+	/**
+	 * Collects emulation metrics when running in emulation mode.
+	 * @param protocolExtension the protocol extension for which to collect emulated metrics
+	 */
+	private void collectEmulationMetrics(final IProtocolExtension protocolExtension) {
+		final MetricFactory metricFactory = new MetricFactory();
+		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+		final Long strategyTime = telemetryManager.getStrategyTime();
+
+		// In emulation mode, collect metricshub.host.up metric directly as "1.0"
+		metricFactory.collectNumberMetric(
+			endpointHostMonitor,
+			UP_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+			UP,
+			strategyTime
+		);
+
+		// In emulation mode, collect metricshub.host.response_time metric directly as "1.0"
+		metricFactory.collectNumberMetric(
+			endpointHostMonitor,
+			RESPONSE_TIME_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+			UP,
+			strategyTime
+		);
+	}
+
+	/**
+	 * Executes the protocol check and collects metricshub.host.up and metricshub.host.response_time metrics.
+	 * @param protocolExtension the protocol extension to check and collect metrics for
+	 */
+	private void checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
+		// Record the start time before launching protocol checks
+		final long startTime = System.currentTimeMillis();
+		protocolExtension
+			.checkProtocol(telemetryManager)
+			.ifPresent(isUp -> {
+				final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
+				final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+				final Long strategyTime = telemetryManager.getStrategyTime();
+				final MetricFactory metricFactory = new MetricFactory();
+
+				Double up = DOWN;
+				if (Boolean.TRUE.equals(isUp)) {
+					up = UP;
+					// Collect protocol check response time metric if response up is true
 					metricFactory.collectNumberMetric(
 						endpointHostMonitor,
-						UP_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
-						up,
+						RESPONSE_TIME_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+						responseTime,
 						strategyTime
 					);
-				});
-		});
-		// CHECKSTYLE:ON
+				}
+
+				// Collect protocol check metric
+				metricFactory.collectNumberMetric(
+					endpointHostMonitor,
+					UP_METRIC_FORMAT.formatted(protocolExtension.getIdentifier()),
+					up,
+					strategyTime
+				);
+			});
 	}
 
 	@Override
