@@ -84,16 +84,21 @@ class ExplorerServiceTest {
 		final Monitor cpu = newMonitor("m1", "cpu", cpuAttrs);
 		final Monitor mem = newMonitor("m2", "mem", memAttrs);
 		final Monitor host = newMonitor("h1", "host", Map.of()); // filtered out
-		final TelemetryManager tmGroup = tmWith(
-			connectorId,
-			"SNMP",
-			Map.of("cpu", List.of(cpu), "mem", List.of(mem), "host", List.of(host))
+		final Map<String, List<Monitor>> groupTypeToMonitors1 = Map.<String, List<Monitor>>of(
+			"cpu",
+			List.<Monitor>of(cpu),
+			"mem",
+			List.<Monitor>of(mem),
+			"host",
+			List.<Monitor>of(host)
 		);
+		final TelemetryManager tmGroup = tmWith(connectorId, "SNMP", groupTypeToMonitors1);
 
 		// Prepare a top-level resource
 		final String topConnectorId = "tc1";
 		final Monitor os = newMonitor("m3", "os", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, topConnectorId));
-		final TelemetryManager tmTop = tmWith(topConnectorId, "TopConn", Map.of("os", List.of(os)));
+		final Map<String, List<Monitor>> topTypeToMonitors1 = Map.<String, List<Monitor>>of("os", List.<Monitor>of(os));
+		final TelemetryManager tmTop = tmWith(topConnectorId, "TopConn", topTypeToMonitors1);
 
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("GroupA", Map.of("serverA", tmGroup));
@@ -158,7 +163,9 @@ class ExplorerServiceTest {
 
 	@Test
 	void testAgentNameDefaultsWhenNoAttributes() {
-		final ExplorerService service = new ExplorerService(holderWithContext(Map.of(), Map.of()));
+		final ExplorerService service = new ExplorerService(
+			holderWithContext(Map.<String, Map<String, TelemetryManager>>of(), Map.<String, String>of())
+		);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("MetricsHub", root.getName());
 	}
@@ -170,22 +177,27 @@ class ExplorerServiceTest {
 		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
 		final Monitor mem = newMonitor("m2", "mem", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
 		final Monitor host = newMonitor("h1", "host", Map.of()); // should be excluded
-		final TelemetryManager tmGroup = tmWith(
-			connectorId,
-			"SNMP",
-			Map.of("cpu", List.of(cpu), "mem", List.of(mem), "host", List.of(host))
+		final Map<String, List<Monitor>> groupTypeToMonitors2 = Map.<String, List<Monitor>>of(
+			"cpu",
+			List.<Monitor>of(cpu),
+			"mem",
+			List.<Monitor>of(mem),
+			"host",
+			List.<Monitor>of(host)
 		);
+		final TelemetryManager tmGroup = tmWith(connectorId, "SNMP", groupTypeToMonitors2);
 
 		// Top-level resource
 		final String topConnectorId = "tc1";
 		final Monitor os = newMonitor("m3", "os", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, topConnectorId));
-		final TelemetryManager tmTop = tmWith(topConnectorId, "TopConn", Map.of("os", List.of(os)));
+		final Map<String, List<Monitor>> topTypeToMonitors2 = Map.<String, List<Monitor>>of("os", List.<Monitor>of(os));
+		final TelemetryManager tmTop = tmWith(topConnectorId, "TopConn", topTypeToMonitors2);
 
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("GroupA", Map.of("serverA", tmGroup));
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("top1", tmTop));
 
-		final ExplorerService service = new ExplorerService(holderWithContext(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(holderWithContext(telemetryManagers, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 
 		assertNotNull(resources);
@@ -231,7 +243,7 @@ class ExplorerServiceTest {
 
 	@Test
 	void testGetResourcesWithNoTelemetryManagers() {
-		final ExplorerService service = new ExplorerService(holderWithContext(null, Map.of()));
+		final ExplorerService service = new ExplorerService(holderWithContext(null, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 		assertNotNull(resources);
 		assertEquals("resources", resources.getName());
@@ -247,7 +259,7 @@ class ExplorerServiceTest {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("GroupX", Map.of("res1", tm));
 
-		final ExplorerService service = new ExplorerService(holderWithContext(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(holderWithContext(telemetryManagers, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 
 		assertEquals(1, resources.getChildren().size());
