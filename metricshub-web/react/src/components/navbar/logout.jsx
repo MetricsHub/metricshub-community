@@ -1,20 +1,22 @@
 import React from "react";
-import { IconButton, Tooltip } from "@mui/material";
+import { MenuItem, ListItemIcon, ListItemText } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 
 /**
- * Logout button component
- * @param {*} param0  onClick - function to call on click
- * @returns JSX.Element
+ * Menu item to log out the current user.
+ *
+ * @param {{ onClick: () => void }} props onClick - callback executed on click
+ * @returns {JSX.Element}
  */
-const Logout = ({ onClick }) => {
+const LogoutMenuItem = ({ onClick }) => {
 	return (
-		<Tooltip title="Log out" arrow enterDelay={200}>
-			<IconButton aria-label="Log out" onClick={onClick}>
-				<LogoutIcon />
-			</IconButton>
-		</Tooltip>
+		<MenuItem onClick={onClick}>
+			<ListItemIcon>
+				<LogoutIcon fontSize="small" />
+			</ListItemIcon>
+			<ListItemText>Sign out</ListItemText>
+		</MenuItem>
 	);
 };
 
-export default Logout;
+export default React.memo(LogoutMenuItem);
