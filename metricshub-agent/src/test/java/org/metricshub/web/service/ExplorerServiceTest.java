@@ -33,8 +33,9 @@ class ExplorerServiceTest {
 	 * @return the mocked AgentContextHolder
 	 */
 	private AgentContextHolder newMockedAgentContextHolder(
-			Map<String, Map<String, TelemetryManager>> telemetryManagers,
-			Map<String, String> agentAttrs) {
+		Map<String, Map<String, TelemetryManager>> telemetryManagers,
+		Map<String, String> agentAttrs
+	) {
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		final AgentContext agentContext = Mockito.mock(AgentContext.class, Mockito.RETURNS_DEEP_STUBS);
 		when(holder.getAgentContext()).thenReturn(agentContext);
@@ -67,9 +68,10 @@ class ExplorerServiceTest {
 	 * @param typeToMonitors a map of monitor types to lists of monitors
 	 */
 	private static TelemetryManager newTelemetryManager(
-			final String connectorId,
-			final String connectorName,
-			final Map<String, List<Monitor>> typeToMonitors) {
+		final String connectorId,
+		final String connectorName,
+		final Map<String, List<Monitor>> typeToMonitors
+	) {
 		final TelemetryManager tm = new TelemetryManager();
 
 		// Connector monitor
@@ -77,8 +79,9 @@ class ExplorerServiceTest {
 
 		tm.addNewMonitor(connectorMonitor, "connector", connectorId);
 
-		typeToMonitors.forEach((type, list) -> IntStream.range(0, list.size()).boxed()
-				.forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1))));
+		typeToMonitors.forEach((type, list) ->
+			IntStream.range(0, list.size()).boxed().forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1)))
+		);
 
 		return tm;
 	}
@@ -107,9 +110,10 @@ class ExplorerServiceTest {
 		final Monitor mem = newMonitor("m2", "mem", memAttrs);
 		final Monitor host = newMonitor("h1", "host", Map.of()); // filtered out
 		final TelemetryManager tmGroup = newTelemetryManager(
-				connectorId,
-				"SNMP",
-				Map.of("cpu", List.of(cpu), "mem", List.of(mem), "host", List.of(host)));
+			connectorId,
+			"SNMP",
+			Map.of("cpu", List.of(cpu), "mem", List.of(mem), "host", List.of(host))
+		);
 
 		// Prepare a top-level resource
 		final String topConnectorId = "tc1";
@@ -138,8 +142,7 @@ class ExplorerServiceTest {
 		// Group subtree
 		final AgentTelemetry groups = root.getChildren().get(0);
 		assertEquals(1, groups.getChildren().size(), "Resource-groups should have one child");
-		assertEquals("resource-group", groups.getChildren().get(0).getType(),
-				"Child should be of type 'resource-group'");
+		assertEquals("resource-group", groups.getChildren().get(0).getType(), "Child should be of type 'resource-group'");
 		assertEquals("GroupA", groups.getChildren().get(0).getName(), "Resource-group name should be 'GroupA'");
 		final AgentTelemetry groupResources = groups.getChildren().get(0).getChildren().get(0);
 		assertEquals("resources", groupResources.getName(), "Resource-group should have 'resources' child");
@@ -157,22 +160,23 @@ class ExplorerServiceTest {
 		assertEquals("monitors", monitorsA.getName(), "Connector should have 'monitors' child");
 		// Types are sorted alphabetically: cpu, mem
 		assertEquals(
-				List.of("cpu", "mem"),
-				monitorsA.getChildren().stream().map(AgentTelemetry::getName).toList(),
-				"Monitors should include 'cpu' and 'mem'");
+			List.of("cpu", "mem"),
+			monitorsA.getChildren().stream().map(AgentTelemetry::getName).toList(),
+			"Monitors should include 'cpu' and 'mem'"
+		);
 
 		// Top-level resources subtree
 		final AgentTelemetry topResources = root.getChildren().get(1);
 		assertEquals(1, topResources.getChildren().size(), "Top-level resources should have one child");
 		assertEquals("top1", topResources.getChildren().get(0).getName(), "Top-level resource name should be 'top1'");
-		final AgentTelemetry topConnectorNode = topResources.getChildren().get(0).getChildren().get(0).getChildren()
-				.get(0);
+		final AgentTelemetry topConnectorNode = topResources.getChildren().get(0).getChildren().get(0).getChildren().get(0);
 		assertEquals("TopConn", topConnectorNode.getName(), "Top-level connector name should be 'TopConn'");
 		final AgentTelemetry topMonitors = topConnectorNode.getChildren().get(0);
 		assertEquals(
-				List.of("os"),
-				topMonitors.getChildren().stream().map(AgentTelemetry::getName).toList(),
-				"Top-level monitors should include 'os'");
+			List.of("os"),
+			topMonitors.getChildren().stream().map(AgentTelemetry::getName).toList(),
+			"Top-level monitors should include 'os'"
+		);
 	}
 
 	@Test
@@ -201,12 +205,13 @@ class ExplorerServiceTest {
 		final Monitor mem = newMonitor("m2", "mem", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
 		final Monitor host = newMonitor("h1", "host", Map.of()); // should be excluded
 		final Map<String, List<Monitor>> groupTypeToMonitors2 = Map.<String, List<Monitor>>of(
-				"cpu",
-				List.<Monitor>of(cpu),
-				"mem",
-				List.<Monitor>of(mem),
-				"host",
-				List.<Monitor>of(host));
+			"cpu",
+			List.<Monitor>of(cpu),
+			"mem",
+			List.<Monitor>of(mem),
+			"host",
+			List.<Monitor>of(host)
+		);
 		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", groupTypeToMonitors2);
 
 		// Top-level resource
@@ -220,7 +225,8 @@ class ExplorerServiceTest {
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("top1", tmTop));
 
 		final ExplorerService service = new ExplorerService(
-				newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of()));
+			newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of())
+		);
 		final AgentTelemetry resources = service.getResources();
 
 		assertNotNull(resources);
@@ -234,11 +240,11 @@ class ExplorerServiceTest {
 
 		// Validate a resource subtree (serverA)
 		final AgentTelemetry resourceA = resources
-				.getChildren()
-				.stream()
-				.filter(r -> r.getName().equals("serverA"))
-				.findFirst()
-				.orElseThrow();
+			.getChildren()
+			.stream()
+			.filter(r -> r.getName().equals("serverA"))
+			.findFirst()
+			.orElseThrow();
 		assertEquals("resource", resourceA.getType());
 		final AgentTelemetry connectorsA = resourceA.getChildren().get(0);
 		assertEquals("connectors", connectorsA.getName());
@@ -252,11 +258,11 @@ class ExplorerServiceTest {
 
 		// Validate top1 subtree
 		final AgentTelemetry top1 = resources
-				.getChildren()
-				.stream()
-				.filter(r -> r.getName().equals("top1"))
-				.findFirst()
-				.orElseThrow();
+			.getChildren()
+			.stream()
+			.filter(r -> r.getName().equals("top1"))
+			.findFirst()
+			.orElseThrow();
 		final AgentTelemetry topConnContainer = top1.getChildren().get(0);
 		final AgentTelemetry topConn = topConnContainer.getChildren().get(0);
 		assertEquals("TopConn", topConn.getName());
@@ -266,8 +272,7 @@ class ExplorerServiceTest {
 
 	@Test
 	void testGetResourcesWithNoTelemetryManagers() {
-		final ExplorerService service = new ExplorerService(
-				newMockedAgentContextHolder(null, Map.<String, String>of()));
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 		assertNotNull(resources);
 		assertEquals("resources", resources.getName());
@@ -284,7 +289,8 @@ class ExplorerServiceTest {
 		telemetryManagers.put("GroupX", Map.of("res1", tm));
 
 		final ExplorerService service = new ExplorerService(
-				newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of()));
+			newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of())
+		);
 		final AgentTelemetry resources = service.getResources();
 
 		assertEquals(1, resources.getChildren().size());
