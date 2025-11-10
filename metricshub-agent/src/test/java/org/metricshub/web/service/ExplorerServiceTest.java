@@ -207,20 +207,20 @@ class ExplorerServiceTest {
 				List.<Monitor>of(mem),
 				"host",
 				List.<Monitor>of(host));
-		final TelemetryManager tmGroup = tmWith(connectorId, "SNMP", groupTypeToMonitors2);
+		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", groupTypeToMonitors2);
 
 		// Top-level resource
 		final String topConnectorId = "tc1";
 		final Monitor os = newMonitor("m3", "os", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, topConnectorId));
 		final Map<String, List<Monitor>> topTypeToMonitors2 = Map.<String, List<Monitor>>of("os", List.<Monitor>of(os));
-		final TelemetryManager tmTop = tmWith(topConnectorId, "TopConn", topTypeToMonitors2);
+		final TelemetryManager tmTop = newTelemetryManager(topConnectorId, "TopConn", topTypeToMonitors2);
 
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("GroupA", Map.of("serverA", tmGroup));
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("top1", tmTop));
 
 		final ExplorerService service = new ExplorerService(
-				holderWithContext(telemetryManagers, Map.<String, String>of()));
+				newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 
 		assertNotNull(resources);
@@ -266,7 +266,8 @@ class ExplorerServiceTest {
 
 	@Test
 	void testGetResourcesWithNoTelemetryManagers() {
-		final ExplorerService service = new ExplorerService(holderWithContext(null, Map.<String, String>of()));
+		final ExplorerService service = new ExplorerService(
+				newMockedAgentContextHolder(null, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 		assertNotNull(resources);
 		assertEquals("resources", resources.getName());
@@ -283,7 +284,7 @@ class ExplorerServiceTest {
 		telemetryManagers.put("GroupX", Map.of("res1", tm));
 
 		final ExplorerService service = new ExplorerService(
-				holderWithContext(telemetryManagers, Map.<String, String>of()));
+				newMockedAgentContextHolder(telemetryManagers, Map.<String, String>of()));
 		final AgentTelemetry resources = service.getResources();
 
 		assertEquals(1, resources.getChildren().size());
