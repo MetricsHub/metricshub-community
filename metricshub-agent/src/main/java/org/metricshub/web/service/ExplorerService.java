@@ -237,10 +237,16 @@ public class ExplorerService {
 		}
 		for (Entry<String, Map<String, TelemetryManager>> entry : telemetryManagers.entrySet()) {
 			final String currentGroup = entry.getKey();
-			if (TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(currentGroup)) continue;
-			if (groupKey != null && !groupKey.isBlank() && !groupKey.equals(currentGroup)) continue;
+			if (TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(currentGroup)) {
+				continue;
+			}
+			if (groupKey != null && !groupKey.isBlank() && !groupKey.equals(currentGroup)) {
+				continue;
+			}
 			final Map<String, TelemetryManager> groupMap = entry.getValue();
-			if (groupMap == null || groupMap.isEmpty()) continue;
+			if (groupMap == null || groupMap.isEmpty()) {
+				continue;
+			}
 			final TelemetryManager tm = groupMap.get(resourceName);
 			if (tm != null) {
 				return buildFullResourceNode(resourceName, tm, currentGroup);
@@ -396,11 +402,21 @@ public class ExplorerService {
 				SearchMatch.builder().name(current.getName()).type(current.getType()).path(tn.path).jaroWinklerScore(jw).build()
 			);
 			final List<AgentTelemetry> next = new ArrayList<>();
-			if (current.getResourceGroups() != null) next.addAll(current.getResourceGroups());
-			if (current.getResources() != null) next.addAll(current.getResources());
-			if (current.getConnectors() != null) next.addAll(current.getConnectors());
-			if (current.getMonitors() != null) next.addAll(current.getMonitors());
-			if (current.getInstances() != null) next.addAll(current.getInstances());
+			if (current.getResourceGroups() != null) {
+				next.addAll(current.getResourceGroups());
+			}
+			if (current.getResources() != null) {
+				next.addAll(current.getResources());
+			}
+			if (current.getConnectors() != null) {
+				next.addAll(current.getConnectors());
+			}
+			if (current.getMonitors() != null) {
+				next.addAll(current.getMonitors());
+			}
+			if (current.getInstances() != null) {
+				next.addAll(current.getInstances());
+			}
 			for (AgentTelemetry child : next) {
 				queue.add(new TraversalNode(child, tn.path + "/" + child.getName()));
 			}
@@ -410,7 +426,6 @@ public class ExplorerService {
 			.stream()
 			.sorted((a, b) -> {
 				int cmp = Double.compare(b.getJaroWinklerScore(), a.getJaroWinklerScore());
-				if (cmp == 0) {}
 				if (cmp == 0) {
 					cmp = a.getPath().compareToIgnoreCase(b.getPath());
 				}
@@ -438,28 +453,44 @@ public class ExplorerService {
 			int start = Math.max(0, i - maxDist);
 			int end = Math.min(b.length() - 1, i + maxDist);
 			for (int j = start; j <= end; j++) {
-				if (bMatches[j]) continue;
-				if (a.charAt(i) != b.charAt(j)) continue;
+				if (bMatches[j]) {
+					continue;
+				}
+				if (a.charAt(i) != b.charAt(j)) {
+					continue;
+				}
 				aMatches[i] = true;
 				bMatches[j] = true;
 				matches++;
 				break;
 			}
 		}
-		if (matches == 0) return 0d;
+		if (matches == 0) {
+			return 0d;
+		}
 		int transpositions = 0;
 		int k = 0;
 		for (int i = 0; i < a.length(); i++) {
-			if (!aMatches[i]) continue;
-			while (!bMatches[k]) k++;
-			if (a.charAt(i) != b.charAt(k)) transpositions++;
+			if (!aMatches[i]) {
+				continue;
+			}
+			while (!bMatches[k]) {
+				k++;
+			}
+			if (a.charAt(i) != b.charAt(k)) {
+				transpositions++;
+			}
 			k++;
 		}
 		final double m = matches;
 		double jaro = (m / a.length() + m / b.length() + (m - transpositions / 2.0) / m) / 3.0;
 		int prefix = 0;
 		for (int i = 0; i < Math.min(4, Math.min(a.length(), b.length())); i++) {
-			if (a.charAt(i) == b.charAt(i)) prefix++; else break;
+			if (a.charAt(i) == b.charAt(i)) {
+				prefix++;
+			} else {
+				break;
+			}
 		}
 		return jaro + prefix * 0.1 * (1 - jaro);
 	}
