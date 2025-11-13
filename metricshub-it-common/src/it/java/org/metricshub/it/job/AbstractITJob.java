@@ -37,7 +37,10 @@ public abstract class AbstractITJob implements ITJob {
 		assertConditionalCollection(expected, actual);
 		assertLegacyTextParameters(expected, actual);
 		assertAlertRules(expected, actual);
-		assertNotNull(actual.getDiscoveryTime());
+		assertNotNull(
+			actual.getDiscoveryTime(),
+			() -> String.format("DiscoveryTime cannot be null on monitor identifier: %s.", expected.getId())
+		);
 
 		final String expectedMonitorId = expected.getId();
 		assertEquals(
@@ -233,7 +236,8 @@ public abstract class AbstractITJob implements ITJob {
 				actual,
 				() ->
 					String.format(
-						"Actual conditional collection did not match expected: %s on monitor identifier: %s." + expectedKey,
+						"Actual conditional collection did not match expected: %s on monitor identifier: %s.",
+						expectedKey,
 						expectedMonitor.getId()
 					)
 			);
@@ -275,7 +279,7 @@ public abstract class AbstractITJob implements ITJob {
 
 		final MonitorsVo actual = telemetryManager.getVo();
 
-		assertEquals(expectedMonitors.getTotal(), actual.getTotal());
+		assertEquals(expectedMonitors.getTotal(), actual.getTotal(), () -> "Total monitors count doesn't match actual.");
 
 		expectedMonitors
 			.getMonitors()

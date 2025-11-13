@@ -45,7 +45,7 @@ class DellOpenManageIT {
 	private static ExtensionManager extensionManager;
 
 	@BeforeAll
-	static void setUp() throws Exception {
+	static void setUp() {
 		final SnmpConfiguration snmpConfiguration = SnmpConfiguration
 			.builder()
 			.community("public".toCharArray())
