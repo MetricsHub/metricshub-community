@@ -48,6 +48,15 @@ description: Learn more about the new features, changes and improvements, and bu
 | [**#116**](https://github.com/MetricsHub/enterprise-connectors/issues/116) | **[HPE iLO4 (ProLiant Gen8 or Gen9)](./connectors/hpegen9ilorest.html)**: An "Invalid credentials" error message was incorrectly displayed for HTTP detection criteria that did not require authentication |
 | [**#119**](https://github.com/MetricsHub/enterprise-connectors/issues/119) | **[NetApp Filer (REST)](./connectors/netapprestv2.html)**: Storage System capacity metrics are inaccurately reported                                                                                       |
 
+### MetricsHub Community Edition v1.0.10
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                                                                                  |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#930**](https://github.com/MetricsHub/metricshub-community/issues/930) | Exporting metrics to the OpenTelemetry Collector now consumes less memory                                                                    |
+| [**#941**](https://github.com/MetricsHub/metricshub-community/issues/941) | MetricsHub Community is bundled with Community Connectors [v1.0.16](https://github.com/MetricsHub/community-connectors/releases/tag/v1.0.16) |
+
 ### MetricsHub Community Edition v1.0.09
 
 #### What's New
@@ -55,7 +64,7 @@ description: Learn more about the new features, changes and improvements, and bu
 | ID                                                                        | Description                                                                                                                                                |
 |---------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**#766**](https://github.com/MetricsHub/metricshub-community/issues/766) | AI Agents: A new set of [MCP Tools](./integrations/ai-agent-mcp.md) is now available to run custom requests (`SNMP GET`, `HTTP GET`, `WMI`, `IPMI`, etc.). |
-| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851) | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-recommended).                |
+| [**#851**](https://github.com/MetricsHub/metricshub-community/issues/851) | MetricsHub Community can now be installed directly via [get.metricshub.com](./installation/debian-linux.md#option-1-automatic-28recommended-29)            |
 
 #### Changes and Improvements
 
@@ -77,6 +86,14 @@ description: Learn more about the new features, changes and improvements, and bu
 | ID                                                                        | Description                                                                                                                                                         |
 |---------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**#849**](https://github.com/MetricsHub/metricshub-community/issues/849) | Clarified Velocity Template Syntax in the [Programmable Configuration example](./configuration/configure-monitoring.md#example-loading-resources-from-an-http-api). |
+
+### MetricsHub Community Connectors v1.0.16
+
+#### Fixed Issues
+
+| ID                                                                        | Description                                                                                    |
+|---------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
+| [**#297**](https://github.com/MetricsHub/community-connectors/issues/297) | **[Ethernet Switch with Sensors (SNMP)](./connectors/mib2switch.html)**: Fans are not detected |
 
 ### MetricsHub Community Connectors v1.0.15
 
@@ -708,11 +725,11 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### Changes and Improvements
 
-| ID                                                                         | Description                                                                                                                                               |
-|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
-| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                |
-| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                               |
-| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | [MIB2Switch](./connectors/mib2switch.html) and [GenericSwitchEnclosure](./connectors/genericswitchenclosure.html) connectors now support Arista platforms |
+| ID                                                                         | Description                                                                                                                                                                             |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**\#158**](https://github.com/metricshub/community-connectors/issues/158) | Updated platforms for community connectors                                                                                                                                              |
+| [**\#160**](https://github.com/metricshub/community-connectors/issues/160) | Created Storage metric semantic conventions                                                                                                                                             |
+| [**\#163**](https://github.com/metricshub/community-connectors/issues/163) | **[Ethernet Switch with Sensors (SNMP)](./connectors/mib2switch.html)** and **[Generic Ethernet Switch](./connectors/genericswitchenclosure.html)**: Added support for Arista platforms |
 
 #### Fixed Issues
 
