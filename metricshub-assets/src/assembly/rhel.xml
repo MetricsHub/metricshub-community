@@ -1,0 +1,83 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+	<id>rhel</id>
+	<formats>
+		<format>dir</format>
+		<format>zip</format>
+	</formats>
+
+	<includeBaseDirectory>false</includeBaseDirectory>
+
+	<files>
+
+		<!-- LICENSE File -->
+		<file>
+			<source>${project.basedir}/../LICENSE</source>
+			<outputDirectory>jpackage/assets</outputDirectory>
+			<fileMode>0644</fileMode>
+			<filtered>false</filtered>
+		</file>
+
+		<!-- JPackage Script -->
+		<file>
+			<source>src/main/resources/linux/package.sh</source>
+			<outputDirectory>/jpackage</outputDirectory>
+			<fileMode>0777</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</file>
+
+		<!-- MetricsHub embedded JRE module list -->
+		<file>
+			<source>src/main/resources/jre-modules.txt</source>
+			<outputDirectory>/</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</file>
+
+	</files>
+
+	<fileSets>
+
+		<fileSet>
+			<directory>src/main/resources/common</directory>
+			<outputDirectory>/jpackage/assets</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
+			<directory>src/main/resources/linux/config</directory>
+			<outputDirectory>/jpackage/assets/config</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
+			<directory>src/main/resources/linux/rhel</directory>
+			<outputDirectory>/</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
+			<directory>src/main/resources/linux/jpackage</directory>
+			<outputDirectory>/jpackage</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>true</filtered>
+		</fileSet>
+
+		<fileSet>
+			<directory>${project.build.directory}/jpackage</directory>
+			<outputDirectory>/jpackage</outputDirectory>
+			<fileMode>0644</fileMode>
+			<filtered>false</filtered>
+		</fileSet>
+
+	</fileSets>
+
+</assembly>
