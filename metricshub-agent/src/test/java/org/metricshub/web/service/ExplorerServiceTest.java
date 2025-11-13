@@ -206,6 +206,21 @@ class ExplorerServiceTest {
 	}
 
 	@Test
+	void testGetTopLevelResource_notFound() {
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of());
+
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+
+		try {
+			service.getTopLevelResource("missing");
+			throw new AssertionError("Expected ResponseStatusException not thrown");
+		} catch (org.springframework.web.server.ResponseStatusException e) {
+			assertEquals(404, e.getStatusCode().value());
+		}
+	}
+
+	@Test
 	void testGetGroupedResource() {
 		final String connectorId = "c1";
 		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
@@ -219,5 +234,65 @@ class ExplorerServiceTest {
 		final ResourceTelemetry resource = service.getGroupedResource("serverA", "GroupA");
 		assertEquals("resource", resource.getType());
 		assertEquals("serverA", resource.getName());
+	}
+
+	@Test
+	void testGetGroupedResource_wrongGroup_notFound() {
+		final String connectorId = "c1";
+		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
+		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", Map.of("cpu", List.of(cpu)));
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put("RightGroup", Map.of("serverA", tmGroup));
+
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+
+		try {
+			service.getGroupedResource("serverA", "WrongGroup");
+			throw new AssertionError("Expected ResponseStatusException not thrown");
+		} catch (org.springframework.web.server.ResponseStatusException e) {
+			assertEquals(404, e.getStatusCode().value());
+		}
+	}
+
+	@Test
+	void testConnectorsAreSortedAndTypesAreDeduplicated() {
+		// Two connectors with different names to validate sort order (A-conn then
+		// b-CONN)
+		final String connA = "a1";
+		final String connB = "b1";
+
+		final Monitor cpu1 = newMonitor("cpu-1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connA));
+		final Monitor cpu2dup = newMonitor("cpu-2", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connA));
+		final Monitor mem1 = newMonitor("mem-1", "mem", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connB));
+		final Monitor hostIgnored = newMonitor("h1", "host", Map.of());
+
+		final TelemetryManager tm = new TelemetryManager();
+		// Add connector monitors with display names encoded in attributes
+		tm.addNewMonitor(newConnector(connA, "A-conn"), "connector", connA);
+		tm.addNewMonitor(newConnector(connB, "b-CONN"), "connector", connB);
+
+		// Add monitors (including duplicates and a host which should be ignored)
+		tm.addNewMonitor(cpu1, "cpu", "cpu-1");
+		tm.addNewMonitor(cpu2dup, "cpu", "cpu-2");
+		tm.addNewMonitor(mem1, "mem", "mem-1");
+		tm.addNewMonitor(hostIgnored, "host", "h1");
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("r1", tm));
+
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ResourceTelemetry r1 = service.getTopLevelResource("r1");
+
+		// Connectors should be sorted by name case-insensitively: A-conn, b-CONN
+		assertEquals(List.of("A-conn", "b-CONN"), r1.getConnectors().stream().map(ConnectorTelemetry::getName).toList());
+
+		// For connA, monitor types should be deduplicated and sorted: only "cpu"
+		final ConnectorTelemetry first = r1.getConnectors().get(0);
+		assertEquals(List.of("cpu"), first.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList());
+
+		// For connB, monitor types should list "mem"
+		final ConnectorTelemetry second = r1.getConnectors().get(1);
+		assertEquals(List.of("mem"), second.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList());
 	}
 }
