@@ -25,6 +25,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COMMA;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.springframework.util.Assert.isTrue;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
@@ -220,10 +221,21 @@ public class StringHelper {
 				.map(item -> item != null ? item.toString() : EMPTY)
 				.collect(Collectors.joining(separator));
 		} else if (value.getClass().isArray()) {
-			// If the input is an array, convert it to a CSV string
-			Object[] array = (Object[]) value;
+			// If the input is an array, convert it to a delimited string
+			if (value.getClass().getComponentType().isPrimitive()) {
+				final int length = Array.getLength(value);
+				final StringBuilder builder = new StringBuilder();
+				for (int index = 0; index < length; index++) {
+					if (index > 0) {
+						builder.append(separator);
+					}
+					final Object element = Array.get(value, index);
+					builder.append(element != null ? element.toString() : EMPTY);
+				}
+				return builder.toString();
+			}
 			return Arrays
-				.stream(array)
+				.stream((Object[]) value)
 				.map(item -> item != null ? item.toString() : EMPTY)
 				.collect(Collectors.joining(separator));
 		} else {
