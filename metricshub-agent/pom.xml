@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.09-SNAPSHOT</version>
+		<version>1.0.10-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -12,7 +12,7 @@
 	<description>MetricsHub Monitoring Agent</description>
 
 	<properties>
-		<log4j2.version>2.22.0</log4j2.version>
+		<log4j2.version>2.25.2</log4j2.version>
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
 		<jjwt.version>0.13.0</jjwt.version>
@@ -259,7 +259,7 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j2-impl</artifactId>
-			<version>2.22.1</version>
+			<version>${log4j2.version}</version>
 		</dependency>
 
 		<dependency>

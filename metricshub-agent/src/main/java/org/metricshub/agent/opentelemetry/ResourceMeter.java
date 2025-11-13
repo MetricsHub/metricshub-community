@@ -134,4 +134,12 @@ public class ResourceMeter {
 			MetricHandler.handle(context, metric, isAppendResourceAttributes ? attributes : Collections.emptyMap())
 		);
 	}
+
+	/**
+	 * Clears all registered metric recorders.
+	 * This method should be called after metrics have been exported to prevent memory leaks.
+	 */
+	public void clearRecorders() {
+		metricRecorders.clear();
+	}
 }

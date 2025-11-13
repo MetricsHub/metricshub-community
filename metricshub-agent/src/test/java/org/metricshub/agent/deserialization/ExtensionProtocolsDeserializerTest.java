@@ -62,7 +62,7 @@ class ExtensionProtocolsDeserializerTest {
 
 			doReturn(extensionManager)
 				.when(deserializeContext)
-				.findInjectableValue(ExtensionManager.class.getName(), null, null);
+				.findInjectableValue(ExtensionManager.class.getName(), null, null, null, null);
 			Map<String, IConfiguration> protocols = deserializer.deserialize(yamlParserMock, deserializeContext);
 			assertEquals(PingConfiguration.builder().build(), protocols.get("ping"));
 
@@ -81,7 +81,7 @@ class ExtensionProtocolsDeserializerTest {
 
 			doReturn(extensionManager)
 				.when(deserializeContext)
-				.findInjectableValue(ExtensionManager.class.getName(), null, null);
+				.findInjectableValue(ExtensionManager.class.getName(), null, null, null, null);
 			final Map<String, IConfiguration> protocols = deserializer.deserialize(yamlParserMock, deserializeContext);
 			assertEquals(PingConfiguration.builder().timeout(10L).build(), protocols.get("ping"));
 		}

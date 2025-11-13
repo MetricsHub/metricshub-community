@@ -11,15 +11,27 @@ description: How to install MetricsHub on RedHat Enterprise Linux.
 
 ### Download
 
-From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-rhel-${enterpriseVersion}-1.x86_64.rpm** and copy into `/usr/local`.
+From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy it into `/usr/local`:
+
+* For **x86_64** (amd64) systems: **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm**
+* For **aarch64** (arm64) systems: **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm**
 
 ### Install
 
 Once you have downloaded the RPM package, run the following `rpm` command:
 
+**For x86_64 systems:**
+
 ```shell-session
 cd /usr/local
-sudo rpm -i metricshub-enterprise-rhel-${enterpriseVersion}-1.x86_64.rpm
+sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm
+```
+
+**For aarch64 systems:**
+
+```shell-session
+cd /usr/local
+sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm
 ```
 
 When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and the **MetricsHubEnterprise Agent** is started as a service.
@@ -66,17 +78,27 @@ systemctl stop metricshub-enterprise-service
 
 ### Uninstall
 
-To uninstall **MetricsHub Enterprise**, run the command below:
+To uninstall **MetricsHub Enterprise**, run the appropriate command below based on your architecture:
+
+**For x86_64 systems:**
 
 ```shell-session
 sudo rpm -e metricshub-${enterpriseVersion}-1.x86_64
+```
+
+**For aarch64 systems:**
+
+```shell-session
+sudo rpm -e metricshub-${enterpriseVersion}-1.aarch64
 ```
 
 ### Upgrade
 
 If you have installed a previous version of **MetricsHub Enterprise** and want to upgrade to the latest version **${enterpriseVersion}**, follow these steps:
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-rhel-${enterpriseVersion}-1.x86_64.rpm** and copy the file into the `/usr/local` directory.
+1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy the file into the `/usr/local` directory:
+   * For **x86_64** systems: **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm**
+   * For **aarch64** systems: **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm**
 
 2. Run the following command to stop the **MetricsHub Enterprise** service:
 
@@ -84,11 +106,20 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
    systemctl stop metricshub-enterprise-service
    ```
 
-3. Run the following `rpm` command:
+3. Run the following `rpm` command with the appropriate package for your architecture:
+
+   **For x86_64 systems:**
 
    ```shell-session
    cd /usr/local
-   sudo rpm -U metricshub-enterprise-rhel-${enterpriseVersion}-1.x86_64.rpm
+   sudo rpm -U metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm
+   ```
+
+   **For aarch64 systems:**
+
+   ```shell-session
+   cd /usr/local
+   sudo rpm -U metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm
    ```
 
 ## Community Edition
