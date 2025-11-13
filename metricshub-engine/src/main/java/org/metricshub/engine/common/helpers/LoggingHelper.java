@@ -117,10 +117,16 @@ public class LoggingHelper {
 			return;
 		}
 
-		log.makeLoggingEventBuilder(loggerLevel).log(() -> sanatizeMessage(message));
+		log.makeLoggingEventBuilder(loggerLevel).log(() -> sanitizeMessage(message));
 	}
 
-	protected static String sanatizeMessage(final String message) {
+	/**
+	 * Sanitize the given message by replacing potential passwords with "************".
+	 *
+	 * @param message The message to sanitize.
+	 * @return The sanitized message.
+	 */
+	protected static String sanitizeMessage(final String message) {
 		return PASSWORD_REGEX.matcher(message).replaceAll("$1**********");
 	}
 }
