@@ -8,8 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.metricshub.web.dto.AgentTelemetry;
 import org.metricshub.web.dto.SearchMatch;
+import org.metricshub.web.dto.telemetry.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.ConnectorTelemetry;
+import org.metricshub.web.dto.telemetry.MonitorTypeTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceGroupTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.metricshub.web.service.ExplorerService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
@@ -30,15 +34,15 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldReturnHierarchy() throws Exception {
-		final AgentTelemetry connector = AgentTelemetry.builder().name("SNMP").type("connector").build();
-		connector.getMonitors().add(AgentTelemetry.builder().name("cpu").type("monitor").build());
-		final AgentTelemetry resource = AgentTelemetry.builder().name("server1").type("resource").build();
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SNMP").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("cpu").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("server1").build();
 		resource.getConnectors().add(connector);
-		final AgentTelemetry group = AgentTelemetry.builder().name("GroupA").type("resource-group").build();
+		final ResourceGroupTelemetry group = ResourceGroupTelemetry.builder().name("GroupA").build();
 		group.getResources().add(resource);
-		final AgentTelemetry root = AgentTelemetry.builder().name("AgentOne").type("agent").build();
+		final AgentTelemetry root = AgentTelemetry.builder().name("AgentOne").build();
 		root.getResourceGroups().add(group);
-		root.getResources().add(AgentTelemetry.builder().name("top0").type("resource").build());
+		root.getResources().add(ResourceTelemetry.builder().name("top0").build());
 
 		when(explorerService.getHierarchy()).thenReturn(root);
 
@@ -57,7 +61,7 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldReturnEmptyHierarchy() throws Exception {
-		final AgentTelemetry root = AgentTelemetry.builder().name("MetricsHub").type("agent").build();
+		final AgentTelemetry root = AgentTelemetry.builder().name("MetricsHub").build();
 		when(explorerService.getHierarchy()).thenReturn(root);
 
 		mockMvc
@@ -71,9 +75,9 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldReturnTopLevelResource() throws Exception {
-		final AgentTelemetry connector = AgentTelemetry.builder().name("SNMP").type("connector").build();
-		connector.getMonitors().add(AgentTelemetry.builder().name("cpu").type("monitor").build());
-		final AgentTelemetry resource = AgentTelemetry.builder().name("top1").type("resource").build();
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SNMP").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("cpu").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("top1").build();
 		resource.getConnectors().add(connector);
 		when(explorerService.getTopLevelResource("top1")).thenReturn(resource);
 
@@ -89,14 +93,14 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldReturnGroupedResource() throws Exception {
-		final AgentTelemetry connector = AgentTelemetry.builder().name("SSH").type("connector").build();
-		connector.getMonitors().add(AgentTelemetry.builder().name("mem").type("monitor").build());
-		final AgentTelemetry resource = AgentTelemetry.builder().name("serverA").type("resource").build();
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SSH").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("mem").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("serverA").build();
 		resource.getConnectors().add(connector);
 		when(explorerService.getGroupedResource("serverA", "GroupA")).thenReturn(resource);
 
 		mockMvc
-			.perform(get("/api/resource-groups/GroupA/serverA"))
+			.perform(get("/api/resource-groups/GroupA/resources/serverA"))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("serverA"))
@@ -110,14 +114,14 @@ class ExplorerControllerTest {
 			.builder()
 			.name("serverA")
 			.type("resource")
-			.path("/Agent/serverA")
+			.path("Agent/serverA")
 			.jaroWinklerScore(1.0)
 			.build();
 		final SearchMatch match2 = SearchMatch
 			.builder()
 			.name("cpu")
 			.type("monitor")
-			.path("/Agent/serverA/connectors/SNMP/monitors/cpu")
+			.path("Agent/serverA/SNMP/cpu")
 			.jaroWinklerScore(0.93)
 			.build();
 		when(explorerService.search("serverA")).thenReturn(java.util.List.of(match1, match2));

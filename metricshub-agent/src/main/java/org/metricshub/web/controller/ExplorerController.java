@@ -22,19 +22,34 @@ package org.metricshub.web.controller;
  */
 
 import java.util.List;
-import org.metricshub.web.dto.AgentTelemetry;
 import org.metricshub.web.dto.SearchMatch;
+import org.metricshub.web.dto.telemetry.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.metricshub.web.service.ExplorerService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * REST API to expose the agent hierarchy and its resource-groups and monitored
  * resources.
+ * <p>
+ * Key endpoints:
+ * <ul>
+ * <li>GET {@code /api/hierarchy} – full agent hierarchy</li>
+ * <li>GET {@code /api/resources/{resourceName}} – top-level resource
+ * subtree</li>
+ * <li>GET {@code /api/resource-groups/{groupName}/resources/{resourceName}} –
+ * grouped resource subtree</li>
+ * <li>GET {@code /api/search?q=...} – fuzzy search across hierarchy
+ * elements</li>
+ * </ul>
+ * </p>
  */
 @RestController
 @RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -56,11 +71,12 @@ public class ExplorerController {
 	 * Retrieves the complete resource hierarchy as a children-only tree.
 	 * <p>
 	 * The response contains one top level element which is the Agent itself. Its
-	 * children are two nodes: "resource-groups" and "resources", each containing
-	 * their respective connector and monitor children.
+	 * children are two typed collections: {@code resource-groups} and
+	 * {@code resources},
+	 * each containing their respective connector and monitor children.
 	 * </p>
 	 *
-	 * @return the agent hierarchy
+	 * @return the agent hierarchy root node
 	 */
 	@GetMapping("/hierarchy")
 	public AgentTelemetry getHierarchy() {
@@ -69,13 +85,16 @@ public class ExplorerController {
 
 	/**
 	 * Retrieves a complete subtree for a top-level resource by name, including
-	 * attributes, metrics and children (connectors and monitors).
+	 * attributes, metrics and children (connectors, monitor types and instances).
 	 *
-	 * @param resourceName the resource key/name as configured at the top-level
+	 * @param resourceName the resource key/name as configured at the top level
 	 * @return the full resource subtree
 	 */
 	@GetMapping("/resources/{resourceName}")
-	public AgentTelemetry getTopLevelResource(@PathVariable("resourceName") final String resourceName) {
+	public ResourceTelemetry getTopLevelResource(@PathVariable("resourceName") final String resourceName) {
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resourceName must not be blank");
+		}
 		return explorerService.getTopLevelResource(resourceName);
 	}
 
@@ -87,19 +106,25 @@ public class ExplorerController {
 	 * @param resourceName the resource key/name within the specified group
 	 * @return the full resource subtree
 	 */
-	@GetMapping("/resource-groups/{groupName}/{resourceName}")
-	public AgentTelemetry getGroupedResourceByPath(
+	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}")
+	public ResourceTelemetry getGroupedResourceByPath(
 		@PathVariable("groupName") final String groupName,
 		@PathVariable("resourceName") final String resourceName
 	) {
+		if (groupName == null || groupName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "groupName must not be blank");
+		}
+		if (resourceName == null || resourceName.isBlank()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resourceName must not be blank");
+		}
 		return explorerService.getGroupedResource(resourceName, groupName);
 	}
 
 	/**
 	 * Searches across resource-groups, resources, connectors, monitor types and
-	 * monitor instances using Jaro-Winkler similarity.
+	 * monitor instances using Jaro–Winkler similarity.
 	 *
-	 * @param q the query string
+	 * @param q free-text query string; fuzzy matched against node names
 	 * @return a ranked list of matches with their hierarchy paths
 	 */
 	@GetMapping("/search")

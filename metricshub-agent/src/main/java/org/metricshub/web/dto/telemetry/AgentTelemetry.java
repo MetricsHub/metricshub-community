@@ -1,4 +1,4 @@
-package org.metricshub.web.dto;
+package org.metricshub.web.dto.telemetry;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -20,60 +20,59 @@ package org.metricshub.web.dto;
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Generic DTO describing a node in the agent telemetry hierarchy.
- * Exposing metrics, attributes and typed child collections.
- */
 @Data
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
-public class AgentTelemetry {
+@EqualsAndHashCode(callSuper = true)
+/**
+ * Telemetry root node representing the Agent.
+ * <p>
+ * Contains typed collections for {@code resource-groups} and top-level
+ * {@code resources}.
+ * </p>
+ */
+public class AgentTelemetry extends AbstractBaseTelemetry {
 
-	private String name;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	private List<ResourceGroupTelemetry> resourceGroups = new ArrayList<>();
+
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	private List<ResourceTelemetry> resources = new ArrayList<>();
 
 	/**
-	 * One of: "resource", "connector", "monitor", "resource-group", "agent",
-	 * plus type nodes that can hold typed children.
+	 * Creates an Agent telemetry node.
+	 *
+	 * @param name           the agent display name
+	 * @param attributes     optional agent attributes
+	 * @param metrics        optional agent metrics
+	 * @param resourceGroups resource-group children
+	 * @param resources      top-level resources
 	 */
-	private String type;
-
-	@Builder.Default
-	private Map<String, String> attributes = new HashMap<>();
-
-	@Builder.Default
-	private Map<String, Object> metrics = new HashMap<>();
-
-	// Typed children relationships (only one applicable per node kind starting from
-	// resource-groups level)
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	@Builder.Default
-	private List<AgentTelemetry> resourceGroups = new ArrayList<>();
-
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	@Builder.Default
-	private List<AgentTelemetry> resources = new ArrayList<>();
-
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	@Builder.Default
-	private List<AgentTelemetry> connectors = new ArrayList<>();
-
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	@Builder.Default
-	private List<AgentTelemetry> monitors = new ArrayList<>();
-
-	// Children of monitor-type nodes are called "instances"
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
-	@Builder.Default
-	private List<AgentTelemetry> instances = new ArrayList<>();
+	@Builder
+	public AgentTelemetry(
+		String name,
+		Map<String, String> attributes,
+		Map<String, Object> metrics,
+		List<ResourceGroupTelemetry> resourceGroups,
+		List<ResourceTelemetry> resources
+	) {
+		super(
+			name,
+			"agent",
+			attributes != null ? attributes : new HashMap<>(),
+			metrics != null ? metrics : new HashMap<>()
+		);
+		this.resourceGroups = resourceGroups != null ? resourceGroups : new ArrayList<>();
+		this.resources = resources != null ? resources : new ArrayList<>();
+	}
 }

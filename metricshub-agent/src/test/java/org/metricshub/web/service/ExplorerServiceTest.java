@@ -19,7 +19,11 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
-import org.metricshub.web.dto.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.ConnectorTelemetry;
+import org.metricshub.web.dto.telemetry.MonitorTypeTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceGroupTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.mockito.Mockito;
 
 class ExplorerServiceTest {
@@ -137,32 +141,32 @@ class ExplorerServiceTest {
 
 		// Group subtree (direct typed children)
 		assertEquals(1, root.getResourceGroups().size(), "Should have one resource-group");
-		final AgentTelemetry group = root.getResourceGroups().get(0);
+		final ResourceGroupTelemetry group = root.getResourceGroups().get(0);
 		assertEquals("resource-group", group.getType(), "Child should be of type 'resource-group'");
 		assertEquals("GroupA", group.getName(), "Resource-group name should be 'GroupA'");
 		assertEquals(1, group.getResources().size(), "Group should contain one resource");
-		final AgentTelemetry resourceA = group.getResources().get(0);
+		final ResourceTelemetry resourceA = group.getResources().get(0);
 		assertEquals("resource", resourceA.getType(), "Resource should be of type 'resource'");
 		assertEquals("serverA", resourceA.getName(), "Resource name should be 'serverA'");
 		assertEquals(1, resourceA.getConnectors().size(), "Resource should have one connector");
-		final AgentTelemetry connector = resourceA.getConnectors().get(0);
+		final ConnectorTelemetry connector = resourceA.getConnectors().get(0);
 		assertEquals("connector", connector.getType(), "Connector should be of type 'connector'");
 		assertEquals("SNMP", connector.getName(), "Connector name should be 'SNMP'");
 		// Types are sorted alphabetically: cpu, mem
 		assertEquals(
 			List.of("cpu", "mem"),
-			connector.getMonitors().stream().map(AgentTelemetry::getName).toList(),
+			connector.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
 			"Monitors should include 'cpu' and 'mem'"
 		);
 
 		// Top-level resources subtree
 		assertEquals(1, root.getResources().size(), "Should have one top-level resource");
 		assertEquals("top1", root.getResources().get(0).getName(), "Top-level resource name should be 'top1'");
-		final AgentTelemetry topConnectorNode = root.getResources().get(0).getConnectors().get(0);
+		final ConnectorTelemetry topConnectorNode = root.getResources().get(0).getConnectors().get(0);
 		assertEquals("TopConn", topConnectorNode.getName(), "Top-level connector name should be 'TopConn'");
 		assertEquals(
 			List.of("os"),
-			topConnectorNode.getMonitors().stream().map(AgentTelemetry::getName).toList(),
+			topConnectorNode.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
 			"Top-level monitors should include 'os'"
 		);
 	}
@@ -195,7 +199,7 @@ class ExplorerServiceTest {
 
 		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
 
-		final AgentTelemetry resource = service.getTopLevelResource("top1");
+		final ResourceTelemetry resource = service.getTopLevelResource("top1");
 		assertEquals("resource", resource.getType());
 		assertEquals("top1", resource.getName());
 		assertEquals("TopConn", resource.getConnectors().get(0).getName());
@@ -212,7 +216,7 @@ class ExplorerServiceTest {
 
 		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
 
-		final AgentTelemetry resource = service.getGroupedResource("serverA", "GroupA");
+		final ResourceTelemetry resource = service.getGroupedResource("serverA", "GroupA");
 		assertEquals("resource", resource.getType());
 		assertEquals("serverA", resource.getName());
 	}
