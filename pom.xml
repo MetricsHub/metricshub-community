@@ -81,8 +81,17 @@
 	<properties>
 		<community-connectors.version>1.0.17</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
-		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
+
 		<project.build.outputTimestamp>2025-12-02T13:11:02Z</project.build.outputTimestamp>
+
+		<!-- Packaging Properties -->
+		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
+		<nssm.version>2.24</nssm.version>
+		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
+		<jdkBuildVersion>21</jdkBuildVersion>
+		<debianTagName>trixie</debianTagName>
+		<fedoraTagName>44</fedoraTagName>
+
 	</properties>
 
 	<modules>
@@ -110,59 +119,10 @@
 		<module>metricshub-yaml-configuration-extension</module>
 		<module>metricshub-programmable-configuration-extension</module>
 		<module>metricshub-web</module>
+		<module>metricshub-assets</module>
 	</modules>
 
 	<profiles>
-
-		<!-- Windows build -->
-		<profile>
-			<id>windows</id>
-			<activation>
-				<os>
-					<family>Windows</family>
-				</os>
-				<property>
-					<!-- Activate only if env var AI is not "true" -->
-					<!-- to make sure this module is not built in Codex -->
-					<name>env.AI</name>
-					<value>!true</value>
-				</property>
-			</activation>
-			<modules>
-				<module>metricshub-community-windows</module>
-			</modules>
-			<build>
-				<!-- No need to deploy artifacts from the windows build -->
-				<plugins>
-					<plugin>
-						<groupId>org.sonatype.central</groupId>
-						<artifactId>central-publishing-maven-plugin</artifactId>
-						<configuration>
-							<skipPublishing>true</skipPublishing>
-						</configuration>
-					</plugin>
-				</plugins>
-			</build>
-		</profile>
-
-		<!-- Linux build -->
-		<profile>
-			<id>linux</id>
-			<activation>
-				<os>
-					<family>Linux</family>
-				</os>
-				<property>
-					<!-- Activate only if env var AI is not "true" -->
-					<!-- to make sure this module is not built in Codex -->
-					<name>env.AI</name>
-					<value>!true</value>
-				</property>
-			</activation>
-			<modules>
-				<module>metricshub-community-linux</module>
-			</modules>
-		</profile>
 
 		<!-- AI coding agent -->
 		<profile>

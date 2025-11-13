@@ -1,0 +1,28 @@
+name: Build - Main Branch
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+
+  deploy-community-artifacts:
+    name: Deploy Community Artifacts
+    uses: ./.github/workflows/maven-build.yml
+    with:
+      jdkVersion: "21"
+      debug: ${{ github.event_name == 'workflow_dispatch' && inputs.debug }}
+      ssh: ${{ github.event_name == 'workflow_dispatch' && inputs.ssh }}
+      mavenPhases: "clean deploy"
+    secrets: inherit
+
+  package-community:
+    name: Package Community Artifacts
+    needs: deploy-community-artifacts
+    uses: ./.github/workflows/packaging.yml
+    with:
+      jdkVersion: "21"
+      assetPackage: ${{ needs.deploy-community-artifacts.outputs.packageArtifact }}
+      version: ${{ needs.deploy-community-artifacts.outputs.version }}
+      deploy: true
+    secrets: inherit

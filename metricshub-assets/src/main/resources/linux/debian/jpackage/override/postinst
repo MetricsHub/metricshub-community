@@ -1,0 +1,68 @@
+#!/bin/sh
+# postinst script for APPLICATION_PACKAGE
+#
+# see: dh_installdeb(1)
+
+set -e
+
+# summary of how this script can be called:
+#        * <postinst> `configure' <most-recently-configured-version>
+#        * <old-postinst> `abort-upgrade' <new version>
+#        * <conflictor's-postinst> `abort-remove' `in-favour' <package>
+#          <new-version>
+#        * <postinst> `abort-remove'
+#        * <deconfigured's-postinst> `abort-deconfigure' `in-favour'
+#          <failed-install-package> <version> `removing'
+#          <conflicting-package> <version>
+# for details, see https://www.debian.org/doc/debian-policy/ or
+# the debian-policy package
+
+package_type=deb
+LAUNCHER_AS_SERVICE_SCRIPTS
+
+case "$1" in
+    configure)
+DESKTOP_COMMANDS_INSTALL
+LAUNCHER_AS_SERVICE_COMMANDS_INSTALL
+    ;;
+
+    abort-upgrade|abort-remove|abort-deconfigure)
+    ;;
+
+    *)
+        echo "postinst called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+if [ -d /opt/metricshub ]; then
+  if [ ! -e /opt/metricshub/config ]; then
+    cd /opt/metricshub && ln -s lib/config config
+  fi
+
+  if [ ! -e /opt/metricshub/security ]; then
+    cd /opt/metricshub && ln -s lib/security security
+  fi
+
+  if [ ! -e /opt/metricshub/otel ]; then
+    cd /opt/metricshub && ln -s lib/otel otel
+  fi
+
+  if [ ! -e /opt/metricshub/logs ]; then
+    cd /opt/metricshub && ln -s lib/logs logs
+  fi
+
+  if [ ! -e /opt/metricshub/LICENSE ]; then
+    cd /opt/metricshub && ln -s lib/LICENSE LICENSE
+  fi
+
+  if [ ! -e /opt/metricshub/connectors ]; then
+    cd /opt/metricshub && ln -s lib/connectors connectors
+  fi
+
+  if [ ! -e /opt/metricshub/extensions ]; then
+    cd /opt/metricshub && ln -s lib/extensions extensions
+  fi
+fi
+
+exit 0
