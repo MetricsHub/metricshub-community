@@ -28,6 +28,8 @@ import org.mockito.Mockito;
 
 class ExplorerServiceTest {
 
+	private final SearchService searchService = new SearchService();
+
 	/**
 	 * Creates a mocked AgentContextHolder with the given telemetry managers and
 	 * agent attributes.
@@ -131,7 +133,10 @@ class ExplorerServiceTest {
 		final Map<String, String> agentAttrs = new HashMap<>();
 		agentAttrs.put(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "AgentX");
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, agentAttrs));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, agentAttrs),
+			searchService
+		);
 
 		final AgentTelemetry root = service.getHierarchy();
 
@@ -157,7 +162,7 @@ class ExplorerServiceTest {
 	@Test
 	void testGetHierarchyWithNoTelemetryManagers() {
 		final Map<String, String> agentAttrs = Map.of(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "Hosty");
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, agentAttrs));
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, agentAttrs), searchService);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("Hosty", root.getName(), "Agent name should match host name attribute");
 		assertEquals(0, root.getResourceGroups().size(), "Resource-groups should have no children");
@@ -166,7 +171,7 @@ class ExplorerServiceTest {
 
 	@Test
 	void testAgentNameDefaultsWhenNoAttributes() {
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(Map.of(), Map.of()));
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(Map.of(), Map.of()), searchService);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("MetricsHub", root.getName(), "Agent name should default to 'MetricsHub'");
 	}
@@ -180,26 +185,32 @@ class ExplorerServiceTest {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("top1", tmTop));
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
 
 		final ResourceTelemetry resource = service.getTopLevelResource("top1");
-		assertEquals("resource", resource.getType());
-		assertEquals("top1", resource.getName());
-		assertEquals("TopConn", resource.getConnectors().get(0).getName());
+		assertEquals("resource", resource.getType(), "Resource type should be 'resource'");
+		assertEquals("top1", resource.getName(), "Resource name should be 'top1'");
+		assertEquals("cTop", resource.getConnectors().get(0).getName(), "Connector name should be 'cTop'");
 	}
 
 	@Test
-	void testGetTopLevelResource_notFound() {
+	void testGetTopLevelResourceNotFound() {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of());
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
 
 		try {
 			service.getTopLevelResource("missing");
 			throw new AssertionError("Expected ResponseStatusException not thrown");
 		} catch (org.springframework.web.server.ResponseStatusException e) {
-			assertEquals(404, e.getStatusCode().value());
+			assertEquals(404, e.getStatusCode().value(), "Status code should be 404 Not Found");
 		}
 	}
 
@@ -212,15 +223,18 @@ class ExplorerServiceTest {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("GroupA", Map.of("serverA", tmGroup));
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
 
 		final ResourceTelemetry resource = service.getGroupedResource("serverA", "GroupA");
-		assertEquals("resource", resource.getType());
-		assertEquals("serverA", resource.getName());
+		assertEquals("resource", resource.getType(), "Resource type should be 'resource'");
+		assertEquals("serverA", resource.getName(), "Resource name should be 'serverA'");
 	}
 
 	@Test
-	void testGetGroupedResource_wrongGroup_notFound() {
+	void testGetGroupedResourceWrongGroupNotFound() {
 		final String connectorId = "c1";
 		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
 		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", Map.of("cpu", List.of(cpu)));
@@ -228,13 +242,16 @@ class ExplorerServiceTest {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put("RightGroup", Map.of("serverA", tmGroup));
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
 
 		try {
 			service.getGroupedResource("serverA", "WrongGroup");
 			throw new AssertionError("Expected ResponseStatusException not thrown");
 		} catch (org.springframework.web.server.ResponseStatusException e) {
-			assertEquals(404, e.getStatusCode().value());
+			assertEquals(404, e.getStatusCode().value(), "Status code should be 404 Not Found");
 		}
 	}
 
@@ -264,18 +281,33 @@ class ExplorerServiceTest {
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("r1", tm));
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, Map.of()));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
 		final ResourceTelemetry r1 = service.getTopLevelResource("r1");
 
 		// Connectors should be sorted by name case-insensitively: A-conn, b-CONN
-		assertEquals(List.of("A-conn", "b-CONN"), r1.getConnectors().stream().map(ConnectorTelemetry::getName).toList());
+		assertEquals(
+			List.of("a1", "b1"),
+			r1.getConnectors().stream().map(ConnectorTelemetry::getName).toList(),
+			"Connectors should be sorted by name"
+		);
 
 		// For connA, monitor types should be deduplicated and sorted: only "cpu"
 		final ConnectorTelemetry first = r1.getConnectors().get(0);
-		assertEquals(List.of("cpu"), first.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList());
+		assertEquals(
+			List.of("cpu"),
+			first.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
+			"Monitor types for first connector should be deduplicated and sorted"
+		);
 
 		// For connB, monitor types should list "mem"
 		final ConnectorTelemetry second = r1.getConnectors().get(1);
-		assertEquals(List.of("mem"), second.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList());
+		assertEquals(
+			List.of("mem"),
+			second.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
+			"Monitor types for second connector should be 'mem'"
+		);
 	}
 }

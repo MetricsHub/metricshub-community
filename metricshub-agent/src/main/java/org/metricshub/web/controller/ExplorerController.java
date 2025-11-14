@@ -21,24 +21,22 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import org.metricshub.web.dto.SearchMatch;
 import org.metricshub.web.dto.telemetry.AgentTelemetry;
 import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.metricshub.web.service.ExplorerService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * REST API to expose the agent hierarchy and its resource-groups and monitored
  * resources.
- * <p>
  * Key endpoints:
  * <ul>
  * <li>GET {@code /api/hierarchy} – full agent hierarchy</li>
@@ -49,7 +47,6 @@ import org.springframework.web.server.ResponseStatusException;
  * <li>GET {@code /api/search?q=...} – fuzzy search across hierarchy
  * elements</li>
  * </ul>
- * </p>
  */
 @RestController
 @RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -91,10 +88,7 @@ public class ExplorerController {
 	 * @return the full resource subtree
 	 */
 	@GetMapping("/resources/{resourceName}")
-	public ResourceTelemetry getTopLevelResource(@PathVariable("resourceName") final String resourceName) {
-		if (resourceName == null || resourceName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resourceName must not be blank");
-		}
+	public ResourceTelemetry getTopLevelResource(@NotBlank @PathVariable("resourceName") final String resourceName) {
 		return explorerService.getTopLevelResource(resourceName);
 	}
 
@@ -108,15 +102,9 @@ public class ExplorerController {
 	 */
 	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}")
 	public ResourceTelemetry getGroupedResourceByPath(
-		@PathVariable("groupName") final String groupName,
-		@PathVariable("resourceName") final String resourceName
+		@NotBlank @PathVariable("groupName") final String groupName,
+		@NotBlank @PathVariable("resourceName") final String resourceName
 	) {
-		if (groupName == null || groupName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "groupName must not be blank");
-		}
-		if (resourceName == null || resourceName.isBlank()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "resourceName must not be blank");
-		}
 		return explorerService.getGroupedResource(resourceName, groupName);
 	}
 
