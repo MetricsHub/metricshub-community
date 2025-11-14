@@ -49,7 +49,7 @@ public class SearchService {
 	/**
 	 * Performs a search across hierarchy elements (excluding virtual container nodes) using Jaro–Winkler
 	 *
-	 * @param query raw query string
+	 * @param q raw query string
 	 * @return ranked list of matches
 	 */
 	public List<SearchMatch> search(@NonNull String q, @NonNull final AgentTelemetry hierarchy) {
