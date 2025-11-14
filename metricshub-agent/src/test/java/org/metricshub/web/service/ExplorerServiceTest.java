@@ -139,7 +139,7 @@ class ExplorerServiceTest {
 		assertEquals("AgentX", root.getName(), "Agent name should match attribute");
 		assertEquals("agent", root.getType(), "Root type should be 'agent'");
 
-		// Group subtree (direct typed children)
+		// Group subtree: hierarchy now stops at resources (no connectors)
 		assertEquals(1, root.getResourceGroups().size(), "Should have one resource-group");
 		final ResourceGroupTelemetry group = root.getResourceGroups().get(0);
 		assertEquals("resource-group", group.getType(), "Child should be of type 'resource-group'");
@@ -148,27 +148,10 @@ class ExplorerServiceTest {
 		final ResourceTelemetry resourceA = group.getResources().get(0);
 		assertEquals("resource", resourceA.getType(), "Resource should be of type 'resource'");
 		assertEquals("serverA", resourceA.getName(), "Resource name should be 'serverA'");
-		assertEquals(1, resourceA.getConnectors().size(), "Resource should have one connector");
-		final ConnectorTelemetry connector = resourceA.getConnectors().get(0);
-		assertEquals("connector", connector.getType(), "Connector should be of type 'connector'");
-		assertEquals("SNMP", connector.getName(), "Connector name should be 'SNMP'");
-		// Types are sorted alphabetically: cpu, mem
-		assertEquals(
-			List.of("cpu", "mem"),
-			connector.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
-			"Monitors should include 'cpu' and 'mem'"
-		);
 
 		// Top-level resources subtree
 		assertEquals(1, root.getResources().size(), "Should have one top-level resource");
 		assertEquals("top1", root.getResources().get(0).getName(), "Top-level resource name should be 'top1'");
-		final ConnectorTelemetry topConnectorNode = root.getResources().get(0).getConnectors().get(0);
-		assertEquals("TopConn", topConnectorNode.getName(), "Top-level connector name should be 'TopConn'");
-		assertEquals(
-			List.of("os"),
-			topConnectorNode.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
-			"Top-level monitors should include 'os'"
-		);
 	}
 
 	@Test

@@ -602,73 +602,12 @@ public class ExplorerService {
 		// Group relationship is only conveyed by structure; do not add group-related
 		// attributes
 
-		// Attach connectors (lightweight: monitor types only)
-		resourceNode.getConnectors().addAll(buildConnectors(tm));
+		// Per updated requirements, hierarchy should stop at resources (no connectors
+		// or monitor types included in /hierarchy response). Full resource expansion
+		// with connectors & instances is still provided by dedicated resource
+		// endpoints.
 
 		return resourceNode;
-	}
-
-	/**
-	 * Builds connector nodes and their monitor type lists.
-	 * <p>
-	 * Monitor types are grouped by {@code connector_id} and exclude {@code host}
-	 * and {@code connector} monitor types.
-	 * </p>
-	 *
-	 * @param tm the {@link TelemetryManager} providing monitors for this resource
-	 * @return connectors with their monitor type lists (no instances)
-	 */
-	private static List<ConnectorTelemetry> buildConnectors(final TelemetryManager tm) {
-		final Map<String, Monitor> connectorMonitors = tm.findMonitorsByType(CONNECTOR.getKey());
-		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
-			return List.of();
-		}
-
-		// Collect monitors by connector-id to later build monitor type lists per
-		// connector
-		final Map<String, Set<String>> connectorIdToMonitorTypes = groupMonitorTypesByConnectorId(tm, connectorMonitors);
-
-		final List<ConnectorTelemetry> connectors = new ArrayList<>();
-
-		connectorMonitors
-			.values()
-			.stream()
-			.sorted((Monitor a, Monitor b) -> {
-				final String an = a.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, a.getId());
-				final String bn = b.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, b.getId());
-				return an.compareToIgnoreCase(bn);
-			})
-			.forEach((Monitor connectorMonitor) ->
-				connectors.add(buildConnectorNode(connectorIdToMonitorTypes, connectorMonitor))
-			);
-
-		return connectors;
-	}
-
-	/**
-	 * Builds a single connector node including its monitor types list.
-	 *
-	 * @param connectorIdToMonitorTypes map of connector IDs to their monitor types
-	 * @param connectorMonitor          the connector monitor to build the node for
-	 * @return a connector node with its monitor type list
-	 */
-	private static ConnectorTelemetry buildConnectorNode(
-		final Map<String, Set<String>> connectorIdToMonitorTypes,
-		Monitor connectorMonitor
-	) {
-		final String connectorId = connectorMonitor
-			.getAttributes()
-			.getOrDefault(MONITOR_ATTRIBUTE_ID, connectorMonitor.getId());
-		final String connectorName = connectorMonitor.getAttributes().getOrDefault(MONITOR_ATTRIBUTE_NAME, connectorId);
-
-		final ConnectorTelemetry connectorNode = ConnectorTelemetry.builder().name(connectorName).build();
-		final Set<String> monitorTypes = connectorIdToMonitorTypes.getOrDefault(connectorId, Set.of());
-		monitorTypes
-			.stream()
-			.sorted(String::compareToIgnoreCase)
-			.forEach(type -> connectorNode.getMonitors().add(MonitorTypeTelemetry.builder().name(type).build()));
-
-		return connectorNode;
 	}
 
 	/**
