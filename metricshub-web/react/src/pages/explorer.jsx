@@ -1,6 +1,5 @@
 import * as React from "react";
 import { Typography } from "@mui/material";
-import { withAuthGuard } from "../hocs/with-auth-guard";
 import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
 
 /**
@@ -20,5 +19,4 @@ const ExplorerPage = () => {
 	);
 };
 
-// Wrap with AuthGuard
-export default withAuthGuard(ExplorerPage);
+export default ExplorerPage;
