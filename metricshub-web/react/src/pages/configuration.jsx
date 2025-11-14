@@ -4,7 +4,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
 
-import { withAuthGuard } from "../hocs/with-auth-guard";
 import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
 
 import { useAppDispatch, useAppSelector } from "../hooks/store";
@@ -285,4 +284,4 @@ function ConfigurationPage() {
 	);
 }
 
-export default withAuthGuard(ConfigurationPage);
+export default ConfigurationPage;
