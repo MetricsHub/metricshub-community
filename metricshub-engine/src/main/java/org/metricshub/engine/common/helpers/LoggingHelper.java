@@ -21,9 +21,12 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 
 /**
  * Helper class for logging opeations
@@ -31,6 +34,8 @@ import lombok.extern.slf4j.Slf4j;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @Slf4j
 public class LoggingHelper {
+
+	static final Pattern PASSWORD_REGEX = Pattern.compile("(?i)(password).*");
 
 	/**
 	 * Log the given throwable
@@ -94,5 +99,34 @@ public class LoggingHelper {
 		if (log.isDebugEnabled()) {
 			runnable.run();
 		}
+	}
+
+	/**
+	 * Log the given message at the given logging {@link Level} after replacing the potential passwords with "************".
+	 * The number of '*' characters if fixed and independent from the passwords lengths.
+	 * @param loggerLevel The logging {@link Level}.
+	 * @param log         The message to log.
+	 */
+	public static void logWithHiddenPassword(final Level loggerLevel, final Supplier<String> messageSupplier) {
+		if (!log.isEnabledForLevel(loggerLevel)) {
+			return;
+		}
+		final String message = messageSupplier.get();
+		// No message to log, no logging to execute.
+		if (loggerLevel == null || message == null || message.isBlank()) {
+			return;
+		}
+
+		log.makeLoggingEventBuilder(loggerLevel).log(() -> sanitizeMessage(message));
+	}
+
+	/**
+	 * Sanitize the given message by replacing potential passwords with "************".
+	 *
+	 * @param message The message to sanitize.
+	 * @return The sanitized message.
+	 */
+	protected static String sanitizeMessage(final String message) {
+		return PASSWORD_REGEX.matcher(message).replaceAll("$1**********");
 	}
 }
