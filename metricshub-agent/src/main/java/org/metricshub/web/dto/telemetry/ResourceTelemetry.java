@@ -1,4 +1,4 @@
-package org.metricshub.web.dto;
+package org.metricshub.web.dto.telemetry;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -21,39 +21,51 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Generic DTO describing a node in the agent telemetry hierarchy.
- * Exposing metrics, attributes and children
- */
 @Data
-@Builder
 @NoArgsConstructor
-@AllArgsConstructor
-public class AgentTelemetry {
+@EqualsAndHashCode(callSuper = true)
+/**
+ * Telemetry node representing a resource.
+ * <p>
+ * Holds a typed collection of {@code connectors} configured for this resource.
+ * </p>
+ */
+public class ResourceTelemetry extends AbstractBaseTelemetry {
 
-	private String name;
+	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	private List<ConnectorTelemetry> connectors = new ArrayList<>();
 
 	/**
-	 * One of: "resource", "connector", "monitor", "resource-group", "agent",
-	 * "resource-groups", "resources", "connectors", "monitors".
+	 * Creates a Resource telemetry node.
+	 *
+	 * @param name       the resource key/name
+	 * @param attributes optional resource attributes (e.g., host metadata)
+	 * @param metrics    optional resource metrics (flattened values)
+	 * @param connectors connectors configured for this resource
 	 */
-	private String type;
-
-	@Builder.Default
-	private Map<String, String> attributes = new HashMap<>();
-
-	@Builder.Default
-	private Map<String, Object> metrics = new HashMap<>();
-
-	@Builder.Default
-	private List<AgentTelemetry> children = new ArrayList<>();
+	@Builder
+	public ResourceTelemetry(
+		String name,
+		Map<String, String> attributes,
+		Map<String, Object> metrics,
+		List<ConnectorTelemetry> connectors
+	) {
+		super(
+			name,
+			"resource",
+			attributes != null ? attributes : new HashMap<>(),
+			metrics != null ? metrics : new HashMap<>()
+		);
+		this.connectors = connectors != null ? connectors : new ArrayList<>();
+	}
 }

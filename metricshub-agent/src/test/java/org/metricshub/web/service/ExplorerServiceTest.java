@@ -19,13 +19,20 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
-import org.metricshub.web.dto.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.ConnectorTelemetry;
+import org.metricshub.web.dto.telemetry.MonitorTypeTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceGroupTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.mockito.Mockito;
 
 class ExplorerServiceTest {
 
+	private final SearchService searchService = new SearchService();
+
 	/**
-	 * Creates a mocked AgentContextHolder with the given telemetry managers and agent attributes.
+	 * Creates a mocked AgentContextHolder with the given telemetry managers and
+	 * agent attributes.
 	 *
 	 * @param telemetryManagers the telemetry managers to return
 	 * @param agentAttrs        the agent attributes to return
@@ -126,73 +133,181 @@ class ExplorerServiceTest {
 		final Map<String, String> agentAttrs = new HashMap<>();
 		agentAttrs.put(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "AgentX");
 
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(telemetryManagers, agentAttrs));
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, agentAttrs),
+			searchService
+		);
 
 		final AgentTelemetry root = service.getHierarchy();
 
 		assertNotNull(root, "Hierarchy root should not be null");
 		assertEquals("AgentX", root.getName(), "Agent name should match attribute");
 		assertEquals("agent", root.getType(), "Root type should be 'agent'");
-		// Two top-level containers
-		assertEquals(2, root.getChildren().size(), "Root should have two children");
-		assertEquals("resource-groups", root.getChildren().get(0).getName(), "First child should be 'resource-groups'");
-		assertEquals("resources", root.getChildren().get(1).getName(), "Second child should be 'resources'");
 
-		// Group subtree
-		final AgentTelemetry groups = root.getChildren().get(0);
-		assertEquals(1, groups.getChildren().size(), "Resource-groups should have one child");
-		assertEquals("resource-group", groups.getChildren().get(0).getType(), "Child should be of type 'resource-group'");
-		assertEquals("GroupA", groups.getChildren().get(0).getName(), "Resource-group name should be 'GroupA'");
-		final AgentTelemetry groupResources = groups.getChildren().get(0).getChildren().get(0);
-		assertEquals("resources", groupResources.getName(), "Resource-group should have 'resources' child");
-		assertEquals(1, groupResources.getChildren().size(), "Resources should have one child");
-		final AgentTelemetry resourceA = groupResources.getChildren().get(0);
+		// Group subtree: hierarchy now stops at resources (no connectors)
+		assertEquals(1, root.getResourceGroups().size(), "Should have one resource-group");
+		final ResourceGroupTelemetry group = root.getResourceGroups().get(0);
+		assertEquals("resource-group", group.getType(), "Child should be of type 'resource-group'");
+		assertEquals("GroupA", group.getName(), "Resource-group name should be 'GroupA'");
+		assertEquals(1, group.getResources().size(), "Group should contain one resource");
+		final ResourceTelemetry resourceA = group.getResources().get(0);
 		assertEquals("resource", resourceA.getType(), "Resource should be of type 'resource'");
 		assertEquals("serverA", resourceA.getName(), "Resource name should be 'serverA'");
-		final AgentTelemetry connectorsA = resourceA.getChildren().get(0);
-		assertEquals("connectors", connectorsA.getName(), "Resource should have 'connectors' child");
-		assertEquals(1, connectorsA.getChildren().size(), "Connectors should have one child");
-		final AgentTelemetry connector = connectorsA.getChildren().get(0);
-		assertEquals("connector", connector.getType(), "Connector should be of type 'connector'");
-		assertEquals("SNMP", connector.getName(), "Connector name should be 'SNMP'");
-		final AgentTelemetry monitorsA = connector.getChildren().get(0);
-		assertEquals("monitors", monitorsA.getName(), "Connector should have 'monitors' child");
-		// Types are sorted alphabetically: cpu, mem
-		assertEquals(
-			List.of("cpu", "mem"),
-			monitorsA.getChildren().stream().map(AgentTelemetry::getName).toList(),
-			"Monitors should include 'cpu' and 'mem'"
-		);
 
 		// Top-level resources subtree
-		final AgentTelemetry topResources = root.getChildren().get(1);
-		assertEquals(1, topResources.getChildren().size(), "Top-level resources should have one child");
-		assertEquals("top1", topResources.getChildren().get(0).getName(), "Top-level resource name should be 'top1'");
-		final AgentTelemetry topConnectorNode = topResources.getChildren().get(0).getChildren().get(0).getChildren().get(0);
-		assertEquals("TopConn", topConnectorNode.getName(), "Top-level connector name should be 'TopConn'");
-		final AgentTelemetry topMonitors = topConnectorNode.getChildren().get(0);
-		assertEquals(
-			List.of("os"),
-			topMonitors.getChildren().stream().map(AgentTelemetry::getName).toList(),
-			"Top-level monitors should include 'os'"
-		);
+		assertEquals(1, root.getResources().size(), "Should have one top-level resource");
+		assertEquals("top1", root.getResources().get(0).getName(), "Top-level resource name should be 'top1'");
 	}
 
 	@Test
 	void testGetHierarchyWithNoTelemetryManagers() {
 		final Map<String, String> agentAttrs = Map.of(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "Hosty");
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, agentAttrs));
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, agentAttrs), searchService);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("Hosty", root.getName(), "Agent name should match host name attribute");
-		assertEquals(2, root.getChildren().size(), "Root should have two children");
-		assertEquals(0, root.getChildren().get(0).getChildren().size(), "Resource-groups should have no children");
-		assertEquals(0, root.getChildren().get(1).getChildren().size(), "Resources should have no children");
+		assertEquals(0, root.getResourceGroups().size(), "Resource-groups should have no children");
+		assertEquals(0, root.getResources().size(), "Resources should have no children");
 	}
 
 	@Test
 	void testAgentNameDefaultsWhenNoAttributes() {
-		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(Map.of(), Map.of()));
+		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(Map.of(), Map.of()), searchService);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("MetricsHub", root.getName(), "Agent name should default to 'MetricsHub'");
+	}
+
+	@Test
+	void testGetTopLevelResource() {
+		final String connectorId = "cTop";
+		final Monitor os = newMonitor("m3", "os", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
+		final TelemetryManager tmTop = newTelemetryManager(connectorId, "TopConn", Map.of("os", List.of(os)));
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("top1", tmTop));
+
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
+
+		final ResourceTelemetry resource = service.getTopLevelResource("top1");
+		assertEquals("resource", resource.getType(), "Resource type should be 'resource'");
+		assertEquals("top1", resource.getName(), "Resource name should be 'top1'");
+		assertEquals("cTop", resource.getConnectors().get(0).getName(), "Connector name should be 'cTop'");
+	}
+
+	@Test
+	void testGetTopLevelResourceNotFound() {
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of());
+
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
+
+		try {
+			service.getTopLevelResource("missing");
+			throw new AssertionError("Expected ResponseStatusException not thrown");
+		} catch (org.springframework.web.server.ResponseStatusException e) {
+			assertEquals(404, e.getStatusCode().value(), "Status code should be 404 Not Found");
+		}
+	}
+
+	@Test
+	void testGetGroupedResource() {
+		final String connectorId = "c1";
+		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
+		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", Map.of("cpu", List.of(cpu)));
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put("GroupA", Map.of("serverA", tmGroup));
+
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
+
+		final ResourceTelemetry resource = service.getGroupedResource("serverA", "GroupA");
+		assertEquals("resource", resource.getType(), "Resource type should be 'resource'");
+		assertEquals("serverA", resource.getName(), "Resource name should be 'serverA'");
+	}
+
+	@Test
+	void testGetGroupedResourceWrongGroupNotFound() {
+		final String connectorId = "c1";
+		final Monitor cpu = newMonitor("m1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connectorId));
+		final TelemetryManager tmGroup = newTelemetryManager(connectorId, "SNMP", Map.of("cpu", List.of(cpu)));
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put("RightGroup", Map.of("serverA", tmGroup));
+
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
+
+		try {
+			service.getGroupedResource("serverA", "WrongGroup");
+			throw new AssertionError("Expected ResponseStatusException not thrown");
+		} catch (org.springframework.web.server.ResponseStatusException e) {
+			assertEquals(404, e.getStatusCode().value(), "Status code should be 404 Not Found");
+		}
+	}
+
+	@Test
+	void testConnectorsAreSortedAndTypesAreDeduplicated() {
+		// Two connectors with different names to validate sort order (A-conn then
+		// b-CONN)
+		final String connA = "a1";
+		final String connB = "b1";
+
+		final Monitor cpu1 = newMonitor("cpu-1", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connA));
+		final Monitor cpu2dup = newMonitor("cpu-2", "cpu", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connA));
+		final Monitor mem1 = newMonitor("mem-1", "mem", Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, connB));
+		final Monitor hostIgnored = newMonitor("h1", "host", Map.of());
+
+		final TelemetryManager tm = new TelemetryManager();
+		// Add connector monitors with display names encoded in attributes
+		tm.addNewMonitor(newConnector(connA, "A-conn"), "connector", connA);
+		tm.addNewMonitor(newConnector(connB, "b-CONN"), "connector", connB);
+
+		// Add monitors (including duplicates and a host which should be ignored)
+		tm.addNewMonitor(cpu1, "cpu", "cpu-1");
+		tm.addNewMonitor(cpu2dup, "cpu", "cpu-2");
+		tm.addNewMonitor(mem1, "mem", "mem-1");
+		tm.addNewMonitor(hostIgnored, "host", "h1");
+
+		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
+		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("r1", tm));
+
+		final ExplorerService service = new ExplorerService(
+			newMockedAgentContextHolder(telemetryManagers, Map.of()),
+			searchService
+		);
+		final ResourceTelemetry r1 = service.getTopLevelResource("r1");
+
+		// Connectors should be sorted by name case-insensitively: A-conn, b-CONN
+		assertEquals(
+			List.of("a1", "b1"),
+			r1.getConnectors().stream().map(ConnectorTelemetry::getName).toList(),
+			"Connectors should be sorted by name"
+		);
+
+		// For connA, monitor types should be deduplicated and sorted: only "cpu"
+		final ConnectorTelemetry first = r1.getConnectors().get(0);
+		assertEquals(
+			List.of("cpu"),
+			first.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
+			"Monitor types for first connector should be deduplicated and sorted"
+		);
+
+		// For connB, monitor types should list "mem"
+		final ConnectorTelemetry second = r1.getConnectors().get(1);
+		assertEquals(
+			List.of("mem"),
+			second.getMonitors().stream().map(MonitorTypeTelemetry::getName).toList(),
+			"Monitor types for second connector should be 'mem'"
+		);
 	}
 }

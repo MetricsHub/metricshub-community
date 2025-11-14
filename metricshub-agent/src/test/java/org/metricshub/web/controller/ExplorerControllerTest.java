@@ -8,7 +8,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.metricshub.web.dto.AgentTelemetry;
+import org.metricshub.web.dto.SearchMatch;
+import org.metricshub.web.dto.telemetry.AgentTelemetry;
+import org.metricshub.web.dto.telemetry.ConnectorTelemetry;
+import org.metricshub.web.dto.telemetry.MonitorTypeTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceGroupTelemetry;
+import org.metricshub.web.dto.telemetry.ResourceTelemetry;
 import org.metricshub.web.service.ExplorerService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
@@ -29,19 +34,15 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldReturnHierarchy() throws Exception {
-		final AgentTelemetry monitors = AgentTelemetry.builder().name("monitors").type("monitors").build();
-		final AgentTelemetry connector = AgentTelemetry.builder().name("SNMP").type("connector").build();
-		connector.getChildren().add(monitors);
-		final AgentTelemetry connectors = AgentTelemetry.builder().name("connectors").type("connectors").build();
-		connectors.getChildren().add(connector);
-		final AgentTelemetry resource = AgentTelemetry.builder().name("server1").type("resource").build();
-		resource.getChildren().add(connectors);
-		final AgentTelemetry resources = AgentTelemetry.builder().name("resources").type("resources").build();
-		resources.getChildren().add(resource);
-		final AgentTelemetry groups = AgentTelemetry.builder().name("resource-groups").type("resource-groups").build();
-		final AgentTelemetry root = AgentTelemetry.builder().name("AgentOne").type("agent").build();
-		root.getChildren().add(groups);
-		root.getChildren().add(resources);
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SNMP").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("cpu").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("server1").build();
+		resource.getConnectors().add(connector);
+		final ResourceGroupTelemetry group = ResourceGroupTelemetry.builder().name("GroupA").build();
+		group.getResources().add(resource);
+		final AgentTelemetry root = AgentTelemetry.builder().name("AgentOne").build();
+		root.getResourceGroups().add(group);
+		root.getResources().add(ResourceTelemetry.builder().name("top0").build());
 
 		when(explorerService.getHierarchy()).thenReturn(root);
 
@@ -51,19 +52,16 @@ class ExplorerControllerTest {
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("AgentOne"))
 			.andExpect(jsonPath("$.type").value("agent"))
-			.andExpect(jsonPath("$.children[0].name").value("resource-groups"))
-			.andExpect(jsonPath("$.children[1].name").value("resources"))
-			.andExpect(jsonPath("$.children[1].children[0].name").value("server1"))
-			.andExpect(jsonPath("$.children[1].children[0].children[0].name").value("connectors"))
-			.andExpect(jsonPath("$.children[1].children[0].children[0].children[0].name").value("SNMP"))
-			.andExpect(jsonPath("$.children[1].children[0].children[0].children[0].children[0].name").value("monitors"));
+			.andExpect(jsonPath("$.resourceGroups[0].name").value("GroupA"))
+			.andExpect(jsonPath("$.resourceGroups[0].resources[0].name").value("server1"))
+			.andExpect(jsonPath("$.resourceGroups[0].resources[0].connectors[0].name").value("SNMP"))
+			.andExpect(jsonPath("$.resourceGroups[0].resources[0].connectors[0].monitors[0].name").value("cpu"))
+			.andExpect(jsonPath("$.resources[0].name").value("top0"));
 	}
 
 	@Test
 	void testShouldReturnEmptyHierarchy() throws Exception {
-		final AgentTelemetry root = AgentTelemetry.builder().name("MetricsHub").type("agent").build();
-		root.getChildren().add(AgentTelemetry.builder().name("resource-groups").type("resource-groups").build());
-		root.getChildren().add(AgentTelemetry.builder().name("resources").type("resources").build());
+		final AgentTelemetry root = AgentTelemetry.builder().name("MetricsHub").build();
 		when(explorerService.getHierarchy()).thenReturn(root);
 
 		mockMvc
@@ -71,8 +69,71 @@ class ExplorerControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.name").value("MetricsHub"))
-			.andExpect(jsonPath("$.children.length()").value(2))
-			.andExpect(jsonPath("$.children[0].children.length()").value(0))
-			.andExpect(jsonPath("$.children[1].children.length()").value(0));
+			.andExpect(jsonPath("$.resourceGroups").doesNotExist())
+			.andExpect(jsonPath("$.resources").doesNotExist());
+	}
+
+	@Test
+	void testShouldReturnTopLevelResource() throws Exception {
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SNMP").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("cpu").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("top1").build();
+		resource.getConnectors().add(connector);
+		when(explorerService.getTopLevelResource("top1")).thenReturn(resource);
+
+		mockMvc
+			.perform(get("/api/resources/top1"))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.name").value("top1"))
+			.andExpect(jsonPath("$.type").value("resource"))
+			.andExpect(jsonPath("$.connectors[0].name").value("SNMP"))
+			.andExpect(jsonPath("$.connectors[0].monitors[0].name").value("cpu"));
+	}
+
+	@Test
+	void testShouldReturnGroupedResource() throws Exception {
+		final ConnectorTelemetry connector = ConnectorTelemetry.builder().name("SSH").build();
+		connector.getMonitors().add(MonitorTypeTelemetry.builder().name("mem").build());
+		final ResourceTelemetry resource = ResourceTelemetry.builder().name("serverA").build();
+		resource.getConnectors().add(connector);
+		when(explorerService.getGroupedResource("serverA", "GroupA")).thenReturn(resource);
+
+		mockMvc
+			.perform(get("/api/resource-groups/GroupA/resources/serverA"))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$.name").value("serverA"))
+			.andExpect(jsonPath("$.connectors[0].name").value("SSH"))
+			.andExpect(jsonPath("$.connectors[0].monitors[0].name").value("mem"));
+	}
+
+	@Test
+	void testShouldSearch() throws Exception {
+		final SearchMatch match1 = SearchMatch
+			.builder()
+			.name("serverA")
+			.type("resource")
+			.path("Agent/serverA")
+			.jaroWinklerScore(1.0)
+			.build();
+		final SearchMatch match2 = SearchMatch
+			.builder()
+			.name("cpu")
+			.type("monitor")
+			.path("Agent/serverA/SNMP/cpu")
+			.jaroWinklerScore(0.93)
+			.build();
+		when(explorerService.search("serverA")).thenReturn(java.util.List.of(match1, match2));
+
+		mockMvc
+			.perform(get("/api/search").param("q", "serverA"))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+			.andExpect(jsonPath("$[0].name").value("serverA"))
+			.andExpect(jsonPath("$[0].type").value("resource"))
+			.andExpect(jsonPath("$[0].jaroWinklerScore").value(1.0))
+			.andExpect(jsonPath("$[1].name").value("cpu"))
+			.andExpect(jsonPath("$[1].type").value("monitor"));
 	}
 }
