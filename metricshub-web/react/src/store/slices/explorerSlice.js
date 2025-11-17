@@ -12,40 +12,40 @@ import { fetchExplorerHierarchy } from "../thunks/explorerThunks";
 
 /** @type {ExplorerState} */
 const initialState = {
-    /** @type {any|null} */
-    hierarchy: null,
-    loading: false,
-    error: null,
-    lastUpdatedAt: null,
+	/** @type {any|null} */
+	hierarchy: null,
+	loading: false,
+	error: null,
+	lastUpdatedAt: null,
 };
 
 const explorerSlice = createSlice({
-    name: "explorer",
-    initialState,
-    reducers: {
-        /** Reset the hierarchy and loading/error flags */
-        clearHierarchy(state) {
-            state.hierarchy = null;
-            state.loading = false;
-            state.error = null;
-            state.lastUpdatedAt = null;
-        },
-    },
-    extraReducers: (b) => {
-        b.addCase(fetchExplorerHierarchy.pending, (s) => {
-            s.loading = true;
-            s.error = null;
-        })
-            .addCase(fetchExplorerHierarchy.fulfilled, (s, a) => {
-                s.loading = false;
-                s.hierarchy = a.payload ?? null;
-                s.lastUpdatedAt = Date.now();
-            })
-            .addCase(fetchExplorerHierarchy.rejected, (s, a) => {
-                s.loading = false;
-                s.error = a.payload || a.error?.message || "Unable to fetch explorer hierarchy";
-            });
-    },
+	name: "explorer",
+	initialState,
+	reducers: {
+		/** Reset the hierarchy and loading/error flags */
+		clearHierarchy(state) {
+			state.hierarchy = null;
+			state.loading = false;
+			state.error = null;
+			state.lastUpdatedAt = null;
+		},
+	},
+	extraReducers: (b) => {
+		b.addCase(fetchExplorerHierarchy.pending, (s) => {
+			s.loading = true;
+			s.error = null;
+		})
+			.addCase(fetchExplorerHierarchy.fulfilled, (s, a) => {
+				s.loading = false;
+				s.hierarchy = a.payload ?? null;
+				s.lastUpdatedAt = Date.now();
+			})
+			.addCase(fetchExplorerHierarchy.rejected, (s, a) => {
+				s.loading = false;
+				s.error = a.payload || a.error?.message || "Unable to fetch explorer hierarchy";
+			});
+	},
 });
 
 export const { clearHierarchy } = explorerSlice.actions;
