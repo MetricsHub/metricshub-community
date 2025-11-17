@@ -25,12 +25,22 @@ vi.mock("../hooks/use-auth", () => ({
 // AuthGuard uses navigate() to redirect unauthenticated users
 // We mock it to verify redirects happen without actually navigating
 const mockNavigate = vi.fn();
+
+// Mock useLocation to control the current location in tests
+const mockLocation = {
+	pathname: "/explorer",
+	search: "",
+	hash: "",
+};
+const mockUseLocation = vi.fn(() => mockLocation);
+
 vi.mock("react-router-dom", async () => {
 	// Import the actual module first
 	const actual = await vi.importActual("react-router-dom");
 	return {
 		...actual, // Keep other exports (like BrowserRouter) as they are
 		useNavigate: () => mockNavigate, // Replace useNavigate with our mock
+		useLocation: () => mockUseLocation(), // Replace useLocation with our mock
 	};
 });
 
@@ -39,6 +49,10 @@ describe("AuthGuard", () => {
 		// Reset all mocks before each test
 		vi.clearAllMocks();
 		mockNavigate.mockClear();
+		// Reset location to default
+		mockLocation.pathname = "/explorer";
+		mockLocation.search = "";
+		mockLocation.hash = "";
 	});
 
 	it("should render children when authenticated and initialized", async () => {
@@ -128,5 +142,179 @@ describe("AuthGuard", () => {
 		});
 		// Verify redirect happened
 		expect(mockNavigate).toHaveBeenCalled();
+	});
+
+	it("should include returnTo parameter with current location when redirecting from /configuration", async () => {
+		// Arrange: Set location to /configuration
+		mockLocation.pathname = "/configuration";
+		mockLocation.search = "";
+		mockLocation.hash = "";
+
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Act
+		renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should redirect with returnTo=/configuration
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith("/login?returnTo=%2Fconfiguration", {
+				replace: true,
+			});
+		});
+	});
+
+	it("should include returnTo parameter with current location when redirecting from /explorer", async () => {
+		// Arrange: Set location to /explorer
+		mockLocation.pathname = "/explorer";
+		mockLocation.search = "";
+		mockLocation.hash = "";
+
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Act
+		renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should redirect with returnTo=/explorer
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith("/login?returnTo=%2Fexplorer", { replace: true });
+		});
+	});
+
+	it("should not include returnTo parameter when redirecting from root path", async () => {
+		// Arrange: Set location to root
+		mockLocation.pathname = "/";
+		mockLocation.search = "";
+		mockLocation.hash = "";
+
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Act
+		renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should redirect without returnTo parameter
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith("/login", { replace: true });
+		});
+	});
+
+	it("should not include returnTo parameter when already on login page", async () => {
+		// Arrange: Set location to login page
+		mockLocation.pathname = "/login";
+		mockLocation.search = "";
+		mockLocation.hash = "";
+
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Act
+		renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should not redirect (already on login page)
+		await waitFor(() => {
+			expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+		});
+		expect(mockNavigate).not.toHaveBeenCalled();
+	});
+
+	it("should include returnTo with search and hash parameters when present", async () => {
+		// Arrange: Set location with search and hash
+		mockLocation.pathname = "/configuration";
+		mockLocation.search = "?tab=settings";
+		mockLocation.hash = "#section1";
+
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Act
+		renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should redirect with full path including search and hash
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith(
+				"/login?returnTo=%2Fconfiguration%3Ftab%3Dsettings%23section1",
+				{ replace: true },
+			);
+		});
+	});
+
+	it("should use current location when auth state changes, not stale location", async () => {
+		// This test verifies that when the user navigates and then logs out,
+		// the returnTo uses the current location, not the first location they visited
+
+		// Arrange: Start on /explorer
+		mockLocation.pathname = "/explorer";
+		useAuth.mockReturnValue({
+			isAuthenticated: true,
+			isInitialized: true,
+		});
+
+		const { rerender } = renderWithAllProviders(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Wait for initial render
+		await waitFor(() => {
+			expect(screen.getByTestId("protected-content")).toBeInTheDocument();
+		});
+
+		// User navigates to /configuration
+		mockLocation.pathname = "/configuration";
+		mockLocation.search = "";
+		mockLocation.hash = "";
+
+		// User logs out (auth state changes)
+		useAuth.mockReturnValue({
+			isAuthenticated: false,
+			isInitialized: true,
+		});
+
+		// Rerender to trigger auth state change
+		rerender(
+			<AuthGuard>
+				<div data-testid="protected-content">Protected Content</div>
+			</AuthGuard>,
+		);
+
+		// Assert: Should redirect with returnTo=/configuration (current location), not /explorer
+		await waitFor(() => {
+			expect(mockNavigate).toHaveBeenCalledWith("/login?returnTo=%2Fconfiguration", {
+				replace: true,
+			});
+		});
 	});
 });

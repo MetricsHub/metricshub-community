@@ -6,7 +6,7 @@ import { useTheme } from "@mui/material/styles";
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 
-import { useNavigate, NavLink } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
@@ -23,18 +23,14 @@ import ToggleTheme from "./ToggleTheme";
 const STATUS_REFRESH_MS = 30000;
 
 const NavBar = ({ onToggleTheme }) => {
-	const navigate = useNavigate();
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
 	const metricshubLogo = theme.palette.mode === "dark" ? logoDark : logoLight;
 
 	const handleSignOut = useCallback(async () => {
-		try {
-			await signOut();
-		} finally {
-			navigate(paths.login, { replace: true });
-		}
-	}, [signOut, navigate]);
+		await signOut();
+		// AuthGuard will automatically redirect to login with the correct returnTo
+	}, [signOut]);
 
 	const dispatch = useAppDispatch();
 
