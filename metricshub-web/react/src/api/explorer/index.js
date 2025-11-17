@@ -1,7 +1,7 @@
 import { httpRequest } from "../../utils/axios-request";
 import { normalizeAxiosError } from "../../utils/http-errors";
-
-const BASE = "/api/explorer";
+// Explorer endpoints are rooted at /api (no /explorer prefix)
+const BASE = "/api";
 
 /**
  * Explorer API client.
