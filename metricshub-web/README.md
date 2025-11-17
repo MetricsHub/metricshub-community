@@ -35,11 +35,6 @@ This project follows consistent naming conventions for maintainability and clari
 
 All files that export React components used in JSX should use **PascalCase** and `.jsx` extension:
 
-- **Components**: `QuestionDialog.jsx`, `Navbar.jsx`, `ErrorBoundary.jsx`
-- **Pages**: `LoginPage.jsx`, `ConfigurationPage.jsx`, `ExplorerPage.jsx`
-- **Guards**: `AuthGuard.jsx`
-- **Layouts**: `AuthLayout.jsx`
-
 **Examples:**
 
 ```
@@ -53,12 +48,6 @@ layouts/auth/AuthLayout.jsx
 ### kebab-case for Everything Else
 
 All non-component files use **kebab-case**:
-
-- **Hooks**: `use-auth.js`, `use-mounted.js`, `use-snackbar.js` 
-- **Services**: `backup-service.js`, `download-service.js`
-- **Utils**: `backup-names.js`, `yaml-lint-utils.js`, `axios-request.js`
-- **Redux Slices**: `config-slice.js`, `application-status-slice.js`
-- **Redux Thunks**: `config-thunks.js`, `application-status-thunks.js`
 
 **Examples:**
 
