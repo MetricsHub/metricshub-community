@@ -1,20 +1,10 @@
 import { httpRequest } from "../../utils/axios-request";
+import { normalizeAxiosError } from "../../utils/http-errors";
 
 const BASE = "/api/config-files";
 
-/**
- * Normalize any Axios-style error into a plain Error with a readable message.
- * @param {unknown} e the error to normalize
- * @param {string} fallback fallback message if nothing else is available. Default: "Request failed"
- * @returns {Error} Normalized error
- */
-const normalizeError = (e, fallback = "Request failed") => {
-	const r = e?.response;
-	if (!r) return new Error(e?.message || fallback);
-	if (typeof r.data === "string" && r.data.trim()) return new Error(r.data);
-	if (r.data?.message) return new Error(r.data.message);
-	return new Error(`${r.status ?? ""} ${r.statusText ?? ""}`.trim() || fallback);
-};
+// Backward-compatible alias used locally in this module
+const normalizeError = (e, fallback = "Request failed") => normalizeAxiosError(e, fallback);
 
 /**
  * Configuration Files API
