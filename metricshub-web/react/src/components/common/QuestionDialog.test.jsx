@@ -70,13 +70,7 @@ describe("QuestionDialog", () => {
 			{ btnTitle: "Confirm", callback: handleConfirm },
 		];
 
-		render(
-			<QuestionDialog
-				open={true}
-				actionButtons={actionButtons}
-				onClose={vi.fn()}
-			/>,
-		);
+		render(<QuestionDialog open={true} actionButtons={actionButtons} onClose={vi.fn()} />);
 
 		// getByRole with name option finds button by its accessible name (the text inside)
 		const cancelButton = screen.getByRole("button", { name: "Cancel" });
@@ -92,13 +86,7 @@ describe("QuestionDialog", () => {
 		const handleConfirm = vi.fn();
 		const actionButtons = [{ btnTitle: "Confirm", callback: handleConfirm }];
 
-		render(
-			<QuestionDialog
-				open={true}
-				actionButtons={actionButtons}
-				onClose={vi.fn()}
-			/>,
-		);
+		render(<QuestionDialog open={true} actionButtons={actionButtons} onClose={vi.fn()} />);
 
 		const confirmButton = screen.getByRole("button", { name: "Confirm" });
 		// user.click() simulates a real user click (fires all events like mouseDown, mouseUp, etc.)
@@ -132,13 +120,7 @@ describe("QuestionDialog", () => {
 			},
 		];
 
-		render(
-			<QuestionDialog
-				open={true}
-				actionButtons={actionButtons}
-				onClose={vi.fn()}
-			/>,
-		);
+		render(<QuestionDialog open={true} actionButtons={actionButtons} onClose={vi.fn()} />);
 
 		const button = screen.getByRole("button", { name: "Delete" });
 		// Check that Material-UI classes are applied correctly

@@ -64,9 +64,9 @@ describe("AuthApi", () => {
 
 			// Act & Assert: Verify the error is propagated
 			// expect().rejects.toThrow() checks that the promise rejects with the expected error
-			await expect(
-				authApi.signIn({ username: "testuser", password: "wrongpass" }),
-			).rejects.toThrow("Invalid credentials");
+			await expect(authApi.signIn({ username: "testuser", password: "wrongpass" })).rejects.toThrow(
+				"Invalid credentials",
+			);
 		});
 	});
 

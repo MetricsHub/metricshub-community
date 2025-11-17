@@ -44,10 +44,7 @@ const TestComponent = () => {
 const SignInTest = () => {
 	const { signIn } = React.useContext(AuthContext);
 	return (
-		<button
-			onClick={() => signIn("testuser", "password")}
-			data-testid="signin-button"
-		>
+		<button onClick={() => signIn("testuser", "password")} data-testid="signin-button">
 			Sign In
 		</button>
 	);

@@ -25,9 +25,7 @@ describe("applicationStatusSlice", () => {
 		// When reducer is called with undefined state and unknown action,
 		// it should return the initial state
 		// This tests the default case of the reducer
-		expect(applicationStatusReducer(undefined, { type: "unknown" })).toEqual(
-			initialState,
-		);
+		expect(applicationStatusReducer(undefined, { type: "unknown" })).toEqual(initialState);
 	});
 
 	it("should handle fetchApplicationStatus.pending", () => {

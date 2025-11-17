@@ -13,7 +13,6 @@ import { screen, waitFor, act } from "@testing-library/react";
 import { AuthGuard } from "./AuthGuard";
 import { renderWithAllProviders } from "../test/test-utils";
 import { useAuth } from "../hooks/use-auth";
-import { useNavigate } from "react-router-dom";
 
 // Mock the useAuth hook
 // AuthGuard uses this hook to check authentication status

@@ -52,9 +52,7 @@ export function createTestStore(initialState = {}) {
 export function renderWithRedux(ui, { store, initialState, ...renderOptions } = {}) {
 	const testStore = store || createTestStore(initialState);
 	// Wrapper component provides Redux store
-	const Wrapper = ({ children }) => (
-		<Provider store={testStore}>{children}</Provider>
-	);
+	const Wrapper = ({ children }) => <Provider store={testStore}>{children}</Provider>;
 	const result = render(ui, { wrapper: Wrapper, ...renderOptions });
 	return { ...result, store: testStore };
 }
@@ -87,10 +85,7 @@ export function renderWithRouter(ui, options = {}) {
  * @param {Object} options.initialState - Initial state for store (optional)
  * @returns {Object} Render result and store
  */
-export function renderWithReduxAndRouter(
-	ui,
-	{ store, initialState, ...renderOptions } = {},
-) {
+export function renderWithReduxAndRouter(ui, { store, initialState, ...renderOptions } = {}) {
 	const testStore = store || createTestStore(initialState);
 	// Wrapper provides both Redux and Router
 	const Wrapper = ({ children }) => (
@@ -130,10 +125,7 @@ export function renderWithAuth(ui, options = {}) {
  * @param {Object} options.initialState - Initial state for store (optional)
  * @returns {Object} Render result and store
  */
-export function renderWithAllProviders(
-	ui,
-	{ store, initialState, ...renderOptions } = {},
-) {
+export function renderWithAllProviders(ui, { store, initialState, ...renderOptions } = {}) {
 	const testStore = store || createTestStore(initialState);
 	// Wrapper provides all three: Redux, Router, and Auth
 	const Wrapper = ({ children }) => (
