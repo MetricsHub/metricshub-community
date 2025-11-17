@@ -1,10 +1,10 @@
 import * as React from "react";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import { setContent } from "../../../store/slices/configSlice";
-import { saveConfig, validateConfig } from "../../../store/thunks/configThunks";
+import { setContent } from "../../../store/slices/config-slice";
+import { saveConfig, validateConfig } from "../../../store/thunks/config-thunks";
 import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
-import { isBackupFileName } from "../../../utils/backupNames";
+import { isBackupFileName } from "../../../utils/backup-names";
 import { Typography } from "@mui/material";
 
 /**

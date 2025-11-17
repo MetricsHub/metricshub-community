@@ -1,7 +1,7 @@
 import { Stack, Typography, Button, Box } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import { useAppSelector } from "../../hooks/store";
-import { isBackupFileName } from "../../utils/backupNames";
+import { isBackupFileName } from "../../utils/backup-names";
 import FileTypeIcon from "./tree/icons/FileTypeIcons";
 
 /**

@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { configApi } from "../api/config";
-import { isBackupFileName } from "../utils/backupNames";
+import { isBackupFileName } from "../utils/backup-names";
 
 /**
  * Download a config file by name.

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { isBackupFileName } from "../../utils/backupNames";
+import { isBackupFileName } from "../../utils/backup-names";
 import {
 	fetchConfigList,
 	fetchConfigContent,
@@ -7,7 +7,7 @@ import {
 	validateConfig,
 	deleteConfig,
 	renameConfig,
-} from "../thunks/configThunks";
+} from "../thunks/config-thunks";
 
 const initialState = {
 	list: [],
@@ -220,7 +220,7 @@ const slice = createSlice({
 
 			.addCase(renameConfig.fulfilled, (s, a) => {
 				const { oldName, meta } = a.payload;
-				s.list = s.list.filter((f) => f.name !== oldName).concat(meta);
+				s.list = s.list.filter((f) => f.name === oldName).concat(meta);
 				if (s.selected === oldName) s.selected = meta.name;
 			});
 	},

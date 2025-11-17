@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Typography, Box } from "@mui/material";
-import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
+import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
 import { useAppSelector } from "../hooks/store";
 import { selectExplorerLastUpdatedAt } from "../store/slices/explorerSlice";

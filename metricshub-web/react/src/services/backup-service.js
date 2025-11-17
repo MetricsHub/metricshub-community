@@ -1,6 +1,6 @@
 import { configApi } from "../api/config";
 import { timestampId } from "../utils/backup";
-import { encodeBackupFileName, isBackupFileName, parseBackupFileName } from "../utils/backupNames";
+import { encodeBackupFileName, isBackupFileName, parseBackupFileName } from "../utils/backup-names";
 
 /**
  * Create a backup set.

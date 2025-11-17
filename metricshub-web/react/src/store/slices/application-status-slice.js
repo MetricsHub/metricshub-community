@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchApplicationStatus } from "../thunks/applicationStatusThunks";
+import { fetchApplicationStatus } from "../thunks/application-status-thunks";
 
 /**
  * Initial state for application status slice
