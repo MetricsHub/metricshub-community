@@ -30,7 +30,7 @@ const Scrollbar = (t) => {
 		"&::-webkit-scrollbar-thumb": {
 			backgroundColor: base,
 			borderRadius: 8,
-			border: "2px solid transparent", // creates the slim “pill” look
+			border: "2px solid transparent", // creates the slim "pill" look
 			backgroundClip: "content-box",
 		},
 		"&::-webkit-scrollbar-thumb:hover": {

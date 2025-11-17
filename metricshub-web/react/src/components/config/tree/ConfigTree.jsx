@@ -8,10 +8,10 @@ import BackupIcon from "@mui/icons-material/Backup";
 import DownloadIcon from "@mui/icons-material/Download";
 import FileTreeItem from "./FileTreeItem.jsx";
 import BackupSetNode from "./BackupSetNode.jsx";
-import { parseBackupFileName } from "../../../utils/backupNames.js";
+import { parseBackupFileName } from "../../../utils/backup-names.js";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store.js";
-import { createConfigBackup } from "../../../store/thunks/configThunks.js";
-import { downloadAllConfigs } from "../../../services/downloadService.js";
+import { createConfigBackup } from "../../../store/thunks/config-thunks.js";
+import { downloadAllConfigs } from "../../../services/download-service.js";
 
 const ROOT_ID = "__config_root__";
 const BACKUP_ROOT_ID = "__backup_root__";

@@ -11,13 +11,13 @@ import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
-import { fetchApplicationStatus } from "../../store/thunks/applicationStatusThunks";
+import { fetchApplicationStatus } from "../../store/thunks/application-status-thunks";
 
-import StatusText from "./status/status-text";
-import StatusDetailsMenu from "./status/status-details-menu";
-import OtelStatusIcon from "./status/otel-status-icon";
-import ProfileMenu from "./profile-menu";
-import ToggleTheme from "./toggle-theme";
+import StatusText from "./status/StatusText";
+import StatusDetailsMenu from "./status/StatusDetailsMenu";
+import OtelStatusIcon from "./status/OtelStatusIcon";
+import ProfileMenu from "./ProfileMenu";
+import ToggleTheme from "./ToggleTheme";
 
 // Refresh status every 30 seconds
 const STATUS_REFRESH_MS = 30000;

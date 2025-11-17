@@ -1,4 +1,4 @@
-import { AuthGuard } from "../guards/auth-guard";
+import { AuthGuard } from "../guards/AuthGuard";
 
 // Higher Order Component to wrap a component with AuthGuard
 export const withAuthGuard = (Component) => {

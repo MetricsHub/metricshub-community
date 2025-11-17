@@ -12,7 +12,7 @@ import {
 	restoreConfigFromBackup,
 	deleteBackupFile,
 	fetchConfigList,
-} from "../../../store/thunks/configThunks";
+} from "../../../store/thunks/config-thunks";
 import { useSnackbar } from "../../../hooks/use-snackbar";
 
 // Memoized label for the backup group to avoid unnecessary re-renders between parent updates
