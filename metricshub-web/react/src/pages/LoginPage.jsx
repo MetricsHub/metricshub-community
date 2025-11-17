@@ -20,7 +20,7 @@ import { useFormik } from "formik";
  * Authentication layout component.
  *
  * @param {object} props children wrapped by the layout.
- * @returns
+ * @returns {JSX.Element} The AuthLayout component.
  */
 const AuthLayoutComponent = (props) => {
 	const { children } = props;
@@ -74,7 +74,8 @@ const AuthLayoutComponent = (props) => {
 };
 
 /**
- * Authentication layout component.
+ * Authentication layout component memoized.
+ *
  * @param {*} props Component props.
  * @returns {JSX.Element} The AuthLayout component.
  */
