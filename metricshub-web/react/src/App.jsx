@@ -1,24 +1,31 @@
 import * as React from "react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { ThemeProvider, CssBaseline, Box, CircularProgress } from "@mui/material";
-import { AuthProvider, AuthConsumer } from "./contexts/jwt-context";
-import logoDark from "./assets/logo-dark.svg";
-import logoLight from "./assets/logo-light.svg";
 import { Provider as ReduxProvider } from "react-redux";
-import { store } from "./store";
 import { useTheme } from "@mui/material/styles";
+import { store } from "./store";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
 import GlobalSnackbarProvider from "./contexts/global-snackbar-context";
+import { AuthProvider } from "./contexts/jwt-context";
+import { useAuth } from "./hooks/use-auth";
+import { withAuthGuard } from "./hocs/with-auth-guard";
 
+import logoDark from "./assets/logo-dark.svg";
+import logoLight from "./assets/logo-light.svg";
+
+// Lazy pages
 const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/explorer"));
 const Configuration = React.lazy(() => import("./pages/configuration"));
 const NavBar = React.lazy(() => import("./components/navbar/navbar"));
 
-// Splash screen while loading
+/**
+ * Splash screen while loading
+ * @returns {React.ReactNode} The SplashScreen component
+ */
 const SplashScreen = () => {
 	const theme = useTheme();
 	return (
@@ -43,44 +50,53 @@ const SplashScreen = () => {
 };
 
 /**
- * App layout component
- * @param {{ authed: boolean, onToggleTheme: () => void }} props
- * @returns JSX.Element
+ * Layout for authenticated app
+ * @param {Function} onToggleTheme - The function to toggle the theme
+ * @returns {React.ReactNode} The AppLayout component
  */
-const AppLayout = ({ authed, onToggleTheme }) => {
+const AppLayout = ({ onToggleTheme }) => {
 	return (
 		<>
-			{authed && <NavBar onToggleTheme={onToggleTheme} />}
-			{/* Global unsaved changes guard */}
+			<NavBar onToggleTheme={onToggleTheme} />
 			<UnsavedChangesGuard />
-			{/* Child pages render here */}
 			<Outlet />
 		</>
 	);
 };
 
-// Theme settings
+// Wrap AppLayout with authentication guard
+const GuardedAppLayout = withAuthGuard(AppLayout);
+
+const STORAGE_KEY = "metricshub.paletteMode"; // 'light' | 'dark'
+
+/**
+ * Theme settings
+ * @type {Object}
+ * @property {string} direction - The direction of the theme
+ * @property {string} defaultMode - The default mode of the theme
+ * @property {boolean} responsiveFontSizes - Whether to responsive font sizes
+ */
 const themeSettings = {
 	direction: "ltr",
-	paletteMode: "dark",
+	defaultMode: "dark",
 	responsiveFontSizes: true,
 };
 
-// Key to store theme preference in localStorage
-const STORAGE_KEY = "metricshub.paletteMode"; // 'light' | 'dark'
-
-// Get initial mode from localStorage or default to dark
+// Retrieve saved theme
 const getInitialMode = (defaultMode = "dark") => {
 	const saved = localStorage.getItem(STORAGE_KEY);
 	if (saved === "light" || saved === "dark") return saved;
 	return defaultMode;
 };
 
+/**
+ * Main App component
+ * @returns {React.ReactNode} The App component
+ */
 export default function App() {
-	// light or dark
-	const [mode, setMode] = useState(() => getInitialMode(themeSettings.paletteMode));
+	const [mode, setMode] = useState(() => getInitialMode(themeSettings.defaultMode));
 
-	// Persist to localStorage whenever mode changes
+	// Persist theme preference
 	useEffect(() => {
 		localStorage.setItem(STORAGE_KEY, mode);
 	}, [mode]);
@@ -102,44 +118,43 @@ export default function App() {
 			<ReduxProvider store={store}>
 				<GlobalSnackbarProvider>
 					<AuthProvider>
-						<AuthConsumer>
-							{(auth) =>
-								auth.isInitialized ? (
-									<BrowserRouter>
-										<React.Suspense fallback={<SplashScreen />}>
-											<Routes>
-												<Route path={paths.login} element={<LoginPage />} />
-												{/* App routes with NavBar */}
-												<Route
-													element={
-														<AppLayout
-															authed={auth.isAuthenticated}
-															onToggleTheme={() =>
-																setMode((prev) => (prev === "light" ? "dark" : "light"))
-															}
-														/>
-													}
-												>
-													<Route path={paths.explorer} element={<Explorer />} />
-													<Route path={paths.configuration} element={<Configuration />} />
-													<Route
-														path={`${paths.configuration}/:name`}
-														element={<Configuration />}
-													/>
-													{/* Fallback */}
-													<Route path="*" element={<Navigate to={paths.explorer} replace />} />
-												</Route>
-											</Routes>
-										</React.Suspense>
-									</BrowserRouter>
-								) : (
-									<SplashScreen />
-								)
-							}
-						</AuthConsumer>
+						<AppContent
+							onToggleTheme={() => setMode((prev) => (prev === "light" ? "dark" : "light"))}
+						/>
 					</AuthProvider>
 				</GlobalSnackbarProvider>
 			</ReduxProvider>
 		</ThemeProvider>
 	);
 }
+
+/**
+ * AppContent component
+ * @param {Function} onToggleTheme - The function to toggle the theme
+ * @returns {React.ReactNode} The AppContent component
+ */
+const AppContent = ({ onToggleTheme }) => {
+	const { isInitialized } = useAuth();
+
+	if (!isInitialized) return <SplashScreen />;
+
+	return (
+		<BrowserRouter>
+			<Suspense fallback={<SplashScreen />}>
+				<Routes>
+					{/* Public routes */}
+					<Route path={paths.login} element={<LoginPage />} />
+
+					{/* Private routes */}
+					<Route element={<GuardedAppLayout onToggleTheme={onToggleTheme} />}>
+						<Route path={paths.explorer} element={<Explorer />} />
+						<Route path={paths.configuration} element={<Configuration />} />
+						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
+						{/* Catch-all */}
+						<Route path="*" element={<Navigate to={paths.explorer} replace />} />
+					</Route>
+				</Routes>
+			</Suspense>
+		</BrowserRouter>
+	);
+};
