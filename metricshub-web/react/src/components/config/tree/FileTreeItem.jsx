@@ -17,10 +17,10 @@ import {
 	restoreConfigFromBackup,
 	deleteBackupFile,
 	fetchConfigList,
-} from "../../../store/thunks/configThunks";
+} from "../../../store/thunks/config-thunks";
 import QuestionDialog from "../../common/QuestionDialog";
-import { downloadConfigFile } from "../../../services/downloadService";
-import { parseBackupFileName } from "../../../utils/backupNames";
+import { downloadConfigFile } from "../../../services/download-service";
+import { parseBackupFileName } from "../../../utils/backup-names";
 
 /**
  * File tree item component.

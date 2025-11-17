@@ -1,7 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { configApi } from "../../api/config";
-import { isBackupFileName } from "../../utils/backupNames";
-import { createBackupSet, restoreBackupFile } from "../../services/backupService";
+import { isBackupFileName } from "../../utils/backup-names";
+import { createBackupSet, restoreBackupFile } from "../../services/backup-service";
 
 /**
  * Fetch the list of configuration files.

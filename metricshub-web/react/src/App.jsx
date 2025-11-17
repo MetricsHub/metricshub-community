@@ -8,19 +8,19 @@ import { store } from "./store";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
-import GlobalSnackbarProvider from "./contexts/global-snackbar-context";
-import { AuthProvider } from "./contexts/jwt-context";
+import GlobalSnackbarProvider from "./contexts/GlobalSnackbarContext";
+import { AuthProvider } from "./contexts/JwtContext";
 import { useAuth } from "./hooks/use-auth";
-import { withAuthGuard } from "./hocs/with-auth-guard";
+import { withAuthGuard } from "./hocs/WithAuthGuard";
 
 import logoDark from "./assets/logo-dark.svg";
 import logoLight from "./assets/logo-light.svg";
 
 // Lazy pages
-const LoginPage = React.lazy(() => import("./pages/login")); // already wrapped with AuthLayout
-const Explorer = React.lazy(() => import("./pages/explorer"));
-const Configuration = React.lazy(() => import("./pages/configuration"));
-const NavBar = React.lazy(() => import("./components/navbar/navbar"));
+const LoginPage = React.lazy(() => import("./pages/LoginPage")); // already wrapped with AuthLayout
+const Explorer = React.lazy(() => import("./pages/ExplorerPage"));
+const Configuration = React.lazy(() => import("./pages/ConfigurationPage"));
+const NavBar = React.lazy(() => import("./components/navbar/Navbar"));
 
 /**
  * Splash screen while loading

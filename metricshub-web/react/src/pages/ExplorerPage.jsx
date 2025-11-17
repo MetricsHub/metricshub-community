@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Typography } from "@mui/material";
-import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
+import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
 /**
  * Monitor page component

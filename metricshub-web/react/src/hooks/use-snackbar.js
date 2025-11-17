@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SnackbarContext } from "../contexts/global-snackbar-context";
+import { SnackbarContext } from "../contexts/GlobalSnackbarContext";
 
 /**
  * Hook to access the global snackbar API.

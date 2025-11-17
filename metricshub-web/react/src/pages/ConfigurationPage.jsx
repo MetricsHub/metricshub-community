@@ -1,10 +1,10 @@
-// src/pages/configuration.jsx
+// src/pages/ConfigurationPage.jsx
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
 
-import { SplitScreen, Left, Right } from "../components/split-screen/split-screen";
+import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import {
@@ -12,14 +12,14 @@ import {
 	fetchConfigContent,
 	deleteConfig,
 	renameConfig,
-} from "../store/thunks/configThunks";
+} from "../store/thunks/config-thunks";
 import {
 	select as selectFile,
 	addLocalFile,
 	setContent,
 	renameLocalFile,
 	deleteLocalFile,
-} from "../store/slices/configSlice";
+} from "../store/slices/config-slice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
 import ConfigTree from "../components/config/tree/ConfigTree";
@@ -217,7 +217,7 @@ function ConfigurationPage() {
 					<QuestionDialog
 						open={deleteOpen}
 						title="Delete file"
-						question={`Are you sure you want to delete “${deleteTarget ?? ""}”? This action cannot be undone.`}
+						question={`Are you sure you want to delete "${deleteTarget ?? ""}"? This action cannot be undone.`}
 						onClose={() => setDeleteOpen(false)}
 						actionButtons={[
 							{ btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
