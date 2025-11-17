@@ -5,7 +5,7 @@ import NodeTypeIcons from "./icons/NodeTypeIcons";
 
 /**
  * Generic explorer tree item label.
- * Displays icon + name and supports custom right adornment.
+ * Displays icon + name.
  */
 const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 	name,
@@ -24,7 +24,7 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 			}}
 		>
 			<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-				<NodeTypeIcons type={type} isFolder={isFolder} />
+				<NodeTypeIcons type={type} />
 				<Typography
 					component="span"
 					noWrap

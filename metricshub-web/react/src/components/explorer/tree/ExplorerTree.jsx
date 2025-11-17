@@ -12,67 +12,47 @@ import {
 
 /**
  * @typedef {Object} ExplorerNode
- * @property {string} id - Stable unique id for the tree item
- * @property {string} name - Display name for the node
- * @property {string=} type - Optional type for iconography and styling
- * @property {ExplorerNode[]=} children - Optional child nodes
+ * @property {string} id - Stable unique id for the tree item (derived)
+ * @property {string} name - Display name for the node (backend provided)
+ * @property {string} type - Node type (backend provided)
+ * @property {ExplorerNode[]} children - Child nodes (empty array when no children)
  */
 
 /**
- * Convert backend hierarchy shape into a normalized tree node with stable ids.
- * Accepts either an object root or an array of top-level nodes.
- * Tries multiple conventional field names and merges known arrays (e.g., resources + resourceGroups).
- *
- * @param {any} raw - Raw data returned by the backend hierarchy endpoint
- * @returns {ExplorerNode|null} Normalized root node or null when input is empty
+ * Normalize backend hierarchy (single root object).
+ * Backend guarantees `name` & `type`. Child collections may appear under
+ * one of several keys: `children`, `resources`, `resourceGroups`, `nodes`, `items`.
+ * We merge them in a stable order to produce a unified children array.
+ * @param {any} raw
+ * @returns {ExplorerNode|null}
  */
 const buildTree = (raw) => {
 	if (!raw) return null;
 
-	const getName = (n, fallbackIndex) =>
-		n?.name ??
-		n?.label ??
-		n?.id ??
-		(typeof fallbackIndex === "number" ? `item-${fallbackIndex}` : "(unnamed)");
-	const getType = (n) => n?.type ?? n?.kind ?? n?.category ?? undefined;
-	const getChildren = (n) => {
-		const candidates = [n?.children, n?.nodes, n?.items, n?.resources, n?.resourceGroups];
-		const merged = [];
-		for (const c of candidates) if (Array.isArray(c)) merged.push(...c);
-		return merged.length ? merged : null;
-	};
-
-	const walk = (node, pathParts, pos) => {
-		const name = getName(node, pos);
-		const id = pathParts.concat([name]).join("/");
-		const rawChildren = getChildren(node);
-		const children = Array.isArray(rawChildren)
-			? rawChildren.map((c, i) => walk(c, pathParts.concat([name]), i))
-			: [];
-		return { id, name, type: getType(node), children };
-	};
-
-	// If backend returns an array at the root
-	if (Array.isArray(raw)) {
-		// If it contains a single element, treat that element as the root
-		if (raw.length === 1) {
-			return walk(raw[0], ["root"], 0);
+	const collectChildren = (node) => {
+		const keys = ["children", "resources", "resourceGroups", "nodes", "items"];
+		const out = [];
+		for (const k of keys) {
+			const v = node[k];
+			if (Array.isArray(v)) out.push(...v);
 		}
-		// Otherwise create a synthetic grouping node and attach each item
-		return {
-			id: "__explorer_root__",
-			name: "Explorer",
-			type: "group",
-			children: raw.map((c, i) => walk(c, ["Explorer"], i)),
-		};
-	}
+		return out;
+	};
 
-	return walk(raw, ["root"], 0);
+	const walk = (node, pathParts) => {
+		const name = node.name;
+		const id = [...pathParts, name].join("/");
+		const rawChildren = collectChildren(node);
+		const children = rawChildren.map((c) => walk(c, [...pathParts, name]));
+		return { id, name, type: node.type, children };
+	};
+
+	return walk(raw, ["root"]);
 };
 
 /**
  * ExplorerTree renders the hierarchy fetched from the explorer endpoint.
- * Recursively builds tree item nodes similar in style to ConfigTree.
+ * Recursively builds tree item nodes.
  */
 export default function ExplorerTree() {
 	const dispatch = useAppDispatch();
@@ -80,7 +60,6 @@ export default function ExplorerTree() {
 	const loading = useAppSelector(selectExplorerLoading);
 	const error = useAppSelector(selectExplorerError);
 
-	// Fetch hierarchy on mount (and when first empty) – avoid re-fetch if already loaded.
 	React.useEffect(() => {
 		if (!hierarchyRaw && !loading && !error) {
 			dispatch(fetchExplorerHierarchy());
