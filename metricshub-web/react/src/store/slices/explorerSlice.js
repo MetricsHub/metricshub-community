@@ -7,7 +7,6 @@ import { fetchExplorerHierarchy } from "../thunks/explorerThunks";
  * @property {any|null} hierarchy - The fetched hierarchy tree
  * @property {boolean} loading - Loading flag for hierarchy fetch
  * @property {string|null} error - Error message when fetch fails
- * @property {number|null} lastUpdatedAt - Epoch millis when hierarchy last updated
  */
 
 /** @type {ExplorerState} */
@@ -16,7 +15,6 @@ const initialState = {
 	hierarchy: null,
 	loading: false,
 	error: null,
-	lastUpdatedAt: null,
 };
 
 const explorerSlice = createSlice({
@@ -28,7 +26,6 @@ const explorerSlice = createSlice({
 			state.hierarchy = null;
 			state.loading = false;
 			state.error = null;
-			state.lastUpdatedAt = null;
 		},
 	},
 	extraReducers: (b) => {
@@ -39,7 +36,6 @@ const explorerSlice = createSlice({
 			.addCase(fetchExplorerHierarchy.fulfilled, (s, a) => {
 				s.loading = false;
 				s.hierarchy = a.payload ?? null;
-				s.lastUpdatedAt = Date.now();
 			})
 			.addCase(fetchExplorerHierarchy.rejected, (s, a) => {
 				s.loading = false;
@@ -56,4 +52,3 @@ const base = (state) => state.explorer ?? initialState;
 export const selectExplorerHierarchy = createSelector([base], (s) => s.hierarchy);
 export const selectExplorerLoading = createSelector([base], (s) => s.loading);
 export const selectExplorerError = createSelector([base], (s) => s.error);
-export const selectExplorerLastUpdatedAt = createSelector([base], (s) => s.lastUpdatedAt);
