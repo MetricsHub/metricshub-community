@@ -1,12 +1,12 @@
 import * as React from "react";
 import { Box } from "@mui/material";
 import DeviceHubIcon from "@mui/icons-material/DeviceHub";
-import FolderSpecialOutlinedIcon from "@mui/icons-material/FolderSpecialOutlined";
+import DomainIcon from "@mui/icons-material/Domain";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 
 const ICONS = {
 	agent: DeviceHubIcon,
-	"resource-group": FolderSpecialOutlinedIcon,
+	"resource-group": DomainIcon,
 	resource: DnsOutlinedIcon,
 };
 
