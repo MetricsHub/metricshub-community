@@ -1,5 +1,5 @@
 import { createSlice, createSelector } from "@reduxjs/toolkit";
-import { fetchExplorerHierarchy } from "../thunks/explorerThunks";
+import { fetchExplorerHierarchy } from "../thunks/explorer-thunks";
 
 /**
  * Explorer slice state

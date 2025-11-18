@@ -16,14 +16,6 @@ export const AuthGuard = ({ children }) => {
 	const location = useLocation();
 
 	/**
-	 * capture the first URL that required authentication
-	 */
-	const returnToRef = React.useRef(null);
-	if (!returnToRef.current) {
-		returnToRef.current = `${location.pathname}${location.search}${location.hash}`;
-	}
-
-	/**
 	 * Check authentication status and redirect if necessary.
 	 */
 	const check = React.useCallback(() => {
@@ -36,16 +28,25 @@ export const AuthGuard = ({ children }) => {
 
 		// Not authenticated, redirect to login
 		if (!isAuthenticated) {
-			const returnTo = returnToRef.current || "/";
-			const searchParams = new URLSearchParams({ returnTo }).toString();
-			navigate(`${paths.login}?${searchParams}`, { replace: true });
+			// Use current location for returnTo to ensure we capture where the user was when they logged out
+			const currentPath = `${location.pathname}${location.search}${location.hash}`;
+			let searchParams = "";
+
+			// Never set returnTo to "/" or login page
+			if (currentPath !== "/" && currentPath !== paths.login) {
+				searchParams = new URLSearchParams({
+					returnTo: currentPath,
+				}).toString();
+			}
+
+			navigate(`${paths.login}${searchParams ? `?${searchParams}` : ""}`, { replace: true });
 			setChecked(false);
 			return;
 		}
 
 		// authenticated, allow render
 		setChecked(true);
-	}, [isAuthenticated, isInitialized, navigate, location.pathname]);
+	}, [isAuthenticated, isInitialized, navigate, location]);
 
 	/**
 	 * Run check on mount and when auth state changes.

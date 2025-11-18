@@ -1,7 +1,7 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { applicationStatusReducer } from "./slices/application-status-slice";
 import { configReducer } from "./slices/config-slice";
-import { explorerReducer } from "./slices/explorerSlice";
+import { explorerReducer } from "./slices/explorer-slice";
 
 /**
  * Main Redux store configuration

@@ -3,12 +3,12 @@ import { SimpleTreeView, treeItemClasses } from "@mui/x-tree-view";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import ExplorerTreeItem from "./TreeItem";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
-import { fetchExplorerHierarchy } from "../../../store/thunks/explorerThunks";
+import { fetchExplorerHierarchy } from "../../../store/thunks/explorer-thunks";
 import {
 	selectExplorerHierarchy,
 	selectExplorerLoading,
 	selectExplorerError,
-} from "../../../store/slices/explorerSlice";
+} from "../../../store/slices/explorer-slice";
 
 /**
  * @typedef {Object} ExplorerNode
