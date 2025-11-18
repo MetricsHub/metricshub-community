@@ -16,6 +16,7 @@ import { BrowserRouter } from "react-router-dom";
 import { configureStore } from "@reduxjs/toolkit";
 import { applicationStatusReducer } from "../store/slices/application-status-slice";
 import { configReducer } from "../store/slices/config-slice";
+import { explorerReducer } from "../store/slices/explorer-slice";
 import { AuthProvider } from "../contexts/JwtContext";
 
 /**
@@ -32,6 +33,7 @@ export function createTestStore(initialState = {}) {
 		reducer: {
 			applicationStatus: applicationStatusReducer,
 			config: configReducer,
+			explorer: explorerReducer,
 		},
 		preloadedState: initialState,
 	});

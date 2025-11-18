@@ -21,7 +21,7 @@ package org.metricshub.web.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY;
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_AGENT_HOST_NAME_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.CONNECTOR;
@@ -76,7 +76,8 @@ public class ExplorerService {
 	/**
 	 * Creates a new ExplorerService instance.
 	 *
-	 * @param agentContextHolder holder providing access to the current {@link org.metricshub.agent.context.AgentContext}
+	 * @param agentContextHolder holder providing access to the current
+	 *                           {@link org.metricshub.agent.context.AgentContext}
 	 * @param searchService      service that performs fuzzy searches across the
 	 */
 	public ExplorerService(final AgentContextHolder agentContextHolder, final SearchService searchService) {
@@ -93,8 +94,8 @@ public class ExplorerService {
 		final var agentContext = agentContextHolder.getAgentContext();
 		final Map<String, String> agentAttributes = agentContext.getAgentInfo().getAttributes();
 		final String agentName = agentAttributes.getOrDefault(
-			AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY,
-			agentAttributes.getOrDefault(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "MetricsHub")
+			AGENT_RESOURCE_AGENT_HOST_NAME_ATTRIBUTE_KEY,
+			agentAttributes.getOrDefault(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "MetricsHub")
 		);
 
 		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).build();
@@ -178,9 +179,10 @@ public class ExplorerService {
 	 * </p>
 	 *
 	 * @param resourceKey the resource key/name to resolve
-	 * @param groupKey     optional group key used to disambiguate grouped searches
-	 * @param groupedOnly  if {@code true}, restricts the search to grouped resources;
-	 *                     if {@code false}, top-level is searched first
+	 * @param groupKey    optional group key used to disambiguate grouped searches
+	 * @param groupedOnly if {@code true}, restricts the search to grouped
+	 *                    resources;
+	 *                    if {@code false}, top-level is searched first
 	 * @return the fully built resource subtree with attributes and metrics
 	 * @throws ResponseStatusException HTTP 404 when the resource cannot be found
 	 */
@@ -231,17 +233,28 @@ public class ExplorerService {
 	/**
 	 * Returns a top-level resource (not belonging to any resource-group).
 	 *
-	 * <p>This method retrieves the telemetry managers from the agent context and extracts the
-	 * {@code TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY} group, which contains all top-level resources.
-	 * It then attempts to locate the {@link TelemetryManager} associated with the given
-	 * {@code resourceName}. If found, the full {@link ResourceTelemetry} node is built and returned.</p>
+	 * <p>
+	 * This method retrieves the telemetry managers from the agent context and
+	 * extracts the
+	 * {@code TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY} group, which contains all
+	 * top-level resources.
+	 * It then attempts to locate the {@link TelemetryManager} associated with the
+	 * given
+	 * {@code resourceName}. If found, the full {@link ResourceTelemetry} node is
+	 * built and returned.
+	 * </p>
 	 *
-	 * <p>If the resource does not exist in the top-level group, a
-	 * {@link org.springframework.web.server.ResponseStatusException} with HTTP 404 is thrown.</p>
+	 * <p>
+	 * If the resource does not exist in the top-level group, a
+	 * {@link org.springframework.web.server.ResponseStatusException} with HTTP 404
+	 * is thrown.
+	 * </p>
 	 *
-	 * @param resourceName the resource key/name to resolve; must not be {@code null}
+	 * @param resourceName the resource key/name to resolve; must not be
+	 *                     {@code null}
 	 * @return the resolved top-level resource subtree
-	 * @throws ResponseStatusException with HTTP status 404 when the resource cannot be found
+	 * @throws ResponseStatusException with HTTP status 404 when the resource cannot
+	 *                                 be found
 	 */
 	public ResourceTelemetry getTopLevelResource(@NonNull final String resourceName) {
 		final var telemetryManagers = agentContextHolder.getAgentContext().getTelemetryManagers();
@@ -256,20 +269,30 @@ public class ExplorerService {
 	}
 
 	/**
-	 * Returns a resource that belongs to resource-groups (excluding the top-level virtual group).
+	 * Returns a resource that belongs to resource-groups (excluding the top-level
+	 * virtual group).
 	 * If {@code groupKey} is provided, only that group is searched.
 	 *
-	 * <p>This method looks through all telemetry manager groups and attempts to find the
-	 * {@link TelemetryManager} associated with the given {@code resourceName}. If found, it builds and
-	 * returns the full {@link ResourceTelemetry} tree for that resource.</p>
+	 * <p>
+	 * This method looks through all telemetry manager groups and attempts to find
+	 * the
+	 * {@link TelemetryManager} associated with the given {@code resourceName}. If
+	 * found, it builds and
+	 * returns the full {@link ResourceTelemetry} tree for that resource.
+	 * </p>
 	 *
-	 * <p>If the resource cannot be found in any applicable group, a
-	 * {@link org.springframework.web.server.ResponseStatusException} with HTTP 404 is thrown.</p>
+	 * <p>
+	 * If the resource cannot be found in any applicable group, a
+	 * {@link org.springframework.web.server.ResponseStatusException} with HTTP 404
+	 * is thrown.
+	 * </p>
 	 *
 	 * @param resourceName the resource key/name to resolve
-	 * @param groupKey     optional group key to restrict the search; if blank or {@code null}, all groups are searched
+	 * @param groupKey     optional group key to restrict the search; if blank or
+	 *                     {@code null}, all groups are searched
 	 * @return the resolved grouped resource subtree
-	 * @throws ResponseStatusException with HTTP status 404 when the resource cannot be found
+	 * @throws ResponseStatusException with HTTP status 404 when the resource cannot
+	 *                                 be found
 	 */
 	public ResourceTelemetry getGroupedResource(final String resourceName, final String groupKey) {
 		if (!StringHelper.nonNullNonBlank(resourceName)) {
@@ -362,10 +385,14 @@ public class ExplorerService {
 	}
 
 	/**
-	 * Appends a connector node to the given list, expanding its monitor types and instances.
+	 * Appends a connector node to the given list, expanding its monitor types and
+	 * instances.
+	 *
 	 * @param tm                        the telemetry manager to search for monitors
-	 * @param connectorIdToMonitorTypes map of connector IDs to their associated monitor types
-	 * @param connectors                the list of connectors to which the new connector node will be added
+	 * @param connectorIdToMonitorTypes map of connector IDs to their associated
+	 *                                  monitor types
+	 * @param connectors                the list of connectors to which the new
+	 *                                  connector node will be added
 	 * @param connectorMonitor          the connector monitor instance
 	 */
 	private static void appendConnectorNode(
@@ -398,9 +425,11 @@ public class ExplorerService {
 
 	/**
 	 * Appends a monitor-type node under the given connector node, expanding all
+	 *
 	 * @param tm            the telemetry manager to search for monitors
 	 * @param connectorId   the connector identifier
-	 * @param connectorNode the connector telemetry node to which the monitor type will be added
+	 * @param connectorNode the connector telemetry node to which the monitor type
+	 *                      will be added
 	 * @param type          the monitor type name
 	 */
 	private static void appendMonitorType(
@@ -429,8 +458,9 @@ public class ExplorerService {
 
 	/**
 	 * Appends monitor instances to the given monitor-type node.
+	 *
 	 * @param monitorTypeNode the monitor-type telemetry node
-	 * @param monitor the monitor instance to append
+	 * @param monitor         the monitor instance to append
 	 */
 	private static void appendInstances(final MonitorTypeTelemetry monitorTypeNode, Monitor monitor) {
 		final InstanceTelemetry instanceNode = InstanceTelemetry.builder().name(monitor.getId()).build();
@@ -445,6 +475,7 @@ public class ExplorerService {
 
 	/**
 	 * Comparator helper to sort monitors by their identifier.
+	 *
 	 * @param a The first monitor
 	 * @param b The second monitor
 	 * @return comparison result
@@ -455,6 +486,7 @@ public class ExplorerService {
 
 	/**
 	 * Extracts the raw value from a metric, or null if the metric is null.
+	 *
 	 * @param metric the metric instance
 	 * @return the raw metric value or null
 	 */
@@ -463,7 +495,8 @@ public class ExplorerService {
 	}
 
 	/**
-	 * Performs a search across hierarchy elements (excluding virtual container nodes) using Jaro–Winkler
+	 * Performs a search across hierarchy elements (excluding virtual container
+	 * nodes) using Jaro–Winkler
 	 *
 	 * @param query raw query string
 	 * @return ranked list of matches
