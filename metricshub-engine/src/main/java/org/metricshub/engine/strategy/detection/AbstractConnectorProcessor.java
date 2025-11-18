@@ -481,7 +481,7 @@ public abstract class AbstractConnectorProcessor {
 			Files.createDirectories(criterionResultOutputDirectory);
 
 			final String fileName = String.format(
-				"%s_%s_%s_criterion%d.yaml",
+				"%s-%s-%s-criterion%d.yaml",
 				telemetryManager.getHostname(),
 				connectorId,
 				criterion.getType(),
@@ -534,7 +534,7 @@ public abstract class AbstractConnectorProcessor {
 	) {
 		final Path outDir = Paths.get(emulationModeCriterionOutputDirectory);
 		final String expectedFileName = String.format(
-			"%s_%s_%s_criterion%d.yaml",
+			"%s-%s-%s-criterion%d.yaml",
 			telemetryManager.getHostname(),
 			connectorId,
 			criterion.getType(),
