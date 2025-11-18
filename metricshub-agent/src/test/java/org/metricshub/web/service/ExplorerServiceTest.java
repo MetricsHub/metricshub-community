@@ -2,7 +2,7 @@ package org.metricshub.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY;
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_AGENT_HOST_NAME_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
 import static org.metricshub.agent.helper.ConfigHelper.TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
@@ -161,7 +161,7 @@ class ExplorerServiceTest {
 
 	@Test
 	void testGetHierarchyWithNoTelemetryManagers() {
-		final Map<String, String> agentAttrs = Map.of(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY, "Hosty");
+		final Map<String, String> agentAttrs = Map.of(AGENT_RESOURCE_AGENT_HOST_NAME_ATTRIBUTE_KEY, "Hosty");
 		final ExplorerService service = new ExplorerService(newMockedAgentContextHolder(null, agentAttrs), searchService);
 		final AgentTelemetry root = service.getHierarchy();
 		assertEquals("Hosty", root.getName(), "Agent name should match host name attribute");

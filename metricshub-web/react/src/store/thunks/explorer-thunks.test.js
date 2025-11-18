@@ -8,37 +8,37 @@ import { explorerReducer } from "../slices/explorer-slice";
 import { explorerApi } from "../../api/explorer";
 
 vi.mock("../../api/explorer", () => ({
-    explorerApi: { getHierarchy: vi.fn() },
+	explorerApi: { getHierarchy: vi.fn() },
 }));
 
 describe("fetchExplorerHierarchy", () => {
-    let store;
-    beforeEach(() => {
-        store = configureStore({ reducer: { explorer: explorerReducer } });
-        vi.clearAllMocks();
-    });
+	let store;
+	beforeEach(() => {
+		store = configureStore({ reducer: { explorer: explorerReducer } });
+		vi.clearAllMocks();
+	});
 
-    it("fetches hierarchy successfully", async () => {
-        const payload = { name: "Root", type: "resource-group", children: [] };
-        explorerApi.getHierarchy.mockResolvedValue(payload);
+	it("fetches hierarchy successfully", async () => {
+		const payload = { name: "Root", type: "resource-group", children: [] };
+		explorerApi.getHierarchy.mockResolvedValue(payload);
 
-        await store.dispatch(fetchExplorerHierarchy());
+		await store.dispatch(fetchExplorerHierarchy());
 
-        const s = store.getState().explorer;
-        expect(s.loading).toBe(false);
-        expect(s.hierarchy).toEqual(payload);
-        expect(s.error).toBe(null);
-        expect(explorerApi.getHierarchy).toHaveBeenCalledTimes(1);
-    });
+		const s = store.getState().explorer;
+		expect(s.loading).toBe(false);
+		expect(s.hierarchy).toEqual(payload);
+		expect(s.error).toBe(null);
+		expect(explorerApi.getHierarchy).toHaveBeenCalledTimes(1);
+	});
 
-    it("handles error from API", async () => {
-        explorerApi.getHierarchy.mockRejectedValue(new Error("net"));
+	it("handles error from API", async () => {
+		explorerApi.getHierarchy.mockRejectedValue(new Error("net"));
 
-        await store.dispatch(fetchExplorerHierarchy());
+		await store.dispatch(fetchExplorerHierarchy());
 
-        const s = store.getState().explorer;
-        expect(s.loading).toBe(false);
-        expect(s.hierarchy).toBe(null);
-        expect(s.error).toBe("net");
-    });
+		const s = store.getState().explorer;
+		expect(s.loading).toBe(false);
+		expect(s.hierarchy).toBe(null);
+		expect(s.error).toBe("net");
+	});
 });
