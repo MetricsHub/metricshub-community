@@ -11,8 +11,10 @@ const ICONS = {
 };
 
 const COLOR_GETTERS = {
-	agent: (t) => t.palette.primary.main,
-	"resource-group": (t) => t.palette.warning.main,
+	// agent renders full-color logo; do not force a color
+	agent: null,
+	// folders should be neutral/grey, not warning/orange
+	"resource-group": (t) => t.palette.text.secondary,
 	resource: (t) => t.palette.info.main,
 };
 
@@ -24,13 +26,30 @@ const COLOR_GETTERS = {
 const NodeTypeIconsComponent = ({ type }) => {
 	const key = ICONS[type] ? type : "resource"; // fallback
 	const IconEl = ICONS[key];
-	const getColor = COLOR_GETTERS[key] || ((t) => t.palette.text.secondary);
+	const getColor = COLOR_GETTERS[key];
+	const colorSx =
+		key === "agent" ? undefined : (t) => (getColor ? getColor(t) : t.palette.text.secondary);
+
 	return (
 		<Box
 			component="span"
-			sx={{ display: "inline-flex", alignItems: "center", mr: 1, color: (t) => getColor(t) }}
+			sx={{
+				display: "inline-flex",
+				alignItems: "center",
+				mr: 1,
+				...(colorSx ? { color: colorSx } : {}),
+			}}
 		>
-			<IconEl fontSize="small" />
+			{key === "agent" ? (
+				<Box
+					component="img"
+					src="/favicon-32x32.png"
+					alt="MetricsHub Agent"
+					sx={{ width: 18, height: 18, display: "block" }}
+				/>
+			) : (
+				<IconEl fontSize="small" />
+			)}
 		</Box>
 	);
 };
