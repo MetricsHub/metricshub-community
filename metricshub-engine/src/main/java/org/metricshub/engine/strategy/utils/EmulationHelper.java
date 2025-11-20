@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy.utils;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -28,7 +29,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Optional;
-
+import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
@@ -38,10 +40,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.NoArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Helper class for persisting and reading emulated source and criterion results.
@@ -105,7 +103,6 @@ public class EmulationHelper {
 			final var fileName = String.join("-", hostname, connectorId, cleanKey) + ".yaml";
 
 			writeContent(sourceTable, sourceResultOutputDirectory, fileName);
-	
 		} catch (Exception e) {
 			log.warn(
 				"Hostname {} - Could not write SourceTable to {}. Error: {}",
@@ -210,8 +207,8 @@ public class EmulationHelper {
 	 * @param fileName        the name of the file to write
 	 * @throws IOException if an I/O error occurs
 	 */
-	private static <T> void writeContent(final T result, final Path outputDirectory,
-			final String fileName) throws IOException {
+	private static <T> void writeContent(final T result, final Path outputDirectory, final String fileName)
+		throws IOException {
 		final Path file = outputDirectory.resolve(fileName);
 
 		try (
