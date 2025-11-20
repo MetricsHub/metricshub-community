@@ -1,20 +1,30 @@
 import * as React from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Paper } from "@mui/material";
 
-const renderRow = (resource) => {
+/**
+ * Render a single resource row.
+ * @param {{ name: string, attributes?: Record<string, unknown> }} resource
+ * @returns {JSX.Element}
+ */
+const ResourceRow = React.memo(function ResourceRow({ resource }) {
     const attrs = resource.attributes ?? {};
     return (
-        <TableRow key={resource.name} hover>
+        <TableRow hover>
             <TableCell>{resource.name}</TableCell>
             <TableCell>{attrs["host.name"] ?? ""}</TableCell>
             <TableCell>{attrs["host.type"] ?? ""}</TableCell>
             <TableCell>{attrs["os.type"] ?? ""}</TableCell>
         </TableRow>
     );
-};
+});
 
+/**
+ * Table displaying rogue resources (not attached to any resource group).
+ * @param {{ resources?: Array<{ name: string, attributes?: Record<string, unknown> }> }} props
+ * @returns {JSX.Element}
+ */
 const ResourcesData = ({ resources }) => {
-    const allResources = resources ?? [];
+    const allResources = React.useMemo(() => resources ?? [], [resources]);
 
     return (
         <Box>
@@ -37,7 +47,9 @@ const ResourcesData = ({ resources }) => {
                                 <TableCell colSpan={4}>No resources</TableCell>
                             </TableRow>
                         ) : (
-                            allResources.map((r) => renderRow(r))
+                            allResources.map((resource) => (
+                                <ResourceRow key={resource.name} resource={resource} />
+                            ))
                         )}
                     </TableBody>
                 </Table>

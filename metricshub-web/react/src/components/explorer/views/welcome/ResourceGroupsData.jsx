@@ -1,11 +1,21 @@
 import * as React from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Paper } from "@mui/material";
 
+/**
+ * Count resources in a resource group.
+ * @param {{ resources?: unknown[] }} group
+ * @returns {number}
+ */
 const countResources = (group) => {
     const resources = group?.resources ?? [];
     return Array.isArray(resources) ? resources.length : 0;
 };
 
+/**
+ * Build the display label for a resource group using its attributes.
+ * @param {{ name?: string, attributes?: Record<string, unknown> }} group
+ * @returns {string}
+ */
 const buildGroupLabel = (group) => {
     const attrs = group?.attributes ?? {};
     const parts = [];
@@ -21,8 +31,13 @@ const buildGroupLabel = (group) => {
     return [group?.name || "", ...parts].join(" ").trim();
 };
 
+/**
+ * Table displaying resource groups handled by the agent.
+ * @param {{ resourceGroups?: Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }> }} props
+ * @returns {JSX.Element}
+ */
 const ResourceGroupsData = ({ resourceGroups }) => {
-    const groups = resourceGroups ?? [];
+    const groups = React.useMemo(() => resourceGroups ?? [], [resourceGroups]);
 
     return (
         <Box>

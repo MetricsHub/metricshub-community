@@ -6,10 +6,19 @@ import AgentData from "./AgentData";
 import ResourceGroupsData from "./ResourceGroupsData";
 import ResourcesData from "./ResourcesData";
 
+/**
+ * Default explorer welcome page displaying agent summary, groups and rogue resources.
+ * @returns {JSX.Element}
+ */
 const WelcomeView = () => {
     const hierarchy = useSelector(selectExplorerHierarchy);
     const loading = useSelector(selectExplorerLoading);
     const error = useSelector(selectExplorerError);
+    const resourceGroups = hierarchy?.resourceGroups ?? [];
+    // "Rogue" resources are those not attached to any resource group.
+    const rogueResources = hierarchy?.resources ?? [];
+    const totalResourcesInGroups = resourceGroups.reduce((acc, g) => acc + (g.resources?.length || 0), 0);
+    const totalResources = totalResourcesInGroups + rogueResources.length;
 
     if (loading && !hierarchy) {
         return (
@@ -34,12 +43,6 @@ const WelcomeView = () => {
             </Box>
         );
     }
-
-    const resourceGroups = hierarchy.resourceGroups ?? [];
-    // "Rogue" resources are those not attached to any resource group.
-    const rogueResources = hierarchy.resources ?? [];
-    const totalResourcesInGroups = resourceGroups.reduce((acc, g) => acc + (g.resources?.length || 0), 0);
-    const totalResources = totalResourcesInGroups + rogueResources.length;
 
     return (
         <Box p={2} display="flex" flexDirection="column" gap={4}>
