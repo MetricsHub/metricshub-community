@@ -42,7 +42,7 @@ const renderMetricsRows = (metrics) => {
     });
 };
 
-const AgentData = ({ agent }) => {
+const AgentData = ({ agent, totalResources }) => {
     if (!agent) {
         return null;
     }
@@ -59,6 +59,11 @@ const AgentData = ({ agent }) => {
                 </Typography>
                 {version && (
                     <Typography variant="subtitle1">Version: {version}</Typography>
+                )}
+                {typeof totalResources === "number" && (
+                    <Typography variant="subtitle1">
+                        Total resources: {totalResources}
+                    </Typography>
                 )}
             </Box>
 

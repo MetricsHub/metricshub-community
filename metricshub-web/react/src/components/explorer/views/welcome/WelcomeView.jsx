@@ -6,12 +6,6 @@ import AgentData from "./AgentData";
 import ResourceGroupsData from "./ResourceGroupsData";
 import ResourcesData from "./ResourcesData";
 
-const collectAllResources = (hierarchy) => {
-    const direct = hierarchy.resources ?? [];
-    const fromGroups = (hierarchy.resourceGroups ?? []).flatMap((g) => g.resources ?? []);
-    return [...direct, ...fromGroups];
-};
-
 const WelcomeView = () => {
     const hierarchy = useSelector(selectExplorerHierarchy);
     const loading = useSelector(selectExplorerLoading);
@@ -42,15 +36,18 @@ const WelcomeView = () => {
     }
 
     const resourceGroups = hierarchy.resourceGroups ?? [];
-    const allResources = collectAllResources(hierarchy);
+    // "Rogue" resources are those not attached to any resource group.
+    const rogueResources = hierarchy.resources ?? [];
+    const totalResourcesInGroups = resourceGroups.reduce((acc, g) => acc + (g.resources?.length || 0), 0);
+    const totalResources = totalResourcesInGroups + rogueResources.length;
 
     return (
         <Box p={2} display="flex" flexDirection="column" gap={4}>
-            <AgentData agent={hierarchy} />
+            <AgentData agent={hierarchy} totalResources={totalResources} />
             <Divider />
             <ResourceGroupsData resourceGroups={resourceGroups} />
             <Divider />
-            <ResourcesData resources={allResources} />
+            <ResourcesData resources={rogueResources} />
         </Box>
     );
 };

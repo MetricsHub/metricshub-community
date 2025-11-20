@@ -42,11 +42,6 @@ const ResourcesData = ({ resources }) => {
                     </TableBody>
                 </Table>
             </Paper>
-            <Box mt={1}>
-                <Typography variant="body2">
-                    Clicking a resource navigates to the Resource page.
-                </Typography>
-            </Box>
         </Box>
     );
 };

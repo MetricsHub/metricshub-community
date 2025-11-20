@@ -53,11 +53,6 @@ const ResourceGroupsData = ({ resourceGroups }) => {
                     </TableBody>
                 </Table>
             </Paper>
-            <Box mt={1}>
-                <Typography variant="body2">
-                    Each Key represents a Resource Group. Clicking a Resource Group Key navigates to the Resource Group page.
-                </Typography>
-            </Box>
         </Box>
     );
 };
