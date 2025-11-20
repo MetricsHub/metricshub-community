@@ -1,7 +1,8 @@
 import * as React from "react";
-import { Typography, Box } from "@mui/material";
+import { Box } from "@mui/material";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
+import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
 // Removed header and updated date UI
 
 /**
@@ -19,7 +20,7 @@ const ExplorerPage = () => {
 				</Box>
 			</Left>
 			<Right>
-				<Typography>Monitored Resources</Typography>
+				<WelcomeView />
 			</Right>
 		</SplitScreen>
 	);
