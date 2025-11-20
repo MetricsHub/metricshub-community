@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -63,6 +64,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.strategy.utils.EmulationHelper;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -95,6 +97,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	private TelemetryManager telemetryManager;
 	private String connectorId;
 	private Map<String, String> attributes;
+	private ExtensionManager extensionManager;
 
 	@Override
 	public SourceTable process(final HttpSource httpSource) {
@@ -199,11 +202,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		// Retrieve emulation input directory and read recorded source from it
 		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
 
+		// Predicate to check whether we should record or emulate the source
+		final Predicate<Source> shouldRecordOrEmulate = this::shouldRecordOrEmulate;
+
 		// CHECKSTYLE:OFF
-		if (
-			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
-			StringHelper.nonNullNonBlank(emulationInputDirectory)
-		) {
+		if (StringHelper.nonNullNonBlank(emulationInputDirectory) && shouldRecordOrEmulate.test(copy)) {
 			return EmulationHelper
 				.readEmulatedSourceTable(connectorId, copy, emulationInputDirectory, telemetryManager)
 				.orElseGet(SourceTable::empty);
@@ -214,7 +217,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 			var table = runExecuteForEachEntryOf(copy);
 
 			// Persist if it is requested through recordOutputDirectory
-			EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table);
+			EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
 
 			return table;
 		}
@@ -233,9 +236,25 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		var table = copy.accept(sourceProcessor);
 
 		// Persist if it is requested through recordOutputDirectory
-		EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table);
+		EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
 
 		return table;
+	}
+
+	/**
+	 * Checks whether we should record or emulate the given source copy
+	 *
+	 * @param copy {@link Source} instance copy
+	 * @return boolean value
+	 */
+	private boolean shouldRecordOrEmulate(final Source copy) {
+		// CHECKSTYLE:OFF
+		return (
+			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
+			(extensionManager.findSourceExtension(copy, telemetryManager).isPresent() ||
+				extensionManager.findCompositeSourceScriptExtension(copy).isPresent())
+		);
+		// CHECKSTYLE:ON
 	}
 
 	/**

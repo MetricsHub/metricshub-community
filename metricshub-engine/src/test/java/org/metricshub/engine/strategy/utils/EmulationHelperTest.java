@@ -43,7 +43,7 @@ class EmulationHelperTest {
 			.recordOutputDirectory(tempDir.toString())
 			.build();
 
-		EmulationHelper.persistIfRequired(nonSnmpSource, CONNECTOR_ID, telemetryManager, sourceTable);
+		EmulationHelper.persistIfRequired(nonSnmpSource, CONNECTOR_ID, telemetryManager, sourceTable, s -> true);
 
 		final Optional<SourceTable> result = EmulationHelper.readEmulatedSourceTable(
 			CONNECTOR_ID,
@@ -85,8 +85,8 @@ class EmulationHelperTest {
 			.key("snmpTable:key")
 			.build();
 
-		EmulationHelper.persistIfRequired(snmpGetSource, CONNECTOR_ID, telemetryManager, sourceTable);
-		EmulationHelper.persistIfRequired(snmpTableSource, CONNECTOR_ID, telemetryManager, sourceTable);
+		EmulationHelper.persistIfRequired(snmpGetSource, CONNECTOR_ID, telemetryManager, sourceTable, s -> false);
+		EmulationHelper.persistIfRequired(snmpTableSource, CONNECTOR_ID, telemetryManager, sourceTable, s -> false);
 
 		try (var paths = Files.list(tempDir)) {
 			assertFalse(paths.findAny().isPresent(), "Expected no files to be created for SNMP sources");

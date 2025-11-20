@@ -29,13 +29,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Optional;
+import java.util.function.Predicate;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
-import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -58,19 +57,18 @@ public class EmulationHelper {
 	 * @param connectorId      the identifier of the connector defining the source
 	 * @param telemetryManager the {@link TelemetryManager} to use
 	 * @param table            the {@link SourceTable} to persist
+	 * @param shouldPersist    predicate to determine if the source should be persisted
 	 */
 	public static void persistIfRequired(
 		final Source copy,
 		final String connectorId,
 		final TelemetryManager telemetryManager,
-		final SourceTable table
+		final SourceTable table,
+		final Predicate<Source> shouldPersist
 	) {
 		// Retrieve emulation output directory and persist source output if required and if not SNMP source
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-		if (
-			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
-			StringHelper.nonNullNonBlank(recordOutputDirectory)
-		) {
+		if (StringHelper.nonNullNonBlank(recordOutputDirectory) && shouldPersist.test(copy)) {
 			EmulationHelper.persist(table, connectorId, copy, recordOutputDirectory, telemetryManager);
 		}
 	}
@@ -182,7 +180,7 @@ public class EmulationHelper {
 			);
 
 			writeContent(result, outputDirectory, fileName);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.warn(
 				"Hostname {} - Could not write ConnectorTestResult to {}. Error: {}",
 				telemetryManager.getHostname(),
@@ -262,7 +260,7 @@ public class EmulationHelper {
 		try (var in = Files.newBufferedReader(expectedFile, StandardCharsets.UTF_8)) {
 			final CriterionTestResult result = YAML_MAPPER.readValue(in, CriterionTestResult.class);
 			return Optional.of(result);
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.warn(
 				"Hostname {} - Could not read CriterionTestResult from {}. Error: {}",
 				telemetryManager.getHostname(),

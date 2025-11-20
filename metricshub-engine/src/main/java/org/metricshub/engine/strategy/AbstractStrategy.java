@@ -281,6 +281,7 @@ public abstract class AbstractStrategy implements IStrategy {
 					.sourceProcessor(sourceProcessor)
 					.telemetryManager(telemetryManager)
 					.attributes(attributes)
+					.extensionManager(extensionManager)
 					.build()
 			);
 
