@@ -281,8 +281,10 @@ public class OsCommandService {
 		throws InterruptedException, ControlledSshException {
 		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
 
+		boolean acquired = false;
 		try {
-			if (semaphore.tryAcquire(timeout, TimeUnit.SECONDS)) {
+			acquired = semaphore.tryAcquire(timeout, TimeUnit.SECONDS);
+			if (acquired) {
 				return executable.get();
 			}
 
@@ -292,8 +294,14 @@ public class OsCommandService {
 			);
 
 			throw new ControlledSshException(message);
+		} catch (InterruptedException e) {
+			// Clear interrupt status to avoid leaking it upstream unintentionally
+			Thread.interrupted();
+			throw e;
 		} finally {
-			semaphore.release();
+			if (acquired) {
+				semaphore.release();
+			}
 		}
 	}
 
