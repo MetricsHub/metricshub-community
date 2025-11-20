@@ -43,6 +43,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -62,6 +63,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.strategy.utils.EmulationHelper;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -97,7 +99,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(final HttpSource httpSource) {
 		// Very important! otherwise we will overlap in multi-host mode
-		final HttpSource copy = httpSource.copy();
+		final var copy = httpSource.copy();
 
 		// Replace HTTP Authentication token
 		copy.setAuthenticationToken(
@@ -194,8 +196,27 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return {@link SourceTable}
 	 */
 	private SourceTable processSource(final Source copy) {
+		// Retrieve emulation input directory and read recorded source from it
+		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+
+		// CHECKSTYLE:OFF
+		if (
+			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
+			StringHelper.nonNullNonBlank(emulationInputDirectory)
+		) {
+			return EmulationHelper
+				.readEmulatedSourceTable(connectorId, copy, emulationInputDirectory, telemetryManager)
+				.orElseGet(SourceTable::empty);
+		}
+		// CHECKSTYLE:ON
+
 		if (copy.isExecuteForEachEntryOf()) {
-			return runExecuteForEachEntryOf(copy);
+			var table = runExecuteForEachEntryOf(copy);
+
+			// Persist if it is requested through recordOutputDirectory
+			EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table);
+
+			return table;
 		}
 
 		copy.update(value ->
@@ -203,13 +224,18 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		);
 		copy.update(value -> replaceAttributeReferences(value, attributes));
 
-		copy.update(value -> replaceProtocolPropertyReferences(value));
+		copy.update(this::replaceProtocolPropertyReferences);
 
 		copy.update(value -> replaceSourceReference(value, copy));
 
 		copy.update(value -> value == null ? value : value.replace("$$", "$"));
 
-		return copy.accept(sourceProcessor);
+		var table = copy.accept(sourceProcessor);
+
+		// Persist if it is requested through recordOutputDirectory
+		EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table);
+
+		return table;
 	}
 
 	/**
