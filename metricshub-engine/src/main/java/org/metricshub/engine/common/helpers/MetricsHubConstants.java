@@ -372,7 +372,7 @@ public class MetricsHubConstants {
 	/**
 	 * Double Pattern
 	 */
-	public static final Pattern DOUBLE_PATTERN = Pattern.compile("\\d+(\\.\\d+)?");
+	public static final Pattern DOUBLE_PATTERN = Pattern.compile("[+-]?(?:\\d+(?:\\.\\d+)?|\\.\\d+)");
 
 	/**
 	 * Translation Reference Pattern
