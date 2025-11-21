@@ -292,6 +292,9 @@ class ComputeProcessorTest {
 		sourceTable.getTable().add(new ArrayList<>(LINE_3));
 	}
 
+	/**
+	 * Creates a table with a single row containing 10 in the 2nd column.
+	 */
 	private List<List<String>> singleNumericRowTable() {
 		return new ArrayList<>(List.of(new ArrayList<>(Arrays.asList(ID1, TEN, VALUE_VAL1))));
 	}
