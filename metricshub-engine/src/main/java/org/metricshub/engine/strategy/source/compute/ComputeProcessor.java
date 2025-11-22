@@ -25,7 +25,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_PA
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COLUMN_REFERENCE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.COMMA;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.DEFAULT;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.DOUBLE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.FILE_PATTERN;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HEXA_PATTERN;
@@ -68,6 +67,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.awk.AwkExecutor;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
+import org.metricshub.engine.common.helpers.NumberHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.common.ConversionType;
@@ -1538,8 +1538,9 @@ public class ComputeProcessor implements IComputeProcessor {
 	 * @return {@link Integer} value
 	 */
 	static Integer transformToIntegerValue(final String value) {
-		if (value != null && DOUBLE_PATTERN.matcher(value).matches()) {
-			return (int) Double.parseDouble(value);
+		final var d = NumberHelper.parseDouble(value, null);
+		if (d != null) {
+			return d.intValue();
 		}
 		return null;
 	}
@@ -1699,7 +1700,7 @@ public class ComputeProcessor implements IComputeProcessor {
 				log.debug("Hostname {} - Stack trace:", hostname, e);
 				return;
 			}
-		} else if (!DOUBLE_PATTERN.matcher(operand2).matches()) {
+		} else if (!NumberHelper.isNumeric(operand2)) {
 			log.warn("Hostname {} - operand2 is not a number: {}, the table remains unchanged.", hostname, operand2);
 			return;
 		}
