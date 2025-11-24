@@ -1,15 +1,8 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
+import DashboardTable from "./DashboardTable";
+import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
 
 /**
  * Render rows for agent attributes.
@@ -21,15 +14,17 @@ const renderAttributesRows = (attributes) => {
 	if (entries.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={2}>No attributes</TableCell>
+				<TableCell colSpan={2} sx={emptyStateCellSx}>
+					No attributes
+				</TableCell>
 			</TableRow>
 		);
 	}
 
 	return entries.map(([key, value]) => (
-		<TableRow key={key}>
+		<TableRow key={key} hover>
 			<TableCell>{key}</TableCell>
-			<TableCell>{String(value)}</TableCell>
+			<TableCell align={typeof value === "number" ? "right" : "left"}>{String(value)}</TableCell>
 		</TableRow>
 	));
 };
@@ -44,7 +39,9 @@ const renderMetricsRows = (metrics) => {
 	if (entries.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={4}>No metrics</TableCell>
+				<TableCell colSpan={4} sx={emptyStateCellSx}>
+					No metrics
+				</TableCell>
 			</TableRow>
 		);
 	}
@@ -52,11 +49,11 @@ const renderMetricsRows = (metrics) => {
 	return entries.map(([name, m]) => {
 		const metric = m || {};
 		return (
-			<TableRow key={name}>
+			<TableRow key={name} hover>
 				<TableCell>{name}</TableCell>
-				<TableCell>{metric.value ?? ""}</TableCell>
+				<TableCell align="right">{metric.value ?? ""}</TableCell>
 				<TableCell>{metric.unit ?? ""}</TableCell>
-				<TableCell>{metric.lastUpdate ?? ""}</TableCell>
+				<TableCell align="right">{metric.lastUpdate ?? ""}</TableCell>
 			</TableRow>
 		);
 	});
@@ -82,7 +79,7 @@ const AgentData = ({ agent, totalResources }) => {
 				<Typography
 					variant="h4"
 					gutterBottom
-					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+					sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
 				>
 					<NodeTypeIcons type="agent" />
 					{title}
@@ -94,39 +91,35 @@ const AgentData = ({ agent, totalResources }) => {
 			</Box>
 
 			<Box>
-				<Typography variant="h6" gutterBottom>
+				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 					Attributes
 				</Typography>
-				<Paper variant="outlined">
-					<Table size="small">
-						<TableHead>
-							<TableRow>
-								<TableCell>Key</TableCell>
-								<TableCell>Value</TableCell>
-							</TableRow>
-						</TableHead>
-						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</Table>
-				</Paper>
+				<DashboardTable>
+					<TableHead>
+						<TableRow>
+							<TableCell>Key</TableCell>
+							<TableCell align="left">Value</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>{renderAttributesRows(attributes)}</TableBody>
+				</DashboardTable>
 			</Box>
 
 			<Box>
-				<Typography variant="h6" gutterBottom>
+				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 					Metrics
 				</Typography>
-				<Paper variant="outlined">
-					<Table size="small">
-						<TableHead>
-							<TableRow>
-								<TableCell>Name</TableCell>
-								<TableCell>Value</TableCell>
-								<TableCell>Unit</TableCell>
-								<TableCell>Last Update</TableCell>
-							</TableRow>
-						</TableHead>
-						<TableBody>{renderMetricsRows(agent.metrics)}</TableBody>
-					</Table>
-				</Paper>
+				<DashboardTable>
+					<TableHead>
+						<TableRow>
+							<TableCell>Name</TableCell>
+							<TableCell align="right">Value</TableCell>
+							<TableCell>Unit</TableCell>
+							<TableCell align="right">Last Update</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>{renderMetricsRows(agent.metrics)}</TableBody>
+				</DashboardTable>
 			</Box>
 		</Box>
 	);
