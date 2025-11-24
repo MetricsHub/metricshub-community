@@ -64,4 +64,14 @@ class NumberHelperTest {
 		assertEquals(0.1, getPositiveOrDefault(0.1, defaultValue), () -> "Double 0.1 should return input");
 		assertEquals(1.9, getPositiveOrDefault(1.9, defaultValue), () -> "Double 1.9 truncates to 1: should return input");
 	}
+
+	@Test
+	void testIsNumeric() {
+		assertEquals(true, NumberHelper.isNumeric("  123  "), "Should recognize numeric string with spaces");
+		assertEquals(true, NumberHelper.isNumeric("  123.45  "), "Should recognize numeric string with decimal and spaces");
+		assertEquals(true, NumberHelper.isNumeric("-123.45"), "Should recognize negative numeric string with decimal");
+		assertEquals(false, NumberHelper.isNumeric("abc"), "Should not recognize non-numeric string");
+		assertEquals(false, NumberHelper.isNumeric(null), "Should not recognize null as numeric");
+		assertEquals(false, NumberHelper.isNumeric("123abc"), "Should not recognize alphanumeric string");
+	}
 }

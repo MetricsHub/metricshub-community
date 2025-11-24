@@ -98,7 +98,7 @@ public class ExplorerService {
 			agentAttributes.getOrDefault(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "MetricsHub")
 		);
 
-		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).build();
+		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).attributes(agentAttributes).build();
 
 		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (telemetryManagers == null) {
@@ -142,7 +142,13 @@ public class ExplorerService {
 		final String groupName,
 		final Map<String, TelemetryManager> groupTms
 	) {
-		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry.builder().name(groupName).build();
+		final Map<String, String> groupAttributes = new HashMap<>();
+		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry
+			.builder()
+			.name(groupName)
+			.attributes(groupAttributes)
+			.build();
+
 		groupNode.getResources().addAll(buildResources(groupTms));
 		return groupNode;
 	}
@@ -164,7 +170,21 @@ public class ExplorerService {
 			.entrySet()
 			.stream()
 			.sorted(Entry.comparingByKey())
-			.map((Entry<String, TelemetryManager> entry) -> ResourceTelemetry.builder().name(entry.getKey()).build())
+			.map((Entry<String, TelemetryManager> entry) -> {
+				final String resourceKey = entry.getKey();
+				final TelemetryManager tm = entry.getValue();
+
+				final Map<String, String> attributes = new HashMap<>();
+
+				if (tm != null) {
+					final var endpointHost = tm.getEndpointHostMonitor();
+					if (endpointHost != null && endpointHost.getAttributes() != null) {
+						attributes.putAll(endpointHost.getAttributes());
+					}
+				}
+
+				return ResourceTelemetry.builder().name(resourceKey).attributes(attributes).build();
+			})
 			.toList();
 	}
 
