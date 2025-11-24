@@ -147,7 +147,12 @@ const AppContent = ({ onToggleTheme }) => {
 
 					{/* Private routes */}
 					<Route element={<GuardedAppLayout onToggleTheme={onToggleTheme} />}>
-						<Route path={paths.explorer} element={<Explorer />} />
+						<Route
+							path={paths.explorer}
+							element={<Navigate to={paths.explorerWelcome} replace />}
+						/>
+						<Route path={paths.explorerWelcome} element={<Explorer />} />
+						<Route path="/explorer/resource-groups/:name" element={<Explorer />} />
 						<Route path={paths.configuration} element={<Configuration />} />
 						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
 						{/* Catch-all */}

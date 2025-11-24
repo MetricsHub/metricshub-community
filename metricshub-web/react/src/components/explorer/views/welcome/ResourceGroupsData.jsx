@@ -43,10 +43,10 @@ const buildGroupLabel = (group) => {
 
 /**
  * Table displaying resource groups handled by the agent.
- * @param {{ resourceGroups?: Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }> }} props
+ * @param {{ resourceGroups?: Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }>, onResourceGroupClick?:(group:any) => void }} props
  * @returns {JSX.Element}
  */
-const ResourceGroupsData = ({ resourceGroups }) => {
+const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 	const groups = React.useMemo(() => resourceGroups ?? [], [resourceGroups]);
 
 	return (
@@ -74,7 +74,12 @@ const ResourceGroupsData = ({ resourceGroups }) => {
 							</TableRow>
 						) : (
 							groups.map((g) => (
-								<TableRow key={g.name} hover>
+								<TableRow
+									key={g.name}
+									hover
+									sx={{ cursor: onResourceGroupClick ? "pointer" : "default" }}
+									onClick={() => onResourceGroupClick && onResourceGroupClick(g)}
+								>
 									<TableCell>{buildGroupLabel(g)}</TableCell>
 									<TableCell>{countResources(g)}</TableCell>
 								</TableRow>
