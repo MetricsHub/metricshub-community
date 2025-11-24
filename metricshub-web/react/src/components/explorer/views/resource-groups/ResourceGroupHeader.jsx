@@ -12,6 +12,12 @@ import {
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers";
 
+/**
+ * Header section for a single resource group, showing its name and attributes.
+ *
+ * @param {{ group?: any }} props
+ * @returns {JSX.Element | null}
+ */
 const ResourceGroupHeader = ({ group }) => {
 	if (!group) return null;
 

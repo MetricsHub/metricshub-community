@@ -10,6 +10,12 @@ import {
 	Paper,
 } from "@mui/material";
 
+/**
+ * Render table rows for a list of resource group metrics.
+ *
+ * @param {Array<{ key: string, value: unknown }> | undefined | null} metrics
+ * @returns {JSX.Element | JSX.Element[]}
+ */
 const renderMetricsRows = (metrics) => {
 	const list = metrics ?? [];
 	if (list.length === 0) {
@@ -28,6 +34,12 @@ const renderMetricsRows = (metrics) => {
 	));
 };
 
+/**
+ * Metrics section for a single resource group.
+ *
+ * @param {{ metrics?: Array<{ key: string, value: unknown }> | null }} props
+ * @returns {JSX.Element}
+ */
 const ResourceGroupMetrics = ({ metrics }) => {
 	const rows = React.useMemo(() => metrics ?? [], [metrics]);
 

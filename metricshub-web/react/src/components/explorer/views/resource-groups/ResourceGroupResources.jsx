@@ -11,6 +11,12 @@ import {
 } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 
+/**
+ * Single clickable resource row.
+ *
+ * @param {{ resource: { key: string, name: string, attributes?: Record<string, unknown> }, onClick?: (resource: any) => void }} props
+ * @returns {JSX.Element}
+ */
 const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	const attrs = resource.attributes ?? {};
 	return (
@@ -22,6 +28,12 @@ const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	);
 });
 
+/**
+ * Resources table for a single resource group.
+ *
+ * @param {{ resources?: Array<{ key: string, name: string, attributes?: Record<string, unknown> }> | null, onResourceClick?: (resource: any) => void }} props
+ * @returns {JSX.Element}
+ */
 const ResourceGroupResources = ({ resources, onResourceClick }) => {
 	const allResources = React.useMemo(() => resources ?? [], [resources]);
 
