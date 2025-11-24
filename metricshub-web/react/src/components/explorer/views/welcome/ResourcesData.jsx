@@ -13,13 +13,13 @@ import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 
 /**
  * Render a single resource row.
- * @param {{ name: string, attributes?: Record<string, unknown> }} resource
+ * @param {{ resource: { name: string, attributes?: Record<string, unknown> }, onClick?: (resource:any) => void }} props
  * @returns {JSX.Element}
  */
-const ResourceRow = React.memo(function ResourceRow({ resource }) {
+const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	const attrs = resource.attributes ?? {};
 	return (
-		<TableRow hover>
+		<TableRow hover sx={{ cursor: onClick ? "pointer" : "default" }} onClick={() => onClick && onClick(resource)}>
 			<TableCell>{resource.name}</TableCell>
 			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
 			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
@@ -30,10 +30,10 @@ const ResourceRow = React.memo(function ResourceRow({ resource }) {
 
 /**
  * Table displaying rogue resources (not attached to any resource group).
- * @param {{ resources?: Array<{ name: string, attributes?: Record<string, unknown> }> }} props
+ * @param {{ resources?: Array<{ name: string, attributes?: Record<string, unknown> }>, onResourceClick?: (resource:any) => void }} props
  * @returns {JSX.Element}
  */
-const ResourcesData = ({ resources }) => {
+const ResourcesData = ({ resources, onResourceClick }) => {
 	const allResources = React.useMemo(() => resources ?? [], [resources]);
 
 	return (
@@ -63,7 +63,7 @@ const ResourcesData = ({ resources }) => {
 							</TableRow>
 						) : (
 							allResources.map((resource) => (
-								<ResourceRow key={resource.name} resource={resource} />
+								<ResourceRow key={resource.name} resource={resource} onClick={onResourceClick} />
 							))
 						)}
 					</TableBody>

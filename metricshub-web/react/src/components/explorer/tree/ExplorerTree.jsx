@@ -30,6 +30,12 @@ const buildTree = (raw) => {
 	if (!raw) return null;
 
 	const collectChildren = (node) => {
+		// Resources are navigation leaves and must not have tree children,
+		// even if the backend sends nested collections under them.
+		if (node.type === "resource") {
+			return [];
+		}
+
 		const keys = ["children", "resources", "resourceGroups", "nodes", "items"];
 		const out = [];
 		for (const k of keys) {
@@ -39,22 +45,31 @@ const buildTree = (raw) => {
 		return out;
 	};
 
-	const walk = (node, pathParts) => {
+	const walk = (node, pathParts, parent) => {
 		const name = node.name;
 		const id = [...pathParts, name].join("/");
 		const rawChildren = collectChildren(node);
-		const children = rawChildren.map((c) => walk(c, [...pathParts, name]));
-		return { id, name, type: node.type, children };
+		const children = rawChildren.map((c) => walk(c, [...pathParts, name], node));
+		// Now that resources never collect children, expandability is equivalent
+		// to "has children".
+		const isExpandable = children.length > 0;
+		return { id, name, type: node.type, children, parent, isExpandable };
 	};
 
-	return walk(raw, ["root"]);
+	return walk(raw, ["root"], null);
 };
 
 /**
  * ExplorerTree renders the hierarchy fetched from the explorer endpoint.
  * Recursively builds tree item nodes.
+ *
+ * @param {{
+ *   onResourceGroupFocus?: (name: string) => void,
+ *   onAgentFocus?: () => void,
+ *   onResourceFocus?: (resource: any, group?: any) => void,
+ * }} props
  */
-export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
+export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onResourceFocus }) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -74,11 +89,17 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 				onResourceGroupFocus(node.name);
 				return;
 			}
+			if (node.type === "resource" && onResourceFocus) {
+				const resource = node.raw || node;
+				const group = node.parentRaw && node.parentRaw.type === "resource-group" ? node.parentRaw : undefined;
+				onResourceFocus(resource, group);
+				return;
+			}
 			if (node.type === "agent" && onAgentFocus) {
 				onAgentFocus();
 			}
 		},
-		[onResourceGroupFocus, onAgentFocus],
+		[onResourceGroupFocus, onAgentFocus, onResourceFocus],
 	);
 
 	if (loading && !treeRoot) {

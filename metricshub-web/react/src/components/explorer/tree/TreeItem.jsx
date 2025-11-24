@@ -23,8 +23,8 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 }) {
 	const handleClick = React.useCallback(
 		(event) => {
-			// Prevent TreeItem's default toggle-on-content-click behavior.
-			// This ensures only the arrow icon expands/collapses the node.
+			// Always prevent TreeItem's default toggle-on-content-click behavior.
+			// This ensures only the built-in arrow icon expands/collapses the node.
 			event.stopPropagation();
 			if (onLabelClick) {
 				onLabelClick(node);
@@ -65,13 +65,15 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
  * @param {{ node:{ id:string, name:string, type?:string, children?:any[] }, right?:React.ReactNode, onLabelClick?:(node:any) => void }} props
  */
 const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right, onLabelClick }) {
-	const isFolder = Array.isArray(node.children) && node.children.length > 0;
+	// Only nodes explicitly marked as expandable should render children and
+	// show expand/collapse affordances. Resource nodes remain simple leaves.
+	const isFolder = !!node.isExpandable;
 
 	// Keep the object passed into the label small & stable
 	// so memoization stays effective as the tree grows.
 	const labelNode = React.useMemo(
-		() => ({ id: node.id, name: node.name, type: node.type }),
-		[node.id, node.name, node.type],
+		() => ({ id: node.id, name: node.name, type: node.type, raw: node, parentRaw: node.parent }),
+		[node],
 	);
 
 	return (
@@ -90,6 +92,7 @@ const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right, onL
 			slotProps={{ content: { sx: { width: "100%" } } }}
 		>
 			{isFolder &&
+				Array.isArray(node.children) &&
 				node.children.map((c) => (
 					<ExplorerTreeItem key={c.id} node={c} onLabelClick={onLabelClick} />
 				))}

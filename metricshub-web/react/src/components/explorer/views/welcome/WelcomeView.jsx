@@ -16,10 +16,10 @@ import ResourcesData from "./ResourcesData";
  * Optionally accepts a render prop to customize the ResourceGroups section,
  * so that parent components can inject navigation behaviour.
  *
- * @param {{ renderResourceGroups?:(props:{ resourceGroups:any[] }) => JSX.Element }} props
+ * @param {{ renderResourceGroups?:(props:{ resourceGroups:any[] }) => JSX.Element, onRogueResourceClick?: (resource:any) => void }} props
  * @returns {JSX.Element}
  */
-const WelcomeView = ({ renderResourceGroups }) => {
+const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
 	const error = useSelector(selectExplorerError);
@@ -66,7 +66,7 @@ const WelcomeView = ({ renderResourceGroups }) => {
 				<ResourceGroupsData resourceGroups={resourceGroups} />
 			)}
 			<Divider />
-			<ResourcesData resources={rogueResources} />
+			<ResourcesData resources={rogueResources} onResourceClick={onRogueResourceClick} />
 		</Box>
 	);
 };

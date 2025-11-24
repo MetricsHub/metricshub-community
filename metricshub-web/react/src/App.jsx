@@ -153,6 +153,11 @@ const AppContent = ({ onToggleTheme }) => {
 						/>
 						<Route path={paths.explorerWelcome} element={<Explorer />} />
 						<Route path="/explorer/resource-groups/:name" element={<Explorer />} />
+						<Route path="/explorer/resources/:resourceName" element={<Explorer />} />
+						<Route
+							path="/explorer/resource-groups/:name/resources/:resourceName"
+							element={<Explorer />}
+						/>
 						<Route path={paths.configuration} element={<Configuration />} />
 						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
 						{/* Catch-all */}
