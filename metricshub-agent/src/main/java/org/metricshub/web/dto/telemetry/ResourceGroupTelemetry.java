@@ -68,10 +68,4 @@ public class ResourceGroupTelemetry extends AbstractBaseTelemetry {
 		);
 		this.resources = resources != null ? resources : new ArrayList<>();
 	}
-
-	@Override
-	@JsonInclude(JsonInclude.Include.ALWAYS)
-	public Map<String, String> getAttributes() {
-		return super.getAttributes();
-	}
 }

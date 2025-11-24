@@ -24,17 +24,8 @@ package org.metricshub.engine.strategy.source;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -47,8 +38,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.JsonHelper;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
@@ -83,9 +72,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Builder
 @Slf4j
 public class SourceProcessor implements ISourceProcessor {
-
-	// Create a YAML ObjectMapper to serialize SourceTable to YAML format
-	private static final ObjectMapper YAML_MAPPER = JsonHelper.buildYamlMapper();
 
 	private TelemetryManager telemetryManager;
 	private String connectorId;
@@ -161,113 +147,10 @@ public class SourceProcessor implements ISourceProcessor {
 	 *         or an empty table if no extension can process the source.
 	 */
 	private SourceTable processSourceThroughExtension(Source source) {
-		// Retrieve emulation input directory and read recorded source from it
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-
-		// CHECKSTYLE:OFF
-		if (
-			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			StringHelper.nonNullNonBlank(emulationInputDirectory)
-		) {
-			Optional<SourceTable> emulatedSourceTable = readEmulatedSourceTable(connectorId, source, emulationInputDirectory);
-			return emulatedSourceTable.orElseGet(SourceTable::empty);
-		}
-
-		SourceTable table = extensionManager
+		return extensionManager
 			.findSourceExtension(source, telemetryManager)
 			.map(ext -> ext.processSource(source, connectorId, telemetryManager))
 			.orElseGet(SourceTable::empty);
-
-		// Retrieve emulation output directory and persist source output if required and if not SNMP source
-		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-		if (
-			!(source instanceof SnmpTableSource || source instanceof SnmpGetSource) &&
-			StringHelper.nonNullNonBlank(recordOutputDirectory)
-		) {
-			persist(table, connectorId, source, recordOutputDirectory);
-		}
-		return table;
-		//CHECKSTYLE:ON
-	}
-
-	/**
-	 *
-	 * @param sourceTable the {@link SourceTable} to persist
-	 * @param connectorId the identifier of the connector defining the source
-	 * @param source the {@link Source} that was processed
-	 * @param recordOutputDirectory The directory to which we save recorded sources
-	 */
-	private void persist(
-		final SourceTable sourceTable,
-		final String connectorId,
-		final Source source,
-		final String recordOutputDirectory
-	) {
-		// Directory where we will store the sources results files
-		// We will store 1 file per source, named as <connectorId><sourceKey>.yaml
-		final Path sourceResultOutputDirectory = Paths.get(recordOutputDirectory);
-		try {
-			Files.createDirectories(sourceResultOutputDirectory);
-
-			final String cleanKey = source.getKey().replace(":", "-");
-			final Path file = sourceResultOutputDirectory.resolve(
-				telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml"
-			); // keep extension if you wish
-
-			try (
-				BufferedWriter out = Files.newBufferedWriter(
-					file,
-					StandardCharsets.UTF_8,
-					StandardOpenOption.CREATE,
-					StandardOpenOption.TRUNCATE_EXISTING
-				)
-			) {
-				// Jackson YAMLFactory handles it
-				YAML_MAPPER.writeValue(out, sourceTable);
-				out.newLine();
-			}
-		} catch (IOException e) {
-			log.warn(
-				"Hostname {} - Could not write SourceTable to {}. Error: {}",
-				telemetryManager.getHostname(),
-				sourceResultOutputDirectory,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - Could not write SourceTable to {}", telemetryManager.getHostname(), source, e);
-		}
-	}
-
-	/**
-	 * Reads a {@link SourceTable} from the emulated source output directory based on the connector ID and source.
-	 *
-	 * @param connectorId The identifier of the connector defining the source.
-	 * @param source      The source for which to read the {@link SourceTable}.
-	 * @param emulationModeSourceOutputDirectory Source emulation input files directory
-	 * @return An {@link Optional} containing the {@link SourceTable} if it exists, or empty if not found.
-	 */
-	private Optional<SourceTable> readEmulatedSourceTable(
-		String connectorId,
-		Source source,
-		String emulationModeSourceOutputDirectory
-	) {
-		final Path outDir = Paths.get(emulationModeSourceOutputDirectory);
-		final String cleanKey = source.getKey().replace(":", "-");
-		// Content is YAML
-		final Path file = outDir.resolve(telemetryManager.getHostname() + "-" + connectorId + "-" + cleanKey + ".yaml");
-
-		try (BufferedReader in = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-			final SourceTable table = YAML_MAPPER.readValue(in, SourceTable.class);
-			return Optional.of(table);
-		} catch (IOException e) {
-			log.warn(
-				"Hostname {} - Could not read SourceTable from {}. Error: {}",
-				telemetryManager.getHostname(),
-				emulationModeSourceOutputDirectory,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - Could not read SourceTable from {}", telemetryManager.getHostname(), source, e);
-			return Optional.empty();
-		}
 	}
 
 	/**

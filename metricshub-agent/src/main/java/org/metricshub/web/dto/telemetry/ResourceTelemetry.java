@@ -68,10 +68,4 @@ public class ResourceTelemetry extends AbstractBaseTelemetry {
 		);
 		this.connectors = connectors != null ? connectors : new ArrayList<>();
 	}
-
-	@Override
-	@JsonInclude(JsonInclude.Include.ALWAYS)
-	public Map<String, String> getAttributes() {
-		return super.getAttributes();
-	}
 }

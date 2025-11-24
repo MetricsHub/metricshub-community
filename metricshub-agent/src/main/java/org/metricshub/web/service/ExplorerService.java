@@ -92,13 +92,13 @@ public class ExplorerService {
 	 */
 	public AgentTelemetry getHierarchy() {
 		final var agentContext = agentContextHolder.getAgentContext();
-		final Map<String, String> rawAgentAttributes = agentContext.getAgentInfo().getAttributes();
-		final String agentName = rawAgentAttributes.getOrDefault(
+		final Map<String, String> agentAttributes = agentContext.getAgentInfo().getAttributes();
+		final String agentName = agentAttributes.getOrDefault(
 			AGENT_RESOURCE_AGENT_HOST_NAME_ATTRIBUTE_KEY,
-			rawAgentAttributes.getOrDefault(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "MetricsHub")
+			agentAttributes.getOrDefault(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY, "MetricsHub")
 		);
 
-		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).attributes(rawAgentAttributes).build();
+		final AgentTelemetry root = AgentTelemetry.builder().name(agentName).attributes(agentAttributes).build();
 
 		Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
 		if (telemetryManagers == null) {
