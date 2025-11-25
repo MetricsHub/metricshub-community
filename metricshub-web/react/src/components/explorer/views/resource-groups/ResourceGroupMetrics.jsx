@@ -17,7 +17,7 @@ import {
  * @returns {JSX.Element | JSX.Element[]}
  */
 const renderMetricsRows = (metrics) => {
-	const list = metrics ?? [];
+	const list = Array.isArray(metrics) ? metrics : [];
 	if (list.length === 0) {
 		return (
 			<TableRow>
@@ -41,7 +41,7 @@ const renderMetricsRows = (metrics) => {
  * @returns {JSX.Element}
  */
 const ResourceGroupMetrics = ({ metrics }) => {
-	const rows = React.useMemo(() => metrics ?? [], [metrics]);
+	const rows = React.useMemo(() => (Array.isArray(metrics) ? metrics : []), [metrics]);
 
 	return (
 		<Box>

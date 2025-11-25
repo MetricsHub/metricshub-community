@@ -19,7 +19,11 @@ import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	const attrs = resource.attributes ?? {};
 	return (
-		<TableRow hover sx={{ cursor: onClick ? "pointer" : "default" }} onClick={() => onClick && onClick(resource)}>
+		<TableRow
+			hover
+			sx={{ cursor: onClick ? "pointer" : "default" }}
+			onClick={() => onClick && onClick(resource)}
+		>
 			<TableCell>{resource.name}</TableCell>
 			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
 			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
@@ -34,7 +38,10 @@ const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
  * @returns {JSX.Element}
  */
 const ResourcesData = ({ resources, onResourceClick }) => {
-	const allResources = React.useMemo(() => resources ?? [], [resources]);
+	const allResources = React.useMemo(
+		() => (Array.isArray(resources) ? resources : []),
+		[resources],
+	);
 
 	return (
 		<Box>

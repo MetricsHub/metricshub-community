@@ -1,13 +1,13 @@
 import * as React from "react";
 import {
-    Box,
-    Typography,
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableRow,
-    Paper,
+	Box,
+	Typography,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableRow,
+	Paper,
 } from "@mui/material";
 
 /**
@@ -17,23 +17,26 @@ import {
  * @returns {JSX.Element | JSX.Element[]}
  */
 const renderMetricsRows = (metrics) => {
-    const list = metrics ?? [];
-    if (list.length === 0) {
-        return (
-            <TableRow>
-                <TableCell colSpan={4}>No metrics</TableCell>
-            </TableRow>
-        );
-    }
+	const list = Array.isArray(metrics) ? metrics : [];
+	if (list.length === 0) {
+		return (
+			<TableRow>
+				<TableCell colSpan={4}>No metrics</TableCell>
+			</TableRow>
+		);
+	}
 
-    return list.map((m) => (
-        <TableRow key={m.name}>
-            <TableCell>{m.name}{m.iconType ? ` (${m.iconType})` : ""}</TableCell>
-            <TableCell>{m.value}</TableCell>
-            <TableCell>{m.unit}</TableCell>
-            <TableCell>{m.lastUpdate}</TableCell>
-        </TableRow>
-    ));
+	return list.map((m) => (
+		<TableRow key={m.name}>
+			<TableCell>
+				{m.name}
+				{m.iconType ? ` (${m.iconType})` : ""}
+			</TableCell>
+			<TableCell>{m.value}</TableCell>
+			<TableCell>{m.unit}</TableCell>
+			<TableCell>{m.lastUpdate}</TableCell>
+		</TableRow>
+	));
 };
 
 /**
@@ -43,28 +46,28 @@ const renderMetricsRows = (metrics) => {
  * @returns {JSX.Element}
  */
 const ResourceMetrics = ({ metrics }) => {
-    const rows = React.useMemo(() => metrics ?? [], [metrics]);
+	const rows = React.useMemo(() => (Array.isArray(metrics) ? metrics : []), [metrics]);
 
-    return (
-        <Box>
-            <Typography variant="h6" gutterBottom>
-                Metrics
-            </Typography>
-            <Paper variant="outlined">
-                <Table size="small">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Value</TableCell>
-                            <TableCell>Unit</TableCell>
-                            <TableCell>Last Update</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>{renderMetricsRows(rows)}</TableBody>
-                </Table>
-            </Paper>
-        </Box>
-    );
+	return (
+		<Box>
+			<Typography variant="h6" gutterBottom>
+				Metrics
+			</Typography>
+			<Paper variant="outlined">
+				<Table size="small">
+					<TableHead>
+						<TableRow>
+							<TableCell>Name</TableCell>
+							<TableCell>Value</TableCell>
+							<TableCell>Unit</TableCell>
+							<TableCell>Last Update</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>{renderMetricsRows(rows)}</TableBody>
+				</Table>
+			</Paper>
+		</Box>
+	);
 };
 
 export default ResourceMetrics;

@@ -1,13 +1,21 @@
 import * as React from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Box, CircularProgress, Divider, Typography } from "@mui/material";
 import {
-    selectExplorerHierarchy,
-    selectExplorerLoading,
-    selectExplorerError,
+	selectExplorerHierarchy,
+	selectExplorerLoading,
+	selectExplorerError,
+	selectCurrentResource,
+	selectResourceLoading,
+	selectResourceError,
 } from "../../../../store/slices/explorer-slice";
+import {
+	fetchTopLevelResource,
+	fetchGroupedResource,
+} from "../../../../store/thunks/explorer-thunks";
 import ResourceHeader from "./ResourceHeader";
 import ResourceMetrics from "./ResourceMetrics";
+import MonitorsView from "../monitors/MonitorsView";
 
 /**
  * Single resource focused page.
@@ -19,76 +27,91 @@ import ResourceMetrics from "./ResourceMetrics";
  * @returns {JSX.Element | null}
  */
 const ResourceView = ({ resourceName, resourceGroupName }) => {
-    const hierarchy = useSelector(selectExplorerHierarchy);
-    const loading = useSelector(selectExplorerLoading);
-    const error = useSelector(selectExplorerError);
+	const dispatch = useDispatch();
+	const hierarchy = useSelector(selectExplorerHierarchy);
+	const loading = useSelector(selectExplorerLoading);
+	const error = useSelector(selectExplorerError);
+	const currentResource = useSelector(selectCurrentResource);
+	const resourceLoading = useSelector(selectResourceLoading);
+	const resourceError = useSelector(selectResourceError);
 
-    if (loading && !hierarchy) {
-        return (
-            <Box display="flex" justifyContent="center" alignItems="center" height="100%">
-                <CircularProgress />
-            </Box>
-        );
-    }
+	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
+	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
 
-    if (error && !hierarchy) {
-        return (
-            <Box p={2}>
-                <Typography color="error">{error}</Typography>
-            </Box>
-        );
-    }
+	React.useEffect(() => {
+		if (!decodedName) return;
+		if (decodedGroup) {
+			dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
+		} else {
+			dispatch(fetchTopLevelResource({ resourceName: decodedName }));
+		}
+	}, [dispatch, decodedName, decodedGroup]);
 
-    if (!hierarchy) {
-        return (
-            <Box p={2}>
-                <Typography>No data available.</Typography>
-            </Box>
-        );
-    }
+	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
+		return (
+			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
+				<CircularProgress />
+			</Box>
+		);
+	}
 
-    const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
+	if ((error && !hierarchy) || (resourceError && !currentResource)) {
+		return (
+			<Box p={2}>
+				<Typography color="error">{error}</Typography>
+			</Box>
+		);
+	}
 
-    let resource = null;
-    const resourceGroups = hierarchy.resourceGroups || [];
-    const topLevelResources = hierarchy.resources || [];
+	if (!hierarchy && !currentResource) {
+		return (
+			<Box p={2}>
+				<Typography>No data available.</Typography>
+			</Box>
+		);
+	}
 
-    if (decodedName) {
-        if (resourceGroupName) {
-            const decodedGroup = decodeURIComponent(resourceGroupName);
-            const group =
-                resourceGroups.find((g) => g.name === decodedGroup || g.id === decodedGroup) || null;
-            if (group && Array.isArray(group.resources)) {
-                resource =
-                    group.resources.find(
-                        (r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
-                    ) || null;
-            }
-        } else {
-            resource =
-                topLevelResources.find(
-                    (r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
-                ) || null;
-        }
-    }
+	let resource = currentResource;
+	if (!resource && hierarchy && decodedName) {
+		const resourceGroups = hierarchy.resourceGroups || [];
+		const topLevelResources = hierarchy.resources || [];
+		if (decodedGroup) {
+			const group =
+				resourceGroups.find((g) => g.name === decodedGroup || g.id === decodedGroup) || null;
+			if (group && Array.isArray(group.resources)) {
+				resource =
+					group.resources.find(
+						(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
+					) || null;
+			}
+		} else {
+			resource =
+				topLevelResources.find(
+					(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
+				) || null;
+		}
+	}
 
-    if (!resource) {
-        return (
-            <Box p={2}>
-                <Typography>No resource selected.</Typography>
-            </Box>
-        );
-    }
+	if (!resource) {
+		return (
+			<Box p={2}>
+				<Typography>No resource selected.</Typography>
+			</Box>
+		);
+	}
 
-    const metrics = resource.metrics || [];
+	const metrics = resource.metrics || [];
+	const connectors = resource.connectors || [];
 
-    return (
-        <Box p={2} display="flex" flexDirection="column" gap={4}>
-            <ResourceHeader resource={resource} />
-            <Divider />
-            <ResourceMetrics metrics={metrics} />
-        </Box>
-    );
+	return (
+		<Box p={2} display="flex" flexDirection="column" gap={4}>
+			<ResourceHeader resource={resource} />
+			<Divider />
+			<ResourceMetrics metrics={metrics} />
+			<Divider />
+			<MonitorsView connectors={connectors} />
+		</Box>
+	);
 };
 
 export default ResourceView;

@@ -48,7 +48,9 @@ const buildTree = (raw) => {
 		const name = node.name;
 		const id = [...pathParts, name].join("/");
 		const rawChildren = collectChildren(node);
-		const children = rawChildren.map((c) => walk(c, [...pathParts, name], node));
+		const children = Array.isArray(rawChildren)
+			? rawChildren.map((c) => walk(c, [...pathParts, name], node))
+			: [];
 		const isExpandable = children.length > 0;
 		return { id, name, type: node.type, children, parent, isExpandable };
 	};
@@ -109,7 +111,8 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 
 			if (node.type === "resource" && onResourceFocus) {
 				const resource = node;
-				const group = node.parent && node.parent.type === "resource-group" ? node.parent : undefined;
+				const group =
+					node.parent && node.parent.type === "resource-group" ? node.parent : undefined;
 				onResourceFocus(resource, group);
 				return;
 			}
