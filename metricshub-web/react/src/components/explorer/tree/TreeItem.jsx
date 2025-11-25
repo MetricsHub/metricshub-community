@@ -4,35 +4,20 @@ import { Box, Typography } from "@mui/material";
 import NodeTypeIcons from "./icons/NodeTypeIcons";
 
 /**
- * Generic explorer tree item label.
- * Displays icon + name.
+ * Presentational label used by explorer tree items.
  *
- * NOTE:
- * - Clicks on this label intentionally do NOT toggle expand/collapse.
- * - We stop propagation so only the built-in arrow icon controls unfolding.
- * - An optional `onLabelClick` makes it easy to later plug in
- *   "focus this node on the right side" behavior.
+ * @param {Object} props
+ * @param {string} props.name Display name of the node.
+ * @param {string} [props.type] Backend node type.
+ * @param {boolean} props.isFolder Whether the node represents a folder/branch.
+ * @param {React.ReactNode} [props.right] Optional right-aligned adornment.
  */
 const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 	name,
 	type,
 	isFolder,
 	right,
-	onLabelClick,
-	node,
 }) {
-	const handleClick = React.useCallback(
-		(event) => {
-			// Always prevent TreeItem's default toggle-on-content-click behavior.
-			// This ensures only the built-in arrow icon expands/collapses the node.
-			event.stopPropagation();
-			if (onLabelClick) {
-				onLabelClick(node);
-			}
-		},
-		[onLabelClick, node],
-	);
-
 	return (
 		<Box
 			sx={{
@@ -42,7 +27,6 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 				justifyContent: "space-between",
 				pr: 1,
 			}}
-			onClick={handleClick}
 		>
 			<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
 				<NodeTypeIcons type={type} />
@@ -61,20 +45,14 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 });
 
 /**
- * Generic explorer tree item wrapper.
- * @param {{ node:{ id:string, name:string, type?:string, children?:any[] }, right?:React.ReactNode, onLabelClick?:(node:any) => void }} props
+ * Renders a single explorer tree item and its children.
+ *
+ * @param {Object} props
+ * @param {{ id:string, name:string, type?:string, children?:any[], isExpandable?:boolean }} props.node Normalized explorer node.
+ * @param {React.ReactNode} [props.right] Optional right-aligned adornment.
  */
-const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right, onLabelClick }) {
-	// Only nodes explicitly marked as expandable should render children and
-	// show expand/collapse affordances. Resource nodes remain simple leaves.
+const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right }) {
 	const isFolder = !!node.isExpandable;
-
-	// Keep the object passed into the label small & stable
-	// so memoization stays effective as the tree grows.
-	const labelNode = React.useMemo(
-		() => ({ id: node.id, name: node.name, type: node.type, raw: node, parentRaw: node.parent }),
-		[node],
-	);
 
 	return (
 		<TreeItem
@@ -85,17 +63,13 @@ const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right, onL
 					type={node.type}
 					isFolder={isFolder}
 					right={right}
-					onLabelClick={onLabelClick}
-					node={labelNode}
 				/>
 			}
 			slotProps={{ content: { sx: { width: "100%" } } }}
 		>
 			{isFolder &&
 				Array.isArray(node.children) &&
-				node.children.map((c) => (
-					<ExplorerTreeItem key={c.id} node={c} onLabelClick={onLabelClick} />
-				))}
+				node.children.map((c) => <ExplorerTreeItem key={c.id} node={c} />)}
 		</TreeItem>
 	);
 });
