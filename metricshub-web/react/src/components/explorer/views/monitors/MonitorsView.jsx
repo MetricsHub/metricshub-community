@@ -8,12 +8,12 @@ import {
 	TableHead,
 	TableRow,
 	Paper,
-	Divider,
 	Accordion,
 	AccordionSummary,
 	AccordionDetails,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { prettifyKey } from "../../../../utils/text-prettifier";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -23,10 +23,12 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
  *   and their metrics in a table.
  * - If instances count > 20, shows a badge with the count that would
  *   redirect to a dedicated monitor type page (navigation not wired yet).
+ * - Shows a "last updated" label based on when the resource
+ *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[] }} props
+ * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date }} props
  */
-const MonitorsView = ({ connectors }) => {
+const MonitorsView = ({ connectors, lastUpdatedAt }) => {
 	// Aggregate monitors from all connectors and always return an array
 	const allMonitors = React.useMemo(() => {
 		if (!Array.isArray(connectors)) return [];
@@ -41,24 +43,52 @@ const MonitorsView = ({ connectors }) => {
 		return list;
 	}, [connectors]);
 
-	const safeMonitors = Array.isArray(allMonitors) ? allMonitors : [];
+	const safeMonitors = React.useMemo(
+		() => (Array.isArray(allMonitors) ? allMonitors : []),
+		[allMonitors],
+	);
+
+	const lastUpdatedLabel = React.useMemo(() => {
+		if (!lastUpdatedAt) return "Never";
+
+		const ts =
+			lastUpdatedAt instanceof Date
+				? lastUpdatedAt.getTime()
+				: typeof lastUpdatedAt === "number"
+					? lastUpdatedAt
+					: new Date(lastUpdatedAt).getTime();
+		if (Number.isNaN(ts)) return "Never";
+
+		// Only display local time, not the full date
+		return new Date(ts).toLocaleTimeString();
+	}, [lastUpdatedAt]);
 
 	if (safeMonitors.length === 0) {
 		return (
 			<Box>
-				<Typography variant="h5" gutterBottom>
-					Monitors
-				</Typography>
+				<Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+					<Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
+						Monitors
+					</Typography>
+					<Typography variant="caption" color="text.secondary">
+						Last updated: {lastUpdatedLabel}
+					</Typography>
+				</Box>
 				<Typography variant="body2">No monitors available for this resource.</Typography>
 			</Box>
 		);
 	}
 
 	return (
-		<Box display="flex" flexDirection="column" gap={3}>
-			<Typography variant="h5" gutterBottom>
-				Monitors
-			</Typography>
+		<Box display="flex" flexDirection="column">
+			<Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+				<Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
+					Monitors
+				</Typography>
+				<Typography variant="caption" color="text.secondary">
+					Last updated: {lastUpdatedLabel}
+				</Typography>
+			</Box>
 
 			{safeMonitors.map((monitor, index) => {
 				const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
@@ -82,21 +112,20 @@ const MonitorsView = ({ connectors }) => {
 						<AccordionSummary
 							expandIcon={<ExpandMoreIcon />}
 							sx={{
-								px: 1.5,
 								minHeight: 40,
 								cursor: "pointer",
 								bgcolor: "background.default",
 								"&:hover": {
 									bgcolor: "action.hover",
 								},
-								"& .MuiAccordionSummary-content": { my: 0 },
+								"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 							}}
 						>
 							<Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-								{monitor.name}
+								{prettifyKey(monitor.name)}
 							</Typography>
 						</AccordionSummary>
-						<AccordionDetails sx={{ px: 1.5, pb: 2 }}>
+						<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1 }}>
 							{instances.map((inst) => {
 								const attrs = inst?.attributes ?? {};
 								const id = attrs.id || inst.name;
@@ -129,20 +158,18 @@ const MonitorsView = ({ connectors }) => {
 														<TableCell>Name</TableCell>
 														<TableCell>Value</TableCell>
 														<TableCell>Unit</TableCell>
-														<TableCell>Last Update</TableCell>
 													</TableRow>
 												</TableHead>
 												<TableBody>
 													{metricEntries.length === 0 ? (
 														<TableRow>
-															<TableCell colSpan={4}>No metrics</TableCell>
+															<TableCell colSpan={3}>No metrics</TableCell>
 														</TableRow>
 													) : (
 														metricEntries.map(([name, value]) => (
 															<TableRow key={name}>
 																<TableCell>{name}</TableCell>
 																<TableCell>{String(value)}</TableCell>
-																<TableCell></TableCell>
 																<TableCell></TableCell>
 															</TableRow>
 														))

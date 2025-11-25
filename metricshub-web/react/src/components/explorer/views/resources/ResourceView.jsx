@@ -34,6 +34,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const currentResource = useSelector(selectCurrentResource);
 	const resourceLoading = useSelector(selectResourceLoading);
 	const resourceError = useSelector(selectResourceError);
+	const [lastUpdatedAt, setLastUpdatedAt] = React.useState(null);
 
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
@@ -45,6 +46,9 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		} else {
 			dispatch(fetchTopLevelResource({ resourceName: decodedName }));
 		}
+
+		// Update "last updated" every time we trigger a resource fetch
+		setLastUpdatedAt(Date.now());
 	}, [dispatch, decodedName, decodedGroup]);
 
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
@@ -109,7 +113,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			<Divider />
 			<ResourceMetrics metrics={metrics} />
 			<Divider />
-			<MonitorsView connectors={connectors} />
+			<MonitorsView connectors={connectors} lastUpdatedAt={lastUpdatedAt} />
 		</Box>
 	);
 };
