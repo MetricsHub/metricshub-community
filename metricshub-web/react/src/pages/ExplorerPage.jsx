@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
 import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
@@ -8,6 +9,7 @@ import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGro
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
 import ResourceView from "../components/explorer/views/resources/ResourceView";
 import { paths } from "../paths";
+import { setLastVisitedPath } from "../store/slices/explorer-slice";
 
 /**
  * Monitor page component
@@ -16,6 +18,12 @@ import { paths } from "../paths";
 const ExplorerPage = () => {
 	const navigate = useNavigate();
 	const params = useParams();
+	const location = useLocation();
+	const dispatch = useDispatch();
+
+	React.useEffect(() => {
+		dispatch(setLastVisitedPath(location.pathname));
+	}, [location.pathname, dispatch]);
 
 	const resourceGroupName = params.name;
 	const resourceName = params.resourceName;

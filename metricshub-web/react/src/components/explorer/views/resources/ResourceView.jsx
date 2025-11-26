@@ -8,6 +8,8 @@ import {
 	selectCurrentResource,
 	selectResourceLoading,
 	selectResourceError,
+	selectResourceUiState,
+	setResourceScrollTop,
 } from "../../../../store/slices/explorer-slice";
 import {
 	fetchTopLevelResource,
@@ -16,6 +18,7 @@ import {
 import ResourceHeader from "./ResourceHeader";
 import ResourceMetrics from "./ResourceMetrics";
 import MonitorsView from "../monitors/MonitorsView";
+import { debounce } from "@mui/material";
 
 /**
  * Single resource focused page.
@@ -35,6 +38,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const resourceLoading = useSelector(selectResourceLoading);
 	const resourceError = useSelector(selectResourceError);
 	const [lastUpdatedAt, setLastUpdatedAt] = React.useState(null);
+	const rootRef = React.useRef(null);
 
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
@@ -50,6 +54,35 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		// Update "last updated" every time we trigger a resource fetch
 		setLastUpdatedAt(Date.now());
 	}, [dispatch, decodedName, decodedGroup]);
+
+	// Scroll restoration logic
+	const resourceId = currentResource?.id || currentResource?.name;
+	const uiState = useSelector((state) =>
+		resourceId ? selectResourceUiState(resourceId)(state) : null,
+	);
+	const savedScrollTop = uiState?.scrollTop || 0;
+
+	React.useLayoutEffect(() => {
+		if (!resourceId || !rootRef.current) return;
+		const scrollParent = rootRef.current.parentElement;
+		if (!scrollParent) return;
+
+		// Restore scroll position
+		if (savedScrollTop > 0) {
+			scrollParent.scrollTop = savedScrollTop;
+		}
+
+		const handleScroll = debounce((e) => {
+			dispatch(setResourceScrollTop({ resourceId, scrollTop: e.target.scrollTop }));
+		}, 300);
+
+		scrollParent.addEventListener("scroll", handleScroll);
+		return () => {
+			scrollParent.removeEventListener("scroll", handleScroll);
+			handleScroll.clear();
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [resourceId]); // Only re-run when resource changes, not when savedScrollTop changes (to avoid loop)
 
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
@@ -108,12 +141,16 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const connectors = resource.connectors || [];
 
 	return (
-		<Box p={2} display="flex" flexDirection="column" gap={4}>
+		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={4}>
 			<ResourceHeader resource={resource} />
 			<Divider />
 			<ResourceMetrics metrics={metrics} />
 			<Divider />
-			<MonitorsView connectors={connectors} lastUpdatedAt={lastUpdatedAt} />
+			<MonitorsView
+				connectors={connectors}
+				lastUpdatedAt={lastUpdatedAt}
+				resourceId={resourceId}
+			/>
 		</Box>
 	);
 };

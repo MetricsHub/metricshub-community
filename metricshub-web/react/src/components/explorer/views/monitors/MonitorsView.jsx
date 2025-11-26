@@ -1,10 +1,12 @@
 import * as React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
+import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -17,9 +19,15 @@ import InstanceMetricsTable from "./components/InstanceMetricsTable";
  * - Shows a "last updated" label based on when the resource
  *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date }} props
+ * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string }} props
  */
-const MonitorsView = ({ connectors, lastUpdatedAt }) => {
+const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
+    const dispatch = useDispatch();
+    const uiState = useSelector((state) =>
+        resourceId ? selectResourceUiState(resourceId)(state) : null,
+    );
+    const expandedMonitors = uiState?.monitors || {};
+
     // Natural sort for metric names like cpu0, cpu1, cpu10, ...
     const naturalMetricCompare = React.useCallback((a, b) => {
         const nameA = a[0];
@@ -147,7 +155,18 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                 return (
                     <Accordion
                         key={monitor.name}
-                        defaultExpanded={false}
+                        expanded={!!expandedMonitors[monitor.name]}
+                        onChange={(e, isExpanded) => {
+                            if (resourceId) {
+                                dispatch(
+                                    setMonitorExpanded({
+                                        resourceId,
+                                        monitorName: monitor.name,
+                                        expanded: isExpanded,
+                                    }),
+                                );
+                            }
+                        }}
                         disableGutters
                         elevation={0}
                         square
@@ -207,6 +226,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                                         key={group.baseName}
                                         group={group}
                                         sortedInstances={sortedInstances}
+                                        resourceId={resourceId}
                                     />
                                 ))
                                 : sortedInstances.map((inst) => {

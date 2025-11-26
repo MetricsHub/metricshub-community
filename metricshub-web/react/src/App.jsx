@@ -19,6 +19,7 @@ import logoLight from "./assets/logo-light.svg";
 // Lazy pages
 const LoginPage = React.lazy(() => import("./pages/LoginPage")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/ExplorerPage"));
+const ExplorerRedirect = React.lazy(() => import("./components/explorer/ExplorerRedirect"));
 const Configuration = React.lazy(() => import("./pages/ConfigurationPage"));
 const NavBar = React.lazy(() => import("./components/navbar/Navbar"));
 
@@ -147,10 +148,7 @@ const AppContent = ({ onToggleTheme }) => {
 
 					{/* Private routes */}
 					<Route element={<GuardedAppLayout onToggleTheme={onToggleTheme} />}>
-						<Route
-							path={paths.explorer}
-							element={<Navigate to={paths.explorerWelcome} replace />}
-						/>
+						<Route path={paths.explorer} element={<ExplorerRedirect />} />
 						<Route path={paths.explorerWelcome} element={<Explorer />} />
 						<Route path="/explorer/resource-groups/:name" element={<Explorer />} />
 						<Route path="/explorer/resources/:resourceName" element={<Explorer />} />

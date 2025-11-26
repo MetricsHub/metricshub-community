@@ -1,12 +1,31 @@
 import * as React from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
 import { renderUtilizationContent, UtilizationStack, colorFor, colorLabelFromKey, buildUtilizationParts, getPriority } from "./Utilization";
+import { selectResourceUiState, setPivotGroupExpanded } from "../../../../../store/slices/explorer-slice";
 
-const PivotGroupSection = ({ group, sortedInstances }) => {
+const PivotGroupSection = ({ group, sortedInstances, resourceId }) => {
     const braceIndex = group.baseName.indexOf("{");
     const displayBaseName = braceIndex === -1 ? group.baseName : group.baseName.slice(0, braceIndex);
-    const [open, setOpen] = React.useState(false);
+
+    const dispatch = useDispatch();
+    const uiState = useSelector((state) =>
+        resourceId ? selectResourceUiState(resourceId)(state) : null,
+    );
+    const open = uiState?.pivotGroups?.[group.baseName] || false;
+
+    const handleToggle = () => {
+        if (resourceId) {
+            dispatch(
+                setPivotGroupExpanded({
+                    resourceId,
+                    groupKey: group.baseName,
+                    expanded: !open,
+                }),
+            );
+        }
+    };
 
     const isUtilizationGroup = group.baseName.includes(".utilization");
 
@@ -82,7 +101,7 @@ const PivotGroupSection = ({ group, sortedInstances }) => {
                         bgcolor: "action.selected",
                     },
                 }}
-                onClick={() => setOpen((prev) => !prev)}
+                onClick={handleToggle}
             >
                 <Box sx={{ display: "flex", alignItems: "center", columnGap: 1, flexWrap: "wrap" }}>
                     <Typography
