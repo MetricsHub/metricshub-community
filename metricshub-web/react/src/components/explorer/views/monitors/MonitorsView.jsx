@@ -111,6 +111,18 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
 
             {safeMonitors.map((monitor, index) => {
                 const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
+                const sortedInstances = [...instances].sort((a, b) => {
+                    const attrsA = a?.attributes ?? {};
+                    const attrsB = b?.attributes ?? {};
+                    const idA = attrsA.id ?? a.name ?? "";
+                    const idB = attrsB.id ?? b.name ?? "";
+                    const numA = Number(idA);
+                    const numB = Number(idB);
+                    if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+                        return numA - numB;
+                    }
+                    return String(idA).localeCompare(String(idB));
+                });
 
                 return (
                     <Accordion
@@ -140,12 +152,36 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                                 "& .MuiAccordionSummary-content": { my: 0, ml: 0 },
                             }}
                         >
-                            <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+                            <Typography
+                                variant="subtitle1"
+                                sx={{
+                                    fontWeight: 500,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    columnGap: 1,
+                                }}
+                            >
                                 {prettifyKey(monitor.name)}
+                                <Box
+                                    component="span"
+                                    sx={{
+                                        ml: 1,
+                                        px: 1,
+                                        minWidth: 24,
+                                        textAlign: "center",
+                                        borderRadius: 999,
+                                        fontSize: 12,
+                                        fontWeight: 500,
+                                        bgcolor: "action.selected",
+                                        color: "text.primary",
+                                    }}
+                                >
+                                    {instances.length}
+                                </Box>
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1 }}>
-                            {instances.map((inst) => {
+                            {sortedInstances.map((inst) => {
                                 const attrs = inst?.attributes ?? {};
                                 const id = attrs.id || inst.name;
                                 const displayName =
