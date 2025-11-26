@@ -185,7 +185,145 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
     const PivotGroupSection = ({ group, sortedInstances }) => {
         const braceIndex = group.baseName.indexOf("{");
         const displayBaseName = braceIndex === -1 ? group.baseName : group.baseName.slice(0, braceIndex);
-        const [open, setOpen] = React.useState(true);
+        const [open, setOpen] = React.useState(false);
+
+        const isUtilizationGroup = group.baseName.includes(".utilization");
+
+        const getLegendItems = () => {
+            if (!isUtilizationGroup) return [];
+            const seen = new Set();
+            const items = [];
+
+            group.metricKeys.forEach((key) => {
+                const braceStart = key.indexOf("{");
+                const braceEnd = key.lastIndexOf("}");
+                let label = null;
+
+                if (braceStart !== -1 && braceEnd > braceStart) {
+                    const insideBraces = key.slice(braceStart + 1, braceEnd);
+                    const quoteStart = insideBraces.indexOf('"');
+                    const quoteEnd = insideBraces.lastIndexOf('"');
+                    if (quoteStart !== -1 && quoteEnd > quoteStart) {
+                        label = insideBraces.slice(quoteStart + 1, quoteEnd).toLowerCase();
+                    }
+                }
+
+                if (!label) {
+                    label = key.substring(key.lastIndexOf(".") + 1).toLowerCase();
+                }
+
+                if (seen.has(label)) return;
+                seen.add(label);
+                items.push(label);
+            });
+
+            return items;
+        };
+
+        const renderHeader = () => {
+            if (!isUtilizationGroup) {
+                return (
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>Instance</TableCell>
+                            {group.metricKeys.map((key) => {
+                                const braceStart = key.indexOf("{");
+                                const braceEnd = key.lastIndexOf("}");
+                                let colLabel = key;
+
+                                if (braceStart !== -1 && braceEnd > braceStart) {
+                                    const insideBraces = key.slice(braceStart + 1, braceEnd);
+                                    const quoteStart = insideBraces.indexOf('"');
+                                    const quoteEnd = insideBraces.lastIndexOf('"');
+                                    if (quoteStart !== -1 && quoteEnd > quoteStart) {
+                                        colLabel = insideBraces.slice(quoteStart + 1, quoteEnd);
+                                    } else {
+                                        colLabel = insideBraces;
+                                    }
+                                }
+
+                                return <TableCell key={key}>{colLabel}</TableCell>;
+                            })}
+                        </TableRow>
+                    </TableHead>
+                );
+            }
+
+            return (
+                <TableHead>
+                    <TableRow>
+                        <TableCell>Instance</TableCell>
+                        <TableCell>Utilization</TableCell>
+                    </TableRow>
+                </TableHead>
+            );
+        };
+
+        const getUtilizationParts = (metrics) => {
+            const parts = group.metricKeys
+                .map((key) => {
+                    const raw = metrics[key];
+                    const value = typeof raw === "number" ? Math.max(0, Math.min(raw, 1)) : 0;
+                    return { key, value };
+                })
+                .filter((p) => p.value > 0);
+
+            if (parts.length === 0) return [];
+
+            const total = parts.reduce((sum, p) => sum + p.value, 0) || 1;
+
+            return parts.map((p) => ({
+                key: p.key,
+                pct: Math.round((p.value / total) * 100),
+            }));
+        };
+
+        const colorFor = (name) => {
+            const n = name.toLowerCase();
+            if (n.includes("used")) return (theme) => theme.palette.success.main;
+            if (n.includes("free")) return (theme) => theme.palette.info.main;
+            if (n.includes("cache")) return (theme) => theme.palette.warning.main;
+            if (n.includes("idle")) return (theme) => theme.palette.grey[500];
+            if (n.includes("system")) return (theme) => theme.palette.warning.dark;
+            if (n.includes("user")) return (theme) => theme.palette.success.dark;
+            return (theme) => theme.palette.grey[600];
+        };
+
+        const UtilizationStack = ({ metrics }) => {
+            const parts = getUtilizationParts(metrics);
+            if (!parts.length) return null;
+
+            const sortedParts = [...parts].sort((a, b) => a.pct - b.pct);
+
+            return (
+                <Box
+                    sx={{
+                        position: "relative",
+                        height: 16,
+                        borderRadius: 1,
+                        overflow: "hidden",
+                        bgcolor: "action.hover",
+                    }}
+                >
+                    {sortedParts.map((p) => {
+                        const label = p.key.substring(p.key.lastIndexOf(".") + 1);
+                        return (
+                            <Box
+                                key={p.key}
+                                sx={{
+                                    float: "left",
+                                    width: `${p.pct}%`,
+                                    height: "100%",
+                                    bgcolor: colorFor(label),
+                                }}
+                            />
+                        );
+                    })}
+                </Box>
+            );
+        };
+
+        const legendItems = getLegendItems();
 
         return (
             <Box key={group.baseName} mb={2}>
@@ -207,17 +345,48 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                     }}
                     onClick={() => setOpen((prev) => !prev)}
                 >
-                    <Typography
-                        variant="subtitle2"
-                        sx={{
-                            fontWeight: 500,
-                            display: "flex",
-                            alignItems: "center",
-                            columnGap: 1,
-                        }}
-                    >
-                        {displayBaseName}
-                    </Typography>
+                    <Box sx={{ display: "flex", alignItems: "center", columnGap: 1, flexWrap: "wrap" }}>
+                        <Typography
+                            variant="subtitle2"
+                            sx={{
+                                fontWeight: 500,
+                                display: "flex",
+                                alignItems: "center",
+                                columnGap: 1,
+                            }}
+                        >
+                            {displayBaseName}
+                        </Typography>
+
+                        {isUtilizationGroup && legendItems.length > 0 && (
+                            <Box
+                                sx={{
+                                    display: "flex",
+                                    flexWrap: "wrap",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                }}
+                            >
+                                {legendItems.map((label) => (
+                                    <Box
+                                        key={label}
+                                        sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: 10 }}
+                                    >
+                                        <Box
+                                            sx={{
+                                                width: 10,
+                                                height: 10,
+                                                borderRadius: 0.5,
+                                                bgcolor: colorFor(label),
+                                            }}
+                                        />
+                                        <Box component="span">{label}</Box>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
+                    </Box>
+
                     <Typography
                         variant="caption"
                         color="text.secondary"
@@ -240,29 +409,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
 
                 {open && (
                     <DashboardTable stickyHeader={false}>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Instance</TableCell>
-                                {group.metricKeys.map((key) => {
-                                    const braceStart = key.indexOf("{");
-                                    const braceEnd = key.lastIndexOf("}");
-                                    let colLabel = key;
-
-                                    if (braceStart !== -1 && braceEnd > braceStart) {
-                                        const insideBraces = key.slice(braceStart + 1, braceEnd);
-                                        const quoteStart = insideBraces.indexOf('"');
-                                        const quoteEnd = insideBraces.lastIndexOf('"');
-                                        if (quoteStart !== -1 && quoteEnd > quoteStart) {
-                                            colLabel = insideBraces.slice(quoteStart + 1, quoteEnd);
-                                        } else {
-                                            colLabel = insideBraces;
-                                        }
-                                    }
-
-                                    return <TableCell key={key}>{colLabel}</TableCell>;
-                                })}
-                            </TableRow>
-                        </TableHead>
+                        {renderHeader()}
                         <TableBody>
                             {sortedInstances.map((inst, rowIndex) => {
                                 const attrs = inst?.attributes ?? {};
@@ -273,11 +420,17 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                                 return (
                                     <TableRow key={id || rowIndex}>
                                         <TableCell>{displayName}</TableCell>
-                                        {group.metricKeys.map((key) => (
-                                            <TableCell key={key}>
-                                                {renderUtilizationContent(key, metrics[key])}
+                                        {isUtilizationGroup ? (
+                                            <TableCell>
+                                                <UtilizationStack metrics={metrics} />
                                             </TableCell>
-                                        ))}
+                                        ) : (
+                                            group.metricKeys.map((key) => (
+                                                <TableCell key={key}>
+                                                    {renderUtilizationContent(key, metrics[key])}
+                                                </TableCell>
+                                            ))
+                                        )}
                                     </TableRow>
                                 );
                             })}
