@@ -55,6 +55,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.extension.TestConfiguration;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -66,6 +68,12 @@ class SourceUpdaterProcessorTest {
 
 	@Mock
 	private ISourceProcessor sourceProcessor;
+
+	@Mock
+	private IProtocolExtension protocolExtensionMock;
+
+	@Mock
+	private ExtensionManager extensionManager;
 
 	@Test
 	void testProcessHttpPSource() {
@@ -86,7 +94,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(HttpSource.builder().url(URL).method(HttpMethod.GET).build())
 		);
@@ -114,7 +123,8 @@ class SourceUpdaterProcessorTest {
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
 		)
 			.process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
@@ -128,7 +138,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
@@ -146,7 +157,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2_ARRAY, result.getRawData());
@@ -164,7 +176,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(httpSource);
 
@@ -214,7 +227,8 @@ class SourceUpdaterProcessorTest {
 			sourceProcessor,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
 		)
 			.process(httpSource);
 		final String expectedResult = "concatStart:{expectedVal1}concatEnd;concatStart:{expectedVal2}concatEnd;";
@@ -279,7 +293,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(SnmpGetSource.builder().oid(OID).build())
 		);
@@ -293,7 +308,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(SnmpGetSource.builder().oid(OID).build())
 		);
@@ -317,7 +333,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
@@ -334,7 +351,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
@@ -358,7 +376,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(TableJoinSource.builder().build())
 		);
@@ -382,7 +401,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(TableUnionSource.builder().tables(new ArrayList<>()).build())
 		);
@@ -406,7 +426,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(CopySource.builder().from(TAB1_REF).build())
 		);
@@ -426,7 +447,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(snmpGetSource)
 		);
@@ -438,7 +460,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(copySource)
 		);
@@ -466,7 +489,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(staticSource)
 		);
@@ -519,7 +543,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(WbemSource.builder().query(EMPTY).build())
 		);
@@ -538,7 +563,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(WmiSource.builder().query(EMPTY).build())
 		);
@@ -557,7 +583,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(
 					CommandLineSource
@@ -577,7 +604,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				TelemetryManager.builder().build(),
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(IpmiSource.builder().build())
 		);
@@ -674,7 +702,8 @@ class SourceUpdaterProcessorTest {
 				sourceProcessor,
 				telemetryManager,
 				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE)
+				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+				extensionManager
 			)
 				.process(source),
 			"Processing JMX source did not return expected result."

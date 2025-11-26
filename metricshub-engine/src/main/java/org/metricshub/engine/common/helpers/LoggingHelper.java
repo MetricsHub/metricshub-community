@@ -104,8 +104,8 @@ public class LoggingHelper {
 	/**
 	 * Log the given message at the given logging {@link Level} after replacing the potential passwords with "************".
 	 * The number of '*' characters if fixed and independent from the passwords lengths.
-	 * @param loggerLevel The logging {@link Level}.
-	 * @param log         The message to log.
+	 * @param loggerLevel     The logging {@link Level}.
+	 * @param messageSupplier The message supplier which provides the log entry.
 	 */
 	public static void logWithHiddenPassword(final Level loggerLevel, final Supplier<String> messageSupplier) {
 		if (!log.isEnabledForLevel(loggerLevel)) {

@@ -75,16 +75,4 @@ public class AgentTelemetry extends AbstractBaseTelemetry {
 		this.resourceGroups = resourceGroups != null ? resourceGroups : new ArrayList<>();
 		this.resources = resources != null ? resources : new ArrayList<>();
 	}
-
-	@Override
-	@JsonInclude(JsonInclude.Include.ALWAYS)
-	public Map<String, String> getAttributes() {
-		return super.getAttributes();
-	}
-
-	@Override
-	@JsonInclude(JsonInclude.Include.ALWAYS)
-	public Map<String, Object> getMetrics() {
-		return super.getMetrics();
-	}
 }

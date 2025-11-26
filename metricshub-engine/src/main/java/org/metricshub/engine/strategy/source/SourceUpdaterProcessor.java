@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -43,6 +44,7 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -62,6 +64,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableJoinSource
 import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.strategy.utils.EmulationHelper;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -93,11 +97,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	private TelemetryManager telemetryManager;
 	private String connectorId;
 	private Map<String, String> attributes;
+	private ExtensionManager extensionManager;
 
 	@Override
 	public SourceTable process(final HttpSource httpSource) {
 		// Very important! otherwise we will overlap in multi-host mode
-		final HttpSource copy = httpSource.copy();
+		final var copy = httpSource.copy();
 
 		// Replace HTTP Authentication token
 		copy.setAuthenticationToken(
@@ -194,8 +199,27 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return {@link SourceTable}
 	 */
 	private SourceTable processSource(final Source copy) {
+		// Retrieve emulation input directory and read recorded source from it
+		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+
+		// Predicate to check whether we should record or emulate the source
+		final Predicate<Source> shouldRecordOrEmulate = this::shouldRecordOrEmulate;
+
+		// CHECKSTYLE:OFF
+		if (StringHelper.nonNullNonBlank(emulationInputDirectory) && shouldRecordOrEmulate.test(copy)) {
+			return EmulationHelper
+				.readEmulatedSourceTable(connectorId, copy, emulationInputDirectory, telemetryManager)
+				.orElseGet(SourceTable::empty);
+		}
+		// CHECKSTYLE:ON
+
 		if (copy.isExecuteForEachEntryOf()) {
-			return runExecuteForEachEntryOf(copy);
+			var table = runExecuteForEachEntryOf(copy);
+
+			// Persist if it is requested through recordOutputDirectory
+			EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
+
+			return table;
 		}
 
 		copy.update(value ->
@@ -203,13 +227,34 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		);
 		copy.update(value -> replaceAttributeReferences(value, attributes));
 
-		copy.update(value -> replaceProtocolPropertyReferences(value));
+		copy.update(this::replaceProtocolPropertyReferences);
 
 		copy.update(value -> replaceSourceReference(value, copy));
 
 		copy.update(value -> value == null ? value : value.replace("$$", "$"));
 
-		return copy.accept(sourceProcessor);
+		var table = copy.accept(sourceProcessor);
+
+		// Persist if it is requested through recordOutputDirectory
+		EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
+
+		return table;
+	}
+
+	/**
+	 * Checks whether we should record or emulate the given source copy
+	 *
+	 * @param copy {@link Source} instance copy
+	 * @return boolean value
+	 */
+	private boolean shouldRecordOrEmulate(final Source copy) {
+		// CHECKSTYLE:OFF
+		return (
+			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
+			(extensionManager.findSourceExtension(copy, telemetryManager).isPresent() ||
+				extensionManager.findCompositeSourceScriptExtension(copy).isPresent())
+		);
+		// CHECKSTYLE:ON
 	}
 
 	/**

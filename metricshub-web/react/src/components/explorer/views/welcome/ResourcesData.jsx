@@ -1,15 +1,8 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
+import DashboardTable from "./DashboardTable";
+import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
 
 /**
  * Render a single resource row.
@@ -45,37 +38,37 @@ const ResourcesData = ({ resources, onResourceClick }) => {
 
 	return (
 		<Box>
-			<Typography
-				variant="h6"
-				gutterBottom
-				sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-			>
+			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 				<NodeTypeIcons type="resource" />
 				Resources
 			</Typography>
-			<Paper variant="outlined">
-				<Table size="small">
-					<TableHead>
+			<DashboardTable>
+				<TableHead>
+					<TableRow>
+						<TableCell>Key</TableCell>
+						<TableCell>host.name</TableCell>
+						<TableCell>host.type</TableCell>
+						<TableCell>os.type</TableCell>
+					</TableRow>
+				</TableHead>
+				<TableBody>
+					{allResources.length === 0 ? (
 						<TableRow>
-							<TableCell>Key</TableCell>
-							<TableCell>host.name</TableCell>
-							<TableCell>host.type</TableCell>
-							<TableCell>os.type</TableCell>
+							<TableCell colSpan={4} sx={emptyStateCellSx}>
+								No resources
+							</TableCell>
 						</TableRow>
-					</TableHead>
-					<TableBody>
-						{allResources.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={4}>No resources</TableCell>
-							</TableRow>
-						) : (
-							allResources.map((resource) => (
-								<ResourceRow key={resource.name} resource={resource} onClick={onResourceClick} />
-							))
-						)}
-					</TableBody>
-				</Table>
-			</Paper>
+					) : (
+						allResources.map((resource) => (
+							<ResourceRow
+								key={resource.name}
+								resource={resource}
+								onClick={onResourceClick}
+							/>
+						))
+					)}
+				</TableBody>
+			</DashboardTable>
 		</Box>
 	);
 };
