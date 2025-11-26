@@ -1,18 +1,10 @@
 import * as React from "react";
-import {
-    Box,
-    Typography,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableRow,
-    Accordion,
-    AccordionSummary,
-    AccordionDetails,
-} from "@mui/material";
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
-import DashboardTable from "../common/DashboardTable";
+import MonitorsHeader from "./components/MonitorsHeader";
+import PivotGroupSection from "./components/PivotGroupSection";
+import InstanceMetricsTable from "./components/InstanceMetricsTable";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -108,49 +100,6 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
         [naturalMetricCompare],
     );
 
-    const renderUtilizationContent = (key, raw) => {
-        if (typeof raw !== "number" || !key.includes(".utilization")) {
-            return raw != null ? String(raw) : "";
-        }
-
-        const clamped = Math.max(0, Math.min(raw, 1));
-        const pct = Math.round(clamped * 100);
-
-        return (
-            <Box
-                sx={{
-                    position: "relative",
-                    height: 16,
-                    borderRadius: 1,
-                    bgcolor: "action.hover",
-                    overflow: "hidden",
-                }}
-            >
-                <Box
-                    sx={{
-                        position: "absolute",
-                        inset: 0,
-                        width: `${pct}%`,
-                        background: (theme) =>
-                            `linear-gradient(90deg, ${theme.palette.success.main}, ${theme.palette.warning.main}, ${theme.palette.error.main})`,
-                        transition: "width 0.2s ease-out",
-                    }}
-                />
-                <Box
-                    sx={{
-                        position: "relative",
-                        zIndex: 1,
-                        fontSize: 11,
-                        textAlign: "center",
-                        color: "common.white",
-                    }}
-                >
-                    {pct}%
-                </Box>
-            </Box>
-        );
-    };
-
     const lastUpdatedLabel = React.useMemo(() => {
         if (!lastUpdatedAt) return "Never";
 
@@ -169,288 +118,15 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
     if (safeMonitors.length === 0) {
         return (
             <Box>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
-                        Monitors
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        Last updated: {lastUpdatedLabel}
-                    </Typography>
-                </Box>
+                <MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
                 <Typography variant="body2">No monitors available for this resource.</Typography>
             </Box>
         );
     }
 
-    const PivotGroupSection = ({ group, sortedInstances }) => {
-        const braceIndex = group.baseName.indexOf("{");
-        const displayBaseName = braceIndex === -1 ? group.baseName : group.baseName.slice(0, braceIndex);
-        const [open, setOpen] = React.useState(false);
-
-        const isUtilizationGroup = group.baseName.includes(".utilization");
-
-        const getLegendItems = () => {
-            if (!isUtilizationGroup) return [];
-            const seen = new Set();
-            const items = [];
-
-            group.metricKeys.forEach((key) => {
-                const braceStart = key.indexOf("{");
-                const braceEnd = key.lastIndexOf("}");
-                let label = null;
-
-                if (braceStart !== -1 && braceEnd > braceStart) {
-                    const insideBraces = key.slice(braceStart + 1, braceEnd);
-                    const quoteStart = insideBraces.indexOf('"');
-                    const quoteEnd = insideBraces.lastIndexOf('"');
-                    if (quoteStart !== -1 && quoteEnd > quoteStart) {
-                        label = insideBraces.slice(quoteStart + 1, quoteEnd).toLowerCase();
-                    }
-                }
-
-                if (!label) {
-                    label = key.substring(key.lastIndexOf(".") + 1).toLowerCase();
-                }
-
-                if (seen.has(label)) return;
-                seen.add(label);
-                items.push(label);
-            });
-
-            return items;
-        };
-
-        const renderHeader = () => {
-            if (!isUtilizationGroup) {
-                return (
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Instance</TableCell>
-                            {group.metricKeys.map((key) => {
-                                const braceStart = key.indexOf("{");
-                                const braceEnd = key.lastIndexOf("}");
-                                let colLabel = key;
-
-                                if (braceStart !== -1 && braceEnd > braceStart) {
-                                    const insideBraces = key.slice(braceStart + 1, braceEnd);
-                                    const quoteStart = insideBraces.indexOf('"');
-                                    const quoteEnd = insideBraces.lastIndexOf('"');
-                                    if (quoteStart !== -1 && quoteEnd > quoteStart) {
-                                        colLabel = insideBraces.slice(quoteStart + 1, quoteEnd);
-                                    } else {
-                                        colLabel = insideBraces;
-                                    }
-                                }
-
-                                return <TableCell key={key}>{colLabel}</TableCell>;
-                            })}
-                        </TableRow>
-                    </TableHead>
-                );
-            }
-
-            return (
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Instance</TableCell>
-                        <TableCell>Utilization</TableCell>
-                    </TableRow>
-                </TableHead>
-            );
-        };
-
-        const getUtilizationParts = (metrics) => {
-            const parts = group.metricKeys
-                .map((key) => {
-                    const raw = metrics[key];
-                    const value = typeof raw === "number" ? Math.max(0, Math.min(raw, 1)) : 0;
-                    return { key, value };
-                })
-                .filter((p) => p.value > 0);
-
-            if (parts.length === 0) return [];
-
-            const total = parts.reduce((sum, p) => sum + p.value, 0) || 1;
-
-            return parts.map((p) => ({
-                key: p.key,
-                pct: Math.round((p.value / total) * 100),
-            }));
-        };
-
-        const colorFor = (name) => {
-            const n = name.toLowerCase();
-            if (n.includes("used")) return (theme) => theme.palette.success.main;
-            if (n.includes("free")) return (theme) => theme.palette.info.main;
-            if (n.includes("cache")) return (theme) => theme.palette.warning.main;
-            if (n.includes("idle")) return (theme) => theme.palette.grey[500];
-            if (n.includes("system")) return (theme) => theme.palette.warning.dark;
-            if (n.includes("user")) return (theme) => theme.palette.success.dark;
-            return (theme) => theme.palette.grey[600];
-        };
-
-        const UtilizationStack = ({ metrics }) => {
-            const parts = getUtilizationParts(metrics);
-            if (!parts.length) return null;
-
-            const sortedParts = [...parts].sort((a, b) => a.pct - b.pct);
-
-            return (
-                <Box
-                    sx={{
-                        position: "relative",
-                        height: 16,
-                        borderRadius: 1,
-                        overflow: "hidden",
-                        bgcolor: "action.hover",
-                    }}
-                >
-                    {sortedParts.map((p) => {
-                        const label = p.key.substring(p.key.lastIndexOf(".") + 1);
-                        return (
-                            <Box
-                                key={p.key}
-                                sx={{
-                                    float: "left",
-                                    width: `${p.pct}%`,
-                                    height: "100%",
-                                    bgcolor: colorFor(label),
-                                }}
-                            />
-                        );
-                    })}
-                </Box>
-            );
-        };
-
-        const legendItems = getLegendItems();
-
-        return (
-            <Box key={group.baseName} mb={2}>
-                <Box
-                    sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        cursor: "pointer",
-                        mb: 0.5,
-                        px: 0.75,
-                        py: 0.25,
-                        borderRadius: 1,
-                        bgcolor: "action.hover",
-                        transition: "background-color 0.15s ease-in-out",
-                        "&:hover": {
-                            bgcolor: "action.selected",
-                        },
-                    }}
-                    onClick={() => setOpen((prev) => !prev)}
-                >
-                    <Box sx={{ display: "flex", alignItems: "center", columnGap: 1, flexWrap: "wrap" }}>
-                        <Typography
-                            variant="subtitle2"
-                            sx={{
-                                fontWeight: 500,
-                                display: "flex",
-                                alignItems: "center",
-                                columnGap: 1,
-                            }}
-                        >
-                            {displayBaseName}
-                        </Typography>
-
-                        {isUtilizationGroup && legendItems.length > 0 && (
-                            <Box
-                                sx={{
-                                    display: "flex",
-                                    flexWrap: "wrap",
-                                    alignItems: "center",
-                                    gap: 0.5,
-                                }}
-                            >
-                                {legendItems.map((label) => (
-                                    <Box
-                                        key={label}
-                                        sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: 10 }}
-                                    >
-                                        <Box
-                                            sx={{
-                                                width: 10,
-                                                height: 10,
-                                                borderRadius: 0.5,
-                                                bgcolor: colorFor(label),
-                                            }}
-                                        />
-                                        <Box component="span">{label}</Box>
-                                    </Box>
-                                ))}
-                            </Box>
-                        )}
-                    </Box>
-
-                    <Typography
-                        variant="caption"
-                        color="text.secondary"
-                        sx={{ display: "flex", alignItems: "center", columnGap: 0.5 }}
-                    >
-                        {open ? "Hide" : "Show"}
-                        <Box
-                            component="span"
-                            sx={{
-                                display: "inline-block",
-                                transform: open ? "rotate(90deg)" : "rotate(0deg)",
-                                transition: "transform 0.15s ease-in-out",
-                                fontSize: 14,
-                            }}
-                        >
-                            ▶
-                        </Box>
-                    </Typography>
-                </Box>
-
-                {open && (
-                    <DashboardTable stickyHeader={false}>
-                        {renderHeader()}
-                        <TableBody>
-                            {sortedInstances.map((inst, rowIndex) => {
-                                const attrs = inst?.attributes ?? {};
-                                const id = attrs.id || inst.name;
-                                const displayName =
-                                    attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
-                                const metrics = inst?.metrics ?? {};
-                                return (
-                                    <TableRow key={id || rowIndex}>
-                                        <TableCell>{displayName}</TableCell>
-                                        {isUtilizationGroup ? (
-                                            <TableCell>
-                                                <UtilizationStack metrics={metrics} />
-                                            </TableCell>
-                                        ) : (
-                                            group.metricKeys.map((key) => (
-                                                <TableCell key={key}>
-                                                    {renderUtilizationContent(key, metrics[key])}
-                                                </TableCell>
-                                            ))
-                                        )}
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </DashboardTable>
-                )}
-            </Box>
-        );
-    };
-
     return (
         <Box display="flex" flexDirection="column">
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
-                    Monitors
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                    Last updated: {lastUpdatedLabel}
-                </Typography>
-            </Box>
+            <MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
 
             {safeMonitors.map((monitor, index) => {
                 const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
@@ -525,70 +201,26 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                             </Typography>
                         </AccordionSummary>
                         <AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1 }}>
-                            {pivotGroups.length > 0 ? (
-                                pivotGroups.map((group) => (
+                            {pivotGroups.length > 0
+                                ? pivotGroups.map((group) => (
                                     <PivotGroupSection
                                         key={group.baseName}
                                         group={group}
                                         sortedInstances={sortedInstances}
                                     />
                                 ))
-                            ) : (
-                                sortedInstances.map((inst) => {
-                                    const attrs = inst?.attributes ?? {};
-                                    const id = attrs.id || inst.name;
-                                    const displayName =
-                                        attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
-                                    const extraInfoParts = [];
-                                    if (attrs.name && attrs.name !== displayName)
-                                        extraInfoParts.push(`name: ${attrs.name}`);
-                                    if (attrs.serial_number)
-                                        extraInfoParts.push(`serial_number: ${attrs.serial_number}`);
-                                    if (attrs.vendor) extraInfoParts.push(`vendor: ${attrs.vendor}`);
-                                    if (attrs.info) extraInfoParts.push(`info: ${attrs.info}`);
-
+                                : sortedInstances.map((inst) => {
                                     const metrics = inst?.metrics ?? {};
-                                    const metricEntries = Object.entries(metrics)
-                                        .filter(([name]) => !name.startsWith("__"))
-                                        .sort(naturalMetricCompare);
-
+                                    const metricEntries = Object.entries(metrics);
                                     return (
-                                        <Box key={id} mb={3}>
-                                            <Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
-                                                {displayName}
-                                                {extraInfoParts.length > 0 && ` (${extraInfoParts.join("; ")})`}
-                                            </Typography>
-
-                                            <DashboardTable stickyHeader={false}>
-                                                <TableHead>
-                                                    <TableRow>
-                                                        <TableCell>Name</TableCell>
-                                                        <TableCell>Value</TableCell>
-                                                        <TableCell>Unit</TableCell>
-                                                    </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {metricEntries.length === 0 ? (
-                                                        <TableRow>
-                                                            <TableCell colSpan={3}>No metrics</TableCell>
-                                                        </TableRow>
-                                                    ) : (
-                                                        metricEntries.map(([name, value]) => (
-                                                            <TableRow key={name}>
-                                                                <TableCell>{name}</TableCell>
-                                                                <TableCell>
-                                                                    {renderUtilizationContent(name, value)}
-                                                                </TableCell>
-                                                                <TableCell></TableCell>
-                                                            </TableRow>
-                                                        ))
-                                                    )}
-                                                </TableBody>
-                                            </DashboardTable>
-                                        </Box>
+                                        <InstanceMetricsTable
+                                            key={inst?.attributes?.id || inst.name}
+                                            instance={inst}
+                                            metricEntries={metricEntries}
+                                            naturalMetricCompare={naturalMetricCompare}
+                                        />
                                     );
-                                })
-                            )}
+                                })}
                         </AccordionDetails>
                     </Accordion>
                 );
