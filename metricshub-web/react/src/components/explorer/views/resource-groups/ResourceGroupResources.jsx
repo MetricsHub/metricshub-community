@@ -13,7 +13,11 @@ import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
 const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	const attrs = resource.attributes ?? {};
 	return (
-		<TableRow hover sx={{ cursor: "pointer" }} onClick={() => onClick && onClick(resource)}>
+		<TableRow
+			hover={Boolean(onClick)}
+			sx={{ cursor: onClick ? "pointer" : "default" }}
+			onClick={onClick ? () => onClick(resource) : undefined}
+		>
 			<TableCell>{resource.name}</TableCell>
 			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
 			<TableCell>{attrs["host.type"] ?? ""}</TableCell>

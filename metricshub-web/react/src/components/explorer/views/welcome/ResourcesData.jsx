@@ -13,9 +13,9 @@ const ResourceRow = React.memo(function ResourceRow({ resource, onClick }) {
 	const attrs = resource.attributes ?? {};
 	return (
 		<TableRow
-			hover
+			hover={Boolean(onClick)}
 			sx={{ cursor: onClick ? "pointer" : "default" }}
-			onClick={() => onClick && onClick(resource)}
+			onClick={onClick ? () => onClick(resource) : undefined}
 		>
 			<TableCell>{resource.name}</TableCell>
 			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
