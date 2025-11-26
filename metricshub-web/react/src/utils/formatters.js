@@ -7,11 +7,6 @@ dayjs.extend(relativeTime);
 export const formatBytes = (n) =>
 	Intl.NumberFormat(undefined, { notation: "compact" }).format(n) + "B";
 
-export const formatDateTime = (s) => {
-	const d = dayjs(s);
-	return d.isValid() ? d.format("MMM DD, YYYY HH:mm") : s;
-};
-
 export const formatRelativeTime = (isoString) => {
 	const d = dayjs(isoString);
 	if (!d.isValid()) return isoString;

@@ -69,12 +69,15 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	);
 	const savedScrollTop = uiState?.scrollTop || 0;
 
+	/**
+	 * Restore scroll position when resource changes.
+	 * Debounce scroll event to save position to Redux.
+	 */
 	React.useLayoutEffect(() => {
 		if (!resourceId || !rootRef.current) return;
 		const scrollParent = rootRef.current.parentElement;
 		if (!scrollParent) return;
 
-		// Restore scroll position
 		if (savedScrollTop > 0) {
 			scrollParent.scrollTop = savedScrollTop;
 		}
@@ -89,7 +92,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			handleScroll.clear();
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [resourceId]); // Only re-run when resource changes, not when savedScrollTop changes (to avoid loop)
+	}, [resourceId]); // Only re-run when resource changes
 
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
@@ -115,6 +118,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		);
 	}
 
+	// Fallback: try to find resource in hierarchy if currentResource is not yet set
 	let resource = currentResource;
 	if (!resource && hierarchy && decodedName) {
 		const resourceGroups = hierarchy.resourceGroups || [];
@@ -153,11 +157,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			<Divider />
 			<ResourceMetrics metrics={metrics} />
 			<Divider />
-			<MonitorsView
-				connectors={connectors}
-				lastUpdatedAt={lastUpdatedAt}
-				resourceId={resourceId}
-			/>
+			<MonitorsView connectors={connectors} lastUpdatedAt={lastUpdatedAt} resourceId={resourceId} />
 		</Box>
 	);
 };

@@ -11,19 +11,17 @@ import { TableRow, TableCell } from "@mui/material";
 export const renderAttributesRows = (attributes, colSpan = 2) => {
 	const entries = Object.entries(attributes ?? {});
 	if (entries.length === 0) {
-		return React.createElement(
-			TableRow,
-			null,
-			React.createElement(TableCell, { colSpan }, "No attributes"),
+		return (
+			<TableRow>
+				<TableCell colSpan={colSpan}>No attributes</TableCell>
+			</TableRow>
 		);
 	}
 
-	return entries.map(([key, value]) =>
-		React.createElement(
-			TableRow,
-			{ key },
-			React.createElement(TableCell, null, key),
-			React.createElement(TableCell, null, String(value)),
-		),
-	);
+	return entries.map(([key, value]) => (
+		<TableRow key={key}>
+			<TableCell>{key}</TableCell>
+			<TableCell>{String(value)}</TableCell>
+		</TableRow>
+	));
 };

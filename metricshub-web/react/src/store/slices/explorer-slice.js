@@ -145,4 +145,7 @@ export const selectResourceError = createSelector([base], (s) => s.resourceError
 export const selectLastVisitedPath = createSelector([base], (s) => s.lastVisitedPath);
 
 export const selectResourceUiState = (resourceId) =>
-	createSelector([base], (s) => s.uiState[resourceId] || { scrollTop: 0, monitors: {}, pivotGroups: {} });
+	createSelector(
+		[base],
+		(s) => s.uiState[resourceId] || { scrollTop: 0, monitors: {}, pivotGroups: {} },
+	);

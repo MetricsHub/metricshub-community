@@ -60,11 +60,7 @@ const ResourcesData = ({ resources, onResourceClick }) => {
 						</TableRow>
 					) : (
 						allResources.map((resource) => (
-							<ResourceRow
-								key={resource.name}
-								resource={resource}
-								onClick={onResourceClick}
-							/>
+							<ResourceRow key={resource.name} resource={resource} onClick={onResourceClick} />
 						))
 					)}
 				</TableBody>
