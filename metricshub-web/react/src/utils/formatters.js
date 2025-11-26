@@ -14,5 +14,8 @@ export const formatDateTime = (s) => {
 
 export const formatRelativeTime = (isoString) => {
 	const d = dayjs(isoString);
-	return d.isValid() ? d.fromNow() : isoString;
+	if (!d.isValid()) return isoString;
+	const diff = dayjs().diff(d);
+	if (diff >= 0 && diff < 5000) return "now";
+	return d.fromNow();
 };

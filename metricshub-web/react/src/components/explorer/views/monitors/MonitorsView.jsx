@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
+import { formatRelativeTime } from "../../../../utils/formatters";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
@@ -27,6 +28,12 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
         resourceId ? selectResourceUiState(resourceId)(state) : null,
     );
     const expandedMonitors = uiState?.monitors || {};
+    const [_now, setNow] = React.useState(Date.now());
+
+    React.useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 5000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Natural sort for metric names like cpu0, cpu1, cpu10, ...
     const naturalMetricCompare = React.useCallback((a, b) => {
@@ -108,20 +115,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
         [naturalMetricCompare],
     );
 
-    const lastUpdatedLabel = React.useMemo(() => {
-        if (!lastUpdatedAt) return "Never";
-
-        const ts =
-            lastUpdatedAt instanceof Date
-                ? lastUpdatedAt.getTime()
-                : typeof lastUpdatedAt === "number"
-                    ? lastUpdatedAt
-                    : new Date(lastUpdatedAt).getTime();
-        if (Number.isNaN(ts)) return "Never";
-
-        // Only display local time, not the full date
-        return new Date(ts).toLocaleTimeString();
-    }, [lastUpdatedAt]);
+    const lastUpdatedLabel = !lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt);
 
     if (safeMonitors.length === 0) {
         return (

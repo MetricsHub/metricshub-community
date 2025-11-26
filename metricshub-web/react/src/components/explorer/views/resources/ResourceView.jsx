@@ -45,14 +45,21 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 
 	React.useEffect(() => {
 		if (!decodedName) return;
-		if (decodedGroup) {
-			dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
-		} else {
-			dispatch(fetchTopLevelResource({ resourceName: decodedName }));
-		}
 
-		// Update "last updated" every time we trigger a resource fetch
-		setLastUpdatedAt(Date.now());
+		const fetchData = () => {
+			if (decodedGroup) {
+				dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
+			} else {
+				dispatch(fetchTopLevelResource({ resourceName: decodedName }));
+			}
+			// Update "last updated" every time we trigger a resource fetch
+			setLastUpdatedAt(Date.now());
+		};
+
+		fetchData();
+		const interval = setInterval(fetchData, 10000);
+
+		return () => clearInterval(interval);
 	}, [dispatch, decodedName, decodedGroup]);
 
 	// Scroll restoration logic
