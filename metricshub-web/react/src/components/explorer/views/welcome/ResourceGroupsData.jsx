@@ -1,8 +1,8 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
+import DashboardTable from "../common/DashboardTable";
+import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
 
 /**
  * Count resources in a resource group.

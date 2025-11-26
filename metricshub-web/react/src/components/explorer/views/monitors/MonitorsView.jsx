@@ -2,18 +2,17 @@ import * as React from "react";
 import {
     Box,
     Typography,
-    Table,
     TableBody,
     TableCell,
     TableHead,
     TableRow,
-    Paper,
     Accordion,
     AccordionSummary,
     AccordionDetails,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
+import DashboardTable from "../common/DashboardTable";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -206,32 +205,30 @@ const MonitorsView = ({ connectors, lastUpdatedAt }) => {
                                             {extraInfoParts.length > 0 && ` (${extraInfoParts.join("; ")})`}
                                         </Typography>
 
-                                        <Paper variant="outlined" sx={{ mt: 1 }}>
-                                            <Table size="small">
-                                                <TableHead>
+                                        <DashboardTable stickyHeader={false}>
+                                            <TableHead>
+                                                <TableRow>
+                                                    <TableCell>Name</TableCell>
+                                                    <TableCell>Value</TableCell>
+                                                    <TableCell>Unit</TableCell>
+                                                </TableRow>
+                                            </TableHead>
+                                            <TableBody>
+                                                {metricEntries.length === 0 ? (
                                                     <TableRow>
-                                                        <TableCell>Name</TableCell>
-                                                        <TableCell>Value</TableCell>
-                                                        <TableCell>Unit</TableCell>
+                                                        <TableCell colSpan={3}>No metrics</TableCell>
                                                     </TableRow>
-                                                </TableHead>
-                                                <TableBody>
-                                                    {metricEntries.length === 0 ? (
-                                                        <TableRow>
-                                                            <TableCell colSpan={3}>No metrics</TableCell>
+                                                ) : (
+                                                    metricEntries.map(([name, value]) => (
+                                                        <TableRow key={name}>
+                                                            <TableCell>{name}</TableCell>
+                                                            <TableCell>{String(value)}</TableCell>
+                                                            <TableCell></TableCell>
                                                         </TableRow>
-                                                    ) : (
-                                                        metricEntries.map(([name, value]) => (
-                                                            <TableRow key={name}>
-                                                                <TableCell>{name}</TableCell>
-                                                                <TableCell>{String(value)}</TableCell>
-                                                                <TableCell></TableCell>
-                                                            </TableRow>
-                                                        ))
-                                                    )}
-                                                </TableBody>
-                                            </Table>
-                                        </Paper>
+                                                    ))
+                                                )}
+                                            </TableBody>
+                                        </DashboardTable>
                                     </Box>
                                 );
                             })}

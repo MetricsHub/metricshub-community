@@ -1,16 +1,9 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers";
+import DashboardTable from "../common/DashboardTable";
+import { sectionTitleSx } from "../common/table-styles";
 
 /**
  * Header section for a single resource, showing its id and attributes.
@@ -38,20 +31,18 @@ const ResourceHeader = ({ resource }) => {
 			</Box>
 
 			<Box>
-				<Typography variant="h6" gutterBottom>
+				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 					Attributes
 				</Typography>
-				<Paper variant="outlined">
-					<Table size="small">
-						<TableHead>
-							<TableRow>
-								<TableCell>Key</TableCell>
-								<TableCell>Value</TableCell>
-							</TableRow>
-						</TableHead>
-						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</Table>
-				</Paper>
+				<DashboardTable>
+					<TableHead>
+						<TableRow>
+							<TableCell>Key</TableCell>
+							<TableCell>Value</TableCell>
+						</TableRow>
+					</TableHead>
+					<TableBody>{renderAttributesRows(attributes)}</TableBody>
+				</DashboardTable>
 			</Box>
 		</Box>
 	);

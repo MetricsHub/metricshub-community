@@ -1,14 +1,7 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import DashboardTable from "../common/DashboardTable";
+import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
 
 /**
  * Render table rows for a list of resource metrics.
@@ -21,7 +14,9 @@ const renderMetricsRows = (metrics) => {
 	if (list.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={4}>No metrics</TableCell>
+				<TableCell colSpan={4} sx={emptyStateCellSx}>
+					No metrics
+				</TableCell>
 			</TableRow>
 		);
 	}
@@ -50,22 +45,20 @@ const ResourceMetrics = ({ metrics }) => {
 
 	return (
 		<Box>
-			<Typography variant="h6" gutterBottom>
+			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 				Metrics
 			</Typography>
-			<Paper variant="outlined">
-				<Table size="small">
-					<TableHead>
-						<TableRow>
-							<TableCell>Name</TableCell>
-							<TableCell>Value</TableCell>
-							<TableCell>Unit</TableCell>
-							<TableCell>Last Update</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderMetricsRows(rows)}</TableBody>
-				</Table>
-			</Paper>
+			<DashboardTable>
+				<TableHead>
+					<TableRow>
+						<TableCell>Name</TableCell>
+						<TableCell>Value</TableCell>
+						<TableCell>Unit</TableCell>
+						<TableCell>Last Update</TableCell>
+					</TableRow>
+				</TableHead>
+				<TableBody>{renderMetricsRows(rows)}</TableBody>
+			</DashboardTable>
 		</Box>
 	);
 };
