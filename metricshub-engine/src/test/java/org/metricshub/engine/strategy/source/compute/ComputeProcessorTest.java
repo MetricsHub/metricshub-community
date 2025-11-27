@@ -292,6 +292,13 @@ class ComputeProcessorTest {
 		sourceTable.getTable().add(new ArrayList<>(LINE_3));
 	}
 
+	/**
+	 * Creates a table with a single row containing 10 in the 2nd column.
+	 */
+	private List<List<String>> singleNumericRowTable() {
+		return new ArrayList<>(List.of(new ArrayList<>(Arrays.asList(ID1, TEN, VALUE_VAL1))));
+	}
+
 	@Test
 	void testProcessAdd() {
 		List<List<String>> table = Arrays.asList(
@@ -542,6 +549,67 @@ class ComputeProcessorTest {
 				Arrays.asList(ID1, "188.0", TWO, VALUE_VAL3)
 			),
 			sourceTable.getTable()
+		);
+	}
+
+	@Test
+	void testShouldPerformMathOperationsWithSignedOperands() {
+		/*
+		 * Column 2 initial numeric value is 10
+		 */
+
+		// --- Addition with + prefix ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Add.builder().column(2).value("+1.5").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "11.5", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Addition with '+1.5' failed"
+		);
+
+		// --- Subtraction with negative operand ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Subtract.builder().column(2).value("-3").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "13.0", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Subtraction with '-3' failed"
+		);
+
+		// --- Multiplication with negative operand ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Multiply.builder().column(2).value("-2").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "-20.0", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Multiplication with '-2' failed"
+		);
+
+		// --- Multiplication with leading-dot operand (.2) ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Multiply.builder().column(2).value(".2").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "2.0", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Multiplication with '.2' failed"
+		);
+
+		// --- Multiplication with signed leading-dot operand (+.2) ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Multiply.builder().column(2).value("+.2").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "2.0", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Multiplication with '+.2' failed"
+		);
+
+		// --- Division with signed leading-dot operand (-.5) ---
+		sourceTable.setTable(singleNumericRowTable());
+		computeProcessor.process(Divide.builder().column(2).value("-.5").build());
+		assertEquals(
+			List.of(Arrays.asList(ID1, "-20.0", VALUE_VAL1)),
+			sourceTable.getTable(),
+			"Division with '-.5' failed"
 		);
 	}
 

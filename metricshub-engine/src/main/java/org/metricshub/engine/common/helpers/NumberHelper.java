@@ -160,4 +160,22 @@ public class NumberHelper {
 	public static Number getPositiveOrDefault(final Number n, @NonNull final Number defaultValue) {
 		return n != null && n.doubleValue() > 0.0 ? n : defaultValue;
 	}
+
+	/**
+	 * Checks if a given string is numeric.
+	 *
+	 * @param strNum the string to check
+	 * @return {@code true} if the string is numeric, {@code false} otherwise
+	 */
+	public static boolean isNumeric(final String strNum) {
+		if (strNum == null) {
+			return false;
+		}
+		try {
+			Double.parseDouble(strNum);
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
 }

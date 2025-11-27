@@ -51,13 +51,9 @@ public abstract class AbstractBaseTelemetry {
 	 */
 	protected String type;
 
-	/**
-	 * Optional attributes describing the node (connector IDs, host details, etc.).
-	 */
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	@JsonInclude(JsonInclude.Include.ALWAYS)
 	protected Map<String, String> attributes = new HashMap<>();
 
-	/** Optional metrics snapshot for the node; values are primitive renderings. */
-	@JsonInclude(JsonInclude.Include.NON_EMPTY)
+	@JsonInclude(JsonInclude.Include.ALWAYS)
 	protected Map<String, Object> metrics = new HashMap<>();
 }
