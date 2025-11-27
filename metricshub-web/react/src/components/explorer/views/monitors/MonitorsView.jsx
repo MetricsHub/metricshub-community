@@ -67,7 +67,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 		for (const connector of connectors) {
 			if (Array.isArray(connector?.monitors)) {
 				for (const m of connector.monitors) {
-					list.push({ ...m, connectorName: connector.name });
+					list.push({ ...m, connectorName: connector.name, metaMetrics: connector.metaMetrics });
 				}
 			}
 		}
@@ -227,25 +227,27 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 						<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1 }}>
 							{pivotGroups.length > 0
 								? pivotGroups.map((group) => (
-										<PivotGroupSection
-											key={group.baseName}
-											group={group}
-											sortedInstances={sortedInstances}
-											resourceId={resourceId}
-										/>
-									))
+									<PivotGroupSection
+										key={group.baseName}
+										group={group}
+										sortedInstances={sortedInstances}
+										resourceId={resourceId}
+										metaMetrics={monitor.metaMetrics}
+									/>
+								))
 								: sortedInstances.map((inst) => {
-										const metrics = inst?.metrics ?? {};
-										const metricEntries = Object.entries(metrics);
-										return (
-											<InstanceMetricsTable
-												key={inst?.attributes?.id || inst.name}
-												instance={inst}
-												metricEntries={metricEntries}
-												naturalMetricCompare={naturalMetricCompare}
-											/>
-										);
-									})}
+									const metrics = inst?.metrics ?? {};
+									const metricEntries = Object.entries(metrics);
+									return (
+										<InstanceMetricsTable
+											key={inst?.attributes?.id || inst.name}
+											instance={inst}
+											metricEntries={metricEntries}
+											naturalMetricCompare={naturalMetricCompare}
+											metaMetrics={monitor.metaMetrics}
+										/>
+									);
+								})}
 						</AccordionDetails>
 					</Accordion>
 				);

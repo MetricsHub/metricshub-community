@@ -1,14 +1,20 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
+import HoverInfo from "./HoverInfo";
+import { formatMetricValue } from "../../../../../utils/formatters";
 import {
-	renderMetricValue,
+	getMetricMetadata,
+	getBaseMetricKey,
+	isUtilizationUnit,
+} from "../../../../../utils/metrics-helper";
+import {
 	UtilizationStack,
 	buildUtilizationParts,
 	colorFor,
 	colorLabelFromKey,
 	compareUtilizationParts,
-} from "./Utilization";
+} from "./utilization";
 
 /**
  * Displays a table of metrics for a single monitor instance.
@@ -17,13 +23,20 @@ import {
  * @param {{
  *   instance: any,
  *   metricEntries: Array<[string, any]>,
- *   naturalMetricCompare: (a: string, b: string) => number
+ *   naturalMetricCompare: (a: string, b: string) => number,
+ *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
  * }} props
  */
-const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare }) => {
+const InstanceMetricsTable = ({
+	instance,
+	metricEntries,
+	naturalMetricCompare,
+	metaMetrics,
+}) => {
 	const attrs = instance?.attributes ?? {};
 	const id = attrs.id || instance.name;
-	const displayName = attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
+	const displayName =
+		attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
 	const extraInfoParts = [];
 	if (attrs.name && attrs.name !== displayName) extraInfoParts.push(`name: ${attrs.name}`);
 	if (attrs.serial_number) extraInfoParts.push(`serial_number: ${attrs.serial_number}`);
@@ -41,8 +54,11 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 		let currentGroup = null;
 
 		for (const [name, value] of sortedEntries) {
-			if (name.includes(".utilization")) {
-				const baseName = name.substring(0, name.indexOf(".utilization") + 12);
+			const meta = getMetricMetadata(name, metaMetrics);
+			const isUtilization = isUtilizationUnit(meta?.unit);
+
+			if (isUtilization) {
+				const baseName = getBaseMetricKey(name);
 
 				if (currentGroup && currentGroup.baseName === baseName) {
 					currentGroup.entries.push({ key: name, value });
@@ -60,7 +76,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 			}
 		}
 		return groups;
-	}, [sortedEntries]);
+	}, [sortedEntries, metaMetrics]);
 
 	return (
 		<Box key={id} mb={3}>
@@ -72,9 +88,9 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 			<DashboardTable stickyHeader={false}>
 				<TableHead>
 					<TableRow>
-						<TableCell>Name</TableCell>
-						<TableCell>Value</TableCell>
-						<TableCell>Unit</TableCell>
+						<TableCell sx={{ width: "25%" }}>Name</TableCell>
+						<TableCell align="left">Value</TableCell>
+						<TableCell align="right">Unit</TableCell>
 					</TableRow>
 				</TableHead>
 				<TableBody>
@@ -85,17 +101,58 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 					) : (
 						groupedEntries.map((group) => {
 							if (group.type === "single") {
+								const meta = getMetricMetadata(group.key, metaMetrics);
+								const { description, unit } = meta;
+
+								// If unit is "1", render as a progress bar (utilization)
+								if (isUtilizationUnit(unit)) {
+									const parts = [
+										{ key: group.key, value: group.value, pct: group.value * 100 },
+									];
+									return (
+										<TableRow key={group.key}>
+											<TableCell>
+												<HoverInfo
+													title={group.key}
+													description={description}
+													unit={unit}
+													sx={{ display: "inline-block" }}
+												>
+													{group.key}
+												</HoverInfo>
+											</TableCell>
+											<TableCell align="left">
+												<UtilizationStack parts={parts} />
+											</TableCell>
+											<TableCell align="right">{unit || ""}</TableCell>
+										</TableRow>
+									);
+								}
+
 								return (
 									<TableRow key={group.key}>
-										<TableCell>{group.key}</TableCell>
-										<TableCell>{renderMetricValue(group.key, group.value)}</TableCell>
-										<TableCell></TableCell>
+										<TableCell>
+											<HoverInfo
+												title={group.key}
+												description={description}
+												unit={unit}
+												sx={{ display: "inline-block" }}
+											>
+												{group.key}
+											</HoverInfo>
+										</TableCell>
+										<TableCell align="left">
+											{formatMetricValue(group.value, unit)}
+										</TableCell>
+										<TableCell align="right">{unit || ""}</TableCell>
 									</TableRow>
 								);
 							}
 
 							const parts = buildUtilizationParts(group.entries);
 							const sortedParts = [...parts].sort(compareUtilizationParts);
+							const meta = getMetricMetadata(group.baseName, metaMetrics);
+							const { description, unit } = meta;
 
 							return (
 								<TableRow key={group.baseName}>
@@ -109,7 +166,16 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 												rowGap: 0.5,
 											}}
 										>
-											<Box component="span">{group.baseName}</Box>
+											<Box component="span">
+												<HoverInfo
+													title={group.baseName}
+													description={description}
+													unit={unit}
+													sx={{ display: "inline-block" }}
+												>
+													{group.baseName}
+												</HoverInfo>
+											</Box>
 											<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
 												{sortedParts.map((p) => {
 													const label = colorLabelFromKey(p.key);
@@ -138,10 +204,10 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 											</Box>
 										</Box>
 									</TableCell>
-									<TableCell>
+									<TableCell align="left">
 										<UtilizationStack parts={sortedParts} />
 									</TableCell>
-									<TableCell></TableCell>
+									<TableCell align="right">{unit || ""}</TableCell>
 								</TableRow>
 							);
 						})
