@@ -66,7 +66,7 @@ const WelcomeView = ({ renderResourceGroups }) => {
 				<ResourceGroupsData resourceGroups={resourceGroups} />
 			)}
 			<Divider />
-			<ResourcesData resources={rogueResources} />
+			<ResourcesData resources={rogueResources} onResourceClick={onRogueResourceClick} />
 		</Box>
 	);
 };

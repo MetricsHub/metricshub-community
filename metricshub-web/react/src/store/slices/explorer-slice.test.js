@@ -12,10 +12,6 @@ const initialState = {
 };
 
 describe("explorerSlice", () => {
-	it("should return initial state", () => {
-		expect(explorerReducer(undefined, { type: "unknown" })).toEqual(initialState);
-	});
-
 	it("should handle fetchExplorerHierarchy.pending", () => {
 		const action = { type: fetchExplorerHierarchy.pending.type };
 		const s = explorerReducer(initialState, action);

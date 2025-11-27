@@ -1,14 +1,5 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers";
 
@@ -22,7 +13,9 @@ const renderMetricsRows = (metrics) => {
 	if (entries.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={4}>No metrics</TableCell>
+				<TableCell colSpan={4} sx={emptyStateCellSx}>
+					No metrics
+				</TableCell>
 			</TableRow>
 		);
 	}
@@ -30,11 +23,11 @@ const renderMetricsRows = (metrics) => {
 	return entries.map(([name, m]) => {
 		const metric = m || {};
 		return (
-			<TableRow key={name}>
+			<TableRow key={name} hover>
 				<TableCell>{name}</TableCell>
-				<TableCell>{metric.value ?? ""}</TableCell>
+				<TableCell align="right">{metric.value ?? ""}</TableCell>
 				<TableCell>{metric.unit ?? ""}</TableCell>
-				<TableCell>{metric.lastUpdate ?? ""}</TableCell>
+				<TableCell align="right">{metric.lastUpdate ?? ""}</TableCell>
 			</TableRow>
 		);
 	});
@@ -49,6 +42,8 @@ const AgentData = ({ agent, totalResources }) => {
 	const attributes = React.useMemo(() => agent?.attributes ?? {}, [agent]);
 	const version = attributes.version || attributes.cc_version || "";
 	const title = "MetricsHub Community";
+	const hasAttributes = Object.keys(attributes).length > 0;
+	const hasMetrics = agent?.metrics && Object.keys(agent.metrics).length > 0;
 
 	if (!agent) {
 		return null;
@@ -60,9 +55,9 @@ const AgentData = ({ agent, totalResources }) => {
 				<Typography
 					variant="h4"
 					gutterBottom
-					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+					sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
 				>
-					<NodeTypeIcons type="agent" />
+					<NodeTypeIcons type="agent" fontSize="large" />
 					{title}
 				</Typography>
 				{version && <Typography variant="subtitle1">Version: {version}</Typography>}
@@ -71,41 +66,41 @@ const AgentData = ({ agent, totalResources }) => {
 				)}
 			</Box>
 
-			<Box>
-				<Typography variant="h6" gutterBottom>
-					Attributes
-				</Typography>
-				<Paper variant="outlined">
-					<Table size="small">
+			{hasAttributes && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Attributes
+					</Typography>
+					<DashboardTable>
 						<TableHead>
 							<TableRow>
 								<TableCell>Key</TableCell>
-								<TableCell>Value</TableCell>
+								<TableCell align="left">Value</TableCell>
 							</TableRow>
 						</TableHead>
 						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</Table>
-				</Paper>
-			</Box>
+					</DashboardTable>
+				</Box>
+			)}
 
-			<Box>
-				<Typography variant="h6" gutterBottom>
-					Metrics
-				</Typography>
-				<Paper variant="outlined">
-					<Table size="small">
+			{hasMetrics && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Metrics
+					</Typography>
+					<DashboardTable>
 						<TableHead>
 							<TableRow>
 								<TableCell>Name</TableCell>
-								<TableCell>Value</TableCell>
+								<TableCell align="right">Value</TableCell>
 								<TableCell>Unit</TableCell>
-								<TableCell>Last Update</TableCell>
+								<TableCell align="right">Last Update</TableCell>
 							</TableRow>
 						</TableHead>
 						<TableBody>{renderMetricsRows(agent.metrics)}</TableBody>
-					</Table>
-				</Paper>
-			</Box>
+					</DashboardTable>
+				</Box>
+			)}
 		</Box>
 	);
 };
