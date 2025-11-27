@@ -108,6 +108,8 @@ public class RetryOperation<T> {
 		int retryCounter = 0;
 		while (retryCounter < maxRetries) {
 			try {
+				// Clear any pending interrupt so the retry executes in a clean state (e.g. after an async timeout)
+				Thread.interrupted();
 				if (waitStrategy > 0) {
 					log.info("Hostname {} - {} retry will be performed after {} seconds.", hostname, description, waitStrategy);
 

@@ -2,6 +2,7 @@ package org.metricshub.extension.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -1247,5 +1248,19 @@ class OsCommandHelperTest {
 			ControlledSshException.class,
 			() -> OsCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 1)
 		);
+	}
+
+	@Test
+	void testRunControlledSshCommandClearsInterruptFlag() {
+		Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(HOSTNAME);
+
+		Thread.currentThread().interrupt();
+
+		assertThrows(
+			InterruptedException.class,
+			() -> OsCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
+		);
+
+		assertFalse(Thread.currentThread().isInterrupted());
 	}
 }

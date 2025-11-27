@@ -72,43 +72,56 @@ public class ForceSerializationHelper {
 		final ReentrantLock forceSerializationLock = getForceSerializationLock(telemetryManager, connectorId);
 		final String hostname = telemetryManager.getHostname();
 
-		final boolean isLockAcquired;
-		try {
-			// Try to get the lock
-			isLockAcquired = forceSerializationLock.tryLock(DEFAULT_LOCK_TIMEOUT, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			log.error(
-				"Hostname {} - Interrupted exception detected when trying to acquire the force serialization lock to process {} {}. Connector: {}.",
-				hostname,
-				description,
-				objToProcess,
-				connectorId
-			);
-
-			log.debug(HOSTNAME_EXCEPTION_MESSAGE, hostname, e);
-
-			Thread.currentThread().interrupt();
-
-			return defaultValue;
+		// Clear any pending interrupt to avoid an immediate InterruptedException from tryLock(),
+		// but remember it so we can restore the original state at the end of the call.
+		boolean interrupted = Thread.currentThread().isInterrupted();
+		if (interrupted) {
+			Thread.interrupted();
 		}
 
-		if (isLockAcquired) {
+		boolean isLockAcquired = false;
+		T result = defaultValue;
+		try {
 			try {
-				return executable.get();
-			} finally {
+				// Try to get the lock
+				isLockAcquired = forceSerializationLock.tryLock(DEFAULT_LOCK_TIMEOUT, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				interrupted = true;
+				log.error(
+					"Hostname {} - Interrupted exception detected when trying to acquire the force serialization lock to process {} {}. Connector: {}.",
+					hostname,
+					description,
+					objToProcess,
+					connectorId
+				);
+
+				log.debug(HOSTNAME_EXCEPTION_MESSAGE, hostname, e);
+
+				return defaultValue;
+			}
+
+			if (isLockAcquired) {
+				result = executable.get();
+			} else {
+				log.error(
+					"Hostname {} - Could not acquire the force serialization lock to process {} {}. Connector: {}.",
+					hostname,
+					description,
+					objToProcess,
+					connectorId
+				);
+			}
+
+			return result;
+		} finally {
+			if (isLockAcquired && forceSerializationLock.isHeldByCurrentThread()) {
 				// Release the lock when the executable is terminated
 				forceSerializationLock.unlock();
 			}
-		} else {
-			log.error(
-				"Hostname {} - Could not acquire the force serialization lock to process {} {}. Connector: {}.",
-				hostname,
-				description,
-				objToProcess,
-				connectorId
-			);
 
-			return defaultValue;
+			if (interrupted) {
+				Thread.currentThread().interrupt();
+			}
 		}
 	}
 
