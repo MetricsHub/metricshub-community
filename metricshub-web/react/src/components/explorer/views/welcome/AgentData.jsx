@@ -10,29 +10,7 @@ import {
 	Paper,
 } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-
-/**
- * Render rows for agent attributes.
- * @param {Record<string, unknown>} attributes
- * @returns {JSX.Element[] | JSX.Element}
- */
-const renderAttributesRows = (attributes) => {
-	const entries = Object.entries(attributes ?? {});
-	if (entries.length === 0) {
-		return (
-			<TableRow>
-				<TableCell colSpan={2}>No attributes</TableCell>
-			</TableRow>
-		);
-	}
-
-	return entries.map(([key, value]) => (
-		<TableRow key={key}>
-			<TableCell>{key}</TableCell>
-			<TableCell>{String(value)}</TableCell>
-		</TableRow>
-	));
-};
+import { renderAttributesRows } from "../common/ExplorerTableHelpers";
 
 /**
  * Render rows for agent metrics.

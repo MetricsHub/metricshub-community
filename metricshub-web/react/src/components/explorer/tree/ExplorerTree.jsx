@@ -54,7 +54,7 @@ const buildTree = (raw) => {
  * ExplorerTree renders the hierarchy fetched from the explorer endpoint.
  * Recursively builds tree item nodes.
  */
-export default function ExplorerTree() {
+export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -67,6 +67,19 @@ export default function ExplorerTree() {
 	}, [hierarchyRaw, loading, error, dispatch]);
 
 	const treeRoot = React.useMemo(() => buildTree(hierarchyRaw), [hierarchyRaw]);
+
+	const handleLabelClick = React.useCallback(
+		(node) => {
+			if (node.type === "resource-group" && onResourceGroupFocus) {
+				onResourceGroupFocus(node.name);
+				return;
+			}
+			if (node.type === "agent" && onAgentFocus) {
+				onAgentFocus();
+			}
+		},
+		[onResourceGroupFocus, onAgentFocus],
+	);
 
 	if (loading && !treeRoot) {
 		return (
@@ -107,7 +120,7 @@ export default function ExplorerTree() {
 				[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 			}}
 		>
-			<ExplorerTreeItem node={treeRoot} />
+			<ExplorerTreeItem node={treeRoot} onLabelClick={handleLabelClick} />
 		</SimpleTreeView>
 	);
 }
