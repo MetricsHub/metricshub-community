@@ -66,7 +66,7 @@ const buildTree = (raw) => {
  * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
  * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
  */
-export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onResourceFocus }) {
+export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -80,48 +80,17 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 
 	const treeRoot = React.useMemo(() => buildTree(hierarchyRaw), [hierarchyRaw]);
 
-	// Build id -> node map so TreeView's onItemClick can resolve the node.
-	const nodeIndex = React.useMemo(() => {
-		const map = new Map();
-
-		const visit = (node) => {
-			map.set(node.id, node);
-			if (Array.isArray(node.children)) {
-				node.children.forEach(visit);
-			}
-		};
-
-		if (treeRoot) {
-			visit(treeRoot);
-		}
-
-		return map;
-	}, [treeRoot]);
-
-	const handleItemClick = React.useCallback(
-		(_event, itemId) => {
-			if (!itemId) return;
-			const node = nodeIndex.get(itemId);
-			if (!node) return;
-
+	const handleLabelClick = React.useCallback(
+		(node) => {
 			if (node.type === "resource-group" && onResourceGroupFocus) {
 				onResourceGroupFocus(node.name);
 				return;
 			}
-
-			if (node.type === "resource" && onResourceFocus) {
-				const resource = node;
-				const group =
-					node.parent && node.parent.type === "resource-group" ? node.parent : undefined;
-				onResourceFocus(resource, group);
-				return;
-			}
-
 			if (node.type === "agent" && onAgentFocus) {
 				onAgentFocus();
 			}
 		},
-		[nodeIndex, onResourceGroupFocus, onResourceFocus, onAgentFocus],
+		[onResourceGroupFocus, onAgentFocus],
 	);
 
 	if (loading && !treeRoot) {
@@ -166,7 +135,7 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 				[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 			}}
 		>
-			<ExplorerTreeItem node={treeRoot} />
+			<ExplorerTreeItem node={treeRoot} onLabelClick={handleLabelClick} />
 		</SimpleTreeView>
 	);
 }

@@ -73,10 +73,22 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 								<TableCell>{buildGroupLabel(g)}</TableCell>
 								<TableCell align="right">{countResources(g)}</TableCell>
 							</TableRow>
-						))
-					)}
-				</TableBody>
-			</DashboardTable>
+						) : (
+							groups.map((g) => (
+								<TableRow
+									key={g.name}
+									hover
+									sx={{ cursor: onResourceGroupClick ? "pointer" : "default" }}
+									onClick={() => onResourceGroupClick && onResourceGroupClick(g)}
+								>
+									<TableCell>{buildGroupLabel(g)}</TableCell>
+									<TableCell>{countResources(g)}</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+			</Paper>
 		</Box>
 	);
 };

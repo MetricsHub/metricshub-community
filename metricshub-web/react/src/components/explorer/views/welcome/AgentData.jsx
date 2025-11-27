@@ -1,33 +1,7 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "../common/DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
-
-/**
- * Render rows for agent attributes.
- * @param {Record<string, unknown>} attributes
- * @returns {JSX.Element[] | JSX.Element}
- */
-const renderAttributesRows = (attributes) => {
-	const entries = Object.entries(attributes ?? {});
-	if (entries.length === 0) {
-		return (
-			<TableRow>
-				<TableCell colSpan={2} sx={emptyStateCellSx}>
-					No attributes
-				</TableCell>
-			</TableRow>
-		);
-	}
-
-	return entries.map(([key, value]) => (
-		<TableRow key={key} hover>
-			<TableCell>{key}</TableCell>
-			<TableCell align={typeof value === "number" ? "right" : "left"}>{String(value)}</TableCell>
-		</TableRow>
-	));
-};
+import { renderAttributesRows } from "../common/ExplorerTableHelpers";
 
 /**
  * Render rows for agent metrics.
