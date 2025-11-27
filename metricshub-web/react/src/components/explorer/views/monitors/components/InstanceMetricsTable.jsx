@@ -27,16 +27,10 @@ import {
  *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
  * }} props
  */
-const InstanceMetricsTable = ({
-	instance,
-	metricEntries,
-	naturalMetricCompare,
-	metaMetrics,
-}) => {
+const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, metaMetrics }) => {
 	const attrs = instance?.attributes ?? {};
 	const id = attrs.id || instance.name;
-	const displayName =
-		attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
+	const displayName = attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
 	const extraInfoParts = [];
 	if (attrs.name && attrs.name !== displayName) extraInfoParts.push(`name: ${attrs.name}`);
 	if (attrs.serial_number) extraInfoParts.push(`serial_number: ${attrs.serial_number}`);
@@ -106,9 +100,7 @@ const InstanceMetricsTable = ({
 
 								// If unit is "1", render as a progress bar (utilization)
 								if (isUtilizationUnit(unit)) {
-									const parts = [
-										{ key: group.key, value: group.value, pct: group.value * 100 },
-									];
+									const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
 									return (
 										<TableRow key={group.key}>
 											<TableCell>
@@ -141,9 +133,7 @@ const InstanceMetricsTable = ({
 												{group.key}
 											</HoverInfo>
 										</TableCell>
-										<TableCell align="left">
-											{formatMetricValue(group.value, unit)}
-										</TableCell>
+										<TableCell align="left">{formatMetricValue(group.value, unit)}</TableCell>
 										<TableCell align="right">{unit || ""}</TableCell>
 									</TableRow>
 								);

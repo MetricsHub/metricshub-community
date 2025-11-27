@@ -6,8 +6,8 @@
  * @returns {string}
  */
 export const getBaseMetricKey = (key) => {
-    if (!key) return "";
-    return key.split("{")[0];
+	if (!key) return "";
+	return key.split("{")[0];
 };
 
 /**
@@ -18,9 +18,9 @@ export const getBaseMetricKey = (key) => {
  * @returns {{ unit?: string, description?: string, type?: string }}
  */
 export const getMetricMetadata = (key, metaMetrics) => {
-    if (!metaMetrics) return {};
-    const baseKey = getBaseMetricKey(key);
-    return metaMetrics[baseKey] || {};
+	if (!metaMetrics) return {};
+	const baseKey = getBaseMetricKey(key);
+	return metaMetrics[baseKey] || {};
 };
 
 /**
@@ -30,19 +30,19 @@ export const getMetricMetadata = (key, metaMetrics) => {
  * @returns {string}
  */
 export const getMetricLabel = (key) => {
-    const braceStart = key.indexOf("{");
-    const braceEnd = key.lastIndexOf("}");
+	const braceStart = key.indexOf("{");
+	const braceEnd = key.lastIndexOf("}");
 
-    if (braceStart !== -1 && braceEnd > braceStart) {
-        const insideBraces = key.slice(braceStart + 1, braceEnd);
-        const quoteStart = insideBraces.indexOf('"');
-        const quoteEnd = insideBraces.lastIndexOf('"');
-        if (quoteStart !== -1 && quoteEnd > quoteStart) {
-            return insideBraces.slice(quoteStart + 1, quoteEnd);
-        }
-        return insideBraces;
-    }
-    return key;
+	if (braceStart !== -1 && braceEnd > braceStart) {
+		const insideBraces = key.slice(braceStart + 1, braceEnd);
+		const quoteStart = insideBraces.indexOf('"');
+		const quoteEnd = insideBraces.lastIndexOf('"');
+		if (quoteStart !== -1 && quoteEnd > quoteStart) {
+			return insideBraces.slice(quoteStart + 1, quoteEnd);
+		}
+		return insideBraces;
+	}
+	return key;
 };
 
 /**

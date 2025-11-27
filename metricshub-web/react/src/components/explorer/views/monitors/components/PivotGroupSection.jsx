@@ -133,10 +133,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 						>
 							Utilization
 							{unit && (
-								<Box
-									component="span"
-									sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}
-								>
+								<Box component="span" sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}>
 									({unit})
 								</Box>
 							)}
