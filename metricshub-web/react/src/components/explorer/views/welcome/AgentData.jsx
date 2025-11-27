@@ -68,6 +68,8 @@ const AgentData = ({ agent, totalResources }) => {
 	const attributes = React.useMemo(() => agent?.attributes ?? {}, [agent]);
 	const version = attributes.version || attributes.cc_version || "";
 	const title = "MetricsHub Community";
+	const hasAttributes = Object.keys(attributes).length > 0;
+	const hasMetrics = agent?.metrics && Object.keys(agent.metrics).length > 0;
 
 	if (!agent) {
 		return null;
@@ -81,7 +83,7 @@ const AgentData = ({ agent, totalResources }) => {
 					gutterBottom
 					sx={{ display: "flex", alignItems: "center", gap: 0.75 }}
 				>
-					<NodeTypeIcons type="agent" />
+					<NodeTypeIcons type="agent" fontSize="large" />
 					{title}
 				</Typography>
 				{version && <Typography variant="subtitle1">Version: {version}</Typography>}
@@ -90,37 +92,41 @@ const AgentData = ({ agent, totalResources }) => {
 				)}
 			</Box>
 
-			<Box>
-				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-					Attributes
-				</Typography>
-				<DashboardTable>
-					<TableHead>
-						<TableRow>
-							<TableCell>Key</TableCell>
-							<TableCell align="left">Value</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderAttributesRows(attributes)}</TableBody>
-				</DashboardTable>
-			</Box>
+			{hasAttributes && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Attributes
+					</Typography>
+					<DashboardTable>
+						<TableHead>
+							<TableRow>
+								<TableCell>Key</TableCell>
+								<TableCell align="left">Value</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>{renderAttributesRows(attributes)}</TableBody>
+					</DashboardTable>
+				</Box>
+			)}
 
-			<Box>
-				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-					Metrics
-				</Typography>
-				<DashboardTable>
-					<TableHead>
-						<TableRow>
-							<TableCell>Name</TableCell>
-							<TableCell align="right">Value</TableCell>
-							<TableCell>Unit</TableCell>
-							<TableCell align="right">Last Update</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderMetricsRows(agent.metrics)}</TableBody>
-				</DashboardTable>
-			</Box>
+			{hasMetrics && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Metrics
+					</Typography>
+					<DashboardTable>
+						<TableHead>
+							<TableRow>
+								<TableCell>Name</TableCell>
+								<TableCell align="right">Value</TableCell>
+								<TableCell>Unit</TableCell>
+								<TableCell align="right">Last Update</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>{renderMetricsRows(agent.metrics)}</TableBody>
+					</DashboardTable>
+				</Box>
+			)}
 		</Box>
 	);
 };

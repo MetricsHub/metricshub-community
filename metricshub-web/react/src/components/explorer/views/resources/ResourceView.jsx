@@ -150,13 +150,18 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 
 	const metrics = resource.metrics || [];
 	const connectors = resource.connectors || [];
+	const hasMetrics = metrics.length > 0;
 
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={4}>
 			<ResourceHeader resource={resource} />
 			<Divider />
-			<ResourceMetrics metrics={metrics} />
-			<Divider />
+			{hasMetrics && (
+				<>
+					<ResourceMetrics metrics={metrics} />
+					<Divider />
+				</>
+			)}
 			<MonitorsView connectors={connectors} lastUpdatedAt={lastUpdatedAt} resourceId={resourceId} />
 		</Box>
 	);

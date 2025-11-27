@@ -83,7 +83,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare })
 							<TableCell colSpan={3}>No metrics</TableCell>
 						</TableRow>
 					) : (
-						groupedEntries.map((group, index) => {
+						groupedEntries.map((group) => {
 							if (group.type === "single") {
 								return (
 									<TableRow key={group.key}>

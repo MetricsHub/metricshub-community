@@ -66,13 +66,18 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 
 	const metrics = group.metrics || [];
 	const resources = group.resources || [];
+	const hasMetrics = metrics.length > 0;
 
 	return (
 		<Box p={2} display="flex" flexDirection="column" gap={4}>
 			<ResourceGroupHeader group={group} />
 			<Divider />
-			<ResourceGroupMetrics metrics={metrics} />
-			<Divider />
+			{hasMetrics && (
+				<>
+					<ResourceGroupMetrics metrics={metrics} />
+					<Divider />
+				</>
+			)}
 			<ResourceGroupResources resources={resources} onResourceClick={onResourceClick} />
 		</Box>
 	);

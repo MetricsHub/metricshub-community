@@ -15,6 +15,7 @@ const ResourceGroupHeader = ({ group }) => {
 	if (!group) return null;
 
 	const attributes = group.attributes ?? {};
+	const hasAttributes = Object.keys(attributes).length > 0;
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
@@ -24,25 +25,27 @@ const ResourceGroupHeader = ({ group }) => {
 					gutterBottom
 					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
 				>
-					<NodeTypeIcons type="resource-group" />
+					<NodeTypeIcons type="resource-group" fontSize="large" />
 					{group.name || group.id}
 				</Typography>
 			</Box>
 
-			<Box>
-				<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-					Attributes
-				</Typography>
-				<DashboardTable>
-					<TableHead>
-						<TableRow>
-							<TableCell>Key</TableCell>
-							<TableCell>Value</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderAttributesRows(attributes)}</TableBody>
-				</DashboardTable>
-			</Box>
+			{hasAttributes && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Attributes
+					</Typography>
+					<DashboardTable>
+						<TableHead>
+							<TableRow>
+								<TableCell>Key</TableCell>
+								<TableCell>Value</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>{renderAttributesRows(attributes)}</TableBody>
+					</DashboardTable>
+				</Box>
+			)}
 		</Box>
 	);
 };

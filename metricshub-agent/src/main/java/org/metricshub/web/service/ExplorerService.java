@@ -429,6 +429,10 @@ public class ExplorerService {
 		if (connectorMonitor.getAttributes() != null) {
 			connectorNode.getAttributes().putAll(connectorMonitor.getAttributes());
 		}
+		var metaMetrics = tm.getConnectorStore().getStore().get(connectorId).getMetrics();
+		if (metaMetrics != null) {
+			connectorNode.setMetaMetrics(metaMetrics);
+		}
 		// copy connector metrics
 		if (connectorMonitor.getMetrics() != null) {
 			connectorMonitor.getMetrics().forEach((k, v) -> connectorNode.getMetrics().put(k, getMetricValue(v)));

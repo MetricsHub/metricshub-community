@@ -38,6 +38,10 @@ const renderMetricsRows = (metrics) => {
 const ResourceGroupMetrics = ({ metrics }) => {
 	const rows = React.useMemo(() => (Array.isArray(metrics) ? metrics : []), [metrics]);
 
+	if (rows.length === 0) {
+		return null;
+	}
+
 	return (
 		<Box>
 			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
