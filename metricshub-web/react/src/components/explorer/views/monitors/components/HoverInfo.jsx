@@ -17,6 +17,9 @@ import { Tooltip, Box, Typography } from "@mui/material";
  * }} props
  */
 const HoverInfo = ({ label, value, title, description, unit, children, ...props }) => {
+	let displayUnit = unit;
+	if (unit === "1") displayUnit = "%";
+
 	let tooltipContent = null;
 
 	if (description) {
@@ -27,12 +30,12 @@ const HoverInfo = ({ label, value, title, description, unit, children, ...props 
 						{title}
 					</Typography>
 				)}
-				<Typography variant="body2" sx={{ mb: unit ? 0.5 : 0 }}>
+				<Typography variant="body2" sx={{ mb: displayUnit ? 0.5 : 0 }}>
 					{description}
 				</Typography>
-				{unit && (
+				{displayUnit && (
 					<Typography variant="caption" color="text.secondary">
-						Unit: {unit}
+						Unit: {displayUnit}
 					</Typography>
 				)}
 			</Box>

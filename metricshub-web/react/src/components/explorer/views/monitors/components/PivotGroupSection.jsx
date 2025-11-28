@@ -118,7 +118,8 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		}
 
 		const meta = getMetricMetadata(group.baseName, metaMetrics);
-		const { description, unit } = meta;
+		let { description, unit } = meta;
+		let displayUnit = unit === "1" ? "%" : unit;
 
 		return (
 			<TableHead>
@@ -128,13 +129,13 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 						<HoverInfo
 							title="Utilization"
 							description={description}
-							unit={unit}
+							unit={displayUnit}
 							sx={{ display: "inline-block" }}
 						>
 							Utilization
-							{unit && (
+							{displayUnit && (
 								<Box component="span" sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}>
-									({unit})
+									({displayUnit})
 								</Box>
 							)}
 						</HoverInfo>

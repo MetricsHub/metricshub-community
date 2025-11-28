@@ -28,7 +28,7 @@ const renderMetricsRows = (metrics) => {
 				{m.iconType ? ` (${m.iconType})` : ""}
 			</TableCell>
 			<TableCell>{m.value}</TableCell>
-			<TableCell>{m.unit}</TableCell>
+			<TableCell>{m.unit === "1" ? "%" : m.unit}</TableCell>
 			<TableCell>{m.lastUpdate}</TableCell>
 		</TableRow>
 	));
