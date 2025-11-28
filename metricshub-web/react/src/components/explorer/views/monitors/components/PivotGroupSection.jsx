@@ -231,6 +231,29 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 				<DashboardTable stickyHeader={false}>
 					{renderHeader()}
 					<TableBody>
+						{isUtilizationGroup && sortedInstances.length > 0 && (
+							<TableRow>
+								<TableCell>
+									<Typography variant="body2" sx={{ fontWeight: 500 }}>
+										Average {displayBaseName}
+									</Typography>
+								</TableCell>
+								<TableCell>
+									<UtilizationStack
+										parts={buildUtilizationParts(
+											group.metricKeys.map((key) => {
+												const sum = sortedInstances.reduce(
+													(acc, inst) => acc + (inst.metrics?.[key] || 0),
+													0,
+												);
+												const avg = sum / sortedInstances.length;
+												return { key, value: avg };
+											}),
+										)}
+									/>
+								</TableCell>
+							</TableRow>
+						)}
 						{sortedInstances.map((inst, rowIndex) => {
 							const attrs = inst?.attributes ?? {};
 							const id = attrs.id || inst.name;
