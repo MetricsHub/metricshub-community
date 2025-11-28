@@ -281,9 +281,29 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 									{group.metricKeys.map((key) => {
 										const meta = getMetricMetadata(key, metaMetrics);
 										const unit = meta?.unit;
+										const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+										const val = metrics[key];
+										const formattedValue = formatMetricValue(val, unit);
+										const rawValue = String(val);
+										const showRaw =
+											typeof val === "number" && formattedValue !== rawValue && formattedValue !== "";
+
 										return (
 											<TableCell key={key} align="left">
-												{formatMetricValue(metrics[key], unit)}
+												{showRaw ? (
+													<HoverInfo
+														title={
+															<Typography variant="body2">
+																Raw value : {val} {cleanUnit}
+															</Typography>
+														}
+														sx={{ display: "inline-block" }}
+													>
+														{formattedValue}
+													</HoverInfo>
+												) : (
+													formattedValue
+												)}
 											</TableCell>
 										);
 									})}

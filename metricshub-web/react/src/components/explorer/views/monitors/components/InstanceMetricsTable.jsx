@@ -120,6 +120,11 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 									);
 								}
 
+								const formattedValue = formatMetricValue(group.value, unit);
+								const rawValue = String(group.value);
+								const showRaw =
+									typeof group.value === "number" && formattedValue !== rawValue && formattedValue !== "";
+
 								return (
 									<TableRow key={group.key}>
 										<TableCell>
@@ -132,7 +137,22 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												{group.key}
 											</HoverInfo>
 										</TableCell>
-										<TableCell align="left">{formatMetricValue(group.value, unit)}</TableCell>
+										<TableCell align="left">
+											{showRaw ? (
+												<HoverInfo
+													title={
+														<Typography variant="body2">
+															Raw value : {group.value} {cleanUnit}
+														</Typography>
+													}
+													sx={{ display: "inline-block" }}
+												>
+													{formattedValue}
+												</HoverInfo>
+											) : (
+												formattedValue
+											)}
+										</TableCell>
 									</TableRow>
 								);
 							}
