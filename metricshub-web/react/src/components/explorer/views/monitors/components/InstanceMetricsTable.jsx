@@ -123,7 +123,9 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 								const formattedValue = formatMetricValue(group.value, unit);
 								const rawValue = String(group.value);
 								const showRaw =
-									typeof group.value === "number" && formattedValue !== rawValue && formattedValue !== "";
+									typeof group.value === "number" &&
+									formattedValue !== rawValue &&
+									formattedValue !== "";
 
 								return (
 									<TableRow key={group.key}>

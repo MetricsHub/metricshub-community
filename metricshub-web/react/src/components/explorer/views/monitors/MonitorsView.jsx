@@ -1,6 +1,16 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import {
+	Box,
+	Typography,
+	Accordion,
+	AccordionSummary,
+	AccordionDetails,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableRow,
+} from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
 import { formatRelativeTime } from "../../../../utils/formatters";
@@ -8,6 +18,8 @@ import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
+import { renderAttributesRows } from "../common/ExplorerTableHelpers";
+import DashboardTable from "../common/DashboardTable";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -59,27 +71,6 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 	}, []);
 
 	/**
-	 * Aggregate monitors from all connectors and always return an array.
-	 */
-	const allMonitors = React.useMemo(() => {
-		if (!Array.isArray(connectors)) return [];
-		const list = [];
-		for (const connector of connectors) {
-			if (Array.isArray(connector?.monitors)) {
-				for (const m of connector.monitors) {
-					list.push({ ...m, connectorName: connector.name, metaMetrics: connector.metaMetrics });
-				}
-			}
-		}
-		return list;
-	}, [connectors]);
-
-	const safeMonitors = React.useMemo(
-		() => (Array.isArray(allMonitors) ? allMonitors : []),
-		[allMonitors],
-	);
-
-	/**
 	 * Decide whether we can pivot a monitor into one or more
 	 * "instances as rows, metrics as columns" tables, grouped by
 	 * a common base metric name (e.g. system.cpu.time.*, system.cpu.utilization.*).
@@ -123,9 +114,19 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 		[naturalMetricCompare],
 	);
 
+	const safeConnectors = React.useMemo(
+		() => (Array.isArray(connectors) ? connectors : []),
+		[connectors],
+	);
+
 	const lastUpdatedLabel = !lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt);
 
-	if (safeMonitors.length === 0) {
+	// Check if there are any monitors across all connectors
+	const hasAnyMonitors = safeConnectors.some(
+		(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
+	);
+
+	if (!hasAnyMonitors) {
 		return (
 			<Box>
 				<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
@@ -138,35 +139,22 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 		<Box display="flex" flexDirection="column">
 			<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
 
-			{safeMonitors.map((monitor, index) => {
-				const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
-				const pivotGroups = buildPivotGroups(instances);
-				const sortedInstances = [...instances].sort((a, b) => {
-					const attrsA = a?.attributes ?? {};
-					const attrsB = b?.attributes ?? {};
-					const idA = attrsA.id ?? a.name ?? "";
-					const idB = attrsB.id ?? b.name ?? "";
-					const numA = Number(idA);
-					const numB = Number(idB);
-					if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
-						return numA - numB;
-					}
-					return String(idA).localeCompare(String(idB));
-				});
+			{safeConnectors.map((connector, connectorIndex) => {
+				const monitors = Array.isArray(connector.monitors) ? connector.monitors : [];
 
-				// Use a unique key combining connector name and monitor name to avoid collisions
-				const uniqueMonitorKey = `${monitor.connectorName || "unknown"}/${monitor.name}`;
+				const connectorKey = connector.name || `connector-${connectorIndex}`;
+				const isConnectorExpanded = !!expandedMonitors[connectorKey];
 
 				return (
 					<Accordion
-						key={uniqueMonitorKey}
-						expanded={!!expandedMonitors[uniqueMonitorKey]}
+						key={connectorKey}
+						expanded={isConnectorExpanded}
 						onChange={(e, isExpanded) => {
 							if (resourceId) {
 								dispatch(
 									setMonitorExpanded({
 										resourceId,
-										monitorName: uniqueMonitorKey,
+										monitorName: connectorKey,
 										expanded: isExpanded,
 									}),
 								);
@@ -179,7 +167,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 							bgcolor: "transparent",
 							borderTop: "1px solid",
 							borderColor: "divider",
-							...(index === safeMonitors.length - 1
+							...(connectorIndex === safeConnectors.length - 1
 								? { borderBottom: "1px solid", borderBottomColor: "divider" }
 								: {}),
 						}}
@@ -187,25 +175,25 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 						<AccordionSummary
 							expandIcon={<ExpandMoreIcon />}
 							sx={{
-								minHeight: 40,
+								minHeight: 48,
 								cursor: "pointer",
-								bgcolor: "background.default",
+								bgcolor: "action.hover",
 								"&:hover": {
-									bgcolor: "action.hover",
+									bgcolor: "action.selected",
 								},
 								"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 							}}
 						>
 							<Typography
-								variant="subtitle1"
+								variant="h6"
 								sx={{
-									fontWeight: 500,
+									fontWeight: 600,
 									display: "flex",
 									alignItems: "center",
 									columnGap: 1,
 								}}
 							>
-								{prettifyKey(monitor.name)}
+								{prettifyKey(connector.name)}
 								<Box
 									component="span"
 									sx={{
@@ -216,38 +204,174 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 										borderRadius: 999,
 										fontSize: 12,
 										fontWeight: 500,
-										bgcolor: "action.selected",
-										color: "text.primary",
+										bgcolor: "primary.main",
+										color: "primary.contrastText",
 									}}
 								>
-									{instances.length}
+									{monitors.length}
 								</Box>
 							</Typography>
 						</AccordionSummary>
-						<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1 }}>
-							{pivotGroups.length > 0
-								? pivotGroups.map((group) => (
-									<PivotGroupSection
-										key={group.baseName}
-										group={group}
-										sortedInstances={sortedInstances}
-										resourceId={resourceId}
-										metaMetrics={monitor.metaMetrics}
-									/>
-								))
-								: sortedInstances.map((inst) => {
-									const metrics = inst?.metrics ?? {};
-									const metricEntries = Object.entries(metrics);
-									return (
-										<InstanceMetricsTable
-											key={inst?.attributes?.id || inst.name}
-											instance={inst}
-											metricEntries={metricEntries}
-											naturalMetricCompare={naturalMetricCompare}
-											metaMetrics={monitor.metaMetrics}
-										/>
-									);
-								})}
+						<AccordionDetails sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+							{/* Connector Attributes Table */}
+							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Attributes
+									</Typography>
+									<DashboardTable>
+										<TableHead>
+											<TableRow>
+												<TableCell>Key</TableCell>
+												<TableCell>Value</TableCell>
+											</TableRow>
+										</TableHead>
+										<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+									</DashboardTable>
+								</Box>
+							)}
+
+							{/* Connector Metrics Table */}
+							{connector.metaMetrics && Object.keys(connector.metaMetrics).length > 0 && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Metrics
+									</Typography>
+									<DashboardTable>
+										<TableHead>
+											<TableRow>
+												<TableCell>Name</TableCell>
+												<TableCell>Value</TableCell>
+												<TableCell>Unit</TableCell>
+											</TableRow>
+										</TableHead>
+										<TableBody>
+											{Object.entries(connector.metaMetrics).map(([name, metricDef]) => (
+												<TableRow key={name}>
+													<TableCell>{name}</TableCell>
+													<TableCell>{metricDef?.description || "-"}</TableCell>
+													<TableCell>{metricDef?.unit || "-"}</TableCell>
+												</TableRow>
+											))}
+										</TableBody>
+									</DashboardTable>
+								</Box>
+							)}
+
+							{/* Monitors Section */}
+							{monitors.map((monitor, monitorIndex) => {
+								const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
+								const pivotGroups = buildPivotGroups(instances);
+								const sortedInstances = [...instances].sort((a, b) => {
+									const attrsA = a?.attributes ?? {};
+									const attrsB = b?.attributes ?? {};
+									const idA = attrsA.id ?? a.name ?? "";
+									const idB = attrsB.id ?? b.name ?? "";
+									const numA = Number(idA);
+									const numB = Number(idB);
+									if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
+										return numA - numB;
+									}
+									return String(idA).localeCompare(String(idB));
+								});
+
+								// Use a unique key combining connector name and monitor name
+								const uniqueMonitorKey = `${connectorKey}/${monitor.name}`;
+								const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
+
+								return (
+									<Accordion
+										key={uniqueMonitorKey}
+										expanded={isMonitorExpanded}
+										onChange={(e, isExpanded) => {
+											if (resourceId) {
+												dispatch(
+													setMonitorExpanded({
+														resourceId,
+														monitorName: uniqueMonitorKey,
+														expanded: isExpanded,
+													}),
+												);
+											}
+										}}
+										disableGutters
+										elevation={0}
+										square
+										sx={{
+											bgcolor: "transparent",
+											borderTop: "1px solid",
+											borderColor: "divider",
+										}}
+									>
+										<AccordionSummary
+											expandIcon={<ExpandMoreIcon />}
+											sx={{
+												minHeight: 40,
+												cursor: "pointer",
+												bgcolor: "background.default",
+												pl: 4, // Indent nested monitors
+												"&:hover": {
+													bgcolor: "action.hover",
+												},
+												"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+											}}
+										>
+											<Typography
+												variant="subtitle1"
+												sx={{
+													fontWeight: 500,
+													display: "flex",
+													alignItems: "center",
+													columnGap: 1,
+												}}
+											>
+												{prettifyKey(monitor.name)}
+												<Box
+													component="span"
+													sx={{
+														ml: 1,
+														px: 1,
+														minWidth: 24,
+														textAlign: "center",
+														borderRadius: 999,
+														fontSize: 12,
+														fontWeight: 500,
+														bgcolor: "action.selected",
+														color: "text.primary",
+													}}
+												>
+													{instances.length}
+												</Box>
+											</Typography>
+										</AccordionSummary>
+										<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1, pl: 5 }}>
+											{pivotGroups.length > 0
+												? pivotGroups.map((group) => (
+														<PivotGroupSection
+															key={group.baseName}
+															group={group}
+															sortedInstances={sortedInstances}
+															resourceId={resourceId}
+															metaMetrics={connector.metaMetrics}
+														/>
+													))
+												: sortedInstances.map((inst) => {
+														const metrics = inst?.metrics ?? {};
+														const metricEntries = Object.entries(metrics);
+														return (
+															<InstanceMetricsTable
+																key={inst?.attributes?.id || inst.name}
+																instance={inst}
+																metricEntries={metricEntries}
+																naturalMetricCompare={naturalMetricCompare}
+																metaMetrics={connector.metaMetrics}
+															/>
+														);
+													})}
+										</AccordionDetails>
+									</Accordion>
+								);
+							})}
 						</AccordionDetails>
 					</Accordion>
 				);

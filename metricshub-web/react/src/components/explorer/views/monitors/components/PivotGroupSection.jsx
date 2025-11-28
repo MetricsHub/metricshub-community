@@ -286,7 +286,9 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 										const formattedValue = formatMetricValue(val, unit);
 										const rawValue = String(val);
 										const showRaw =
-											typeof val === "number" && formattedValue !== rawValue && formattedValue !== "";
+											typeof val === "number" &&
+											formattedValue !== rawValue &&
+											formattedValue !== "";
 
 										return (
 											<TableCell key={key} align="left">

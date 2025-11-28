@@ -25,7 +25,7 @@ export const formatSI = (n, unit) => {
 	const value = parseFloat((n / Math.pow(k, i)).toFixed(2));
 	const prefix = sizes[i];
 
-	// If unit is provided, attach prefix to unit (e.g. kJ). 
+	// If unit is provided, attach prefix to unit (e.g. kJ).
 	// If no unit, just return value + prefix (e.g. 10K)
 	return unit ? `${value} ${prefix}${unit}` : `${value} ${prefix}`;
 };

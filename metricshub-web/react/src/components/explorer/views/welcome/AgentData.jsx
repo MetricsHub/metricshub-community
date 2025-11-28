@@ -52,7 +52,7 @@ const renderMetricsRows = (metrics) => {
 			<TableRow key={name} hover>
 				<TableCell>{name}</TableCell>
 				<TableCell align="right">{metric.value ?? ""}</TableCell>
-				<TableCell>{metric.unit === "1" ? "%" : metric.unit ?? ""}</TableCell>
+				<TableCell>{metric.unit === "1" ? "%" : (metric.unit ?? "")}</TableCell>
 				<TableCell align="right">{metric.lastUpdate ?? ""}</TableCell>
 			</TableRow>
 		);
