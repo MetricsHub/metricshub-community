@@ -12,11 +12,30 @@ export const formatBytes = (n) => {
 	return parseFloat((n / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 
+export const formatSI = (n, unit) => {
+	if (n === 0) return `0 ${unit}`;
+	const k = 1000;
+	const sizes = ["", "K", "M", "G", "T", "P", "E", "Z", "Y"];
+	const i = Math.floor(Math.log(Math.abs(n)) / Math.log(k));
+
+	// Handle very small numbers or numbers < 1000
+	if (i < 0) return n.toFixed(2) + (unit ? ` ${unit}` : "");
+	if (i === 0) return n.toFixed(2) + (unit ? ` ${unit}` : "");
+
+	const value = parseFloat((n / Math.pow(k, i)).toFixed(2));
+	const prefix = sizes[i];
+
+	// If unit is provided, attach prefix to unit (e.g. kJ). 
+	// If no unit, just return value + prefix (e.g. 10K)
+	return unit ? `${value} ${prefix}${unit}` : `${value} ${prefix}`;
+};
+
 export const formatMetricValue = (value, unit) => {
 	if (value == null) return "";
 	if (typeof value !== "number") return String(value);
 
-	const u = unit ? unit.toLowerCase() : "";
+	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+	const u = cleanUnit.toLowerCase();
 
 	// Handle bytes
 	if (u === "by" || u === "b" || u === "byte" || u === "bytes") {
@@ -39,15 +58,8 @@ export const formatMetricValue = (value, unit) => {
 		return parts.join(" ");
 	}
 
-	// Handle other units with compact notation if large
-	if (Math.abs(value) >= 1000) {
-		return Intl.NumberFormat("en-US", {
-			notation: "compact",
-			maximumFractionDigits: 2,
-		}).format(value);
-	}
-
-	return String(value);
+	// Use generic SI formatter for everything else
+	return formatSI(value, cleanUnit);
 };
 
 export const formatRelativeTime = (isoString) => {

@@ -90,22 +90,23 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							const colLabel = getMetricLabel(key);
 							const meta = getMetricMetadata(key, metaMetrics);
 							const { description, unit } = meta;
+							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
 							return (
 								<TableCell key={key} align="left">
 									<HoverInfo
 										title={colLabel}
 										description={description}
-										unit={unit}
+										unit={cleanUnit}
 										sx={{ display: "inline-block" }}
 									>
 										{colLabel}
-										{unit && (
+										{cleanUnit && (
 											<Box
 												component="span"
 												sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}
 											>
-												({unit})
+												({cleanUnit})
 											</Box>
 										)}
 									</HoverInfo>
@@ -119,7 +120,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 		const meta = getMetricMetadata(group.baseName, metaMetrics);
 		let { description, unit } = meta;
-		let displayUnit = unit === "1" ? "%" : unit;
+		let displayUnit = unit === "1" ? "%" : unit ? unit.replace(/[{}]/g, "") : "";
 
 		return (
 			<TableHead>

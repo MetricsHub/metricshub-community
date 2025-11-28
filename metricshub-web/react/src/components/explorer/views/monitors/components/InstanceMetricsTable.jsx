@@ -84,19 +84,19 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 					<TableRow>
 						<TableCell sx={{ width: "25%" }}>Name</TableCell>
 						<TableCell align="left">Value</TableCell>
-						<TableCell align="right">Unit</TableCell>
 					</TableRow>
 				</TableHead>
 				<TableBody>
 					{groupedEntries.length === 0 ? (
 						<TableRow>
-							<TableCell colSpan={3}>No metrics</TableCell>
+							<TableCell colSpan={2}>No metrics</TableCell>
 						</TableRow>
 					) : (
 						groupedEntries.map((group) => {
 							if (group.type === "single") {
 								const meta = getMetricMetadata(group.key, metaMetrics);
 								const { description, unit } = meta;
+								const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
 								// If unit is "1", render as a progress bar (utilization)
 								if (isUtilizationUnit(unit)) {
@@ -107,7 +107,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												<HoverInfo
 													title={group.key}
 													description={description}
-													unit={unit}
+													unit={cleanUnit}
 													sx={{ display: "inline-block" }}
 												>
 													{group.key}
@@ -116,7 +116,6 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 											<TableCell align="left">
 												<UtilizationStack parts={parts} />
 											</TableCell>
-											<TableCell align="right">{unit || ""}</TableCell>
 										</TableRow>
 									);
 								}
@@ -127,14 +126,13 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 											<HoverInfo
 												title={group.key}
 												description={description}
-												unit={unit}
+												unit={cleanUnit}
 												sx={{ display: "inline-block" }}
 											>
 												{group.key}
 											</HoverInfo>
 										</TableCell>
 										<TableCell align="left">{formatMetricValue(group.value, unit)}</TableCell>
-										<TableCell align="right">{unit || ""}</TableCell>
 									</TableRow>
 								);
 							}
@@ -143,6 +141,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 							const sortedParts = [...parts].sort(compareUtilizationParts);
 							const meta = getMetricMetadata(group.baseName, metaMetrics);
 							const { description, unit } = meta;
+							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
 							return (
 								<TableRow key={group.baseName}>
@@ -160,7 +159,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												<HoverInfo
 													title={group.baseName}
 													description={description}
-													unit={unit}
+													unit={cleanUnit}
 													sx={{ display: "inline-block" }}
 												>
 													{group.baseName}
@@ -197,7 +196,6 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 									<TableCell align="left">
 										<UtilizationStack parts={sortedParts} />
 									</TableCell>
-									<TableCell align="right">{unit || ""}</TableCell>
 								</TableRow>
 							);
 						})
