@@ -136,8 +136,27 @@ export const UtilizationStack = ({ parts }) => {
 								width: "100%",
 								height: "100%",
 								bgcolor: colorFor(label),
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
 							}}
-						/>
+						>
+							{p.pct > 10 && (
+								<Box
+									component="span"
+									sx={{
+										color: "common.white",
+										fontSize: "0.7rem",
+										fontWeight: 600,
+										lineHeight: 1,
+										textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
+										userSelect: "none",
+									}}
+								>
+									{p.pct}%
+								</Box>
+							)}
+						</Box>
 					</HoverInfo>
 				);
 			})}
