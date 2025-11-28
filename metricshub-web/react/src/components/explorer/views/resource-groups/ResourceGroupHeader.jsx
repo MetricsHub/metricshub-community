@@ -1,9 +1,16 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import {
+	Box,
+	Typography,
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableRow,
+	Paper,
+} from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers";
-import DashboardTable from "../common/DashboardTable";
-import { sectionTitleSx } from "../common/table-styles";
 
 /**
  * Header section for a single resource group, showing its name and attributes.
@@ -15,7 +22,6 @@ const ResourceGroupHeader = ({ group }) => {
 	if (!group) return null;
 
 	const attributes = group.attributes ?? {};
-	const hasAttributes = Object.keys(attributes).length > 0;
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
@@ -25,17 +31,17 @@ const ResourceGroupHeader = ({ group }) => {
 					gutterBottom
 					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
 				>
-					<NodeTypeIcons type="resource-group" fontSize="large" />
+					<NodeTypeIcons type="resource-group" />
 					{group.name || group.id}
 				</Typography>
 			</Box>
 
-			{hasAttributes && (
-				<Box>
-					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-						Attributes
-					</Typography>
-					<DashboardTable>
+			<Box>
+				<Typography variant="h6" gutterBottom>
+					Attributes
+				</Typography>
+				<Paper variant="outlined">
+					<Table size="small">
 						<TableHead>
 							<TableRow>
 								<TableCell>Key</TableCell>
@@ -43,9 +49,9 @@ const ResourceGroupHeader = ({ group }) => {
 							</TableRow>
 						</TableHead>
 						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</DashboardTable>
-				</Box>
-			)}
+					</Table>
+				</Paper>
+			</Box>
 		</Box>
 	);
 };
