@@ -16,8 +16,8 @@
 
 	<properties>
 		<communityVersion>${project.version}</communityVersion>
-		<enterpriseVersion>3.0.02</enterpriseVersion>
-		<otelVersion>0.138.0</otelVersion>
+		<enterpriseVersion>3.0.03</enterpriseVersion>
+		<otelVersion>0.140.1</otelVersion>
 	</properties>
 
 	<dependencies>
