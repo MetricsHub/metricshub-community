@@ -67,6 +67,17 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 	const metrics = group.metrics || [];
 	const resources = group.resources || [];
 
+	let hasMetrics = false;
+	if (metrics) {
+		if (Array.isArray(metrics)) {
+			hasMetrics = metrics.length > 0;
+		} else if (typeof metrics === "object") {
+			hasMetrics = Object.keys(metrics).length > 0;
+		}
+	}
+
+	const hasAttributes = group.attributes && Object.keys(group.attributes).length > 0;
+
 	return (
 		<Box p={2} display="flex" flexDirection="column" gap={4}>
 			<EntityHeader
@@ -74,9 +85,13 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 				iconType="resource-group"
 				attributes={group.attributes}
 			/>
-			<Divider />
-			<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
-			<Divider />
+			{(hasAttributes || hasMetrics) && <Divider />}
+			{hasMetrics && (
+				<>
+					<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
+					<Divider />
+				</>
+			)}
 			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />
 		</Box>
 	);

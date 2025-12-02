@@ -127,10 +127,19 @@ export const UtilizationStack = ({ parts }) => {
 				display: "flex",
 			}}
 		>
-			{sortedParts.map((p) => {
+			{sortedParts.map((p, index) => {
 				const label = colorLabelFromKey(p.key);
+				const isLast = index === sortedParts.length - 1;
 				return (
-					<HoverInfo key={p.key} label={label} value={p.value} sx={{ width: `${p.pct}%` }}>
+					<HoverInfo
+						key={p.key}
+						label={label}
+						value={p.value}
+						sx={{
+							width: isLast ? "auto" : `${p.pct}%`,
+							flexGrow: isLast ? 1 : 0,
+						}}
+					>
 						<Box
 							sx={{
 								width: "100%",

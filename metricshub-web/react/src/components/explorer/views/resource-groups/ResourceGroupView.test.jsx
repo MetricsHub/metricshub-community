@@ -91,4 +91,29 @@ describe("ResourceGroupView", () => {
 		expect(onResourceClick).toHaveBeenCalledTimes(1);
 		expect(onResourceClick).toHaveBeenCalledWith(expect.objectContaining({ key: "res-1" }));
 	});
+
+	it("does not render metrics section when metrics are empty", () => {
+		const hierarchy = {
+			resourceGroups: [
+				{
+					id: "rg-empty-metrics",
+					attributes: {},
+					metrics: [],
+					resources: [
+						{
+							key: "res-1",
+							name: "res-1",
+							attributes: { "host.name": "host1", "host.type": "vm" },
+						},
+					],
+				},
+			],
+		};
+
+		renderWithHierarchy({ hierarchy, loading: false, error: null });
+
+		expect(screen.getByRole("heading", { level: 4, name: "rg-empty-metrics" })).toBeInTheDocument();
+		expect(screen.queryByText("Metrics")).not.toBeInTheDocument();
+		expect(screen.getByText("res-1")).toBeInTheDocument();
+	});
 });
