@@ -13,7 +13,8 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
-import { formatRelativeTime } from "../../../../utils/formatters";
+import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatters";
+import { getMetricMetadata } from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
@@ -130,7 +131,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 		return (
 			<Box>
 				<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
-				<Typography variant="body2">No monitors available for this resource.</Typography>
+				<Typography variant="body2">No connectors available for this resource.</Typography>
 			</Box>
 		);
 	}
@@ -232,7 +233,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 							)}
 
 							{/* Connector Metrics Table */}
-							{connector.metaMetrics && Object.keys(connector.metaMetrics).length > 0 && (
+							{connector.metrics && Object.keys(connector.metrics).length > 0 && (
 								<Box>
 									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 										Metrics
@@ -240,26 +241,41 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 									<DashboardTable>
 										<TableHead>
 											<TableRow>
-												<TableCell>Name</TableCell>
-												<TableCell>Value</TableCell>
-												<TableCell>Unit</TableCell>
+												<TableCell sx={{ width: "25%" }}>Name</TableCell>
+												<TableCell align="left">Value</TableCell>
 											</TableRow>
 										</TableHead>
 										<TableBody>
-											{Object.entries(connector.metaMetrics).map(([name, metricDef]) => (
-												<TableRow key={name}>
-													<TableCell>{name}</TableCell>
-													<TableCell>{metricDef?.description || "-"}</TableCell>
-													<TableCell>{metricDef?.unit || "-"}</TableCell>
-												</TableRow>
-											))}
+											{Object.entries(connector.metrics).map(([name, metric]) => {
+												let value = metric;
+												let unit = undefined;
+
+												if (metric && typeof metric === "object" && "value" in metric) {
+													value = metric.value;
+													unit = metric.unit;
+												}
+
+												if (!unit) {
+													const meta = getMetricMetadata(name, connector.metaMetrics);
+													if (meta?.unit) unit = meta.unit;
+												}
+
+												const formattedValue = formatMetricValue(value, unit);
+
+												return (
+													<TableRow key={name}>
+														<TableCell>{name}</TableCell>
+														<TableCell align="left">{formattedValue}</TableCell>
+													</TableRow>
+												);
+											})}
 										</TableBody>
 									</DashboardTable>
 								</Box>
 							)}
 
 							{/* Monitors Section */}
-							{monitors.map((monitor, monitorIndex) => {
+							{monitors.map((monitor) => {
 								const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
 								const pivotGroups = buildPivotGroups(instances);
 								const sortedInstances = [...instances].sort((a, b) => {
@@ -347,27 +363,27 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 										<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1, pl: 5 }}>
 											{pivotGroups.length > 0
 												? pivotGroups.map((group) => (
-														<PivotGroupSection
-															key={group.baseName}
-															group={group}
-															sortedInstances={sortedInstances}
-															resourceId={resourceId}
+													<PivotGroupSection
+														key={group.baseName}
+														group={group}
+														sortedInstances={sortedInstances}
+														resourceId={resourceId}
+														metaMetrics={connector.metaMetrics}
+													/>
+												))
+												: sortedInstances.map((inst) => {
+													const metrics = inst?.metrics ?? {};
+													const metricEntries = Object.entries(metrics);
+													return (
+														<InstanceMetricsTable
+															key={inst?.attributes?.id || inst.name}
+															instance={inst}
+															metricEntries={metricEntries}
+															naturalMetricCompare={naturalMetricCompare}
 															metaMetrics={connector.metaMetrics}
 														/>
-													))
-												: sortedInstances.map((inst) => {
-														const metrics = inst?.metrics ?? {};
-														const metricEntries = Object.entries(metrics);
-														return (
-															<InstanceMetricsTable
-																key={inst?.attributes?.id || inst.name}
-																instance={inst}
-																metricEntries={metricEntries}
-																naturalMetricCompare={naturalMetricCompare}
-																metaMetrics={connector.metaMetrics}
-															/>
-														);
-													})}
+													);
+												})}
 										</AccordionDetails>
 									</Accordion>
 								);

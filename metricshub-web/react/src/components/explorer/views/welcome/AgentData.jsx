@@ -1,7 +1,9 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
+import DashboardTable from "../common/DashboardTable";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers";
+import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
 
 /**
  * Render rows for agent metrics.

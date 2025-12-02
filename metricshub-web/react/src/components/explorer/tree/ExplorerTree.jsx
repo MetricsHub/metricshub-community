@@ -59,6 +59,24 @@ const buildTree = (raw) => {
 };
 
 /**
+ * Find a node by ID in the tree.
+ * @param {ExplorerNode} root
+ * @param {string} id
+ * @returns {ExplorerNode | null}
+ */
+const findNode = (root, id) => {
+	if (!root) return null;
+	if (root.id === id) return root;
+	if (root.children) {
+		for (const child of root.children) {
+			const found = findNode(child, id);
+			if (found) return found;
+		}
+	}
+	return null;
+};
+
+/**
  * Renders the explorer hierarchy and dispatches focus callbacks for leaf nodes.
  *
  * @param {Object} props
@@ -66,7 +84,11 @@ const buildTree = (raw) => {
  * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
  * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
  */
-export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
+export default function ExplorerTree({
+	onResourceGroupFocus,
+	onAgentFocus,
+	onResourceFocus,
+}) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -88,9 +110,23 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 			}
 			if (node.type === "agent" && onAgentFocus) {
 				onAgentFocus();
+				return;
+			}
+			if (node.type === "resource" && onResourceFocus) {
+				onResourceFocus(node, node.parent);
 			}
 		},
-		[onResourceGroupFocus, onAgentFocus],
+		[onResourceGroupFocus, onAgentFocus, onResourceFocus],
+	);
+
+	const handleItemClick = React.useCallback(
+		(event, itemId) => {
+			const node = findNode(treeRoot, itemId);
+			if (node) {
+				handleLabelClick(node);
+			}
+		},
+		[treeRoot, handleLabelClick],
 	);
 
 	if (loading && !treeRoot) {
@@ -135,7 +171,7 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 				[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 			}}
 		>
-			<ExplorerTreeItem node={treeRoot} onLabelClick={handleLabelClick} />
+			<ExplorerTreeItem node={treeRoot} />
 		</SimpleTreeView>
 	);
 }

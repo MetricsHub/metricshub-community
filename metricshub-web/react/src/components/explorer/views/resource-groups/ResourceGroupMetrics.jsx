@@ -1,14 +1,7 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
-	Paper,
-} from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import DashboardTable from "../common/DashboardTable";
+import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
 
 /**
  * Render table rows for a list of resource group metrics.
@@ -21,7 +14,9 @@ const renderMetricsRows = (metrics) => {
 	if (list.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={2}>No metrics</TableCell>
+				<TableCell colSpan={2} sx={emptyStateCellSx}>
+					No metrics
+				</TableCell>
 			</TableRow>
 		);
 	}
@@ -41,24 +36,36 @@ const renderMetricsRows = (metrics) => {
  * @returns {JSX.Element}
  */
 const ResourceGroupMetrics = ({ metrics }) => {
-	const rows = React.useMemo(() => metrics ?? [], [metrics]);
+	const rows = React.useMemo(() => {
+		if (Array.isArray(metrics)) {
+			return metrics;
+		}
+		if (metrics && typeof metrics === "object") {
+			return Object.entries(metrics).map(([key, val]) => {
+				let value = val;
+				if (val && typeof val === "object" && "value" in val) {
+					value = val.value;
+				}
+				return { key, value };
+			});
+		}
+		return [];
+	}, [metrics]);
 
 	return (
 		<Box>
-			<Typography variant="h6" gutterBottom>
+			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
 				Metrics
 			</Typography>
-			<Paper variant="outlined">
-				<Table size="small">
-					<TableHead>
-						<TableRow>
-							<TableCell>Key</TableCell>
-							<TableCell>Value</TableCell>
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderMetricsRows(rows)}</TableBody>
-				</Table>
-			</Paper>
+			<DashboardTable>
+				<TableHead>
+					<TableRow>
+						<TableCell>Key</TableCell>
+						<TableCell>Value</TableCell>
+					</TableRow>
+				</TableHead>
+				<TableBody>{renderMetricsRows(rows)}</TableBody>
+			</DashboardTable>
 		</Box>
 	);
 };
