@@ -73,7 +73,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	}, [sortedEntries, metaMetrics]);
 
 	return (
-		<Box key={id} mb={3}>
+		<Box key={id} mb={1}>
 			<Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
 				{displayName}
 				{extraInfoParts.length > 0 && ` (${extraInfoParts.join("; ")})`}

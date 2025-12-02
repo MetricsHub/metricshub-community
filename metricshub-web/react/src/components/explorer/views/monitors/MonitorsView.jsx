@@ -246,156 +246,169 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 								)}
 							</Typography>
 						</AccordionSummary>
-						<AccordionDetails sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-							{/* Connector Attributes Table */}
-							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-										Attributes
-									</Typography>
-									<DashboardTable>
-										<TableHead>
-											<TableRow>
-												<TableCell>Key</TableCell>
-												<TableCell>Value</TableCell>
-											</TableRow>
-										</TableHead>
-										<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-									</DashboardTable>
-								</Box>
-							)}
+						<AccordionDetails sx={{ p: 0 }}>
+							{/* Connector Attributes & Metrics Container */}
+							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
+								showMetricsTable) && (
+									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+										{/* Connector Attributes Table */}
+										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+											<Box>
+												<Typography
+													variant="subtitle2"
+													gutterBottom
+													sx={{ fontWeight: 600, mb: 1 }}
+												>
+													Attributes
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell>Key</TableCell>
+															<TableCell>Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>
+														{renderAttributesRows(connector.attributes)}
+													</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
 
-							{/* Connector Metrics Table */}
-							{showMetricsTable && (
-								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-										Metrics
-									</Typography>
-									<DashboardTable>
-										<TableHead>
-											<TableRow>
-												<TableCell sx={{ width: "25%" }}>Name</TableCell>
-												<TableCell align="left">Value</TableCell>
-											</TableRow>
-										</TableHead>
-										<TableBody>
-											{Object.entries(connector.metrics).map(([name, metric]) => {
-												let value = metric;
-												let unit = undefined;
+										{/* Connector Metrics Table */}
+										{showMetricsTable && (
+											<Box>
+												<Typography
+													variant="subtitle2"
+													gutterBottom
+													sx={{ fontWeight: 600, mb: 1 }}
+												>
+													Metrics
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell sx={{ width: "25%" }}>Name</TableCell>
+															<TableCell align="left">Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>
+														{Object.entries(connector.metrics).map(([name, metric]) => {
+															let value = metric;
+															let unit = undefined;
 
-												if (metric && typeof metric === "object" && "value" in metric) {
-													value = metric.value;
-													unit = metric.unit;
-												}
+															if (
+																metric &&
+																typeof metric === "object" &&
+																"value" in metric
+															) {
+																value = metric.value;
+																unit = metric.unit;
+															}
 
-												if (!unit) {
-													const meta = getMetricMetadata(name, connector.metaMetrics);
-													if (meta?.unit) unit = meta.unit;
-												}
+															if (!unit) {
+																const meta = getMetricMetadata(
+																	name,
+																	connector.metaMetrics,
+																);
+																if (meta?.unit) unit = meta.unit;
+															}
 
-												const formattedValue = formatMetricValue(value, unit);
+															const formattedValue = formatMetricValue(value, unit);
 
-												return (
-													<TableRow key={name}>
-														<TableCell>{name}</TableCell>
-														<TableCell align="left">{formattedValue}</TableCell>
-													</TableRow>
-												);
-											})}
-										</TableBody>
-									</DashboardTable>
-								</Box>
-							)}
+															return (
+																<TableRow key={name}>
+																	<TableCell>{name}</TableCell>
+																	<TableCell align="left">{formattedValue}</TableCell>
+																</TableRow>
+															);
+														})}
+													</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
+									</Box>
+								)}
 
 							{/* Monitors Section */}
-							{monitors.map((monitor) => {
-								const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
-								const pivotGroups = buildPivotGroups(instances);
-								const sortedInstances = [...instances].sort((a, b) => {
-									const attrsA = a?.attributes ?? {};
-									const attrsB = b?.attributes ?? {};
-									const idA = attrsA.id ?? a.name ?? "";
-									const idB = attrsB.id ?? b.name ?? "";
-									const numA = Number(idA);
-									const numB = Number(idB);
-									if (!Number.isNaN(numA) && !Number.isNaN(numB)) {
-										return numA - numB;
-									}
-									return String(idA).localeCompare(String(idB));
-								});
+							<Box sx={{ display: "flex", flexDirection: "column" }}>
+								{monitors.map((monitor) => {
+									const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
+									const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
+									const sortedInstances = [...instances].sort((a, b) =>
+										naturalMetricCompare([a.name || ""], [b.name || ""])
+									);
+									const pivotGroups = buildPivotGroups(sortedInstances);
+									const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
 
-								// Use a unique key combining connector name and monitor name
-								const uniqueMonitorKey = `${connectorKey}/${monitor.name}`;
-								const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
-
-								return (
-									<Accordion
-										key={uniqueMonitorKey}
-										expanded={isMonitorExpanded}
-										onChange={(e, isExpanded) => {
-											if (resourceId) {
-												dispatch(
-													setMonitorExpanded({
-														resourceId,
-														monitorName: uniqueMonitorKey,
-														expanded: isExpanded,
-													}),
-												);
-											}
-										}}
-										disableGutters
-										elevation={0}
-										square
-										sx={{
-											bgcolor: "transparent",
-											borderTop: "1px solid",
-											borderColor: "divider",
-										}}
-									>
-										<AccordionSummary
-											expandIcon={<ExpandMoreIcon />}
+									return (
+										<Accordion
+											key={uniqueMonitorKey}
+											expanded={isMonitorExpanded}
+											onChange={(e, isExpanded) => {
+												if (resourceId) {
+													dispatch(
+														setMonitorExpanded({
+															resourceId,
+															monitorName: uniqueMonitorKey,
+															expanded: isExpanded,
+														}),
+													);
+												}
+											}}
+											disableGutters
+											elevation={0}
+											square
 											sx={{
-												minHeight: 40,
-												cursor: "pointer",
-												bgcolor: "background.default",
-												pl: 4, // Indent nested monitors
-												"&:hover": {
-													bgcolor: "action.hover",
-												},
-												"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+												bgcolor: "transparent",
+												borderTop: "1px solid",
+												borderColor: "divider",
 											}}
 										>
-											<Typography
-												variant="subtitle1"
+											<AccordionSummary
+												expandIcon={<ExpandMoreIcon />}
 												sx={{
-													fontWeight: 500,
-													display: "flex",
-													alignItems: "center",
-													columnGap: 1,
+													minHeight: 40,
+													cursor: "pointer",
+													bgcolor: "background.default",
+													pl: 4, // Indent nested monitors
+													"&:hover": {
+														bgcolor: "action.hover",
+													},
+													"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 												}}
 											>
-												{prettifyKey(monitor.name)}
-												<Box
-													component="span"
+												<Typography
+													variant="subtitle1"
 													sx={{
-														ml: 1,
-														px: 1,
-														minWidth: 24,
-														textAlign: "center",
-														borderRadius: 999,
-														fontSize: 12,
 														fontWeight: 500,
-														bgcolor: "action.selected",
-														color: "text.primary",
+														display: "flex",
+														alignItems: "center",
+														columnGap: 1,
 													}}
 												>
-													{instances.length}
-												</Box>
-											</Typography>
-										</AccordionSummary>
-										<AccordionDetails sx={{ px: 1.5, pb: 2, pt: 1, pl: 5 }}>
-											{pivotGroups.length > 0
-												? pivotGroups.map((group) => (
+													{prettifyKey(monitor.name)}
+													<Box
+														component="span"
+														sx={{
+															ml: 1,
+															px: 1,
+															minWidth: 24,
+															textAlign: "center",
+															borderRadius: 999,
+															fontSize: 12,
+															fontWeight: 500,
+															bgcolor: "action.selected",
+															color: "text.primary",
+														}}
+													>
+														{instances.length}
+													</Box>
+												</Typography>
+											</AccordionSummary>
+											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
+												{pivotGroups.length > 0
+													? pivotGroups.map((group) => (
 														<PivotGroupSection
 															key={group.baseName}
 															group={group}
@@ -404,7 +417,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 															metaMetrics={connector.metaMetrics}
 														/>
 													))
-												: sortedInstances.map((inst) => {
+													: sortedInstances.map((inst) => {
 														const metrics = inst?.metrics ?? {};
 														const metricEntries = Object.entries(metrics);
 														return (
@@ -417,10 +430,11 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 															/>
 														);
 													})}
-										</AccordionDetails>
-									</Accordion>
-								);
-							})}
+											</AccordionDetails>
+										</Accordion>
+									);
+								})}
+							</Box>
 						</AccordionDetails>
 					</Accordion>
 				);

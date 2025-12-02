@@ -147,21 +147,19 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 	};
 
 	return (
-		<Box key={group.baseName} mb={2}>
+		<Box key={group.baseName}>
 			<Box
 				sx={{
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "space-between",
 					cursor: "pointer",
-					mb: 0.5,
 					px: 0.75,
-					py: 0.25,
-					borderRadius: 1,
-					bgcolor: "action.hover",
+					py: 0.5,
+					bgcolor: "transparent",
 					transition: "background-color 0.15s ease-in-out",
 					"&:hover": {
-						bgcolor: "action.selected",
+						bgcolor: "action.hover",
 					},
 				}}
 				onClick={handleToggle}
@@ -229,91 +227,93 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 			</Box>
 
 			{open && (
-				<DashboardTable stickyHeader={false}>
-					{renderHeader()}
-					<TableBody>
-						{isUtilizationGroup && sortedInstances.length > 0 && (
-							<TableRow>
-								<TableCell>
-									<Typography variant="body2" sx={{ fontWeight: 500 }}>
-										Average {displayBaseName}
-									</Typography>
-								</TableCell>
-								<TableCell>
-									<UtilizationStack
-										parts={buildUtilizationParts(
-											group.metricKeys.map((key) => {
-												const sum = sortedInstances.reduce(
-													(acc, inst) => acc + (inst.metrics?.[key] || 0),
-													0,
-												);
-												const avg = sum / sortedInstances.length;
-												return { key, value: avg };
-											}),
-										)}
-									/>
-								</TableCell>
-							</TableRow>
-						)}
-						{sortedInstances.map((inst, rowIndex) => {
-							const attrs = inst?.attributes ?? {};
-							const id = attrs.id || inst.name;
-							const displayName =
-								attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
-							const metrics = inst?.metrics ?? {};
+				<Box sx={{ mt: 1, mb: 2 }}>
+					<DashboardTable stickyHeader={false}>
+						{renderHeader()}
+						<TableBody>
+							{isUtilizationGroup && sortedInstances.length > 0 && (
+								<TableRow>
+									<TableCell>
+										<Typography variant="body2" sx={{ fontWeight: 500 }}>
+											Average {displayBaseName}
+										</Typography>
+									</TableCell>
+									<TableCell>
+										<UtilizationStack
+											parts={buildUtilizationParts(
+												group.metricKeys.map((key) => {
+													const sum = sortedInstances.reduce(
+														(acc, inst) => acc + (inst.metrics?.[key] || 0),
+														0,
+													);
+													const avg = sum / sortedInstances.length;
+													return { key, value: avg };
+												}),
+											)}
+										/>
+									</TableCell>
+								</TableRow>
+							)}
+							{sortedInstances.map((inst, rowIndex) => {
+								const attrs = inst?.attributes ?? {};
+								const id = attrs.id || inst.name;
+								const displayName =
+									attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
+								const metrics = inst?.metrics ?? {};
 
-							if (isUtilizationGroup) {
-								const entries = group.metricKeys.map((key) => ({ key, value: metrics[key] }));
-								const parts = buildUtilizationParts(entries);
+								if (isUtilizationGroup) {
+									const entries = group.metricKeys.map((key) => ({ key, value: metrics[key] }));
+									const parts = buildUtilizationParts(entries);
+									return (
+										<TableRow key={id || rowIndex}>
+											<TableCell>{displayName}</TableCell>
+											<TableCell>
+												<UtilizationStack parts={parts} />
+											</TableCell>
+										</TableRow>
+									);
+								}
+
 								return (
 									<TableRow key={id || rowIndex}>
 										<TableCell>{displayName}</TableCell>
-										<TableCell>
-											<UtilizationStack parts={parts} />
-										</TableCell>
+										{group.metricKeys.map((key) => {
+											const meta = getMetricMetadata(key, metaMetrics);
+											const unit = meta?.unit;
+											const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+											const val = metrics[key];
+											const formattedValue = formatMetricValue(val, unit);
+											const rawValue = String(val);
+											const showRaw =
+												typeof val === "number" &&
+												formattedValue !== rawValue &&
+												formattedValue !== "";
+
+											return (
+												<TableCell key={key} align="left">
+													{showRaw ? (
+														<HoverInfo
+															title={
+																<Typography variant="body2">
+																	Raw value : {val} {cleanUnit}
+																</Typography>
+															}
+															sx={{ display: "inline-block" }}
+														>
+															{formattedValue}
+														</HoverInfo>
+													) : (
+														formattedValue
+													)}
+												</TableCell>
+											);
+										})}
 									</TableRow>
 								);
-							}
-
-							return (
-								<TableRow key={id || rowIndex}>
-									<TableCell>{displayName}</TableCell>
-									{group.metricKeys.map((key) => {
-										const meta = getMetricMetadata(key, metaMetrics);
-										const unit = meta?.unit;
-										const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
-										const val = metrics[key];
-										const formattedValue = formatMetricValue(val, unit);
-										const rawValue = String(val);
-										const showRaw =
-											typeof val === "number" &&
-											formattedValue !== rawValue &&
-											formattedValue !== "";
-
-										return (
-											<TableCell key={key} align="left">
-												{showRaw ? (
-													<HoverInfo
-														title={
-															<Typography variant="body2">
-																Raw value : {val} {cleanUnit}
-															</Typography>
-														}
-														sx={{ display: "inline-block" }}
-													>
-														{formattedValue}
-													</HoverInfo>
-												) : (
-													formattedValue
-												)}
-											</TableCell>
-										);
-									})}
-								</TableRow>
-							);
-						})}
-					</TableBody>
-				</DashboardTable>
+							})}
+						</TableBody>
+					</DashboardTable>
+				</Box>
 			)}
 		</Box>
 	);
