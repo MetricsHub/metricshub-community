@@ -38,7 +38,7 @@ description: Learn more about the new features, changes and improvements, and bu
 |----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**#139**](https://github.com/MetricsHub/enterprise-connectors/issues/139) | **[HPE OneView (Frames and Blades)](./connectors/hpesynergy.html)**: <ul><li>Incorrect Smart Storage Batteries alerts on Gen11</li><li>Interconnect interfaces are not excluded</li><li>Truncated attribute ids</li></ul> |
 | [**#142**](https://github.com/MetricsHub/enterprise-connectors/issues/142) | **[Cisco MDS9000 Series (SSH)](./connectors/ciscossh.html)**: Incorrect status reported for Power Supplies                                                                                                                |
-| [**#146**](https://github.com/MetricsHub/enterprise-connectors/issues/146) | **[HPE iLO4 (Proliant Gen 8, Gen9)](./connectors/hpegen9ilorest.html)**: Incorrect Temperature alerts generated                                                                                                       |
+| [**#146**](https://github.com/MetricsHub/enterprise-connectors/issues/146) | **[HPE iLO4 (Proliant Gen 8, Gen9)](./connectors/hpegen9ilorest.html)**: Incorrect Temperature alerts generated                                                                                                           |
 | [**#152**](https://github.com/MetricsHub/enterprise-connectors/issues/152) | **[HP-UX (WBEM)](./connectors/hpuxwbem.html)**: CPUs are not discovered                                                                                                                                                   |
 | [**#160**](https://github.com/MetricsHub/enterprise-connectors/issues/160) | **[RedFish (REST)](./connectors/redfish.html)**: The fan name is not meaningful                                                                                                                                           |
 
@@ -62,10 +62,10 @@ description: Learn more about the new features, changes and improvements, and bu
 
 #### What's New
 
-| ID                                                                        | Description                                                                 |
-|---------------------------------------------------------------------------|-----------------------------------------------------------------------------|
-| [**#311**](https://github.com/MetricsHub/community-connectors/issues/311) | Added **[Linux file monitoring](./connectors/linuxfile.html)** via SSH      |
-| [**#312**](https://github.com/MetricsHub/community-connectors/issues/312) | Added **[Windows file monitoring](./connectors/windowsfile.html)**  via WMI |
+| ID                                                                        | Description                                                                |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [**#311**](https://github.com/MetricsHub/community-connectors/issues/311) | Added **[Linux file monitoring](./connectors/linuxfile.html)** via SSH     |
+| [**#312**](https://github.com/MetricsHub/community-connectors/issues/312) | Added **[Windows file monitoring](./connectors/windowsfile.html)** via WMI |
 
 ## MetricsHub Enterprise Edition v3.0.02
 
