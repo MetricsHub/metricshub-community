@@ -16,7 +16,7 @@ import {
 	colorLabelFromKey,
 	buildUtilizationParts,
 	getPriority,
-} from "./utilization";
+} from "./Utilization";
 import {
 	selectResourceUiState,
 	setPivotGroupExpanded,

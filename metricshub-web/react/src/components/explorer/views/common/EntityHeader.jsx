@@ -18,40 +18,40 @@ import { sectionTitleSx } from "./table-styles";
  * @returns {JSX.Element | null}
  */
 const EntityHeader = ({ title, iconType, attributes, children }) => {
-    const hasAttributes = attributes && Object.keys(attributes).length > 0;
+	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 
-    return (
-        <Box display="flex" flexDirection="column" gap={3}>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                <Typography
-                    variant="h4"
-                    gutterBottom
-                    sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                >
-                    {iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
-                    {title}
-                </Typography>
-                {children}
-            </Box>
+	return (
+		<Box display="flex" flexDirection="column" gap={3}>
+			<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+				<Typography
+					variant="h4"
+					gutterBottom
+					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+				>
+					{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
+					{title}
+				</Typography>
+				{children}
+			</Box>
 
-            {hasAttributes && (
-                <Box>
-                    <Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-                        Attributes
-                    </Typography>
-                    <DashboardTable>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Key</TableCell>
-                                <TableCell>Value</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>{renderAttributesRows(attributes)}</TableBody>
-                    </DashboardTable>
-                </Box>
-            )}
-        </Box>
-    );
+			{hasAttributes && (
+				<Box>
+					<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+						Attributes
+					</Typography>
+					<DashboardTable>
+						<TableHead>
+							<TableRow>
+								<TableCell>Key</TableCell>
+								<TableCell>Value</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>{renderAttributesRows(attributes)}</TableBody>
+					</DashboardTable>
+				</Box>
+			)}
+		</Box>
+	);
 };
 
 export default EntityHeader;

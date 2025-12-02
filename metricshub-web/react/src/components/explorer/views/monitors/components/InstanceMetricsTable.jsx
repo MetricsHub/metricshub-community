@@ -14,7 +14,7 @@ import {
 	colorFor,
 	colorLabelFromKey,
 	compareUtilizationParts,
-} from "./utilization";
+} from "./Utilization";
 
 /**
  * Displays a table of metrics for a single monitor instance.

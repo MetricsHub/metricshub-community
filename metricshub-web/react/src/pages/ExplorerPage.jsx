@@ -88,9 +88,7 @@ const ExplorerPage = () => {
 						onResourceClick={handleResourceClick}
 					/>
 				)}
-				{isResource && (
-					<ResourceView resourceName={resourceName} resourceGroupName={groupParam} />
-				)}
+				{isResource && <ResourceView resourceName={resourceName} resourceGroupName={groupParam} />}
 			</Right>
 		</SplitScreen>
 	);

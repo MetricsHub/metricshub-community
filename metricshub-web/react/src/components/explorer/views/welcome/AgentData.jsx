@@ -19,18 +19,12 @@ const AgentData = ({ agent, totalResources }) => {
 	}
 
 	return (
-		<EntityHeader
-			title={title}
-			iconType="agent"
-			attributes={attributes}
-		>
+		<EntityHeader title={title} iconType="agent" attributes={attributes}>
 			{version && <Typography variant="subtitle1">Version: {version}</Typography>}
 			{typeof totalResources === "number" && (
 				<Typography variant="subtitle1">Total resources: {totalResources}</Typography>
 			)}
-			{hasMetrics && (
-				<MetricsTable metrics={agent.metrics} showUnit={true} showLastUpdate={true} />
-			)}
+			{hasMetrics && <MetricsTable metrics={agent.metrics} showUnit={true} showLastUpdate={true} />}
 		</EntityHeader>
 	);
 };

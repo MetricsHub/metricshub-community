@@ -84,11 +84,7 @@ const findNode = (root, id) => {
  * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
  * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
  */
-export default function ExplorerTree({
-	onResourceGroupFocus,
-	onAgentFocus,
-	onResourceFocus,
-}) {
+export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onResourceFocus }) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);

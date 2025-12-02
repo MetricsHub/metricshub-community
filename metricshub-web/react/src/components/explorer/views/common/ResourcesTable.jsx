@@ -10,19 +10,19 @@ import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
  * @returns {JSX.Element}
  */
 const ResourceRow = React.memo(function ResourceRow({ resource, onClick, showOsType }) {
-    const attrs = resource.attributes ?? {};
-    return (
-        <TableRow
-            hover={Boolean(onClick)}
-            sx={{ cursor: onClick ? "pointer" : "default" }}
-            onClick={onClick ? () => onClick(resource) : undefined}
-        >
-            <TableCell>{resource.name}</TableCell>
-            <TableCell>{attrs["host.name"] ?? ""}</TableCell>
-            <TableCell>{attrs["host.type"] ?? ""}</TableCell>
-            {showOsType && <TableCell>{attrs["os.type"] ?? ""}</TableCell>}
-        </TableRow>
-    );
+	const attrs = resource.attributes ?? {};
+	return (
+		<TableRow
+			hover={Boolean(onClick)}
+			sx={{ cursor: onClick ? "pointer" : "default" }}
+			onClick={onClick ? () => onClick(resource) : undefined}
+		>
+			<TableCell>{resource.name}</TableCell>
+			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
+			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
+			{showOsType && <TableCell>{attrs["os.type"] ?? ""}</TableCell>}
+		</TableRow>
+	);
 });
 
 /**
@@ -35,47 +35,47 @@ const ResourceRow = React.memo(function ResourceRow({ resource, onClick, showOsT
  * @returns {JSX.Element}
  */
 const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
-    const allResources = React.useMemo(
-        () => (Array.isArray(resources) ? resources : []),
-        [resources],
-    );
+	const allResources = React.useMemo(
+		() => (Array.isArray(resources) ? resources : []),
+		[resources],
+	);
 
-    return (
-        <Box>
-            <Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-                <NodeTypeIcons type="resource" />
-                Resources
-            </Typography>
-            <DashboardTable>
-                <TableHead>
-                    <TableRow>
-                        <TableCell>Key</TableCell>
-                        <TableCell>host.name</TableCell>
-                        <TableCell>host.type</TableCell>
-                        {showOsType && <TableCell>os.type</TableCell>}
-                    </TableRow>
-                </TableHead>
-                <TableBody>
-                    {allResources.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={showOsType ? 4 : 3} sx={emptyStateCellSx}>
-                                No resources
-                            </TableCell>
-                        </TableRow>
-                    ) : (
-                        allResources.map((resource) => (
-                            <ResourceRow
-                                key={resource.name || resource.key}
-                                resource={resource}
-                                onClick={onResourceClick}
-                                showOsType={showOsType}
-                            />
-                        ))
-                    )}
-                </TableBody>
-            </DashboardTable>
-        </Box>
-    );
+	return (
+		<Box>
+			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
+				<NodeTypeIcons type="resource" />
+				Resources
+			</Typography>
+			<DashboardTable>
+				<TableHead>
+					<TableRow>
+						<TableCell>Key</TableCell>
+						<TableCell>host.name</TableCell>
+						<TableCell>host.type</TableCell>
+						{showOsType && <TableCell>os.type</TableCell>}
+					</TableRow>
+				</TableHead>
+				<TableBody>
+					{allResources.length === 0 ? (
+						<TableRow>
+							<TableCell colSpan={showOsType ? 4 : 3} sx={emptyStateCellSx}>
+								No resources
+							</TableCell>
+						</TableRow>
+					) : (
+						allResources.map((resource) => (
+							<ResourceRow
+								key={resource.name || resource.key}
+								resource={resource}
+								onClick={onResourceClick}
+								showOsType={showOsType}
+							/>
+						))
+					)}
+				</TableBody>
+			</DashboardTable>
+		</Box>
+	);
 };
 
 export default ResourcesTable;
