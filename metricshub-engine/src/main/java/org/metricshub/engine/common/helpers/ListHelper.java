@@ -40,7 +40,13 @@ public class ListHelper {
 	 * @return The element at the specified position in the list, or the default value if the index is out of bounds.
 	 */
 	public static <T> T getValueAtIndex(List<T> list, int index, T defaultValue) {
-		if (list == null || list.size() <= index) {
+		if (index < 0) {
+			return defaultValue;
+		}
+		if (list == null) {
+			return defaultValue;
+		}
+		if (list.size() <= index) {
 			return defaultValue;
 		}
 		return list.get(index);
