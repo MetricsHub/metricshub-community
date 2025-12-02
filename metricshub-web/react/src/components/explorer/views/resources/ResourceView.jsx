@@ -118,27 +118,29 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		);
 	}
 
-	// Fallback: try to find resource in hierarchy if currentResource is not yet set
-	let resource = currentResource;
-	if (!resource && hierarchy && decodedName) {
+	// Find resource in hierarchy
+	let hierarchyResource = null;
+	if (hierarchy && decodedName) {
 		const resourceGroups = hierarchy.resourceGroups || [];
 		const topLevelResources = hierarchy.resources || [];
 		if (decodedGroup) {
 			const group =
 				resourceGroups.find((g) => g.name === decodedGroup || g.id === decodedGroup) || null;
 			if (group && Array.isArray(group.resources)) {
-				resource =
+				hierarchyResource =
 					group.resources.find(
 						(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
 					) || null;
 			}
 		} else {
-			resource =
+			hierarchyResource =
 				topLevelResources.find(
 					(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
 				) || null;
 		}
 	}
+
+	const resource = currentResource || hierarchyResource;
 
 	if (!resource) {
 		return (
@@ -148,12 +150,31 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		);
 	}
 
-	const metrics = resource.metrics || [];
+	let metrics = resource.metrics;
+	// If current resource has no metrics, try to use metrics from hierarchy
+	if (
+		(!metrics ||
+			(Array.isArray(metrics) && metrics.length === 0) ||
+			(typeof metrics === "object" && Object.keys(metrics).length === 0)) &&
+		hierarchyResource?.metrics
+	) {
+		metrics = hierarchyResource.metrics;
+	}
+	metrics = metrics || [];
+
 	const connectors = resource.connectors || [];
-	const hasMetrics = metrics.length > 0;
+
+	let hasMetrics = false;
+	if (metrics) {
+		if (Array.isArray(metrics)) {
+			hasMetrics = metrics.length > 0;
+		} else if (typeof metrics === "object") {
+			hasMetrics = Object.keys(metrics).length > 0;
+		}
+	}
 
 	return (
-		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={4}>
+		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader
 				title={resource.id || resource.key || resource.name}
 				iconType="resource"
@@ -162,7 +183,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			<Divider />
 			{hasMetrics && (
 				<>
-					<MetricsTable metrics={metrics} />
+					<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
 					<Divider />
 				</>
 			)}

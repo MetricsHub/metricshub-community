@@ -57,7 +57,7 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	}
 
 	return (
-		<Box p={2} display="flex" flexDirection="column" gap={4}>
+		<Box p={2} display="flex" flexDirection="column" gap={2}>
 			<AgentData agent={hierarchy} totalResources={totalResources} />
 			<Divider />
 			{renderResourceGroups ? (

@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
 import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
 
@@ -47,6 +49,8 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
  * @returns {JSX.Element | null}
  */
 const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
+	const [expanded, setExpanded] = React.useState(false);
+
 	const rows = React.useMemo(() => {
 		if (!metrics) return [];
 		if (Array.isArray(metrics)) {
@@ -79,22 +83,37 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 		return null;
 	}
 
+	const shouldFold = rows.length > 6;
+
 	return (
 		<Box>
-			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
-				Metrics
-			</Typography>
-			<DashboardTable>
-				<TableHead>
-					<TableRow>
-						<TableCell>Name</TableCell>
-						<TableCell align={showUnit || showLastUpdate ? "left" : "right"}>Value</TableCell>
-						{showUnit && <TableCell>Unit</TableCell>}
-						{showLastUpdate && <TableCell align="right">Last Update</TableCell>}
-					</TableRow>
-				</TableHead>
-				<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
-			</DashboardTable>
+			<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
+				<Typography variant="h6" sx={{ ...sectionTitleSx, mb: 0 }}>
+					Metrics
+				</Typography>
+				{shouldFold && (
+					<Button
+						size="small"
+						onClick={() => setExpanded(!expanded)}
+						endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+					>
+						{expanded ? "Hide" : `Show (${rows.length})`}
+					</Button>
+				)}
+			</Box>
+			{(!shouldFold || expanded) && (
+				<DashboardTable>
+					<TableHead>
+						<TableRow>
+							<TableCell>Name</TableCell>
+							<TableCell align={showUnit || showLastUpdate ? "left" : "right"}>Value</TableCell>
+							{showUnit && <TableCell>Unit</TableCell>}
+							{showLastUpdate && <TableCell align="right">Last Update</TableCell>}
+						</TableRow>
+					</TableHead>
+					<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
+				</DashboardTable>
+			)}
 		</Box>
 	);
 };

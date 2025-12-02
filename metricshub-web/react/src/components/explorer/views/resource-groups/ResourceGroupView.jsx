@@ -79,7 +79,7 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 	const hasAttributes = group.attributes && Object.keys(group.attributes).length > 0;
 
 	return (
-		<Box p={2} display="flex" flexDirection="column" gap={4}>
+		<Box p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader
 				title={group.name || group.id}
 				iconType="resource-group"
