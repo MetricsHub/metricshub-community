@@ -146,6 +146,20 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 				const connectorKey = connector.name || `connector-${connectorIndex}`;
 				const isConnectorExpanded = !!expandedMonitors[connectorKey];
 
+				const statusMetric = connector.metrics?.["metricshub.connector.status"];
+				let statusValue = null;
+				if (statusMetric) {
+					statusValue =
+						typeof statusMetric === "object" && "value" in statusMetric
+							? statusMetric.value
+							: statusMetric;
+				}
+
+				const metricKeys = connector.metrics ? Object.keys(connector.metrics) : [];
+				const showMetricsTable =
+					metricKeys.length > 0 &&
+					!(metricKeys.length === 1 && metricKeys[0] === "metricshub.connector.status");
+
 				return (
 					<Accordion
 						key={connectorKey}
@@ -211,6 +225,25 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 								>
 									{monitors.length}
 								</Box>
+								{statusValue && (
+									<Box
+										component="span"
+										sx={{
+											ml: 1,
+											px: 1,
+											minWidth: 24,
+											textAlign: "center",
+											borderRadius: 999,
+											fontSize: 12,
+											fontWeight: 500,
+											bgcolor: statusValue === "ok" ? "success.main" : "error.main",
+											color: "white",
+											textTransform: "uppercase",
+										}}
+									>
+										{statusValue}
+									</Box>
+								)}
 							</Typography>
 						</AccordionSummary>
 						<AccordionDetails sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
@@ -233,7 +266,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 							)}
 
 							{/* Connector Metrics Table */}
-							{connector.metrics && Object.keys(connector.metrics).length > 0 && (
+							{showMetricsTable && (
 								<Box>
 									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 										Metrics
