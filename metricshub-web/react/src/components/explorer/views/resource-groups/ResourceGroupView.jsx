@@ -6,9 +6,9 @@ import {
 	selectExplorerLoading,
 	selectExplorerError,
 } from "../../../../store/slices/explorer-slice";
-import ResourceGroupHeader from "./ResourceGroupHeader";
-import ResourceGroupMetrics from "./ResourceGroupMetrics";
-import ResourceGroupResources from "./ResourceGroupResources";
+import EntityHeader from "../common/EntityHeader";
+import MetricsTable from "../common/MetricsTable";
+import ResourcesTable from "../common/ResourcesTable";
 
 /**
  * Resource group focused page. Mirrors the welcome page behaviour but
@@ -69,11 +69,15 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 
 	return (
 		<Box p={2} display="flex" flexDirection="column" gap={4}>
-			<ResourceGroupHeader group={group} />
+			<EntityHeader
+				title={group.name || group.id}
+				iconType="resource-group"
+				attributes={group.attributes}
+			/>
 			<Divider />
-			<ResourceGroupMetrics metrics={metrics} />
+			<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
 			<Divider />
-			<ResourceGroupResources resources={resources} onResourceClick={onResourceClick} />
+			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />
 		</Box>
 	);
 };

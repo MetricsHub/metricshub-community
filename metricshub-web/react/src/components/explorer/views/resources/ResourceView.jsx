@@ -15,8 +15,8 @@ import {
 	fetchTopLevelResource,
 	fetchGroupedResource,
 } from "../../../../store/thunks/explorer-thunks";
-import ResourceHeader from "./ResourceHeader";
-import ResourceMetrics from "./ResourceMetrics";
+import EntityHeader from "../common/EntityHeader";
+import MetricsTable from "../common/MetricsTable";
 import MonitorsView from "../monitors/MonitorsView";
 import { debounce } from "@mui/material";
 
@@ -154,11 +154,15 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={4}>
-			<ResourceHeader resource={resource} />
+			<EntityHeader
+				title={resource.id || resource.key || resource.name}
+				iconType="resource"
+				attributes={resource.attributes}
+			/>
 			<Divider />
 			{hasMetrics && (
 				<>
-					<ResourceMetrics metrics={metrics} />
+					<MetricsTable metrics={metrics} />
 					<Divider />
 				</>
 			)}

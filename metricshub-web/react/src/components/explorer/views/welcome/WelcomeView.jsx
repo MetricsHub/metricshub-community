@@ -8,7 +8,7 @@ import {
 } from "../../../../store/slices/explorer-slice";
 import AgentData from "./AgentData";
 import ResourceGroupsData from "./ResourceGroupsData";
-import ResourcesData from "./ResourcesData";
+import ResourcesTable from "../common/ResourcesTable";
 
 /**
  * Default explorer welcome page displaying agent summary, groups and rogue resources.
@@ -66,7 +66,11 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 				<ResourceGroupsData resourceGroups={resourceGroups} />
 			)}
 			<Divider />
-			<ResourcesData resources={rogueResources} onResourceClick={onRogueResourceClick} />
+			<ResourcesTable
+				resources={rogueResources}
+				onResourceClick={onRogueResourceClick}
+				showOsType={true}
+			/>
 		</Box>
 	);
 };

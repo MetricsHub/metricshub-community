@@ -19,7 +19,7 @@ import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
-import { renderAttributesRows } from "../common/ExplorerTableHelpers";
+import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
 
 /**

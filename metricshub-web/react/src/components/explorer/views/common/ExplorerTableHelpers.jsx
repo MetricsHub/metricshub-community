@@ -1,5 +1,6 @@
 import * as React from "react";
 import { TableRow, TableCell } from "@mui/material";
+import { emptyStateCellSx } from "./table-styles";
 
 /**
  * Render rows for a simple key/value attributes table.
@@ -13,7 +14,9 @@ export const renderAttributesRows = (attributes, colSpan = 2) => {
 	if (entries.length === 0) {
 		return (
 			<TableRow>
-				<TableCell colSpan={colSpan}>No attributes</TableCell>
+				<TableCell colSpan={colSpan} sx={emptyStateCellSx}>
+					No attributes
+				</TableCell>
 			</TableRow>
 		);
 	}
