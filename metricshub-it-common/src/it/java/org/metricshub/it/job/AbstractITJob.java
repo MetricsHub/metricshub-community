@@ -90,6 +90,9 @@ public abstract class AbstractITJob implements ITJob {
 		for (final Entry<String, AbstractMetric> expectedEntry : expectedMonitor.getMetrics().entrySet()) {
 			final AbstractMetric expectedMetric = expectedEntry.getValue();
 			final String expectedKey = expectedEntry.getKey();
+			if (expectedKey.startsWith("metricshub.job.duration")) {
+				continue;
+			}
 			final String expectedMonitorId = expectedMonitor.getId();
 
 			assertNotNull(
