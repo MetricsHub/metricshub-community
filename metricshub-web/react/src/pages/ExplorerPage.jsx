@@ -1,6 +1,8 @@
 import * as React from "react";
 import { Box } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useAppDispatch } from "../hooks/store";
+import { setLastVisitedPath } from "../store/slices/explorer-slice";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
 import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
@@ -16,6 +18,12 @@ import { paths } from "../paths";
 const ExplorerPage = () => {
 	const navigate = useNavigate();
 	const params = useParams();
+	const location = useLocation();
+	const dispatch = useAppDispatch();
+
+	React.useEffect(() => {
+		dispatch(setLastVisitedPath(location.pathname));
+	}, [location.pathname, dispatch]);
 
 	const resourceGroupName = params.name;
 	const resourceName = params.resource;

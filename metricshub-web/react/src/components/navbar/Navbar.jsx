@@ -12,6 +12,7 @@ import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/application-status-thunks";
+import { selectLastVisitedPath } from "../../store/slices/explorer-slice";
 
 import StatusText from "./status/StatusText";
 import StatusDetailsMenu from "./status/StatusDetailsMenu";
@@ -33,6 +34,7 @@ const NavBar = ({ onToggleTheme }) => {
 	}, [signOut]);
 
 	const dispatch = useAppDispatch();
+	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
 
 	// Config dirty/error status for navbar dot indicator
 	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
@@ -106,7 +108,7 @@ const NavBar = ({ onToggleTheme }) => {
 
 						{/* Navigation Buttons */}
 						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
-							<Button component={NavLink} size="large" to={paths.explorer} sx={navBtnSx}>
+							<Button component={NavLink} size="large" to={lastVisitedPath || paths.explorer} sx={navBtnSx}>
 								Explorer
 							</Button>
 							<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
