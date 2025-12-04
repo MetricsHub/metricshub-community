@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Box, CircularProgress, Divider, Typography } from "@mui/material";
+import { Box, CircularProgress, Divider, Typography, Button } from "@mui/material";
 import {
 	selectExplorerHierarchy,
 	selectExplorerLoading,
@@ -20,7 +20,10 @@ import MetricsTable from "../common/MetricsTable";
 import MonitorsView from "../monitors/MonitorsView";
 import HoverInfo from "../monitors/components/HoverInfo";
 import WarningIcon from "@mui/icons-material/Warning";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import { debounce } from "@mui/material";
+import { getMetricValue } from "../../../../utils/metrics-helper";
 
 /**
  * Single resource focused page.
@@ -40,10 +43,16 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const resourceLoading = useSelector(selectResourceLoading);
 	const resourceError = useSelector(selectResourceError);
 	const [lastUpdatedAt, setLastUpdatedAt] = React.useState(null);
+	const [isPaused, setIsPaused] = React.useState(false);
 	const rootRef = React.useRef(null);
 
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
+
+	// Reset paused state when resource changes
+	React.useEffect(() => {
+		setIsPaused(false);
+	}, [decodedName, decodedGroup]);
 
 	React.useEffect(() => {
 		if (!decodedName) return;
@@ -58,11 +67,14 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			setLastUpdatedAt(Date.now());
 		};
 
+		if (isPaused) return;
+
 		fetchData();
+
 		const interval = setInterval(fetchData, 10000);
 
 		return () => clearInterval(interval);
-	}, [dispatch, decodedName, decodedGroup]);
+	}, [dispatch, decodedName, decodedGroup, isPaused]);
 
 	// Scroll restoration logic
 	const resourceId = currentResource?.id || currentResource?.name;
@@ -124,14 +136,10 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const resource = currentResource || hierarchyResource;
 
 	const connectors = React.useMemo(() => resource?.connectors || [], [resource]);
-
 	const failedConnectors = React.useMemo(() => {
 		return connectors.filter((c) => {
 			const statusMetric = c.metrics?.["metricshub.connector.status"];
-			const statusValue =
-				statusMetric && typeof statusMetric === "object" && "value" in statusMetric
-					? statusMetric.value
-					: statusMetric;
+			const statusValue = getMetricValue(statusMetric);
 			return statusValue === "failed";
 		});
 	}, [connectors]);
@@ -212,6 +220,16 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 				title={resourceTitle}
 				iconType="resource"
 				attributes={resource.attributes}
+				action={
+					<Button
+						size="small"
+						variant="contained"
+						startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+						onClick={() => setIsPaused(!isPaused)}
+					>
+						{isPaused ? "Resume Collect" : "Pause Collect"}
+					</Button>
+				}
 			/>
 			<Divider />
 			{hasMetrics && (

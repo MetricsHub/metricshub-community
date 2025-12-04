@@ -15,11 +15,12 @@ import { sectionTitleSx } from "./table-styles";
  *   title: React.ReactNode,
  *   iconType?: string,
  *   attributes?: Record<string, unknown>,
- *   children?: React.ReactNode
+ *   children?: React.ReactNode,
+ *   action?: React.ReactNode
  * }} props
  * @returns {JSX.Element | null}
  */
-const EntityHeader = ({ title, iconType, attributes, children }) => {
+const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 	const [expanded, setExpanded] = React.useState(false);
 
@@ -31,16 +32,19 @@ const EntityHeader = ({ title, iconType, attributes, children }) => {
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
-			<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-				<Typography
-					variant="h4"
-					gutterBottom
-					sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-				>
-					{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
-					{title}
-				</Typography>
-				{children}
+			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+					<Typography
+						variant="h4"
+						gutterBottom
+						sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
+					>
+						{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
+						{title}
+					</Typography>
+					{children}
+				</Box>
+				{action && <Box>{action}</Box>}
 			</Box>
 
 			{hasAttributes && (

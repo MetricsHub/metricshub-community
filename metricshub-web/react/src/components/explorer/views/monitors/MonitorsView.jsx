@@ -14,7 +14,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
 import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatters";
-import { getMetricMetadata } from "../../../../utils/metrics-helper";
+import { getMetricMetadata, getMetricValue } from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
@@ -147,13 +147,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 				const isConnectorExpanded = !!expandedMonitors[connectorKey];
 
 				const statusMetric = connector.metrics?.["metricshub.connector.status"];
-				let statusValue = null;
-				if (statusMetric) {
-					statusValue =
-						typeof statusMetric === "object" && "value" in statusMetric
-							? statusMetric.value
-							: statusMetric;
-				}
+				const statusValue = getMetricValue(statusMetric);
 
 				const metricKeys = connector.metrics ? Object.keys(connector.metrics) : [];
 				const showMetricsTable =

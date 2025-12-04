@@ -52,3 +52,16 @@ export const getMetricLabel = (key) => {
  * @returns {boolean}
  */
 export const isUtilizationUnit = (unit) => unit === "1";
+
+/**
+ * Helper to get the value of a metric, handling both primitive values and objects with a 'value' property.
+ *
+ * @param {any} metric
+ * @returns {any}
+ */
+export const getMetricValue = (metric) => {
+	if (metric && typeof metric === "object" && "value" in metric) {
+		return metric.value;
+	}
+	return metric;
+};

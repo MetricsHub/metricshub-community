@@ -108,7 +108,12 @@ const NavBar = ({ onToggleTheme }) => {
 
 						{/* Navigation Buttons */}
 						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
-							<Button component={NavLink} size="large" to={lastVisitedPath || paths.explorer} sx={navBtnSx}>
+							<Button
+								component={NavLink}
+								size="large"
+								to={lastVisitedPath || paths.explorer}
+								sx={navBtnSx}
+							>
 								Explorer
 							</Button>
 							<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
