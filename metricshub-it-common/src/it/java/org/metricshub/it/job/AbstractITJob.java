@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.NonNull;
 import org.metricshub.engine.alert.AlertRule;
@@ -24,6 +25,8 @@ public abstract class AbstractITJob implements ITJob {
 
 	@NonNull
 	protected final TelemetryManager telemetryManager;
+
+	private static final Pattern JOB_DURATION_PATTERN = Pattern.compile("^metricshub\\.job\\.duration(\\{.*})?$");
 
 	/**
 	 * Assert that expected and actual are equal.
@@ -90,7 +93,7 @@ public abstract class AbstractITJob implements ITJob {
 		for (final Entry<String, AbstractMetric> expectedEntry : expectedMonitor.getMetrics().entrySet()) {
 			final AbstractMetric expectedMetric = expectedEntry.getValue();
 			final String expectedKey = expectedEntry.getKey();
-			if (expectedKey.startsWith("metricshub.job.duration")) {
+			if (JOB_DURATION_PATTERN.matcher(expectedKey).matches()) {
 				continue;
 			}
 			final String expectedMonitorId = expectedMonitor.getId();
