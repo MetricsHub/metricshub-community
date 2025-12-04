@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>1.0.14-SNAPSHOT</version>
+	<version>1.0.15-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -79,10 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.16</community-connectors.version>
+		<community-connectors.version>1.0.17</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
-		<project.build.outputTimestamp>2025-11-21T11:38:39Z</project.build.outputTimestamp>
+		<project.build.outputTimestamp>2025-12-02T13:11:02Z</project.build.outputTimestamp>
 	</properties>
 
 	<modules>
