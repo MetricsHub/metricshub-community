@@ -18,6 +18,8 @@ import {
 import EntityHeader from "../common/EntityHeader";
 import MetricsTable from "../common/MetricsTable";
 import MonitorsView from "../monitors/MonitorsView";
+import HoverInfo from "../monitors/components/HoverInfo";
+import WarningIcon from "@mui/icons-material/Warning";
 import { debounce } from "@mui/material";
 
 /**
@@ -94,6 +96,46 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [resourceId]); // Only re-run when resource changes
 
+	// Find resource in hierarchy
+	const hierarchyResource = React.useMemo(() => {
+		if (!hierarchy || !decodedName) return null;
+		const resourceGroups = hierarchy.resourceGroups || [];
+		const topLevelResources = hierarchy.resources || [];
+		if (decodedGroup) {
+			const group =
+				resourceGroups.find((g) => g.name === decodedGroup || g.id === decodedGroup) || null;
+			if (group && Array.isArray(group.resources)) {
+				return (
+					group.resources.find(
+						(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
+					) || null
+				);
+			}
+		} else {
+			return (
+				topLevelResources.find(
+					(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
+				) || null
+			);
+		}
+		return null;
+	}, [hierarchy, decodedName, decodedGroup]);
+
+	const resource = currentResource || hierarchyResource;
+
+	const connectors = React.useMemo(() => resource?.connectors || [], [resource]);
+
+	const failedConnectors = React.useMemo(() => {
+		return connectors.filter((c) => {
+			const statusMetric = c.metrics?.["metricshub.connector.status"];
+			const statusValue =
+				statusMetric && typeof statusMetric === "object" && "value" in statusMetric
+					? statusMetric.value
+					: statusMetric;
+			return statusValue === "failed";
+		});
+	}, [connectors]);
+
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -118,30 +160,6 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		);
 	}
 
-	// Find resource in hierarchy
-	let hierarchyResource = null;
-	if (hierarchy && decodedName) {
-		const resourceGroups = hierarchy.resourceGroups || [];
-		const topLevelResources = hierarchy.resources || [];
-		if (decodedGroup) {
-			const group =
-				resourceGroups.find((g) => g.name === decodedGroup || g.id === decodedGroup) || null;
-			if (group && Array.isArray(group.resources)) {
-				hierarchyResource =
-					group.resources.find(
-						(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
-					) || null;
-			}
-		} else {
-			hierarchyResource =
-				topLevelResources.find(
-					(r) => r.name === decodedName || r.id === decodedName || r.key === decodedName,
-				) || null;
-		}
-	}
-
-	const resource = currentResource || hierarchyResource;
-
 	if (!resource) {
 		return (
 			<Box p={2}>
@@ -162,7 +180,22 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	}
 	metrics = metrics || [];
 
-	const connectors = resource.connectors || [];
+	const resourceTitle = (
+		<Box component="span" display="flex" alignItems="center" gap={1}>
+			{resource.id || resource.key || resource.name}
+			{failedConnectors.length > 0 && (
+				<HoverInfo
+					title="Warning"
+					description={`The following connectors have failed: ${failedConnectors
+						.map((c) => c.name || c.id || "Unknown")
+						.join(", ")}`}
+					sx={{ display: "flex", alignItems: "center" }}
+				>
+					<WarningIcon color="warning" />
+				</HoverInfo>
+			)}
+		</Box>
+	);
 
 	let hasMetrics = false;
 	if (metrics) {
@@ -176,7 +209,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader
-				title={resource.id || resource.key || resource.name}
+				title={resourceTitle}
 				iconType="resource"
 				attributes={resource.attributes}
 			/>
