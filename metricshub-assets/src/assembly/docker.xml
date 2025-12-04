@@ -1,0 +1,52 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+	<id>docker</id>
+	<formats>
+		<format>dir</format>
+	</formats>
+
+	<includeBaseDirectory>false</includeBaseDirectory>
+
+	<files>
+
+		<!-- Docker Image -->
+		<file>
+			<source>src/main/resources/docker/Dockerfile</source>
+			<outputDirectory>/</outputDirectory>
+			<destName>Dockerfile</destName>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>true</filtered>
+		</file>
+
+		<!-- Docker container entrypoint script -->
+		<file>
+			<source>src/main/resources/docker/docker-entrypoint.sh</source>
+			<outputDirectory>/</outputDirectory>
+			<destName>docker-entrypoint.sh</destName>
+			<fileMode>0755</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</file>
+	</files>
+
+	<fileSets>
+
+		<fileSet>
+			<directory>src/main/resources/common</directory>
+			<outputDirectory>/defaults</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+		<fileSet>
+			<directory>src/main/resources/linux/config</directory>
+			<outputDirectory>/defaults/config</outputDirectory>
+			<fileMode>0644</fileMode>
+			<lineEnding>unix</lineEnding>
+			<filtered>false</filtered>
+		</fileSet>
+
+	</fileSets>
+
+</assembly>
