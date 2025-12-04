@@ -9,6 +9,7 @@ import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
 import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGroupsData";
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
 import ResourceView from "../components/explorer/views/resources/ResourceView";
+import MonitorTypeView from "../components/explorer/views/monitor-type/MonitorTypeView";
 import { paths } from "../paths";
 
 /**
@@ -28,10 +29,12 @@ const ExplorerPage = () => {
 	const resourceGroupName = params.name;
 	const resourceName = params.resource;
 	const groupParam = params.group;
+	const monitorType = params.monitorType;
 
-	const isResource = Boolean(resourceName);
-	const isResourceGroup = Boolean(resourceGroupName) && !isResource;
-	const isWelcome = !isResourceGroup && !isResource;
+	const isMonitorType = Boolean(monitorType);
+	const isResource = Boolean(resourceName) && !isMonitorType;
+	const isResourceGroup = Boolean(resourceGroupName) && !isResource && !isMonitorType;
+	const isWelcome = !isResourceGroup && !isResource && !isMonitorType;
 
 	const handleResourceGroupFocus = React.useCallback(
 		(name) => {
@@ -97,6 +100,13 @@ const ExplorerPage = () => {
 					/>
 				)}
 				{isResource && <ResourceView resourceName={resourceName} resourceGroupName={groupParam} />}
+				{isMonitorType && (
+					<MonitorTypeView
+						resourceName={resourceName}
+						resourceGroupName={groupParam}
+						monitorType={monitorType}
+					/>
+				)}
 			</Right>
 		</SplitScreen>
 	);

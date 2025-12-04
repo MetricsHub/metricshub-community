@@ -65,3 +65,32 @@ export const getMetricValue = (metric) => {
 	}
 	return metric;
 };
+
+/**
+ * Natural sort comparator for metric names.
+ * Handles cases like "cpu0", "cpu1", "cpu10" correctly.
+ *
+ * @param {string} nameA
+ * @param {string} nameB
+ * @returns {number}
+ */
+export const compareMetricNames = (nameA, nameB) => {
+	const re = /(.*?)(\d+)$/;
+	const ma = nameA.match(re);
+	const mb = nameB.match(re);
+
+	if (!ma || !mb || ma[1] !== mb[1]) {
+		// Fallback to plain string compare when no common prefix+index
+		return nameA.localeCompare(nameB);
+	}
+
+	const idxA = parseInt(ma[2], 10);
+	const idxB = parseInt(mb[2], 10);
+
+	if (Number.isNaN(idxA) || Number.isNaN(idxB)) {
+		return nameA.localeCompare(nameB);
+	}
+
+	if (idxA === idxB) return 0;
+	return idxA < idxB ? -1 : 1;
+};

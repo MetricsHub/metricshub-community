@@ -238,7 +238,13 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 					<Divider />
 				</>
 			)}
-			<MonitorsView connectors={connectors} lastUpdatedAt={lastUpdatedAt} resourceId={resourceId} />
+			<MonitorsView
+				connectors={connectors}
+				lastUpdatedAt={lastUpdatedAt}
+				resourceId={resourceId}
+				resourceName={decodedName}
+				resourceGroupName={decodedGroup}
+			/>
 		</Box>
 	);
 };
