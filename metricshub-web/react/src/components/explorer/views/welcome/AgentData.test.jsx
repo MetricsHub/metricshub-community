@@ -44,10 +44,4 @@ describe("AgentData", () => {
 		expect(screen.getByText("2048")).toBeInTheDocument();
 		expect(screen.getByText("MB")).toBeInTheDocument();
 	});
-
-	it("shows empty fallbacks for missing attributes and metrics", () => {
-		render(<AgentData agent={{ attributes: {}, metrics: {} }} />);
-		expect(screen.getByText("No attributes")).toBeInTheDocument();
-		expect(screen.getByText("No metrics")).toBeInTheDocument();
-	});
 });

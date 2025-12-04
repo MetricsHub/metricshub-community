@@ -12,24 +12,29 @@ import {
 
 /**
  * @typedef {Object} ExplorerNode
- * @property {string} id - Stable unique id for the tree item (derived)
- * @property {string} name - Display name for the node (backend provided)
- * @property {string} type - Node type (backend provided)
- * @property {ExplorerNode[]} children - Child nodes (empty array when no children)
+ * @property {string} id Unique path-based identifier.
+ * @property {string} name Display name.
+ * @property {string} type Backend node type (e.g. "resource").
+ * @property {ExplorerNode[]} children Normalized child nodes.
+ * @property {ExplorerNode | null} [parent] Parent node if available.
+ * @property {boolean} [isExpandable] Whether the node can be expanded.
  */
 
 /**
- * Normalize backend hierarchy (single root object).
- * Backend guarantees `name` & `type`. Child collections may appear under
- * one of several keys: `children`, `resources`, `resourceGroups`, `nodes`, `items`.
- * We merge them in a stable order to produce a unified children array.
- * @param {any} raw
- * @returns {ExplorerNode|null}
+ * Normalizes the raw backend hierarchy into a single `ExplorerNode` tree.
+ *
+ * @param {*} raw Raw hierarchy object from the API.
+ * @returns {ExplorerNode | null} Normalized root node or `null` when absent.
  */
 const buildTree = (raw) => {
 	if (!raw) return null;
 
 	const collectChildren = (node) => {
+		// Resources are navigation leaves and must not have tree children.
+		if (node.type === "resource") {
+			return [];
+		}
+
 		const keys = ["children", "resources", "resourceGroups", "nodes", "items"];
 		const out = [];
 		for (const k of keys) {
@@ -39,22 +44,47 @@ const buildTree = (raw) => {
 		return out;
 	};
 
-	const walk = (node, pathParts) => {
+	const walk = (node, pathParts, parent) => {
 		const name = node.name;
 		const id = [...pathParts, name].join("/");
 		const rawChildren = collectChildren(node);
-		const children = rawChildren.map((c) => walk(c, [...pathParts, name]));
-		return { id, name, type: node.type, children };
+		const children = Array.isArray(rawChildren)
+			? rawChildren.map((c) => walk(c, [...pathParts, name], node))
+			: [];
+		const isExpandable = children.length > 0;
+		return { id, name, type: node.type, children, parent, isExpandable };
 	};
 
-	return walk(raw, ["root"]);
+	return walk(raw, ["root"], null);
 };
 
 /**
- * ExplorerTree renders the hierarchy fetched from the explorer endpoint.
- * Recursively builds tree item nodes.
+ * Find a node by ID in the tree.
+ * @param {ExplorerNode} root
+ * @param {string} id
+ * @returns {ExplorerNode | null}
  */
-export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
+const findNode = (root, id) => {
+	if (!root) return null;
+	if (root.id === id) return root;
+	if (root.children) {
+		for (const child of root.children) {
+			const found = findNode(child, id);
+			if (found) return found;
+		}
+	}
+	return null;
+};
+
+/**
+ * Renders the explorer hierarchy and dispatches focus callbacks for leaf nodes.
+ *
+ * @param {Object} props
+ * @param {(name: string) => void} [props.onResourceGroupFocus] Called when a resource group is selected.
+ * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
+ * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
+ */
+export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onResourceFocus }) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -76,9 +106,23 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 			}
 			if (node.type === "agent" && onAgentFocus) {
 				onAgentFocus();
+				return;
+			}
+			if (node.type === "resource" && onResourceFocus) {
+				onResourceFocus(node, node.parent);
 			}
 		},
-		[onResourceGroupFocus, onAgentFocus],
+		[onResourceGroupFocus, onAgentFocus, onResourceFocus],
+	);
+
+	const handleItemClick = React.useCallback(
+		(event, itemId) => {
+			const node = findNode(treeRoot, itemId);
+			if (node) {
+				handleLabelClick(node);
+			}
+		},
+		[treeRoot, handleLabelClick],
 	);
 
 	if (loading && !treeRoot) {
@@ -115,12 +159,15 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus }) {
 			aria-label="Explorer hierarchy"
 			defaultExpandedItems={[treeRoot.id]}
 			multiSelect={false}
+			// Only the arrow/icon should expand/collapse. Row click just selects + triggers focus logic.
+			expansionTrigger="iconContainer"
+			onItemClick={handleItemClick}
 			sx={{
 				[`& .${treeItemClasses.content}`]: { py: 0.25, width: "100%" },
 				[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 			}}
 		>
-			<ExplorerTreeItem node={treeRoot} onLabelClick={handleLabelClick} />
+			<ExplorerTreeItem node={treeRoot} />
 		</SimpleTreeView>
 	);
 }

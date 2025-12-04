@@ -1,11 +1,14 @@
 import * as React from "react";
 import { Box } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
+import { useAppDispatch } from "../hooks/store";
+import { setLastVisitedPath } from "../store/slices/explorer-slice";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
 import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
 import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGroupsData";
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
+import ResourceView from "../components/explorer/views/resources/ResourceView";
 import { paths } from "../paths";
 
 /**
@@ -15,10 +18,20 @@ import { paths } from "../paths";
 const ExplorerPage = () => {
 	const navigate = useNavigate();
 	const params = useParams();
+	const location = useLocation();
+	const dispatch = useAppDispatch();
+
+	React.useEffect(() => {
+		dispatch(setLastVisitedPath(location.pathname));
+	}, [location.pathname, dispatch]);
 
 	const resourceGroupName = params.name;
-	const isResourceGroup = Boolean(resourceGroupName);
-	const isWelcome = !isResourceGroup;
+	const resourceName = params.resource;
+	const groupParam = params.group;
+
+	const isResource = Boolean(resourceName);
+	const isResourceGroup = Boolean(resourceGroupName) && !isResource;
+	const isWelcome = !isResourceGroup && !isResource;
 
 	const handleResourceGroupFocus = React.useCallback(
 		(name) => {
@@ -32,10 +45,25 @@ const ExplorerPage = () => {
 		navigate(paths.explorerWelcome);
 	}, [navigate]);
 
-	const handleResourceClick = React.useCallback((resource) => {
-		// TODO: integrate with routing when resource page exists.
-		void resource;
-	}, []);
+	const handleResourceClick = React.useCallback(
+		(resource, parent) => {
+			const rName = resource.name || resource.id || resource.key;
+			let gName;
+
+			if (parent && parent.type === "resource-group") {
+				gName = parent.name || parent.id;
+			} else if (parent && parent.type === "agent") {
+				// Rogue resource from tree (parent is agent)
+				gName = undefined;
+			} else {
+				// Fallback to context (WelcomeView or ResourceGroupView where parent is undefined)
+				gName = resourceGroupName || groupParam;
+			}
+
+			navigate(paths.explorerResource(gName, rName));
+		},
+		[navigate, resourceGroupName, groupParam],
+	);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -45,6 +73,7 @@ const ExplorerPage = () => {
 						<ExplorerTree
 							onResourceGroupFocus={handleResourceGroupFocus}
 							onAgentFocus={handleAgentFocus}
+							onResourceFocus={handleResourceClick}
 						/>
 					</Box>
 				</Box>
@@ -58,6 +87,7 @@ const ExplorerPage = () => {
 								onResourceGroupClick={(group) => handleResourceGroupFocus(group.name || group.id)}
 							/>
 						)}
+						onRogueResourceClick={handleResourceClick}
 					/>
 				)}
 				{isResourceGroup && (
@@ -66,6 +96,7 @@ const ExplorerPage = () => {
 						onResourceClick={handleResourceClick}
 					/>
 				)}
+				{isResource && <ResourceView resourceName={resourceName} resourceGroupName={groupParam} />}
 			</Right>
 		</SplitScreen>
 	);

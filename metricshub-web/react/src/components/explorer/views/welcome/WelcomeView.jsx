@@ -8,7 +8,7 @@ import {
 } from "../../../../store/slices/explorer-slice";
 import AgentData from "./AgentData";
 import ResourceGroupsData from "./ResourceGroupsData";
-import ResourcesData from "./ResourcesData";
+import ResourcesTable from "../common/ResourcesTable";
 
 /**
  * Default explorer welcome page displaying agent summary, groups and rogue resources.
@@ -16,10 +16,10 @@ import ResourcesData from "./ResourcesData";
  * Optionally accepts a render prop to customize the ResourceGroups section,
  * so that parent components can inject navigation behaviour.
  *
- * @param {{ renderResourceGroups?:(props:{ resourceGroups:any[] }) => JSX.Element }} props
+ * @param {{ renderResourceGroups?:(props:{ resourceGroups:any[] }) => JSX.Element, onRogueResourceClick?: (resource: any) => void }} props
  * @returns {JSX.Element}
  */
-const WelcomeView = ({ renderResourceGroups }) => {
+const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
 	const error = useSelector(selectExplorerError);
@@ -57,7 +57,7 @@ const WelcomeView = ({ renderResourceGroups }) => {
 	}
 
 	return (
-		<Box p={2} display="flex" flexDirection="column" gap={4}>
+		<Box p={2} display="flex" flexDirection="column" gap={2}>
 			<AgentData agent={hierarchy} totalResources={totalResources} />
 			<Divider />
 			{renderResourceGroups ? (
@@ -66,7 +66,11 @@ const WelcomeView = ({ renderResourceGroups }) => {
 				<ResourceGroupsData resourceGroups={resourceGroups} />
 			)}
 			<Divider />
-			<ResourcesData resources={rogueResources} />
+			<ResourcesTable
+				resources={rogueResources}
+				onResourceClick={onRogueResourceClick}
+				showOsType={true}
+			/>
 		</Box>
 	);
 };
