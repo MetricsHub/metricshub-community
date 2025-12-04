@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.regex.Pattern;
 import lombok.Data;
 import lombok.NonNull;
 import org.metricshub.engine.alert.AlertRule;
@@ -19,6 +21,10 @@ import org.metricshub.engine.telemetry.MonitorsVo;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.AbstractMetric;
 
+/**
+ * Abstract implementation of an integration test job.<br>
+ * This class provides common functionality for executing strategies and verifying expected telemetry data.
+ */
 @Data
 public abstract class AbstractITJob implements ITJob {
 
@@ -26,10 +32,20 @@ public abstract class AbstractITJob implements ITJob {
 	protected final TelemetryManager telemetryManager;
 
 	/**
+	 * Pattern to match job duration metrics, which are ignored in comparisons.
+	 */
+	private static final Pattern JOB_DURATION_PATTERN = Pattern.compile("^metricshub\\.job\\.duration(\\{.*\\})?$");
+
+	/**
+	 * List of metric patterns to skip during comparison.
+	 */
+	private static final List<Pattern> SKIP_METRIC_PATTERNS = List.of(JOB_DURATION_PATTERN);
+
+	/**
 	 * Assert that expected and actual are equal.
 	 *
-	 * @param expected
-	 * @param actual
+	 * @param expected The expected monitor instance
+	 * @param actual   The actual monitor instance
 	 */
 	private static void assertMonitor(final Monitor expected, final Monitor actual) {
 		assertMetrics(expected, actual);
@@ -90,6 +106,12 @@ public abstract class AbstractITJob implements ITJob {
 		for (final Entry<String, AbstractMetric> expectedEntry : expectedMonitor.getMetrics().entrySet()) {
 			final AbstractMetric expectedMetric = expectedEntry.getValue();
 			final String expectedKey = expectedEntry.getKey();
+
+			// Should we skip assertions for this metric?
+			if (skipMetric(expectedKey)) {
+				continue;
+			}
+
 			final String expectedMonitorId = expectedMonitor.getId();
 
 			assertNotNull(
@@ -158,6 +180,16 @@ public abstract class AbstractITJob implements ITJob {
 					)
 			);
 		}
+	}
+
+	/**
+	 * Decide whether to skip the metric check based on the expected key.
+	 *
+	 * @param metricKey The expected metric key
+	 * @return true to skip the check, false otherwise
+	 */
+	static boolean skipMetric(final String metricKey) {
+		return SKIP_METRIC_PATTERNS.stream().anyMatch(pattern -> pattern.matcher(metricKey).matches());
 	}
 
 	/**
