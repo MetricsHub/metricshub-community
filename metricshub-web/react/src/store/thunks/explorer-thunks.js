@@ -16,3 +16,40 @@ export const fetchExplorerHierarchy = createAsyncThunk(
 		}
 	},
 );
+
+/**
+ * Fetch a single resource by name, for resources that are not attached
+ * to a resource-group.
+ *
+ * @param {{ resourceName: string }} params
+ * @returns {Promise<any>} The resource JSON
+ */
+export const fetchTopLevelResource = createAsyncThunk(
+	"explorer/fetchTopLevelResource",
+	async ({ resourceName }, { rejectWithValue }) => {
+		try {
+			const data = await explorerApi.getTopLevelResource(resourceName);
+			return data;
+		} catch (e) {
+			return rejectWithValue(e?.message || "Failed to fetch top-level resource");
+		}
+	},
+);
+
+/**
+ * Fetch a resource that belongs to a resource-group.
+ *
+ * @param {{ groupName: string, resourceName: string }} params
+ * @returns {Promise<any>} The resource JSON
+ */
+export const fetchGroupedResource = createAsyncThunk(
+	"explorer/fetchGroupedResource",
+	async ({ groupName, resourceName }, { rejectWithValue }) => {
+		try {
+			const data = await explorerApi.getGroupedResource(groupName, resourceName);
+			return data;
+		} catch (e) {
+			return rejectWithValue(e?.message || "Failed to fetch grouped resource");
+		}
+	},
+);

@@ -150,6 +150,18 @@ public class ExplorerService {
 			.build();
 
 		groupNode.getResources().addAll(buildResources(groupTms));
+
+		// Optionally, aggregate resource metrics (sum/avg/etc.)
+		groupNode
+			.getResources()
+			.forEach(resource ->
+				resource
+					.getMetrics()
+					.forEach((k, v) -> {
+						// implement aggregation logic here
+					})
+			);
+
 		return groupNode;
 	}
 
@@ -175,15 +187,21 @@ public class ExplorerService {
 				final TelemetryManager tm = entry.getValue();
 
 				final Map<String, String> attributes = new HashMap<>();
+				final Map<String, Object> metrics = new HashMap<>();
 
 				if (tm != null) {
 					final var endpointHost = tm.getEndpointHostMonitor();
-					if (endpointHost != null && endpointHost.getAttributes() != null) {
-						attributes.putAll(endpointHost.getAttributes());
+					if (endpointHost != null) {
+						if (endpointHost.getAttributes() != null) {
+							attributes.putAll(endpointHost.getAttributes());
+						}
+						if (endpointHost.getMetrics() != null) {
+							endpointHost.getMetrics().forEach((k, v) -> metrics.put(k, getMetricValue(v)));
+						}
 					}
 				}
 
-				return ResourceTelemetry.builder().name(resourceKey).attributes(attributes).build();
+				return ResourceTelemetry.builder().name(resourceKey).attributes(attributes).metrics(metrics).build();
 			})
 			.toList();
 	}
@@ -428,6 +446,10 @@ public class ExplorerService {
 		// copy connector attributes
 		if (connectorMonitor.getAttributes() != null) {
 			connectorNode.getAttributes().putAll(connectorMonitor.getAttributes());
+		}
+		var metaMetrics = tm.getConnectorStore().getStore().get(connectorId).getMetrics();
+		if (metaMetrics != null) {
+			connectorNode.setMetaMetrics(metaMetrics);
 		}
 		// copy connector metrics
 		if (connectorMonitor.getMetrics() != null) {

@@ -30,6 +30,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import org.metricshub.engine.connector.model.metric.MetricDefinition;
 
 @Data
 @NoArgsConstructor
@@ -45,6 +46,8 @@ public class ConnectorTelemetry extends AbstractBaseTelemetry {
 	@JsonInclude(JsonInclude.Include.NON_EMPTY)
 	private List<MonitorTypeTelemetry> monitors = new ArrayList<>();
 
+	private Map<String, MetricDefinition> metaMetrics = new HashMap<>();
+
 	/**
 	 * Creates a Connector telemetry node.
 	 *
@@ -58,6 +61,7 @@ public class ConnectorTelemetry extends AbstractBaseTelemetry {
 		String name,
 		Map<String, String> attributes,
 		Map<String, Object> metrics,
+		Map<String, MetricDefinition> metaMetrics,
 		List<MonitorTypeTelemetry> monitors
 	) {
 		super(
@@ -66,6 +70,7 @@ public class ConnectorTelemetry extends AbstractBaseTelemetry {
 			attributes != null ? attributes : new HashMap<>(),
 			metrics != null ? metrics : new HashMap<>()
 		);
+		this.metaMetrics = metaMetrics != null ? metaMetrics : new HashMap<>();
 		this.monitors = monitors != null ? monitors : new ArrayList<>();
 	}
 }

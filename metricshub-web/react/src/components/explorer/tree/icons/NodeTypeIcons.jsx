@@ -22,13 +22,20 @@ const COLOR_GETTERS = {
  * Icon component for explorer node types.
  * Accepts only: agent | resource-group | resource.
  * Unknown types fall back to resource icon & neutral color.
+ *
+ * @param {{ type: string, fontSize?: 'small'|'medium'|'large' }} props
  */
-const NodeTypeIconsComponent = ({ type }) => {
+const NodeTypeIconsComponent = ({ type, fontSize = "small" }) => {
 	const key = ICONS[type] ? type : "resource"; // fallback
 	const IconEl = ICONS[key];
 	const getColor = COLOR_GETTERS[key];
 	const colorSx =
 		key === "agent" ? undefined : (t) => (getColor ? getColor(t) : t.palette.text.secondary);
+
+	// Map fontSize to pixel size for the image (agent icon)
+	let imgSize = 18;
+	if (fontSize === "medium") imgSize = 24;
+	if (fontSize === "large") imgSize = 32;
 
 	return (
 		<Box
@@ -45,10 +52,10 @@ const NodeTypeIconsComponent = ({ type }) => {
 					component="img"
 					src="/favicon-32x32.png"
 					alt="MetricsHub Agent"
-					sx={{ width: 18, height: 18, display: "block" }}
+					sx={{ width: imgSize, height: imgSize, display: "block" }}
 				/>
 			) : (
-				<IconEl fontSize="small" />
+				<IconEl fontSize={fontSize} />
 			)}
 		</Box>
 	);
