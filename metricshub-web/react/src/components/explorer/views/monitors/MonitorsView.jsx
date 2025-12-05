@@ -14,7 +14,11 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { prettifyKey } from "../../../../utils/text-prettifier";
 import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatters";
-import { getMetricMetadata, getMetricValue } from "../../../../utils/metrics-helper";
+import {
+	getMetricMetadata,
+	getMetricValue,
+	getBaseMetricKey,
+} from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
@@ -96,11 +100,25 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 			);
 			if (!allSameKeys) return [];
 
-			// Derive groups by base name before the last dot, if any.
+			// Derive groups by base name.
+			// Heuristic:
+			// 1. If a metric has tags (e.g. "system.disk.io{...}"), it likely represents a multi-dimensional metric
+			//    that deserves its own table. We group by its full clean name (e.g. "system.disk.io").
+			// 2. If a metric has no tags (e.g. "system.cpu.utilization"), it is likely a scalar.
+			//    We group these by their parent namespace (e.g. "system.cpu") to aggregate related scalars.
 			const groupsMap = new Map();
 			for (const key of firstKeys) {
-				const lastDot = key.lastIndexOf(".");
-				const base = lastDot > 0 ? key.slice(0, lastDot) : key;
+				const cleanKey = getBaseMetricKey(key);
+				const hasTags = key.includes("{");
+
+				let base;
+				if (hasTags) {
+					base = cleanKey;
+				} else {
+					const lastDot = cleanKey.lastIndexOf(".");
+					base = lastDot > 0 ? cleanKey.slice(0, lastDot) : cleanKey;
+				}
+
 				if (!groupsMap.has(base)) {
 					groupsMap.set(base, []);
 				}
@@ -244,68 +262,68 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 							{/* Connector Attributes & Metrics Container */}
 							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 								showMetricsTable) && (
-								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-									{/* Connector Attributes Table */}
-									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Attributes
-											</Typography>
-											<DashboardTable>
-												<TableHead>
-													<TableRow>
-														<TableCell>Key</TableCell>
-														<TableCell>Value</TableCell>
-													</TableRow>
-												</TableHead>
-												<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-											</DashboardTable>
-										</Box>
-									)}
+									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+										{/* Connector Attributes Table */}
+										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+											<Box>
+												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+													Attributes
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell>Key</TableCell>
+															<TableCell>Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
 
-									{/* Connector Metrics Table */}
-									{showMetricsTable && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Metrics
-											</Typography>
-											<DashboardTable>
-												<TableHead>
-													<TableRow>
-														<TableCell sx={{ width: "25%" }}>Name</TableCell>
-														<TableCell align="left">Value</TableCell>
-													</TableRow>
-												</TableHead>
-												<TableBody>
-													{Object.entries(connector.metrics).map(([name, metric]) => {
-														let value = metric;
-														let unit = undefined;
+										{/* Connector Metrics Table */}
+										{showMetricsTable && (
+											<Box>
+												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+													Metrics
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell sx={{ width: "25%" }}>Name</TableCell>
+															<TableCell align="left">Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>
+														{Object.entries(connector.metrics).map(([name, metric]) => {
+															let value = metric;
+															let unit = undefined;
 
-														if (metric && typeof metric === "object" && "value" in metric) {
-															value = metric.value;
-															unit = metric.unit;
-														}
+															if (metric && typeof metric === "object" && "value" in metric) {
+																value = metric.value;
+																unit = metric.unit;
+															}
 
-														if (!unit) {
-															const meta = getMetricMetadata(name, connector.metaMetrics);
-															if (meta?.unit) unit = meta.unit;
-														}
+															if (!unit) {
+																const meta = getMetricMetadata(name, connector.metaMetrics);
+																if (meta?.unit) unit = meta.unit;
+															}
 
-														const formattedValue = formatMetricValue(value, unit);
+															const formattedValue = formatMetricValue(value, unit);
 
-														return (
-															<TableRow key={name}>
-																<TableCell>{name}</TableCell>
-																<TableCell align="left">{formattedValue}</TableCell>
-															</TableRow>
-														);
-													})}
-												</TableBody>
-											</DashboardTable>
-										</Box>
-									)}
-								</Box>
-							)}
+															return (
+																<TableRow key={name}>
+																	<TableCell>{name}</TableCell>
+																	<TableCell align="left">{formattedValue}</TableCell>
+																</TableRow>
+															);
+														})}
+													</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
+									</Box>
+								)}
 
 							{/* Monitors Section */}
 							<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -386,27 +404,27 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
 													? pivotGroups.map((group) => (
-															<PivotGroupSection
-																key={group.baseName}
-																group={group}
-																sortedInstances={sortedInstances}
-																resourceId={resourceId}
+														<PivotGroupSection
+															key={group.baseName}
+															group={group}
+															sortedInstances={sortedInstances}
+															resourceId={resourceId}
+															metaMetrics={connector.metaMetrics}
+														/>
+													))
+													: sortedInstances.map((inst) => {
+														const metrics = inst?.metrics ?? {};
+														const metricEntries = Object.entries(metrics);
+														return (
+															<InstanceMetricsTable
+																key={inst?.attributes?.id || inst.name}
+																instance={inst}
+																metricEntries={metricEntries}
+																naturalMetricCompare={naturalMetricCompare}
 																metaMetrics={connector.metaMetrics}
 															/>
-														))
-													: sortedInstances.map((inst) => {
-															const metrics = inst?.metrics ?? {};
-															const metricEntries = Object.entries(metrics);
-															return (
-																<InstanceMetricsTable
-																	key={inst?.attributes?.id || inst.name}
-																	instance={inst}
-																	metricEntries={metricEntries}
-																	naturalMetricCompare={naturalMetricCompare}
-																	metaMetrics={connector.metaMetrics}
-																/>
-															);
-														})}
+														);
+													})}
 											</AccordionDetails>
 										</Accordion>
 									);
