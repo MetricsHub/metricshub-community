@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Tooltip } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import { formatMetricValue } from "../../../../../utils/formatters";
@@ -31,11 +32,6 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	const attrs = instance?.attributes ?? {};
 	const id = attrs.id || instance.name;
 	const displayName = attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
-	const extraInfoParts = [];
-	if (attrs.name && attrs.name !== displayName) extraInfoParts.push(`name: ${attrs.name}`);
-	if (attrs.serial_number) extraInfoParts.push(`serial_number: ${attrs.serial_number}`);
-	if (attrs.vendor) extraInfoParts.push(`vendor: ${attrs.vendor}`);
-	if (attrs.info) extraInfoParts.push(`info: ${attrs.info}`);
 
 	const sortedEntries = React.useMemo(
 		() => metricEntries.filter(([name]) => !name.startsWith("__")).sort(naturalMetricCompare),
@@ -74,10 +70,38 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 
 	return (
 		<Box key={id} mb={1}>
-			<Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
-				{displayName}
-				{extraInfoParts.length > 0 && ` (${extraInfoParts.join("; ")})`}
-			</Typography>
+			<Box display="flex" alignItems="center" gap={1} mb={1}>
+				<Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
+					{displayName}
+				</Typography>
+				{Object.keys(attrs).length > 0 && (
+					<Tooltip
+						title={
+							<Box>
+								<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+									Attributes
+								</Typography>
+								<Box
+									component="ul"
+									sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
+								>
+									{Object.entries(attrs).map(([k, v]) => (
+										<li key={k}>
+											<strong>{k}:</strong> {String(v)}
+										</li>
+									))}
+								</Box>
+							</Box>
+						}
+					>
+						<InfoOutlinedIcon
+							fontSize="small"
+							color="action"
+							sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
+						/>
+					</Tooltip>
+				)}
+			</Box>
 
 			<DashboardTable stickyHeader={false}>
 				<TableHead>

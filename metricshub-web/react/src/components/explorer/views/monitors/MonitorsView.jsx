@@ -22,6 +22,7 @@ import {
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
+import HoverInfo from "./components/HoverInfo";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
@@ -91,14 +92,14 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 					.sort(naturalMetricCompare);
 			});
 
-			const metricKeySets = perInstanceEntries.map((entries) => entries.map(([name]) => name));
-			const [firstKeys = []] = metricKeySets;
-			if (!firstKeys.length) return [];
+			// Collect all unique metric keys from all instances
+			const allKeys = new Set();
+			perInstanceEntries.forEach((entries) => {
+				entries.forEach(([name]) => allKeys.add(name));
+			});
 
-			const allSameKeys = metricKeySets.every(
-				(keys) => keys.length === firstKeys.length && keys.every((k, i) => k === firstKeys[i]),
-			);
-			if (!allSameKeys) return [];
+			const sortedKeys = Array.from(allKeys).sort((a, b) => naturalMetricCompare([a], [b]));
+			if (sortedKeys.length === 0) return [];
 
 			// Derive groups by base name.
 			// Heuristic:
@@ -107,7 +108,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 			// 2. If a metric has no tags (e.g. "system.cpu.utilization"), it is likely a scalar.
 			//    We group these by their parent namespace (e.g. "system.cpu") to aggregate related scalars.
 			const groupsMap = new Map();
-			for (const key of firstKeys) {
+			for (const key of sortedKeys) {
 				const cleanKey = getBaseMetricKey(key);
 				const hasTags = key.includes("{");
 
@@ -221,23 +222,10 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 								}}
 							>
 								{prettifyKey(connector.name)}
-								<Box
-									component="span"
-									sx={{
-										ml: 1,
-										px: 1,
-										minWidth: 24,
-										textAlign: "center",
-										borderRadius: 999,
-										fontSize: 12,
-										fontWeight: 500,
-										bgcolor: "primary.main",
-										color: "primary.contrastText",
-									}}
+								<HoverInfo
+									title="Number of monitor types"
+									sx={{ display: "flex", alignItems: "center" }}
 								>
-									{monitors.length}
-								</Box>
-								{statusValue && (
 									<Box
 										component="span"
 										sx={{
@@ -248,13 +236,36 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 											borderRadius: 999,
 											fontSize: 12,
 											fontWeight: 500,
-											bgcolor: statusValue === "ok" ? "success.main" : "error.main",
-											color: "white",
-											textTransform: "uppercase",
+											bgcolor: "primary.main",
+											color: "primary.contrastText",
 										}}
 									>
-										{statusValue}
+										{monitors.length}
 									</Box>
+								</HoverInfo>
+								{statusValue && (
+									<HoverInfo
+										title={`Status of ${prettifyKey(connector.name)}`}
+										sx={{ display: "flex", alignItems: "center" }}
+									>
+										<Box
+											component="span"
+											sx={{
+												ml: 1,
+												px: 1,
+												minWidth: 24,
+												textAlign: "center",
+												borderRadius: 999,
+												fontSize: 12,
+												fontWeight: 500,
+												bgcolor: statusValue === "ok" ? "success.main" : "error.main",
+												color: "white",
+												textTransform: "uppercase",
+											}}
+										>
+											{statusValue}
+										</Box>
+									</HoverInfo>
 								)}
 							</Typography>
 						</AccordionSummary>

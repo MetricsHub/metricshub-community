@@ -35,10 +35,9 @@ export const getMetricLabel = (key) => {
 
 	if (braceStart !== -1 && braceEnd > braceStart) {
 		const insideBraces = key.slice(braceStart + 1, braceEnd);
-		const quoteStart = insideBraces.indexOf('"');
-		const quoteEnd = insideBraces.lastIndexOf('"');
-		if (quoteStart !== -1 && quoteEnd > quoteStart) {
-			return insideBraces.slice(quoteStart + 1, quoteEnd);
+		const matches = insideBraces.match(/"([^"]+)"/g);
+		if (matches && matches.length > 0) {
+			return matches.map((m) => m.slice(1, -1)).join(" | ");
 		}
 		return insideBraces;
 	}

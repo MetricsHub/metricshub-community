@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Tooltip } from "@mui/material";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import { formatMetricValue } from "../../../../../utils/formatters";
@@ -87,7 +88,13 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 					<TableRow>
 						<TableCell sx={{ width: "25%" }}>Instance</TableCell>
 						{group.metricKeys.map((key) => {
-							const colLabel = getMetricLabel(key);
+							let colLabel;
+							if (group.metricKeys.length === 1) {
+								colLabel = "Value";
+							} else {
+								colLabel = getMetricLabel(key);
+							}
+
 							const meta = getMetricMetadata(key, metaMetrics);
 							const { description, unit } = meta;
 							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
@@ -266,7 +273,38 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 									const parts = buildUtilizationParts(entries);
 									return (
 										<TableRow key={id || rowIndex}>
-											<TableCell>{displayName}</TableCell>
+											<TableCell>
+												<Box display="flex" alignItems="center" gap={1}>
+													{displayName}
+													{Object.keys(attrs).length > 0 && (
+														<Tooltip
+															title={
+																<Box>
+																	<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+																		Attributes
+																	</Typography>
+																	<Box
+																		component="ul"
+																		sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
+																	>
+																		{Object.entries(attrs).map(([k, v]) => (
+																			<li key={k}>
+																				<strong>{k}:</strong> {String(v)}
+																			</li>
+																		))}
+																	</Box>
+																</Box>
+															}
+														>
+															<InfoOutlinedIcon
+																fontSize="small"
+																color="action"
+																sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
+															/>
+														</Tooltip>
+													)}
+												</Box>
+											</TableCell>
 											<TableCell>
 												<UtilizationStack parts={parts} />
 											</TableCell>
@@ -276,12 +314,52 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 								return (
 									<TableRow key={id || rowIndex}>
-										<TableCell>{displayName}</TableCell>
+										<TableCell>
+											<Box display="flex" alignItems="center" gap={1}>
+												{displayName}
+												{Object.keys(attrs).length > 0 && (
+													<Tooltip
+														title={
+															<Box>
+																<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+																	Attributes
+																</Typography>
+																<Box
+																	component="ul"
+																	sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
+																>
+																	{Object.entries(attrs).map(([k, v]) => (
+																		<li key={k}>
+																			<strong>{k}:</strong> {String(v)}
+																		</li>
+																	))}
+																</Box>
+															</Box>
+														}
+													>
+														<InfoOutlinedIcon
+															fontSize="small"
+															color="action"
+															sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
+														/>
+													</Tooltip>
+												)}
+											</Box>
+										</TableCell>
 										{group.metricKeys.map((key) => {
 											const meta = getMetricMetadata(key, metaMetrics);
 											const unit = meta?.unit;
 											const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 											const val = metrics[key];
+
+											if (val === undefined || val === null) {
+												return (
+													<TableCell key={key} align="left">
+														-
+													</TableCell>
+												);
+											}
+
 											const formattedValue = formatMetricValue(val, unit);
 											const rawValue = String(val);
 											const showRaw =
