@@ -135,12 +135,12 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 					<TableCell sx={{ width: "25%" }}>Instance</TableCell>
 					<TableCell>
 						<HoverInfo
-							title="Utilization"
+							title="Value"
 							description={description}
 							unit={displayUnit}
 							sx={{ display: "inline-block" }}
 						>
-							Utilization
+							Value
 							{displayUnit && (
 								<Box component="span" sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}>
 									({displayUnit})
@@ -270,12 +270,21 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 								if (isUtilizationGroup) {
 									const entries = group.metricKeys.map((key) => ({ key, value: metrics[key] }));
-									const parts = buildUtilizationParts(entries);
+									const hasData = entries.some((e) => e.value !== undefined && e.value !== null);
+									const parts = hasData ? buildUtilizationParts(entries) : [];
+
 									return (
 										<TableRow key={id || rowIndex}>
 											<TableCell>
-												<Box display="flex" alignItems="center" gap={1}>
-													{displayName}
+												<Box
+													display="flex"
+													alignItems="center"
+													justifyContent="space-between"
+													width="100%"
+												>
+													<Box component="span" sx={{ mr: 1 }}>
+														{displayName}
+													</Box>
 													{Object.keys(attrs).length > 0 && (
 														<Tooltip
 															title={
@@ -305,9 +314,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 													)}
 												</Box>
 											</TableCell>
-											<TableCell>
-												<UtilizationStack parts={parts} />
-											</TableCell>
+											<TableCell>{hasData ? <UtilizationStack parts={parts} /> : "-"}</TableCell>
 										</TableRow>
 									);
 								}
@@ -315,8 +322,15 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 								return (
 									<TableRow key={id || rowIndex}>
 										<TableCell>
-											<Box display="flex" alignItems="center" gap={1}>
-												{displayName}
+											<Box
+												display="flex"
+												alignItems="center"
+												justifyContent="space-between"
+												width="100%"
+											>
+												<Box component="span" sx={{ mr: 1 }}>
+													{displayName}
+												</Box>
 												{Object.keys(attrs).length > 0 && (
 													<Tooltip
 														title={

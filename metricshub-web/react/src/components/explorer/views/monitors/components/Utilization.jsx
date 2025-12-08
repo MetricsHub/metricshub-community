@@ -13,11 +13,12 @@ export const buildUtilizationParts = (entries) => {
 			const value = typeof raw === "number" ? Math.max(0, Math.min(raw, 1)) : 0;
 			return { key, value };
 		})
-		.filter((p) => p.value > 0);
+		.filter((p) => p.value >= 0); // Keep 0 values so we know they exist
 
 	if (parts.length === 0) return [];
 
-	const total = parts.reduce((sum, p) => sum + p.value, 0) || 1;
+	const sum = parts.reduce((acc, p) => acc + p.value, 0);
+	const total = Math.max(sum, 1);
 
 	return parts.map((p) => ({
 		key: p.key,
@@ -71,6 +72,8 @@ export const colorFor = (name) => {
 	if (n.includes("idle")) return (theme) => theme.palette.action.disabled;
 	if (n.includes("system")) return (theme) => theme.palette.error.main;
 	if (n.includes("user")) return (theme) => theme.palette.info.main;
+	if (n.includes("receive")) return (theme) => theme.palette.success.main;
+	if (n.includes("transmit")) return (theme) => theme.palette.secondary.main;
 	return (theme) => theme.palette.grey[500];
 };
 
@@ -112,9 +115,39 @@ export const compareUtilizationParts = (a, b) => {
  * @param {{parts: Array<{key: string, value: number, pct: number}>}} props
  */
 export const UtilizationStack = ({ parts }) => {
-	if (!Array.isArray(parts) || parts.length === 0) return null;
+	if (!Array.isArray(parts) || parts.length === 0) {
+		// Render empty bar if no parts
+		return (
+			<Box
+				sx={{
+					position: "relative",
+					height: 16,
+					borderRadius: 1,
+					overflow: "hidden",
+					bgcolor: "action.hover",
+					display: "flex",
+				}}
+			/>
+		);
+	}
 
 	const sortedParts = [...parts].sort(compareUtilizationParts);
+	const hasNonZero = sortedParts.some((p) => p.value > 0);
+
+	if (!hasNonZero) {
+		return (
+			<Box
+				sx={{
+					position: "relative",
+					height: 16,
+					borderRadius: 1,
+					overflow: "hidden",
+					bgcolor: "action.hover",
+					display: "flex",
+				}}
+			/>
+		);
+	}
 
 	return (
 		<Box
@@ -127,48 +160,49 @@ export const UtilizationStack = ({ parts }) => {
 				display: "flex",
 			}}
 		>
-			{sortedParts.map((p, index) => {
-				const label = colorLabelFromKey(p.key);
-				const isLast = index === sortedParts.length - 1;
-				return (
-					<HoverInfo
-						key={p.key}
-						label={label}
-						value={p.value}
-						sx={{
-							width: isLast ? "auto" : `${p.pct}%`,
-							flexGrow: isLast ? 1 : 0,
-						}}
-					>
-						<Box
+			{sortedParts
+				.filter((p) => p.value > 0)
+				.map((p) => {
+					const label = colorLabelFromKey(p.key);
+					return (
+						<HoverInfo
+							key={p.key}
+							label={label}
+							value={p.value}
 							sx={{
-								width: "100%",
-								height: "100%",
-								bgcolor: colorFor(label),
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
+								width: `${p.pct}%`,
+								minWidth: "1px",
 							}}
 						>
-							{p.pct > 10 && (
-								<Box
-									component="span"
-									sx={{
-										color: "common.white",
-										fontSize: "0.7rem",
-										fontWeight: 600,
-										lineHeight: 1,
-										textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
-										userSelect: "none",
-									}}
-								>
-									{p.pct}%
-								</Box>
-							)}
-						</Box>
-					</HoverInfo>
-				);
-			})}
+							<Box
+								sx={{
+									width: "100%",
+									height: "100%",
+									bgcolor: colorFor(label),
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "center",
+								}}
+							>
+								{p.pct > 10 && (
+									<Box
+										component="span"
+										sx={{
+											color: "common.white",
+											fontSize: "0.7rem",
+											fontWeight: 600,
+											lineHeight: 1,
+											textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
+											userSelect: "none",
+										}}
+									>
+										{p.pct}%
+									</Box>
+								)}
+							</Box>
+						</HoverInfo>
+					);
+				})}
 		</Box>
 	);
 };

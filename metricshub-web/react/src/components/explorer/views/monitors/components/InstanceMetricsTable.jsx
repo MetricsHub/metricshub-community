@@ -81,10 +81,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 								<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
 									Attributes
 								</Typography>
-								<Box
-									component="ul"
-									sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
-								>
+								<Box component="ul" sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}>
 									{Object.entries(attrs).map(([k, v]) => (
 										<li key={k}>
 											<strong>{k}:</strong> {String(v)}
