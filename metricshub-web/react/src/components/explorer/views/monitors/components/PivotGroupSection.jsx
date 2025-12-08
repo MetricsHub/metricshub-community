@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Tooltip } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Box, Typography, TableBody, TableCell, TableRow } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
+import PivotGroupHeader from "./PivotGroupHeader";
+import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import { formatMetricValue } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
-	getMetricLabel,
 	isUtilizationUnit,
 } from "../../../../../utils/metrics-helper";
 import {
@@ -80,78 +80,6 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 		return items.sort((a, b) => getPriority(a) - getPriority(b));
 	}, [group, isUtilizationGroup]);
-
-	const renderHeader = () => {
-		if (!isUtilizationGroup) {
-			return (
-				<TableHead>
-					<TableRow>
-						<TableCell sx={{ width: "25%" }}>Instance</TableCell>
-						{group.metricKeys.map((key) => {
-							let colLabel;
-							if (group.metricKeys.length === 1) {
-								colLabel = "Value";
-							} else {
-								colLabel = getMetricLabel(key);
-							}
-
-							const meta = getMetricMetadata(key, metaMetrics);
-							const { description, unit } = meta;
-							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
-
-							return (
-								<TableCell key={key} align="left">
-									<HoverInfo
-										title={colLabel}
-										description={description}
-										unit={cleanUnit}
-										sx={{ display: "inline-block" }}
-									>
-										{colLabel}
-										{cleanUnit && (
-											<Box
-												component="span"
-												sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}
-											>
-												({cleanUnit})
-											</Box>
-										)}
-									</HoverInfo>
-								</TableCell>
-							);
-						})}
-					</TableRow>
-				</TableHead>
-			);
-		}
-
-		const meta = getMetricMetadata(group.baseName, metaMetrics);
-		let { description, unit } = meta;
-		let displayUnit = unit === "1" ? "%" : unit ? unit.replace(/[{}]/g, "") : "";
-
-		return (
-			<TableHead>
-				<TableRow>
-					<TableCell sx={{ width: "25%" }}>Instance</TableCell>
-					<TableCell>
-						<HoverInfo
-							title="Value"
-							description={description}
-							unit={displayUnit}
-							sx={{ display: "inline-block" }}
-						>
-							Value
-							{displayUnit && (
-								<Box component="span" sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}>
-									({displayUnit})
-								</Box>
-							)}
-						</HoverInfo>
-					</TableCell>
-				</TableRow>
-			</TableHead>
-		);
-	};
 
 	return (
 		<Box key={group.baseName}>
@@ -236,7 +164,11 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 			{open && (
 				<Box sx={{ mt: 1, mb: 2 }}>
 					<DashboardTable stickyHeader={false}>
-						{renderHeader()}
+						<PivotGroupHeader
+							group={group}
+							isUtilizationGroup={isUtilizationGroup}
+							metaMetrics={metaMetrics}
+						/>
 						<TableBody>
 							{isUtilizationGroup && sortedInstances.length > 0 && (
 								<TableRow>
@@ -276,43 +208,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 									return (
 										<TableRow key={id || rowIndex}>
 											<TableCell>
-												<Box
-													display="flex"
-													alignItems="center"
-													justifyContent="space-between"
-													width="100%"
-												>
-													<Box component="span" sx={{ mr: 1 }}>
-														{displayName}
-													</Box>
-													{Object.keys(attrs).length > 0 && (
-														<Tooltip
-															title={
-																<Box>
-																	<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-																		Attributes
-																	</Typography>
-																	<Box
-																		component="ul"
-																		sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
-																	>
-																		{Object.entries(attrs).map(([k, v]) => (
-																			<li key={k}>
-																				<strong>{k}:</strong> {String(v)}
-																			</li>
-																		))}
-																	</Box>
-																</Box>
-															}
-														>
-															<InfoOutlinedIcon
-																fontSize="small"
-																color="action"
-																sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
-															/>
-														</Tooltip>
-													)}
-												</Box>
+												<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
 											</TableCell>
 											<TableCell>{hasData ? <UtilizationStack parts={parts} /> : "-"}</TableCell>
 										</TableRow>
@@ -322,43 +218,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 								return (
 									<TableRow key={id || rowIndex}>
 										<TableCell>
-											<Box
-												display="flex"
-												alignItems="center"
-												justifyContent="space-between"
-												width="100%"
-											>
-												<Box component="span" sx={{ mr: 1 }}>
-													{displayName}
-												</Box>
-												{Object.keys(attrs).length > 0 && (
-													<Tooltip
-														title={
-															<Box>
-																<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-																	Attributes
-																</Typography>
-																<Box
-																	component="ul"
-																	sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}
-																>
-																	{Object.entries(attrs).map(([k, v]) => (
-																		<li key={k}>
-																			<strong>{k}:</strong> {String(v)}
-																		</li>
-																	))}
-																</Box>
-															</Box>
-														}
-													>
-														<InfoOutlinedIcon
-															fontSize="small"
-															color="action"
-															sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
-														/>
-													</Tooltip>
-												)}
-											</Box>
+											<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
 										</TableCell>
 										{group.metricKeys.map((key) => {
 											const meta = getMetricMetadata(key, metaMetrics);

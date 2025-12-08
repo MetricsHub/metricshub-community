@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Tooltip } from "@mui/material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
+import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import { formatMetricValue } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
@@ -24,7 +24,7 @@ import {
  * @param {{
  *   instance: any,
  *   metricEntries: Array<[string, any]>,
- *   naturalMetricCompare: (a: string, b: string) => number,
+ *   naturalMetricCompare: (a: [string, any], b: [string, any]) => number,
  *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
  * }} props
  */
@@ -70,34 +70,12 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 
 	return (
 		<Box key={id} mb={1}>
-			<Box display="flex" alignItems="center" gap={1} mb={1}>
-				<Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
-					{displayName}
-				</Typography>
-				{Object.keys(attrs).length > 0 && (
-					<Tooltip
-						title={
-							<Box>
-								<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-									Attributes
-								</Typography>
-								<Box component="ul" sx={{ m: 0, pl: 2, fontSize: "0.75rem", textAlign: "left" }}>
-									{Object.entries(attrs).map(([k, v]) => (
-										<li key={k}>
-											<strong>{k}:</strong> {String(v)}
-										</li>
-									))}
-								</Box>
-							</Box>
-						}
-					>
-						<InfoOutlinedIcon
-							fontSize="small"
-							color="action"
-							sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
-						/>
-					</Tooltip>
-				)}
+			<Box mb={1}>
+				<InstanceNameWithAttributes
+					displayName={displayName}
+					attributes={attrs}
+					variant="subtitle1"
+				/>
 			</Box>
 
 			<DashboardTable stickyHeader={false}>
@@ -119,7 +97,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 								const { description, unit } = meta;
 								const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
-								// If unit is "1", render as a progress bar (utilization)
+								// If unit is "1", render as a progress bar
 								if (isUtilizationUnit(unit)) {
 									const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
 									return (
