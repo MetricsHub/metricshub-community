@@ -1,0 +1,398 @@
+# Reusable Build to create final Packages
+#
+# Call this workflow after Maven build that generates
+# assets that can be used here to create platform packages.
+#
+# Requirements:
+# - Maven build that upload assets
+# - JDK 21
+# - WiX Toolset 3 (3.14) for Windows
+
+name: Package Creation
+run-name: Package Creation for ${{ github.head_ref }}
+
+on:
+  workflow_call:
+    inputs:
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "21"
+      assetPackage:
+        type: string
+        description: "Name of the asset artifact to get for packages"
+        required: true
+        default: package-artifacts
+      platforms:
+        type: string
+        description: "Docker platforms to build for (e.g., linux/amd64,linux/arm64)"
+        required: false
+        default: 'linux/amd64,linux/arm64'
+      deploy:
+        type: boolean
+        description: "Whether to deploy the Docker image and packages to the repositories"
+        required: false
+        default: true
+      deployDockerHub:
+        type: boolean
+        description: "Whether to deploy the Docker image to Docker Hub"
+        required: false
+        default: false
+      debRepository:
+        type: string
+        description: "APT repository to push the .deb package to"
+        required: false
+        default: 'apt-staging-public'
+      rpmRepository:
+        type: string
+        description: "YUM repository to push the .rpm package to"
+        required: false
+        default: 'rpm-staging-public'
+      version:
+        type: string
+        description: "Project Packaging Version"
+        required: true
+    outputs:
+      linuxPackage:
+        description: "Path to the Linux packages created"
+        value: ${{ jobs.package-linux.outputs.linuxPackage }}
+      windowsPackage:
+        description: "Path to the Windows packages created"
+        value: ${{ jobs.package-windows.outputs.windowsPackage }}
+      dockerImageName:
+        description: "Name of the Docker image created"
+        value: ${{ jobs.package-linux.outputs.dockerImageName }}
+      dockerRegistry:
+        description: "Docker registry used"
+        value: ${{ jobs.package-linux.outputs.dockerRegistry }}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+
+  package-linux:
+    name: Package for Linux and Docker
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Download Assets
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.assetPackage }}
+        path: packaging-assets
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Login to Docker Hub
+      if: ${{ inputs.deployDockerHub }}
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    -
+      # Add support for more platforms with QEMU (optional)
+      # https://github.com/docker/setup-qemu-action
+      name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      with:
+        install: true
+
+    - name: Compute Image Names from Version
+      id: version
+      run: |
+        repository=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')
+        projectVersion=$(echo '${{ inputs.version }}' | tr '[:upper:]' '[:lower:]')
+        currentBranch=$(echo '${{ github.ref_name }}-${{ github.run_number }}' | tr '[:upper:]' '[:lower:]' | tr -c 'a-zA-Z0-9._-' '-' | sed 's/-*$//')
+        dockerVersion=${projectVersion}-${currentBranch}
+        echo "repository=${repository}" >> $GITHUB_OUTPUT
+        echo "branchName=${currentBranch}" >> $GITHUB_OUTPUT
+        echo "dockerVersion=${dockerVersion}" >> $GITHUB_OUTPUT
+
+        # Packaging in Docker Image Name
+        buildImage=ghcr.io/${repository}:packages-${currentBranch}
+        echo "buildImage=${buildImage}" >> $GITHUB_OUTPUT
+
+        # MetricsHub Docker Image Name
+        if [ "${{ inputs.deployDockerHub }}" = "true" ] ; then
+          imageName=metricshub/metricshub-community:${dockerVersion}
+        else
+          imageName=ghcr.io/${repository}:${currentBranch}
+        fi
+        echo "imageName=${imageName}" >> $GITHUB_OUTPUT
+
+        # Extract build image names from Dockerfile
+        debianBaseImage=$(grep 'ARG DEBIAN_JPACKAGE_IMAGE=' packaging-assets/Dockerfile.build | cut -d'=' -f2)
+        debianBaseImage=$( echo ${debianBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )
+        rhelBaseImage=$(grep 'ARG RHEL_JPACKAGE_IMAGE=' packaging-assets/Dockerfile.build | cut -d'=' -f2)
+        rhelBaseImage=$( echo ${rhelBaseImage} | sed "s|metricshub/metricshub-community|$repository|" )
+        echo "debianBaseImage=${debianBaseImage}" >> $GITHUB_OUTPUT
+        echo "rhelBaseImage=${rhelBaseImage}" >> $GITHUB_OUTPUT
+
+        echo "Image Name: ${imageName}"
+        echo "Debian Base Image: ${debianBaseImage}"
+        echo "RHEL Base Image: ${rhelBaseImage}"
+        echo "Packaging Image: ${buildImage}"
+
+    - name: Prepare Debian Packaging with Docker
+      uses: docker/build-push-action@v6
+      with:
+        context: packaging-assets/
+        file: packaging-assets/Dockerfile.debian
+        platforms: ${{ inputs.platforms }}
+        push: true
+        tags: ${{ steps.version.outputs.debianBaseImage }}
+        # Cache scope enables to share cache between branches
+        cache-from: type=gha,scope=debian-packaging
+        cache-to: type=gha,mode=max,scope=debian-packaging
+      env:
+        SOURCE_DATE_EPOCH: 0
+  
+    - name: Prepare RHEL Packaging with Docker
+      uses: docker/build-push-action@v6
+      with:
+        context: packaging-assets/
+        file: packaging-assets/Dockerfile.rhel
+        platforms: ${{ inputs.platforms }}
+        push: true
+        tags: ${{ steps.version.outputs.rhelBaseImage }}
+        # Cache scope enables to share cache between branches
+        cache-from: type=gha,scope=rhel-packaging
+        cache-to: type=gha,mode=max,scope=rhel-packaging
+      env:
+        SOURCE_DATE_EPOCH: 0
+
+    - name: Create Linux Packages
+      uses: docker/build-push-action@v6
+      with:
+        context: packaging-assets/
+        file: packaging-assets/Dockerfile.build
+        platforms: ${{ inputs.platforms }}
+        push: true
+        build-args: |
+          DEBIAN_JPACKAGE_IMAGE=${{ steps.version.outputs.debianBaseImage }}
+          RHEL_JPACKAGE_IMAGE=${{ steps.version.outputs.rhelBaseImage }}
+        tags: |
+          ${{ steps.version.outputs.buildImage }}
+      env:
+        SOURCE_DATE_EPOCH: 0
+
+    - name: Extract AMD64 Packages from Docker Image
+      run: |
+        containerId=$(docker create ${{ steps.version.outputs.buildImage }})
+        mkdir -p packages
+        docker cp ${containerId}:/tmp/packages/. ./packages/
+        docker rm ${containerId}
+        ls -l packages
+      if: contains(inputs.platforms, 'linux/amd64')
+
+    - name: Extract ARM64 Packages from Docker Image
+      run: |
+        containerId=$(docker create --platform linux/arm64 ${{ steps.version.outputs.buildImage }})
+        mkdir -p packages
+        docker cp ${containerId}:/tmp/packages/. ./packages/
+        docker rm ${containerId}
+        ls -l packages
+      if: contains(inputs.platforms, 'linux/arm64')
+
+    - name: Add version to Linux archive
+      run: |
+        find packages -type f -name 'metricshub-community-linux.tar.gz' | while read file; do
+          echo "---"
+          fileDir=$(dirname "$file")
+          newFile=$(basename "$file" | sed "s/\.tar\.gz/-${{ inputs.version }}.tar.gz/")
+          echo "Renaming $file to $fileDir/$newFile"
+          mv "$file" "${fileDir}/${newFile}"
+        done
+
+    - name: Rename Packages to Include "community"
+      run: |
+        find packages -type f \( -name '*.deb' -o -name '*.rpm' \) | while read file; do
+          echo "---"
+          fileDir=$(dirname "$file")
+          newFile=$(basename "$file" | sed 's/metricshub/metricshub-community/')
+          echo "Renaming $file to $fileDir/$newFile"
+          mv "$file" "${fileDir}/${newFile}"
+        done
+
+    - name: Upload Debian Package to APT Repository in Sonatype Nexus
+      if: ${{ inputs.deploy }}
+      run: |
+        echo "Uploading Debian package to APT repository ${REPO_NAME}..."
+        find packages -type f -name '*.deb' | while read file; do
+          echo "---"
+          echo "Adding $file to APT repository..."
+          curl -v -X "POST" \
+            "https://repo.metricshub.com/service/rest/v1/components?repository=${REPO_NAME}" \
+            -H "accept: application/json" \
+            -H "Content-Type: multipart/form-data" \
+            -u "${REPO_METRICSHUB_USERNAME}:${REPO_METRICSHUB_TOKEN}" \
+            -F "apt.asset=@$file"
+        done
+      env:
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
+        REPO_NAME: ${{ inputs.debRepository }}
+
+    - name: Upload RedHat RPM Package to YUM Repository in Sonatype Nexus
+      if: ${{ inputs.deploy }}
+      run: |
+        echo "Uploading RPM package to YUM repository ${REPO_NAME}..."
+        find maven-${{ github.ref_name }} -type f -name '*.rpm' | while read file; do
+          echo "---"
+          echo "Adding $file to YUM repository..."
+          curl -v -X "POST" \
+            "https://repo.metricshub.com/service/rest/v1/components?repository=${REPO_NAME}" \
+            -H "accept: application/json" \
+            -H "Content-Type: multipart/form-data" \
+            -u "${REPO_METRICSHUB_USERNAME}:${REPO_METRICSHUB_TOKEN}" \
+            -F "yum.asset.filename=$(basename "$file")" \
+            -F "yum.asset=@$file"
+        done
+      env:
+        REPO_METRICSHUB_USERNAME: ${{ secrets.REPO_METRICSHUB_USERNAME }}
+        REPO_METRICSHUB_TOKEN: ${{ secrets.REPO_METRICSHUB_TOKEN }}
+        REPO_NAME: ${{ inputs.rpmRepository }}
+
+    - name: Upload Linux Packages
+      uses: actions/upload-artifact@v5
+      with:
+        name: linux-packages
+        path: packages/*
+
+    - name: Create Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: packaging-assets/
+        file: packaging-assets/Dockerfile
+        platforms: ${{ inputs.platforms }}
+        push: true
+        build-args: |
+          BUILD_IMAGE=${{ steps.version.outputs.buildImage }}
+        tags: |
+          ${{ steps.version.outputs.imageName }}
+
+    - name: Clean up cache
+      run: |
+        rm -rf /tmp/.buildx-cache
+
+    outputs:
+      linuxPackage: linux-packages
+      dockerRegistry: ${{ inputs.dockerRegistry }}
+      dockerImageName: ${{ steps.version.outputs.imageName }}
+
+  package-windows:
+    name: Package for Windows
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+
+    - name: Set up JDK ${{ inputs.jdkVersion }}
+      id: jdk
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.jdkVersion }}
+        distribution: temurin
+        cache: maven
+
+    - name: Download Jsign
+      shell: cmd
+      run: |
+        curl -sLo ${{ github.workspace }}/jsign.jar https://github.com/ebourg/jsign/releases/download/7.3/jsign-7.3.jar
+        java -jar ${{ github.workspace }}/jsign.jar --help
+
+    - name: Login to Azure
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Get Access to Azure Key Vault (Access Token)
+      shell: bash
+      id: get_access_token
+      run: |
+        token=$(az account get-access-token --resource "https://vault.azure.net" | jq -r ".accessToken")
+        echo "token=${token}" >> $GITHUB_OUTPUT
+
+    - name: Download Assets
+      uses: actions/download-artifact@v6
+      with:
+        name: ${{ inputs.assetPackage }}
+        path: packaging-assets
+
+    - name: Get Windows Assets
+      run: |
+        Get-ChildItem -Path "packaging-assets" -Filter "assets-windows.zip" | ForEach-Object {
+          Expand-Archive -Path $_.FullName -DestinationPath "packaging-assets" -Force
+        }
+
+    - name: Define JRE version
+      shell: bash
+      id: jre_version
+      run: |
+        jre_version="$(tr -d '\n' < ./packaging-assets/jre-version.txt | sed 's/_/+/g')"
+        echo "jre_version=$jre_version" >> $GITHUB_OUTPUT
+
+    - name: Create JRE for Windows
+      run: |
+        $jlinkModules=(Get-Content .\packaging-assets\jre-modules.txt) -join ','
+        curl -sLo ${{ github.workspace }}/packaging-assets/jdk-windows.zip https://api.adoptium.net/v3/binary/version/jdk-${{ steps.jre_version.outputs.jre_version }}/windows/x64/jdk/hotspot/normal/eclipse?project=jdk
+        Expand-Archive -Path ${{ github.workspace }}/packaging-assets/jdk-windows.zip -DestinationPath ${{ github.workspace }}/packaging-assets/jdk-windows -Force
+        cd ${{ github.workspace }}/packaging-assets/jdk-windows/jdk-*/bin
+        jlink --strip-debug --no-header-files --no-man-pages --add-modules $jlinkModules --output "${{ github.workspace }}\jre-windows"
+
+    - name: Display WiX Toolset Version
+      run: |
+        candle.exe -? 
+        light.exe -?
+
+    - name: Run Windows Packaging Script
+      shell: cmd
+      run: |
+        mkdir packages
+        cd .\packaging-assets\jpackage
+        package.cmd "${{ github.workspace }}\jre-windows" "${{ github.workspace }}\packages"
+
+    - name: Rename Packages to Include "community"
+      shell: pwsh
+      run: |
+        Get-ChildItem -Path "packages\metricshub-*.msi" | ForEach-Object {
+          $newName = $_.Name -replace '^metricshub', 'metricshub-community'
+          $dest    = Join-Path -Path $_.DirectoryName -ChildPath $newName
+          Move-Item -LiteralPath $_.FullName -Destination $dest
+        }
+        Get-ChildItem packages
+
+    - name: Sign Installer
+      shell: cmd
+      run: |
+        java -jar ${{ github.workspace }}\jsign.jar ^
+          --storetype AZUREKEYVAULT ^
+          --keystore ${{ secrets.AZURE_VAULT_NAME }} ^
+          --storepass ${{ steps.get_access_token.outputs.token }} ^
+          --alias ${{ secrets.AZURE_VAULT_ALIAS }} packages/*.msi
+
+    - name: Upload Windows Packages
+      uses: actions/upload-artifact@v5
+      with:
+        name: windows-packages
+        path: packages/*.msi
+
+    outputs:
+      windowsPackage: windows-packages
