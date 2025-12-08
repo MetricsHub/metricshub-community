@@ -1,57 +1,89 @@
-name: Build
+# Reusable Build with Maven
+#
+# This is not a release workflow, use it to build
+# and/or deploy a SNAPSHOT version of your project.
+#
+# Call this workflow on push to the base branch.
+#
+
+name: Maven Build
+run-name: Maven ${{ github.head_ref }} Build
 
 on:
-  pull_request:
-    branches: [ "main" ]
+  workflow_call:
+    inputs:
+      jdkVersion:
+        type: string
+        description: "Version of the JDK to setup and use"
+        required: false
+        default: "21"
+      mavenPhases:
+        type: string
+        description: "Maven phases to run (e.g., clean verify)"
+        required: false
+        default: "clean verify"
+      mavenOptions:
+        type: string
+        description: "Additional Maven options (e.g., -DskipTests)"
+        required: false
+        default: ""
+      debug:
+        type: boolean
+        description: "Enable Maven debug"
+        required: false
+        default: false
+      ssh:
+        type: boolean
+        description: "Enable SSH session to the runner"
+        required: false
+        default: false
+      additionalInstallPath:
+        type: boolean
+        description: "Additional install path for Maven artifacts"
+        required: false
+        default: false
+    outputs:
+      mavenArtifact:
+        description: "Path to the Maven artifacts when additionalInstallPath is set to true"
+        value: ${{ jobs.build.outputs.mavenArtifact }}
+      packageArtifact:
+        description: "Path to the Maven artifacts when additionalInstallPath is set to true"
+        value: ${{ jobs.build.outputs.packageArtifacts }}
+      version:
+        description: "Version of the project as determined by Maven"
+        value: ${{ jobs.build.outputs.version }}
 
-# Default to bash
-defaults:
-  run:
-    shell: bash
+permissions:
+  # This is required for report upload
+  checks: write
+  contents: write
+  pull-requests: write
 
 jobs:
-  build-main:
 
-    permissions:
-      contents: write
-      packages: write
+  build:
+    name: Build with Maven
 
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest ]
+    runs-on: ubuntu-latest
 
     steps:
-
-    - name: Install gcc-multilib
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-multilib
-
     - name: Checkout code
-      uses: actions/checkout@v6
+      uses: actions/checkout@v5
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v5
+    - name: Set up JDK ${{ inputs.jdkVersion }}
+      id: jdk
+      uses: actions/setup-java@v4
       with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: 'maven'
+        java-version: ${{ inputs.jdkVersion }}
+        distribution: temurin
+        cache: maven
 
-    - name: Set up Maven settings.xml on ${{ matrix.os }}
-      uses: s4u/maven-settings-action@v4.0.0
+    - name: Set up Maven settings.xml
+      uses: s4u/maven-settings-action@v3.1.0
       with:
-        repositories: >-
+        override: true
+        repositories: |
           [
-            {
-              "id": "github",
-              "name": "MetricsHub JRE Builder",
-              "url": "https://maven.pkg.github.com/metricshub/metricshub-jre-builder",
-              "snapshots": { "enabled": true },
-              "releases": { "enabled": true }
-            },
             {
               "id": "central-snapshots",
               "name": "Maven Repository Switchboard",
@@ -60,43 +92,90 @@ jobs:
               "releases": { "enabled": false }
             }
           ]
+        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
         sonatypeSnapshots: true
 
-    - name: Build with Maven on ${{ matrix.os }}
-      run: mvn -B -U verify --file pom.xml
-      env:
-        GITHUB_TOKEN: ${{ github.token }}
+    - name: Setup tmate SSH session
+      uses: mxschmitt/action-tmate@v3
+      with:
+        detached: true
+        sudo: false
+        install-dependencies: false
+      if: ${{ inputs.ssh }}
 
-    - name: Get version
+    - name: Configure additional installation path for Maven artifacts
+      shell: bash
+      run: echo "additionalInstallPath=${{ runner.temp }}/maven" >> $GITHUB_ENV
+      if: ${{ inputs.additionalInstallPath }}
+
+    - name: Set Debug Flag
+      id: debug_flag
+      shell: bash
+      run: echo "flag=${RUNNER_DEBUG:-0}" >> $GITHUB_OUTPUT
+
+    - name: Configure Maven debug flag
+      shell: bash
+      run: echo "debugFlag=--debug" >> $GITHUB_ENV
+      if: ${{ inputs.debug || steps.debug_flag.outputs.flag == '1'}}
+
+    - name: Get Project Version
+      id: version
       run: |
-            metricshub_version=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-            echo "MetricsHub version ${metricshub_version}"
-            echo "metricshub_version=$metricshub_version" >> $GITHUB_ENV
+        echo "version=$(mvn help:evaluate -Dexpression=project.version -q -N -DforceStdout)" >> $GITHUB_OUTPUT
 
-    - name: Upload Linux Artifact
-      uses: actions/upload-artifact@v5
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        name: metricshub-community-linux-package-${{ env.metricshub_version }}
-        path: ./metricshub-community-linux/target/metricshub-community-linux-${{ env.metricshub_version }}.tar.gz
+    - name: Build with Maven
+      run: mvn ${{ env.debugFlag }} --batch-mode --file pom.xml ${{ inputs.mavenPhases }} ${{ inputs.mavenOptions }}
+      env:
+        LOCAL_REPOSITORY_PATH_INSTALL: ${{ env.additionalInstallPath }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
-    - name: Upload Windows Artifact
+    - name: Upload Maven Artifacts
       uses: actions/upload-artifact@v5
-      if: ${{ matrix.os == 'windows-latest' }}
+      if: ${{ inputs.additionalInstallPath }}
       with:
-        name: metricshub-community-windows-package-${{ env.metricshub_version }}
-        path: ./metricshub-community-windows/target/metricshub-community-windows-${{ env.metricshub_version }}.zip
+        name: maven-artifacts
+        include-hidden-files: true
+        path: ${{ env.additionalInstallPath }}
 
-    - name: Upload Site Artifact
-      uses: actions/upload-artifact@v5
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        name: metricshub-site-${{ env.metricshub_version }}
-        path: ./metricshub-doc/target/metricshub-doc-${{ env.metricshub_version }}-site.jar
+    - name: Prepare packaging assets
+      run: |
+        mkdir -p packaging-assets
+        cp metricshub-assets/target/assets-*.zip packaging-assets/
+        cp -r metricshub-assets/target/assets-docker/* packaging-assets/
+        cp -r metricshub-assets/target/assets-packaging/* packaging-assets/
+        ls -l packaging-assets/
 
-    - name: Upload Docker Artifact
+    - name: Upload Community Package Artifacts
       uses: actions/upload-artifact@v5
-      if: ${{ matrix.os == 'ubuntu-latest' }}
       with:
-        name: metricshub-community-docker-package-${{ env.metricshub_version }}
-        path: ./metricshub-community-linux/target/metricshub-community-linux-${{ env.metricshub_version }}-docker.tar.gz
+        name: package-artifacts
+        include-hidden-files: true
+        path: packaging-assets/
+
+    - name: Upload Site Artifact v${{ steps.version.outputs.version }}
+      uses: actions/upload-artifact@v5
+      with:
+        name: metricshub-site-${{ steps.version.outputs.version }}
+        path: ./metricshub-doc/target/metricshub-doc-${{ steps.version.outputs.version }}-site.jar
+
+    - name: Upload Checkstyle reports to GitHub
+      uses: jwgmeligmeyling/checkstyle-github-action@v1.2
+      with:
+        path: "**/checkstyle-result.xml"
+
+    - name: Upload Spotbugs reports to GitHub
+      uses: jwgmeligmeyling/spotbugs-github-action@v1.2
+      with:
+        path: "**/spotbugsXml.xml"
+
+    - name: Upload PMD reports to GitHub
+      uses: jwgmeligmeyling/pmd-github-action@v1.2
+      with:
+        path: "**/pmd.xml"
+
+    # Collect Maven build outputs
+    outputs:
+      mavenArtifact: maven-artifacts
+      packageArtifacts: package-artifacts
+      version: ${{ steps.version.outputs.version }}
