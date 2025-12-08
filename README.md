@@ -164,16 +164,29 @@ To build the MetricsHub package, from `./metricshub`:
 $ mvn clean package
 ```
 
-#### Building Windows Packages (.zip)
+#### Building Windows Packages (.msi, .zip)
 
 * **Host:** Windows
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.zip` package in the `metricshub/metricshub-community-windows/target` directory upon completion (`metricshub-community-windows-<version>.zip`).
+* **Prerequisites:** [WiX Toolset 3.11](https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm) configured in the `PATH`
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+* Execute the `metricshub-assets\target\assets-local\build-windows.cmd` command. The command will create a `packages` sub-directory containing the unsigned `.msi` file and the `MetricsHub` application folder.
 
-#### Building Linux Packages (.tar.gz)
+#### Building Linux Packages (.deb, .rpm, .tar.gz)
+
+##### Building all Linux packages with Docker (recommended)
+
+* **Host:** Windows
+* **Prerequisites:** Docker Desktop with QEMU enabled for multi-arch builds
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+* Execute the `metricshub-assets\target\assets-local\build-docker-linux.cmd` command. The command will create a `packages` sub-directory containing the _x86_ and _arm64_ `.deb` and `.rpm` files and the `metricshub-community-linux.tar.gz` archive.
+
+##### Building Linux package for your platform
 
 * **Host:** Linux
-* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`). You can find the `.tar.gz` package in the `metricshub/metricshub-community-linux/target` directory upon completion (`metricshub-community-linux-<version>.tar.gz`).
-  * The `Docker` package is compatible with the `debian:latest` image, it will be generated under the `metricshub/metricshub-community-linux/target` directory (`metricshub-community-linux-<version>-docker.tar.gz`).
+* **Debian Prerequisites:** The following packages must be installed `fakeroot` and `gcc-multilib` (for _x86_)
+* **RedHat Prerequisites:** The following package must be installed `rpm-build`
+* Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
+* Execute the `metricshub-assets/target/assets-local/build-linux.sh` command. The command will create a `packages` sub-directory containing the `.deb` **or** `.rpm` file and the `metricshub-community-linux.tar.gz` archive for your Linux distribution and CPU architecture.
 
 ## Checkstyle
 

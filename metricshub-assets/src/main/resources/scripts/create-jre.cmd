@@ -27,8 +27,8 @@ set "ROOT_DIR=%CD%"
 rem ------------------------------------------------------------
 rem Step 1: Check for existing JRE
 rem ------------------------------------------------------------
-if exist "%BUILD_DIR%\assets-local\jre" (
-    call :info "Custom JRE directory already exists (%BUILD_DIR%\assets-local\jre); skipping jlink step."
+if exist "%BUILD_DIR%\assets-local\jre-windows" (
+    call :info "Custom JRE directory already exists (%BUILD_DIR%\assets-local\jre-windows); skipping jlink step."
     goto :jre-done
 )
 
@@ -103,7 +103,7 @@ if not defined MODS (
 
 call :info "Using jlink modules: !MODS!"
 
-jlink --strip-debug --no-header-files --no-man-pages --add-modules !MODS! --output "%BUILD_DIR%\assets-local\jre"
+jlink --strip-debug --no-header-files --no-man-pages --add-modules !MODS! --output "%BUILD_DIR%\assets-local\jre-windows"
 if errorlevel 1 (
     call :fail "jlink failed to create the custom JRE."
     goto :enderror

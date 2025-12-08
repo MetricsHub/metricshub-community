@@ -131,7 +131,7 @@ if not exist "%BUILD_DIR%\assets-windows\jpackage\package.cmd" (
 )
 
 pushd "%BUILD_DIR%\assets-windows\jpackage"
-call package.cmd "%BUILD_DIR%\assets-local\jre" "%ROOT_DIR%\packages"
+call package.cmd "%BUILD_DIR%\assets-local\jre-windows" "%ROOT_DIR%\packages"
 set "PKG_EXIT=%ERRORLEVEL%"
 popd
 
