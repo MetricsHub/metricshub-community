@@ -54,8 +54,7 @@ This is a multi-module project:
 * **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts.
 * **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
-* **metricshub-community-windows**: Builds the `.zip` package for MetricsHub on Windows platforms.
-* **metricshub-community-linux**: Builds the `.tar.gz` package of MetricsHub on Linux platforms.
+* **metricshub-assets**: Generates the assets required to package MetricsHub Community for Windows, Debian, RedHat, and Docker platforms.
 * **metricshub-doc**: Houses the documentation for MetricsHub.
 
 > [!TIP]
