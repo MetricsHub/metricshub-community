@@ -34,7 +34,6 @@ RUN apt-get update &&\
     rm -rf /var/lib/apt/lists/* &&\
     mkdir -p /opt/metricshub/lib/logs &&\
     ln -s /opt/metricshub/lib/config /opt/metricshub/config &&\
-    ln -s /opt/metricshub/lib/security /opt/metricshub/security &&\
     ln -s /opt/metricshub/lib/logs /opt/metricshub/logs &&\
     ln -s /opt/metricshub/lib/LICENSE /opt/metricshub/LICENSE &&\
     ln -s /opt/metricshub/lib/connectors /opt/metricshub/connectors &&\
@@ -51,4 +50,4 @@ ENV PATH="/opt/metricshub/bin:${PATH}"
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -s http://localhost:13133 | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | grep -q 'Server available'
 
 ENTRYPOINT ["/opt/metricshub/bin/docker-entrypoint.sh"]
-CMD ["/opt/metricshub/bin/metricshub-service"]
+CMD ["/opt/metricshub/bin/metricshub-community-service"]
