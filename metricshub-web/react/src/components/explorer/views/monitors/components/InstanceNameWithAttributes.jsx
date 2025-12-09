@@ -23,7 +23,7 @@ const InstanceNameWithAttributes = ({
 	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 
 	return (
-		<Box display="flex" alignItems="center" justifyContent="space-between" width="100%" sx={sx}>
+		<Box display="flex" alignItems="center" sx={sx}>
 			<Typography variant={variant} sx={{ mr: 1, fontWeight }}>
 				{displayName}
 			</Typography>

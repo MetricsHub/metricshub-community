@@ -207,7 +207,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 									return (
 										<TableRow key={id || rowIndex}>
-											<TableCell>
+											<TableCell sx={{ whiteSpace: "nowrap" }}>
 												<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
 											</TableCell>
 											<TableCell>{hasData ? <UtilizationStack parts={parts} /> : "-"}</TableCell>
@@ -217,7 +217,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 								return (
 									<TableRow key={id || rowIndex}>
-										<TableCell>
+										<TableCell sx={{ whiteSpace: "nowrap" }}>
 											<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
 										</TableCell>
 										{group.metricKeys.map((key) => {

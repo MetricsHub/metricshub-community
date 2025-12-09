@@ -87,9 +87,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 
 			const perInstanceEntries = instances.map((inst) => {
 				const metrics = inst?.metrics ?? {};
-				return Object.entries(metrics)
-					.filter(([name]) => !name.startsWith("__"))
-					.sort(naturalMetricCompare);
+				return Object.entries(metrics).filter(([name]) => !name.startsWith("__"));
 			});
 
 			// Collect all unique metric keys from all instances
@@ -98,7 +96,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 				entries.forEach(([name]) => allKeys.add(name));
 			});
 
-			const sortedKeys = Array.from(allKeys).sort((a, b) => naturalMetricCompare([a], [b]));
+			const sortedKeys = Array.from(allKeys);
 			if (sortedKeys.length === 0) return [];
 
 			// Derive groups by base name.

@@ -21,7 +21,7 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 		return (
 			<TableHead>
 				<TableRow>
-					<TableCell sx={{ width: "25%" }}>Instance</TableCell>
+					<TableCell sx={{ whiteSpace: "nowrap" }}>Instance</TableCell>
 					{group.metricKeys.map((key) => {
 						let colLabel;
 						let hoverTitle;
@@ -75,7 +75,7 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 	return (
 		<TableHead>
 			<TableRow>
-				<TableCell sx={{ width: "25%" }}>Instance</TableCell>
+				<TableCell sx={{ whiteSpace: "nowrap" }}>Instance</TableCell>
 				<TableCell>
 					<HoverInfo
 						title={hoverTitle}
