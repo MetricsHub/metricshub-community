@@ -25,6 +25,44 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 	const loading = useSelector(selectExplorerLoading);
 	const error = useSelector(selectExplorerError);
 
+	// Memoize computed values (hooks must be called before any conditional returns)
+	const decodedName = React.useMemo(
+		() => (resourceGroupName ? decodeURIComponent(resourceGroupName) : null),
+		[resourceGroupName],
+	);
+
+	const resourceGroups = React.useMemo(
+		() => hierarchy?.resourceGroups || [],
+		[hierarchy?.resourceGroups],
+	);
+
+	const group = React.useMemo(() => {
+		if (!hierarchy || resourceGroups.length === 0) return null;
+		if (decodedName) {
+			return resourceGroups.find((g) => g.name === decodedName || g.id === decodedName) || null;
+		}
+		return resourceGroups[0] || null;
+	}, [hierarchy, decodedName, resourceGroups]);
+
+	const metrics = React.useMemo(() => group?.metrics || [], [group?.metrics]);
+	const resources = React.useMemo(() => group?.resources || [], [group?.resources]);
+
+	const hasMetrics = React.useMemo(() => {
+		if (!metrics) return false;
+		if (Array.isArray(metrics)) {
+			return metrics.length > 0;
+		}
+		if (typeof metrics === "object") {
+			return Object.keys(metrics).length > 0;
+		}
+		return false;
+	}, [metrics]);
+
+	const hasAttributes = React.useMemo(
+		() => !!(group?.attributes && Object.keys(group.attributes).length > 0),
+		[group?.attributes],
+	);
+
 	if (loading && !hierarchy) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -49,13 +87,6 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 		);
 	}
 
-	const resourceGroups = hierarchy.resourceGroups || [];
-	const decodedName = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
-	const group =
-		decodedName && resourceGroups.length
-			? resourceGroups.find((g) => g.name === decodedName || g.id === decodedName) || null
-			: resourceGroups[0] || null;
-
 	if (!group) {
 		return (
 			<Box p={2}>
@@ -63,20 +94,6 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 			</Box>
 		);
 	}
-
-	const metrics = group.metrics || [];
-	const resources = group.resources || [];
-
-	let hasMetrics = false;
-	if (metrics) {
-		if (Array.isArray(metrics)) {
-			hasMetrics = metrics.length > 0;
-		} else if (typeof metrics === "object") {
-			hasMetrics = Object.keys(metrics).length > 0;
-		}
-	}
-
-	const hasAttributes = group.attributes && Object.keys(group.attributes).length > 0;
 
 	return (
 		<Box p={2} display="flex" flexDirection="column" gap={2}>
@@ -97,4 +114,4 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 	);
 };
 
-export default ResourceGroupView;
+export default React.memo(ResourceGroupView);

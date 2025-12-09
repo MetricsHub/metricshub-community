@@ -45,7 +45,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
-	const expandedMonitors = uiState?.monitors || {};
+	const expandedMonitors = React.useMemo(() => uiState?.monitors || {}, [uiState?.monitors]);
 	// Force re-render every 5 seconds to update "last updated" relative time
 	const [_now, setNow] = React.useState(Date.now());
 
@@ -81,72 +81,89 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 	 * "instances as rows, metrics as columns" tables, grouped by
 	 * a common base metric name (e.g. system.cpu.time.*, system.cpu.utilization.*).
 	 */
-	const buildPivotGroups = React.useCallback(
-		(instances) => {
-			if (!Array.isArray(instances) || instances.length <= 1) return [];
+	const buildPivotGroups = React.useCallback((instances) => {
+		if (!Array.isArray(instances) || instances.length <= 1) return [];
 
-			const perInstanceEntries = instances.map((inst) => {
-				const metrics = inst?.metrics ?? {};
-				return Object.entries(metrics).filter(([name]) => !name.startsWith("__"));
-			});
+		const perInstanceEntries = instances.map((inst) => {
+			const metrics = inst?.metrics ?? {};
+			return Object.entries(metrics).filter(([name]) => !name.startsWith("__"));
+		});
 
-			// Collect all unique metric keys from all instances
-			const allKeys = new Set();
-			perInstanceEntries.forEach((entries) => {
-				entries.forEach(([name]) => allKeys.add(name));
-			});
+		// Collect all unique metric keys from all instances
+		const allKeys = new Set();
+		perInstanceEntries.forEach((entries) => {
+			entries.forEach(([name]) => allKeys.add(name));
+		});
 
-			const sortedKeys = Array.from(allKeys);
-			if (sortedKeys.length === 0) return [];
+		const sortedKeys = Array.from(allKeys);
+		if (sortedKeys.length === 0) return [];
 
-			// Derive groups by base name.
-			// Heuristic:
-			// 1. If a metric has tags (e.g. "system.disk.io{...}"), it likely represents a multi-dimensional metric
-			//    that deserves its own table. We group by its full clean name (e.g. "system.disk.io").
-			// 2. If a metric has no tags (e.g. "system.cpu.utilization"), it is likely a scalar.
-			//    We group these by their parent namespace (e.g. "system.cpu") to aggregate related scalars.
-			const groupsMap = new Map();
-			for (const key of sortedKeys) {
-				const cleanKey = getBaseMetricKey(key);
-				const hasTags = key.includes("{");
+		// Derive groups by base name.
+		const groupsMap = new Map();
+		for (const key of sortedKeys) {
+			const base = getBaseMetricKey(key);
 
-				let base;
-				if (hasTags) {
-					base = cleanKey;
-				} else {
-					const dotCount = (cleanKey.match(/\./g) || []).length;
-					if (dotCount <= 1) {
-						base = cleanKey;
-					} else {
-						const lastDot = cleanKey.lastIndexOf(".");
-						base = lastDot > 0 ? cleanKey.slice(0, lastDot) : cleanKey;
-					}
-				}
-
-				if (!groupsMap.has(base)) {
-					groupsMap.set(base, []);
-				}
-				groupsMap.get(base).push(key);
+			if (!groupsMap.has(base)) {
+				groupsMap.set(base, []);
 			}
+			groupsMap.get(base).push(key);
+		}
 
-			return Array.from(groupsMap.entries()).map(([baseName, metricKeys]) => ({
-				baseName,
-				metricKeys,
-			}));
-		},
-		[naturalMetricCompare],
-	);
+		return Array.from(groupsMap.entries()).map(([baseName, metricKeys]) => ({
+			baseName,
+			metricKeys,
+		}));
+	}, []);
 
 	const safeConnectors = React.useMemo(
 		() => (Array.isArray(connectors) ? connectors : []),
 		[connectors],
 	);
 
-	const lastUpdatedLabel = !lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt);
+	const lastUpdatedLabel = React.useMemo(
+		() => (!lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt)),
+		[lastUpdatedAt],
+	);
 
 	// Check if there are any monitors across all connectors
-	const hasAnyMonitors = safeConnectors.some(
-		(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
+	const hasAnyMonitors = React.useMemo(
+		() =>
+			safeConnectors.some(
+				(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
+			),
+		[safeConnectors],
+	);
+
+	// Handler factory for connector accordion toggles
+	const handleConnectorToggle = React.useCallback(
+		(connectorKey) => (e, isExpanded) => {
+			if (resourceId) {
+				dispatch(
+					setMonitorExpanded({
+						resourceId,
+						monitorName: connectorKey,
+						expanded: isExpanded,
+					}),
+				);
+			}
+		},
+		[dispatch, resourceId],
+	);
+
+	// Handler factory for monitor accordion toggles
+	const handleMonitorToggle = React.useCallback(
+		(uniqueMonitorKey) => (e, isExpanded) => {
+			if (resourceId) {
+				dispatch(
+					setMonitorExpanded({
+						resourceId,
+						monitorName: uniqueMonitorKey,
+						expanded: isExpanded,
+					}),
+				);
+			}
+		},
+		[dispatch, resourceId],
 	);
 
 	if (!hasAnyMonitors) {
@@ -180,17 +197,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 					<Accordion
 						key={connectorKey}
 						expanded={isConnectorExpanded}
-						onChange={(e, isExpanded) => {
-							if (resourceId) {
-								dispatch(
-									setMonitorExpanded({
-										resourceId,
-										monitorName: connectorKey,
-										expanded: isExpanded,
-									}),
-								);
-							}
-						}}
+						onChange={handleConnectorToggle(connectorKey)}
 						disableGutters
 						elevation={0}
 						square
@@ -354,17 +361,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 										<Accordion
 											key={uniqueMonitorKey}
 											expanded={isMonitorExpanded}
-											onChange={(e, isExpanded) => {
-												if (resourceId) {
-													dispatch(
-														setMonitorExpanded({
-															resourceId,
-															monitorName: uniqueMonitorKey,
-															expanded: isExpanded,
-														}),
-													);
-												}
-											}}
+											onChange={handleMonitorToggle(uniqueMonitorKey)}
 											disableGutters
 											elevation={0}
 											square
@@ -452,4 +449,4 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 	);
 };
 
-export default MonitorsView;
+export default React.memo(MonitorsView);

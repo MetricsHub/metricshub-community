@@ -10,6 +10,7 @@ import {
 	getMetricMetadata,
 	getBaseMetricKey,
 	isUtilizationUnit,
+	getInstanceDisplayName,
 } from "../../../../../utils/metrics-helper";
 import {
 	UtilizationStack,
@@ -35,14 +36,18 @@ import {
  * }} props
  */
 const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
-	const displayBaseName = getBaseMetricKey(group.baseName);
+	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
-	const open = uiState?.pivotGroups?.[group.baseName] || false;
+	const open = React.useMemo(
+		() => uiState?.pivotGroups?.[group.baseName] || false,
+		[uiState?.pivotGroups, group.baseName],
+	);
 
+	// Handler for toggling the pivot group expanded state
 	const handleToggle = React.useCallback(() => {
 		if (resourceId) {
 			dispatch(
@@ -66,6 +71,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		return false;
 	}, [group.metricKeys, metaMetrics]);
 
+	// Build the legend items for the utilization group
 	const legendItems = React.useMemo(() => {
 		if (!isUtilizationGroup) return [];
 		const seen = new Set();
@@ -79,10 +85,22 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		});
 
 		return items.sort((a, b) => getPriority(a) - getPriority(b));
-	}, [group, isUtilizationGroup]);
+	}, [group.metricKeys, isUtilizationGroup]);
+
+	// Calculate average utilization parts when group is open and utilization type
+	const averageParts = React.useMemo(() => {
+		if (!open || !isUtilizationGroup || sortedInstances.length === 0) return null;
+		return buildUtilizationParts(
+			group.metricKeys.map((key) => {
+				const sum = sortedInstances.reduce((acc, inst) => acc + (inst.metrics?.[key] || 0), 0);
+				const avg = sum / sortedInstances.length;
+				return { key, value: avg };
+			}),
+		);
+	}, [open, isUtilizationGroup, sortedInstances, group.metricKeys]);
 
 	return (
-		<Box key={group.baseName}>
+		<Box>
 			<Box
 				sx={{
 					display: "flex",
@@ -170,7 +188,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							metaMetrics={metaMetrics}
 						/>
 						<TableBody>
-							{isUtilizationGroup && sortedInstances.length > 0 && (
+							{isUtilizationGroup && averageParts && (
 								<TableRow>
 									<TableCell>
 										<Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -178,26 +196,14 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 										</Typography>
 									</TableCell>
 									<TableCell>
-										<UtilizationStack
-											parts={buildUtilizationParts(
-												group.metricKeys.map((key) => {
-													const sum = sortedInstances.reduce(
-														(acc, inst) => acc + (inst.metrics?.[key] || 0),
-														0,
-													);
-													const avg = sum / sortedInstances.length;
-													return { key, value: avg };
-												}),
-											)}
-										/>
+										<UtilizationStack parts={averageParts} />
 									</TableCell>
 								</TableRow>
 							)}
 							{sortedInstances.map((inst, rowIndex) => {
 								const attrs = inst?.attributes ?? {};
 								const id = attrs.id || inst.name;
-								const displayName =
-									attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
+								const displayName = getInstanceDisplayName(inst, id);
 								const metrics = inst?.metrics ?? {};
 
 								if (isUtilizationGroup) {
@@ -271,4 +277,4 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 	);
 };
 
-export default PivotGroupSection;
+export default React.memo(PivotGroupSection);

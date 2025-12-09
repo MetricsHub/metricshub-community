@@ -8,6 +8,7 @@ import {
 	getMetricMetadata,
 	getBaseMetricKey,
 	isUtilizationUnit,
+	getInstanceDisplayName,
 } from "../../../../../utils/metrics-helper";
 import {
 	UtilizationStack,
@@ -29,9 +30,8 @@ import {
  * }} props
  */
 const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, metaMetrics }) => {
-	const attrs = instance?.attributes ?? {};
-	const id = attrs.id || instance.name;
-	const displayName = attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
+	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
+	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
 	const sortedEntries = React.useMemo(
 		() => metricEntries.filter(([name]) => !name.startsWith("__")).sort(naturalMetricCompare),
@@ -69,7 +69,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	}, [sortedEntries, metaMetrics]);
 
 	return (
-		<Box key={id} mb={1}>
+		<Box mb={1}>
 			<Box mb={1}>
 				<InstanceNameWithAttributes
 					displayName={displayName}
@@ -81,7 +81,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 			<DashboardTable stickyHeader={false}>
 				<TableHead>
 					<TableRow>
-						<TableCell sx={{ width: "25%" }}>Name</TableCell>
+						<TableCell sx={{ width: "50%", minWidth: 300 }}>Name</TableCell>
 						<TableCell align="left">Value</TableCell>
 					</TableRow>
 				</TableHead>
@@ -227,4 +227,4 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	);
 };
 
-export default InstanceMetricsTable;
+export default React.memo(InstanceMetricsTable);

@@ -118,43 +118,33 @@ export const compareUtilizationParts = (a, b) => {
 	return a.pct - b.pct;
 };
 
+// Shared empty bar styles - extracted to avoid repetition
+const emptyBarSx = {
+	position: "relative",
+	height: 16,
+	borderRadius: 1,
+	overflow: "hidden",
+	bgcolor: "action.hover",
+	display: "flex",
+};
+
 /**
  * Renders a stacked progress bar for utilization metrics.
  * @param {{parts: Array<{key: string, value: number, pct: number}>}} props
  */
-export const UtilizationStack = ({ parts }) => {
-	if (!Array.isArray(parts) || parts.length === 0) {
-		// Render empty bar if no parts
-		return (
-			<Box
-				sx={{
-					position: "relative",
-					height: 16,
-					borderRadius: 1,
-					overflow: "hidden",
-					bgcolor: "action.hover",
-					display: "flex",
-				}}
-			/>
-		);
-	}
+const UtilizationStackComponent = ({ parts }) => {
+	const sortedParts = React.useMemo(() => {
+		if (!Array.isArray(parts) || parts.length === 0) return [];
+		return [...parts].sort(compareUtilizationParts);
+	}, [parts]);
 
-	const sortedParts = [...parts].sort(compareUtilizationParts);
-	const hasNonZero = sortedParts.some((p) => p.value > 0);
+	const hasNonZero = React.useMemo(() => sortedParts.some((p) => p.value > 0), [sortedParts]);
 
-	if (!hasNonZero) {
-		return (
-			<Box
-				sx={{
-					position: "relative",
-					height: 16,
-					borderRadius: 1,
-					overflow: "hidden",
-					bgcolor: "action.hover",
-					display: "flex",
-				}}
-			/>
-		);
+	const filteredParts = React.useMemo(() => sortedParts.filter((p) => p.value > 0), [sortedParts]);
+
+	if (!Array.isArray(parts) || parts.length === 0 || !hasNonZero) {
+		// Render empty bar if no parts or all values are zero
+		return <Box sx={emptyBarSx} />;
 	}
 
 	return (
@@ -168,49 +158,49 @@ export const UtilizationStack = ({ parts }) => {
 				display: "flex",
 			}}
 		>
-			{sortedParts
-				.filter((p) => p.value > 0)
-				.map((p) => {
-					const label = colorLabelFromKey(p.key);
-					return (
-						<HoverInfo
-							key={p.key}
-							label={label}
-							value={p.pct / 100}
+			{filteredParts.map((p) => {
+				const label = colorLabelFromKey(p.key);
+				return (
+					<HoverInfo
+						key={p.key}
+						label={label}
+						value={p.pct / 100}
+						sx={{
+							width: `${p.pct}%`,
+							minWidth: "1px",
+						}}
+					>
+						<Box
 							sx={{
-								width: `${p.pct}%`,
-								minWidth: "1px",
+								width: "100%",
+								height: "100%",
+								bgcolor: colorFor(label),
+								display: "flex",
+								alignItems: "center",
+								justifyContent: "center",
 							}}
 						>
-							<Box
-								sx={{
-									width: "100%",
-									height: "100%",
-									bgcolor: colorFor(label),
-									display: "flex",
-									alignItems: "center",
-									justifyContent: "center",
-								}}
-							>
-								{p.pct > 10 && (
-									<Box
-										component="span"
-										sx={{
-											color: "common.white",
-											fontSize: "0.7rem",
-											fontWeight: 600,
-											lineHeight: 1,
-											textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
-											userSelect: "none",
-										}}
-									>
-										{p.pct}%
-									</Box>
-								)}
-							</Box>
-						</HoverInfo>
-					);
-				})}
+							{p.pct > 10 && (
+								<Box
+									component="span"
+									sx={{
+										color: "common.white",
+										fontSize: "0.7rem",
+										fontWeight: 600,
+										lineHeight: 1,
+										textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
+										userSelect: "none",
+									}}
+								>
+									{p.pct}%
+								</Box>
+							)}
+						</Box>
+					</HoverInfo>
+				);
+			})}
 		</Box>
 	);
 };
+
+export const UtilizationStack = React.memo(UtilizationStackComponent);

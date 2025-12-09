@@ -17,6 +17,22 @@ import {
  * }} props
  */
 const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
+	// Memoize utilization group values (hooks must be called before any conditional returns)
+	const utilizationMeta = React.useMemo(
+		() => (isUtilizationGroup ? getMetricMetadata(group.baseName, metaMetrics) : null),
+		[isUtilizationGroup, group.baseName, metaMetrics],
+	);
+	const utilizationUnit = React.useMemo(() => utilizationMeta?.unit, [utilizationMeta?.unit]);
+	const displayUnit = React.useMemo(
+		() =>
+			utilizationUnit === "1" ? "%" : utilizationUnit ? utilizationUnit.replace(/[{}]/g, "") : "",
+		[utilizationUnit],
+	);
+	const hoverTitle = React.useMemo(
+		() => (isUtilizationGroup ? getMetricLabel(group.baseName) : null),
+		[isUtilizationGroup, group.baseName],
+	);
+
 	if (!isUtilizationGroup) {
 		return (
 			<TableHead>
@@ -63,14 +79,7 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 		);
 	}
 
-	const meta = getMetricMetadata(group.baseName, metaMetrics);
-	const { description, unit } = meta;
-	const displayUnit = unit === "1" ? "%" : unit ? unit.replace(/[{}]/g, "") : "";
-
-	// For utilization groups, we usually have multiple keys (e.g. user, system, idle)
-	// but they are aggregated into one column. The baseName is the metric prefix.
-	// If we want the hover to show the base name, we can use it.
-	const hoverTitle = getMetricLabel(group.baseName);
+	const { description } = utilizationMeta || {};
 
 	return (
 		<TableHead>
@@ -78,7 +87,7 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 				<TableCell sx={{ whiteSpace: "nowrap" }}>Instance</TableCell>
 				<TableCell>
 					<HoverInfo
-						title={hoverTitle}
+						title={hoverTitle || ""}
 						description={description}
 						unit={displayUnit}
 						sx={{ display: "inline-block" }}

@@ -19,7 +19,6 @@ import logoLight from "./assets/logo-light.svg";
 // Lazy pages
 const LoginPage = React.lazy(() => import("./pages/LoginPage")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/ExplorerPage"));
-const ExplorerRedirect = React.lazy(() => import("./components/explorer/ExplorerRedirect"));
 const Configuration = React.lazy(() => import("./pages/ConfigurationPage"));
 const NavBar = React.lazy(() => import("./components/navbar/Navbar"));
 

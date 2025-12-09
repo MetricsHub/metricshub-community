@@ -57,18 +57,27 @@ const DashboardTable = ({
 	sx = {},
 	stickyHeader = true,
 	...rest
-}) => (
-	<TableContainer
-		component={Paper}
-		square={false}
-		elevation={1}
-		{...containerProps}
-		sx={{ ...containerSx, ...(containerProps.sx || {}) }}
-	>
-		<Table stickyHeader={stickyHeader} size="small" sx={{ ...tableSx, ...sx }} {...rest}>
-			{children}
-		</Table>
-	</TableContainer>
-);
+}) => {
+	// Memoize merged sx objects to avoid recreating on every render
+	const containerMergedSx = React.useMemo(
+		() => ({ ...containerSx, ...(containerProps.sx || {}) }),
+		[containerProps.sx],
+	);
+	const tableMergedSx = React.useMemo(() => ({ ...tableSx, ...sx }), [sx]);
 
-export default DashboardTable;
+	return (
+		<TableContainer
+			component={Paper}
+			square={false}
+			elevation={1}
+			{...containerProps}
+			sx={containerMergedSx}
+		>
+			<Table stickyHeader={stickyHeader} size="small" sx={tableMergedSx} {...rest}>
+				{children}
+			</Table>
+		</TableContainer>
+	);
+};
+
+export default React.memo(DashboardTable);

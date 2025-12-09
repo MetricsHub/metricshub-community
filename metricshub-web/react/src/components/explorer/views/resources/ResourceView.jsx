@@ -46,38 +46,46 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const [isPaused, setIsPaused] = React.useState(false);
 	const rootRef = React.useRef(null);
 
-	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
-	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
+	const decodedName = React.useMemo(
+		() => (resourceName ? decodeURIComponent(resourceName) : null),
+		[resourceName],
+	);
+	const decodedGroup = React.useMemo(
+		() => (resourceGroupName ? decodeURIComponent(resourceGroupName) : null),
+		[resourceGroupName],
+	);
 
 	// Reset paused state when resource changes
 	React.useEffect(() => {
 		setIsPaused(false);
 	}, [decodedName, decodedGroup]);
 
-	React.useEffect(() => {
+	const fetchData = React.useCallback(() => {
 		if (!decodedName) return;
+		if (decodedGroup) {
+			dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
+		} else {
+			dispatch(fetchTopLevelResource({ resourceName: decodedName }));
+		}
+		// Update "last updated" every time we trigger a resource fetch
+		setLastUpdatedAt(Date.now());
+	}, [dispatch, decodedName, decodedGroup]);
 
-		const fetchData = () => {
-			if (decodedGroup) {
-				dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
-			} else {
-				dispatch(fetchTopLevelResource({ resourceName: decodedName }));
-			}
-			// Update "last updated" every time we trigger a resource fetch
-			setLastUpdatedAt(Date.now());
-		};
-
-		if (isPaused) return;
+	React.useEffect(() => {
+		if (!decodedName || isPaused) return;
 
 		fetchData();
 
 		const interval = setInterval(fetchData, 10000);
 
 		return () => clearInterval(interval);
-	}, [dispatch, decodedName, decodedGroup, isPaused]);
+	}, [decodedName, isPaused, fetchData]);
 
 	// Scroll restoration logic
-	const resourceId = currentResource?.id || currentResource?.name;
+	const resourceId = React.useMemo(
+		() => currentResource?.id || currentResource?.name,
+		[currentResource?.id, currentResource?.name],
+	);
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
@@ -87,6 +95,17 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	 * Restore scroll position when resource changes.
 	 * Debounce scroll event to save position to Redux.
 	 */
+	const handleScroll = React.useCallback(
+		(e) => {
+			if (resourceId) {
+				dispatch(setResourceScrollTop({ resourceId, scrollTop: e.target.scrollTop }));
+			}
+		},
+		[dispatch, resourceId],
+	);
+
+	const debouncedHandleScroll = React.useMemo(() => debounce(handleScroll, 300), [handleScroll]);
+
 	React.useLayoutEffect(() => {
 		if (!resourceId || !rootRef.current) return;
 		const scrollParent = rootRef.current.parentElement;
@@ -96,17 +115,12 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 			scrollParent.scrollTop = savedScrollTop;
 		}
 
-		const handleScroll = debounce((e) => {
-			dispatch(setResourceScrollTop({ resourceId, scrollTop: e.target.scrollTop }));
-		}, 300);
-
-		scrollParent.addEventListener("scroll", handleScroll);
+		scrollParent.addEventListener("scroll", debouncedHandleScroll);
 		return () => {
-			scrollParent.removeEventListener("scroll", handleScroll);
-			handleScroll.clear();
+			scrollParent.removeEventListener("scroll", debouncedHandleScroll);
+			debouncedHandleScroll.clear();
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [resourceId]); // Only re-run when resource changes
+	}, [resourceId, savedScrollTop, debouncedHandleScroll]);
 
 	// Find resource in hierarchy
 	const hierarchyResource = React.useMemo(() => {
@@ -133,16 +147,93 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		return null;
 	}, [hierarchy, decodedName, decodedGroup]);
 
-	const resource = currentResource || hierarchyResource;
+	const resource = React.useMemo(
+		() => currentResource || hierarchyResource,
+		[currentResource, hierarchyResource],
+	);
 
-	const connectors = React.useMemo(() => resource?.connectors || [], [resource]);
+	const connectors = React.useMemo(() => resource?.connectors || [], [resource?.connectors]);
 	const failedConnectors = React.useMemo(() => {
+		if (!connectors || connectors.length === 0) return [];
 		return connectors.filter((c) => {
 			const statusMetric = c.metrics?.["metricshub.connector.status"];
 			const statusValue = getMetricValue(statusMetric);
 			return statusValue === "failed";
 		});
 	}, [connectors]);
+
+	const metrics = React.useMemo(() => {
+		if (!resource) return [];
+		let resourceMetrics = resource.metrics;
+		// If current resource has no metrics, try to use metrics from hierarchy
+		if (
+			(!resourceMetrics ||
+				(Array.isArray(resourceMetrics) && resourceMetrics.length === 0) ||
+				(typeof resourceMetrics === "object" && Object.keys(resourceMetrics).length === 0)) &&
+			hierarchyResource?.metrics
+		) {
+			resourceMetrics = hierarchyResource.metrics;
+		}
+		return resourceMetrics || [];
+	}, [resource, hierarchyResource?.metrics]);
+
+	const failedConnectorsDescription = React.useMemo(() => {
+		if (failedConnectors.length === 0) return "";
+		return failedConnectors.map((c) => c.name || c.id || "Unknown").join(", ");
+	}, [failedConnectors]);
+
+	const resourceTitle = React.useMemo(
+		() => (
+			<Box component="span" display="flex" alignItems="center" gap={1}>
+				{resource?.id || resource?.key || resource?.name || ""}
+				{failedConnectors.length > 0 && (
+					<HoverInfo
+						title="Warning"
+						description={`The following connectors have failed: ${failedConnectorsDescription}`}
+						sx={{ display: "flex", alignItems: "center" }}
+					>
+						<WarningIcon color="warning" />
+					</HoverInfo>
+				)}
+			</Box>
+		),
+		[
+			resource?.id,
+			resource?.key,
+			resource?.name,
+			failedConnectors.length,
+			failedConnectorsDescription,
+		],
+	);
+
+	const hasMetrics = React.useMemo(() => {
+		if (!metrics) return false;
+		if (Array.isArray(metrics)) {
+			return metrics.length > 0;
+		}
+		if (typeof metrics === "object") {
+			return Object.keys(metrics).length > 0;
+		}
+		return false;
+	}, [metrics]);
+
+	const handleTogglePause = React.useCallback(() => {
+		setIsPaused((prev) => !prev);
+	}, []);
+
+	const actionButton = React.useMemo(
+		() => (
+			<Button
+				size="small"
+				variant="contained"
+				startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+				onClick={handleTogglePause}
+			>
+				{isPaused ? "Resume Collect" : "Pause Collect"}
+			</Button>
+		),
+		[isPaused, handleTogglePause],
+	);
 
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
@@ -176,60 +267,13 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		);
 	}
 
-	let metrics = resource.metrics;
-	// If current resource has no metrics, try to use metrics from hierarchy
-	if (
-		(!metrics ||
-			(Array.isArray(metrics) && metrics.length === 0) ||
-			(typeof metrics === "object" && Object.keys(metrics).length === 0)) &&
-		hierarchyResource?.metrics
-	) {
-		metrics = hierarchyResource.metrics;
-	}
-	metrics = metrics || [];
-
-	const resourceTitle = (
-		<Box component="span" display="flex" alignItems="center" gap={1}>
-			{resource.id || resource.key || resource.name}
-			{failedConnectors.length > 0 && (
-				<HoverInfo
-					title="Warning"
-					description={`The following connectors have failed: ${failedConnectors
-						.map((c) => c.name || c.id || "Unknown")
-						.join(", ")}`}
-					sx={{ display: "flex", alignItems: "center" }}
-				>
-					<WarningIcon color="warning" />
-				</HoverInfo>
-			)}
-		</Box>
-	);
-
-	let hasMetrics = false;
-	if (metrics) {
-		if (Array.isArray(metrics)) {
-			hasMetrics = metrics.length > 0;
-		} else if (typeof metrics === "object") {
-			hasMetrics = Object.keys(metrics).length > 0;
-		}
-	}
-
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader
 				title={resourceTitle}
 				iconType="resource"
 				attributes={resource.attributes}
-				action={
-					<Button
-						size="small"
-						variant="contained"
-						startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
-						onClick={() => setIsPaused(!isPaused)}
-					>
-						{isPaused ? "Resume Collect" : "Pause Collect"}
-					</Button>
-				}
+				action={actionButton}
 			/>
 			<Divider />
 			{hasMetrics && (
