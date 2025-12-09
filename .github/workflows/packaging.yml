@@ -306,7 +306,7 @@ jobs:
 
     - name: Set up JDK ${{ inputs.jdkVersion }}
       id: jdk
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: ${{ inputs.jdkVersion }}
         distribution: temurin
