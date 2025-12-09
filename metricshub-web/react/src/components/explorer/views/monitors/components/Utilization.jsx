@@ -30,17 +30,6 @@ export const buildUtilizationParts = (entries) => {
 };
 
 /**
- * Renders a metric value.
- *
- * @param {string} key
- * @param {any} raw
- * @returns {string}
- */
-export const renderMetricValue = (key, raw) => {
-	return raw != null ? String(raw) : "";
-};
-
-/**
  * Extracts a display label from a metric key.
  * Handles keys with braces like `system.cpu.utilization{state="idle"}`.
  * @param {string} key
