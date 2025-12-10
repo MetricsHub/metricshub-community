@@ -106,16 +106,24 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
+	const sortedInstances = React.useMemo(() => {
+		return [...instances].sort((a, b) => {
+			const nameA = a.attributes?.id || a.name || "";
+			const nameB = b.attributes?.id || b.name || "";
+			return compareMetricNames(nameA, nameB);
+		});
+	}, [instances]);
+
 	const availableMetrics = React.useMemo(() => {
 		const metricsSet = new Set();
 		// Check first 50 instances to gather available metrics
-		for (const instance of instances.slice(0, 50)) {
+		for (const instance of sortedInstances.slice(0, 50)) {
 			if (instance.metrics) {
 				Object.keys(instance.metrics).forEach((k) => metricsSet.add(k));
 			}
 		}
 		return Array.from(metricsSet).sort();
-	}, [instances]);
+	}, [sortedInstances]);
 
 	const handleMetricToggle = React.useCallback((metric) => {
 		setSelectedMetrics((prev) =>
@@ -124,7 +132,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 	}, []);
 
 	const filteredInstances = React.useMemo(() => {
-		return instances.filter((instance) => {
+		return sortedInstances.filter((instance) => {
 			const id = instance.attributes?.id || instance.name || "";
 			const name = instance.attributes?.name || "";
 			return (
@@ -132,7 +140,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 				name.toLowerCase().includes(searchTerm.toLowerCase())
 			);
 		});
-	}, [instances, searchTerm]);
+	}, [sortedInstances, searchTerm]);
 
 	// Helper to get metrics for an instance
 	const getMetricsForInstance = React.useCallback((instance) => {
@@ -271,7 +279,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 							</TableRow>
 						</TableHead>
 						<TableBody>
-							{instances.slice(0, 10).map((instance, index) => (
+							{sortedInstances.slice(0, 10).map((instance, index) => (
 								<TableRow key={index}>
 									<TableCell>{instance.attributes?.id || instance.name}</TableCell>
 									{selectedMetrics.map((metric) => {
