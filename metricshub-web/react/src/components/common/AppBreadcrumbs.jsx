@@ -4,6 +4,45 @@ import { Breadcrumbs, Link, Typography, Box } from "@mui/material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { paths } from "../../paths";
 
+/**
+ * Configuration for Explorer routes to generate breadcrumbs.
+ * @type {Array<{pattern: string, getBreadcrumbs: (params: Record<string, string>) => Array<{label: string, to: string|null}>}>}
+ */
+const EXPLORER_ROUTES = [
+	{
+		pattern: "/explorer/resource-groups/:group/resources/:resource",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			return [
+				{ label: group, to: paths.explorerResourceGroup(group) },
+				{ label: resource, to: null },
+			];
+		},
+	},
+	{
+		pattern: "/explorer/resource-groups/:name",
+		getBreadcrumbs: (params) => {
+			const name = decodeURIComponent(params.name);
+			return [{ label: name, to: null }];
+		},
+	},
+	{
+		pattern: "/explorer/resources/:resource",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			return [{ label: resource, to: null }];
+		},
+	},
+];
+
+/**
+ * Component to render breadcrumbs based on the current location.
+ * Currently supports Explorer routes.
+ *
+ * @param {{ sx?: import("@mui/material").SxProps }} props
+ * @returns {React.ReactElement|null}
+ */
 const AppBreadcrumbs = ({ sx }) => {
 	const location = useLocation();
 	const currentPath = location.pathname;
@@ -14,34 +53,12 @@ const AppBreadcrumbs = ({ sx }) => {
 		if (currentPath.startsWith("/explorer")) {
 			items.push({ label: "Explorer", to: paths.explorerWelcome });
 
-			const resourceWithGroupMatch = matchPath(
-				{ path: "/explorer/resource-groups/:group/resources/:resource", end: true },
-				currentPath,
-			);
-			const groupMatch = matchPath(
-				{ path: "/explorer/resource-groups/:name", end: true },
-				currentPath,
-			);
-			const resourceNoGroupMatch = matchPath(
-				{ path: "/explorer/resources/:resource", end: true },
-				currentPath,
-			);
-
-			if (resourceWithGroupMatch) {
-				const { group, resource } = resourceWithGroupMatch.params;
-				const decodedGroup = decodeURIComponent(group);
-				const decodedResource = decodeURIComponent(resource);
-				items.push({
-					label: decodedGroup,
-					to: paths.explorerResourceGroup(decodedGroup),
-				});
-				items.push({ label: decodedResource, to: null });
-			} else if (groupMatch) {
-				const { name } = groupMatch.params;
-				items.push({ label: decodeURIComponent(name), to: null });
-			} else if (resourceNoGroupMatch) {
-				const { resource } = resourceNoGroupMatch.params;
-				items.push({ label: decodeURIComponent(resource), to: null });
+			for (const route of EXPLORER_ROUTES) {
+				const match = matchPath({ path: route.pattern, end: true }, currentPath);
+				if (match) {
+					items.push(...route.getBreadcrumbs(match.params));
+					break; // Stop after first match
+				}
 			}
 		}
 
@@ -77,4 +94,4 @@ const AppBreadcrumbs = ({ sx }) => {
 	);
 };
 
-export default AppBreadcrumbs;
+export default React.memo(AppBreadcrumbs);
