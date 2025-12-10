@@ -9,6 +9,7 @@ import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
 import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGroupsData";
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
 import ResourceView from "../components/explorer/views/resources/ResourceView";
+import AppBreadcrumbs from "../components/common/AppBreadcrumbs";
 import { paths } from "../paths";
 
 /**
@@ -79,6 +80,7 @@ const ExplorerPage = () => {
 				</Box>
 			</Left>
 			<Right>
+				<AppBreadcrumbs />
 				{isWelcome && (
 					<WelcomeView
 						renderResourceGroups={(props) => (

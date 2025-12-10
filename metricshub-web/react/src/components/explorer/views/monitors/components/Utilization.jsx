@@ -167,7 +167,6 @@ const UtilizationStackComponent = ({ parts }) => {
 						value={p.pct / 100}
 						sx={{
 							width: `${p.pct}%`,
-							minWidth: "1px",
 						}}
 					>
 						<Box
