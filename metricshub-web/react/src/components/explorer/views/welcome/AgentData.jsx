@@ -9,14 +9,21 @@ import MetricsTable from "../common/MetricsTable";
  * @returns {JSX.Element | null}
  */
 const AgentData = ({ agent, totalResources }) => {
-	const attributes = React.useMemo(() => agent?.attributes ?? {}, [agent]);
-	const version = attributes.version || attributes.cc_version || "";
-	const title = "MetricsHub Community";
-	const hasMetrics = agent?.metrics && Object.keys(agent.metrics).length > 0;
+	const attributes = React.useMemo(() => agent?.attributes ?? {}, [agent?.attributes]);
+	const version = React.useMemo(
+		() => attributes.version || attributes.cc_version || "",
+		[attributes.version, attributes.cc_version],
+	);
+	const hasMetrics = React.useMemo(
+		() => !!(agent?.metrics && Object.keys(agent.metrics).length > 0),
+		[agent?.metrics],
+	);
 
 	if (!agent) {
 		return null;
 	}
+
+	const title = "MetricsHub Community";
 
 	return (
 		<EntityHeader title={title} iconType="agent" attributes={attributes}>
@@ -29,4 +36,4 @@ const AgentData = ({ agent, totalResources }) => {
 	);
 };
 
-export default AgentData;
+export default React.memo(AgentData);

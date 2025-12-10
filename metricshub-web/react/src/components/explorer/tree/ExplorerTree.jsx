@@ -117,6 +117,11 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 
 	const handleItemClick = React.useCallback(
 		(event, itemId) => {
+			// Prevent focus if clicking on the expansion arrow
+			if (event.target.closest(`.${treeItemClasses.iconContainer}`)) {
+				return;
+			}
+
 			const node = findNode(treeRoot, itemId);
 			if (node) {
 				handleLabelClick(node);

@@ -1,12 +1,14 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
+import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import { formatMetricValue } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
 	isUtilizationUnit,
+	getInstanceDisplayName,
 } from "../../../../../utils/metrics-helper";
 import {
 	UtilizationStack,
@@ -23,19 +25,13 @@ import {
  * @param {{
  *   instance: any,
  *   metricEntries: Array<[string, any]>,
- *   naturalMetricCompare: (a: string, b: string) => number,
+ *   naturalMetricCompare: (a: [string, any], b: [string, any]) => number,
  *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
  * }} props
  */
 const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, metaMetrics }) => {
-	const attrs = instance?.attributes ?? {};
-	const id = attrs.id || instance.name;
-	const displayName = attrs["system.device"] || attrs.name || attrs["network.interface.name"] || id;
-	const extraInfoParts = [];
-	if (attrs.name && attrs.name !== displayName) extraInfoParts.push(`name: ${attrs.name}`);
-	if (attrs.serial_number) extraInfoParts.push(`serial_number: ${attrs.serial_number}`);
-	if (attrs.vendor) extraInfoParts.push(`vendor: ${attrs.vendor}`);
-	if (attrs.info) extraInfoParts.push(`info: ${attrs.info}`);
+	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
+	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
 	const sortedEntries = React.useMemo(
 		() => metricEntries.filter(([name]) => !name.startsWith("__")).sort(naturalMetricCompare),
@@ -73,16 +69,19 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	}, [sortedEntries, metaMetrics]);
 
 	return (
-		<Box key={id} mb={1}>
-			<Typography variant="subtitle1" sx={{ fontWeight: 500, mb: 1 }}>
-				{displayName}
-				{extraInfoParts.length > 0 && ` (${extraInfoParts.join("; ")})`}
-			</Typography>
+		<Box mb={1}>
+			<Box mb={1}>
+				<InstanceNameWithAttributes
+					displayName={displayName}
+					attributes={attrs}
+					variant="subtitle1"
+				/>
+			</Box>
 
 			<DashboardTable stickyHeader={false}>
 				<TableHead>
 					<TableRow>
-						<TableCell sx={{ width: "25%" }}>Name</TableCell>
+						<TableCell sx={{ width: "50%", minWidth: 300 }}>Name</TableCell>
 						<TableCell align="left">Value</TableCell>
 					</TableRow>
 				</TableHead>
@@ -98,7 +97,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 								const { description, unit } = meta;
 								const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
-								// If unit is "1", render as a progress bar (utilization)
+								// If unit is "1", render as a progress bar
 								if (isUtilizationUnit(unit)) {
 									const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
 									return (
@@ -228,4 +227,4 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 	);
 };
 
-export default InstanceMetricsTable;
+export default React.memo(InstanceMetricsTable);

@@ -10,13 +10,18 @@ import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
  * @returns {JSX.Element}
  */
 const ResourceRow = React.memo(function ResourceRow({ resource, onClick, showOsType }) {
-	const attrs = resource.attributes ?? {};
+	const attrs = React.useMemo(() => resource.attributes ?? {}, [resource.attributes]);
+
+	const rowSx = React.useMemo(() => ({ cursor: onClick ? "pointer" : "default" }), [onClick]);
+
+	const handleClick = React.useCallback(() => {
+		if (onClick) {
+			onClick(resource);
+		}
+	}, [onClick, resource]);
+
 	return (
-		<TableRow
-			hover={Boolean(onClick)}
-			sx={{ cursor: onClick ? "pointer" : "default" }}
-			onClick={onClick ? () => onClick(resource) : undefined}
-		>
+		<TableRow hover={Boolean(onClick)} sx={rowSx} onClick={onClick ? handleClick : undefined}>
 			<TableCell>{resource.name}</TableCell>
 			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
 			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
@@ -40,6 +45,10 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 		[resources],
 	);
 
+	const hasResources = React.useMemo(() => allResources.length > 0, [allResources.length]);
+
+	const emptyStateColSpan = React.useMemo(() => (showOsType ? 4 : 3), [showOsType]);
+
 	return (
 		<Box>
 			<Typography variant="h6" gutterBottom sx={sectionTitleSx}>
@@ -56,9 +65,9 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 					</TableRow>
 				</TableHead>
 				<TableBody>
-					{allResources.length === 0 ? (
+					{!hasResources ? (
 						<TableRow>
-							<TableCell colSpan={showOsType ? 4 : 3} sx={emptyStateCellSx}>
+							<TableCell colSpan={emptyStateColSpan} sx={emptyStateCellSx}>
 								No resources
 							</TableCell>
 						</TableRow>
@@ -78,4 +87,4 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 	);
 };
 
-export default ResourcesTable;
+export default React.memo(ResourcesTable);

@@ -144,8 +144,31 @@ export const selectResourceLoading = createSelector([base], (s) => s.resourceLoa
 export const selectResourceError = createSelector([base], (s) => s.resourceError);
 export const selectLastVisitedPath = createSelector([base], (s) => s.lastVisitedPath);
 
-export const selectResourceUiState = (resourceId) =>
-	createSelector(
-		[base],
-		(s) => s.uiState[resourceId] || { scrollTop: 0, monitors: {}, pivotGroups: {} },
-	);
+// Default UI state object - stable reference to avoid creating new objects
+const defaultUiState = { scrollTop: 0, monitors: {}, pivotGroups: {} };
+
+// Memoized selector factory - creates a selector for a specific resourceId
+const resourceUiStateSelectors = new Map();
+
+// Pre-create the null selector to avoid creating it multiple times
+const nullSelector = createSelector([base], () => null);
+
+export const selectResourceUiState = (resourceId) => {
+	if (!resourceId) {
+		// Return the pre-created null selector for null/undefined resourceId
+		return nullSelector;
+	}
+
+	// Return memoized selector for this resourceId to avoid creating new selectors
+	if (!resourceUiStateSelectors.has(resourceId)) {
+		const selector = createSelector([base], (s) => {
+			const uiState = s.uiState[resourceId];
+			// Return the existing state if it exists, otherwise return the stable default
+			// This ensures we always return the same object reference when the state hasn't changed
+			return uiState || defaultUiState;
+		});
+		resourceUiStateSelectors.set(resourceId, selector);
+	}
+
+	return resourceUiStateSelectors.get(resourceId);
+};

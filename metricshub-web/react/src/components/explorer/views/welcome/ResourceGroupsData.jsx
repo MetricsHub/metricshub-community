@@ -40,7 +40,31 @@ const buildGroupLabel = (group) => {
  * @returns {JSX.Element}
  */
 const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
-	const groups = React.useMemo(() => resourceGroups ?? [], [resourceGroups]);
+	// Pre-compute labels and counts for all groups to avoid recalculating in render
+	const processedGroups = React.useMemo(() => {
+		const groups = resourceGroups ?? [];
+		return groups.map((group) => ({
+			...group,
+			displayLabel: buildGroupLabel(group),
+			resourceCount: countResources(group),
+		}));
+	}, [resourceGroups]);
+
+	const hasGroups = React.useMemo(() => processedGroups.length > 0, [processedGroups.length]);
+	const rowCursorSx = React.useMemo(
+		() => ({ cursor: onResourceGroupClick ? "pointer" : "default" }),
+		[onResourceGroupClick],
+	);
+
+	// Memoized click handler factory to avoid recreating functions in map
+	const handleGroupClick = React.useCallback(
+		(group) => {
+			if (onResourceGroupClick) {
+				onResourceGroupClick(group);
+			}
+		},
+		[onResourceGroupClick],
+	);
 
 	return (
 		<Box>
@@ -56,22 +80,17 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 					</TableRow>
 				</TableHead>
 				<TableBody>
-					{groups.length === 0 ? (
+					{!hasGroups ? (
 						<TableRow>
 							<TableCell colSpan={2} sx={emptyStateCellSx}>
 								No resource groups
 							</TableCell>
 						</TableRow>
 					) : (
-						groups.map((g) => (
-							<TableRow
-								key={g.name}
-								hover
-								sx={{ cursor: onResourceGroupClick ? "pointer" : "default" }}
-								onClick={() => onResourceGroupClick && onResourceGroupClick(g)}
-							>
-								<TableCell>{buildGroupLabel(g)}</TableCell>
-								<TableCell align="right">{countResources(g)}</TableCell>
+						processedGroups.map((g) => (
+							<TableRow key={g.name} hover sx={rowCursorSx} onClick={() => handleGroupClick(g)}>
+								<TableCell>{g.displayLabel}</TableCell>
+								<TableCell align="right">{g.resourceCount}</TableCell>
 							</TableRow>
 						))
 					)}
@@ -81,4 +100,4 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 	);
 };
 
-export default ResourceGroupsData;
+export default React.memo(ResourceGroupsData);

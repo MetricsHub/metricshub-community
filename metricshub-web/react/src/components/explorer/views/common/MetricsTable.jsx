@@ -79,22 +79,33 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 		return [];
 	}, [metrics]);
 
+	const shouldFold = React.useMemo(() => rows.length > 6, [rows.length]);
+
+	const titleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
+
+	const valueAlign = React.useMemo(
+		() => (showUnit || showLastUpdate ? "left" : "right"),
+		[showUnit, showLastUpdate],
+	);
+
+	const handleToggleExpanded = React.useCallback(() => {
+		setExpanded((prev) => !prev);
+	}, []);
+
 	if (rows.length === 0) {
 		return null;
 	}
 
-	const shouldFold = rows.length > 6;
-
 	return (
 		<Box>
 			<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-				<Typography variant="h6" sx={{ ...sectionTitleSx, mb: 0 }}>
+				<Typography variant="h6" sx={titleSx}>
 					Metrics
 				</Typography>
 				{shouldFold && (
 					<Button
 						size="small"
-						onClick={() => setExpanded(!expanded)}
+						onClick={handleToggleExpanded}
 						endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
 					>
 						{expanded ? "Hide" : `Show (${rows.length})`}
@@ -106,7 +117,7 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 					<TableHead>
 						<TableRow>
 							<TableCell>Name</TableCell>
-							<TableCell align={showUnit || showLastUpdate ? "left" : "right"}>Value</TableCell>
+							<TableCell align={valueAlign}>Value</TableCell>
 							{showUnit && <TableCell>Unit</TableCell>}
 							{showLastUpdate && <TableCell align="right">Last Update</TableCell>}
 						</TableRow>
@@ -118,4 +129,4 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 	);
 };
 
-export default MetricsTable;
+export default React.memo(MetricsTable);

@@ -22,10 +22,12 @@ import {
 	getMetricMetadata,
 	getMetricValue,
 	compareMetricNames,
+	getBaseMetricKey,
 } from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
 import PivotGroupSection from "./components/PivotGroupSection";
 import InstanceMetricsTable from "./components/InstanceMetricsTable";
+import HoverInfo from "./components/HoverInfo";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
@@ -56,7 +58,7 @@ const MonitorsView = ({
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
-	const expandedMonitors = uiState?.monitors || {};
+	const expandedMonitors = React.useMemo(() => uiState?.monitors || {}, [uiState?.monitors]);
 	// Force re-render every 5 seconds to update "last updated" relative time
 	const [_now, setNow] = React.useState(Date.now());
 
@@ -77,55 +79,89 @@ const MonitorsView = ({
 	 * "instances as rows, metrics as columns" tables, grouped by
 	 * a common base metric name (e.g. system.cpu.time.*, system.cpu.utilization.*).
 	 */
-	const buildPivotGroups = React.useCallback(
-		(instances) => {
-			if (!Array.isArray(instances) || instances.length <= 1) return [];
+	const buildPivotGroups = React.useCallback((instances) => {
+		if (!Array.isArray(instances) || instances.length <= 1) return [];
 
-			const perInstanceEntries = instances.map((inst) => {
-				const metrics = inst?.metrics ?? {};
-				return Object.entries(metrics)
-					.filter(([name]) => !name.startsWith("__"))
-					.sort(naturalMetricCompare);
-			});
+		const perInstanceEntries = instances.map((inst) => {
+			const metrics = inst?.metrics ?? {};
+			return Object.entries(metrics).filter(([name]) => !name.startsWith("__"));
+		});
 
-			const metricKeySets = perInstanceEntries.map((entries) => entries.map(([name]) => name));
-			const [firstKeys = []] = metricKeySets;
-			if (!firstKeys.length) return [];
+		// Collect all unique metric keys from all instances
+		const allKeys = new Set();
+		perInstanceEntries.forEach((entries) => {
+			entries.forEach(([name]) => allKeys.add(name));
+		});
 
-			const allSameKeys = metricKeySets.every(
-				(keys) => keys.length === firstKeys.length && keys.every((k, i) => k === firstKeys[i]),
-			);
-			if (!allSameKeys) return [];
+		const sortedKeys = Array.from(allKeys);
+		if (sortedKeys.length === 0) return [];
 
-			// Derive groups by base name before the last dot, if any.
-			const groupsMap = new Map();
-			for (const key of firstKeys) {
-				const lastDot = key.lastIndexOf(".");
-				const base = lastDot > 0 ? key.slice(0, lastDot) : key;
-				if (!groupsMap.has(base)) {
-					groupsMap.set(base, []);
-				}
-				groupsMap.get(base).push(key);
+		// Derive groups by base name.
+		const groupsMap = new Map();
+		for (const key of sortedKeys) {
+			const base = getBaseMetricKey(key);
+
+			if (!groupsMap.has(base)) {
+				groupsMap.set(base, []);
 			}
+			groupsMap.get(base).push(key);
+		}
 
-			return Array.from(groupsMap.entries()).map(([baseName, metricKeys]) => ({
-				baseName,
-				metricKeys,
-			}));
-		},
-		[naturalMetricCompare],
-	);
+		return Array.from(groupsMap.entries()).map(([baseName, metricKeys]) => ({
+			baseName,
+			metricKeys,
+		}));
+	}, []);
 
 	const safeConnectors = React.useMemo(
 		() => (Array.isArray(connectors) ? connectors : []),
 		[connectors],
 	);
 
-	const lastUpdatedLabel = !lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt);
+	const lastUpdatedLabel = React.useMemo(
+		() => (!lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt)),
+		[lastUpdatedAt],
+	);
 
 	// Check if there are any monitors across all connectors
-	const hasAnyMonitors = safeConnectors.some(
-		(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
+	const hasAnyMonitors = React.useMemo(
+		() =>
+			safeConnectors.some(
+				(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
+			),
+		[safeConnectors],
+	);
+
+	// Handler factory for connector accordion toggles
+	const handleConnectorToggle = React.useCallback(
+		(connectorKey) => (e, isExpanded) => {
+			if (resourceId) {
+				dispatch(
+					setMonitorExpanded({
+						resourceId,
+						monitorName: connectorKey,
+						expanded: isExpanded,
+					}),
+				);
+			}
+		},
+		[dispatch, resourceId],
+	);
+
+	// Handler factory for monitor accordion toggles
+	const handleMonitorToggle = React.useCallback(
+		(uniqueMonitorKey) => (e, isExpanded) => {
+			if (resourceId) {
+				dispatch(
+					setMonitorExpanded({
+						resourceId,
+						monitorName: uniqueMonitorKey,
+						expanded: isExpanded,
+					}),
+				);
+			}
+		},
+		[dispatch, resourceId],
 	);
 
 	if (!hasAnyMonitors) {
@@ -159,17 +195,7 @@ const MonitorsView = ({
 					<Accordion
 						key={connectorKey}
 						expanded={isConnectorExpanded}
-						onChange={(e, isExpanded) => {
-							if (resourceId) {
-								dispatch(
-									setMonitorExpanded({
-										resourceId,
-										monitorName: connectorKey,
-										expanded: isExpanded,
-									}),
-								);
-							}
-						}}
+						onChange={handleConnectorToggle(connectorKey)}
 						disableGutters
 						elevation={0}
 						square
@@ -204,23 +230,10 @@ const MonitorsView = ({
 								}}
 							>
 								{prettifyKey(connector.name)}
-								<Box
-									component="span"
-									sx={{
-										ml: 1,
-										px: 1,
-										minWidth: 24,
-										textAlign: "center",
-										borderRadius: 999,
-										fontSize: 12,
-										fontWeight: 500,
-										bgcolor: "primary.main",
-										color: "primary.contrastText",
-									}}
+								<HoverInfo
+									title="Number of monitor types"
+									sx={{ display: "flex", alignItems: "center" }}
 								>
-									{monitors.length}
-								</Box>
-								{statusValue && (
 									<Box
 										component="span"
 										sx={{
@@ -231,13 +244,36 @@ const MonitorsView = ({
 											borderRadius: 999,
 											fontSize: 12,
 											fontWeight: 500,
-											bgcolor: statusValue === "ok" ? "success.main" : "error.main",
-											color: "white",
-											textTransform: "uppercase",
+											bgcolor: "primary.main",
+											color: "primary.contrastText",
 										}}
 									>
-										{statusValue}
+										{monitors.length}
 									</Box>
+								</HoverInfo>
+								{statusValue && (
+									<HoverInfo
+										title={`Status of ${prettifyKey(connector.name)}`}
+										sx={{ display: "flex", alignItems: "center" }}
+									>
+										<Box
+											component="span"
+											sx={{
+												ml: 1,
+												px: 1,
+												minWidth: 24,
+												textAlign: "center",
+												borderRadius: 999,
+												fontSize: 12,
+												fontWeight: 500,
+												bgcolor: statusValue === "ok" ? "success.main" : "error.main",
+												color: "white",
+												textTransform: "uppercase",
+											}}
+										>
+											{statusValue}
+										</Box>
+									</HoverInfo>
 								)}
 							</Typography>
 						</AccordionSummary>
@@ -245,68 +281,68 @@ const MonitorsView = ({
 							{/* Connector Attributes & Metrics Container */}
 							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 								showMetricsTable) && (
-								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-									{/* Connector Attributes Table */}
-									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Attributes
-											</Typography>
-											<DashboardTable>
-												<TableHead>
-													<TableRow>
-														<TableCell>Key</TableCell>
-														<TableCell>Value</TableCell>
-													</TableRow>
-												</TableHead>
-												<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-											</DashboardTable>
-										</Box>
-									)}
+									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+										{/* Connector Attributes Table */}
+										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+											<Box>
+												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+													Attributes
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell>Key</TableCell>
+															<TableCell>Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
 
-									{/* Connector Metrics Table */}
-									{showMetricsTable && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Metrics
-											</Typography>
-											<DashboardTable>
-												<TableHead>
-													<TableRow>
-														<TableCell sx={{ width: "25%" }}>Name</TableCell>
-														<TableCell align="left">Value</TableCell>
-													</TableRow>
-												</TableHead>
-												<TableBody>
-													{Object.entries(connector.metrics).map(([name, metric]) => {
-														let value = metric;
-														let unit = undefined;
+										{/* Connector Metrics Table */}
+										{showMetricsTable && (
+											<Box>
+												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+													Metrics
+												</Typography>
+												<DashboardTable>
+													<TableHead>
+														<TableRow>
+															<TableCell sx={{ width: "25%" }}>Name</TableCell>
+															<TableCell align="left">Value</TableCell>
+														</TableRow>
+													</TableHead>
+													<TableBody>
+														{Object.entries(connector.metrics).map(([name, metric]) => {
+															let value = metric;
+															let unit = undefined;
 
-														if (metric && typeof metric === "object" && "value" in metric) {
-															value = metric.value;
-															unit = metric.unit;
-														}
+															if (metric && typeof metric === "object" && "value" in metric) {
+																value = metric.value;
+																unit = metric.unit;
+															}
 
-														if (!unit) {
-															const meta = getMetricMetadata(name, connector.metaMetrics);
-															if (meta?.unit) unit = meta.unit;
-														}
+															if (!unit) {
+																const meta = getMetricMetadata(name, connector.metaMetrics);
+																if (meta?.unit) unit = meta.unit;
+															}
 
-														const formattedValue = formatMetricValue(value, unit);
+															const formattedValue = formatMetricValue(value, unit);
 
-														return (
-															<TableRow key={name}>
-																<TableCell>{name}</TableCell>
-																<TableCell align="left">{formattedValue}</TableCell>
-															</TableRow>
-														);
-													})}
-												</TableBody>
-											</DashboardTable>
-										</Box>
-									)}
-								</Box>
-							)}
+															return (
+																<TableRow key={name}>
+																	<TableCell>{name}</TableCell>
+																	<TableCell align="left">{formattedValue}</TableCell>
+																</TableRow>
+															);
+														})}
+													</TableBody>
+												</DashboardTable>
+											</Box>
+										)}
+									</Box>
+								)}
 
 							{/* Monitors Section */}
 							<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -323,17 +359,7 @@ const MonitorsView = ({
 										<Accordion
 											key={uniqueMonitorKey}
 											expanded={isMonitorExpanded}
-											onChange={(e, isExpanded) => {
-												if (resourceId) {
-													dispatch(
-														setMonitorExpanded({
-															resourceId,
-															monitorName: uniqueMonitorKey,
-															expanded: isExpanded,
-														}),
-													);
-												}
-											}}
+											onChange={handleMonitorToggle(uniqueMonitorKey)}
 											disableGutters
 											elevation={0}
 											square
@@ -405,27 +431,27 @@ const MonitorsView = ({
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
 													? pivotGroups.map((group) => (
-															<PivotGroupSection
-																key={group.baseName}
-																group={group}
-																sortedInstances={sortedInstances}
-																resourceId={resourceId}
+														<PivotGroupSection
+															key={group.baseName}
+															group={group}
+															sortedInstances={sortedInstances}
+															resourceId={resourceId}
+															metaMetrics={connector.metaMetrics}
+														/>
+													))
+													: sortedInstances.map((inst) => {
+														const metrics = inst?.metrics ?? {};
+														const metricEntries = Object.entries(metrics);
+														return (
+															<InstanceMetricsTable
+																key={inst?.attributes?.id || inst.name}
+																instance={inst}
+																metricEntries={metricEntries}
+																naturalMetricCompare={naturalMetricCompare}
 																metaMetrics={connector.metaMetrics}
 															/>
-														))
-													: sortedInstances.map((inst) => {
-															const metrics = inst?.metrics ?? {};
-															const metricEntries = Object.entries(metrics);
-															return (
-																<InstanceMetricsTable
-																	key={inst?.attributes?.id || inst.name}
-																	instance={inst}
-																	metricEntries={metricEntries}
-																	naturalMetricCompare={naturalMetricCompare}
-																	metaMetrics={connector.metaMetrics}
-																/>
-															);
-														})}
+														);
+													})}
 											</AccordionDetails>
 										</Accordion>
 									);
@@ -439,4 +465,4 @@ const MonitorsView = ({
 	);
 };
 
-export default MonitorsView;
+export default React.memo(MonitorsView);

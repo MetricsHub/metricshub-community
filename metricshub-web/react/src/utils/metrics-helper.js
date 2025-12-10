@@ -35,10 +35,9 @@ export const getMetricLabel = (key) => {
 
 	if (braceStart !== -1 && braceEnd > braceStart) {
 		const insideBraces = key.slice(braceStart + 1, braceEnd);
-		const quoteStart = insideBraces.indexOf('"');
-		const quoteEnd = insideBraces.lastIndexOf('"');
-		if (quoteStart !== -1 && quoteEnd > quoteStart) {
-			return insideBraces.slice(quoteStart + 1, quoteEnd);
+		const matches = insideBraces.match(/"([^"]+)"/g);
+		if (matches && matches.length > 0) {
+			return matches.map((m) => m.slice(1, -1)).join(", ");
 		}
 		return insideBraces;
 	}
@@ -93,4 +92,40 @@ export const compareMetricNames = (nameA, nameB) => {
 
 	if (idxA === idxB) return 0;
 	return idxA < idxB ? -1 : 1;
+};
+
+/**
+ * Priority-ordered list of attribute keys to use for instance display names.
+ * The first available attribute value will be used as the display name.
+ */
+export const INSTANCE_DISPLAY_NAME_KEYS = [
+	"system.device",
+	"name",
+	"network.interface.name",
+	"process.name",
+	"system.service.name",
+];
+
+/**
+ * Gets the display name for an instance based on its attributes.
+ * Searches through INSTANCE_DISPLAY_NAME_KEYS in priority order.
+ * Falls back to id attribute or instance name if no matching attribute is found.
+ *
+ * @param {any} instance - The instance object with attributes
+ * @param {string} [fallbackId] - Optional fallback ID if instance.id or instance.name is not available
+ * @returns {string} The display name for the instance
+ */
+export const getInstanceDisplayName = (instance, fallbackId) => {
+	const attrs = instance?.attributes ?? {};
+
+	// Search through priority keys
+	for (const key of INSTANCE_DISPLAY_NAME_KEYS) {
+		if (attrs[key]) {
+			return attrs[key];
+		}
+	}
+
+	// Fallback to id or instance name
+	const id = attrs.id || instance?.name || fallbackId;
+	return id || "Unknown";
 };

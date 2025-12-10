@@ -6,7 +6,7 @@ import { Box, Typography } from "@mui/material";
  *
  * @param {{ lastUpdatedLabel: string }} props
  */
-const MonitorsHeader = ({ lastUpdatedLabel }) => (
+const MonitorsHeader = React.memo(({ lastUpdatedLabel }) => (
 	<Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
 		<Typography variant="h5" gutterBottom sx={{ mb: 0 }}>
 			Connectors
@@ -15,6 +15,8 @@ const MonitorsHeader = ({ lastUpdatedLabel }) => (
 			Last updated: {lastUpdatedLabel}
 		</Typography>
 	</Box>
-);
+));
+
+MonitorsHeader.displayName = "MonitorsHeader";
 
 export default MonitorsHeader;

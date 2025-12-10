@@ -16,50 +16,64 @@ import { Tooltip, Box, Typography } from "@mui/material";
  *   [key: string]: any
  * }} props
  */
-const HoverInfo = ({ label, value, title, description, unit, children, ...props }) => {
-	let displayUnit = unit;
-	if (unit === "1") displayUnit = "%";
+const HoverInfo = ({ label, value, title, description, unit, children, sx, ...props }) => {
+	const displayUnit = React.useMemo(() => (unit === "1" ? "%" : unit), [unit]);
 
-	let tooltipContent = null;
-
-	if (description) {
-		tooltipContent = (
-			<Box sx={{ textAlign: "center", maxWidth: 300 }}>
-				{title && (
-					<Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-						{title}
+	const tooltipContent = React.useMemo(() => {
+		if (description) {
+			return (
+				<Box sx={{ textAlign: "center", maxWidth: 400, px: 1 }}>
+					{title && (
+						<Typography
+							variant="subtitle2"
+							sx={{
+								fontWeight: 600,
+								mb: 0.5,
+								wordBreak: "break-word",
+								overflowWrap: "break-word",
+								whiteSpace: "normal",
+							}}
+						>
+							{title}
+						</Typography>
+					)}
+					<Typography variant="body2" sx={{ mb: displayUnit ? 0.5 : 0 }}>
+						{description}
 					</Typography>
-				)}
-				<Typography variant="body2" sx={{ mb: displayUnit ? 0.5 : 0 }}>
-					{description}
-				</Typography>
-				{displayUnit && (
-					<Typography variant="caption" color="text.secondary">
-						Unit: {displayUnit}
+					{displayUnit && (
+						<Typography variant="caption" color="text.secondary">
+							Unit: {displayUnit}
+						</Typography>
+					)}
+				</Box>
+			);
+		}
+		if (typeof value === "number") {
+			return (
+				<Box sx={{ textAlign: "center" }}>
+					<Typography variant="body2" sx={{ fontWeight: 600 }}>
+						{label}
 					</Typography>
-				)}
-			</Box>
-		);
-	} else if (typeof value === "number") {
-		tooltipContent = (
-			<Box sx={{ textAlign: "center" }}>
-				<Typography variant="body2" sx={{ fontWeight: 600 }}>
-					{label}
-				</Typography>
-				<Typography variant="caption">{(value * 100).toFixed(1)}%</Typography>
-			</Box>
-		);
-	} else if (title) {
-		// Fallback if only title is provided
-		tooltipContent = title;
-	}
+					<Typography variant="caption">{(value * 100).toFixed(1)}%</Typography>
+				</Box>
+			);
+		}
+		if (title) {
+			// Fallback if only title is provided
+			return title;
+		}
+		return null;
+	}, [description, title, displayUnit, value, label]);
 
-	const containerSx = {
-		display: "block",
-		height: "100%",
-		cursor: description ? "help" : "default",
-		...(props.sx || {}),
-	};
+	const containerSx = React.useMemo(
+		() => ({
+			display: "block",
+			height: "100%",
+			cursor: description ? "help" : "default",
+			...(sx || {}),
+		}),
+		[description, sx],
+	);
 
 	if (!tooltipContent) {
 		return (
@@ -70,7 +84,21 @@ const HoverInfo = ({ label, value, title, description, unit, children, ...props 
 	}
 
 	return (
-		<Tooltip title={tooltipContent} arrow placement="top">
+		<Tooltip
+			title={tooltipContent}
+			arrow
+			placement="top"
+			slotProps={{
+				tooltip: {
+					sx: {
+						maxWidth: "none",
+						"& .MuiTooltip-arrow": {
+							color: "background.paper",
+						},
+					},
+				},
+			}}
+		>
 			<Box component="span" {...props} sx={containerSx}>
 				{children}
 			</Box>
@@ -78,4 +106,4 @@ const HoverInfo = ({ label, value, title, description, unit, children, ...props 
 	);
 };
 
-export default HoverInfo;
+export default React.memo(HoverInfo);

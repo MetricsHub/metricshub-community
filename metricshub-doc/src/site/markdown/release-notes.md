@@ -5,6 +5,68 @@ description: Learn more about the new features, changes and improvements, and bu
 
 <!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
 
+## MetricsHub Enterprise Edition v3.0.03
+
+### MetricsHub Enterprise Edition v3.0.03
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                            |
+|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#147**](https://github.com/MetricsHub/metricshub-enterprise/issues/147) | Upgraded OpenTelemetry Collector Contrib to version [0.140.1](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.140.1) |
+
+### MetricsHub Enterprise Connectors v111
+
+#### What's New
+
+| ID                                                                         | Description                                                                           |
+|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [**#147**](https://github.com/MetricsHub/enterprise-connectors/issues/147) | Added support for **[H3C UniServer Series](./connectors/h3cuniserver.html)** via SNMP |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                                                 |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#134**](https://github.com/MetricsHub/enterprise-connectors/issues/134) | **[Citrix NetScaler (REST)](./connectors/citrixnetscalerrest.html)**: Added new load balancer and service metrics to detect backend failures and performance issues         |
+| [**#143**](https://github.com/MetricsHub/enterprise-connectors/issues/143) | **[SuperMicro (REST)](./connectors/supermicro.html)**: All HTTP requests now include the `Accept: application/json` header for consistent data retrieval                    |
+| [**#157**](https://github.com/MetricsHub/enterprise-connectors/issues/157) | **[Dell iDRAC9 (REST)](./connectors/dellidracrest.html)** now reports remaining SSD lifetime through the `hw.physical_disk.endurance_utilization{state="remaining"}` metric |
+| [**#158**](https://github.com/MetricsHub/enterprise-connectors/issues/158) | **[Dell iDRAC9 (REST)](./connectors/dellidracrest.html)** now reports network errors on HBA and NIC interfaces                                                              |
+
+#### Fixed Issues
+
+| ID                                                                         | Description                                                                                                                                                                                                               |
+|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#139**](https://github.com/MetricsHub/enterprise-connectors/issues/139) | **[HPE OneView (Frames and Blades)](./connectors/hpesynergy.html)**: <ul><li>Incorrect Smart Storage Batteries alerts on Gen11</li><li>Interconnect interfaces are not excluded</li><li>Truncated attribute ids</li></ul> |
+| [**#142**](https://github.com/MetricsHub/enterprise-connectors/issues/142) | **[Cisco MDS9000 Series (SSH)](./connectors/ciscossh.html)**: Incorrect status reported for Power Supplies                                                                                                                |
+| [**#146**](https://github.com/MetricsHub/enterprise-connectors/issues/146) | **[HPE iLO4 (Proliant Gen 8, Gen9)](./connectors/hpegen9ilorest.html)**: Incorrect Temperature alerts generated                                                                                                           |
+| [**#152**](https://github.com/MetricsHub/enterprise-connectors/issues/152) | **[HP-UX (WBEM)](./connectors/hpuxwbem.html)**: CPUs are not discovered                                                                                                                                                   |
+| [**#160**](https://github.com/MetricsHub/enterprise-connectors/issues/160) | **[RedFish (REST)](./connectors/redfish.html)**: The fan name is not meaningful                                                                                                                                           |
+
+### MetricsHub Community Edition v1.0.14
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                         |
+|---------------------------------------------------------------------------|---------------------------------------------------------------------|
+| [**#904**](https://github.com/MetricsHub/metricshub-community/issues/904) | Log files now sanitize sensitive HTTP information                   |
+| [**#934**](https://github.com/MetricsHub/metricshub-community/issues/934) | Updated package names to match RPM, DEB, and MSI naming conventions |
+
+#### Fixed Issues
+
+| ID                                                                        | Description                                                                       |
+|---------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| [**#972**](https://github.com/MetricsHub/metricshub-community/issues/972) | The collect stops when the connector no longer matches the monitored host         |
+| [**#976**](https://github.com/MetricsHub/metricshub-community/issues/976) | Connectors may fail to collect metrics when processing negative or signed values. |
+
+### MetricsHub Community Connectors v1.0.17
+
+#### What's New
+
+| ID                                                                        | Description                                                                |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------|
+| [**#311**](https://github.com/MetricsHub/community-connectors/issues/311) | Added **[Linux file monitoring](./connectors/linuxfile.html)** via SSH     |
+| [**#312**](https://github.com/MetricsHub/community-connectors/issues/312) | Added **[Windows file monitoring](./connectors/windowsfile.html)** via WMI |
+
 ## MetricsHub Enterprise Edition v3.0.02
 
 ### MetricsHub Enterprise Edition v3.0.02

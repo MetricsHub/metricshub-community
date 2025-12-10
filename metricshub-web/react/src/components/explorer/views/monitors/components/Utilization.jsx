@@ -10,31 +10,23 @@ import HoverInfo from "./HoverInfo";
 export const buildUtilizationParts = (entries) => {
 	const parts = entries
 		.map(({ key, value: raw }) => {
-			const value = typeof raw === "number" ? Math.max(0, Math.min(raw, 1)) : 0;
+			// Don't clamp to 1, as some metrics might exceed 100% (e.g. multi-core aggregation issues)
+			// or be non-normalized. We normalize them below relative to the total sum.
+			const value = typeof raw === "number" ? Math.max(0, raw) : 0;
 			return { key, value };
 		})
-		.filter((p) => p.value > 0);
+		.filter((p) => p.value >= 0); // Keep 0 values so we know they exist
 
 	if (parts.length === 0) return [];
 
-	const total = parts.reduce((sum, p) => sum + p.value, 0) || 1;
+	const sum = parts.reduce((acc, p) => acc + p.value, 0);
+	const total = Math.max(sum, 1);
 
 	return parts.map((p) => ({
 		key: p.key,
 		value: p.value,
 		pct: Math.round((p.value / total) * 100),
 	}));
-};
-
-/**
- * Renders a metric value.
- *
- * @param {string} key
- * @param {any} raw
- * @returns {string}
- */
-export const renderMetricValue = (key, raw) => {
-	return raw != null ? String(raw) : "";
 };
 
 /**
@@ -68,10 +60,24 @@ export const colorFor = (name) => {
 	if (n.includes("used")) return (theme) => theme.palette.primary.main;
 	if (n.includes("free")) return (theme) => theme.palette.action.disabled;
 	if (n.includes("cache")) return (theme) => theme.palette.warning.main;
+	if (n.includes("buffer")) return (theme) => theme.palette.warning.light;
 	if (n.includes("idle")) return (theme) => theme.palette.action.disabled;
 	if (n.includes("system")) return (theme) => theme.palette.error.main;
 	if (n.includes("user")) return (theme) => theme.palette.info.main;
-	return (theme) => theme.palette.grey[500];
+	if (n.includes("nice")) return (theme) => theme.palette.success.main;
+	if (n.includes("wait")) return (theme) => theme.palette.warning.dark; // io_wait, iowait
+	if (n.includes("steal")) return (theme) => theme.palette.text.primary;
+	if (n.includes("irq")) return (theme) => theme.palette.secondary.main; // irq, softirq
+	if (n.includes("receive")) return (theme) => theme.palette.success.main;
+	if (n.includes("transmit")) return (theme) => theme.palette.secondary.main;
+
+	// Fallback: generate a consistent color based on the string hash
+	let hash = 0;
+	for (let i = 0; i < n.length; i++) {
+		hash = n.charCodeAt(i) + ((hash << 5) - hash);
+	}
+	const hue = Math.abs(hash) % 360;
+	return () => `hsl(${hue}, 70%, 50%)`;
 };
 
 /**
@@ -81,9 +87,14 @@ export const colorFor = (name) => {
  */
 export const getPriority = (label) => {
 	if (label.includes("user")) return 10;
+	if (label.includes("nice")) return 15;
 	if (label.includes("system")) return 20;
+	if (label.includes("wait")) return 25; // io_wait
+	if (label.includes("irq")) return 28;
+	if (label.includes("steal")) return 29;
 	if (label.includes("used")) return 30;
 	if (label.includes("cache")) return 40;
+	if (label.includes("buffer")) return 45;
 	if (label.includes("free")) return 90;
 	if (label.includes("idle")) return 100;
 	return 50;
@@ -107,14 +118,34 @@ export const compareUtilizationParts = (a, b) => {
 	return a.pct - b.pct;
 };
 
+// Shared empty bar styles - extracted to avoid repetition
+const emptyBarSx = {
+	position: "relative",
+	height: 16,
+	borderRadius: 1,
+	overflow: "hidden",
+	bgcolor: "action.hover",
+	display: "flex",
+};
+
 /**
  * Renders a stacked progress bar for utilization metrics.
  * @param {{parts: Array<{key: string, value: number, pct: number}>}} props
  */
-export const UtilizationStack = ({ parts }) => {
-	if (!Array.isArray(parts) || parts.length === 0) return null;
+const UtilizationStackComponent = ({ parts }) => {
+	const sortedParts = React.useMemo(() => {
+		if (!Array.isArray(parts) || parts.length === 0) return [];
+		return [...parts].sort(compareUtilizationParts);
+	}, [parts]);
 
-	const sortedParts = [...parts].sort(compareUtilizationParts);
+	const hasNonZero = React.useMemo(() => sortedParts.some((p) => p.value > 0), [sortedParts]);
+
+	const filteredParts = React.useMemo(() => sortedParts.filter((p) => p.value > 0), [sortedParts]);
+
+	if (!Array.isArray(parts) || parts.length === 0 || !hasNonZero) {
+		// Render empty bar if no parts or all values are zero
+		return <Box sx={emptyBarSx} />;
+	}
 
 	return (
 		<Box
@@ -127,17 +158,15 @@ export const UtilizationStack = ({ parts }) => {
 				display: "flex",
 			}}
 		>
-			{sortedParts.map((p, index) => {
+			{filteredParts.map((p) => {
 				const label = colorLabelFromKey(p.key);
-				const isLast = index === sortedParts.length - 1;
 				return (
 					<HoverInfo
 						key={p.key}
 						label={label}
-						value={p.value}
+						value={p.pct / 100}
 						sx={{
-							width: isLast ? "auto" : `${p.pct}%`,
-							flexGrow: isLast ? 1 : 0,
+							width: `${p.pct}%`,
 						}}
 					>
 						<Box
@@ -172,3 +201,5 @@ export const UtilizationStack = ({ parts }) => {
 		</Box>
 	);
 };
+
+export const UtilizationStack = React.memo(UtilizationStackComponent);

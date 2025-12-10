@@ -10,6 +10,7 @@ import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGro
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
 import ResourceView from "../components/explorer/views/resources/ResourceView";
 import MonitorTypeView from "../components/explorer/views/monitor-type/MonitorTypeView";
+import AppBreadcrumbs from "../components/common/AppBreadcrumbs";
 import { paths } from "../paths";
 
 /**
@@ -82,6 +83,7 @@ const ExplorerPage = () => {
 				</Box>
 			</Left>
 			<Right>
+				<AppBreadcrumbs />
 				{isWelcome && (
 					<WelcomeView
 						renderResourceGroups={(props) => (

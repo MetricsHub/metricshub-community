@@ -21,24 +21,32 @@ import { sectionTitleSx } from "./table-styles";
  * @returns {JSX.Element | null}
  */
 const EntityHeader = ({ title, iconType, attributes, children, action }) => {
-	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 	const [expanded, setExpanded] = React.useState(false);
 
 	const attributeEntries = React.useMemo(() => {
 		return attributes ? Object.entries(attributes) : [];
 	}, [attributes]);
 
-	const shouldFold = attributeEntries.length > 6;
+	const hasAttributes = React.useMemo(
+		() => attributes && Object.keys(attributes).length > 0,
+		[attributes],
+	);
+
+	const shouldFold = React.useMemo(() => attributeEntries.length > 6, [attributeEntries.length]);
+
+	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
+
+	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
+
+	const handleToggleExpanded = React.useCallback(() => {
+		setExpanded((prev) => !prev);
+	}, []);
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
 			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-					<Typography
-						variant="h4"
-						gutterBottom
-						sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-					>
+					<Typography variant="h4" gutterBottom sx={titleSx}>
 						{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
 						{title}
 					</Typography>
@@ -50,13 +58,13 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 			{hasAttributes && (
 				<Box>
 					<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-						<Typography variant="h6" sx={{ ...sectionTitleSx, mb: 0 }}>
+						<Typography variant="h6" sx={attributesTitleSx}>
 							Attributes
 						</Typography>
 						{shouldFold && (
 							<Button
 								size="small"
-								onClick={() => setExpanded(!expanded)}
+								onClick={handleToggleExpanded}
 								endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
 							>
 								{expanded ? "Hide" : `Show (${attributeEntries.length})`}
@@ -80,4 +88,4 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 	);
 };
 
-export default EntityHeader;
+export default React.memo(EntityHeader);

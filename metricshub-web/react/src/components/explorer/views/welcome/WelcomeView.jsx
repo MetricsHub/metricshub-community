@@ -23,14 +23,22 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
 	const error = useSelector(selectExplorerError);
-	const resourceGroups = hierarchy?.resourceGroups ?? [];
-	// "Rogue" resources are those not attached to any resource group.
-	const rogueResources = hierarchy?.resources ?? [];
-	const totalResourcesInGroups = resourceGroups.reduce(
-		(acc, g) => acc + (g.resources?.length || 0),
-		0,
+
+	// Memoize derived data to avoid recalculating on every render
+	const resourceGroups = React.useMemo(
+		() => hierarchy?.resourceGroups ?? [],
+		[hierarchy?.resourceGroups],
 	);
-	const totalResources = totalResourcesInGroups + rogueResources.length;
+	// "Rogue" resources are those not attached to any resource group.
+	const rogueResources = React.useMemo(() => hierarchy?.resources ?? [], [hierarchy?.resources]);
+	const totalResourcesInGroups = React.useMemo(
+		() => resourceGroups.reduce((acc, g) => acc + (g.resources?.length || 0), 0),
+		[resourceGroups],
+	);
+	const totalResources = React.useMemo(
+		() => totalResourcesInGroups + rogueResources.length,
+		[totalResourcesInGroups, rogueResources.length],
+	);
 
 	if (loading && !hierarchy) {
 		return (
@@ -75,4 +83,4 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	);
 };
 
-export default WelcomeView;
+export default React.memo(WelcomeView);
