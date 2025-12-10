@@ -40,7 +40,8 @@ const EXPLORER_ROUTES = [
  * Component to render breadcrumbs based on the current location.
  * Currently supports Explorer routes.
  *
- * @param {{ sx?: import("@mui/material").SxProps }} props
+ * @param {Object} props
+ * @param {import("@mui/material").SxProps} [props.sx] - Additional styles
  * @returns {React.ReactElement|null}
  */
 const AppBreadcrumbs = ({ sx }) => {
@@ -55,7 +56,7 @@ const AppBreadcrumbs = ({ sx }) => {
 
 			for (const route of EXPLORER_ROUTES) {
 				const match = matchPath({ path: route.pattern, end: true }, currentPath);
-				if (match) {
+				if (match && match.params) {
 					items.push(...route.getBreadcrumbs(match.params));
 					break; // Stop after first match
 				}
@@ -78,7 +79,7 @@ const AppBreadcrumbs = ({ sx }) => {
 						</Typography>
 					) : (
 						<Link
-							key={crumb.label}
+							key={`${crumb.label}-${index}`}
 							underline="hover"
 							color="inherit"
 							component={RouterLink}
