@@ -64,7 +64,7 @@ public class VersionService implements IVersionProvider {
 		final Path logsDir = ConfigHelper.getDefaultOutputDirectory().toAbsolutePath();
 
 		return new String[] {
-			" __  __          _            _                _    _           _      ®  ",
+			" __  __          _            _                _    _           _         ",
 			"|  \\/  |        | |          (_)              | |  | |         | |       ",
 			"| \\  / |   ___  | |_   _ __   _    ___   ___  | |__| |  _   _  | |__     ",
 			"| |\\/| |  / _ \\ | __| | '__| | |  / __| / __| |  __  | | | | | | '_ \\  ",
