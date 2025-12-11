@@ -409,7 +409,7 @@ jobs:
       uses: actions/upload-artifact@v5
       with:
         name: windows-packages
-        path: packages/*
+        path: packages/metricshub-community-*
 
     outputs:
       windowsPackage: windows-packages
