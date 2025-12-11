@@ -396,7 +396,9 @@ jobs:
       run: |
         $zipPath = Join-Path -Path "packages" -ChildPath "metricshub-community-windows-${{ inputs.version }}.zip"
         if (Test-Path "packages\MetricsHub") {
-          Compress-Archive -Path "packages\MetricsHub" -DestinationPath $zipPath -Force
+          Push-Location "packages"
+          Compress-Archive -Path "MetricsHub" -DestinationPath "metricshub-community-windows-${{ inputs.version }}.zip" -Force
+          Pop-Location
           Write-Host "Created ZIP archive: $zipPath"
           Get-Item $zipPath
         } else {
