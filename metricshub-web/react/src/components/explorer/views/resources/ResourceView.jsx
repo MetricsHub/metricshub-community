@@ -11,10 +11,6 @@ import {
 	selectResourceUiState,
 	setResourceScrollTop,
 } from "../../../../store/slices/explorer-slice";
-import {
-	fetchTopLevelResource,
-	fetchGroupedResource,
-} from "../../../../store/thunks/explorer-thunks";
 import EntityHeader from "../common/EntityHeader";
 import MetricsTable from "../common/MetricsTable";
 import MonitorsView from "../monitors/MonitorsView";
@@ -24,6 +20,7 @@ import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import { debounce } from "@mui/material";
 import { getMetricValue } from "../../../../utils/metrics-helper";
+import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
 /**
  * Single resource focused page.
@@ -60,26 +57,16 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		setIsPaused(false);
 	}, [decodedName, decodedGroup]);
 
-	const fetchData = React.useCallback(() => {
-		if (!decodedName) return;
-		if (decodedGroup) {
-			dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
-		} else {
-			dispatch(fetchTopLevelResource({ resourceName: decodedName }));
-		}
-		// Update "last updated" every time we trigger a resource fetch
+	const handleFetch = React.useCallback(() => {
 		setLastUpdatedAt(Date.now());
-	}, [dispatch, decodedName, decodedGroup]);
+	}, []);
 
-	React.useEffect(() => {
-		if (!decodedName || isPaused) return;
-
-		fetchData();
-
-		const interval = setInterval(fetchData, 10000);
-
-		return () => clearInterval(interval);
-	}, [decodedName, isPaused, fetchData]);
+	useResourceFetcher({
+		resourceName,
+		resourceGroupName,
+		isPaused,
+		onFetch: handleFetch,
+	});
 
 	// Scroll restoration logic
 	const resourceId = React.useMemo(

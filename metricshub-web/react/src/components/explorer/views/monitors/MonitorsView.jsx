@@ -22,6 +22,7 @@ import {
 	getMetricMetadata,
 	getMetricValue,
 	compareMetricNames,
+	compareMetricEntries,
 	getBaseMetricKey,
 } from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
@@ -70,9 +71,7 @@ const MonitorsView = ({
 	/**
 	 * Natural sort for metric names like cpu0, cpu1, cpu10, ...
 	 */
-	const naturalMetricCompare = React.useCallback((a, b) => {
-		return compareMetricNames(a[0], b[0]);
-	}, []);
+	const naturalMetricCompare = React.useCallback(compareMetricEntries, []);
 
 	/**
 	 * Decide whether we can pivot a monitor into one or more
@@ -281,68 +280,68 @@ const MonitorsView = ({
 							{/* Connector Attributes & Metrics Container */}
 							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 								showMetricsTable) && (
-									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-										{/* Connector Attributes Table */}
-										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Attributes
-												</Typography>
-												<DashboardTable>
-													<TableHead>
-														<TableRow>
-															<TableCell>Key</TableCell>
-															<TableCell>Value</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
+								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+									{/* Connector Attributes Table */}
+									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Attributes
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell>Key</TableCell>
+														<TableCell>Value</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
 
-										{/* Connector Metrics Table */}
-										{showMetricsTable && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Metrics
-												</Typography>
-												<DashboardTable>
-													<TableHead>
-														<TableRow>
-															<TableCell sx={{ width: "25%" }}>Name</TableCell>
-															<TableCell align="left">Value</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>
-														{Object.entries(connector.metrics).map(([name, metric]) => {
-															let value = metric;
-															let unit = undefined;
+									{/* Connector Metrics Table */}
+									{showMetricsTable && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Metrics
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell sx={{ width: "25%" }}>Name</TableCell>
+														<TableCell align="left">Value</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>
+													{Object.entries(connector.metrics).map(([name, metric]) => {
+														let value = metric;
+														let unit = undefined;
 
-															if (metric && typeof metric === "object" && "value" in metric) {
-																value = metric.value;
-																unit = metric.unit;
-															}
+														if (metric && typeof metric === "object" && "value" in metric) {
+															value = metric.value;
+															unit = metric.unit;
+														}
 
-															if (!unit) {
-																const meta = getMetricMetadata(name, connector.metaMetrics);
-																if (meta?.unit) unit = meta.unit;
-															}
+														if (!unit) {
+															const meta = getMetricMetadata(name, connector.metaMetrics);
+															if (meta?.unit) unit = meta.unit;
+														}
 
-															const formattedValue = formatMetricValue(value, unit);
+														const formattedValue = formatMetricValue(value, unit);
 
-															return (
-																<TableRow key={name}>
-																	<TableCell>{name}</TableCell>
-																	<TableCell align="left">{formattedValue}</TableCell>
-																</TableRow>
-															);
-														})}
-													</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
-									</Box>
-								)}
+														return (
+															<TableRow key={name}>
+																<TableCell>{name}</TableCell>
+																<TableCell align="left">{formattedValue}</TableCell>
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
+								</Box>
+							)}
 
 							{/* Monitors Section */}
 							<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -409,8 +408,8 @@ const MonitorsView = ({
 														{instances.length}
 													</Box>
 													<Tooltip title="Open Monitor Type Page">
-														<IconButton
-															size="small"
+														<Box
+															component="span"
 															onClick={(e) => {
 																e.stopPropagation();
 																navigate(
@@ -421,37 +420,51 @@ const MonitorsView = ({
 																	),
 																);
 															}}
-															sx={{ ml: 1, p: 0.5 }}
+															sx={{
+																ml: 1,
+																p: 0.5,
+																display: "inline-flex",
+																borderRadius: "50%",
+																cursor: "pointer",
+																"&:hover": {
+																	bgcolor: "action.hover",
+																},
+															}}
+															role="button"
+															tabIndex={0}
 														>
-															<OpenInNewIcon fontSize="small" />
-														</IconButton>
+															<OpenInNewIcon fontSize="small" color="action" />
+														</Box>
 													</Tooltip>
 												</Typography>
 											</AccordionSummary>
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
 													? pivotGroups.map((group) => (
-														<PivotGroupSection
-															key={group.baseName}
-															group={group}
-															sortedInstances={sortedInstances}
-															resourceId={resourceId}
-															metaMetrics={connector.metaMetrics}
-														/>
-													))
-													: sortedInstances.map((inst) => {
-														const metrics = inst?.metrics ?? {};
-														const metricEntries = Object.entries(metrics);
-														return (
-															<InstanceMetricsTable
-																key={inst?.attributes?.id || inst.name}
-																instance={inst}
-																metricEntries={metricEntries}
-																naturalMetricCompare={naturalMetricCompare}
+															<PivotGroupSection
+																key={group.baseName}
+																group={group}
+																sortedInstances={sortedInstances}
+																resourceId={resourceId}
 																metaMetrics={connector.metaMetrics}
 															/>
-														);
-													})}
+														))
+													: sortedInstances.map((inst) => {
+															const metrics = inst?.metrics ?? {};
+															const metricEntries = Object.entries(metrics).map(([k, v]) => [
+																k,
+																getMetricValue(v),
+															]);
+															return (
+																<InstanceMetricsTable
+																	key={inst?.attributes?.id || inst.name}
+																	instance={inst}
+																	metricEntries={metricEntries}
+																	naturalMetricCompare={naturalMetricCompare}
+																	metaMetrics={connector.metaMetrics}
+																/>
+															);
+														})}
 											</AccordionDetails>
 										</Accordion>
 									);

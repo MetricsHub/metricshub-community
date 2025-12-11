@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import {
 	Box,
 	Typography,
@@ -8,13 +8,10 @@ import {
 	TextField,
 	CircularProgress,
 	IconButton,
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
 	TableRow,
-	Paper,
-	TableContainer,
 	Dialog,
 	DialogTitle,
 	DialogContent,
@@ -30,19 +27,20 @@ import {
 	selectResourceLoading,
 	selectResourceError,
 } from "../../../../store/slices/explorer-slice";
-import {
-	fetchTopLevelResource,
-	fetchGroupedResource,
-} from "../../../../store/thunks/explorer-thunks";
 import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
+import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
 import DashboardTable from "../common/DashboardTable";
 import HoverInfo from "../monitors/components/HoverInfo";
+import MetricValueCell from "../common/MetricValueCell";
 import {
 	getMetricValue,
 	getMetricMetadata,
 	compareMetricNames,
+	compareMetricEntries,
+	getInstanceDisplayName,
 } from "../../../../utils/metrics-helper";
+import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
 /**
  * Monitor Type View component.
@@ -55,7 +53,6 @@ import {
  * @returns {JSX.Element} The rendered component.
  */
 const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
-	const dispatch = useDispatch();
 	const [tabValue, setTabValue] = React.useState(0);
 	const [searchTerm, setSearchTerm] = React.useState("");
 	const [selectedMetrics, setSelectedMetrics] = React.useState([]);
@@ -65,24 +62,9 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 	const error = useSelector(selectResourceError);
 
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
-	const decodedGroup = resourceGroupName ? decodeURIComponent(resourceGroupName) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
 
-	React.useEffect(() => {
-		if (!decodedName) return;
-
-		const fetchData = () => {
-			if (decodedGroup) {
-				dispatch(fetchGroupedResource({ groupName: decodedGroup, resourceName: decodedName }));
-			} else {
-				dispatch(fetchTopLevelResource({ resourceName: decodedName }));
-			}
-		};
-
-		fetchData();
-		const interval = setInterval(fetchData, 10000);
-		return () => clearInterval(interval);
-	}, [dispatch, decodedName, decodedGroup]);
+	useResourceFetcher({ resourceName, resourceGroupName });
 
 	const handleTabChange = React.useCallback((event, newValue) => {
 		setTabValue(newValue);
@@ -150,7 +132,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 		]);
 	}, []);
 
-	const naturalMetricCompare = React.useCallback((a, b) => compareMetricNames(a[0], b[0]), []);
+	const naturalMetricCompare = React.useCallback(compareMetricEntries, []);
 
 	if (loading && !currentResource) {
 		return (
@@ -178,7 +160,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	return (
 		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-			<EntityHeader title={decodedMonitorType} subtitle={`Resource: ${decodedName}`} />
+			<EntityHeader title={`${decodedName} : ${decodedMonitorType}`} />
 
 			<Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
 				<Tabs value={tabValue} onChange={handleTabChange}>
@@ -202,20 +184,11 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 						{filteredInstances.map((instance, index) => (
 							<Box key={index}>
-								<Typography variant="h6" gutterBottom>
-									{instance.attributes?.id || instance.name}
-								</Typography>
-								<Box sx={{ mb: 2 }}>
-									{Object.entries(instance.attributes || {}).map(([k, v]) => (
-										<Typography key={k} variant="body2" color="text.secondary">
-											{k}: {v}
-										</Typography>
-									))}
-								</Box>
 								<InstanceMetricsTable
 									instance={instance}
 									metricEntries={getMetricsForInstance(instance)}
 									naturalMetricCompare={naturalMetricCompare}
+									metaMetrics={monitorData?.metaMetrics}
 								/>
 							</Box>
 						))}
@@ -281,10 +254,17 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 						<TableBody>
 							{sortedInstances.slice(0, 10).map((instance, index) => (
 								<TableRow key={index}>
-									<TableCell>{instance.attributes?.id || instance.name}</TableCell>
+									<TableCell>
+										<InstanceNameWithAttributes
+											displayName={getInstanceDisplayName(instance)}
+											attributes={instance.attributes}
+										/>
+									</TableCell>
 									{selectedMetrics.map((metric) => {
 										const val = instance.metrics?.[metric];
-										return <TableCell key={metric}>{val ? getMetricValue(val) : "-"}</TableCell>;
+										const value = getMetricValue(val);
+										const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+										return <MetricValueCell key={metric} value={value} unit={meta?.unit} />;
 									})}
 								</TableRow>
 							))}

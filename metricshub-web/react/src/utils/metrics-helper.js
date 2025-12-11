@@ -95,6 +95,16 @@ export const compareMetricNames = (nameA, nameB) => {
 };
 
 /**
+ * Comparator for metric entries [key, value].
+ * Uses compareMetricNames on the keys.
+ *
+ * @param {[string, any]} a
+ * @param {[string, any]} b
+ * @returns {number}
+ */
+export const compareMetricEntries = (a, b) => compareMetricNames(a[0], b[0]);
+
+/**
  * Priority-ordered list of attribute keys to use for instance display names.
  * The first available attribute value will be used as the display name.
  */
