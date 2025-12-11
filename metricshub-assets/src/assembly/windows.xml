@@ -28,7 +28,7 @@
 		<!-- Service Installer -->
 		<file>
 			<source>${project.build.directory}/nssm/nssm-${nssm.version}/win64/nssm.exe</source>
-			<outputDirectory>/jpackage/assets</outputDirectory>
+			<outputDirectory>/jpackage/override</outputDirectory>
 			<destName>service-installer.exe</destName>
 			<fileMode>0777</fileMode>
 			<filtered>false</filtered>
