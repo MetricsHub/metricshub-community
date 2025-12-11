@@ -79,6 +79,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 					return {
 						monitor: found,
 						metaMetrics: connector.metaMetrics,
+						connectorName: connector.name,
 					};
 				}
 			}
@@ -160,7 +161,9 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	return (
 		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
-			<EntityHeader title={`${decodedName} : ${decodedMonitorType}`} />
+			<EntityHeader
+				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
+			/>
 
 			<Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
 				<Tabs value={tabValue} onChange={handleTabChange}>
