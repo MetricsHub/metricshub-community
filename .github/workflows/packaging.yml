@@ -352,10 +352,13 @@ jobs:
     - name: Create JRE for Windows
       run: |
         $jlinkModules=(Get-Content .\packaging-assets\jre-modules.txt) -join ','
-        curl -sLo ${{ github.workspace }}/packaging-assets/jdk-windows.zip https://api.adoptium.net/v3/binary/version/jdk-${{ steps.jre_version.outputs.jre_version }}/windows/x64/jdk/hotspot/normal/eclipse?project=jdk
-        Expand-Archive -Path ${{ github.workspace }}/packaging-assets/jdk-windows.zip -DestinationPath ${{ github.workspace }}/packaging-assets/jdk-windows -Force
-        cd ${{ github.workspace }}/packaging-assets/jdk-windows/jdk-*/bin
-        jlink --strip-debug --no-header-files --no-man-pages --add-modules $jlinkModules --output "${{ github.workspace }}\jre-windows"
+        $zipPath = "${{ github.workspace }}\packaging-assets\jdk-windows.zip"
+        $extractPath = "${{ github.workspace }}\packaging-assets\jdk-windows"
+        curl -sLo $zipPath https://api.adoptium.net/v3/binary/version/jdk-${{ steps.jre_version.outputs.jre_version }}/windows/x64/jdk/hotspot/normal/eclipse?project=jdk
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        $jdkFolder = Get-ChildItem -Path $extractPath | Where-Object { $_.PsIsContainer -and $_.Name -like "jdk-*" } | Select-Object -First 1
+        $JLINK = Join-Path $jdkFolder.FullName "bin\jlink.exe"
+        & $JLINK --strip-debug --no-header-files --no-man-pages --add-modules $jlinkModules --output "${{ github.workspace }}\jre-windows"
 
     - name: Display WiX Toolset Version
       run: |
