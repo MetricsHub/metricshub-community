@@ -96,7 +96,12 @@ public class CommandLineSourceProcessor {
 			return SourceTable
 				.builder()
 				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
-				.table(selectedColumnsLines.stream().map(line -> Stream.of(line.split(TABLE_SEP)).toList()).toList())
+				.table(
+					selectedColumnsLines
+						.stream()
+						.map(line -> Stream.of(line.split(TABLE_SEP)).collect(Collectors.toList()))
+						.collect(Collectors.toList())
+				)
 				.build();
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
