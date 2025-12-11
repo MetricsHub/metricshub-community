@@ -391,11 +391,23 @@ jobs:
           --storepass ${{ steps.get_access_token.outputs.token }} ^
           --alias ${{ secrets.AZURE_VAULT_ALIAS }} packages/*.msi
 
+    - name: Create Windows ZIP Archive
+      shell: pwsh
+      run: |
+        $zipPath = Join-Path -Path "packages" -ChildPath "metricshub-community-windows-${{ inputs.version }}.zip"
+        if (Test-Path "packages\MetricsHub") {
+          Compress-Archive -Path "packages\MetricsHub" -DestinationPath $zipPath -Force
+          Write-Host "Created ZIP archive: $zipPath"
+          Get-Item $zipPath
+        } else {
+          Write-Warning "packages\MetricsHub directory not found"
+        }
+
     - name: Upload Windows Packages
       uses: actions/upload-artifact@v5
       with:
         name: windows-packages
-        path: packages/*.msi
+        path: packages/*
 
     outputs:
       windowsPackage: windows-packages
