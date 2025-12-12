@@ -251,11 +251,6 @@ jobs:
           metricshub-doc-${{ inputs.releaseVersion }}.buildinfo
           metricshub-community-windows-${{ inputs.releaseVersion }}.zip
           metricshub-community-linux-${{ inputs.releaseVersion }}.tar.gz
-          metricshub-community-${{ inputs.releaseVersion }}-1.aarch64.rpm
-          metricshub-community-${{ inputs.releaseVersion }}-1.x86_64.rpm
-          metricshub-community_${{ inputs.releaseVersion }}_arm64.deb
-          metricshub-community_${{ inputs.releaseVersion }}_amd64.deb
-          metricshub-community-${{ inputs.releaseVersion }}.msi
 
     - name: Create Pull Request from ${{ needs.prepare.outputs.branchName }} to ${{ github.event.repository.default_branch }}
       uses: devops-infra/action-pull-request@v1.0.2
