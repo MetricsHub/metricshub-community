@@ -110,13 +110,15 @@ export default function ExplorerSearch() {
 				navigate(paths.explorerResource(groupName, name));
 				break;
 			case "connector":
-				navigate(paths.explorerResource(groupName, resourceName));
+				navigate(paths.explorerResource(groupName, resourceName) + `#${name}`);
 				break;
 			case "monitor":
 			case "monitor-type":
 			case "monitor_type":
-			case "instance":
 				navigate(paths.explorerMonitorType(groupName, resourceName, name));
+				break;
+			case "instance":
+				navigate(paths.explorerMonitorType(groupName, resourceName, name) + `#${newValue.name}`);
 				break;
 			default:
 				console.warn("Unknown search result type:", type);

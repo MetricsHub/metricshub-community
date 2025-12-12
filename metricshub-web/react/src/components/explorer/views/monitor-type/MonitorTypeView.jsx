@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import {
 	Box,
 	Typography,
@@ -84,6 +85,21 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 			return { key, direction: isAsc ? "desc" : "asc" };
 		});
 	}, []);
+
+	const location = useLocation();
+
+	React.useEffect(() => {
+		if (location.hash) {
+			const id = location.hash.substring(1);
+			const decodedId = decodeURIComponent(id);
+			setTimeout(() => {
+				const element = document.getElementById(decodedId);
+				if (element) {
+					element.scrollIntoView({ behavior: "smooth", block: "center" });
+				}
+			}, 100);
+		}
+	}, [location.hash, loading]);
 
 	const monitorData = React.useMemo(() => {
 		if (!currentResource?.connectors) return null;
@@ -245,7 +261,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 						{filteredInstances.map((instance, index) => (
-							<Box key={index}>
+							<Box key={index} id={instance.name}>
 								<InstanceMetricsTable
 									instance={instance}
 									metricEntries={getMetricsForInstance(instance)}

@@ -514,6 +514,13 @@ public class ExplorerService {
 		connectorNode.getMonitors().add(monitorTypeNode);
 	}
 
+	private static final List<String> INSTANCE_DISPLAY_NAME_KEYS = List.of(
+			"system.device",
+			"name",
+			"network.interface.name",
+			"process.name",
+			"system.service.name");
+
 	/**
 	 * Appends monitor instances to the given monitor-type node.
 	 *
@@ -521,7 +528,17 @@ public class ExplorerService {
 	 * @param monitor         the monitor instance to append
 	 */
 	private static void appendInstances(final MonitorTypeTelemetry monitorTypeNode, Monitor monitor) {
-		final InstanceTelemetry instanceNode = InstanceTelemetry.builder().name(monitor.getId()).build();
+		String name = monitor.getId();
+		if (monitor.getAttributes() != null) {
+			for (String key : INSTANCE_DISPLAY_NAME_KEYS) {
+				if (monitor.getAttributes().containsKey(key)) {
+					name = monitor.getAttributes().get(key);
+					break;
+				}
+			}
+		}
+
+		final InstanceTelemetry instanceNode = InstanceTelemetry.builder().name(name).build();
 		if (monitor.getAttributes() != null) {
 			instanceNode.getAttributes().putAll(monitor.getAttributes());
 		}
