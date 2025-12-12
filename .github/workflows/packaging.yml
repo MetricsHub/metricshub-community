@@ -319,6 +319,7 @@ jobs:
         java -jar ${{ github.workspace }}/jsign.jar --help
 
     - name: Login to Azure
+      if: ${{ github.repository_owner == 'MetricsHub' }}
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -383,6 +384,7 @@ jobs:
         Get-ChildItem packages
 
     - name: Sign Installer
+      if: ${{ github.repository_owner == 'MetricsHub' }}
       shell: cmd
       run: |
         java -jar ${{ github.workspace }}\jsign.jar ^
