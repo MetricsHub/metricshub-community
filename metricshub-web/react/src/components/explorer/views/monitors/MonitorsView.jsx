@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
 	Box,
 	Typography,
@@ -32,6 +32,8 @@ import { selectResourceUiState, setMonitorExpanded } from "../../../../store/sli
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
 import { paths } from "../../../../paths";
+import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
+import { flashBlueAnimation } from "../../../../utils/animations";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -162,23 +164,13 @@ const MonitorsView = ({
 		[dispatch, resourceId],
 	);
 
-	const location = useLocation();
+	const highlightedId = useScrollToHash();
 
 	React.useEffect(() => {
-		if (location.hash && safeConnectors.length > 0) {
-			const id = location.hash.substring(1);
-			const decodedId = decodeURIComponent(id);
-			setTimeout(() => {
-				const element = document.getElementById(decodedId);
-				if (element) {
-					element.scrollIntoView({ behavior: "smooth", block: "center" });
-					if (resourceId) {
-						dispatch(setMonitorExpanded({ resourceId, monitorName: decodedId, expanded: true }));
-					}
-				}
-			}, 100);
+		if (highlightedId && resourceId) {
+			dispatch(setMonitorExpanded({ resourceId, monitorName: highlightedId, expanded: true }));
 		}
-	}, [location.hash, safeConnectors, resourceId, dispatch]);
+	}, [highlightedId, resourceId, dispatch]);
 
 	if (!hasAnyMonitors) {
 		return (
@@ -198,8 +190,7 @@ const MonitorsView = ({
 
 				const connectorKey = connector.name || `connector-${connectorIndex}`;
 				const isConnectorExpanded = !!expandedMonitors[connectorKey];
-				const isHighlighted =
-					location.hash && decodeURIComponent(location.hash.substring(1)) === connectorKey;
+				const isHighlighted = highlightedId === connectorKey;
 
 				const statusMetric = connector.metrics?.["metricshub.connector.status"];
 				const statusValue = getMetricValue(statusMetric);
@@ -220,13 +211,7 @@ const MonitorsView = ({
 						square
 						sx={{
 							bgcolor: "transparent",
-							...(isHighlighted && {
-								animation: "flash-blue 2s ease-out",
-								"@keyframes flash-blue": {
-									"0%": { backgroundColor: "rgba(25, 118, 210, 0.5)" },
-									"100%": { backgroundColor: "transparent" },
-								},
-							}),
+							...(isHighlighted && flashBlueAnimation),
 							borderTop: "1px solid",
 							borderColor: "divider",
 							...(connectorIndex === safeConnectors.length - 1
@@ -307,68 +292,68 @@ const MonitorsView = ({
 							{/* Connector Attributes & Metrics Container */}
 							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 								showMetricsTable) && (
-									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-										{/* Connector Attributes Table */}
-										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Attributes
-												</Typography>
-												<DashboardTable>
-													<TableHead>
-														<TableRow>
-															<TableCell>Key</TableCell>
-															<TableCell>Value</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
+								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+									{/* Connector Attributes Table */}
+									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Attributes
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell>Key</TableCell>
+														<TableCell>Value</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
 
-										{/* Connector Metrics Table */}
-										{showMetricsTable && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Metrics
-												</Typography>
-												<DashboardTable>
-													<TableHead>
-														<TableRow>
-															<TableCell sx={{ width: "25%" }}>Name</TableCell>
-															<TableCell align="left">Value</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>
-														{Object.entries(connector.metrics).map(([name, metric]) => {
-															let value = metric;
-															let unit = undefined;
+									{/* Connector Metrics Table */}
+									{showMetricsTable && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Metrics
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell sx={{ width: "25%" }}>Name</TableCell>
+														<TableCell align="left">Value</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>
+													{Object.entries(connector.metrics).map(([name, metric]) => {
+														let value = metric;
+														let unit = undefined;
 
-															if (metric && typeof metric === "object" && "value" in metric) {
-																value = metric.value;
-																unit = metric.unit;
-															}
+														if (metric && typeof metric === "object" && "value" in metric) {
+															value = metric.value;
+															unit = metric.unit;
+														}
 
-															if (!unit) {
-																const meta = getMetricMetadata(name, connector.metaMetrics);
-																if (meta?.unit) unit = meta.unit;
-															}
+														if (!unit) {
+															const meta = getMetricMetadata(name, connector.metaMetrics);
+															if (meta?.unit) unit = meta.unit;
+														}
 
-															const formattedValue = formatMetricValue(value, unit);
+														const formattedValue = formatMetricValue(value, unit);
 
-															return (
-																<TableRow key={name}>
-																	<TableCell>{name}</TableCell>
-																	<TableCell align="left">{formattedValue}</TableCell>
-																</TableRow>
-															);
-														})}
-													</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
-									</Box>
-								)}
+														return (
+															<TableRow key={name}>
+																<TableCell>{name}</TableCell>
+																<TableCell align="left">{formattedValue}</TableCell>
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
+								</Box>
+							)}
 
 							{/* Monitors Section */}
 							<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -469,30 +454,30 @@ const MonitorsView = ({
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
 													? pivotGroups.map((group) => (
-														<PivotGroupSection
-															key={group.baseName}
-															group={group}
-															sortedInstances={sortedInstances}
-															resourceId={resourceId}
-															metaMetrics={connector.metaMetrics}
-														/>
-													))
-													: sortedInstances.map((inst) => {
-														const metrics = inst?.metrics ?? {};
-														const metricEntries = Object.entries(metrics).map(([k, v]) => [
-															k,
-															getMetricValue(v),
-														]);
-														return (
-															<InstanceMetricsTable
-																key={inst?.attributes?.id || inst.name}
-																instance={inst}
-																metricEntries={metricEntries}
-																naturalMetricCompare={naturalMetricCompare}
+															<PivotGroupSection
+																key={group.baseName}
+																group={group}
+																sortedInstances={sortedInstances}
+																resourceId={resourceId}
 																metaMetrics={connector.metaMetrics}
 															/>
-														);
-													})}
+														))
+													: sortedInstances.map((inst) => {
+															const metrics = inst?.metrics ?? {};
+															const metricEntries = Object.entries(metrics).map(([k, v]) => [
+																k,
+																getMetricValue(v),
+															]);
+															return (
+																<InstanceMetricsTable
+																	key={inst?.attributes?.id || inst.name}
+																	instance={inst}
+																	metricEntries={metricEntries}
+																	naturalMetricCompare={naturalMetricCompare}
+																	metaMetrics={connector.metaMetrics}
+																/>
+															);
+														})}
 											</AccordionDetails>
 										</Accordion>
 									);
