@@ -21,7 +21,6 @@ import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatt
 import {
 	getMetricMetadata,
 	getMetricValue,
-	compareMetricNames,
 	compareMetricEntries,
 	getBaseMetricKey,
 } from "../../../../utils/metrics-helper";
