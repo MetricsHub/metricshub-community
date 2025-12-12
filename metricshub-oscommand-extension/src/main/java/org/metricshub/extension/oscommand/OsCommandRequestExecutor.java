@@ -30,12 +30,14 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.LoggingHelper;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.ssh.SshClient;
 
 /**
@@ -47,6 +49,7 @@ public class OsCommandRequestExecutor {
 
 	private static final String SSH_FILE_MODE = "0700";
 	private static final String SSH_REMOTE_DIRECTORY = "/var/tmp/";
+	private static final String WINDOWS_SSH_REMOTE_DIRECTORY = "C:\\Windows\\Temp\\";
 
 	/**
 	 * Use ssh-client in order to run ssh command.
@@ -73,7 +76,8 @@ public class OsCommandRequestExecutor {
 		@SpanAttribute("ssh.timeout") final long timeout,
 		@SpanAttribute("ssh.port") final Integer port,
 		@SpanAttribute("ssh.local_files") final List<File> localFiles,
-		@SpanAttribute("ssh.command") final String noPasswordCommand
+		@SpanAttribute("ssh.command") final String noPasswordCommand,
+		@SpanAttribute("ssh.host_type") final DeviceKind hostType
 	) throws ClientException {
 		LoggingHelper.trace(() ->
 			log.trace(
@@ -93,11 +97,16 @@ public class OsCommandRequestExecutor {
 		isTrue(timeout > 0, "Timeout cannot be negative nor zero.");
 		final long timeoutInMilliseconds = timeout * 1000;
 
-		final String updatedCommand = updateCommandWithLocalList(command, localFiles);
+		// Choose the temporary directory according to the OS (Windows Temp or Unix temp)
+		final String remoteDirectory = hostType != null && hostType == DeviceKind.WINDOWS
+			? WINDOWS_SSH_REMOTE_DIRECTORY
+			: SSH_REMOTE_DIRECTORY;
+
+		final String updatedCommand = updateCommandWithLocalList(command, localFiles, remoteDirectory);
 
 		final String noPasswordUpdatedCommand = noPasswordCommand == null
 			? updatedCommand
-			: updateCommandWithLocalList(noPasswordCommand, localFiles);
+			: updateCommandWithLocalList(noPasswordCommand, localFiles, remoteDirectory);
 
 		// Create the collection that will store the paths of remote files that need to be removed
 		final List<String> remoteFilePaths = new ArrayList<>();
@@ -121,10 +130,10 @@ public class OsCommandRequestExecutor {
 				// copy all local files using SCP
 				for (final File file : localFiles) {
 					final String filename = file.getName();
-					sshClient.scp(file.getAbsolutePath(), filename, SSH_REMOTE_DIRECTORY, SSH_FILE_MODE);
+					sshClient.scp(file.getAbsolutePath(), filename, remoteDirectory, SSH_FILE_MODE);
 
 					// Add the remote file path to the list
-					remoteFilePaths.add(SSH_REMOTE_DIRECTORY + filename);
+					remoteFilePaths.add(remoteDirectory + filename);
 				}
 			}
 
@@ -301,19 +310,23 @@ public class OsCommandRequestExecutor {
 	 * @param localFiles The local files list.
 	 * @return The updated command.
 	 */
-	static String updateCommandWithLocalList(final String command, final List<File> localFiles) {
+	static String updateCommandWithLocalList(
+		final String command,
+		final List<File> localFiles,
+		final String remoteDirectory
+	) {
 		return localFiles == null || localFiles.isEmpty()
 			? command
 			: localFiles
 				.stream()
 				.reduce(
 					command,
-					(s, file) ->
-						command.replaceAll(
+					(updatedCommand, file) ->
+						updatedCommand.replaceAll(
 							protectCaseInsensitiveRegex(file.getAbsolutePath()),
-							SSH_REMOTE_DIRECTORY + file.getName()
+							Matcher.quoteReplacement(remoteDirectory + file.getName())
 						),
-					(s1, s2) -> null
+					(s1, s2) -> s2
 				);
 	}
 

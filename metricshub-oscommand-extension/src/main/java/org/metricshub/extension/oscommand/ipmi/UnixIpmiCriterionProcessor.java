@@ -308,6 +308,14 @@ public class UnixIpmiCriterionProcessor {
 	) throws InterruptedException, IOException, TimeoutException, ClientException, ControlledSshException {
 		return telemetryManager.getHostProperties().isLocalhost()
 			? OsCommandService.runLocalCommand(ipmitoolCommand, timeout, null) // or we can use NetworkHelper.isLocalhost(hostname)
-			: OsCommandService.runSshCommand(ipmitoolCommand, hostname, sshConfiguration, timeout, null, null);
+			: OsCommandService.runSshCommand(
+				ipmitoolCommand,
+				hostname,
+				sshConfiguration,
+				timeout,
+				null,
+				null,
+				telemetryManager.getHostConfiguration().getHostType()
+			);
 	}
 }

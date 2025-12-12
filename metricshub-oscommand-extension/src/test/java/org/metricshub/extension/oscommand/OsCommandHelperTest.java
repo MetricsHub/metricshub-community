@@ -463,23 +463,23 @@ class OsCommandHelperTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null)
+			() -> OsCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null)
+			() -> OsCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, null, timeout, null, null)
+			() -> OsCommandService.runSshCommand(CMD, HOST, null, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null)
+			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null)
+			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null, DeviceKind.LINUX)
 		);
 
 		try (
@@ -500,12 +500,16 @@ class OsCommandHelperTest {
 						timeout,
 						PORT,
 						null,
-						null
+						null,
+						DeviceKind.LINUX
 					)
 				)
 				.thenReturn(RESULT);
 
-			assertEquals(RESULT, OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null));
+			assertEquals(
+				RESULT,
+				OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+			);
 		}
 	}
 
@@ -862,7 +866,8 @@ class OsCommandHelperTest {
 						sshConfiguration,
 						120,
 						Collections.emptyList(),
-						NO_PASSWORD_COMMAND
+						NO_PASSWORD_COMMAND,
+						DeviceKind.LINUX
 					);
 				})
 				.thenReturn(AGENT_REV_RESULT);
@@ -942,7 +947,8 @@ class OsCommandHelperTest {
 						sshConfiguration,
 						120L,
 						Collections.emptyList(),
-						NO_PASSWORD_COMMAND
+						NO_PASSWORD_COMMAND,
+						DeviceKind.LINUX
 					)
 				)
 				.thenReturn(AGENT_REV_RESULT);
@@ -1023,7 +1029,8 @@ class OsCommandHelperTest {
 						sshConfiguration,
 						120,
 						Collections.emptyList(),
-						NO_PASSWORD_COMMAND
+						NO_PASSWORD_COMMAND,
+						DeviceKind.LINUX
 					)
 				)
 				.thenReturn(AGENT_REV_RESULT);
@@ -1104,7 +1111,8 @@ class OsCommandHelperTest {
 						sshConfiguration,
 						120,
 						Collections.emptyList(),
-						SUDO_KEYWORD + NO_PASSWORD_COMMAND
+						SUDO_KEYWORD + NO_PASSWORD_COMMAND,
+						DeviceKind.LINUX
 					);
 				})
 				.thenReturn(AGENT_REV_RESULT);
@@ -1204,7 +1212,8 @@ class OsCommandHelperTest {
 						sshConfiguration,
 						120,
 						List.of(localFile),
-						SH_SEN_EMBEDDED_0001_PATH
+						SH_SEN_EMBEDDED_0001_PATH,
+						DeviceKind.LINUX
 					);
 				})
 				.thenReturn(HARD_DRIVE);

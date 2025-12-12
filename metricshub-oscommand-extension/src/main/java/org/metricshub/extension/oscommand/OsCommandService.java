@@ -60,6 +60,7 @@ import org.metricshub.engine.common.exception.NoCredentialProvidedException;
 import org.metricshub.engine.common.helpers.LocalOsHandler;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.EmbeddedFileHelper;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
@@ -236,7 +237,8 @@ public class OsCommandService {
 		@NonNull final SshConfiguration sshConfiguration,
 		final long timeout,
 		final List<File> localFiles,
-		final String noPasswordCommand
+		final String noPasswordCommand,
+		final DeviceKind hostType
 	) throws ClientException, InterruptedException, ControlledSshException {
 		isTrue(timeout > 0, NEGATIVE_TIMEOUT);
 		try {
@@ -252,7 +254,8 @@ public class OsCommandService {
 							timeout,
 							sshConfiguration.getPort(),
 							localFiles,
-							noPasswordCommand
+							noPasswordCommand,
+							hostType
 						);
 					} catch (ClientException e) {
 						throw new ClientRuntimeException(e);
@@ -379,6 +382,7 @@ public class OsCommandService {
 	 * Run the OS Command on:
 	 * <ul>
 	 *   <li>Local (use java Process)</li>
+	 *   <li>Remote Windows (use SSH)</li>
 	 *   <li>Remote Linux (use SSH)</li>
 	 * </ul>
 	 * <p>It replaces Host name, User name, Password, Sudo, Embedded files macros in the command line.</p>
@@ -515,7 +519,8 @@ public class OsCommandService {
 						(SshConfiguration) sshConfiguration,
 						timeout,
 						new ArrayList<>(embeddedTempFiles.values()),
-						commandNoPassword
+						commandNoPassword,
+						telemetryManager.getHostConfiguration().getHostType()
 					);
 			}
 
