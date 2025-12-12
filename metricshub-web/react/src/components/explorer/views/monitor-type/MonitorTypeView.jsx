@@ -20,6 +20,7 @@ import {
 	FormGroup,
 	FormControlLabel,
 	Checkbox,
+	TableSortLabel,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import {
@@ -57,6 +58,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 	const [searchTerm, setSearchTerm] = React.useState("");
 	const [selectedMetrics, setSelectedMetrics] = React.useState([]);
 	const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
+	const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "asc" });
 	const currentResource = useSelector(selectCurrentResource);
 	const loading = useSelector(selectResourceLoading);
 	const error = useSelector(selectResourceError);
@@ -68,6 +70,19 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	const handleTabChange = React.useCallback((event, newValue) => {
 		setTabValue(newValue);
+	}, []);
+
+	/**
+	 * Handles the sort request for the metrics table.
+	 * Toggles direction if the same key is clicked, otherwise sets the new key and defaults to 'asc'.
+	 *
+	 * @param {string} key - The metric key or identifier to sort by.
+	 */
+	const handleRequestSort = React.useCallback((key) => {
+		setSortConfig((prev) => {
+			const isAsc = prev.key === key && prev.direction === "asc";
+			return { key, direction: isAsc ? "desc" : "asc" };
+		});
 	}, []);
 
 	const monitorData = React.useMemo(() => {
@@ -89,13 +104,57 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
+	/**
+	 * Helper to get the instance ID or name.
+	 * @param {object} instance
+	 * @returns {string}
+	 */
+	const getInstanceId = React.useCallback(
+		(instance) => instance.attributes?.id || instance.name || "",
+		[],
+	);
+
 	const sortedInstances = React.useMemo(() => {
 		return [...instances].sort((a, b) => {
-			const nameA = a.attributes?.id || a.name || "";
-			const nameB = b.attributes?.id || b.name || "";
+			const nameA = getInstanceId(a);
+			const nameB = getInstanceId(b);
 			return compareMetricNames(nameA, nameB);
 		});
-	}, [instances]);
+	}, [instances, getInstanceId]);
+
+	const sortedMetricsInstances = React.useMemo(() => {
+		// If sorting by instance ID in ascending order (default), or no sort key, use the pre-sorted instances.
+		if (
+			!sortConfig.key ||
+			(sortConfig.key === "__instance_id__" && sortConfig.direction === "asc")
+		) {
+			return sortedInstances;
+		}
+
+		// If sorting by instance ID in descending order, just reverse the pre-sorted instances.
+		if (sortConfig.key === "__instance_id__" && sortConfig.direction === "desc") {
+			return [...sortedInstances].reverse();
+		}
+
+		// Sort by metric value
+		return [...sortedInstances].sort((a, b) => {
+			const valA = getMetricValue(a.metrics?.[sortConfig.key]);
+			const valB = getMetricValue(b.metrics?.[sortConfig.key]);
+
+			if (valA === valB) return 0;
+			// Push null/undefined to the end
+			if (valA === null || valA === undefined) return 1;
+			if (valB === null || valB === undefined) return -1;
+
+			let comparison = 0;
+			if (typeof valA === "number" && typeof valB === "number") {
+				comparison = valA - valB;
+			} else {
+				comparison = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
+			}
+			return sortConfig.direction === "asc" ? comparison : -comparison;
+		});
+	}, [sortedInstances, sortConfig]);
 
 	const availableMetrics = React.useMemo(() => {
 		const metricsSet = new Set();
@@ -116,14 +175,14 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	const filteredInstances = React.useMemo(() => {
 		return sortedInstances.filter((instance) => {
-			const id = instance.attributes?.id || instance.name || "";
+			const id = getInstanceId(instance);
 			const name = instance.attributes?.name || "";
 			return (
 				id.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				name.toLowerCase().includes(searchTerm.toLowerCase())
 			);
 		});
-	}, [sortedInstances, searchTerm]);
+	}, [sortedInstances, searchTerm, getInstanceId]);
 
 	// Helper to get metrics for an instance
 	const getMetricsForInstance = React.useCallback((instance) => {
@@ -235,27 +294,41 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 					<DashboardTable>
 						<TableHead>
 							<TableRow>
-								<TableCell>Instance Id</TableCell>
+								<TableCell>
+									<TableSortLabel
+										active={sortConfig.key === "__instance_id__"}
+										direction={sortConfig.key === "__instance_id__" ? sortConfig.direction : "asc"}
+										onClick={() => handleRequestSort("__instance_id__")}
+									>
+										Instance Id
+									</TableSortLabel>
+								</TableCell>
 								{selectedMetrics.map((metric) => {
 									const meta = getMetricMetadata(metric, monitorData.metaMetrics);
 									const cleanUnit = meta?.unit ? meta.unit.replace(/[{}]/g, "") : "";
 									return (
 										<TableCell key={metric}>
-											<HoverInfo
-												title={metric}
-												description={meta?.description}
-												unit={cleanUnit}
-												sx={{ display: "inline-block" }}
+											<TableSortLabel
+												active={sortConfig.key === metric}
+												direction={sortConfig.key === metric ? sortConfig.direction : "asc"}
+												onClick={() => handleRequestSort(metric)}
 											>
-												{metric}
-											</HoverInfo>
+												<HoverInfo
+													title={metric}
+													description={meta?.description}
+													unit={cleanUnit}
+													sx={{ display: "inline-block" }}
+												>
+													{metric}
+												</HoverInfo>
+											</TableSortLabel>
 										</TableCell>
 									);
 								})}
 							</TableRow>
 						</TableHead>
 						<TableBody>
-							{sortedInstances.slice(0, 10).map((instance, index) => (
+							{sortedMetricsInstances.slice(0, 10).map((instance, index) => (
 								<TableRow key={index}>
 									<TableCell>
 										<InstanceNameWithAttributes
