@@ -26,10 +26,17 @@ import {
  *   instance: any,
  *   metricEntries: Array<[string, any]>,
  *   naturalMetricCompare: (a: [string, any], b: [string, any]) => number,
- *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
+ *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>,
+ *   highlighted?: boolean
  * }} props
  */
-const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, metaMetrics }) => {
+const InstanceMetricsTable = ({
+	instance,
+	metricEntries,
+	naturalMetricCompare,
+	metaMetrics,
+	highlighted,
+}) => {
 	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
 	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
@@ -70,7 +77,22 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 
 	return (
 		<Box mb={1}>
-			<Box mb={1}>
+			<Box
+				mb={1}
+				sx={
+					highlighted
+						? {
+							animation: "flash-blue 2s ease-out",
+							"@keyframes flash-blue": {
+								"0%": { backgroundColor: "rgba(25, 118, 210, 0.5)" },
+								"100%": { backgroundColor: "transparent" },
+							},
+							borderRadius: 1,
+							p: 0.5,
+						}
+						: { p: 0.5 }
+				}
+			>
 				<InstanceNameWithAttributes
 					displayName={displayName}
 					attributes={attrs}
