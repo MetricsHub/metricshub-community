@@ -8,10 +8,6 @@ import {
 	TextField,
 	CircularProgress,
 	IconButton,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
 	Dialog,
 	DialogTitle,
 	DialogContent,
@@ -20,9 +16,9 @@ import {
 	FormGroup,
 	FormControlLabel,
 	Checkbox,
-	TableSortLabel,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
+import { DataGrid } from "@mui/x-data-grid";
 import {
 	selectCurrentResource,
 	selectResourceLoading,
@@ -31,9 +27,10 @@ import {
 import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
-import DashboardTable from "../common/DashboardTable";
-import HoverInfo from "../monitors/components/HoverInfo";
+import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
+import { renderMetricHeader } from "../common/metric-column-helper";
+import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
 	getMetricMetadata,
@@ -42,14 +39,12 @@ import {
 } from "../../../../utils/metrics-helper";
 import { cleanUnit } from "../../../../utils/formatters";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
+import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 import { useMonitorData } from "../../../../hooks/use-monitor-data";
-import {
-	useInstanceSorting,
-	SORT_KEY_INSTANCE_ID,
-	SORT_DIRECTION_ASC,
-} from "../../../../hooks/use-instance-sorting";
+import { useInstanceSorting } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
+import { dataGridSx } from "../common/table-styles";
 
 const TAB_INSTANCES = 0;
 const TAB_METRICS = 1;
@@ -58,11 +53,11 @@ const TAB_METRICS = 1;
  * Monitor Type View component.
  * Displays instances and metrics for a specific monitor type.
  *
- * @param {Object} props - Component props.
- * @param {string} props.resourceName - The name of the resource.
- * @param {string} props.resourceGroupName - The name of the resource group.
- * @param {string} props.connectorId - The ID of the connector.
- * @param {string} props.monitorType - The type of the monitor.
+ * @param {object} props - Component props
+ * @param {string} props.resourceName - The name of the resource
+ * @param {string} props.resourceGroupName - The name of the resource group
+ * @param {string} props.connectorId - The ID of the connector
+ * @param {string} props.monitorType - The type of the monitor
  * @returns {JSX.Element} The rendered component.
  */
 const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitorType }) => {
@@ -80,13 +75,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const monitorData = useMonitorData(currentResource, decodedConnectorId, decodedMonitorType);
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
-	const { sortedInstances, sortedMetricsInstances, sortConfig, handleRequestSort } =
-		useInstanceSorting(instances);
+	const { sortedInstances, sortedMetricsInstances } = useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
 
 	const {
 		selectedMetrics,
+		setSelectedMetrics,
 		handleMetricToggle,
 		isSettingsOpen,
 		setIsSettingsOpen,
@@ -97,15 +92,60 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		setTabValue(newValue);
 	}, []);
 
-	// Helper to get metrics for an instance
-	const getMetricsForInstance = React.useCallback((instance) => {
-		return Object.entries(instance.metrics || {}).map(([key, value]) => [
-			key,
-			getMetricValue(value),
-		]);
-	}, []);
+	const columns = React.useMemo(() => {
+		if (!monitorData) return [];
+		const cols = [
+			{
+				field: "instanceName",
+				headerName: "Instance Name",
+				flex: 1,
+				renderCell: (params) => (
+					<InstanceNameWithAttributes
+						displayName={getInstanceDisplayName(params.row)}
+						attributes={params.row.attributes}
+					/>
+				),
+				valueGetter: (value, row) => getInstanceDisplayName(row),
+			},
+		];
 
-	const naturalMetricCompare = React.useCallback(compareMetricEntries, []);
+		selectedMetrics.forEach((metric) => {
+			const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+			const cleanedUnit = cleanUnit(meta?.unit);
+			const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
+
+			cols.push({
+				field: metric,
+				headerName: metric.toLowerCase(),
+				headerClassName: "metric-header",
+				flex: 1,
+				align: "left",
+				headerAlign: "left",
+				renderHeader: () => renderMetricHeader(metric, meta, displayUnit),
+				renderCell: (params) => {
+					const val = params.row.metrics?.[metric];
+					const value = getMetricValue(val);
+
+					return <MetricValueCell value={value} unit={meta?.unit} />;
+				},
+				valueGetter: (value, row) => {
+					const val = row.metrics?.[metric];
+					return getMetricValue(val);
+				},
+			});
+		});
+
+		return cols;
+	}, [selectedMetrics, monitorData]);
+
+	const rows = React.useMemo(() => {
+		return sortedMetricsInstances.map((instance, index) => ({
+			id: instance.name || index,
+			...instance,
+		}));
+	}, [sortedMetricsInstances]);
+
+	const highlightedId = useScrollToHash();
 
 	if (loading && !currentResource) {
 		return (
@@ -135,6 +175,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
 			<EntityHeader
 				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
+				icon={<MonitorTypeIcon type={decodedMonitorType} fontSize="large" />}
 			/>
 
 			<Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
@@ -157,24 +198,27 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						/>
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-						{filteredInstances?.map((instance, index) => (
-							<Box key={index}>
-								<InstanceMetricsTable
-									instance={instance}
-									metricEntries={getMetricsForInstance(instance)}
-									naturalMetricCompare={naturalMetricCompare}
-									metaMetrics={monitorData?.metaMetrics}
-								/>
-							</Box>
-						))}
+						{filteredInstances.map((instance, index) => {
+							const isHighlighted = highlightedId === instance.name;
+							return (
+								<Box key={index} id={instance.name}>
+									<InstanceMetricsTable
+										instance={instance}
+										naturalMetricCompare={compareMetricEntries}
+										metaMetrics={monitorData?.metaMetrics}
+										highlighted={isHighlighted}
+									/>
+								</Box>
+							);
+						})}
 						{filteredInstances.length === 0 && <Typography>No instances found.</Typography>}
 					</Box>
 				</Box>
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ flex: 1, overflow: "auto" }}>
-					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
+				<Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
 						</IconButton>
@@ -185,6 +229,28 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						<DialogTitle>Select Metrics</DialogTitle>
 						<DialogContent dividers>
 							<FormGroup>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={
+												availableMetrics?.length > 0 &&
+												selectedMetrics.length === availableMetrics.length
+											}
+											indeterminate={
+												selectedMetrics.length > 0 &&
+												selectedMetrics.length < availableMetrics?.length
+											}
+											onChange={(e) => {
+												if (e.target.checked) {
+													setSelectedMetrics([...availableMetrics]);
+												} else {
+													setSelectedMetrics([]);
+												}
+											}}
+										/>
+									}
+									label="Select All"
+								/>
 								{availableMetrics?.map((metric) => (
 									<FormControlLabel
 										key={metric}
@@ -204,68 +270,15 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						</DialogActions>
 					</Dialog>
 
-					<Box sx={{ width: "100%", overflowX: "auto" }}>
-						<DashboardTable containerProps={{ sx: { minWidth: "max-content" } }}>
-							<TableHead>
-								<TableRow>
-									<TableCell>
-										<TableSortLabel
-											active={sortConfig.key === SORT_KEY_INSTANCE_ID}
-											direction={
-												sortConfig.key === SORT_KEY_INSTANCE_ID
-													? sortConfig.direction
-													: SORT_DIRECTION_ASC
-											}
-											onClick={() => handleRequestSort(SORT_KEY_INSTANCE_ID)}
-										>
-											Instance Id
-										</TableSortLabel>
-									</TableCell>
-									{selectedMetrics?.map((metric) => {
-										const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-										const cleanedUnit = cleanUnit(meta?.unit);
-										return (
-											<TableCell key={metric}>
-												<TableSortLabel
-													active={sortConfig.key === metric}
-													direction={
-														sortConfig.key === metric ? sortConfig.direction : SORT_DIRECTION_ASC
-													}
-													onClick={() => handleRequestSort(metric)}
-												>
-													<HoverInfo
-														title={metric}
-														description={meta?.description}
-														unit={cleanedUnit}
-														sx={{ display: "inline-block" }}
-													>
-														{metric}
-													</HoverInfo>
-												</TableSortLabel>
-											</TableCell>
-										);
-									})}
-								</TableRow>
-							</TableHead>
-							<TableBody>
-								{sortedMetricsInstances?.map((instance, index) => (
-									<TableRow key={index}>
-										<TableCell>
-											<InstanceNameWithAttributes
-												displayName={getInstanceDisplayName(instance)}
-												attributes={instance.attributes}
-											/>
-										</TableCell>
-										{selectedMetrics?.map((metric) => {
-											const val = instance.metrics?.[metric];
-											const value = getMetricValue(val);
-											const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-											return <MetricValueCell key={metric} value={value} unit={meta?.unit} />;
-										})}
-									</TableRow>
-								))}
-							</TableBody>
-						</DashboardTable>
+					<Box sx={{ width: "100%", overflow: "hidden" }}>
+						<DataGrid
+							rows={rows}
+							columns={columns}
+							disableRowSelectionOnClick
+							hideFooter
+							autoHeight
+							sx={dataGridSx}
+						/>
 					</Box>
 				</Box>
 			)}
@@ -273,4 +286,4 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	);
 };
 
-export default MonitorTypeView;
+export default React.memo(MonitorTypeView);

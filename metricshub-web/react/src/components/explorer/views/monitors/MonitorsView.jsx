@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
 	Box,
 	Typography,
@@ -162,6 +162,24 @@ const MonitorsView = ({
 		[dispatch, resourceId],
 	);
 
+	const location = useLocation();
+
+	React.useEffect(() => {
+		if (location.hash && safeConnectors.length > 0) {
+			const id = location.hash.substring(1);
+			const decodedId = decodeURIComponent(id);
+			setTimeout(() => {
+				const element = document.getElementById(decodedId);
+				if (element) {
+					element.scrollIntoView({ behavior: "smooth", block: "center" });
+					if (resourceId) {
+						dispatch(setMonitorExpanded({ resourceId, monitorName: decodedId, expanded: true }));
+					}
+				}
+			}, 100);
+		}
+	}, [location.hash, safeConnectors, resourceId, dispatch]);
+
 	if (!hasAnyMonitors) {
 		return (
 			<Box>
@@ -191,6 +209,7 @@ const MonitorsView = ({
 
 				return (
 					<Accordion
+						id={connectorKey}
 						key={connectorKey}
 						expanded={isConnectorExpanded}
 						onChange={handleConnectorToggle(connectorKey)}
