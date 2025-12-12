@@ -1,6 +1,5 @@
 import * as React from "react";
 import { useSelector } from "react-redux";
-import { useLocation } from "react-router-dom";
 import {
 	Box,
 	Typography,
@@ -43,6 +42,7 @@ import {
 	getInstanceDisplayName,
 } from "../../../../utils/metrics-helper";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
+import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 
 /**
  * Monitor Type View component.
@@ -86,20 +86,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 		});
 	}, []);
 
-	const location = useLocation();
-
-	React.useEffect(() => {
-		if (location.hash) {
-			const id = location.hash.substring(1);
-			const decodedId = decodeURIComponent(id);
-			setTimeout(() => {
-				const element = document.getElementById(decodedId);
-				if (element) {
-					element.scrollIntoView({ behavior: "smooth", block: "center" });
-				}
-			}, 100);
-		}
-	}, [location.hash, loading]);
+	const highlightedId = useScrollToHash();
 
 	const monitorData = React.useMemo(() => {
 		if (!currentResource?.connectors) return null;
@@ -261,8 +248,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
 						{filteredInstances.map((instance, index) => {
-							const isHighlighted =
-								location.hash && decodeURIComponent(location.hash.substring(1)) === instance.name;
+							const isHighlighted = highlightedId === instance.name;
 							return (
 								<Box key={index} id={instance.name}>
 									<InstanceMetricsTable

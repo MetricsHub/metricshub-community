@@ -17,6 +17,7 @@ import {
 	colorLabelFromKey,
 	compareUtilizationParts,
 } from "./Utilization";
+import { flashBlueAnimation } from "../../../../../utils/animations";
 
 /**
  * Displays a table of metrics for a single monitor instance.
@@ -79,19 +80,10 @@ const InstanceMetricsTable = ({
 		<Box mb={1}>
 			<Box
 				mb={1}
-				sx={
-					highlighted
-						? {
-							animation: "flash-blue 2s ease-out",
-							"@keyframes flash-blue": {
-								"0%": { backgroundColor: "rgba(25, 118, 210, 0.5)" },
-								"100%": { backgroundColor: "transparent" },
-							},
-							borderRadius: 1,
-							p: 0.5,
-						}
-						: { p: 0.5 }
-				}
+				sx={{
+					p: 0.5,
+					...(highlighted && { ...flashBlueAnimation, borderRadius: 1 }),
+				}}
 			>
 				<InstanceNameWithAttributes
 					displayName={displayName}
