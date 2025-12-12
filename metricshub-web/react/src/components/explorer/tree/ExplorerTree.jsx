@@ -11,16 +11,6 @@ import {
 } from "../../../store/slices/explorer-slice";
 
 /**
- * @typedef {Object} ExplorerNode
- * @property {string} id Unique path-based identifier.
- * @property {string} name Display name.
- * @property {string} type Backend node type (e.g. "resource").
- * @property {ExplorerNode[]} children Normalized child nodes.
- * @property {ExplorerNode | null} [parent] Parent node if available.
- * @property {boolean} [isExpandable] Whether the node can be expanded.
- */
-
-/**
  * Normalizes the raw backend hierarchy into a single `ExplorerNode` tree.
  *
  * @param {*} raw Raw hierarchy object from the API.

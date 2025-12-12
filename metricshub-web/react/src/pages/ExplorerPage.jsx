@@ -14,10 +14,6 @@ import AppBreadcrumbs from "../components/common/AppBreadcrumbs";
 import { paths } from "../paths";
 
 /**
- * Monitor page component
- * @returns JSX.Element
- */
-/**
  * Builds the node ID for tree selection based on URL params and hierarchy.
  * @param {any} hierarchyRaw - Raw hierarchy from the store
  * @param {string|null} resourceGroupName - Resource group name from URL
@@ -61,6 +57,10 @@ const buildSelectedNodeId = (
 	return parts.join("/");
 };
 
+/**
+ * Monitor page component
+ * @returns JSX.Element
+ */
 const ExplorerPage = () => {
 	const navigate = useNavigate();
 	const params = useParams();
