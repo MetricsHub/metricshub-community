@@ -37,7 +37,6 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.alert.AlertInfo;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -118,29 +117,15 @@ public class HostConfiguration {
 			sources.remove(WmiSource.class);
 		}
 
-		// Add IPMI through WMI
-		if (DeviceKind.WINDOWS.equals(hostType) && sources.contains(WmiSource.class)) {
-			sources.add(IpmiSource.class);
-			// Add OSCommand through Remote WMI Commands
-			if (!isLocalhost) {
-				sources.add(CommandLineSource.class);
-			}
-		}
-
-		// Add IPMI through OSCommand remote (SSH)
-		if ((DeviceKind.LINUX.equals(hostType) || DeviceKind.SOLARIS.equals(hostType)) && !isLocalhost) {
-			sources.add(IpmiSource.class);
+		// Add OSCommand through Remote WMI Commands
+		if (DeviceKind.WINDOWS.equals(hostType) && sources.contains(WmiSource.class) && !isLocalhost) {
+			sources.add(CommandLineSource.class);
 		}
 
 		// Handle localhost protocols
 		if (isLocalhost) {
 			// OS Command always enabled locally
 			sources.add(CommandLineSource.class);
-
-			// IPMI executed locally on Linux through OS Command
-			if (DeviceKind.LINUX.equals(hostType) || DeviceKind.SOLARIS.equals(hostType)) {
-				sources.add(IpmiSource.class);
-			}
 		}
 
 		return sources;
