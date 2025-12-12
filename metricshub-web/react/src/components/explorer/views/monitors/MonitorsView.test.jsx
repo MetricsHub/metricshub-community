@@ -1,17 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { screen } from "@testing-library/react";
-import { renderWithRedux } from "../../../../test/test-utils";
+import { renderWithReduxAndRouter } from "../../../../test/test-utils";
 import MonitorsView from "./MonitorsView";
 
 describe("MonitorsView", () => {
 	it("renders no connectors message", () => {
-		renderWithRedux(<MonitorsView connectors={[]} />);
+		renderWithReduxAndRouter(<MonitorsView connectors={[]} />);
 		expect(screen.getByText(/No connectors available/i)).toBeInTheDocument();
 	});
 
 	it("renders connectors", () => {
 		const connectors = [{ name: "conn1", monitors: [{ name: "mon1", instances: [] }] }];
-		renderWithRedux(<MonitorsView connectors={connectors} />);
+		renderWithReduxAndRouter(<MonitorsView connectors={connectors} />);
 		expect(screen.getByText(/conn1/i)).toBeInTheDocument();
 	});
 
@@ -33,7 +33,7 @@ describe("MonitorsView", () => {
 					],
 				},
 			];
-			renderWithRedux(<MonitorsView connectors={connectors} resourceId="test-resource" />);
+			renderWithReduxAndRouter(<MonitorsView connectors={connectors} resourceId="test-resource" />);
 
 			// Verify the component renders with the monitor
 			// The naturalMetricCompare function ensures instances are sorted: cpu0, cpu1, cpu2, cpu10
@@ -57,7 +57,7 @@ describe("MonitorsView", () => {
 					],
 				},
 			];
-			renderWithRedux(<MonitorsView connectors={connectors} resourceId="test-resource" />);
+			renderWithReduxAndRouter(<MonitorsView connectors={connectors} resourceId="test-resource" />);
 
 			// Should render without errors - different prefixes fall back to localeCompare
 			expect(screen.getByText(/conn1/i)).toBeInTheDocument();
@@ -79,7 +79,7 @@ describe("MonitorsView", () => {
 					],
 				},
 			];
-			renderWithRedux(<MonitorsView connectors={connectors} resourceId="test-resource" />);
+			renderWithReduxAndRouter(<MonitorsView connectors={connectors} resourceId="test-resource" />);
 
 			// Should render without errors - no numbers fall back to localeCompare
 			expect(screen.getByText(/conn1/i)).toBeInTheDocument();
@@ -100,7 +100,7 @@ describe("MonitorsView", () => {
 					],
 				},
 			];
-			renderWithRedux(<MonitorsView connectors={connectors} resourceId="test-resource" />);
+			renderWithReduxAndRouter(<MonitorsView connectors={connectors} resourceId="test-resource" />);
 
 			// Should render without errors
 			expect(screen.getByText(/conn1/i)).toBeInTheDocument();
@@ -123,7 +123,7 @@ describe("MonitorsView", () => {
 					],
 				},
 			];
-			renderWithRedux(<MonitorsView connectors={connectors} resourceId="test-resource" />);
+			renderWithReduxAndRouter(<MonitorsView connectors={connectors} resourceId="test-resource" />);
 
 			// Should render - natural sort should handle eth1, eth2, eth10, eth20
 			expect(screen.getByText(/conn1/i)).toBeInTheDocument();
