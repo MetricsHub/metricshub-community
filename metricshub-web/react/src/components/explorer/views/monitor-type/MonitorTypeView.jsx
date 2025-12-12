@@ -260,16 +260,21 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 						/>
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-						{filteredInstances.map((instance, index) => (
-							<Box key={index} id={instance.name}>
-								<InstanceMetricsTable
-									instance={instance}
-									metricEntries={getMetricsForInstance(instance)}
-									naturalMetricCompare={naturalMetricCompare}
-									metaMetrics={monitorData?.metaMetrics}
-								/>
-							</Box>
-						))}
+						{filteredInstances.map((instance, index) => {
+							const isHighlighted =
+								location.hash && decodeURIComponent(location.hash.substring(1)) === instance.name;
+							return (
+								<Box key={index} id={instance.name}>
+									<InstanceMetricsTable
+										instance={instance}
+										metricEntries={getMetricsForInstance(instance)}
+										naturalMetricCompare={naturalMetricCompare}
+										metaMetrics={monitorData?.metaMetrics}
+										highlighted={isHighlighted}
+									/>
+								</Box>
+							);
+						})}
 						{filteredInstances.length === 0 && <Typography>No instances found.</Typography>}
 					</Box>
 				</Box>
