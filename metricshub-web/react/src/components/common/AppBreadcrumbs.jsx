@@ -10,6 +10,31 @@ import { paths } from "../../paths";
  */
 const EXPLORER_ROUTES = [
 	{
+		pattern:
+			"/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId/monitors/:monitorType",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			const monitorType = decodeURIComponent(params.monitorType);
+			return [
+				{ label: group, to: paths.explorerResourceGroup(group) },
+				{ label: resource, to: paths.explorerResource(group, resource) },
+				{ label: monitorType, to: null },
+			];
+		},
+	},
+	{
+		pattern: "/explorer/resources/:resource/connectors/:connectorId/monitors/:monitorType",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			const monitorType = decodeURIComponent(params.monitorType);
+			return [
+				{ label: resource, to: paths.explorerResource(null, resource) },
+				{ label: monitorType, to: null },
+			];
+		},
+	},
+	{
 		pattern: "/explorer/resource-groups/:group/resources/:resource",
 		getBreadcrumbs: (params) => {
 			const group = decodeURIComponent(params.group);

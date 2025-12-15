@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
 	Box,
 	Typography,
@@ -10,13 +11,17 @@ import {
 	TableCell,
 	TableHead,
 	TableRow,
+	IconButton,
+	Tooltip,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { prettifyKey } from "../../../../utils/text-prettifier";
 import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getMetricValue,
+	compareMetricEntries,
 	getBaseMetricKey,
 } from "../../../../utils/metrics-helper";
 import MonitorsHeader from "./components/MonitorsHeader";
@@ -26,6 +31,7 @@ import HoverInfo from "./components/HoverInfo";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
+import { paths } from "../../../../paths";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -38,10 +44,17 @@ import DashboardTable from "../common/DashboardTable";
  * - Shows a "last updated" label based on when the resource
  *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string }} props
+ * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string }} props
  */
-const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
+const MonitorsView = ({
+	connectors,
+	lastUpdatedAt,
+	resourceId,
+	resourceName,
+	resourceGroupName,
+}) => {
 	const dispatch = useDispatch();
+	const navigate = useNavigate();
 	const uiState = useSelector((state) =>
 		resourceId ? selectResourceUiState(resourceId)(state) : null,
 	);
@@ -57,24 +70,7 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 	/**
 	 * Natural sort for metric names like cpu0, cpu1, cpu10, ...
 	 */
-	const naturalMetricCompare = React.useCallback((a, b) => {
-		const nameA = a[0];
-		const nameB = b[0];
-		const re = /(.*?)(\d+)$/;
-		const ma = nameA.match(re);
-		const mb = nameB.match(re);
-		if (!ma || !mb || ma[1] !== mb[1]) {
-			// Fallback to plain string compare when no common prefix+index
-			return nameA.localeCompare(nameB);
-		}
-		const idxA = parseInt(ma[2], 10);
-		const idxB = parseInt(mb[2], 10);
-		if (Number.isNaN(idxA) || Number.isNaN(idxB)) {
-			return nameA.localeCompare(nameB);
-		}
-		if (idxA === idxB) return 0;
-		return idxA < idxB ? -1 : 1;
-	}, []);
+	const naturalMetricCompare = React.useCallback(compareMetricEntries, []);
 
 	/**
 	 * Decide whether we can pivot a monitor into one or more
@@ -410,6 +406,36 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 													>
 														{instances.length}
 													</Box>
+													<Tooltip title="Open Monitor Type Page">
+														<Box
+															component="span"
+															onClick={(e) => {
+																e.stopPropagation();
+																navigate(
+																	paths.explorerMonitorType(
+																		resourceGroupName,
+																		resourceName,
+																		connector.name,
+																		monitor.name,
+																	),
+																);
+															}}
+															sx={{
+																ml: 1,
+																p: 0.5,
+																display: "inline-flex",
+																borderRadius: "50%",
+																cursor: "pointer",
+																"&:hover": {
+																	bgcolor: "action.hover",
+																},
+															}}
+															role="button"
+															tabIndex={0}
+														>
+															<OpenInNewIcon fontSize="small" color="action" />
+														</Box>
+													</Tooltip>
 												</Typography>
 											</AccordionSummary>
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
@@ -425,7 +451,10 @@ const MonitorsView = ({ connectors, lastUpdatedAt, resourceId }) => {
 														))
 													: sortedInstances.map((inst) => {
 															const metrics = inst?.metrics ?? {};
-															const metricEntries = Object.entries(metrics);
+															const metricEntries = Object.entries(metrics).map(([k, v]) => [
+																k,
+																getMetricValue(v),
+															]);
 															return (
 																<InstanceMetricsTable
 																	key={inst?.attributes?.id || inst.name}

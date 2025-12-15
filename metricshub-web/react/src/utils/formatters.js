@@ -30,12 +30,19 @@ export const formatSI = (n, unit) => {
 	return unit ? `${value} ${prefix}${unit}` : `${value} ${prefix}`;
 };
 
+/**
+ * Removes curly braces from unit strings.
+ * @param {string} unit - The unit string, potentially with curly braces.
+ * @returns {string} The cleaned unit string without curly braces.
+ */
+export const cleanUnit = (unit) => (unit ? unit.replace(/[{}]/g, "") : "");
+
 export const formatMetricValue = (value, unit) => {
 	if (value == null) return "";
 	if (typeof value !== "number") return String(value);
 
-	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
-	const u = cleanUnit.toLowerCase();
+	const cleanUnitValue = cleanUnit(unit);
+	const u = cleanUnitValue.toLowerCase();
 
 	// Handle bytes
 	if (u === "by" || u === "b" || u === "byte" || u === "bytes") {
@@ -59,7 +66,7 @@ export const formatMetricValue = (value, unit) => {
 	}
 
 	// Use generic SI formatter for everything else
-	return formatSI(value, cleanUnit);
+	return formatSI(value, cleanUnitValue);
 };
 
 export const formatRelativeTime = (isoString) => {

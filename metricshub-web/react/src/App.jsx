@@ -157,7 +157,15 @@ const AppContent = ({ onToggleTheme }) => {
 							path="/explorer/resource-groups/:group/resources/:resource"
 							element={<Explorer />}
 						/>
+						<Route
+							path="/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId/monitors/:monitorType"
+							element={<Explorer />}
+						/>
 						<Route path="/explorer/resources/:resource" element={<Explorer />} />
+						<Route
+							path="/explorer/resources/:resource/connectors/:connectorId/monitors/:monitorType"
+							element={<Explorer />}
+						/>
 						<Route path={paths.configuration} element={<Configuration />} />
 						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
 						{/* Catch-all */}
