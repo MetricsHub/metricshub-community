@@ -415,6 +415,7 @@ const MonitorsView = ({
 																	paths.explorerMonitorType(
 																		resourceGroupName,
 																		resourceName,
+																		connector.name,
 																		monitor.name,
 																	),
 																);

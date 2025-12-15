@@ -76,6 +76,7 @@ const ExplorerPage = () => {
 	const resourceGroupName = params.name;
 	const resourceName = params.resource;
 	const groupParam = params.group;
+	const connectorId = params.connectorId;
 	const monitorType = params.monitorType;
 
 	const isMonitorType = Boolean(monitorType);
@@ -159,6 +160,7 @@ const ExplorerPage = () => {
 					<MonitorTypeView
 						resourceName={resourceName}
 						resourceGroupName={groupParam}
+						connectorId={connectorId}
 						monitorType={monitorType}
 					/>
 				)}

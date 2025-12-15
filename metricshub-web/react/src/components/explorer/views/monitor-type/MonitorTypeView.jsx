@@ -61,21 +61,23 @@ const TAB_METRICS = 1;
  * @param {Object} props - Component props.
  * @param {string} props.resourceName - The name of the resource.
  * @param {string} props.resourceGroupName - The name of the resource group.
+ * @param {string} props.connectorId - The ID of the connector.
  * @param {string} props.monitorType - The type of the monitor.
  * @returns {JSX.Element} The rendered component.
  */
-const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
+const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitorType }) => {
 	const [tabValue, setTabValue] = React.useState(TAB_INSTANCES);
 	const currentResource = useSelector(selectCurrentResource);
 	const loading = useSelector(selectResourceLoading);
 	const error = useSelector(selectResourceError);
 
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
+	const decodedConnectorId = connectorId ? decodeURIComponent(connectorId) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
-	const monitorData = useMonitorData(currentResource, decodedMonitorType);
+	const monitorData = useMonitorData(currentResource, decodedConnectorId, decodedMonitorType);
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
 	const { sortedInstances, sortedMetricsInstances, sortConfig, handleRequestSort } =

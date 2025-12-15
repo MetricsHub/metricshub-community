@@ -6,10 +6,10 @@ export const paths = {
 		group
 			? `/explorer/resource-groups/${encodeURIComponent(group)}/resources/${encodeURIComponent(name)}`
 			: `/explorer/resources/${encodeURIComponent(name)}`,
-	explorerMonitorType: (group, resource, monitorType) =>
+	explorerMonitorType: (group, resource, connectorId, monitorType) =>
 		group
-			? `/explorer/resource-groups/${encodeURIComponent(group)}/resources/${encodeURIComponent(resource)}/monitors/${encodeURIComponent(monitorType)}`
-			: `/explorer/resources/${encodeURIComponent(resource)}/monitors/${encodeURIComponent(monitorType)}`,
+			? `/explorer/resource-groups/${encodeURIComponent(group)}/resources/${encodeURIComponent(resource)}/connectors/${encodeURIComponent(connectorId)}/monitors/${encodeURIComponent(monitorType)}`
+			: `/explorer/resources/${encodeURIComponent(resource)}/connectors/${encodeURIComponent(connectorId)}/monitors/${encodeURIComponent(monitorType)}`,
 	configuration: "/configuration",
 	configurationFile: (name) => `/configuration/${encodeURIComponent(name)}`,
 	login: "/login",
