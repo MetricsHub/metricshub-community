@@ -61,6 +61,7 @@ export default function ExplorerSearch() {
 
 	return (
 		<Autocomplete
+			noOptionsText={inputValue.length < 2 ? "Start typing to search..." : "No result"}
 			open={open}
 			onOpen={() => setOpen(true)}
 			onClose={() => setOpen(false)}
