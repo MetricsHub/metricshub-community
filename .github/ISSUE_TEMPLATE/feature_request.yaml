@@ -15,6 +15,7 @@ body:
       - /
       - metricshub-engine
       - metricshub-agent
+      - metricshub-assets
       - metricshub-classloader-agent
       - metricshub-ipmi-extension
       - metricshub-oscommand-extension

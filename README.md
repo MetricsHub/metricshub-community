@@ -5,7 +5,7 @@
 
 [![Website](https://img.shields.io/website?up_message=available&down_message=down&url=https%3A%2F%2Fmetricshub.com&style=for-the-badge)](https://metricshub.com)
 [![GitHub release (with filter)](https://img.shields.io/github/v/release/metricshub/metricshub-community?style=for-the-badge)](https://github.com/metricshub/metricshub-community/releases)
-[![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/maven-deploy.yml?style=for-the-badge)](https://github.com/MetricsHub/metricshub-community/actions/workflows/maven-deploy.yml)
+[![Build](https://img.shields.io/github/actions/workflow/status/metricshub/metricshub-community/build-main.yml?style=for-the-badge)](https://github.com/MetricsHub/metricshub-community/actions/workflows/build-main.yml)
 ![GitHub top language](https://img.shields.io/github/languages/top/metricshub/metricshub-community?style=for-the-badge)
 [![License](https://img.shields.io/badge/license-AGPL%203.0-7b3e7b?style=for-the-badge)](https://github.com/metricshub/metricshub-community/blob/main/LICENSE)
 
