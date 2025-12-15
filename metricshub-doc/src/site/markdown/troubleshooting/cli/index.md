@@ -17,4 +17,5 @@ Use the:
 * **[SSH CLI](ssh.md)**: to confirm secure SSH connections to your resources
 * **[WBEM CLI](wbem.md)**: to execute CIM-compliant queries on WBEM-enabled systems
 * **[WinRm CLI](winrm.md)**: to query and manage Windows systems using the WS-Management protocol
-* **[WMI CLI](wmi.md)**: to execute WMI queries on Windows-based systems.
+* **[WMI CLI](wmi.md)**: to execute WMI queries on Windows-based systems
+* **[Windows Remote CLI](winremote.md)**: to execute Windows OS commands (CMD commands) on remote Windows systems via WMI or WinRM.
