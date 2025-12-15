@@ -5,12 +5,13 @@ import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import PivotGroupHeader from "./PivotGroupHeader";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
-import { formatMetricValue } from "../../../../../utils/formatters";
+import MetricValueCell from "../../common/MetricValueCell";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
 	isUtilizationUnit,
 	getInstanceDisplayName,
+	getMetricValue,
 } from "../../../../../utils/metrics-helper";
 import {
 	UtilizationStack,
@@ -228,42 +229,10 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 										</TableCell>
 										{group.metricKeys.map((key) => {
 											const meta = getMetricMetadata(key, metaMetrics);
-											const unit = meta?.unit;
-											const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
-											const val = metrics[key];
-
-											if (val === undefined || val === null) {
-												return (
-													<TableCell key={key} align="left">
-														-
-													</TableCell>
-												);
-											}
-
-											const formattedValue = formatMetricValue(val, unit);
-											const rawValue = String(val);
-											const showRaw =
-												typeof val === "number" &&
-												formattedValue !== rawValue &&
-												formattedValue !== "";
+											const val = getMetricValue(metrics[key]);
 
 											return (
-												<TableCell key={key} align="left">
-													{showRaw ? (
-														<HoverInfo
-															title={
-																<Typography variant="body2">
-																	Raw value : {val} {cleanUnit}
-																</Typography>
-															}
-															sx={{ display: "inline-block" }}
-														>
-															{formattedValue}
-														</HoverInfo>
-													) : (
-														formattedValue
-													)}
-												</TableCell>
+												<MetricValueCell key={key} value={val} unit={meta?.unit} align="left" />
 											);
 										})}
 									</TableRow>

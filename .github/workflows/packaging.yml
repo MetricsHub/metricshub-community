@@ -319,6 +319,7 @@ jobs:
         java -jar ${{ github.workspace }}/jsign.jar --help
 
     - name: Login to Azure
+      if: ${{ github.repository_owner == 'MetricsHub' }}
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -383,6 +384,7 @@ jobs:
         Get-ChildItem packages
 
     - name: Sign Installer
+      if: ${{ github.repository_owner == 'MetricsHub' }}
       shell: cmd
       run: |
         java -jar ${{ github.workspace }}\jsign.jar ^
@@ -391,11 +393,25 @@ jobs:
           --storepass ${{ steps.get_access_token.outputs.token }} ^
           --alias ${{ secrets.AZURE_VAULT_ALIAS }} packages/*.msi
 
+    - name: Create Windows ZIP Archive
+      shell: pwsh
+      run: |
+        $zipPath = Join-Path -Path "packages" -ChildPath "metricshub-community-windows-${{ inputs.version }}.zip"
+        if (Test-Path "packages\MetricsHub") {
+          Push-Location "packages"
+          Compress-Archive -Path "MetricsHub" -DestinationPath "metricshub-community-windows-${{ inputs.version }}.zip" -Force
+          Pop-Location
+          Write-Host "Created ZIP archive: $zipPath"
+          Get-Item $zipPath
+        } else {
+          Write-Warning "packages\MetricsHub directory not found"
+        }
+
     - name: Upload Windows Packages
       uses: actions/upload-artifact@v5
       with:
         name: windows-packages
-        path: packages/*.msi
+        path: packages/metricshub-community-*
 
     outputs:
       windowsPackage: windows-packages
