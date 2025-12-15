@@ -27,4 +27,3 @@ export const useInstanceFilter = (instances) => {
 		filteredInstances,
 	};
 };
-

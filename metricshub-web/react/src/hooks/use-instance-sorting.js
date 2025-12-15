@@ -1,5 +1,9 @@
 import { useState, useMemo, useCallback } from "react";
-import { getMetricValue, compareMetricNames, getInstanceDisplayName } from "../utils/metrics-helper";
+import {
+	getMetricValue,
+	compareMetricNames,
+	getInstanceDisplayName,
+} from "../utils/metrics-helper";
 
 export const SORT_KEY_INSTANCE_ID = "__instance_id__";
 export const SORT_DIRECTION_ASC = "asc";
@@ -73,4 +77,3 @@ export const useInstanceSorting = (instances) => {
 		handleRequestSort,
 	};
 };
-

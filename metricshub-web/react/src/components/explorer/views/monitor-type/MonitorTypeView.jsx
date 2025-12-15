@@ -78,12 +78,8 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 	const monitorData = useMonitorData(currentResource, decodedMonitorType);
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
-	const {
-		sortedInstances,
-		sortedMetricsInstances,
-		sortConfig,
-		handleRequestSort,
-	} = useInstanceSorting(instances);
+	const { sortedInstances, sortedMetricsInstances, sortConfig, handleRequestSort } =
+		useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
 
@@ -213,7 +209,11 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 									<TableCell>
 										<TableSortLabel
 											active={sortConfig.key === SORT_KEY_INSTANCE_ID}
-											direction={sortConfig.key === SORT_KEY_INSTANCE_ID ? sortConfig.direction : SORT_DIRECTION_ASC}
+											direction={
+												sortConfig.key === SORT_KEY_INSTANCE_ID
+													? sortConfig.direction
+													: SORT_DIRECTION_ASC
+											}
 											onClick={() => handleRequestSort(SORT_KEY_INSTANCE_ID)}
 										>
 											Instance Id
@@ -226,7 +226,9 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 											<TableCell key={metric}>
 												<TableSortLabel
 													active={sortConfig.key === metric}
-													direction={sortConfig.key === metric ? sortConfig.direction : SORT_DIRECTION_ASC}
+													direction={
+														sortConfig.key === metric ? sortConfig.direction : SORT_DIRECTION_ASC
+													}
 													onClick={() => handleRequestSort(metric)}
 												>
 													<HoverInfo

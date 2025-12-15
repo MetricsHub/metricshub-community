@@ -35,4 +35,3 @@ export const useMetricSelection = (instances) => {
 		availableMetrics,
 	};
 };
-
