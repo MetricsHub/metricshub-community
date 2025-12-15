@@ -29,8 +29,6 @@ import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_ID;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -577,7 +575,7 @@ public class ExplorerService {
 
 	/**
 	 * Performs a search across hierarchy elements (excluding virtual container
-	 * nodes) using Jaro–Winkler
+	 * nodes).
 	 *
 	 * @param query raw query string
 	 * @return ranked list of matches
@@ -587,135 +585,7 @@ public class ExplorerService {
 		if (q.isEmpty()) {
 			return List.of();
 		}
-		List<SearchMatch> matches = searchService.search(q, getHierarchy(true));
-		matches.forEach(this::updatePath);
-		return matches;
-	}
-
-	private void updatePath(SearchMatch match) {
-		String type = match.getType();
-		if (type == null) {
-			return;
-		}
-
-		String lowerType = type.toLowerCase();
-		String name = match.getName();
-		String originalName = name;
-		String groupName = null;
-		String resourceName = null;
-		String path = match.getPath();
-
-		if (path != null) {
-			String prefix = path;
-			if (name != null && path.endsWith(name)) {
-				prefix = path.substring(0, path.length() - name.length());
-			}
-			if (prefix.endsWith("/")) {
-				prefix = prefix.substring(0, prefix.length() - 1);
-			}
-
-			String[] parts = prefix.split("/");
-			int len = parts.length;
-
-			if ("monitor".equals(lowerType) || "monitor-type".equals(lowerType) || "monitor_type".equals(lowerType)) {
-				if (len == 3) {
-					resourceName = parts[1];
-				} else if (len == 4) {
-					groupName = parts[1];
-					resourceName = parts[2];
-				}
-			} else if ("instance".equals(lowerType)) {
-				if (len == 4) {
-					resourceName = parts[1];
-					name = parts[3];
-				} else if (len == 5) {
-					groupName = parts[1];
-					resourceName = parts[2];
-					name = parts[4];
-				}
-			} else if ("resource".equals(lowerType)) {
-				if (len == 2) {
-					groupName = parts[1];
-				}
-			} else if ("connector".equals(lowerType)) {
-				if (len == 2) {
-					resourceName = parts[1];
-				} else if (len == 3) {
-					groupName = parts[1];
-					resourceName = parts[2];
-				}
-			}
-		}
-
-		String newPath = null;
-		switch (lowerType) {
-			case "resource_group":
-			case "resource-group":
-				newPath = "/explorer/resource-groups/" + encode(name);
-				break;
-			case "resource":
-				if (groupName != null) {
-					newPath = "/explorer/resource-groups/" + encode(groupName) + "/resources/" + encode(name);
-				} else {
-					newPath = "/explorer/resources/" + encode(name);
-				}
-				break;
-			case "connector":
-				if (groupName != null) {
-					newPath =
-						"/explorer/resource-groups/" + encode(groupName) + "/resources/" + encode(resourceName) + "#" + name;
-				} else {
-					newPath = "/explorer/resources/" + encode(resourceName) + "#" + name;
-				}
-				break;
-			case "monitor":
-			case "monitor-type":
-			case "monitor_type":
-				if (groupName != null) {
-					newPath =
-						"/explorer/resource-groups/" +
-						encode(groupName) +
-						"/resources/" +
-						encode(resourceName) +
-						"/monitors/" +
-						encode(name);
-				} else {
-					newPath = "/explorer/resources/" + encode(resourceName) + "/monitors/" + encode(name);
-				}
-				break;
-			case "instance":
-				if (groupName != null) {
-					newPath =
-						"/explorer/resource-groups/" +
-						encode(groupName) +
-						"/resources/" +
-						encode(resourceName) +
-						"/monitors/" +
-						encode(name) +
-						"#" +
-						originalName;
-				} else {
-					newPath = "/explorer/resources/" + encode(resourceName) + "/monitors/" + encode(name) + "#" + originalName;
-				}
-				break;
-			default:
-				break;
-		}
-
-		if (newPath != null) {
-			match.setPath(newPath);
-		}
-	}
-
-	private String encode(String s) {
-		if (s == null) {
-			return "";
-		}
-		try {
-			return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
-		} catch (Exception e) {
-			return s;
-		}
+		return searchService.search(q, getHierarchy(true));
 	}
 
 	/**

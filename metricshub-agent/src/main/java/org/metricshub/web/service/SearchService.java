@@ -21,6 +21,8 @@ package org.metricshub.web.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -47,7 +49,8 @@ public class SearchService {
 	private static final double MIN_JW_SCORE = 0.50D;
 
 	/**
-	 * Performs a search across hierarchy elements (excluding virtual container nodes) using Jaro–Winkler
+	 * Performs a search across hierarchy elements (excluding virtual container
+	 * nodes) using Jaro–Winkler
 	 *
 	 * @param q raw query string
 	 * @return ranked list of matches
@@ -56,7 +59,7 @@ public class SearchService {
 		final List<SearchMatch> matches = new ArrayList<>();
 
 		final Queue<TraversalNode> queue = new LinkedList<>();
-		queue.add(new TraversalNode(hierarchy, hierarchy.getName()));
+		queue.add(new TraversalNode(hierarchy, "/explorer", "/explorer"));
 		while (!queue.isEmpty()) {
 			final TraversalNode tn = queue.poll();
 			final AbstractBaseTelemetry current = tn.node;
@@ -67,7 +70,7 @@ public class SearchService {
 						.builder()
 						.name(current.getName())
 						.type(current.getType())
-						.path(tn.path)
+						.path(tn.matchPath)
 						.jaroWinklerScore(jw)
 						.build()
 				);
@@ -76,26 +79,56 @@ public class SearchService {
 			// enqueue children based on type
 			if (current instanceof AgentTelemetry at) {
 				if (at.getResourceGroups() != null) {
-					at.getResourceGroups().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					at
+						.getResourceGroups()
+						.forEach(child -> {
+							String path = tn.childrenBasePath + "/resource-groups/" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
+						});
 				}
 				if (at.getResources() != null) {
-					at.getResources().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					at
+						.getResources()
+						.forEach(child -> {
+							String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
+						});
 				}
 			} else if (current instanceof ResourceGroupTelemetry rgt) {
 				if (rgt.getResources() != null) {
-					rgt.getResources().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					rgt
+						.getResources()
+						.forEach(child -> {
+							String path = tn.childrenBasePath + "/resources/" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
+						});
 				}
 			} else if (current instanceof ResourceTelemetry rt) {
 				if (rt.getConnectors() != null) {
-					rt.getConnectors().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					rt
+						.getConnectors()
+						.forEach(child -> {
+							String matchPath = tn.childrenBasePath + "#" + encode(child.getName());
+							queue.add(new TraversalNode(child, matchPath, tn.childrenBasePath));
+						});
 				}
 			} else if (current instanceof ConnectorTelemetry ct) {
 				if (ct.getMonitors() != null) {
-					ct.getMonitors().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					ct
+						.getMonitors()
+						.forEach(child -> {
+							String path = tn.childrenBasePath + "/monitors/" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
+						});
 				}
 			} else if (current instanceof MonitorTypeTelemetry mtt) {
 				if (mtt.getInstances() != null) {
-					mtt.getInstances().forEach(child -> queue.add(new TraversalNode(child, tn.path + "/" + child.getName())));
+					mtt
+						.getInstances()
+						.forEach(child -> {
+							String path = tn.matchPath + "#" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
+						});
 				}
 			}
 		}
@@ -117,7 +150,18 @@ public class SearchService {
 	/**
 	 * Helper record to hold a node and its path during traversal.
 	 */
-	private static record TraversalNode(AbstractBaseTelemetry node, String path) {}
+	private static record TraversalNode(AbstractBaseTelemetry node, String matchPath, String childrenBasePath) {}
+
+	private String encode(String s) {
+		if (s == null) {
+			return "";
+		}
+		try {
+			return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
+		} catch (Exception e) {
+			return s;
+		}
+	}
 
 	/**
 	 * Computes the Jaro-Winkler similarity between two strings.
