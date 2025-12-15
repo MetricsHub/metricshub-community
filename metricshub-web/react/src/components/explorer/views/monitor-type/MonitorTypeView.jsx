@@ -37,11 +37,22 @@ import MetricValueCell from "../common/MetricValueCell";
 import {
 	getMetricValue,
 	getMetricMetadata,
-	compareMetricNames,
 	compareMetricEntries,
 	getInstanceDisplayName,
 } from "../../../../utils/metrics-helper";
+import { cleanUnit } from "../../../../utils/formatters";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
+import { useMonitorData } from "../../../../hooks/use-monitor-data";
+import {
+	useInstanceSorting,
+	SORT_KEY_INSTANCE_ID,
+	SORT_DIRECTION_ASC,
+} from "../../../../hooks/use-instance-sorting";
+import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
+import { useMetricSelection } from "../../../../hooks/use-metric-selection";
+
+const TAB_INSTANCES = 0;
+const TAB_METRICS = 1;
 
 /**
  * Monitor Type View component.
@@ -54,11 +65,7 @@ import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
  * @returns {JSX.Element} The rendered component.
  */
 const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
-	const [tabValue, setTabValue] = React.useState(0);
-	const [searchTerm, setSearchTerm] = React.useState("");
-	const [selectedMetrics, setSelectedMetrics] = React.useState([]);
-	const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
-	const [sortConfig, setSortConfig] = React.useState({ key: null, direction: "asc" });
+	const [tabValue, setTabValue] = React.useState(TAB_INSTANCES);
 	const currentResource = useSelector(selectCurrentResource);
 	const loading = useSelector(selectResourceLoading);
 	const error = useSelector(selectResourceError);
@@ -68,121 +75,29 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
+	const monitorData = useMonitorData(currentResource, decodedMonitorType);
+	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
+
+	const {
+		sortedInstances,
+		sortedMetricsInstances,
+		sortConfig,
+		handleRequestSort,
+	} = useInstanceSorting(instances);
+
+	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
+
+	const {
+		selectedMetrics,
+		handleMetricToggle,
+		isSettingsOpen,
+		setIsSettingsOpen,
+		availableMetrics,
+	} = useMetricSelection(sortedInstances);
+
 	const handleTabChange = React.useCallback((event, newValue) => {
 		setTabValue(newValue);
 	}, []);
-
-	/**
-	 * Handles the sort request for the metrics table.
-	 * Toggles direction if the same key is clicked, otherwise sets the new key and defaults to 'asc'.
-	 *
-	 * @param {string} key - The metric key or identifier to sort by.
-	 */
-	const handleRequestSort = React.useCallback((key) => {
-		setSortConfig((prev) => {
-			const isAsc = prev.key === key && prev.direction === "asc";
-			return { key, direction: isAsc ? "desc" : "asc" };
-		});
-	}, []);
-
-	const monitorData = React.useMemo(() => {
-		if (!currentResource?.connectors) return null;
-		for (const connector of currentResource.connectors) {
-			if (connector.monitors) {
-				const found = connector.monitors.find((m) => m.name === decodedMonitorType);
-				if (found) {
-					return {
-						monitor: found,
-						metaMetrics: connector.metaMetrics,
-						connectorName: connector.name,
-					};
-				}
-			}
-		}
-		return null;
-	}, [currentResource, decodedMonitorType]);
-
-	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
-
-	/**
-	 * Helper to get the instance ID or name.
-	 * @param {object} instance
-	 * @returns {string}
-	 */
-	const getInstanceId = React.useCallback(
-		(instance) => instance.attributes?.id || instance.name || "",
-		[],
-	);
-
-	const sortedInstances = React.useMemo(() => {
-		return [...instances].sort((a, b) => {
-			const nameA = getInstanceId(a);
-			const nameB = getInstanceId(b);
-			return compareMetricNames(nameA, nameB);
-		});
-	}, [instances, getInstanceId]);
-
-	const sortedMetricsInstances = React.useMemo(() => {
-		// If sorting by instance ID in ascending order (default), or no sort key, use the pre-sorted instances.
-		if (
-			!sortConfig.key ||
-			(sortConfig.key === "__instance_id__" && sortConfig.direction === "asc")
-		) {
-			return sortedInstances;
-		}
-
-		// If sorting by instance ID in descending order, just reverse the pre-sorted instances.
-		if (sortConfig.key === "__instance_id__" && sortConfig.direction === "desc") {
-			return [...sortedInstances].reverse();
-		}
-
-		// Sort by metric value
-		return [...sortedInstances].sort((a, b) => {
-			const valA = getMetricValue(a.metrics?.[sortConfig.key]);
-			const valB = getMetricValue(b.metrics?.[sortConfig.key]);
-
-			if (valA === valB) return 0;
-			// Push null/undefined to the end
-			if (valA === null || valA === undefined) return 1;
-			if (valB === null || valB === undefined) return -1;
-
-			let comparison = 0;
-			if (typeof valA === "number" && typeof valB === "number") {
-				comparison = valA - valB;
-			} else {
-				comparison = String(valA).toLowerCase().localeCompare(String(valB).toLowerCase());
-			}
-			return sortConfig.direction === "asc" ? comparison : -comparison;
-		});
-	}, [sortedInstances, sortConfig]);
-
-	const availableMetrics = React.useMemo(() => {
-		const metricsSet = new Set();
-		// Check first 50 instances to gather available metrics
-		for (const instance of sortedInstances.slice(0, 50)) {
-			if (instance.metrics) {
-				Object.keys(instance.metrics).forEach((k) => metricsSet.add(k));
-			}
-		}
-		return Array.from(metricsSet).sort();
-	}, [sortedInstances]);
-
-	const handleMetricToggle = React.useCallback((metric) => {
-		setSelectedMetrics((prev) =>
-			prev.includes(metric) ? prev.filter((m) => m !== metric) : [...prev, metric],
-		);
-	}, []);
-
-	const filteredInstances = React.useMemo(() => {
-		return sortedInstances.filter((instance) => {
-			const id = getInstanceId(instance);
-			const name = instance.attributes?.name || "";
-			return (
-				id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				name.toLowerCase().includes(searchTerm.toLowerCase())
-			);
-		});
-	}, [sortedInstances, searchTerm, getInstanceId]);
 
 	// Helper to get metrics for an instance
 	const getMetricsForInstance = React.useCallback((instance) => {
@@ -231,7 +146,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 				</Tabs>
 			</Box>
 
-			{tabValue === 0 && (
+			{tabValue === TAB_INSTANCES && (
 				<Box sx={{ flex: 1, overflow: "auto" }}>
 					<Box sx={{ mb: 2 }}>
 						<TextField
@@ -244,7 +159,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 						/>
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-						{filteredInstances.map((instance, index) => (
+						{filteredInstances?.map((instance, index) => (
 							<Box key={index}>
 								<InstanceMetricsTable
 									instance={instance}
@@ -259,7 +174,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 				</Box>
 			)}
 
-			{tabValue === 1 && (
+			{tabValue === TAB_METRICS && (
 				<Box sx={{ flex: 1, overflow: "auto" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
@@ -272,7 +187,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 						<DialogTitle>Select Metrics</DialogTitle>
 						<DialogContent dividers>
 							<FormGroup>
-								{availableMetrics.map((metric) => (
+								{availableMetrics?.map((metric) => (
 									<FormControlLabel
 										key={metric}
 										control={
@@ -291,61 +206,63 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, monitorType }) => {
 						</DialogActions>
 					</Dialog>
 
-					<DashboardTable>
-						<TableHead>
-							<TableRow>
-								<TableCell>
-									<TableSortLabel
-										active={sortConfig.key === "__instance_id__"}
-										direction={sortConfig.key === "__instance_id__" ? sortConfig.direction : "asc"}
-										onClick={() => handleRequestSort("__instance_id__")}
-									>
-										Instance Id
-									</TableSortLabel>
-								</TableCell>
-								{selectedMetrics.map((metric) => {
-									const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-									const cleanUnit = meta?.unit ? meta.unit.replace(/[{}]/g, "") : "";
-									return (
-										<TableCell key={metric}>
-											<TableSortLabel
-												active={sortConfig.key === metric}
-												direction={sortConfig.key === metric ? sortConfig.direction : "asc"}
-												onClick={() => handleRequestSort(metric)}
-											>
-												<HoverInfo
-													title={metric}
-													description={meta?.description}
-													unit={cleanUnit}
-													sx={{ display: "inline-block" }}
-												>
-													{metric}
-												</HoverInfo>
-											</TableSortLabel>
-										</TableCell>
-									);
-								})}
-							</TableRow>
-						</TableHead>
-						<TableBody>
-							{sortedMetricsInstances.slice(0, 10).map((instance, index) => (
-								<TableRow key={index}>
+					<Box sx={{ width: "100%", overflowX: "auto" }}>
+						<DashboardTable containerProps={{ sx: { minWidth: "max-content" } }}>
+							<TableHead>
+								<TableRow>
 									<TableCell>
-										<InstanceNameWithAttributes
-											displayName={getInstanceDisplayName(instance)}
-											attributes={instance.attributes}
-										/>
+										<TableSortLabel
+											active={sortConfig.key === SORT_KEY_INSTANCE_ID}
+											direction={sortConfig.key === SORT_KEY_INSTANCE_ID ? sortConfig.direction : SORT_DIRECTION_ASC}
+											onClick={() => handleRequestSort(SORT_KEY_INSTANCE_ID)}
+										>
+											Instance Id
+										</TableSortLabel>
 									</TableCell>
-									{selectedMetrics.map((metric) => {
-										const val = instance.metrics?.[metric];
-										const value = getMetricValue(val);
+									{selectedMetrics?.map((metric) => {
 										const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-										return <MetricValueCell key={metric} value={value} unit={meta?.unit} />;
+										const cleanedUnit = cleanUnit(meta?.unit);
+										return (
+											<TableCell key={metric}>
+												<TableSortLabel
+													active={sortConfig.key === metric}
+													direction={sortConfig.key === metric ? sortConfig.direction : SORT_DIRECTION_ASC}
+													onClick={() => handleRequestSort(metric)}
+												>
+													<HoverInfo
+														title={metric}
+														description={meta?.description}
+														unit={cleanedUnit}
+														sx={{ display: "inline-block" }}
+													>
+														{metric}
+													</HoverInfo>
+												</TableSortLabel>
+											</TableCell>
+										);
 									})}
 								</TableRow>
-							))}
-						</TableBody>
-					</DashboardTable>
+							</TableHead>
+							<TableBody>
+								{sortedMetricsInstances?.map((instance, index) => (
+									<TableRow key={index}>
+										<TableCell>
+											<InstanceNameWithAttributes
+												displayName={getInstanceDisplayName(instance)}
+												attributes={instance.attributes}
+											/>
+										</TableCell>
+										{selectedMetrics?.map((metric) => {
+											const val = instance.metrics?.[metric];
+											const value = getMetricValue(val);
+											const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+											return <MetricValueCell key={metric} value={value} unit={meta?.unit} />;
+										})}
+									</TableRow>
+								))}
+							</TableBody>
+						</DashboardTable>
+					</Box>
 				</Box>
 			)}
 		</Box>

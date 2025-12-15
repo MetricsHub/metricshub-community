@@ -3,7 +3,7 @@ import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
-import { formatMetricValue } from "../../../../../utils/formatters";
+import { formatMetricValue, cleanUnit } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -95,7 +95,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 							if (group.type === "single") {
 								const meta = getMetricMetadata(group.key, metaMetrics);
 								const { description, unit } = meta;
-								const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+								const cleanedUnit = cleanUnit(unit);
 
 								// If unit is "1", render as a progress bar
 								if (isUtilizationUnit(unit)) {
@@ -106,7 +106,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												<HoverInfo
 													title={group.key}
 													description={description}
-													unit={cleanUnit}
+													unit={cleanedUnit}
 													sx={{ display: "inline-block" }}
 												>
 													{group.key}
@@ -132,7 +132,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 											<HoverInfo
 												title={group.key}
 												description={description}
-												unit={cleanUnit}
+												unit={cleanedUnit}
 												sx={{ display: "inline-block" }}
 											>
 												{group.key}
@@ -143,7 +143,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												<HoverInfo
 													title={
 														<Typography variant="body2">
-															Raw value : {group.value} {cleanUnit}
+															Raw value : {group.value} {cleanedUnit}
 														</Typography>
 													}
 													sx={{ display: "inline-block" }}
@@ -162,7 +162,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 							const sortedParts = [...parts].sort(compareUtilizationParts);
 							const meta = getMetricMetadata(group.baseName, metaMetrics);
 							const { description, unit } = meta;
-							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+							const cleanedUnit = cleanUnit(unit);
 
 							return (
 								<TableRow key={group.baseName}>
@@ -180,7 +180,7 @@ const InstanceMetricsTable = ({ instance, metricEntries, naturalMetricCompare, m
 												<HoverInfo
 													title={group.baseName}
 													description={description}
-													unit={cleanUnit}
+													unit={cleanedUnit}
 													sx={{ display: "inline-block" }}
 												>
 													{group.baseName}

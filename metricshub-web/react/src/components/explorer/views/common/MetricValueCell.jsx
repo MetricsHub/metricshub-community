@@ -1,7 +1,7 @@
 import * as React from "react";
 import { TableCell, Typography } from "@mui/material";
 import HoverInfo from "../monitors/components/HoverInfo";
-import { formatMetricValue } from "../../../../utils/formatters";
+import { formatMetricValue, cleanUnit } from "../../../../utils/formatters";
 
 /**
  * Renders a table cell for a metric value.
@@ -18,7 +18,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 		return <TableCell align={align}>-</TableCell>;
 	}
 
-	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+	const cleanedUnit = cleanUnit(unit);
 	const formattedValue = formatMetricValue(value, unit);
 	const rawValue = String(value);
 	const showRaw = typeof value === "number" && formattedValue !== rawValue && formattedValue !== "";
@@ -29,7 +29,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 				<HoverInfo
 					title={
 						<Typography variant="body2">
-							Raw value : {value} {cleanUnit}
+							Raw value : {value} {cleanedUnit}
 						</Typography>
 					}
 					sx={{ display: "inline-block" }}
