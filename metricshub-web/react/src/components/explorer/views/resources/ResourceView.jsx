@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Box, CircularProgress, Divider, Typography, Button } from "@mui/material";
+import { Box, CircularProgress, Divider, Typography } from "@mui/material";
 import {
 	selectExplorerHierarchy,
 	selectExplorerLoading,
@@ -16,8 +16,6 @@ import MetricsTable from "../common/MetricsTable";
 import MonitorsView from "../monitors/MonitorsView";
 import HoverInfo from "../monitors/components/HoverInfo";
 import WarningIcon from "@mui/icons-material/Warning";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
-import PauseIcon from "@mui/icons-material/Pause";
 import { debounce } from "@mui/material";
 import { getMetricValue } from "../../../../utils/metrics-helper";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
@@ -28,10 +26,11 @@ import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
  * @param {{
  *   resourceName?: string,
  *   resourceGroupName?: string,
+ *   isPaused?: boolean
  * }} props
  * @returns {JSX.Element | null}
  */
-const ResourceView = ({ resourceName, resourceGroupName }) => {
+const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 	const dispatch = useDispatch();
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
@@ -40,7 +39,6 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 	const resourceLoading = useSelector(selectResourceLoading);
 	const resourceError = useSelector(selectResourceError);
 	const [lastUpdatedAt, setLastUpdatedAt] = React.useState(null);
-	const [isPaused, setIsPaused] = React.useState(false);
 	const rootRef = React.useRef(null);
 
 	const decodedName = React.useMemo(
@@ -51,11 +49,6 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		() => (resourceGroupName ? decodeURIComponent(resourceGroupName) : null),
 		[resourceGroupName],
 	);
-
-	// Reset paused state when resource changes
-	React.useEffect(() => {
-		setIsPaused(false);
-	}, [decodedName, decodedGroup]);
 
 	const handleFetch = React.useCallback(() => {
 		setLastUpdatedAt(Date.now());
@@ -204,24 +197,6 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 		return false;
 	}, [metrics]);
 
-	const handleTogglePause = React.useCallback(() => {
-		setIsPaused((prev) => !prev);
-	}, []);
-
-	const actionButton = React.useMemo(
-		() => (
-			<Button
-				size="small"
-				variant="contained"
-				startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
-				onClick={handleTogglePause}
-			>
-				{isPaused ? "Resume Collect" : "Pause Collect"}
-			</Button>
-		),
-		[isPaused, handleTogglePause],
-	);
-
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -256,12 +231,7 @@ const ResourceView = ({ resourceName, resourceGroupName }) => {
 
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
-			<EntityHeader
-				title={resourceTitle}
-				iconType="resource"
-				attributes={resource.attributes}
-				action={actionButton}
-			/>
+			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes} />
 			<Divider />
 			{hasMetrics && (
 				<>

@@ -10,8 +10,7 @@ import { paths } from "../../paths";
  */
 const EXPLORER_ROUTES = [
 	{
-		pattern:
-			"/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId/monitors/:monitorType",
+		pattern: "/explorer/resource-groups/:group/resources/:resource/monitors/:monitorType",
 		getBreadcrumbs: (params) => {
 			const group = decodeURIComponent(params.group);
 			const resource = decodeURIComponent(params.resource);
@@ -24,7 +23,7 @@ const EXPLORER_ROUTES = [
 		},
 	},
 	{
-		pattern: "/explorer/resources/:resource/connectors/:connectorId/monitors/:monitorType",
+		pattern: "/explorer/resources/:resource/monitors/:monitorType",
 		getBreadcrumbs: (params) => {
 			const resource = decodeURIComponent(params.resource);
 			const monitorType = decodeURIComponent(params.monitorType);
@@ -65,11 +64,10 @@ const EXPLORER_ROUTES = [
  * Component to render breadcrumbs based on the current location.
  * Currently supports Explorer routes.
  *
- * @param {Object} props
- * @param {import("@mui/material").SxProps} [props.sx] - Additional styles
+ * @param {{ sx?: import("@mui/material").SxProps, action?: React.ReactNode }} props
  * @returns {React.ReactElement|null}
  */
-const AppBreadcrumbs = ({ sx }) => {
+const AppBreadcrumbs = ({ sx, action }) => {
 	const location = useLocation();
 	const currentPath = location.pathname;
 
@@ -81,7 +79,7 @@ const AppBreadcrumbs = ({ sx }) => {
 
 			for (const route of EXPLORER_ROUTES) {
 				const match = matchPath({ path: route.pattern, end: true }, currentPath);
-				if (match && match.params) {
+				if (match) {
 					items.push(...route.getBreadcrumbs(match.params));
 					break; // Stop after first match
 				}
@@ -94,7 +92,16 @@ const AppBreadcrumbs = ({ sx }) => {
 	if (crumbs.length <= 1) return null;
 
 	return (
-		<Box sx={{ px: 2, py: 1, ...sx }}>
+		<Box
+			sx={{
+				px: 2,
+				py: 1,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				...sx,
+			}}
+		>
 			<Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
 				{crumbs.map((crumb, index) => {
 					const isLast = index === crumbs.length - 1;
@@ -104,7 +111,7 @@ const AppBreadcrumbs = ({ sx }) => {
 						</Typography>
 					) : (
 						<Link
-							key={`${crumb.label}-${index}`}
+							key={crumb.label}
 							underline="hover"
 							color="inherit"
 							component={RouterLink}
@@ -116,6 +123,7 @@ const AppBreadcrumbs = ({ sx }) => {
 					);
 				})}
 			</Breadcrumbs>
+			{action && <Box>{action}</Box>}
 		</Box>
 	);
 };

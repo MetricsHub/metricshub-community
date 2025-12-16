@@ -12,13 +12,13 @@ describe("MetricsTable", () => {
 		const metrics = [{ name: "cpu", value: 50, unit: "%" }];
 		render(<MetricsTable metrics={metrics} />);
 		expect(screen.getByText("cpu")).toBeInTheDocument();
-		expect(screen.getByText("50")).toBeInTheDocument();
+		expect(screen.getByText("50.00 %")).toBeInTheDocument();
 	});
 
 	it("renders metrics from object", () => {
 		const metrics = { cpu: { value: 50, unit: "%" } };
 		render(<MetricsTable metrics={metrics} />);
 		expect(screen.getByText("cpu")).toBeInTheDocument();
-		expect(screen.getByText("50")).toBeInTheDocument();
+		expect(screen.getByText("50.00 %")).toBeInTheDocument();
 	});
 });
