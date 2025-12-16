@@ -15,39 +15,39 @@ winremotecli <HOSTNAME> --command <COMMAND> [--wmi | --winrm] [WMI_OPTIONS | WIN
 
 ## Options
 
-| Option       | Description                                                                                      | Default Value |
-| ------------ | ------------------------------------------------------------------------------------------------ | ------------- |
-| `HOSTNAME`   | Hostname or IP address of the Windows remote-enabled device. **This option is required.**        | None          |
-| `--command`  | Windows OS command (CMD command) to execute. **This option is required.**                        | None          |
-| `--wmi`      | Enable WMI protocol for command execution. **Either --wmi or --winrm must be specified.**        | None          |
-| `--winrm`    | Enable WinRM protocol for command execution. **Either --wmi or --winrm must be specified.**     | None          |
-| `-v`         | Enables verbose mode. Use `-v` for basic logs, `-vv` for detailed logs.                          | None          |
-| `-h, --help` | Displays detailed help information about available options.                                      | None          |
+| Option       | Description                                                                                 | Default Value |
+| ------------ | ------------------------------------------------------------------------------------------- | ------------- |
+| `HOSTNAME`   | Hostname or IP address of the Windows remote-enabled device. **This option is required.**   | None          |
+| `--command`  | Windows OS command (CMD command) to execute. **This option is required.**                   | None          |
+| `--wmi`      | Enable WMI protocol for command execution. **Either --wmi or --winrm must be specified.**   | None          |
+| `--winrm`    | Enable WinRM protocol for command execution. **Either --wmi or --winrm must be specified.** | None          |
+| `-v`         | Enables verbose mode. Use `-v` for basic logs, `-vv` for detailed logs.                     | None          |
+| `-h, --help` | Displays detailed help information about available options.                                 | None          |
 
 ### WMI Options
 
 When using `--wmi`, you can specify additional WMI-specific options:
 
-| Option                  | Description                                                                                      | Default Value |
-| ----------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
-| `--wmi-username`        | Username for WMI authentication.                                                                 | None          |
-| `--wmi-password`        | Password for WMI authentication. If not provided, you will be prompted interactively.          | None          |
-| `--wmi-timeout`         | Timeout in seconds for WMI operations.                                                           | 30            |
-| `--wmi-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced).     | None          |
+| Option                  | Description                                                                                 | Default Value |
+| ----------------------- | ------------------------------------------------------------------------------------------- | ------------- |
+| `--wmi-username`        | Username for WMI authentication.                                                            | None          |
+| `--wmi-password`        | Password for WMI authentication. If not provided, you will be prompted interactively.       | None          |
+| `--wmi-timeout`         | Timeout in seconds for WMI operations.                                                      | 30            |
+| `--wmi-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced). | None          |
 
 ### WinRM Options
 
 When using `--winrm`, you can specify additional WinRM-specific options:
 
-| Option                    | Description                                                                                      | Default Value |
-| ------------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
-| `--winrm-transport`       | Transport protocol for WinRM. Possible values: `HTTP` or `HTTPS`.                               | `HTTP`        |
-| `--winrm-username`        | Username for WinRM authentication.                                                              | None          |
-| `--winrm-password`        | Password for WinRM authentication. If not provided, you will be prompted interactively.        | None          |
-| `--winrm-port`            | Port for WinRM service (default: 5985 for HTTP, 5986 for HTTPS).                                | Auto-detect   |
-| `--winrm-timeout`         | Timeout in seconds for WinRM operations.                                                        | 30            |
-| `--winrm-auth`            | Comma-separated ordered list of authentication schemes. Possible values: `NTLM`, `KERBEROS`.     | `NTLM`        |
-| `--winrm-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced).     | None          |
+| Option                    | Description                                                                                  | Default Value |
+| ------------------------- | -------------------------------------------------------------------------------------------- | ------------- |
+| `--winrm-transport`       | Transport protocol for WinRM. Possible values: `HTTP` or `HTTPS`.                            | `HTTP`        |
+| `--winrm-username`        | Username for WinRM authentication.                                                           | None          |
+| `--winrm-password`        | Password for WinRM authentication. If not provided, you will be prompted interactively.      | None          |
+| `--winrm-port`            | Port for WinRM service (default: 5985 for HTTP, 5986 for HTTPS).                             | Auto-detect   |
+| `--winrm-timeout`         | Timeout in seconds for WinRM operations.                                                     | 30            |
+| `--winrm-auth`            | Comma-separated ordered list of authentication schemes. Possible values: `NTLM`, `KERBEROS`. | `NTLM`        |
+| `--winrm-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced).  | None          |
 
 ## Examples
 
