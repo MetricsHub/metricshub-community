@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Typography } from "@mui/material";
+import { Typography, Box } from "@mui/material";
 import EntityHeader from "../common/EntityHeader";
 import MetricsTable from "../common/MetricsTable";
 
@@ -25,8 +25,21 @@ const AgentData = ({ agent, totalResources }) => {
 
 	const title = "MetricsHub Community";
 
+	const osType = attributes["os.type"];
+	let action = null;
+	if (typeof osType === "string") {
+		const lower = osType.toLowerCase();
+		if (lower.includes("windows")) {
+			action = (
+				<Box component="img" src="/windows.svg" alt="Windows" sx={{ width: 60, height: 60 }} />
+			);
+		} else if (lower.includes("linux")) {
+			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 80, height: 80 }} />;
+		}
+	}
+
 	return (
-		<EntityHeader title={title} iconType="agent" attributes={attributes}>
+		<EntityHeader title={title} iconType="agent" attributes={attributes} action={action}>
 			{version && <Typography variant="subtitle1">Version: {version}</Typography>}
 			{typeof totalResources === "number" && (
 				<Typography variant="subtitle1">Total resources: {totalResources}</Typography>
