@@ -179,8 +179,8 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ flex: 1, overflow: "auto" }}>
-					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1 }}>
+				<Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
 						</IconButton>
@@ -210,12 +210,14 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						</DialogActions>
 					</Dialog>
 
-					<Box sx={{ width: "100%", overflowX: "auto" }}>
+					<Box sx={{ flex: 1, width: "100%", overflow: "hidden" }}>
 						<DashboardTable
 							containerProps={{
 								sx: {
+									height: "100%",
 									minWidth: selectedMetrics.length + 1 >= 5 ? "100%" : undefined,
 									overflowX: selectedMetrics.length + 1 >= 5 ? "auto" : "hidden",
+									overflowY: "auto",
 								},
 							}}
 							fixedLayout={selectedMetrics.length + 1 < 5}
