@@ -108,8 +108,8 @@ public class SearchService {
 					rt
 						.getConnectors()
 						.forEach(child -> {
-							String matchPath = tn.childrenBasePath + "#" + encode(child.getName());
-							queue.add(new TraversalNode(child, matchPath, tn.childrenBasePath));
+							String path = tn.childrenBasePath + "/connectors/" + encode(child.getName());
+							queue.add(new TraversalNode(child, path, path));
 						});
 				}
 			} else if (current instanceof ConnectorTelemetry ct) {
