@@ -2,14 +2,8 @@ import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
+import { emptyStateCellSx, sectionTitleSx, truncatedCellSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Render a single resource row.
@@ -73,11 +67,7 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				<NodeTypeIcons type="resource" />
 				Resources
 			</Typography>
-			<DashboardTable
-				sx={{ tableLayout: "fixed", width: "100%" }}
-				style={{ tableLayout: "fixed" }}
-				containerProps={{ sx: { width: "100%" } }}
-			>
+			<DashboardTable>
 				<TableHead>
 					<TableRow>
 						<TableCell sx={{ width: colWidth }}>Key</TableCell>

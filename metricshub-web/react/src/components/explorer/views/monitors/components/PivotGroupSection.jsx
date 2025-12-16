@@ -7,12 +7,8 @@ import TruncatedText from "../../common/TruncatedText";
 import PivotGroupHeader from "./PivotGroupHeader";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
+import { truncatedCellSx } from "../../common/table-styles";
 
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -101,7 +97,9 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 		// Count how many instances actually have data for any of the keys in this group
 		const instancesWithDataCount = sortedInstances.filter((inst) =>
-			group.metricKeys.some((key) => inst.metrics?.[key] !== undefined && inst.metrics?.[key] !== null),
+			group.metricKeys.some(
+				(key) => inst.metrics?.[key] !== undefined && inst.metrics?.[key] !== null,
+			),
 		).length;
 
 		// If only 1 (or 0) instance has data, showing an average is redundant/misleading
@@ -198,12 +196,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 			{open && (
 				<Box sx={{ mt: 1, mb: 2 }}>
-					<DashboardTable
-						stickyHeader={false}
-						sx={{ tableLayout: "fixed", width: "100%" }}
-						style={{ tableLayout: "fixed" }}
-						containerProps={{ sx: { width: "100%" } }}
-					>
+					<DashboardTable stickyHeader={false}>
 						<PivotGroupHeader
 							group={group}
 							isUtilizationGroup={isUtilizationGroup}
@@ -237,7 +230,10 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 										<TableRow key={id || rowIndex}>
 											<TableCell sx={truncatedCellSx}>
 												<Box sx={{ overflow: "hidden" }}>
-													<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
+													<InstanceNameWithAttributes
+														displayName={displayName}
+														attributes={attrs}
+													/>
 												</Box>
 											</TableCell>
 											<TableCell>{hasData ? <UtilizationStack parts={parts} /> : "-"}</TableCell>

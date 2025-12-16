@@ -15,9 +15,9 @@ import {
 	Tooltip,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import MonitorIcon from '@mui/icons-material/Monitor';
+import MonitorIcon from "@mui/icons-material/Monitor";
 import { prettifyKey } from "../../../../utils/text-prettifier";
-import { formatRelativeTime, formatMetricValue } from "../../../../utils/formatters";
+import { formatRelativeTime } from "../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getMetricValue,
@@ -32,15 +32,11 @@ import { selectResourceUiState, setMonitorExpanded } from "../../../../store/sli
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
 import TruncatedText from "../common/TruncatedText";
+import MetricValueCell from "../common/MetricValueCell";
+import { truncatedCellSx } from "../common/table-styles";
 import { paths } from "../../../../paths";
 import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 import { flashBlueAnimation } from "../../../../utils/animations";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -331,84 +327,70 @@ const MonitorsView = ({
 							{/* Connector Attributes & Metrics Container */}
 							{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 								showMetricsTable) && (
-									<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-										{/* Connector Attributes Table */}
-										{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Attributes
-												</Typography>
-												<DashboardTable
-													sx={{ tableLayout: "fixed", width: "100%" }}
-													style={{ tableLayout: "fixed" }}
-													containerProps={{ sx: { width: "100%" } }}
-												>
-													<TableHead>
-														<TableRow>
-															<TableCell sx={{ width: "50%" }}>Key</TableCell>
-															<TableCell sx={{ width: "50%" }}>Value</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
+								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+									{/* Connector Attributes Table */}
+									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Attributes
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell sx={{ width: "50%" }}>Key</TableCell>
+														<TableCell sx={{ width: "50%" }}>Value</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
 
-										{/* Connector Metrics Table */}
-										{showMetricsTable && (
-											<Box>
-												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-													Metrics
-												</Typography>
-												<DashboardTable
-													sx={{ tableLayout: "fixed", width: "100%" }}
-													style={{ tableLayout: "fixed" }}
-													containerProps={{ sx: { width: "100%" } }}
-												>
-													<TableHead>
-														<TableRow>
-															<TableCell sx={{ width: "50%" }}>Name</TableCell>
-															<TableCell align="left" sx={{ width: "50%" }}>
-																Value
-															</TableCell>
-														</TableRow>
-													</TableHead>
-													<TableBody>
-														{Object.entries(connector.metrics).map(([name, metric]) => {
-															let value = metric;
-															let unit = undefined;
+									{/* Connector Metrics Table */}
+									{showMetricsTable && (
+										<Box>
+											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+												Metrics
+											</Typography>
+											<DashboardTable>
+												<TableHead>
+													<TableRow>
+														<TableCell sx={{ width: "50%" }}>Name</TableCell>
+														<TableCell align="left" sx={{ width: "50%" }}>
+															Value
+														</TableCell>
+													</TableRow>
+												</TableHead>
+												<TableBody>
+													{Object.entries(connector.metrics).map(([name, metric]) => {
+														let value = metric;
+														let unit = undefined;
 
-															if (metric && typeof metric === "object" && "value" in metric) {
-																value = metric.value;
-																unit = metric.unit;
-															}
+														if (metric && typeof metric === "object" && "value" in metric) {
+															value = metric.value;
+															unit = metric.unit;
+														}
 
-															if (!unit) {
-																const meta = getMetricMetadata(name, connector.metaMetrics);
-																if (meta?.unit) unit = meta.unit;
-															}
+														if (!unit) {
+															const meta = getMetricMetadata(name, connector.metaMetrics);
+															if (meta?.unit) unit = meta.unit;
+														}
 
-															const formattedValue = formatMetricValue(value, unit);
-
-															return (
-																<TableRow key={name}>
-																	<TableCell sx={truncatedCellSx}>
-																		<TruncatedText text={name}>{name}</TruncatedText>
-																	</TableCell>
-																	<TableCell align="left" sx={truncatedCellSx}>
-																		<TruncatedText text={formattedValue}>
-																			{formattedValue}
-																		</TruncatedText>
-																	</TableCell>
-																</TableRow>
-															);
-														})}
-													</TableBody>
-												</DashboardTable>
-											</Box>
-										)}
-									</Box>
-								)}
+														return (
+															<TableRow key={name}>
+																<TableCell sx={truncatedCellSx}>
+																	<TruncatedText text={name}>{name}</TruncatedText>
+																</TableCell>
+																<MetricValueCell value={value} unit={unit} align="left" />
+															</TableRow>
+														);
+													})}
+												</TableBody>
+											</DashboardTable>
+										</Box>
+									)}
+								</Box>
+							)}
 
 							{/* Monitors Section */}
 							<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -510,30 +492,30 @@ const MonitorsView = ({
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
 													? pivotGroups.map((group) => (
-														<PivotGroupSection
-															key={group.baseName}
-															group={group}
-															sortedInstances={sortedInstances}
-															resourceId={resourceId}
-															metaMetrics={connector.metaMetrics}
-														/>
-													))
-													: sortedInstances.map((inst) => {
-														const metrics = inst?.metrics ?? {};
-														const metricEntries = Object.entries(metrics).map(([k, v]) => [
-															k,
-															getMetricValue(v),
-														]);
-														return (
-															<InstanceMetricsTable
-																key={inst?.attributes?.id || inst.name}
-																instance={inst}
-																metricEntries={metricEntries}
-																naturalMetricCompare={naturalMetricCompare}
+															<PivotGroupSection
+																key={group.baseName}
+																group={group}
+																sortedInstances={sortedInstances}
+																resourceId={resourceId}
 																metaMetrics={connector.metaMetrics}
 															/>
-														);
-													})}
+														))
+													: sortedInstances.map((inst) => {
+															const metrics = inst?.metrics ?? {};
+															const metricEntries = Object.entries(metrics).map(([k, v]) => [
+																k,
+																getMetricValue(v),
+															]);
+															return (
+																<InstanceMetricsTable
+																	key={inst?.attributes?.id || inst.name}
+																	instance={inst}
+																	metricEntries={metricEntries}
+																	naturalMetricCompare={naturalMetricCompare}
+																	metaMetrics={connector.metaMetrics}
+																/>
+															);
+														})}
 											</AccordionDetails>
 										</Accordion>
 									);

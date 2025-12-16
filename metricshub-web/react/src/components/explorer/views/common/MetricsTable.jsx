@@ -3,14 +3,9 @@ import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } fr
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
+import { emptyStateCellSx, sectionTitleSx, truncatedCellSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
+import MetricValueCell from "./MetricValueCell";
 
 /**
  * Render table rows for a list of metrics.
@@ -38,9 +33,7 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
 			<TableCell sx={truncatedCellSx}>
 				<TruncatedText text={m.name}>{m.name}</TruncatedText>
 			</TableCell>
-			<TableCell align="left" sx={truncatedCellSx}>
-				<TruncatedText text={String(m.value ?? "")}>{String(m.value ?? "")}</TruncatedText>
-			</TableCell>
+			<MetricValueCell value={m.value} unit={m.unit} align="left" />
 			{showUnit && (
 				<TableCell sx={truncatedCellSx}>
 					<TruncatedText text={m.unit === "1" ? "%" : (m.unit ?? "")}>
@@ -135,11 +128,7 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 				)}
 			</Box>
 			{(!shouldFold || expanded) && (
-				<DashboardTable
-					sx={{ tableLayout: "fixed", width: "100%" }}
-					style={{ tableLayout: "fixed" }}
-					containerProps={{ sx: { width: "100%" } }}
-				>
+				<DashboardTable>
 					<TableHead>
 						<TableRow>
 							<TableCell sx={{ width: colWidth }}>Name</TableCell>

@@ -65,6 +65,11 @@ export const formatMetricValue = (value, unit) => {
 		return parts.join(" ");
 	}
 
+	// Handle unit "1" as percentage
+	if (cleanUnit === "1") {
+		return formatSI(value * 100, "%");
+	}
+
 	// Use generic SI formatter for everything else
 	return formatSI(value, cleanUnitValue);
 };

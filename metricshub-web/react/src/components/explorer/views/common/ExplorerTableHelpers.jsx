@@ -1,13 +1,7 @@
 import * as React from "react";
 import { TableRow, TableCell } from "@mui/material";
-import { emptyStateCellSx } from "./table-styles";
+import { emptyStateCellSx, truncatedCellSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Render rows for a simple key/value attributes table.

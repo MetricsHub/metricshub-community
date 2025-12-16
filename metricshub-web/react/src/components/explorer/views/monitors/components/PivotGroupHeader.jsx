@@ -1,17 +1,12 @@
 import * as React from "react";
 import { Box, TableCell, TableHead, TableRow } from "@mui/material";
 import HoverInfo from "./HoverInfo";
+import { truncatedCellSx } from "../../common/table-styles";
 import {
 	getBaseMetricKey,
 	getMetricLabel,
 	getMetricMetadata,
 } from "../../../../../utils/metrics-helper";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Renders the header for the pivot group table.
