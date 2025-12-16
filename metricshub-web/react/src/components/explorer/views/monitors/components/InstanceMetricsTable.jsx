@@ -4,7 +4,8 @@ import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
-import { formatMetricValue } from "../../../../../utils/formatters";
+import MetricValueCell from "../../common/MetricValueCell";
+import { truncatedCellSx } from "../../common/table-styles";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -19,12 +20,6 @@ import {
 	compareUtilizationParts,
 } from "./Utilization";
 import { flashBlueAnimation } from "../../../../../utils/animations";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Displays a table of metrics for a single monitor instance.
@@ -99,12 +94,7 @@ const InstanceMetricsTable = ({
 				/>
 			</Box>
 
-			<DashboardTable
-				stickyHeader={false}
-				sx={{ tableLayout: "fixed", width: "100%" }}
-				style={{ tableLayout: "fixed" }}
-				containerProps={{ sx: { width: "100%" } }}
-			>
+			<DashboardTable stickyHeader={false}>
 				<TableHead>
 					<TableRow>
 						<TableCell sx={{ width: "50%" }}>Name</TableCell>
@@ -140,23 +130,12 @@ const InstanceMetricsTable = ({
 									);
 								}
 
-								const formattedValue = formatMetricValue(group.value, unit);
-								const rawValue = String(group.value);
-								const showRaw =
-									typeof group.value === "number" &&
-									formattedValue !== rawValue &&
-									formattedValue !== "";
-
 								return (
 									<TableRow key={group.key}>
 										<TableCell sx={truncatedCellSx}>
 											<TruncatedText text={group.key}>{group.key}</TruncatedText>
 										</TableCell>
-										<TableCell align="left" sx={truncatedCellSx}>
-											<TruncatedText text={showRaw ? `Raw value : ${group.value} ${cleanUnit}` : formattedValue}>
-												{formattedValue}
-											</TruncatedText>
-										</TableCell>
+										<MetricValueCell value={group.value} unit={unit} align="left" />
 									</TableRow>
 								);
 							}

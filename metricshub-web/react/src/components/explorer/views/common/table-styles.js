@@ -11,3 +11,9 @@ export const emptyStateCellSx = {
 	color: "text.secondary",
 	textAlign: "center",
 };
+
+export const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};

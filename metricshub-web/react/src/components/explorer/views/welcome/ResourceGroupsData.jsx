@@ -2,14 +2,8 @@ import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "../common/DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
+import { emptyStateCellSx, sectionTitleSx, truncatedCellSx } from "../common/table-styles";
 import TruncatedText from "../common/TruncatedText";
-
-const truncatedCellSx = {
-	whiteSpace: "nowrap",
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-};
 
 /**
  * Count resources in a resource group.
@@ -79,11 +73,7 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 				<NodeTypeIcons type="resource-group" />
 				Resource Groups
 			</Typography>
-			<DashboardTable
-				sx={{ tableLayout: "fixed", width: "100%" }}
-				style={{ tableLayout: "fixed" }}
-				containerProps={{ sx: { width: "100%" } }}
-			>
+			<DashboardTable>
 				<TableHead>
 					<TableRow>
 						<TableCell sx={{ width: "50%" }}>Key</TableCell>

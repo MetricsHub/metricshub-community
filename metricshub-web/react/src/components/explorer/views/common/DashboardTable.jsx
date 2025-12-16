@@ -56,14 +56,26 @@ const DashboardTable = ({
 	containerProps = {},
 	sx = {},
 	stickyHeader = true,
+	fixedLayout = true,
 	...rest
 }) => {
 	// Memoize merged sx objects to avoid recreating on every render
 	const containerMergedSx = React.useMemo(
-		() => ({ ...containerSx, ...(containerProps.sx || {}) }),
-		[containerProps.sx],
+		() => ({
+			...containerSx,
+			...(fixedLayout ? { width: "100%" } : {}),
+			...(containerProps.sx || {}),
+		}),
+		[containerProps.sx, fixedLayout],
 	);
-	const tableMergedSx = React.useMemo(() => ({ ...tableSx, ...sx }), [sx]);
+	const tableMergedSx = React.useMemo(
+		() => ({
+			...tableSx,
+			...(fixedLayout ? { tableLayout: "fixed", width: "100%" } : {}),
+			...sx,
+		}),
+		[sx, fixedLayout],
+	);
 
 	return (
 		<TableContainer
