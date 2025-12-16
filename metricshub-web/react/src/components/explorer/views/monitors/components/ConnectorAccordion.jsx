@@ -414,6 +414,7 @@ const ConnectorAccordion = ({
 															paths.explorerMonitorType(
 																resourceGroupName,
 																resourceName,
+																connector.name,
 																monitor.name,
 															),
 														);
