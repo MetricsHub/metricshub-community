@@ -1,12 +1,10 @@
 import * as React from "react";
 import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
-import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { truncatedCellSx } from "../../common/table-styles";
-import { cleanUnit } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -113,8 +111,7 @@ const InstanceMetricsTable = ({
 						groupedEntries.map((group) => {
 							if (group.type === "single") {
 								const meta = getMetricMetadata(group.key, metaMetrics);
-								const { description, unit } = meta;
-								const cleanedUnit = cleanUnit(unit);
+								const { unit } = meta;
 
 								// If unit is "1", render as a progress bar
 								if (isUtilizationUnit(unit)) {
@@ -143,9 +140,6 @@ const InstanceMetricsTable = ({
 
 							const parts = buildUtilizationParts(group.entries);
 							const sortedParts = [...parts].sort(compareUtilizationParts);
-							const meta = getMetricMetadata(group.baseName, metaMetrics);
-							const { description, unit } = meta;
-							const cleanedUnit = cleanUnit(unit);
 
 							return (
 								<TableRow key={group.baseName}>
