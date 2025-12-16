@@ -211,7 +211,16 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 					</Dialog>
 
 					<Box sx={{ width: "100%", overflowX: "auto" }}>
-						<DashboardTable containerProps={{ sx: { minWidth: "max-content" } }}>
+						<DashboardTable
+							containerProps={{
+								sx: {
+									minWidth: selectedMetrics.length + 1 >= 5 ? "100%" : undefined,
+									overflowX: selectedMetrics.length + 1 >= 5 ? "auto" : "hidden",
+								},
+							}}
+							fixedLayout={selectedMetrics.length + 1 < 5}
+							sx={selectedMetrics.length + 1 >= 5 ? { minWidth: "100%" } : undefined}
+						>
 							<TableHead>
 								<TableRow>
 									<TableCell>
