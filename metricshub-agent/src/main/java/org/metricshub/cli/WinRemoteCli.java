@@ -26,7 +26,11 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.PrintWriter;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.stream.Stream;
 import lombok.Data;
 import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.AnsiConsole;
@@ -35,9 +39,13 @@ import org.metricshub.cli.service.ConsoleService;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.MetricsHubCliService.CliPasswordReader;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
+import org.metricshub.cli.service.protocol.IProtocolConfigCli;
+import org.metricshub.cli.service.protocol.WinRmConfigCli;
+import org.metricshub.cli.service.protocol.WmiConfigCli;
 import org.metricshub.engine.common.IQuery;
 import org.metricshub.engine.configuration.IConfiguration;
 import picocli.CommandLine;
+import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
@@ -71,13 +79,14 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 		Example:
 
-		winremotecli <HOSTNAME> --username <USERNAME> --password <PASSWORD> --protocol <wmi|winrm> --command <COMMAND> --timeout <TIMEOUT>
+		winremotecli <HOSTNAME> --command <COMMAND> [--wmi | --winrm] [WMI_OPTIONS | WINRM_OPTIONS]
 
-		winremotecli dev-01 --username username --password password --protocol wmi --command "ipconfig /all" --timeout 30s
+		winremotecli dev-01 --wmi --wmi-username username --wmi-password password --command "ipconfig /all"
 
-		winremotecli dev-01 --username username --password password --protocol winrm --command "systeminfo" --timeout 30s
+		winremotecli dev-01 --winrm --winrm-username username --winrm-password password --command "systeminfo"
 
-		Note: If --password is not provided, you will be prompted interactively.
+		Note: If --wmi-password or --winrm-password is not provided, you will be prompted interactively.
+		Either --wmi or --winrm must be specified (but not both).
 		""";
 
 	@Parameters(index = "0", paramLabel = "HOSTNAME", description = "Hostname or IP address of the host to monitor")
@@ -86,58 +95,16 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	@Spec
 	CommandSpec spec;
 
-	/**
-	 * Username for Windows remote authentication
-	 */
-	@Option(
-		names = "--username",
-		order = 1,
-		paramLabel = "USER",
-		description = "Username for Windows remote authentication"
-	)
-	private String username;
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline WMI Options|@:%n")
+	WmiConfigCli wmiConfigCli;
 
-	/**
-	 * Password for Windows remote authentication
-	 */
-	@Option(
-		names = "--password",
-		order = 2,
-		paramLabel = "P4SSW0RD",
-		description = "Password for Windows remote authentication",
-		interactive = true,
-		arity = "0..1"
-	)
-	private char[] password;
-
-	/**
-	 * Protocol to use for Windows remote command execution (WMI or WINRM)
-	 */
-	@Option(
-		names = "--protocol",
-		order = 3,
-		paramLabel = "PROTOCOL",
-		defaultValue = "wmi",
-		description = "Protocol to use for Windows remote command execution (WMI or WINRM) (default: ${DEFAULT-VALUE})"
-	)
-	private String protocol;
-
-	/**
-	 * Timeout in seconds for Windows remote OS command execution
-	 */
-	@Option(
-		names = "--timeout",
-		order = 4,
-		paramLabel = "TIMEOUT",
-		defaultValue = "" + DEFAULT_TIMEOUT,
-		description = "Timeout in seconds for Windows remote OS command execution (default: ${DEFAULT-VALUE} s)"
-	)
-	private String timeout;
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline WinRM Options|@:%n")
+	WinRmConfigCli winRmConfigCli;
 
 	@Option(
 		names = "--command",
 		required = true,
-		order = 5,
+		order = 1,
 		paramLabel = "COMMAND",
 		description = "Windows OS command (CMD command) to execute"
 	)
@@ -145,13 +112,13 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 	@Option(
 		names = { "-h", "-?", "--help" },
-		order = 6,
+		order = 2,
 		usageHelp = true,
 		description = "Shows this help message and exits"
 	)
 	boolean usageHelpRequested;
 
-	@Option(names = "-v", order = 7, description = "Verbose mode (repeat the option to increase verbosity)")
+	@Option(names = "-v", order = 3, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
 	PrintWriter printWriter;
@@ -177,26 +144,77 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 
 		// Password
 		if (interactive) {
-			tryInteractivePassword(System.console()::readPassword);
+			tryInteractivePasswords(System.console()::readPassword);
 		}
 
 		if (command.isBlank()) {
 			throw new ParameterException(spec.commandLine(), "Windows OS command must not be empty nor blank.");
 		}
 
-		if (!protocol.equalsIgnoreCase("wmi") && !protocol.equalsIgnoreCase("winrm")) {
-			throw new ParameterException(spec.commandLine(), "Protocol must be either WMI or WINRM.");
+		// No protocol at all?
+		final boolean protocolsNotConfigured = Stream.of(wmiConfigCli, winRmConfigCli).allMatch(Objects::isNull);
+
+		if (protocolsNotConfigured) {
+			throw new ParameterException(spec.commandLine(), "At least one protocol must be specified: --winrm, --wmi.");
+		}
+
+		if (wmiConfigCli != null && winRmConfigCli != null) {
+			throw new ParameterException(spec.commandLine(), "Only one protocol should be specified: --winrm or --wmi.");
 		}
 	}
 
 	/**
-	 * Try to start the interactive mode to request and set Windows remote password
+	 * Try to start the interactive mode to request and set Windows remote passwords
 	 *
 	 * @param passwordReader password reader which displays the prompt text and wait for user's input
 	 */
-	void tryInteractivePassword(final CliPasswordReader<char[]> passwordReader) {
-		if (username != null && password == null) {
-			password = (passwordReader.read("%s password for Windows remote: ", username));
+	void tryInteractivePasswords(final CliPasswordReader<char[]> passwordReader) {
+		tryInteractiveWmiPassword(passwordReader);
+		tryInteractiveWinRmPassword(passwordReader);
+	}
+
+	/**
+	 * Try to start the interactive mode to request and set WMI password
+	 *
+	 * @param passwordReader password reader which displays the prompt text and wait for user's input
+	 */
+	void tryInteractiveWmiPassword(final CliPasswordReader<char[]> passwordReader) {
+		if (wmiConfigCli != null && wmiConfigCli.getUsername() != null && wmiConfigCli.getPassword() == null) {
+			wmiConfigCli.setPassword(passwordReader.read("%s password for WMI: ", wmiConfigCli.getUsername()));
+		}
+	}
+
+	/**
+	 * Try to start the interactive mode to request and set WinRM password
+	 *
+	 * @param passwordReader password reader which displays the prompt text and wait for user's input
+	 */
+	void tryInteractiveWinRmPassword(final CliPasswordReader<char[]> passwordReader) {
+		if (winRmConfigCli != null && winRmConfigCli.getUsername() != null && winRmConfigCli.getPassword() == null) {
+			winRmConfigCli.setPassword(passwordReader.read("%s password for WinRM: ", winRmConfigCli.getUsername()));
+		}
+	}
+
+	private Entry<String, IConfiguration> buildConfiguration() {
+		String configType;
+		IProtocolConfigCli cliConfig;
+		if (wmiConfigCli != null) {
+			cliConfig = wmiConfigCli;
+			configType = "wmi";
+		} else {
+			cliConfig = winRmConfigCli;
+			configType = "winrm";
+		}
+
+		try {
+			// Pass null for default username/password since we use protocol-specific options
+			final IConfiguration protocolConfiguration = cliConfig.toConfiguration(null, null);
+			// Duplicate the main hostname on each configuration. By design, the extensions retrieve the hostname from the configuration.
+			protocolConfiguration.setHostname(hostname);
+			protocolConfiguration.validateConfiguration(hostname);
+			return Map.entry(configType, protocolConfiguration);
+		} catch (Exception e) {
+			throw new IllegalStateException("Invalid configuration detected.", e);
 		}
 	}
 
@@ -247,31 +265,22 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 		printWriter = spec.commandLine().getOut();
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
+
+		// build the configuration
+		final Entry<String, IConfiguration> configEntry = buildConfiguration();
+
+		final String protocol = configEntry.getKey();
+
 		// Find an extension to execute the command
 		CliExtensionManager
 			.getExtensionManagerSingleton()
-			.findExtensionByType(protocol.toLowerCase())
+			.findExtensionByType(protocol)
 			.ifPresent(extension -> {
 				try {
-					// Create and fill in a configuration ObjectNode
-					final ObjectNode configurationNode = JsonNodeFactory.instance.objectNode();
-
-					configurationNode.set("username", new TextNode(username));
-					if (password != null) {
-						configurationNode.set("password", new TextNode(String.valueOf(password)));
-					}
-					configurationNode.set("timeout", new TextNode(timeout));
-
-					// Build an IConfiguration from the configuration ObjectNode
-					final IConfiguration configuration = extension.buildConfiguration(hostname, configurationNode, null);
-					configuration.setHostname(hostname);
-
-					configuration.validateConfiguration(hostname);
-
 					// display the request
-					displayCommand();
+					displayCommand(protocol);
 					// Execute the Windows remote OS command
-					final String result = extension.executeQuery(configuration, getQuery());
+					final String result = extension.executeQuery(configEntry.getValue(), getQuery());
 					// display the returned result
 					displayResult(result);
 				} catch (Exception e) {
@@ -284,7 +293,7 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	/**
 	 * Prints command execution details.
 	 */
-	void displayCommand() {
+	void displayCommand(final String protocol) {
 		printWriter.println(Ansi.ansi().a("Hostname ").bold().a(hostname).a(" - Executing Windows remote OS command."));
 		printWriter.println(Ansi.ansi().a("Protocol: ").fgBrightBlack().a(protocol).reset().toString());
 		printWriter.println(Ansi.ansi().a("Command: ").fgBrightBlack().a(command).reset().toString());

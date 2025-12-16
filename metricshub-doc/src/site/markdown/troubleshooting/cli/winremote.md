@@ -10,7 +10,7 @@ Before using the CLI, ensure your platform supports Windows remote monitoring by
 ## Syntax
 
 ```bash
-winremotecli <HOSTNAME> --username <USERNAME> --password <PASSWORD> --protocol <wmi|winrm> --command <COMMAND> --timeout <TIMEOUT>
+winremotecli <HOSTNAME> --command <COMMAND> [--wmi | --winrm] [WMI_OPTIONS | WINRM_OPTIONS]
 ```
 
 ## Options
@@ -18,41 +18,74 @@ winremotecli <HOSTNAME> --username <USERNAME> --password <PASSWORD> --protocol <
 | Option       | Description                                                                                      | Default Value |
 | ------------ | ------------------------------------------------------------------------------------------------ | ------------- |
 | `HOSTNAME`   | Hostname or IP address of the Windows remote-enabled device. **This option is required.**        | None          |
-| `--username` | Username for Windows remote authentication.                                                      | None          |
-| `--password` | Password for Windows remote authentication. If not provided, you will be prompted interactively. | None          |
-| `--protocol` | Protocol to use for Windows remote command execution. Possible values: `wmi` or `winrm`.         | `wmi`         |
 | `--command`  | Windows OS command (CMD command) to execute. **This option is required.**                        | None          |
-| `--timeout`  | Timeout in seconds for Windows remote OS command execution.                                      | 30            |
+| `--wmi`      | Enable WMI protocol for command execution. **Either --wmi or --winrm must be specified.**        | None          |
+| `--winrm`    | Enable WinRM protocol for command execution. **Either --wmi or --winrm must be specified.**     | None          |
 | `-v`         | Enables verbose mode. Use `-v` for basic logs, `-vv` for detailed logs.                          | None          |
 | `-h, --help` | Displays detailed help information about available options.                                      | None          |
+
+### WMI Options
+
+When using `--wmi`, you can specify additional WMI-specific options:
+
+| Option                  | Description                                                                                      | Default Value |
+| ----------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| `--wmi-username`        | Username for WMI authentication.                                                                 | None          |
+| `--wmi-password`        | Password for WMI authentication. If not provided, you will be prompted interactively.          | None          |
+| `--wmi-timeout`         | Timeout in seconds for WMI operations.                                                           | 30            |
+| `--wmi-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced).     | None          |
+
+### WinRM Options
+
+When using `--winrm`, you can specify additional WinRM-specific options:
+
+| Option                    | Description                                                                                      | Default Value |
+| ------------------------- | ------------------------------------------------------------------------------------------------ | ------------- |
+| `--winrm-transport`       | Transport protocol for WinRM. Possible values: `HTTP` or `HTTPS`.                               | `HTTP`        |
+| `--winrm-username`        | Username for WinRM authentication.                                                              | None          |
+| `--winrm-password`        | Password for WinRM authentication. If not provided, you will be prompted interactively.        | None          |
+| `--winrm-port`            | Port for WinRM service (default: 5985 for HTTP, 5986 for HTTPS).                                | Auto-detect   |
+| `--winrm-timeout`         | Timeout in seconds for WinRM operations.                                                        | 30            |
+| `--winrm-auth`            | Comma-separated ordered list of authentication schemes. Possible values: `NTLM`, `KERBEROS`.     | `NTLM`        |
+| `--winrm-force-namespace` | Force a specific namespace for connectors that perform namespace auto-detection (advanced).     | None          |
 
 ## Examples
 
 ### Example 1: Execute Command via WMI Protocol
 
 ```bash
-winremotecli dev-01 --username admin --password secret --protocol wmi --command "ipconfig /all" --timeout 30
+winremotecli dev-01 --wmi --wmi-username admin --wmi-password secret --command "ipconfig /all"
 ```
 
 ### Example 2: Execute Command via WinRM Protocol
 
 ```bash
-winremotecli dev-01 --username admin --password secret --protocol winrm --command "systeminfo" --timeout 30
+winremotecli dev-01 --winrm --winrm-username admin --winrm-password secret --command "systeminfo"
 ```
 
 ### Example 3: Interactive Password Input
 
 ```bash
-winremotecli dev-01 --username admin --protocol wmi --command "tasklist"
+winremotecli dev-01 --wmi --wmi-username admin --command "tasklist"
 ```
 
-The CLI prompts for the password if not provided.
+The CLI prompts for the password if `--wmi-password` or `--winrm-password` is not provided.
 
-### Example 4: Using Default Protocol (WMI)
+### Example 4: WMI with Custom Timeout
 
 ```bash
-winremotecli dev-01 --username admin --password secret --command "dir C:\\Windows"
+winremotecli dev-01 --wmi --wmi-username admin --wmi-password secret --command "dir C:\\Windows" --wmi-timeout 60
 ```
 
-When `--protocol` is not specified, the CLI defaults to `wmi`.
+### Example 5: WinRM with HTTPS Transport
+
+```bash
+winremotecli dev-01 --winrm --winrm-username admin --winrm-password secret --command "systeminfo" --winrm-transport HTTPS --winrm-port 5986
+```
+
+### Example 6: WinRM with Custom Authentication
+
+```bash
+winremotecli dev-01 --winrm --winrm-username admin --winrm-password secret --command "tasklist" --winrm-auth NTLM,KERBEROS
+```
 
