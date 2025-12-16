@@ -64,10 +64,10 @@ const EXPLORER_ROUTES = [
  * Component to render breadcrumbs based on the current location.
  * Currently supports Explorer routes.
  *
- * @param {{ sx?: import("@mui/material").SxProps }} props
+ * @param {{ sx?: import("@mui/material").SxProps, action?: React.ReactNode }} props
  * @returns {React.ReactElement|null}
  */
-const AppBreadcrumbs = ({ sx }) => {
+const AppBreadcrumbs = ({ sx, action }) => {
 	const location = useLocation();
 	const currentPath = location.pathname;
 
@@ -92,7 +92,16 @@ const AppBreadcrumbs = ({ sx }) => {
 	if (crumbs.length <= 1) return null;
 
 	return (
-		<Box sx={{ px: 2, py: 1, ...sx }}>
+		<Box
+			sx={{
+				px: 2,
+				py: 1,
+				display: "flex",
+				justifyContent: "space-between",
+				alignItems: "center",
+				...sx,
+			}}
+		>
 			<Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
 				{crumbs.map((crumb, index) => {
 					const isLast = index === crumbs.length - 1;
@@ -114,6 +123,7 @@ const AppBreadcrumbs = ({ sx }) => {
 					);
 				})}
 			</Breadcrumbs>
+			{action && <Box>{action}</Box>}
 		</Box>
 	);
 };

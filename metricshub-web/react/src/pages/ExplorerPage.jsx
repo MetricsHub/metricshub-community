@@ -1,6 +1,8 @@
 import * as React from "react";
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import { useAppDispatch } from "../hooks/store";
 import { setLastVisitedPath } from "../store/slices/explorer-slice";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
@@ -22,10 +24,20 @@ const ExplorerPage = () => {
 	const params = useParams();
 	const location = useLocation();
 	const dispatch = useAppDispatch();
+	const [isPaused, setIsPaused] = React.useState(false);
 
 	React.useEffect(() => {
 		dispatch(setLastVisitedPath(location.pathname));
 	}, [location.pathname, dispatch]);
+
+	// Reset paused state when location changes
+	React.useEffect(() => {
+		setIsPaused(false);
+	}, [location.pathname]);
+
+	const handleTogglePause = React.useCallback(() => {
+		setIsPaused((prev) => !prev);
+	}, []);
 
 	const resourceGroupName = params.name;
 	const resourceName = params.resource;
@@ -36,6 +48,22 @@ const ExplorerPage = () => {
 	const isResource = Boolean(resourceName) && !isMonitorType;
 	const isResourceGroup = Boolean(resourceGroupName) && !isResource && !isMonitorType;
 	const isWelcome = !isResourceGroup && !isResource && !isMonitorType;
+
+	const actionButton = React.useMemo(() => {
+		if (isResource) {
+			return (
+				<Button
+					size="small"
+					variant="contained"
+					startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+					onClick={handleTogglePause}
+				>
+					{isPaused ? "Resume Collect" : "Pause Collect"}
+				</Button>
+			);
+		}
+		return null;
+	}, [isResource, isPaused, handleTogglePause]);
 
 	const handleResourceGroupFocus = React.useCallback(
 		(name) => {
@@ -83,7 +111,7 @@ const ExplorerPage = () => {
 				</Box>
 			</Left>
 			<Right>
-				<AppBreadcrumbs />
+				<AppBreadcrumbs action={actionButton} />
 				{isWelcome && (
 					<WelcomeView
 						renderResourceGroups={(props) => (
@@ -101,7 +129,13 @@ const ExplorerPage = () => {
 						onResourceClick={handleResourceClick}
 					/>
 				)}
-				{isResource && <ResourceView resourceName={resourceName} resourceGroupName={groupParam} />}
+				{isResource && (
+					<ResourceView
+						resourceName={resourceName}
+						resourceGroupName={groupParam}
+						isPaused={isPaused}
+					/>
+				)}
 				{isMonitorType && (
 					<MonitorTypeView
 						resourceName={resourceName}
