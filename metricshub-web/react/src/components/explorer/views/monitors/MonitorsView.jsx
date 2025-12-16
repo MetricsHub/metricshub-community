@@ -107,6 +107,7 @@ const MonitorsView = ({
 					isLast={connectorIndex === safeConnectors.length - 1}
 				/>
 			))}
+
 		</Box>
 	);
 };

@@ -267,3 +267,24 @@ jobs:
         label: automatic
         get_diff: true
         allow_no_diff: true
+
+    - name: Configure AWS Credentials
+      if: ${{ github.repository_owner == 'MetricsHub' }}
+      uses: aws-actions/configure-aws-credentials@v5.0.0
+      with:
+        role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
+        role-session-name: ci
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Publish Packages on MetricsHub.com Website
+      if: ${{ github.repository_owner == 'MetricsHub' }}
+      run: |
+        packagedir="packages/${{ github.ref_name }}"
+        mkdir -p ${packagedir}
+        # Get packages
+        cp "*.rpm" "${packagedir}"
+        cp "*.deb" "${packagedir}"
+        cp "*.msi" "${packagedir}"
+        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ steps.get_run_id.outputs.version }}/ --recursive
+      env:
+        AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}

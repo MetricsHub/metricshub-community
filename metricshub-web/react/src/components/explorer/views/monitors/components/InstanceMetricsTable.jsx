@@ -6,6 +6,7 @@ import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { truncatedCellSx } from "../../common/table-styles";
+import { cleanUnit } from "../../../../../utils/formatters";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -113,7 +114,7 @@ const InstanceMetricsTable = ({
 							if (group.type === "single") {
 								const meta = getMetricMetadata(group.key, metaMetrics);
 								const { description, unit } = meta;
-								const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+								const cleanedUnit = cleanUnit(unit);
 
 								// If unit is "1", render as a progress bar
 								if (isUtilizationUnit(unit)) {
@@ -144,7 +145,7 @@ const InstanceMetricsTable = ({
 							const sortedParts = [...parts].sort(compareUtilizationParts);
 							const meta = getMetricMetadata(group.baseName, metaMetrics);
 							const { description, unit } = meta;
-							const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+							const cleanedUnit = cleanUnit(unit);
 
 							return (
 								<TableRow key={group.baseName}>

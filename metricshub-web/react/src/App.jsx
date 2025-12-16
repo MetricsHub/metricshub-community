@@ -158,12 +158,12 @@ const AppContent = ({ onToggleTheme }) => {
 							element={<Explorer />}
 						/>
 						<Route
-							path="/explorer/resource-groups/:group/resources/:resource/monitors/:monitorType"
+							path="/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId/monitors/:monitorType"
 							element={<Explorer />}
 						/>
 						<Route path="/explorer/resources/:resource" element={<Explorer />} />
 						<Route
-							path="/explorer/resources/:resource/monitors/:monitorType"
+							path="/explorer/resources/:resource/connectors/:connectorId/monitors/:monitorType"
 							element={<Explorer />}
 						/>
 						<Route path={paths.configuration} element={<Configuration />} />

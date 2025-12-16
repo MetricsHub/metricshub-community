@@ -12,16 +12,6 @@ import {
 } from "../../../store/slices/explorer-slice";
 
 /**
- * @typedef {Object} ExplorerNode
- * @property {string} id Unique path-based identifier.
- * @property {string} name Display name.
- * @property {string} type Backend node type (e.g. "resource").
- * @property {ExplorerNode[]} children Normalized child nodes.
- * @property {ExplorerNode | null} [parent] Parent node if available.
- * @property {boolean} [isExpandable] Whether the node can be expanded.
- */
-
-/**
  * Normalizes the raw backend hierarchy into a single `ExplorerNode` tree.
  *
  * @param {*} raw Raw hierarchy object from the API.
@@ -78,14 +68,39 @@ const findNode = (root, id) => {
 };
 
 /**
+ * Collects all expandable node IDs from the tree (all nodes with children).
+ * @param {ExplorerNode} root
+ * @returns {string[]} Array of node IDs that can be expanded
+ */
+const collectAllExpandableIds = (root) => {
+	if (!root) return [];
+	const ids = [];
+	if (root.isExpandable) {
+		ids.push(root.id);
+	}
+	if (root.children) {
+		for (const child of root.children) {
+			ids.push(...collectAllExpandableIds(child));
+		}
+	}
+	return ids;
+};
+
+/**
  * Renders the explorer hierarchy and dispatches focus callbacks for leaf nodes.
  *
  * @param {Object} props
+ * @param {string|null} [props.selectedNodeId] The ID of the node to highlight/select in the tree.
  * @param {(name: string) => void} [props.onResourceGroupFocus] Called when a resource group is selected.
  * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
  * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
  */
-export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onResourceFocus }) {
+export default function ExplorerTree({
+	selectedNodeId,
+	onResourceGroupFocus,
+	onAgentFocus,
+	onResourceFocus,
+}) {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -98,6 +113,23 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 	}, [hierarchyRaw, loading, error, dispatch]);
 
 	const treeRoot = React.useMemo(() => buildTree(hierarchyRaw), [hierarchyRaw]);
+
+	// Compute selected items array for SimpleTreeView
+	const selectedItems = React.useMemo(() => {
+		if (!selectedNodeId || !treeRoot) return [];
+		// Verify the node exists in the tree before selecting it
+		const node = findNode(treeRoot, selectedNodeId);
+		return node ? [selectedNodeId] : [];
+	}, [selectedNodeId, treeRoot]);
+
+	// Compute expanded items - expand all expandable nodes by default
+	// This ensures the entire tree is visible, and when an item is selected,
+	// its path is already expanded
+	const expandedItems = React.useMemo(() => {
+		if (!treeRoot) return [];
+		// Collect all expandable node IDs (all nodes with children)
+		return collectAllExpandableIds(treeRoot);
+	}, [treeRoot]);
 
 	const handleLabelClick = React.useCallback(
 		(node) => {
@@ -164,7 +196,8 @@ export default function ExplorerTree({ onResourceGroupFocus, onAgentFocus, onRes
 		return (
 			<SimpleTreeView
 				aria-label="Explorer hierarchy"
-				defaultExpandedItems={[treeRoot.id]}
+				defaultExpandedItems={expandedItems}
+				selectedItems={selectedItems}
 				multiSelect={false}
 				// Only the arrow/icon should expand/collapse. Row click just selects + triggers focus logic.
 				expansionTrigger="iconContainer"

@@ -10,7 +10,8 @@ import { paths } from "../../paths";
  */
 const EXPLORER_ROUTES = [
 	{
-		pattern: "/explorer/resource-groups/:group/resources/:resource/monitors/:monitorType",
+		pattern:
+			"/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId/monitors/:monitorType",
 		getBreadcrumbs: (params) => {
 			const group = decodeURIComponent(params.group);
 			const resource = decodeURIComponent(params.resource);
@@ -23,7 +24,7 @@ const EXPLORER_ROUTES = [
 		},
 	},
 	{
-		pattern: "/explorer/resources/:resource/monitors/:monitorType",
+		pattern: "/explorer/resources/:resource/connectors/:connectorId/monitors/:monitorType",
 		getBreadcrumbs: (params) => {
 			const resource = decodeURIComponent(params.resource);
 			const monitorType = decodeURIComponent(params.monitorType);
@@ -79,7 +80,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 
 			for (const route of EXPLORER_ROUTES) {
 				const match = matchPath({ path: route.pattern, end: true }, currentPath);
-				if (match) {
+				if (match && match.params) {
 					items.push(...route.getBreadcrumbs(match.params));
 					break; // Stop after first match
 				}
@@ -111,7 +112,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 						</Typography>
 					) : (
 						<Link
-							key={crumb.label}
+							key={`${crumb.label}-${index}`}
 							underline="hover"
 							color="inherit"
 							component={RouterLink}

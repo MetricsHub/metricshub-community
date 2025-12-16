@@ -7,6 +7,7 @@ import {
 	getMetricLabel,
 	getMetricMetadata,
 } from "../../../../../utils/metrics-helper";
+import { cleanUnit } from "../../../../../utils/formatters";
 
 /**
  * Renders the header for the pivot group table.
@@ -25,8 +26,7 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 	);
 	const utilizationUnit = React.useMemo(() => utilizationMeta?.unit, [utilizationMeta?.unit]);
 	const displayUnit = React.useMemo(
-		() =>
-			utilizationUnit === "1" ? "%" : utilizationUnit ? utilizationUnit.replace(/[{}]/g, "") : "",
+		() => (utilizationUnit === "1" ? "%" : cleanUnit(utilizationUnit)),
 		[utilizationUnit],
 	);
 	const hoverTitle = React.useMemo(
@@ -55,23 +55,23 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 
 						const meta = getMetricMetadata(key, metaMetrics);
 						const { description, unit } = meta;
-						const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
+						const cleanedUnit = cleanUnit(unit);
 
 						return (
 							<TableCell key={key} align="left" sx={{ ...truncatedCellSx, width: colWidth }}>
 								<HoverInfo
 									title={hoverTitle}
 									description={description}
-									unit={cleanUnit}
+									unit={cleanedUnit}
 									sx={{ display: "inline-block", maxWidth: "100%", ...truncatedCellSx }}
 								>
 									{colLabel}
-									{cleanUnit && (
+									{cleanedUnit && (
 										<Box
 											component="span"
 											sx={{ color: "text.secondary", fontSize: "0.75em", ml: 0.5 }}
 										>
-											({cleanUnit})
+											({cleanedUnit})
 										</Box>
 									)}
 								</HoverInfo>
