@@ -1,7 +1,14 @@
 import * as React from "react";
 import { TableCell, Typography } from "@mui/material";
 import HoverInfo from "../monitors/components/HoverInfo";
-import { formatMetricValue, cleanUnit } from "../../../../utils/formatters";
+import TruncatedText from "./TruncatedText";
+import { formatMetricValue } from "../../../../utils/formatters";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Renders a table cell for a metric value.
@@ -18,26 +25,26 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 		return <TableCell align={align}>-</TableCell>;
 	}
 
-	const cleanedUnit = cleanUnit(unit);
+	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 	const formattedValue = formatMetricValue(value, unit);
 	const rawValue = String(value);
 	const showRaw = typeof value === "number" && formattedValue !== rawValue && formattedValue !== "";
 
 	return (
-		<TableCell align={align}>
+		<TableCell align={align} sx={truncatedCellSx}>
 			{showRaw ? (
 				<HoverInfo
 					title={
 						<Typography variant="body2">
-							Raw value : {value} {cleanedUnit}
+							Raw value : {value} {cleanUnit}
 						</Typography>
 					}
-					sx={{ display: "inline-block" }}
+					sx={{ display: "inline-block", maxWidth: "100%", ...truncatedCellSx }}
 				>
 					{formattedValue}
 				</HoverInfo>
 			) : (
-				formattedValue
+				<TruncatedText text={formattedValue}>{formattedValue}</TruncatedText>
 			)}
 		</TableCell>
 	);

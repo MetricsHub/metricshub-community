@@ -4,6 +4,13 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
 import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
+import TruncatedText from "./TruncatedText";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Render table rows for a list of metrics.
@@ -28,12 +35,24 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
 
 	return list.map((m) => (
 		<TableRow key={m.name}>
-			<TableCell>{m.name}</TableCell>
-			<TableCell align={showUnit || showLastUpdate ? "left" : "right"}>
-				{String(m.value ?? "")}
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={m.name}>{m.name}</TruncatedText>
 			</TableCell>
-			{showUnit && <TableCell>{m.unit === "1" ? "%" : (m.unit ?? "")}</TableCell>}
-			{showLastUpdate && <TableCell align="right">{m.lastUpdate ?? ""}</TableCell>}
+			<TableCell align="left" sx={truncatedCellSx}>
+				<TruncatedText text={String(m.value ?? "")}>{String(m.value ?? "")}</TruncatedText>
+			</TableCell>
+			{showUnit && (
+				<TableCell sx={truncatedCellSx}>
+					<TruncatedText text={m.unit === "1" ? "%" : (m.unit ?? "")}>
+						{m.unit === "1" ? "%" : (m.unit ?? "")}
+					</TruncatedText>
+				</TableCell>
+			)}
+			{showLastUpdate && (
+				<TableCell align="right" sx={truncatedCellSx}>
+					<TruncatedText text={m.lastUpdate ?? ""}>{m.lastUpdate ?? ""}</TruncatedText>
+				</TableCell>
+			)}
 		</TableRow>
 	));
 };
@@ -83,10 +102,13 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 
 	const titleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
 
-	const valueAlign = React.useMemo(
-		() => (showUnit || showLastUpdate ? "left" : "right"),
+	const valueAlign = "left";
+
+	const colCount = React.useMemo(
+		() => 2 + (showUnit ? 1 : 0) + (showLastUpdate ? 1 : 0),
 		[showUnit, showLastUpdate],
 	);
+	const colWidth = React.useMemo(() => `${100 / colCount}%`, [colCount]);
 
 	const handleToggleExpanded = React.useCallback(() => {
 		setExpanded((prev) => !prev);
@@ -113,13 +135,23 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 				)}
 			</Box>
 			{(!shouldFold || expanded) && (
-				<DashboardTable>
+				<DashboardTable
+					sx={{ tableLayout: "fixed", width: "100%" }}
+					style={{ tableLayout: "fixed" }}
+					containerProps={{ sx: { width: "100%" } }}
+				>
 					<TableHead>
 						<TableRow>
-							<TableCell>Name</TableCell>
-							<TableCell align={valueAlign}>Value</TableCell>
-							{showUnit && <TableCell>Unit</TableCell>}
-							{showLastUpdate && <TableCell align="right">Last Update</TableCell>}
+							<TableCell sx={{ width: colWidth }}>Name</TableCell>
+							<TableCell align={valueAlign} sx={{ width: colWidth }}>
+								Value
+							</TableCell>
+							{showUnit && <TableCell sx={{ width: colWidth }}>Unit</TableCell>}
+							{showLastUpdate && (
+								<TableCell align="right" sx={{ width: colWidth }}>
+									Last Update
+								</TableCell>
+							)}
 						</TableRow>
 					</TableHead>
 					<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>

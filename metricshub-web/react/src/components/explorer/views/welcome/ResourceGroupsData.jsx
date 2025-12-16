@@ -3,6 +3,13 @@ import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "../common/DashboardTable";
 import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
+import TruncatedText from "../common/TruncatedText";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Count resources in a resource group.
@@ -72,11 +79,17 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 				<NodeTypeIcons type="resource-group" />
 				Resource Groups
 			</Typography>
-			<DashboardTable>
+			<DashboardTable
+				sx={{ tableLayout: "fixed", width: "100%" }}
+				style={{ tableLayout: "fixed" }}
+				containerProps={{ sx: { width: "100%" } }}
+			>
 				<TableHead>
 					<TableRow>
-						<TableCell>Key</TableCell>
-						<TableCell align="right">Resources</TableCell>
+						<TableCell sx={{ width: "50%" }}>Key</TableCell>
+						<TableCell align="left" sx={{ width: "50%" }}>
+							Resources
+						</TableCell>
 					</TableRow>
 				</TableHead>
 				<TableBody>
@@ -89,8 +102,12 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 					) : (
 						processedGroups.map((g) => (
 							<TableRow key={g.name} hover sx={rowCursorSx} onClick={() => handleGroupClick(g)}>
-								<TableCell>{g.displayLabel}</TableCell>
-								<TableCell align="right">{g.resourceCount}</TableCell>
+								<TableCell sx={truncatedCellSx}>
+									<TruncatedText text={g.displayLabel}>{g.displayLabel}</TruncatedText>
+								</TableCell>
+								<TableCell align="left" sx={truncatedCellSx}>
+									<TruncatedText text={String(g.resourceCount)}>{g.resourceCount}</TruncatedText>
+								</TableCell>
 							</TableRow>
 						))
 					)}
