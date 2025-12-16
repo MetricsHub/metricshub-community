@@ -7,6 +7,12 @@ import {
 	getMetricMetadata,
 } from "../../../../../utils/metrics-helper";
 
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
+
 /**
  * Renders the header for the pivot group table.
  *
@@ -34,10 +40,13 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 	);
 
 	if (!isUtilizationGroup) {
+		const colCount = 1 + group.metricKeys.length;
+		const colWidth = `${100 / colCount}%`;
+
 		return (
 			<TableHead>
 				<TableRow>
-					<TableCell sx={{ whiteSpace: "nowrap", width: "30%" }}>Instance</TableCell>
+					<TableCell sx={{ ...truncatedCellSx, width: colWidth }}>Instance</TableCell>
 					{group.metricKeys.map((key) => {
 						let colLabel;
 						let hoverTitle;
@@ -54,12 +63,12 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 						const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
 
 						return (
-							<TableCell key={key} align="left">
+							<TableCell key={key} align="left" sx={{ ...truncatedCellSx, width: colWidth }}>
 								<HoverInfo
 									title={hoverTitle}
 									description={description}
 									unit={cleanUnit}
-									sx={{ display: "inline-block" }}
+									sx={{ display: "inline-block", maxWidth: "100%", ...truncatedCellSx }}
 								>
 									{colLabel}
 									{cleanUnit && (
@@ -84,13 +93,13 @@ const PivotGroupHeader = ({ group, isUtilizationGroup, metaMetrics }) => {
 	return (
 		<TableHead>
 			<TableRow>
-				<TableCell sx={{ whiteSpace: "nowrap", width: "30%" }}>Instance</TableCell>
-				<TableCell>
+				<TableCell sx={{ ...truncatedCellSx, width: "50%" }}>Instance</TableCell>
+				<TableCell sx={{ ...truncatedCellSx, width: "50%" }}>
 					<HoverInfo
 						title={hoverTitle || ""}
 						description={description}
 						unit={displayUnit}
-						sx={{ display: "inline-block" }}
+						sx={{ display: "inline-block", maxWidth: "100%", ...truncatedCellSx }}
 					>
 						Value
 						{displayUnit && (

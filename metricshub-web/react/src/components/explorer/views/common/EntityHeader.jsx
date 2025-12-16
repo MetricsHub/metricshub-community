@@ -72,11 +72,15 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 						)}
 					</Box>
 					{(!shouldFold || expanded) && (
-						<DashboardTable>
+						<DashboardTable
+							sx={{ tableLayout: "fixed", width: "100%" }}
+							style={{ tableLayout: "fixed" }}
+							containerProps={{ sx: { width: "100%" } }}
+						>
 							<TableHead>
 								<TableRow>
-									<TableCell>Key</TableCell>
-									<TableCell>Value</TableCell>
+									<TableCell sx={{ width: "50%" }}>Key</TableCell>
+									<TableCell sx={{ width: "50%" }}>Value</TableCell>
 								</TableRow>
 							</TableHead>
 							<TableBody>{renderAttributesRows(attributes)}</TableBody>

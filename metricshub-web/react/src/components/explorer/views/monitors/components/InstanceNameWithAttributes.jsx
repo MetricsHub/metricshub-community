@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box, Tooltip, Typography } from "@mui/material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import TruncatedText from "../../common/TruncatedText";
 
 /**
  * Renders an instance name along with an info icon that shows attributes in a tooltip.
@@ -23,10 +24,14 @@ const InstanceNameWithAttributes = ({
 	const hasAttributes = attributes && Object.keys(attributes).length > 0;
 
 	return (
-		<Box display="flex" alignItems="center" sx={sx}>
-			<Typography variant={variant} sx={{ mr: 1, fontWeight }}>
-				{displayName}
-			</Typography>
+		<Box display="flex" alignItems="center" sx={{ minWidth: 0, ...sx }}>
+			<Box sx={{ minWidth: 0, flexShrink: 1, mr: 1 }}>
+				<TruncatedText text={displayName}>
+					<Typography variant={variant} sx={{ fontWeight }} component="span">
+						{displayName}
+					</Typography>
+				</TruncatedText>
+			</Box>
 			{hasAttributes && (
 				<Tooltip
 					title={
@@ -47,7 +52,7 @@ const InstanceNameWithAttributes = ({
 					<InfoOutlinedIcon
 						fontSize="small"
 						color="action"
-						sx={{ fontSize: 16, cursor: "help", opacity: 0.7 }}
+						sx={{ fontSize: 16, cursor: "help", opacity: 0.7, flexShrink: 0 }}
 					/>
 				</Tooltip>
 			)}

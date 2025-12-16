@@ -2,6 +2,7 @@ import * as React from "react";
 import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
+import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import { formatMetricValue } from "../../../../../utils/formatters";
 import {
@@ -18,6 +19,12 @@ import {
 	compareUtilizationParts,
 } from "./Utilization";
 import { flashBlueAnimation } from "../../../../../utils/animations";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Displays a table of metrics for a single monitor instance.
@@ -92,11 +99,18 @@ const InstanceMetricsTable = ({
 				/>
 			</Box>
 
-			<DashboardTable stickyHeader={false}>
+			<DashboardTable
+				stickyHeader={false}
+				sx={{ tableLayout: "fixed", width: "100%" }}
+				style={{ tableLayout: "fixed" }}
+				containerProps={{ sx: { width: "100%" } }}
+			>
 				<TableHead>
 					<TableRow>
-						<TableCell sx={{ width: "50%", minWidth: 300 }}>Name</TableCell>
-						<TableCell align="left">Value</TableCell>
+						<TableCell sx={{ width: "50%" }}>Name</TableCell>
+						<TableCell align="left" sx={{ width: "50%" }}>
+							Value
+						</TableCell>
 					</TableRow>
 				</TableHead>
 				<TableBody>
@@ -116,15 +130,8 @@ const InstanceMetricsTable = ({
 									const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
 									return (
 										<TableRow key={group.key}>
-											<TableCell>
-												<HoverInfo
-													title={group.key}
-													description={description}
-													unit={cleanUnit}
-													sx={{ display: "inline-block" }}
-												>
-													{group.key}
-												</HoverInfo>
+											<TableCell sx={truncatedCellSx}>
+												<TruncatedText text={group.key}>{group.key}</TruncatedText>
 											</TableCell>
 											<TableCell align="left">
 												<UtilizationStack parts={parts} />
@@ -142,31 +149,13 @@ const InstanceMetricsTable = ({
 
 								return (
 									<TableRow key={group.key}>
-										<TableCell>
-											<HoverInfo
-												title={group.key}
-												description={description}
-												unit={cleanUnit}
-												sx={{ display: "inline-block" }}
-											>
-												{group.key}
-											</HoverInfo>
+										<TableCell sx={truncatedCellSx}>
+											<TruncatedText text={group.key}>{group.key}</TruncatedText>
 										</TableCell>
-										<TableCell align="left">
-											{showRaw ? (
-												<HoverInfo
-													title={
-														<Typography variant="body2">
-															Raw value : {group.value} {cleanUnit}
-														</Typography>
-													}
-													sx={{ display: "inline-block" }}
-												>
-													{formattedValue}
-												</HoverInfo>
-											) : (
-												formattedValue
-											)}
+										<TableCell align="left" sx={truncatedCellSx}>
+											<TruncatedText text={showRaw ? `Raw value : ${group.value} ${cleanUnit}` : formattedValue}>
+												{formattedValue}
+											</TruncatedText>
 										</TableCell>
 									</TableRow>
 								);
@@ -190,15 +179,10 @@ const InstanceMetricsTable = ({
 												rowGap: 0.5,
 											}}
 										>
-											<Box component="span">
-												<HoverInfo
-													title={group.baseName}
-													description={description}
-													unit={cleanUnit}
-													sx={{ display: "inline-block" }}
-												>
+											<Box component="span" sx={{ maxWidth: "100%", overflow: "hidden" }}>
+												<TruncatedText text={group.baseName} sx={{ width: "auto" }}>
 													{group.baseName}
-												</HoverInfo>
+												</TruncatedText>
 											</Box>
 											<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
 												{sortedParts.map((p) => {

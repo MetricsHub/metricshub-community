@@ -3,6 +3,13 @@ import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "./DashboardTable";
 import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
+import TruncatedText from "./TruncatedText";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Render a single resource row.
@@ -22,10 +29,20 @@ const ResourceRow = React.memo(function ResourceRow({ resource, onClick, showOsT
 
 	return (
 		<TableRow hover={Boolean(onClick)} sx={rowSx} onClick={onClick ? handleClick : undefined}>
-			<TableCell>{resource.name}</TableCell>
-			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
-			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
-			{showOsType && <TableCell>{attrs["os.type"] ?? ""}</TableCell>}
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={resource.name}>{resource.name}</TruncatedText>
+			</TableCell>
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={attrs["host.name"] ?? ""}>{attrs["host.name"] ?? ""}</TruncatedText>
+			</TableCell>
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={attrs["host.type"] ?? ""}>{attrs["host.type"] ?? ""}</TruncatedText>
+			</TableCell>
+			{showOsType && (
+				<TableCell sx={truncatedCellSx}>
+					<TruncatedText text={attrs["os.type"] ?? ""}>{attrs["os.type"] ?? ""}</TruncatedText>
+				</TableCell>
+			)}
 		</TableRow>
 	);
 });
@@ -48,6 +65,7 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 	const hasResources = React.useMemo(() => allResources.length > 0, [allResources.length]);
 
 	const emptyStateColSpan = React.useMemo(() => (showOsType ? 4 : 3), [showOsType]);
+	const colWidth = React.useMemo(() => (showOsType ? "25%" : "33.33%"), [showOsType]);
 
 	return (
 		<Box>
@@ -55,13 +73,17 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				<NodeTypeIcons type="resource" />
 				Resources
 			</Typography>
-			<DashboardTable>
+			<DashboardTable
+				sx={{ tableLayout: "fixed", width: "100%" }}
+				style={{ tableLayout: "fixed" }}
+				containerProps={{ sx: { width: "100%" } }}
+			>
 				<TableHead>
 					<TableRow>
-						<TableCell>Key</TableCell>
-						<TableCell>host.name</TableCell>
-						<TableCell>host.type</TableCell>
-						{showOsType && <TableCell>os.type</TableCell>}
+						<TableCell sx={{ width: colWidth }}>Key</TableCell>
+						<TableCell sx={{ width: colWidth }}>host.name</TableCell>
+						<TableCell sx={{ width: colWidth }}>host.type</TableCell>
+						{showOsType && <TableCell sx={{ width: colWidth }}>os.type</TableCell>}
 					</TableRow>
 				</TableHead>
 				<TableBody>

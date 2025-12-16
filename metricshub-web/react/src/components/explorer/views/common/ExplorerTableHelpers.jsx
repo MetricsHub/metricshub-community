@@ -1,6 +1,13 @@
 import * as React from "react";
 import { TableRow, TableCell } from "@mui/material";
 import { emptyStateCellSx } from "./table-styles";
+import TruncatedText from "./TruncatedText";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Render rows for a simple key/value attributes table.
@@ -23,8 +30,12 @@ export const renderAttributesRows = (attributes, colSpan = 2) => {
 
 	return entries.map(([key, value]) => (
 		<TableRow key={key}>
-			<TableCell>{key}</TableCell>
-			<TableCell>{String(value)}</TableCell>
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={key}>{key}</TruncatedText>
+			</TableCell>
+			<TableCell sx={truncatedCellSx}>
+				<TruncatedText text={String(value)}>{String(value)}</TruncatedText>
+			</TableCell>
 		</TableRow>
 	));
 };

@@ -31,9 +31,16 @@ import HoverInfo from "./components/HoverInfo";
 import { selectResourceUiState, setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { renderAttributesRows } from "../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../common/DashboardTable";
+import TruncatedText from "../common/TruncatedText";
 import { paths } from "../../../../paths";
 import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 import { flashBlueAnimation } from "../../../../utils/animations";
+
+const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -132,6 +139,22 @@ const MonitorsView = ({
 		[safeConnectors],
 	);
 
+	// Calculate max length of connector names for alignment
+	const maxNameLength = React.useMemo(() => {
+		return safeConnectors.reduce((max, connector) => {
+			const name = prettifyKey(connector.name || "");
+			return Math.max(max, name.length);
+		}, 0);
+	}, [safeConnectors]);
+
+	// Calculate max length of monitor counts for alignment
+	const maxCountLength = React.useMemo(() => {
+		return safeConnectors.reduce((max, connector) => {
+			const count = (connector.monitors || []).length;
+			return Math.max(max, count.toString().length);
+		}, 0);
+	}, [safeConnectors]);
+
 	// Handler factory for connector accordion toggles
 	const handleConnectorToggle = React.useCallback(
 		(connectorKey) => (e, isExpanded) => {
@@ -200,6 +223,18 @@ const MonitorsView = ({
 					metricKeys.length > 0 &&
 					!(metricKeys.length === 1 && metricKeys[0] === "metricshub.connector.status");
 
+				// Calculate max length of monitor names for alignment within this connector
+				const maxMonitorNameLength = monitors.reduce((max, monitor) => {
+					const name = prettifyKey(monitor.name || "");
+					return Math.max(max, name.length);
+				}, 0);
+
+				// Calculate max length of instance counts for alignment within this connector
+				const maxMonitorCountLength = monitors.reduce((max, monitor) => {
+					const count = (monitor.instances || []).length;
+					return Math.max(max, count.toString().length);
+				}, 0);
+
 				return (
 					<Accordion
 						id={connectorKey}
@@ -231,62 +266,66 @@ const MonitorsView = ({
 								"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 							}}
 						>
-							<Typography
-								variant="h6"
-								sx={{
-									fontWeight: 600,
-									display: "flex",
-									alignItems: "center",
-									columnGap: 1,
-								}}
-							>
-								{prettifyKey(connector.name)}
-								<HoverInfo
-									title="Number of monitor types"
-									sx={{ display: "flex", alignItems: "center" }}
+							<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
+								<Typography
+									variant="h6"
+									sx={{
+										fontWeight: 600,
+										width: `${maxNameLength + 1}ch`,
+										flexShrink: 0,
+									}}
 								>
-									<Box
-										component="span"
-										sx={{
-											ml: 1,
-											px: 1,
-											minWidth: 24,
-											textAlign: "center",
-											borderRadius: 999,
-											fontSize: 12,
-											fontWeight: 500,
-											bgcolor: "primary.main",
-											color: "primary.contrastText",
-										}}
-									>
-										{monitors.length}
-									</Box>
-								</HoverInfo>
-								{statusValue && (
+									{prettifyKey(connector.name)}
+								</Typography>
+								<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 									<HoverInfo
-										title={`Status of ${prettifyKey(connector.name)}`}
+										title="Number of monitor types"
 										sx={{ display: "flex", alignItems: "center" }}
 									>
 										<Box
 											component="span"
 											sx={{
-												ml: 1,
-												px: 1,
-												minWidth: 24,
-												textAlign: "center",
+												width: `${Math.max(24, maxCountLength * 12)}px`,
+												display: "flex",
+												justifyContent: "center",
+												alignItems: "center",
 												borderRadius: 999,
 												fontSize: 12,
 												fontWeight: 500,
-												bgcolor: statusValue === "ok" ? "success.main" : "error.main",
-												color: "white",
-												textTransform: "uppercase",
+												bgcolor: "primary.main",
+												color: "primary.contrastText",
 											}}
 										>
-											{statusValue}
+											{monitors.length}
 										</Box>
 									</HoverInfo>
-								)}
-							</Typography>
+									{statusValue && (
+										<HoverInfo
+											title={`Status of ${prettifyKey(connector.name)}`}
+											sx={{ display: "flex", alignItems: "center" }}
+										>
+											<Box
+												component="span"
+												sx={{
+													minWidth: 24,
+													px: 1,
+													display: "flex",
+													justifyContent: "center",
+													alignItems: "center",
+													borderRadius: 999,
+													fontSize: 12,
+													fontWeight: 500,
+													bgcolor: statusValue === "ok" ? "success.main" : "error.main",
+													color: "white",
+													textTransform: "uppercase",
+												}}
+											>
+												{statusValue}
+											</Box>
+										</HoverInfo>
+									)}
+								</Box>
+							</Box>
 						</AccordionSummary>
 						<AccordionDetails sx={{ p: 0 }}>
 							{/* Connector Attributes & Metrics Container */}
@@ -299,11 +338,15 @@ const MonitorsView = ({
 												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 													Attributes
 												</Typography>
-												<DashboardTable>
+												<DashboardTable
+													sx={{ tableLayout: "fixed", width: "100%" }}
+													style={{ tableLayout: "fixed" }}
+													containerProps={{ sx: { width: "100%" } }}
+												>
 													<TableHead>
 														<TableRow>
-															<TableCell>Key</TableCell>
-															<TableCell>Value</TableCell>
+															<TableCell sx={{ width: "50%" }}>Key</TableCell>
+															<TableCell sx={{ width: "50%" }}>Value</TableCell>
 														</TableRow>
 													</TableHead>
 													<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
@@ -317,11 +360,17 @@ const MonitorsView = ({
 												<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 													Metrics
 												</Typography>
-												<DashboardTable>
+												<DashboardTable
+													sx={{ tableLayout: "fixed", width: "100%" }}
+													style={{ tableLayout: "fixed" }}
+													containerProps={{ sx: { width: "100%" } }}
+												>
 													<TableHead>
 														<TableRow>
-															<TableCell sx={{ width: "25%" }}>Name</TableCell>
-															<TableCell align="left">Value</TableCell>
+															<TableCell sx={{ width: "50%" }}>Name</TableCell>
+															<TableCell align="left" sx={{ width: "50%" }}>
+																Value
+															</TableCell>
 														</TableRow>
 													</TableHead>
 													<TableBody>
@@ -343,8 +392,14 @@ const MonitorsView = ({
 
 															return (
 																<TableRow key={name}>
-																	<TableCell>{name}</TableCell>
-																	<TableCell align="left">{formattedValue}</TableCell>
+																	<TableCell sx={truncatedCellSx}>
+																		<TruncatedText text={name}>{name}</TruncatedText>
+																	</TableCell>
+																	<TableCell align="left" sx={truncatedCellSx}>
+																		<TruncatedText text={formattedValue}>
+																			{formattedValue}
+																		</TruncatedText>
+																	</TableCell>
 																</TableRow>
 															);
 														})}
@@ -393,62 +448,64 @@ const MonitorsView = ({
 													"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 												}}
 											>
-												<Typography
-													variant="subtitle1"
-													sx={{
-														fontWeight: 500,
-														display: "flex",
-														alignItems: "center",
-														columnGap: 1,
-													}}
-												>
-													{prettifyKey(monitor.name)}
-													<Box
-														component="span"
+												<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
+													<Typography
+														variant="subtitle1"
 														sx={{
-															ml: 1,
-															px: 1,
-															minWidth: 24,
-															textAlign: "center",
-															borderRadius: 999,
-															fontSize: 12,
 															fontWeight: 500,
-															bgcolor: "action.selected",
-															color: "text.primary",
+															width: `${maxMonitorNameLength + 1}ch`,
+															flexShrink: 0,
 														}}
 													>
-														{instances.length}
-													</Box>
-													<Tooltip title="Open Monitor Type Page">
+														{prettifyKey(monitor.name)}
+													</Typography>
+													<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 														<Box
 															component="span"
-															onClick={(e) => {
-																e.stopPropagation();
-																navigate(
-																	paths.explorerMonitorType(
-																		resourceGroupName,
-																		resourceName,
-																		monitor.name,
-																	),
-																);
-															}}
 															sx={{
-																ml: 1,
-																p: 0.5,
-																display: "inline-flex",
-																borderRadius: "50%",
-																cursor: "pointer",
-																"&:hover": {
-																	bgcolor: "action.hover",
-																},
+																width: `${Math.max(24, maxMonitorCountLength * 12)}px`,
+																display: "flex",
+																justifyContent: "center",
+																alignItems: "center",
+																borderRadius: 999,
+																fontSize: 12,
+																fontWeight: 500,
+																bgcolor: "action.selected",
+																color: "text.primary",
 															}}
-															role="button"
-															tabIndex={0}
 														>
-															<MonitorIcon fontSize="small" color="action" />
+															{instances.length}
 														</Box>
-													</Tooltip>
-												</Typography>
+														<Tooltip title="Open Monitor Type Page">
+															<Box
+																component="span"
+																onClick={(e) => {
+																	e.stopPropagation();
+																	navigate(
+																		paths.explorerMonitorType(
+																			resourceGroupName,
+																			resourceName,
+																			monitor.name,
+																		),
+																	);
+																}}
+																sx={{
+																	p: 0.5,
+																	display: "inline-flex",
+																	borderRadius: "50%",
+																	cursor: "pointer",
+																	"&:hover": {
+																		bgcolor: "action.hover",
+																	},
+																}}
+																role="button"
+																tabIndex={0}
+															>
+																<MonitorIcon fontSize="small" color="action" />
+															</Box>
+														</Tooltip>
+													</Box>
+												</Box>
 											</AccordionSummary>
 											<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 												{pivotGroups.length > 0
