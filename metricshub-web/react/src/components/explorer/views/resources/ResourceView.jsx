@@ -249,12 +249,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes} />
-			{hasMetrics && (
-				<MetricsAccordion
-					metrics={metrics}
-					maxNameLength={maxNameLength}
-				/>
-			)}
+			{hasMetrics && <MetricsAccordion metrics={metrics} maxNameLength={maxNameLength} />}
 			<Divider />
 			<MonitorsView
 				connectors={connectors}
