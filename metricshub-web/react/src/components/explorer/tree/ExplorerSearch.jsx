@@ -53,6 +53,27 @@ export default function ExplorerSearch() {
 			if (!newValue) return;
 
 			if (newValue.path) {
+				// Handle connector redirection
+				// Pattern 1: /explorer/resources/:resource/connectors/:connectorId
+				const resourceConnectorMatch = newValue.path.match(
+					/^\/explorer\/resources\/([^/]+)\/connectors\/([^/]+)$/,
+				);
+				if (resourceConnectorMatch) {
+					const [, resource, connectorId] = resourceConnectorMatch;
+					navigate(`/explorer/resources/${resource}#${connectorId}`);
+					return;
+				}
+
+				// Pattern 2: /explorer/resource-groups/:group/resources/:resource/connectors/:connectorId
+				const groupResourceConnectorMatch = newValue.path.match(
+					/^\/explorer\/resource-groups\/([^/]+)\/resources\/([^/]+)\/connectors\/([^/]+)$/,
+				);
+				if (groupResourceConnectorMatch) {
+					const [, group, resource, connectorId] = groupResourceConnectorMatch;
+					navigate(`/explorer/resource-groups/${group}/resources/${resource}#${connectorId}`);
+					return;
+				}
+
 				navigate(newValue.path);
 			}
 		},
