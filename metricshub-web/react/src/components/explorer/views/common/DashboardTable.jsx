@@ -4,7 +4,7 @@ import { Paper, Table, TableContainer } from "@mui/material";
 
 const containerSx = {
 	borderRadius: 1, // subtle rounding
-	boxShadow: (theme) => theme.shadows[3],
+	boxShadow: "none",
 	border: (theme) => `1px solid ${alpha(theme.palette.divider, 0.5)}`,
 	backgroundColor: (theme) => theme.palette.background.paper,
 	overflow: "hidden",
@@ -81,7 +81,7 @@ const DashboardTable = ({
 		<TableContainer
 			component={Paper}
 			square={false}
-			elevation={1}
+			elevation={0}
 			{...containerProps}
 			sx={containerMergedSx}
 		>
