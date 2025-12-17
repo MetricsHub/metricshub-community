@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
 import DashboardTable from "../../common/DashboardTable";
+import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
@@ -119,7 +120,19 @@ const InstanceMetricsTable = ({
 									return (
 										<TableRow key={group.key}>
 											<TableCell sx={truncatedCellSx}>
-												<TruncatedText text={group.key}>{group.key}</TruncatedText>
+												<HoverInfo
+													title={group.key}
+													description={meta?.description}
+													unit={meta?.unit}
+													sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+												>
+													<TruncatedText
+														text={group.key}
+														sx={{ width: "fit-content", maxWidth: "100%" }}
+													>
+														{group.key}
+													</TruncatedText>
+												</HoverInfo>
 											</TableCell>
 											<TableCell align="left">
 												<UtilizationStack parts={parts} />
@@ -131,7 +144,19 @@ const InstanceMetricsTable = ({
 								return (
 									<TableRow key={group.key}>
 										<TableCell sx={truncatedCellSx}>
-											<TruncatedText text={group.key}>{group.key}</TruncatedText>
+											<HoverInfo
+												title={group.key}
+												description={meta?.description}
+												unit={meta?.unit}
+												sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+											>
+												<TruncatedText
+													text={group.key}
+													sx={{ width: "fit-content", maxWidth: "100%" }}
+												>
+													{group.key}
+												</TruncatedText>
+											</HoverInfo>
 										</TableCell>
 										<MetricValueCell value={group.value} unit={unit} align="left" />
 									</TableRow>
@@ -140,6 +165,7 @@ const InstanceMetricsTable = ({
 
 							const parts = buildUtilizationParts(group.entries);
 							const sortedParts = [...parts].sort(compareUtilizationParts);
+							const baseMeta = getMetricMetadata(group.baseName, metaMetrics);
 
 							return (
 								<TableRow key={group.baseName}>
@@ -154,9 +180,19 @@ const InstanceMetricsTable = ({
 											}}
 										>
 											<Box component="span" sx={{ maxWidth: "100%", overflow: "hidden" }}>
-												<TruncatedText text={group.baseName} sx={{ width: "auto" }}>
-													{group.baseName}
-												</TruncatedText>
+												<HoverInfo
+													title={group.baseName}
+													description={baseMeta?.description}
+													unit={baseMeta?.unit}
+													sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+												>
+													<TruncatedText
+														text={group.baseName}
+														sx={{ width: "auto", maxWidth: "100%" }}
+													>
+														{group.baseName}
+													</TruncatedText>
+												</HoverInfo>
 											</Box>
 											<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
 												{sortedParts.map((p) => {
