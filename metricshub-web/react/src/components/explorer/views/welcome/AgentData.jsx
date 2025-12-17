@@ -46,9 +46,7 @@ const AgentData = ({ agent, totalResources }) => {
 					<Typography variant="subtitle1">Total resources: {totalResources}</Typography>
 				)}
 			</EntityHeader>
-			{hasMetrics && (
-				<MetricsAccordion metrics={agent.metrics} />
-			)}
+			{hasMetrics && <MetricsAccordion metrics={agent.metrics} />}
 		</Box>
 	);
 };

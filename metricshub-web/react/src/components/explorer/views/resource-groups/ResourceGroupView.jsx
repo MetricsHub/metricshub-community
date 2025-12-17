@@ -102,9 +102,7 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 				iconType="resource-group"
 				attributes={group.attributes}
 			/>
-			{hasMetrics && (
-				<MetricsAccordion metrics={metrics} />
-			)}
+			{hasMetrics && <MetricsAccordion metrics={metrics} />}
 			<Divider />
 			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />
 		</Box>

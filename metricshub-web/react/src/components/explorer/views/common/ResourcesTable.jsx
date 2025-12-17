@@ -79,7 +79,10 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				<TableBody>
 					{!hasResources ? (
 						<TableRow>
-							<TableCell colSpan={emptyStateColSpan} sx={{ ...emptyStateCellSx, textAlign: "left" }}>
+							<TableCell
+								colSpan={emptyStateColSpan}
+								sx={{ ...emptyStateCellSx, textAlign: "left" }}
+							>
 								No resources
 							</TableCell>
 						</TableRow>
