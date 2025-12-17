@@ -47,7 +47,7 @@ const AgentData = ({ agent, totalResources }) => {
 				)}
 			</EntityHeader>
 			{hasMetrics && (
-				<MetricsAccordion metrics={agent.metrics} showUnit={true} showLastUpdate={true} />
+				<MetricsAccordion metrics={agent.metrics} />
 			)}
 		</Box>
 	);

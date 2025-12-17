@@ -11,17 +11,14 @@ import MetricValueCell from "./MetricValueCell";
  * Render table rows for a list of metrics.
  *
  * @param {Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }>} metrics
- * @param {boolean} showUnit
- * @param {boolean} showLastUpdate
  * @returns {JSX.Element | JSX.Element[]}
  */
-const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
+const renderMetricsRows = (metrics) => {
 	const list = Array.isArray(metrics) ? metrics : [];
 	if (list.length === 0) {
-		const colSpan = 2 + (showUnit ? 1 : 0) + (showLastUpdate ? 1 : 0);
 		return (
 			<TableRow>
-				<TableCell colSpan={colSpan} sx={emptyStateCellSx}>
+				<TableCell colSpan={2} sx={emptyStateCellSx}>
 					No metrics
 				</TableCell>
 			</TableRow>
@@ -34,18 +31,6 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
 				<TruncatedText text={m.name}>{m.name}</TruncatedText>
 			</TableCell>
 			<MetricValueCell value={m.value} unit={m.unit} align="left" />
-			{showUnit && (
-				<TableCell sx={truncatedCellSx}>
-					<TruncatedText text={m.unit === "1" ? "%" : (m.unit ?? "")}>
-						{m.unit === "1" ? "%" : (m.unit ?? "")}
-					</TruncatedText>
-				</TableCell>
-			)}
-			{showLastUpdate && (
-				<TableCell align="right" sx={truncatedCellSx}>
-					<TruncatedText text={m.lastUpdate ?? ""}>{m.lastUpdate ?? ""}</TruncatedText>
-				</TableCell>
-			)}
 		</TableRow>
 	));
 };
@@ -55,12 +40,10 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
  *
  * @param {{
  *   metrics?: Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }> | Record<string, any> | null,
- *   showUnit?: boolean,
- *   showLastUpdate?: boolean
  * }} props
  * @returns {JSX.Element | null}
  */
-const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
+const MetricsTable = ({ metrics }) => {
 	const rows = React.useMemo(() => {
 		if (!metrics) return [];
 		if (Array.isArray(metrics)) {
@@ -91,11 +74,7 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 
 	const valueAlign = "left";
 
-	const colCount = React.useMemo(
-		() => 2 + (showUnit ? 1 : 0) + (showLastUpdate ? 1 : 0),
-		[showUnit, showLastUpdate],
-	);
-	const colWidth = React.useMemo(() => `${100 / colCount}%`, [colCount]);
+	const colWidth = "50%";
 
 	if (rows.length === 0) {
 		return null;
@@ -109,15 +88,9 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 					<TableCell align={valueAlign} sx={{ width: colWidth }}>
 						Value
 					</TableCell>
-					{showUnit && <TableCell sx={{ width: colWidth }}>Unit</TableCell>}
-					{showLastUpdate && (
-						<TableCell align="right" sx={{ width: colWidth }}>
-							Last Update
-						</TableCell>
-					)}
 				</TableRow>
 			</TableHead>
-			<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
+			<TableBody>{renderMetricsRows(rows)}</TableBody>
 		</DashboardTable>
 	);
 };
