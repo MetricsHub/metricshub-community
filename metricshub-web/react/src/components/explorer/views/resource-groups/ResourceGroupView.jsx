@@ -103,7 +103,7 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 				attributes={group.attributes}
 			/>
 			{hasMetrics && (
-				<MetricsAccordion metrics={metrics} showUnit={true} showLastUpdate={true} />
+				<MetricsAccordion metrics={metrics} />
 			)}
 			<Divider />
 			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />

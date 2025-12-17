@@ -252,8 +252,6 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 			{hasMetrics && (
 				<MetricsAccordion
 					metrics={metrics}
-					showUnit={true}
-					showLastUpdate={true}
 					maxNameLength={maxNameLength}
 				/>
 			)}

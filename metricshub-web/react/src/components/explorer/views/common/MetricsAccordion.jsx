@@ -13,13 +13,11 @@ import HoverInfo from "../monitors/components/HoverInfo";
 /**
  * Accordion for displaying metrics with a count bubble.
  *
- * @param {{ metrics: Record<string, any> | Array<any>, showUnit?: boolean, showLastUpdate?: boolean, maxNameLength?: number }} props
+ * @param {{ metrics: Record<string, any> | Array<any>, maxNameLength?: number }} props
  * @returns {JSX.Element | null}
  */
 const MetricsAccordion = ({
     metrics,
-    showUnit = true,
-    showLastUpdate = true,
     maxNameLength,
 }) => {
     const [expanded, setExpanded] = React.useState(false);
@@ -111,8 +109,6 @@ const MetricsAccordion = ({
                 <Box sx={{ p: 2 }}>
                     <MetricsTable
                         metrics={metrics}
-                        showUnit={showUnit}
-                        showLastUpdate={showLastUpdate}
                     />
                 </Box>
             </AccordionDetails>
