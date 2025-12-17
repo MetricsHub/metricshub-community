@@ -154,6 +154,106 @@ function ChatPage() {
 		}
 	}, [abortController, dispatch]);
 
+	const renderInputArea = () => (
+		<Box sx={{ maxWidth: "900px", mx: "auto" }}>
+			<Paper
+				elevation={0}
+				sx={{
+					p: 1.5,
+					borderRadius: 2,
+					border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
+					bgcolor: theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.background.paper,
+					transition: "all 0.2s ease",
+					"&:focus-within": {
+						borderColor: theme.palette.primary.main,
+						boxShadow: `0 0 0 2px ${theme.palette.mode === "dark" ? "rgba(38, 125, 244, 0.15)" : "rgba(38, 125, 244, 0.1)"}`,
+					},
+				}}
+			>
+				<Stack direction="row" spacing={1.5} alignItems="flex-end">
+					<TextField
+						inputRef={inputRef}
+						fullWidth
+						multiline
+						maxRows={4}
+						placeholder="Type your message..."
+						value={input}
+						onChange={(e) => setInput(e.target.value)}
+						onKeyDown={handleKeyDown}
+						disabled={isLoading}
+						variant="standard"
+						sx={{
+							"& .MuiInputBase-root": {
+								padding: 0,
+								fontSize: "0.9375rem",
+								"&::before": {
+									display: "none",
+								},
+								"&::after": {
+									display: "none",
+								},
+							},
+							"& .MuiInputBase-input": {
+								padding: 0,
+								color: theme.palette.text.primary,
+								"&::placeholder": {
+									color: theme.palette.text.secondary,
+									opacity: 0.6,
+								},
+							},
+						}}
+					/>
+					{isLoading ? (
+						<IconButton
+							onClick={handleStop}
+							sx={{
+								mb: 0.5,
+								bgcolor: theme.palette.error.main,
+								color: theme.palette.error.contrastText,
+								"&:hover": {
+									bgcolor: theme.palette.error.dark,
+								},
+								width: 36,
+								height: 36,
+							}}
+						>
+							<StopIcon fontSize="small" />
+						</IconButton>
+					) : (
+						<IconButton
+							onClick={handleSend}
+							disabled={!input.trim()}
+							sx={{
+								mb: 0.5,
+								bgcolor: input.trim() ? theme.palette.primary.main : "transparent",
+								color: input.trim() ? theme.palette.primary.contrastText : theme.palette.text.disabled,
+								"&:hover": {
+									bgcolor: input.trim() ? theme.palette.primary.dark : "transparent",
+								},
+								"&:disabled": {
+									bgcolor: "transparent",
+								},
+								width: 36,
+								height: 36,
+								transition: "all 0.2s ease",
+							}}
+						>
+							<SendIcon fontSize="small" />
+						</IconButton>
+					)}
+				</Stack>
+			</Paper>
+			{isLoading && (
+				<Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5, px: 1 }}>
+					<CircularProgress size={14} />
+					<Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+						Generating response...
+					</Typography>
+				</Box>
+			)}
+		</Box>
+	);
+
 	return (
 		<Box
 			sx={{
@@ -164,40 +264,6 @@ function ChatPage() {
 					theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[50],
 			}}
 		>
-			{/* Header Section */}
-			<Box
-				sx={{
-					px: { xs: 2, sm: 3, md: 4 },
-					py: 3,
-					borderBottom: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[200]}`,
-					bgcolor:
-						theme.palette.mode === "dark"
-							? theme.palette.neutral[900]
-							: theme.palette.background.paper,
-				}}
-			>
-				<Typography
-					variant="h5"
-					component="h1"
-					sx={{
-						fontWeight: 600,
-						fontSize: { xs: "1.25rem", sm: "1.5rem" },
-						color: theme.palette.text.primary,
-						mb: 0.5,
-					}}
-				>
-					M8B
-				</Typography>
-				<Typography
-					variant="body2"
-					sx={{
-						color: theme.palette.text.secondary,
-						fontSize: "0.875rem",
-					}}
-				>
-					How can we help you gain better observability insights?
-				</Typography>
-			</Box>
 
 			{/* Messages Container */}
 			<Box
@@ -264,7 +330,7 @@ function ChatPage() {
 								color: theme.palette.text.primary,
 							}}
 						>
-							Start a conversation
+							Start a conversation with M8B
 						</Typography>
 						<Typography
 							variant="body2"
@@ -276,6 +342,7 @@ function ChatPage() {
 							Ask questions about your infrastructure, metrics, monitoring setup, or get help with
 							MetricsHub configuration.
 						</Typography>
+						<Box sx={{ width: "100%", mt: 4 }}>{renderInputArea()}</Box>
 					</Box>
 				) : (
 					<Box sx={{ maxWidth: "900px", mx: "auto" }}>
@@ -304,123 +371,21 @@ function ChatPage() {
 			</Box>
 
 			{/* Input Section */}
-			<Box
-				sx={{
-					px: { xs: 2, sm: 3, md: 4 },
-					py: 2.5,
-					borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[200]}`,
-					bgcolor:
-						theme.palette.mode === "dark"
-							? theme.palette.neutral[900]
-							: theme.palette.background.paper,
-				}}
-			>
-				<Box sx={{ maxWidth: "900px", mx: "auto" }}>
-					<Paper
-						elevation={0}
-						sx={{
-							p: 1.5,
-							borderRadius: 2,
-							border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-							bgcolor:
-								theme.palette.mode === "dark"
-									? theme.palette.neutral[800]
-									: theme.palette.background.paper,
-							transition: "all 0.2s ease",
-							"&:focus-within": {
-								borderColor: theme.palette.primary.main,
-								boxShadow: `0 0 0 2px ${theme.palette.mode === "dark" ? "rgba(38, 125, 244, 0.15)" : "rgba(38, 125, 244, 0.1)"}`,
-							},
-						}}
-					>
-						<Stack direction="row" spacing={1.5} alignItems="flex-end">
-							<TextField
-								inputRef={inputRef}
-								fullWidth
-								multiline
-								maxRows={4}
-								placeholder="Type your message..."
-								value={input}
-								onChange={(e) => setInput(e.target.value)}
-								onKeyDown={handleKeyDown}
-								disabled={isLoading}
-								variant="standard"
-								sx={{
-									"& .MuiInputBase-root": {
-										padding: 0,
-										fontSize: "0.9375rem",
-										"&::before": {
-											display: "none",
-										},
-										"&::after": {
-											display: "none",
-										},
-									},
-									"& .MuiInputBase-input": {
-										padding: 0,
-										color: theme.palette.text.primary,
-										"&::placeholder": {
-											color: theme.palette.text.secondary,
-											opacity: 0.6,
-										},
-									},
-								}}
-							/>
-							{isLoading ? (
-								<IconButton
-									onClick={handleStop}
-									sx={{
-										mb: 0.5,
-										bgcolor: theme.palette.error.main,
-										color: theme.palette.error.contrastText,
-										"&:hover": {
-											bgcolor: theme.palette.error.dark,
-										},
-										width: 36,
-										height: 36,
-									}}
-								>
-									<StopIcon fontSize="small" />
-								</IconButton>
-							) : (
-								<IconButton
-									onClick={handleSend}
-									disabled={!input.trim()}
-									sx={{
-										mb: 0.5,
-										bgcolor: input.trim() ? theme.palette.primary.main : "transparent",
-										color: input.trim()
-											? theme.palette.primary.contrastText
-											: theme.palette.text.disabled,
-										"&:hover": {
-											bgcolor: input.trim() ? theme.palette.primary.dark : "transparent",
-										},
-										"&:disabled": {
-											bgcolor: "transparent",
-										},
-										width: 36,
-										height: 36,
-										transition: "all 0.2s ease",
-									}}
-								>
-									<SendIcon fontSize="small" />
-								</IconButton>
-							)}
-						</Stack>
-					</Paper>
-					{isLoading && (
-						<Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5, px: 1 }}>
-							<CircularProgress size={14} />
-							<Typography
-								variant="caption"
-								sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
-							>
-								Generating response...
-							</Typography>
-						</Box>
-					)}
+			{messages.length > 0 && (
+				<Box
+					sx={{
+						px: { xs: 2, sm: 3, md: 4 },
+						py: 2.5,
+						borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[200]}`,
+						bgcolor:
+							theme.palette.mode === "dark"
+								? theme.palette.neutral[900]
+								: theme.palette.background.paper,
+					}}
+				>
+					{renderInputArea()}
 				</Box>
-			</Box>
+			)}
 		</Box>
 	);
 }
