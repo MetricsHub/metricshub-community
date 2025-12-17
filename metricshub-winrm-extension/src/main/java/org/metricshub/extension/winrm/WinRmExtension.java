@@ -307,7 +307,7 @@ public class WinRmExtension implements IProtocolExtension {
 			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
-			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
+			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
 			return null;
 		}
 		final String[] columns = StringHelper.extractColumns(query);

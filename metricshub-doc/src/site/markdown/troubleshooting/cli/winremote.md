@@ -5,8 +5,6 @@ description: How to execute Windows remote OS commands (CMD commands) on remote 
 
 The **MetricsHub Windows Remote CLI** allows you to execute Windows OS commands (CMD commands) on remote Windows systems via WMI or WinRM protocols. It enables administrators to run commands like `ipconfig`, `systeminfo`, `tasklist`, and other Windows command-line utilities on remote hosts.
 
-Before using the CLI, ensure your platform supports Windows remote monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
-
 ## Syntax
 
 ```bash
