@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Typography, Box } from "@mui/material";
 import EntityHeader from "../common/EntityHeader";
-import MetricsTable from "../common/MetricsTable";
+import MetricsAccordion from "../common/MetricsAccordion";
 
 /**
  * Agent header, attributes and metrics section for the welcome page.
@@ -39,13 +39,17 @@ const AgentData = ({ agent, totalResources }) => {
 	}
 
 	return (
-		<EntityHeader title={title} iconType="agent" attributes={attributes} action={action}>
-			{version && <Typography variant="subtitle1">Version: {version}</Typography>}
-			{typeof totalResources === "number" && (
-				<Typography variant="subtitle1">Total resources: {totalResources}</Typography>
+		<Box display="flex" flexDirection="column" gap={2}>
+			<EntityHeader title={title} iconType="agent" attributes={attributes} action={action}>
+				{version && <Typography variant="subtitle1">Version: {version}</Typography>}
+				{typeof totalResources === "number" && (
+					<Typography variant="subtitle1">Total resources: {totalResources}</Typography>
+				)}
+			</EntityHeader>
+			{hasMetrics && (
+				<MetricsAccordion metrics={agent.metrics} showUnit={true} showLastUpdate={true} />
 			)}
-			{hasMetrics && <MetricsTable metrics={agent.metrics} showUnit={true} showLastUpdate={true} />}
-		</EntityHeader>
+		</Box>
 	);
 };
 

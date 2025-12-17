@@ -7,7 +7,7 @@ import {
 	selectExplorerError,
 } from "../../../../store/slices/explorer-slice";
 import EntityHeader from "../common/EntityHeader";
-import MetricsTable from "../common/MetricsTable";
+import MetricsAccordion from "../common/MetricsAccordion";
 import ResourcesTable from "../common/ResourcesTable";
 
 /**
@@ -102,13 +102,10 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 				iconType="resource-group"
 				attributes={group.attributes}
 			/>
-			{(hasAttributes || hasMetrics) && <Divider />}
 			{hasMetrics && (
-				<>
-					<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
-					<Divider />
-				</>
+				<MetricsAccordion metrics={metrics} showUnit={true} showLastUpdate={true} />
 			)}
+			<Divider />
 			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />
 		</Box>
 	);

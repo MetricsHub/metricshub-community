@@ -19,7 +19,7 @@ import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
  * - Shows a "last updated" label based on when the resource
  *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string }} props
+ * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string, maxNameLength?: number }} props
  */
 const MonitorsView = ({
 	connectors,
@@ -27,6 +27,7 @@ const MonitorsView = ({
 	resourceId,
 	resourceName,
 	resourceGroupName,
+	maxNameLength: providedMaxNameLength,
 }) => {
 	const dispatch = useDispatch();
 	// Force re-render every 5 seconds to update "last updated" relative time
@@ -58,11 +59,12 @@ const MonitorsView = ({
 
 	// Calculate max length of connector names for alignment
 	const maxNameLength = React.useMemo(() => {
+		if (providedMaxNameLength !== undefined) return providedMaxNameLength;
 		return safeConnectors.reduce((max, connector) => {
 			const name = prettifyKey(connector.name || "");
 			return Math.max(max, name.length);
 		}, 0);
-	}, [safeConnectors]);
+	}, [safeConnectors, providedMaxNameLength]);
 
 	// Calculate max length of monitor counts for alignment
 	const maxCountLength = React.useMemo(() => {
