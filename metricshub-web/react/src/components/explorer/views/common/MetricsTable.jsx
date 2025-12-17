@@ -61,8 +61,6 @@ const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
  * @returns {JSX.Element | null}
  */
 const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
-	const [expanded, setExpanded] = React.useState(false);
-
 	const rows = React.useMemo(() => {
 		if (!metrics) return [];
 		if (Array.isArray(metrics)) {
@@ -91,10 +89,6 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 		return [];
 	}, [metrics]);
 
-	const shouldFold = React.useMemo(() => rows.length > 6, [rows.length]);
-
-	const titleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
-
 	const valueAlign = "left";
 
 	const colCount = React.useMemo(
@@ -103,50 +97,28 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 	);
 	const colWidth = React.useMemo(() => `${100 / colCount}%`, [colCount]);
 
-	const handleToggleExpanded = React.useCallback(() => {
-		setExpanded((prev) => !prev);
-	}, []);
-
 	if (rows.length === 0) {
 		return null;
 	}
 
 	return (
-		<Box>
-			<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-				<Typography variant="h6" sx={titleSx}>
-					Metrics
-				</Typography>
-				{shouldFold && (
-					<Button
-						size="small"
-						onClick={handleToggleExpanded}
-						endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-					>
-						{expanded ? "Hide" : `Show (${rows.length})`}
-					</Button>
-				)}
-			</Box>
-			{(!shouldFold || expanded) && (
-				<DashboardTable>
-					<TableHead>
-						<TableRow>
-							<TableCell sx={{ width: colWidth }}>Name</TableCell>
-							<TableCell align={valueAlign} sx={{ width: colWidth }}>
-								Value
-							</TableCell>
-							{showUnit && <TableCell sx={{ width: colWidth }}>Unit</TableCell>}
-							{showLastUpdate && (
-								<TableCell align="right" sx={{ width: colWidth }}>
-									Last Update
-								</TableCell>
-							)}
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
-				</DashboardTable>
-			)}
-		</Box>
+		<DashboardTable>
+			<TableHead>
+				<TableRow>
+					<TableCell sx={{ width: colWidth }}>Name</TableCell>
+					<TableCell align={valueAlign} sx={{ width: colWidth }}>
+						Value
+					</TableCell>
+					{showUnit && <TableCell sx={{ width: colWidth }}>Unit</TableCell>}
+					{showLastUpdate && (
+						<TableCell align="right" sx={{ width: colWidth }}>
+							Last Update
+						</TableCell>
+					)}
+				</TableRow>
+			</TableHead>
+			<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
+		</DashboardTable>
 	);
 };
 

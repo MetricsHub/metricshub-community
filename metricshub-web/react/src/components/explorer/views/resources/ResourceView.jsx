@@ -12,12 +12,13 @@ import {
 	setResourceScrollTop,
 } from "../../../../store/slices/explorer-slice";
 import EntityHeader from "../common/EntityHeader";
-import MetricsTable from "../common/MetricsTable";
+import MetricsAccordion from "../common/MetricsAccordion";
 import MonitorsView from "../monitors/MonitorsView";
 import HoverInfo from "../monitors/components/HoverInfo";
 import WarningIcon from "@mui/icons-material/Warning";
 import { debounce } from "@mui/material";
 import { getMetricValue } from "../../../../utils/metrics-helper";
+import { prettifyKey } from "../../../../utils/text-prettifier";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
 /**
@@ -197,6 +198,22 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 		return false;
 	}, [metrics]);
 
+	// Calculate max length for alignment between Metrics and Connectors
+	const maxNameLength = React.useMemo(() => {
+		let max = 0;
+		if (hasMetrics) {
+			max = "Metrics".length;
+		}
+		if (connectors && connectors.length > 0) {
+			const connectorsMax = connectors.reduce((m, c) => {
+				const name = prettifyKey(c.name || "");
+				return Math.max(m, name.length);
+			}, 0);
+			max = Math.max(max, connectorsMax);
+		}
+		return max;
+	}, [hasMetrics, connectors]);
+
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -232,19 +249,22 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
 			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes} />
-			<Divider />
 			{hasMetrics && (
-				<>
-					<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
-					<Divider />
-				</>
+				<MetricsAccordion
+					metrics={metrics}
+					showUnit={true}
+					showLastUpdate={true}
+					maxNameLength={maxNameLength}
+				/>
 			)}
+			<Divider />
 			<MonitorsView
 				connectors={connectors}
 				lastUpdatedAt={lastUpdatedAt}
 				resourceId={resourceId}
 				resourceName={decodedName}
 				resourceGroupName={decodedGroup}
+				maxNameLength={maxNameLength}
 			/>
 		</Box>
 	);

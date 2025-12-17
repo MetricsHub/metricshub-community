@@ -32,15 +32,9 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 		[attributes],
 	);
 
-	const shouldFold = React.useMemo(() => attributeEntries.length > 6, [attributeEntries.length]);
-
 	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
 
-	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
-
-	const handleToggleExpanded = React.useCallback(() => {
-		setExpanded((prev) => !prev);
-	}, []);
+	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 1 }), []);
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
@@ -57,35 +51,22 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 
 			{hasAttributes && (
 				<Box>
-					<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-						<Typography variant="h6" sx={attributesTitleSx}>
-							Attributes
-						</Typography>
-						{shouldFold && (
-							<Button
-								size="small"
-								onClick={handleToggleExpanded}
-								endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-							>
-								{expanded ? "Hide" : `Show (${attributeEntries.length})`}
-							</Button>
-						)}
-					</Box>
-					{(!shouldFold || expanded) && (
-						<DashboardTable
-							sx={{ tableLayout: "fixed", width: "100%" }}
-							style={{ tableLayout: "fixed" }}
-							containerProps={{ sx: { width: "100%" } }}
-						>
-							<TableHead>
-								<TableRow>
-									<TableCell sx={{ width: "50%" }}>Key</TableCell>
-									<TableCell sx={{ width: "50%" }}>Value</TableCell>
-								</TableRow>
-							</TableHead>
-							<TableBody>{renderAttributesRows(attributes)}</TableBody>
-						</DashboardTable>
-					)}
+					<Typography variant="h6" sx={attributesTitleSx}>
+						Attributes
+					</Typography>
+					<DashboardTable
+						sx={{ tableLayout: "fixed", width: "100%" }}
+						style={{ tableLayout: "fixed" }}
+						containerProps={{ sx: { width: "100%" } }}
+					>
+						<TableHead>
+							<TableRow>
+								<TableCell sx={{ width: "50%" }}>Key</TableCell>
+								<TableCell sx={{ width: "50%" }}>Value</TableCell>
+							</TableRow>
+						</TableHead>
+						<TableBody>{renderAttributesRows(attributes)}</TableBody>
+					</DashboardTable>
 				</Box>
 			)}
 		</Box>
