@@ -44,6 +44,7 @@ function ChatPage() {
 	const [abortController, setAbortController] = React.useState(null);
 	const messagesEndRef = React.useRef(null);
 	const inputRef = React.useRef(null);
+	const hasMessages = React.useMemo(() => messages.length > 0, [messages]);
 
 	// Initialize conversation on mount if none exists
 	React.useEffect(() => {
@@ -154,6 +155,7 @@ function ChatPage() {
 		}
 	}, [abortController, dispatch]);
 
+	// Render the TextField for the input area
 	const renderInputArea = () => (
 		<Box sx={{ maxWidth: "900px", mx: "auto" }}>
 			<Paper
@@ -162,7 +164,8 @@ function ChatPage() {
 					p: 1.5,
 					borderRadius: 2,
 					border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-					bgcolor: theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.background.paper,
+					bgcolor:
+						theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[50],
 					transition: "all 0.2s ease",
 					"&:focus-within": {
 						borderColor: theme.palette.primary.main,
@@ -194,12 +197,17 @@ function ChatPage() {
 								},
 							},
 							"& .MuiInputBase-input": {
-								padding: 0,
+								padding: "8px 0",
+								lineHeight: 1.5,
 								color: theme.palette.text.primary,
 								"&::placeholder": {
 									color: theme.palette.text.secondary,
 									opacity: 0.6,
 								},
+							},
+							"& .MuiInputBase-inputMultiline": {
+								padding: "8px 0",
+								lineHeight: 1.5,
 							},
 						}}
 					/>
@@ -225,14 +233,6 @@ function ChatPage() {
 							disabled={!input.trim()}
 							sx={{
 								mb: 0.5,
-								bgcolor: input.trim() ? theme.palette.primary.main : "transparent",
-								color: input.trim() ? theme.palette.primary.contrastText : theme.palette.text.disabled,
-								"&:hover": {
-									bgcolor: input.trim() ? theme.palette.primary.dark : "transparent",
-								},
-								"&:disabled": {
-									bgcolor: "transparent",
-								},
 								width: 36,
 								height: 36,
 								transition: "all 0.2s ease",
@@ -246,7 +246,10 @@ function ChatPage() {
 			{isLoading && (
 				<Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1.5, px: 1 }}>
 					<CircularProgress size={14} />
-					<Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}>
+					<Typography
+						variant="caption"
+						sx={{ color: theme.palette.text.secondary, fontSize: "0.75rem" }}
+					>
 						Generating response...
 					</Typography>
 				</Box>
@@ -257,14 +260,13 @@ function ChatPage() {
 	return (
 		<Box
 			sx={{
-				height: "calc(100vh - 64px)",
+				height: "calc(100vh - 76px)",
 				display: "flex",
 				flexDirection: "column",
 				bgcolor:
 					theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[50],
 			}}
 		>
-
 			{/* Messages Container */}
 			<Box
 				sx={{
@@ -293,7 +295,7 @@ function ChatPage() {
 					},
 				}}
 			>
-				{messages.length === 0 ? (
+				{hasMessages === false ? (
 					<Box
 						sx={{
 							display: "flex",
@@ -371,16 +373,12 @@ function ChatPage() {
 			</Box>
 
 			{/* Input Section */}
-			{messages.length > 0 && (
+			{hasMessages && (
 				<Box
 					sx={{
 						px: { xs: 2, sm: 3, md: 4 },
 						py: 2.5,
 						borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[200]}`,
-						bgcolor:
-							theme.palette.mode === "dark"
-								? theme.palette.neutral[900]
-								: theme.palette.background.paper,
 					}}
 				>
 					{renderInputArea()}

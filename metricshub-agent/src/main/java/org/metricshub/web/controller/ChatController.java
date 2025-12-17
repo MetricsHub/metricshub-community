@@ -25,12 +25,14 @@ import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.dto.chat.ChatErrorResponse;
 import org.metricshub.web.dto.chat.ChatMessage;
 import org.metricshub.web.dto.chat.ChatRequest;
+import org.reactivestreams.Subscription;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.messages.Message;
@@ -89,61 +91,92 @@ public class ChatController {
 	public SseEmitter streamChat(@Valid @RequestBody final ChatRequest request) {
 		// Validate API key is configured and ChatClient is available
 		if (!hasApiKey() || chatClientOpenAi == null) {
-			final var emitter = new SseEmitter(SSE_TIMEOUT_MS);
-			try {
-				emitter.send(SseEmitter.event().name("error").data(new ChatErrorResponse("OpenAI API key is not configured")));
-				emitter.complete();
-			} catch (IOException e) {
-				log.error("Failed to send error response", e);
-				emitter.completeWithError(e);
-			}
-			return emitter;
+			return sendImmediateError("OpenAI API key is not configured");
 		}
 
 		final var emitter = new SseEmitter(SSE_TIMEOUT_MS);
-
-		// Send initial event to establish SSE connection
-		try {
-			emitter.send(SseEmitter.event().name("connected").data(""));
-		} catch (IOException e) {
-			log.error("Failed to send initial SSE event", e);
-			emitter.completeWithError(e);
-			return emitter;
-		}
+		final var terminated = new AtomicBoolean(false);
 
 		// Build conversation history
 		final List<Message> messages = buildMessageHistory(request.history());
 		messages.add(new UserMessage(request.message()));
 
-		// Stream the response - Flux.subscribe() is non-blocking
 		log.info("Starting chat stream for message: {}", request.message());
 
 		final Flux<String> responseStream = chatClientOpenAi.prompt().messages(messages).stream().content();
 
-		// Subscribe directly - this is non-blocking and returns immediately
-		responseStream
-			.doOnSubscribe(subscription -> log.info("Flux subscribed, starting to receive chunks"))
-			.doOnNext((String chunk) -> handleNextChunk(emitter, chunk))
-			.doOnComplete(() -> handleComplete(emitter))
-			.doOnError((Throwable error) -> handleError(emitter, error))
-			.doOnCancel(() -> handleCancel(emitter))
+		// Subscribe and keep a handle so we can cancel generation if client disconnects / times out
+		final var disposable = responseStream
+			.doOnSubscribe((Subscription sub) -> {
+				log.info("Flux subscribed, starting to receive chunks");
+				// Initial SSE "connected" event
+				sendEventSafely(emitter, terminated, "connected", "");
+			})
+			.doOnNext(chunk -> sendEventSafely(emitter, terminated, "chunk", chunk))
+			.doOnComplete(() -> {
+				// Try to send "done", but if the client is already gone, don't escalate
+				sendEventSafely(emitter, terminated, "done", "");
+				completeSafely(emitter, terminated);
+			})
+			.doOnError((Throwable error) -> {
+				log.error("Error during chat streaming", error);
+				sendEventSafely(
+					emitter,
+					terminated,
+					"error",
+					new ChatErrorResponse("Failed to generate response: " + error.getMessage())
+				);
+				completeSafely(emitter, terminated);
+			})
 			.subscribe();
 
-		// Handle client disconnect
-		emitter.onCompletion(() -> log.info("SSE connection completed"));
+		// If the client disconnects or we time out, stop generating immediately
+		emitter.onCompletion(() -> {
+			log.info("SSE connection completed");
+			disposable.dispose();
+			terminated.set(true);
+		});
+
 		emitter.onTimeout(() -> {
 			log.warn("SSE connection timed out");
-			emitter.complete();
+			disposable.dispose();
+			completeSafely(emitter, terminated);
 		});
-		emitter.onError((Throwable ex) -> log.error("SSE connection error", ex));
+
+		emitter.onError((Throwable th) -> {
+			// Most commonly triggered when client disconnects mid-stream.
+			log.debug("SSE connection error (often client disconnect): {}", th.toString());
+			disposable.dispose();
+			completeSafely(emitter, terminated);
+		});
 
 		return emitter;
 	}
 
 	/**
-	 * Checks if the API key is not configured.
-	 *
-	 * @return true if the API key is missing or unconfigured, false otherwise
+	 * Sends an immediate error message via SSE and completes the emitter.
+	 * @param message the error message to send
+	 * @return the SseEmitter with the error sent
+	 */
+	private SseEmitter sendImmediateError(final String message) {
+		final var emitter = new SseEmitter(SSE_TIMEOUT_MS);
+		try {
+			emitter.send(SseEmitter.event().name("error").data(new ChatErrorResponse(message)));
+		} catch (IOException e) {
+			log.debug("Unable to send immediate SSE error (client disconnected): {}", e.getMessage());
+		} finally {
+			try {
+				emitter.complete();
+			} catch (Exception ignored) {
+				// no-op
+			}
+		}
+		return emitter;
+	}
+
+	/**
+	 * Checks if the API key is configured properly.
+	 * @return true if the API key is set and not equal to the unconfigured placeholder
 	 */
 	private boolean hasApiKey() {
 		final String apiKey = chatConfig.getApiKey();
@@ -151,62 +184,43 @@ public class ChatController {
 	}
 
 	/**
-	 * Handles the next chunk of data from the chat stream.
-	 * @param emitter the SseEmitter to send data to
-	 * @param chunk   the chunk of data received
+	 * Sends an SSE event; if the client is already disconnected, this will throw IOException.
+	 * We treat that as a normal termination and complete the emitter without "completeWithError".
 	 */
-	private void handleNextChunk(final SseEmitter emitter, final String chunk) {
+	private static void sendEventSafely(
+		final SseEmitter emitter,
+		final AtomicBoolean terminated,
+		final String eventName,
+		final Object data
+	) {
+		if (terminated.get()) {
+			return;
+		}
 		try {
-			log.debug("Received chunk: {}", chunk);
-			emitter.send(SseEmitter.event().name("chunk").data(chunk));
+			emitter.send(SseEmitter.event().name(eventName).data(data));
 		} catch (IOException e) {
-			log.error("Failed to send chunk", e);
-			emitter.completeWithError(e);
+			// Client disconnected / connection reset: normal in streaming UIs
+			log.debug("Unable to send SSE event '{}' (client disconnected): {}", eventName, e.getMessage());
+			completeSafely(emitter, terminated);
+		} catch (Exception e) {
+			// Emitter already completed
+			terminated.set(true);
 		}
 	}
 
 	/**
-	 * Handles the completion of the chat stream.
-	 * @param emitter the SseEmitter to complete
+	 * Completes the SseEmitter safely, ensuring it's only done once.
+	 * @param emitter    the SseEmitter to complete
+	 * @param terminated atomic boolean tracking termination state
 	 */
-	private void handleComplete(final SseEmitter emitter) {
-		try {
-			log.info("Stream completed successfully");
-			emitter.send(SseEmitter.event().name("done").data(""));
-			emitter.complete();
-		} catch (IOException e) {
-			log.error("Failed to send completion event", e);
-			emitter.completeWithError(e);
+	private static void completeSafely(final SseEmitter emitter, final AtomicBoolean terminated) {
+		if (!terminated.compareAndSet(false, true)) {
+			return;
 		}
-	}
-
-	/**
-	 * Handles the cancellation of the chat stream.
-	 * @param emitter the SseEmitter to complete with error
-	 */
-	private void handleCancel(final SseEmitter emitter) {
-		log.info("Stream cancelled by client");
-		emitter.completeWithError(new IOException("Client disconnected"));
-	}
-
-	/**
-	 * Handles errors that occur during the chat stream.
-	 * @param emitter the SseEmitter to send error to
-	 * @param error   the error that occurred
-	 */
-	private void handleError(final SseEmitter emitter, Throwable error) {
-		log.error("Error during chat streaming", error);
 		try {
-			emitter.send(
-				SseEmitter
-					.event()
-					.name("error")
-					.data(new ChatErrorResponse("Failed to generate response: " + error.getMessage()))
-			);
 			emitter.complete();
-		} catch (IOException e) {
-			log.error("Failed to send error event", e);
-			emitter.completeWithError(e);
+		} catch (Exception ignored) {
+			// no-op
 		}
 	}
 

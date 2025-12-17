@@ -7,6 +7,127 @@ import remarkGfm from "remark-gfm";
 import CopyButton from "../common/CopyButton";
 
 /**
+ * Build styles for assistant messages in chat.
+ * @param {*} theme  current MUI theme
+ * @returns styles object
+ */
+const assistantMessagesSx = (theme) => ({
+	"& > *": {
+		marginTop: 0,
+		marginBottom: "1em",
+		"&:last-child": {
+			marginBottom: 0,
+		},
+	},
+	// Headings
+	"& h1, & h2, & h3, & h4, & h5, & h6": {
+		fontWeight: 600,
+		marginTop: "1.5em",
+		marginBottom: "0.5em",
+		lineHeight: 1.2,
+		color: theme.palette.text.primary,
+	},
+	"& h1": { fontSize: "1.5rem" },
+	"& h2": { fontSize: "1.25rem" },
+	"& h3": { fontSize: "1.125rem" },
+	"& h4, & h5, & h6": { fontSize: "1rem" },
+	// Paragraphs
+	"& p": {
+		margin: 0,
+		marginBottom: "1em",
+		lineHeight: 1.7,
+		fontSize: "0.9375rem",
+		color: theme.palette.text.primary,
+		"&:last-child": {
+			marginBottom: 0,
+		},
+	},
+	// Lists
+	"& ul, & ol": {
+		margin: "0.5em 0",
+		paddingLeft: "1.5em",
+		"& li": {
+			margin: "0.25em 0",
+			lineHeight: 1.7,
+		},
+	},
+	// Code blocks
+	"& pre": {
+		backgroundColor:
+			theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[100],
+		border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
+		borderRadius: "4px",
+		padding: "0.75em",
+		overflow: "auto",
+		fontSize: "0.875rem",
+		lineHeight: 1.5,
+		margin: "0.5em 0",
+		"& code": {
+			backgroundColor: "transparent",
+			padding: 0,
+			border: "none",
+		},
+	},
+	// Inline code
+	"& code": {
+		backgroundColor:
+			theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[100],
+		border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
+		borderRadius: "3px",
+		padding: "0.125em 0.375em",
+		fontSize: "0.875em",
+		fontFamily: "monospace",
+		color: theme.palette.text.primary,
+	},
+	// Blockquotes
+	"& blockquote": {
+		borderLeft: `3px solid ${theme.palette.primary.main}`,
+		paddingLeft: "1em",
+		margin: "0.5em 0",
+		color: theme.palette.text.secondary,
+		fontStyle: "italic",
+	},
+	// Links
+	"& a": {
+		color: theme.palette.primary.main,
+		textDecoration: "none",
+		"&:hover": {
+			textDecoration: "underline",
+		},
+	},
+	// Tables
+	"& table": {
+		borderCollapse: "collapse",
+		width: "100%",
+		margin: "0.5em 0",
+		fontSize: "0.875rem",
+	},
+	"& th, & td": {
+		border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
+		padding: "0.5em",
+		textAlign: "left",
+	},
+	"& th": {
+		backgroundColor:
+			theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[100],
+		fontWeight: 600,
+	},
+	// Horizontal rules
+	"& hr": {
+		border: "none",
+		borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
+		margin: "1em 0",
+	},
+	// Strong and emphasis
+	"& strong": {
+		fontWeight: 600,
+		color: theme.palette.text.primary,
+	},
+	"& em": {
+		fontStyle: "italic",
+	},
+});
+/**
  * Chat message component with professional system design style
  */
 const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
@@ -96,8 +217,8 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 						p: 2.5,
 						bgcolor: isUser
 							? theme.palette.mode === "dark"
-								? theme.palette.primary.dark
-								: theme.palette.primary.light
+								? theme.palette.primary.alpha50
+								: theme.palette.primary.main
 							: theme.palette.mode === "dark"
 								? theme.palette.neutral[800]
 								: theme.palette.background.paper,
@@ -105,7 +226,7 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 						border: `1px solid ${
 							isUser
 								? theme.palette.mode === "dark"
-									? theme.palette.primary.main
+									? theme.palette.primary.alpha50
 									: theme.palette.primary.main
 								: theme.palette.mode === "dark"
 									? theme.palette.neutral[700]
@@ -130,130 +251,7 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 						</Typography>
 					) : (
 						// Assistant messages: render markdown
-						<Box
-							sx={{
-								"& > *": {
-									marginTop: 0,
-									marginBottom: "1em",
-									"&:last-child": {
-										marginBottom: 0,
-									},
-								},
-								// Headings
-								"& h1, & h2, & h3, & h4, & h5, & h6": {
-									fontWeight: 600,
-									marginTop: "1.5em",
-									marginBottom: "0.5em",
-									lineHeight: 1.2,
-									color: theme.palette.text.primary,
-								},
-								"& h1": { fontSize: "1.5rem" },
-								"& h2": { fontSize: "1.25rem" },
-								"& h3": { fontSize: "1.125rem" },
-								"& h4, & h5, & h6": { fontSize: "1rem" },
-								// Paragraphs
-								"& p": {
-									margin: 0,
-									marginBottom: "1em",
-									lineHeight: 1.7,
-									fontSize: "0.9375rem",
-									color: theme.palette.text.primary,
-									"&:last-child": {
-										marginBottom: 0,
-									},
-								},
-								// Lists
-								"& ul, & ol": {
-									margin: "0.5em 0",
-									paddingLeft: "1.5em",
-									"& li": {
-										margin: "0.25em 0",
-										lineHeight: 1.7,
-									},
-								},
-								// Code blocks
-								"& pre": {
-									backgroundColor:
-										theme.palette.mode === "dark"
-											? theme.palette.neutral[900]
-											: theme.palette.neutral[100],
-									border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-									borderRadius: "4px",
-									padding: "0.75em",
-									overflow: "auto",
-									fontSize: "0.875rem",
-									lineHeight: 1.5,
-									margin: "0.5em 0",
-									"& code": {
-										backgroundColor: "transparent",
-										padding: 0,
-										border: "none",
-									},
-								},
-								// Inline code
-								"& code": {
-									backgroundColor:
-										theme.palette.mode === "dark"
-											? theme.palette.neutral[900]
-											: theme.palette.neutral[100],
-									border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-									borderRadius: "3px",
-									padding: "0.125em 0.375em",
-									fontSize: "0.875em",
-									fontFamily: "monospace",
-									color: theme.palette.text.primary,
-								},
-								// Blockquotes
-								"& blockquote": {
-									borderLeft: `3px solid ${theme.palette.primary.main}`,
-									paddingLeft: "1em",
-									margin: "0.5em 0",
-									color: theme.palette.text.secondary,
-									fontStyle: "italic",
-								},
-								// Links
-								"& a": {
-									color: theme.palette.primary.main,
-									textDecoration: "none",
-									"&:hover": {
-										textDecoration: "underline",
-									},
-								},
-								// Tables
-								"& table": {
-									borderCollapse: "collapse",
-									width: "100%",
-									margin: "0.5em 0",
-									fontSize: "0.875rem",
-								},
-								"& th, & td": {
-									border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-									padding: "0.5em",
-									textAlign: "left",
-								},
-								"& th": {
-									backgroundColor:
-										theme.palette.mode === "dark"
-											? theme.palette.neutral[900]
-											: theme.palette.neutral[100],
-									fontWeight: 600,
-								},
-								// Horizontal rules
-								"& hr": {
-									border: "none",
-									borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
-									margin: "1em 0",
-								},
-								// Strong and emphasis
-								"& strong": {
-									fontWeight: 600,
-									color: theme.palette.text.primary,
-								},
-								"& em": {
-									fontStyle: "italic",
-								},
-							}}
-						>
+						<Box sx={assistantMessagesSx(theme)}>
 							<ReactMarkdown remarkPlugins={[remarkGfm]}>{content || ""}</ReactMarkdown>
 							{isStreaming && (
 								<Box
@@ -288,7 +286,10 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 						alignItems: "center",
 						justifyContent: "center",
 						flexShrink: 0,
-						bgcolor: theme.palette.primary.main,
+						bgcolor:
+							theme.palette.mode === "dark"
+								? theme.palette.primary.alpha50
+								: theme.palette.primary.main,
 						color: theme.palette.primary.contrastText,
 					}}
 				>

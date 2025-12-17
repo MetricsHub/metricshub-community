@@ -45,8 +45,6 @@ class ChatApi {
 				let streamDoneReceived = false;
 				let errorReceived = false;
 				let readerReleased = false;
-				let readIterationCount = 0;
-				const MAX_READ_ITERATIONS = 100000; // Safety guard against infinite loops
 
 				const processEvent = (eventText) => {
 					// Parse SSE event format:
@@ -101,8 +99,17 @@ class ChatApi {
 							doneCallbackCalled = true;
 							onDone();
 						}
-						// Continue reading to consume any remaining stream data, but we'll stop soon
-						return false;
+						// Close client-side cleanly
+						try {
+							reader.cancel();
+						} catch {
+							// Reader may already be released, ignore
+						}
+						// Abort the request
+						abortController.abort();
+
+						// We're done reading the stream, so return true to stop reading
+						return true;
 					} else if (eventName === "error") {
 						// Mark that an error was received
 						errorReceived = true;
@@ -121,25 +128,6 @@ class ChatApi {
 				};
 
 				const readChunk = () => {
-					// Guard against infinite loops
-					readIterationCount++;
-					if (readIterationCount > MAX_READ_ITERATIONS) {
-						console.error("Maximum read iterations exceeded, stopping stream processing");
-						if (!readerReleased) {
-							try {
-								reader.releaseLock();
-								readerReleased = true;
-							} catch {
-								// Reader may already be released, ignore
-							}
-						}
-						if (!errorReceived && onError) {
-							errorReceived = true;
-							onError(new Error("Stream processing exceeded maximum iterations"));
-						}
-						return;
-					}
-
 					// Guard against reading from a released reader
 					if (readerReleased) {
 						return;
@@ -229,8 +217,7 @@ class ChatApi {
 								return;
 							}
 							// On error, still try to consume remaining stream (with guard)
-							// But limit retries to prevent infinite loops
-							if (!readerReleased && readIterationCount < MAX_READ_ITERATIONS) {
+							if (!readerReleased) {
 								readChunk().catch(() => {
 									// If reading fails, release the reader and call error handler
 									if (!readerReleased) {
