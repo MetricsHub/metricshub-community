@@ -5,6 +5,7 @@ import SmartToyIcon from "@mui/icons-material/SmartToy";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import CopyButton from "../common/CopyButton";
+import StreamingTableScroller from "../common/StreamingTableScroller";
 
 /**
  * Build styles for assistant messages in chat.
@@ -98,14 +99,16 @@ const assistantMessagesSx = (theme) => ({
 	// Tables
 	"& table": {
 		borderCollapse: "collapse",
-		width: "100%",
-		margin: "0.5em 0",
+		width: "max-content",
+		minWidth: "100%",
+		margin: 0, // The wrapper manages the spacing
 		fontSize: "0.875rem",
 	},
 	"& th, & td": {
 		border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.neutral[700] : theme.palette.neutral[300]}`,
 		padding: "0.5em",
 		textAlign: "left",
+		whiteSpace: "nowrap",
 	},
 	"& th": {
 		backgroundColor:
@@ -252,7 +255,18 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 					) : (
 						// Assistant messages: render markdown
 						<Box sx={assistantMessagesSx(theme)}>
-							<ReactMarkdown remarkPlugins={[remarkGfm]}>{content || ""}</ReactMarkdown>
+							<ReactMarkdown
+								remarkPlugins={[remarkGfm]}
+								components={{
+									table: (props) => (
+										<StreamingTableScroller isStreaming={isStreaming}>
+											<table {...props} />
+										</StreamingTableScroller>
+									),
+								}}
+							>
+								{content || ""}
+							</ReactMarkdown>
 							{isStreaming && (
 								<Box
 									component="span"
