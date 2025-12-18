@@ -21,7 +21,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 	}
 
 	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
-	const displayUnit = cleanUnit === "1" ? "%" : cleanUnit;
+	const displayUnit = cleanUnit === "1" ? "" : cleanUnit;
 	const formattedValue = formatMetricValue(value, unit);
 	const rawValue = String(value);
 	const showRaw = typeof value === "number" && formattedValue !== rawValue && formattedValue !== "";

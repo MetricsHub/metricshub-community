@@ -88,6 +88,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 
 	const {
 		selectedMetrics,
+		setSelectedMetrics,
 		handleMetricToggle,
 		isSettingsOpen,
 		setIsSettingsOpen,
@@ -99,15 +100,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	}, []);
 
 	const highlightedId = useScrollToHash();
-	// Helper to get metrics for an instance
-	const getMetricsForInstance = React.useCallback((instance) => {
-		return Object.entries(instance.metrics || {}).map(([key, value]) => [
-			key,
-			getMetricValue(value),
-		]);
-	}, []);
-
-	const naturalMetricCompare = React.useCallback(compareMetricEntries, []);
 
 	if (loading && !currentResource) {
 		return (
@@ -165,8 +157,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 								<Box key={index} id={instance.name}>
 									<InstanceMetricsTable
 										instance={instance}
-										metricEntries={getMetricsForInstance(instance)}
-										naturalMetricCompare={naturalMetricCompare}
+										naturalMetricCompare={compareMetricEntries}
 										metaMetrics={monitorData?.metaMetrics}
 										highlighted={isHighlighted}
 									/>
@@ -206,6 +197,8 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 							</FormGroup>
 						</DialogContent>
 						<DialogActions>
+							<Button onClick={() => setSelectedMetrics([...availableMetrics])}>Check All</Button>
+							<Button onClick={() => setSelectedMetrics([])}>Uncheck All</Button>
 							<Button onClick={() => setIsSettingsOpen(false)}>Close</Button>
 						</DialogActions>
 					</Dialog>
@@ -214,7 +207,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						<DashboardTable
 							containerProps={{
 								sx: {
-									height: "100%",
+									maxHeight: "100%",
 									minWidth: selectedMetrics.length + 1 >= 5 ? "100%" : undefined,
 									overflowX: selectedMetrics.length + 1 >= 5 ? "auto" : "hidden",
 									overflowY: "auto",
@@ -235,12 +228,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 											}
 											onClick={() => handleRequestSort(SORT_KEY_INSTANCE_ID)}
 										>
-											Instance Id
+											Instance Name
 										</TableSortLabel>
 									</TableCell>
 									{selectedMetrics?.map((metric) => {
 										const meta = getMetricMetadata(metric, monitorData.metaMetrics);
 										const cleanedUnit = cleanUnit(meta?.unit);
+										const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
 										return (
 											<TableCell key={metric}>
 												<TableSortLabel
@@ -253,7 +247,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 													<HoverInfo
 														title={metric}
 														description={meta?.description}
-														unit={cleanedUnit}
+														unit={displayUnit}
 														sx={{ display: "inline-block" }}
 													>
 														{metric}

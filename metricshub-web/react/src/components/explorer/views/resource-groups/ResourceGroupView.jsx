@@ -58,11 +58,6 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 		return false;
 	}, [metrics]);
 
-	const hasAttributes = React.useMemo(
-		() => !!(group?.attributes && Object.keys(group.attributes).length > 0),
-		[group?.attributes],
-	);
-
 	if (loading && !hierarchy) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">

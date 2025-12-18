@@ -66,7 +66,7 @@ export const formatMetricValue = (value, unit) => {
 	}
 
 	// Handle unit "1" as percentage
-	if (cleanUnit === "1") {
+	if (cleanUnitValue === "1") {
 		return formatSI(value * 100, "%");
 	}
 

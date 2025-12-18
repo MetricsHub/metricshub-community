@@ -179,7 +179,6 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 					color="text.secondary"
 					sx={{ display: "flex", alignItems: "center", columnGap: 0.5 }}
 				>
-					{open ? "Hide" : "Show"}
 					<Box
 						component="span"
 						sx={{

@@ -3,7 +3,7 @@ import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } fr
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx, truncatedCellSx } from "./table-styles";
+import { emptyStateCellSx, truncatedCellSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
 import MetricValueCell from "./MetricValueCell";
 

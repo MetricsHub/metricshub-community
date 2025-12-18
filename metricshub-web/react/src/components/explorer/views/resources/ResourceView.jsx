@@ -1,6 +1,9 @@
 import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Box, CircularProgress, Divider, Typography } from "@mui/material";
+import { Box, CircularProgress, Divider, Typography, Button } from "@mui/material";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
+import RefreshIcon from "@mui/icons-material/Refresh";
 import {
 	selectExplorerHierarchy,
 	selectExplorerLoading,
@@ -18,7 +21,6 @@ import HoverInfo from "../monitors/components/HoverInfo";
 import WarningIcon from "@mui/icons-material/Warning";
 import { debounce } from "@mui/material";
 import { getMetricValue } from "../../../../utils/metrics-helper";
-import { prettifyKey } from "../../../../utils/text-prettifier";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
 /**
@@ -27,11 +29,12 @@ import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
  * @param {{
  *   resourceName?: string,
  *   resourceGroupName?: string,
- *   isPaused?: boolean
+ *   isPaused?: boolean,
+ *   onTogglePause?: () => void
  * }} props
  * @returns {JSX.Element | null}
  */
-const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
+const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause }) => {
 	const dispatch = useDispatch();
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
@@ -55,7 +58,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 		setLastUpdatedAt(Date.now());
 	}, []);
 
-	useResourceFetcher({
+	const { fetchData } = useResourceFetcher({
 		resourceName,
 		resourceGroupName,
 		isPaused,
@@ -198,22 +201,6 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 		return false;
 	}, [metrics]);
 
-	// Calculate max length for alignment between Metrics and Connectors
-	const maxNameLength = React.useMemo(() => {
-		let max = 0;
-		if (hasMetrics) {
-			max = "Metrics".length;
-		}
-		if (connectors && connectors.length > 0) {
-			const connectorsMax = connectors.reduce((m, c) => {
-				const name = prettifyKey(c.name || "");
-				return Math.max(m, name.length);
-			}, 0);
-			max = Math.max(max, connectorsMax);
-		}
-		return max;
-	}, [hasMetrics, connectors]);
-
 	if ((loading && !hierarchy) || (resourceLoading && !currentResource)) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -248,8 +235,30 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 
 	return (
 		<Box ref={rootRef} p={2} display="flex" flexDirection="column" gap={2}>
-			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes} />
-			{hasMetrics && <MetricsAccordion metrics={metrics} maxNameLength={maxNameLength} />}
+			<EntityHeader title={resourceTitle} iconType="resource" attributes={resource.attributes}>
+				<Box display="flex" gap={1}>
+					<Button
+						size="small"
+						variant="outlined"
+						color="inherit"
+						startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
+						onClick={onTogglePause}
+					>
+						{isPaused ? "Resume Collect" : "Pause Collect"}
+					</Button>
+					<Button
+						size="small"
+						variant="outlined"
+						color="inherit"
+						startIcon={<RefreshIcon />}
+						onClick={fetchData}
+						disabled={isPaused}
+					>
+						Collect Now
+					</Button>
+				</Box>
+			</EntityHeader>
+			{hasMetrics && <MetricsAccordion metrics={metrics} />}
 			<Divider />
 			<MonitorsView
 				connectors={connectors}
@@ -257,7 +266,6 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused }) => {
 				resourceId={resourceId}
 				resourceName={decodedName}
 				resourceGroupName={decodedGroup}
-				maxNameLength={maxNameLength}
 			/>
 		</Box>
 	);
