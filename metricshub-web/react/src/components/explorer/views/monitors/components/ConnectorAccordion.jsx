@@ -14,7 +14,6 @@ import {
 	Tooltip,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import MonitorIcon from "@mui/icons-material/Monitor";
 import { prettifyKey } from "../../../../../utils/text-prettifier";
 import {
 	getMetricMetadata,
@@ -25,6 +24,7 @@ import {
 import PivotGroupSection from "./PivotGroupSection";
 import InstanceMetricsTable from "./InstanceMetricsTable";
 import HoverInfo from "./HoverInfo";
+import CountBadge from "../../common/CountBadge";
 import {
 	selectResourceUiState,
 	setMonitorExpanded,
@@ -36,11 +36,6 @@ import MetricValueCell from "../../common/MetricValueCell";
 import { truncatedCellSx } from "../../common/table-styles";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
-
-/**
- * Natural sort for metric names like cpu0, cpu1, cpu10, ...
- */
-const naturalMetricCompare = compareMetricEntries;
 
 /**
  * Decide whether we can pivot a monitor into one or more
@@ -90,8 +85,6 @@ const buildPivotGroups = (instances) => {
  *   resourceId: string,
  *   resourceName: string,
  *   resourceGroupName: string,
- *   maxNameLength: number,
- *   maxCountLength: number,
  *   highlightedId: string,
  *   isLast: boolean
  * }} props
@@ -102,8 +95,6 @@ const ConnectorAccordion = ({
 	resourceId,
 	resourceName,
 	resourceGroupName,
-	maxNameLength,
-	maxCountLength,
 	highlightedId,
 	isLast,
 }) => {
@@ -129,22 +120,6 @@ const ConnectorAccordion = ({
 	const showMetricsTable =
 		metricKeys.length > 0 &&
 		!(metricKeys.length === 1 && metricKeys[0] === "metricshub.connector.status");
-
-	// Calculate max length of monitor names for alignment within this connector
-	const maxMonitorNameLength = React.useMemo(() => {
-		return monitors.reduce((max, monitor) => {
-			const name = prettifyKey(monitor.name || "");
-			return Math.max(max, name.length);
-		}, 0);
-	}, [monitors]);
-
-	// Calculate max length of instance counts for alignment within this connector
-	const maxMonitorCountLength = React.useMemo(() => {
-		return monitors.reduce((max, monitor) => {
-			const count = (monitor.instances || []).length;
-			return Math.max(max, count.toString().length);
-		}, 0);
-	}, [monitors]);
 
 	const handleConnectorToggle = React.useCallback(
 		(e, isExpanded) => {
@@ -205,62 +180,25 @@ const ConnectorAccordion = ({
 				}}
 			>
 				<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-					<Typography
-						variant="h6"
-						sx={{
-							fontWeight: 600,
-							width: `${maxNameLength + 1}ch`,
-							flexShrink: 0,
-						}}
-					>
-						{prettifyKey(connector.name)}
-					</Typography>
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-						<HoverInfo
-							title="Number of monitor types"
-							sx={{ display: "flex", alignItems: "center" }}
+					<Box sx={{ display: "flex", alignItems: "center" }}>
+						<Typography
+							variant="h6"
+							sx={{
+								fontWeight: 600,
+								flexShrink: 0,
+							}}
 						>
-							<Box
-								component="span"
-								sx={{
-									width: `${Math.max(24, maxCountLength * 12)}px`,
-									display: "flex",
-									justifyContent: "center",
-									alignItems: "center",
-									borderRadius: 999,
-									fontSize: 12,
-									fontWeight: 500,
-									bgcolor: "primary.main",
-									color: "primary.contrastText",
-								}}
-							>
-								{monitors.length}
-							</Box>
-						</HoverInfo>
+							{prettifyKey(connector.name)}
+						</Typography>
+						<CountBadge count={monitors.length} title="Number of monitor types" sx={{ ml: 1 }} />
 						{statusValue && (
-							<HoverInfo
+							<CountBadge
+								count={statusValue}
 								title={`Status of ${prettifyKey(connector.name)}`}
-								sx={{ display: "flex", alignItems: "center" }}
-							>
-								<Box
-									component="span"
-									sx={{
-										minWidth: 24,
-										px: 1,
-										display: "flex",
-										justifyContent: "center",
-										alignItems: "center",
-										borderRadius: 999,
-										fontSize: 12,
-										fontWeight: 500,
-										bgcolor: statusValue === "ok" ? "success.main" : "error.main",
-										color: "white",
-										textTransform: "uppercase",
-									}}
-								>
-									{statusValue}
-								</Box>
-							</HoverInfo>
+								bgcolor={statusValue === "ok" ? "success.main" : "error.main"}
+								color="white"
+								sx={{ ml: 1, textTransform: "uppercase" }}
+							/>
 						)}
 					</Box>
 				</Box>
@@ -340,7 +278,7 @@ const ConnectorAccordion = ({
 						const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
 						const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
 						const sortedInstances = [...instances].sort((a, b) =>
-							naturalMetricCompare([a.name || ""], [b.name || ""]),
+							compareMetricEntries([a.name || ""], [b.name || ""]),
 						);
 						const pivotGroups = buildPivotGroups(sortedInstances);
 						const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
@@ -373,40 +311,15 @@ const ConnectorAccordion = ({
 									}}
 								>
 									<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-										<Typography
-											variant="subtitle1"
+										<Box
 											sx={{
-												fontWeight: 500,
-												width: `${maxMonitorNameLength + 1}ch`,
 												flexShrink: 0,
+												mr: 1,
 											}}
 										>
-											{prettifyKey(monitor.name)}
-										</Typography>
-										<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-											<HoverInfo
-												title="Number of instances"
-												sx={{ display: "flex", alignItems: "center" }}
-											>
-												<Box
-													component="span"
-													sx={{
-														width: `${Math.max(24, maxMonitorCountLength * 12)}px`,
-														display: "flex",
-														justifyContent: "center",
-														alignItems: "center",
-														borderRadius: 999,
-														fontSize: 12,
-														fontWeight: 500,
-														bgcolor: "action.selected",
-														color: "text.primary",
-													}}
-												>
-													{instances.length}
-												</Box>
-											</HoverInfo>
-											<HoverInfo title="Open Monitor Type Page">
-												<Box
+											<HoverInfo title="Open Monitor Type Page" sx={{ display: "inline-block" }}>
+												<Typography
+													variant="subtitle1"
 													component="span"
 													onClick={(e) => {
 														e.stopPropagation();
@@ -420,20 +333,25 @@ const ConnectorAccordion = ({
 														);
 													}}
 													sx={{
-														p: 0.5,
-														display: "inline-flex",
-														borderRadius: "50%",
+														fontWeight: 500,
 														cursor: "pointer",
 														"&:hover": {
-															bgcolor: "action.hover",
+															color: "primary.main",
+															textDecoration: "underline",
 														},
 													}}
-													role="button"
-													tabIndex={0}
 												>
-													<MonitorIcon fontSize="small" color="action" />
-												</Box>
+													{prettifyKey(monitor.name)}
+												</Typography>
 											</HoverInfo>
+										</Box>
+										<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+											<CountBadge
+												count={instances.length}
+												title="Number of instances"
+												bgcolor="action.selected"
+												sx={{ fontWeight: 500 }}
+											/>
 										</Box>
 									</Box>
 								</AccordionSummary>
@@ -449,17 +367,11 @@ const ConnectorAccordion = ({
 												/>
 											))
 										: sortedInstances.map((inst) => {
-												const metrics = inst?.metrics ?? {};
-												const metricEntries = Object.entries(metrics).map(([k, v]) => [
-													k,
-													getMetricValue(v),
-												]);
 												return (
 													<InstanceMetricsTable
 														key={inst?.attributes?.id || inst.name}
 														instance={inst}
-														metricEntries={metricEntries}
-														naturalMetricCompare={naturalMetricCompare}
+														naturalMetricCompare={compareMetricEntries}
 														metaMetrics={connector.metaMetrics}
 													/>
 												);

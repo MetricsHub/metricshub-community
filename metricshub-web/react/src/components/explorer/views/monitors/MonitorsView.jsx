@@ -1,7 +1,6 @@
 import * as React from "react";
 import { useDispatch } from "react-redux";
 import { Box, Typography } from "@mui/material";
-import { prettifyKey } from "../../../../utils/text-prettifier";
 import { formatRelativeTime } from "../../../../utils/formatters";
 import MonitorsHeader from "./components/MonitorsHeader";
 import ConnectorAccordion from "./components/ConnectorAccordion";
@@ -19,7 +18,7 @@ import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
  * - Shows a "last updated" label based on when the resource
  *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string, maxNameLength?: number }} props
+ * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string }} props
  */
 const MonitorsView = ({
 	connectors,
@@ -27,7 +26,6 @@ const MonitorsView = ({
 	resourceId,
 	resourceName,
 	resourceGroupName,
-	maxNameLength: providedMaxNameLength,
 }) => {
 	const dispatch = useDispatch();
 	// Force re-render every 5 seconds to update "last updated" relative time
@@ -45,7 +43,8 @@ const MonitorsView = ({
 
 	const lastUpdatedLabel = React.useMemo(
 		() => (!lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt)),
-		[lastUpdatedAt],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[lastUpdatedAt, _now],
 	);
 
 	// Check if there are any monitors across all connectors
@@ -56,23 +55,6 @@ const MonitorsView = ({
 			),
 		[safeConnectors],
 	);
-
-	// Calculate max length of connector names for alignment
-	const maxNameLength = React.useMemo(() => {
-		if (providedMaxNameLength !== undefined) return providedMaxNameLength;
-		return safeConnectors.reduce((max, connector) => {
-			const name = prettifyKey(connector.name || "");
-			return Math.max(max, name.length);
-		}, 0);
-	}, [safeConnectors, providedMaxNameLength]);
-
-	// Calculate max length of monitor counts for alignment
-	const maxCountLength = React.useMemo(() => {
-		return safeConnectors.reduce((max, connector) => {
-			const count = (connector.monitors || []).length;
-			return Math.max(max, count.toString().length);
-		}, 0);
-	}, [safeConnectors]);
 
 	const highlightedId = useScrollToHash();
 
@@ -103,8 +85,6 @@ const MonitorsView = ({
 					resourceId={resourceId}
 					resourceName={resourceName}
 					resourceGroupName={resourceGroupName}
-					maxNameLength={maxNameLength}
-					maxCountLength={maxCountLength}
 					highlightedId={highlightedId}
 					isLast={connectorIndex === safeConnectors.length - 1}
 				/>

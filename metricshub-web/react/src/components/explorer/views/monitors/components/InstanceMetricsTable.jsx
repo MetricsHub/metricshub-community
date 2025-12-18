@@ -11,6 +11,7 @@ import {
 	getBaseMetricKey,
 	isUtilizationUnit,
 	getInstanceDisplayName,
+	getMetricValue,
 } from "../../../../../utils/metrics-helper";
 import {
 	UtilizationStack,
@@ -27,7 +28,7 @@ import { flashBlueAnimation } from "../../../../../utils/animations";
  *
  * @param {{
  *   instance: any,
- *   metricEntries: Array<[string, any]>,
+ *   metricEntries?: Array<[string, any]>,
  *   naturalMetricCompare: (a: [string, any], b: [string, any]) => number,
  *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>,
  *   highlighted?: boolean
@@ -43,9 +44,16 @@ const InstanceMetricsTable = ({
 	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
 	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
+	const effectiveMetricEntries = React.useMemo(() => {
+		if (metricEntries) return metricEntries;
+		const metrics = instance?.metrics ?? {};
+		return Object.entries(metrics).map(([k, v]) => [k, getMetricValue(v)]);
+	}, [metricEntries, instance?.metrics]);
+
 	const sortedEntries = React.useMemo(
-		() => metricEntries.filter(([name]) => !name.startsWith("__")).sort(naturalMetricCompare),
-		[metricEntries, naturalMetricCompare],
+		() =>
+			effectiveMetricEntries.filter(([name]) => !name.startsWith("__")).sort(naturalMetricCompare),
+		[effectiveMetricEntries, naturalMetricCompare],
 	);
 
 	// Group utilization metrics together

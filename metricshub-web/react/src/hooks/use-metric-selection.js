@@ -29,6 +29,7 @@ export const useMetricSelection = (instances) => {
 
 	return {
 		selectedMetrics,
+		setSelectedMetrics,
 		handleMetricToggle,
 		isSettingsOpen,
 		setIsSettingsOpen,

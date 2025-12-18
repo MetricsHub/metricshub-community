@@ -21,12 +21,6 @@ import { sectionTitleSx } from "./table-styles";
  * @returns {JSX.Element | null}
  */
 const EntityHeader = ({ title, iconType, attributes, children, action }) => {
-	const [expanded, setExpanded] = React.useState(false);
-
-	const attributeEntries = React.useMemo(() => {
-		return attributes ? Object.entries(attributes) : [];
-	}, [attributes]);
-
 	const hasAttributes = React.useMemo(
 		() => attributes && Object.keys(attributes).length > 0,
 		[attributes],

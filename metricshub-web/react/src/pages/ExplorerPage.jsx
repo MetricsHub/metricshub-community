@@ -50,20 +50,8 @@ const ExplorerPage = () => {
 	const isWelcome = !isResourceGroup && !isResource && !isMonitorType;
 
 	const actionButton = React.useMemo(() => {
-		if (isResource) {
-			return (
-				<Button
-					size="small"
-					variant="contained"
-					startIcon={isPaused ? <PlayArrowIcon /> : <PauseIcon />}
-					onClick={handleTogglePause}
-				>
-					{isPaused ? "Resume Collect" : "Pause Collect"}
-				</Button>
-			);
-		}
 		return null;
-	}, [isResource, isPaused, handleTogglePause]);
+	}, []);
 
 	const handleResourceGroupFocus = React.useCallback(
 		(name) => {
@@ -134,6 +122,7 @@ const ExplorerPage = () => {
 						resourceName={resourceName}
 						resourceGroupName={groupParam}
 						isPaused={isPaused}
+						onTogglePause={handleTogglePause}
 					/>
 				)}
 				{isMonitorType && (

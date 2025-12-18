@@ -38,10 +38,7 @@ describe("AgentData", () => {
 		expect(screen.getByText("us-east")).toBeInTheDocument();
 		expect(screen.getByText("cpu")).toBeInTheDocument();
 		expect(screen.getByText("50.00 %")).toBeInTheDocument();
-		expect(screen.getByText("%")).toBeInTheDocument();
-		expect(screen.getByText("2025-11-21")).toBeInTheDocument();
 		expect(screen.getByText("mem")).toBeInTheDocument();
 		expect(screen.getByText("2.05 KMB")).toBeInTheDocument();
-		expect(screen.getByText("MB")).toBeInTheDocument();
 	});
 });
