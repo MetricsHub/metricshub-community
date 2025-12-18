@@ -90,7 +90,16 @@ public class UnixIpmiSourceProcessor {
 			if (isLocalHost) {
 				fruResult = OsCommandService.runLocalCommand(fruCommand, defaultTimeout, null);
 			} else if (sshConfiguration != null) {
-				fruResult = OsCommandService.runSshCommand(fruCommand, hostname, sshConfiguration, defaultTimeout, null, null);
+				fruResult =
+					OsCommandService.runSshCommand(
+						fruCommand,
+						hostname,
+						sshConfiguration,
+						defaultTimeout,
+						null,
+						null,
+						telemetryManager.getHostConfiguration().getHostType()
+					);
 			} else {
 				log.warn("Hostname {} - Could not process UNIX IPMI Source. SSH protocol credentials are missing.", hostname);
 				return SourceTable.empty();
@@ -119,7 +128,15 @@ public class UnixIpmiSourceProcessor {
 				sensorResult = OsCommandService.runLocalCommand(sdrCommand, defaultTimeout, null);
 			} else {
 				sensorResult =
-					OsCommandService.runSshCommand(sdrCommand, hostname, sshConfiguration, defaultTimeout, null, null);
+					OsCommandService.runSshCommand(
+						sdrCommand,
+						hostname,
+						sshConfiguration,
+						defaultTimeout,
+						null,
+						null,
+						telemetryManager.getHostConfiguration().getHostType()
+					);
 			}
 			log.debug("Hostname {} - IPMI OS command: {}:\n{}", hostname, sdrCommand, sensorResult);
 		} catch (Exception e) {
