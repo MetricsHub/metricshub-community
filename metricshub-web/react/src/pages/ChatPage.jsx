@@ -45,6 +45,7 @@ function ChatPage() {
 	const messagesEndRef = React.useRef(null);
 	const inputRef = React.useRef(null);
 	const hasMessages = React.useMemo(() => messages.length > 0, [messages]);
+	const [reasoning, setReasoning] = React.useState("");
 
 	// Initialize conversation on mount if none exists
 	React.useEffect(() => {
@@ -76,6 +77,7 @@ function ChatPage() {
 		const userMessage = input.trim();
 		setInput("");
 		dispatch(setError({ error: null }));
+		setReasoning("");
 
 		// Ensure we have a conversation
 		if (!currentConversationId) {
@@ -109,11 +111,16 @@ function ChatPage() {
 						}),
 					);
 				},
+				onReasoning: (chunk) => {
+					setReasoning((prev) => prev + chunk);
+				},
 				onDone: () => {
+					setReasoning("");
 					dispatch(setLoading({ isLoading: false }));
 					setAbortController(null);
 				},
 				onError: (err) => {
+					setReasoning("");
 					dispatch(setError({ error: err.message || "Failed to get response" }));
 					dispatch(setLoading({ isLoading: false }));
 					setAbortController(null);
@@ -152,6 +159,7 @@ function ChatPage() {
 			abortController.abort();
 			setAbortController(null);
 			dispatch(setLoading({ isLoading: false }));
+			setReasoning("");
 		}
 	}, [abortController, dispatch]);
 
@@ -349,12 +357,32 @@ function ChatPage() {
 				) : (
 					<Box sx={{ maxWidth: "900px", mx: "auto" }}>
 						{messages.map((msg, index) => (
-							<ChatMessage
-								key={msg.id || index}
-								role={msg.role}
-								content={msg.content}
-								isStreaming={msg.role === "assistant" && isLoading && index === messages.length - 1}
-							/>
+							<React.Fragment key={msg.id || index}>
+								<ChatMessage
+									role={msg.role}
+									content={msg.content}
+									isStreaming={msg.role === "assistant" && isLoading && index === messages.length - 1}
+								/>
+								{isLoading &&
+									index === messages.length - 1 &&
+									msg.role === "assistant" &&
+									reasoning && (
+										<Box
+											sx={{
+												mt: 0.5,
+												ml: { xs: 0, sm: 4 },
+												borderLeft: `3px solid ${theme.palette.primary.light}`,
+												pl: 1.5,
+												color: theme.palette.text.secondary,
+												fontSize: "0.85rem",
+												whiteSpace: "pre-wrap",
+												opacity: 0.85,
+											}}
+										>
+											{reasoning}
+										</Box>
+									)}
+							</React.Fragment>
 						))}
 					</Box>
 				)}

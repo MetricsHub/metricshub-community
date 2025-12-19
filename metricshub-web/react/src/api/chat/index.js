@@ -10,9 +10,10 @@ class ChatApi {
 	 * @param {Function} onChunk - Callback for each chunk received
 	 * @param {Function} onDone - Callback when stream completes
 	 * @param {Function} onError - Callback for errors
+	 * @param {Function} onReasoning - Callback for reasoning chunks
 	 * @returns {Promise<AbortController>} AbortController to cancel the request
 	 */
-	streamChat(request, { onChunk, onDone, onError }) {
+	streamChat(request, { onChunk, onDone, onError, onReasoning }) {
 		const abortController = new AbortController();
 
 		// Use fetch for SSE streaming (EventSource doesn't support POST)
@@ -83,6 +84,11 @@ class ChatApi {
 					if (eventName === "connected") {
 						// Connection established, continue
 						return false; // Don't stop reading
+					} else if (eventName === "reasoning") {
+						if (onReasoning) {
+							onReasoning(eventData);
+						}
+						return false; // Continue reading
 					} else if (eventName === "chunk") {
 						// Always call onChunk, even if eventData is empty (to handle empty chunks)
 						// Preserve exact content including all whitespace - do not modify eventData

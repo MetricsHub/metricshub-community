@@ -21,19 +21,13 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.List;
+import com.openai.client.OpenAIClient;
+import com.openai.client.okhttp.OpenAIOkHttpClient;
 import org.metricshub.engine.common.helpers.ResourceHelper;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
-import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 /**
  * Configuration class for creating ChatClient with OpenAI and MetricsHub tools.
@@ -45,7 +39,7 @@ public class ChatClientOpenAiConfiguration {
 	/**
 	 * System prompt defining the behavior and rules for the chat assistant.
 	 */
-	private static final String SYSTEM_PROMPT = ResourceHelper.getClassPathResourceContent("system-prompt.md");
+	public static final String SYSTEM_PROMPT = ResourceHelper.getClassPathResourceContent("system-prompt.md");
 
 	private final ChatOpenAiConfigurationProperties chatConfig;
 	private final ToolCallbackProvider toolCallbackProvider;
@@ -65,35 +59,13 @@ public class ChatClientOpenAiConfiguration {
 	}
 
 	/**
-	 * Creates a ChatModel bean configured with OpenAI.
-	 *
-	 * @return the configured ChatModel
-	 */
-	@Bean
-	@Primary
-	public ChatModel chatModelOpenAi() {
-		final var openAiApi = OpenAiApi.builder().apiKey(chatConfig.getApiKey()).build();
-
-		// Ensure streaming is enabled in options
-		final var options = OpenAiChatOptions.builder().model(chatConfig.getModel()).streamUsage(true).build();
-
-		return OpenAiChatModel.builder().openAiApi(openAiApi).defaultOptions(options).build();
-	}
-
-	/**
 	 * Creates a ChatClient bean configured with the ChatModel and tools.
 	 *
 	 * @param chatModelOpenAi the ChatModel to use (OpenAi)
 	 * @return the configured ChatClient
 	 */
 	@Bean
-	@Primary
-	public ChatClient chatClientOpenAi(final ChatModel chatModelOpenAi) {
-		final ToolCallback[] toolCallbacks = toolCallbackProvider.getToolCallbacks();
-		return ChatClient
-			.builder(chatModelOpenAi)
-			.defaultSystem(SYSTEM_PROMPT)
-			.defaultToolCallbacks(List.of(toolCallbacks))
-			.build();
+	OpenAIClient openAIClient(ChatOpenAiConfigurationProperties props) {
+		return OpenAIOkHttpClient.builder().apiKey(props.getApiKey()).build();
 	}
 }

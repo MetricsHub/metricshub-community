@@ -21,143 +21,224 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.openai.client.OpenAIClient;
+import com.openai.core.http.StreamResponse;
+import com.openai.models.Reasoning;
+import com.openai.models.ReasoningEffort;
+import com.openai.models.responses.EasyInputMessage;
+import com.openai.models.responses.ResponseCompletedEvent;
+import com.openai.models.responses.ResponseCreateParams;
+import com.openai.models.responses.ResponseInputItem;
+import com.openai.models.responses.ResponseReasoningSummaryTextDeltaEvent;
+import com.openai.models.responses.ResponseReasoningTextDeltaEvent;
+import com.openai.models.responses.ResponseStreamEvent;
+import com.openai.models.responses.ResponseTextDeltaEvent;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
+import org.metricshub.web.config.ChatClientOpenAiConfiguration;
 import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.dto.chat.ChatErrorResponse;
 import org.metricshub.web.dto.chat.ChatMessage;
 import org.metricshub.web.dto.chat.ChatRequest;
-import org.reactivestreams.Subscription;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.Message;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.Flux;
 
-/**
- * Controller for handling chat AI requests.
- */
 @RestController
 @RequestMapping(value = "/api")
 @Slf4j
 public class ChatController {
 
-	/**
-	 * Placeholder value indicating the API key is not configured.
-	 */
 	private static final String UNCONFIGURED_API_KEY = "unconfigured";
-
-	/**
-	 * Timeout for SSE connections in milliseconds (5 minutes).
-	 */
 	private static final long SSE_TIMEOUT_MS = 300_000L;
 
-	private final ChatClient chatClientOpenAi;
+	private final OpenAIClient openAiClient;
 	private final ChatOpenAiConfigurationProperties chatConfig;
 
-	/**
-	 * Constructor for ChatController.
-	 *
-	 * @param chatClientOpenAi the ChatClient to use for chat operations (optional, may be null if API key not configured)
-	 * @param chatConfig       the chat configuration properties
-	 */
-	public ChatController(final ChatClient chatClientOpenAi, final ChatOpenAiConfigurationProperties chatConfig) {
-		this.chatClientOpenAi = chatClientOpenAi;
+	public ChatController(final OpenAIClient openAiClient, final ChatOpenAiConfigurationProperties chatConfig) {
+		this.openAiClient = openAiClient;
 		this.chatConfig = chatConfig;
 	}
 
-	/**
-	 * Streams chat responses using Server-Sent Events (SSE).
-	 *
-	 * @param request the chat request containing message and history
-	 * @return SseEmitter for streaming responses
-	 */
 	@PostMapping(
 		value = "/chat/stream",
 		consumes = MediaType.APPLICATION_JSON_VALUE,
 		produces = MediaType.TEXT_EVENT_STREAM_VALUE
 	)
 	public SseEmitter streamChat(@Valid @RequestBody final ChatRequest request) {
-		// Validate API key is configured and ChatClient is available
-		if (!hasApiKey() || chatClientOpenAi == null) {
+		if (!hasApiKey() || openAiClient == null) {
 			return sendImmediateError("OpenAI API key is not configured");
 		}
 
 		final var emitter = new SseEmitter(SSE_TIMEOUT_MS);
 		final var terminated = new AtomicBoolean(false);
-
-		// Build conversation history
-		final List<Message> messages = buildMessageHistory(request.history());
-		messages.add(new UserMessage(request.message()));
+		final AtomicReference<StreamResponse<ResponseStreamEvent>> streamRef = new AtomicReference<>();
 
 		log.info("Starting chat stream for message: {}", request.message());
 
-		final Flux<String> responseStream = chatClientOpenAi.prompt().messages(messages).stream().content();
+		CompletableFuture.runAsync(() -> {
+			sendEventSafely(emitter, terminated, "connected", "");
 
-		// Subscribe and keep a handle so we can cancel generation if client disconnects / times out
-		final var disposable = responseStream
-			.doOnSubscribe((Subscription sub) -> {
-				log.info("Flux subscribed, starting to receive chunks");
-				// Initial SSE "connected" event
-				sendEventSafely(emitter, terminated, "connected", "");
-			})
-			.doOnNext(chunk -> sendEventSafely(emitter, terminated, "chunk", chunk))
-			.doOnComplete(() -> {
-				// Try to send "done", but if the client is already gone, don't escalate
-				sendEventSafely(emitter, terminated, "done", "");
-				completeSafely(emitter, terminated);
-			})
-			.doOnError((Throwable error) -> {
-				log.error("Error during chat streaming", error);
+			final ResponseCreateParams params = ResponseCreateParams
+				.builder()
+				.model(chatConfig.getModel())
+				.input(buildInput(request.history(), request.message()))
+				.reasoning(Reasoning.builder().effort(ReasoningEffort.MEDIUM).summary(Reasoning.Summary.AUTO).build())
+				.build();
+
+			try (StreamResponse<ResponseStreamEvent> stream = openAiClient.responses().createStreaming(params)) {
+				streamRef.set(stream);
+
+				stream.stream().forEach((ResponseStreamEvent event) -> handleStreamEvent(emitter, terminated, event));
+
+				// If the stream ends without emitting response.completed (rare), still finish gracefully.
+				if (!terminated.get()) {
+					sendEventSafely(emitter, terminated, "done", "");
+					completeSafely(emitter, terminated);
+				}
+			} catch (Exception e) {
+				log.error("Error during OpenAI streaming", e);
 				sendEventSafely(
 					emitter,
 					terminated,
 					"error",
-					new ChatErrorResponse("Failed to generate response: " + error.getMessage())
+					new ChatErrorResponse("Failed to generate response: " + e.getMessage())
 				);
 				completeSafely(emitter, terminated);
-			})
-			.subscribe();
+			} finally {
+				streamRef.set(null);
+			}
+		});
 
-		// If the client disconnects or we time out, stop generating immediately
 		emitter.onCompletion(() -> {
 			log.info("SSE connection completed");
-			disposable.dispose();
 			terminated.set(true);
+			closeStreamQuietly(streamRef.get());
 		});
 
 		emitter.onTimeout(() -> {
 			log.warn("SSE connection timed out");
-			disposable.dispose();
+			terminated.set(true);
+			closeStreamQuietly(streamRef.get());
 			completeSafely(emitter, terminated);
 		});
 
 		emitter.onError((Throwable th) -> {
-			// Most commonly triggered when client disconnects mid-stream.
 			log.debug("SSE connection error (often client disconnect): {}", th.toString());
-			disposable.dispose();
+			terminated.set(true);
+			closeStreamQuietly(streamRef.get());
 			completeSafely(emitter, terminated);
 		});
 
 		return emitter;
 	}
 
-	/**
-	 * Sends an immediate error message via SSE and completes the emitter.
-	 * @param message the error message to send
-	 * @return the SseEmitter with the error sent
-	 */
+	private void handleStreamEvent(final SseEmitter emitter, final AtomicBoolean terminated, ResponseStreamEvent event) {
+		if (terminated.get()) {
+			return;
+		}
+
+		event
+			.outputTextDelta()
+			.ifPresent((ResponseTextDeltaEvent deltaEvent) -> {
+				String delta = deltaEvent.delta();
+				if (StringHelper.nonNullNonBlank(delta)) {
+					sendEventSafely(emitter, terminated, "chunk", delta);
+				}
+			});
+
+		event
+			.reasoningTextDelta()
+			.ifPresent((ResponseReasoningTextDeltaEvent deltaEvent) -> {
+				String delta = deltaEvent.delta();
+				if (StringHelper.nonNullNonBlank(delta)) {
+					sendEventSafely(emitter, terminated, "reasoning", delta);
+				}
+			});
+
+		event
+			.reasoningSummaryTextDelta()
+			.ifPresent((ResponseReasoningSummaryTextDeltaEvent deltaEvent) -> {
+				String delta = deltaEvent.delta();
+				if (StringHelper.nonNullNonBlank(delta)) {
+					sendEventSafely(emitter, terminated, "reasoning_summary", delta);
+				}
+			});
+
+		event
+			.completed()
+			.ifPresent((ResponseCompletedEvent done) -> {
+				sendEventSafely(emitter, terminated, "done", "");
+				completeSafely(emitter, terminated);
+			});
+	}
+
+	private static ResponseCreateParams.Input buildInput(List<ChatMessage> history, String userMessage) {
+		List<ResponseInputItem> items = new ArrayList<>();
+
+		// system message
+		items.add(
+			ResponseInputItem.ofEasyInputMessage(
+				EasyInputMessage
+					.builder()
+					.role(EasyInputMessage.Role.SYSTEM)
+					.content(ChatClientOpenAiConfiguration.SYSTEM_PROMPT)
+					.build()
+			)
+		);
+
+		// history
+		if (history != null) {
+			for (ChatMessage m : history) {
+				if (m == null || m.content() == null || m.content().isBlank()) {
+					continue;
+				}
+
+				String role = m.role() == null ? "" : m.role().toLowerCase(Locale.getDefault());
+				EasyInputMessage.Role r = "assistant".equals(role)
+					? EasyInputMessage.Role.ASSISTANT
+					: EasyInputMessage.Role.USER;
+
+				items.add(
+					ResponseInputItem.ofEasyInputMessage(EasyInputMessage.builder().role(r).content(m.content()).build())
+				);
+			}
+		}
+
+		// latest user message
+		items.add(
+			ResponseInputItem.ofEasyInputMessage(
+				EasyInputMessage
+					.builder()
+					.role(EasyInputMessage.Role.USER)
+					.content(userMessage == null ? "" : userMessage)
+					.build()
+			)
+		);
+
+		return ResponseCreateParams.Input.ofResponse(items);
+	}
+
+	private static void closeStreamQuietly(final StreamResponse<?> stream) {
+		if (stream == null) {
+			return;
+		}
+		try {
+			stream.close();
+		} catch (Exception ignored) {}
+	}
+
 	private SseEmitter sendImmediateError(final String message) {
 		final var emitter = new SseEmitter(SSE_TIMEOUT_MS);
 		try {
@@ -167,26 +248,16 @@ public class ChatController {
 		} finally {
 			try {
 				emitter.complete();
-			} catch (Exception ignored) {
-				// no-op
-			}
+			} catch (Exception ignored) {}
 		}
 		return emitter;
 	}
 
-	/**
-	 * Checks if the API key is configured properly.
-	 * @return true if the API key is set and not equal to the unconfigured placeholder
-	 */
 	private boolean hasApiKey() {
 		final String apiKey = chatConfig.getApiKey();
 		return StringHelper.nonNullNonBlank(apiKey) && !apiKey.equals(UNCONFIGURED_API_KEY);
 	}
 
-	/**
-	 * Sends an SSE event; if the client is already disconnected, this will throw IOException.
-	 * We treat that as a normal termination and complete the emitter without "completeWithError".
-	 */
 	private static void sendEventSafely(
 		final SseEmitter emitter,
 		final AtomicBoolean terminated,
@@ -199,50 +270,19 @@ public class ChatController {
 		try {
 			emitter.send(SseEmitter.event().name(eventName).data(data));
 		} catch (IOException e) {
-			// Client disconnected / connection reset: normal in streaming UIs
 			log.debug("Unable to send SSE event '{}' (client disconnected): {}", eventName, e.getMessage());
 			completeSafely(emitter, terminated);
 		} catch (Exception e) {
-			// Emitter already completed
 			terminated.set(true);
 		}
 	}
 
-	/**
-	 * Completes the SseEmitter safely, ensuring it's only done once.
-	 * @param emitter    the SseEmitter to complete
-	 * @param terminated atomic boolean tracking termination state
-	 */
 	private static void completeSafely(final SseEmitter emitter, final AtomicBoolean terminated) {
 		if (!terminated.compareAndSet(false, true)) {
 			return;
 		}
 		try {
 			emitter.complete();
-		} catch (Exception ignored) {
-			// no-op
-		}
-	}
-
-	/**
-	 * Builds a list of Message objects from the chat history.
-	 *
-	 * @param history the chat history
-	 * @return a list of Message objects
-	 */
-	private static List<Message> buildMessageHistory(final List<ChatMessage> history) {
-		final List<Message> messages = new ArrayList<>();
-		if (history != null) {
-			for (final ChatMessage chatMessage : history) {
-				if ("user".equalsIgnoreCase(chatMessage.role())) {
-					messages.add(new UserMessage(chatMessage.content()));
-				} else if ("assistant".equalsIgnoreCase(chatMessage.role())) {
-					messages.add(new AssistantMessage(chatMessage.content()));
-				} else {
-					log.warn("Unknown message role: {}", chatMessage.role());
-				}
-			}
-		}
-		return messages;
+		} catch (Exception ignored) {}
 	}
 }
