@@ -207,70 +207,70 @@ const ConnectorAccordion = ({
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (
-					<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-						{/* Connector Attributes Table */}
-						{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-							<Box>
-								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-									Attributes
-								</Typography>
-								<DashboardTable>
-									<TableHead>
-										<TableRow>
-											<TableCell sx={{ width: "50%" }}>Key</TableCell>
-											<TableCell sx={{ width: "50%" }}>Value</TableCell>
-										</TableRow>
-									</TableHead>
-									<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-								</DashboardTable>
-							</Box>
-						)}
+						<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+							{/* Connector Attributes Table */}
+							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Attributes
+									</Typography>
+									<DashboardTable>
+										<TableHead>
+											<TableRow>
+												<TableCell sx={{ width: "50%" }}>Key</TableCell>
+												<TableCell sx={{ width: "50%" }}>Value</TableCell>
+											</TableRow>
+										</TableHead>
+										<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
+									</DashboardTable>
+								</Box>
+							)}
 
-						{/* Connector Metrics Table */}
-						{showMetricsTable && (
-							<Box>
-								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-									Metrics
-								</Typography>
-								<DashboardTable>
-									<TableHead>
-										<TableRow>
-											<TableCell sx={{ width: "50%" }}>Name</TableCell>
-											<TableCell align="left" sx={{ width: "50%" }}>
-												Value
-											</TableCell>
-										</TableRow>
-									</TableHead>
-									<TableBody>
-										{Object.entries(connector.metrics).map(([name, metric]) => {
-											let value = metric;
-											let unit = undefined;
+							{/* Connector Metrics Table */}
+							{showMetricsTable && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Metrics
+									</Typography>
+									<DashboardTable>
+										<TableHead>
+											<TableRow>
+												<TableCell sx={{ width: "50%" }}>Name</TableCell>
+												<TableCell align="left" sx={{ width: "50%" }}>
+													Value
+												</TableCell>
+											</TableRow>
+										</TableHead>
+										<TableBody>
+											{Object.entries(connector.metrics).map(([name, metric]) => {
+												let value = metric;
+												let unit = undefined;
 
-											if (metric && typeof metric === "object" && "value" in metric) {
-												value = metric.value;
-												unit = metric.unit;
-											}
+												if (metric && typeof metric === "object" && "value" in metric) {
+													value = metric.value;
+													unit = metric.unit;
+												}
 
-											if (!unit) {
-												const meta = getMetricMetadata(name, connector.metaMetrics);
-												if (meta?.unit) unit = meta.unit;
-											}
+												if (!unit) {
+													const meta = getMetricMetadata(name, connector.metaMetrics);
+													if (meta?.unit) unit = meta.unit;
+												}
 
-											return (
-												<TableRow key={name}>
-													<TableCell sx={truncatedCellSx}>
-														<TruncatedText text={name}>{name}</TruncatedText>
-													</TableCell>
-													<MetricValueCell value={value} unit={unit} align="left" />
-												</TableRow>
-											);
-										})}
-									</TableBody>
-								</DashboardTable>
-							</Box>
-						)}
-					</Box>
-				)}
+												return (
+													<TableRow key={name}>
+														<TableCell sx={truncatedCellSx}>
+															<TruncatedText text={name}>{name}</TruncatedText>
+														</TableCell>
+														<MetricValueCell value={value} unit={unit} align="left" />
+													</TableRow>
+												);
+											})}
+										</TableBody>
+									</DashboardTable>
+								</Box>
+							)}
+						</Box>
+					)}
 
 				{/* Monitors Section */}
 				<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -317,33 +317,41 @@ const ConnectorAccordion = ({
 												mr: 1,
 											}}
 										>
-											<HoverInfo title="Open Monitor Type Page" sx={{ display: "inline-block" }}>
-												<Typography
-													variant="subtitle1"
-													component="span"
-													onClick={(e) => {
-														e.stopPropagation();
-														navigate(
-															paths.explorerMonitorType(
-																resourceGroupName,
-																resourceName,
-																connector.name,
-																monitor.name,
-															),
-														);
-													}}
-													sx={{
-														fontWeight: 500,
-														cursor: "pointer",
-														"&:hover": {
+											<Tooltip
+												title="Open Monitor Type Page"
+												arrow
+												placement="top"
+												disableInteractive
+											>
+												<Box component="span" sx={{ display: "inline-block" }}>
+													<Typography
+														variant="subtitle1"
+														component="span"
+														onClick={(e) => {
+															e.stopPropagation();
+															navigate(
+																paths.explorerMonitorType(
+																	resourceGroupName,
+																	resourceName,
+																	connector.name,
+																	monitor.name,
+																),
+															);
+														}}
+														sx={{
+															fontWeight: 500,
+															cursor: "pointer",
 															color: "primary.main",
-															textDecoration: "underline",
-														},
-													}}
-												>
-													{prettifyKey(monitor.name)}
-												</Typography>
-											</HoverInfo>
+															"&:hover": {
+																color: "common.white",
+																textDecoration: "underline",
+															},
+														}}
+													>
+														{prettifyKey(monitor.name)}
+													</Typography>
+												</Box>
+											</Tooltip>
 										</Box>
 										<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 											<CountBadge
@@ -358,24 +366,24 @@ const ConnectorAccordion = ({
 								<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 									{pivotGroups.length > 0
 										? pivotGroups.map((group) => (
-												<PivotGroupSection
-													key={group.baseName}
-													group={group}
-													sortedInstances={sortedInstances}
-													resourceId={resourceId}
+											<PivotGroupSection
+												key={group.baseName}
+												group={group}
+												sortedInstances={sortedInstances}
+												resourceId={resourceId}
+												metaMetrics={connector.metaMetrics}
+											/>
+										))
+										: sortedInstances.map((inst) => {
+											return (
+												<InstanceMetricsTable
+													key={inst?.attributes?.id || inst.name}
+													instance={inst}
+													naturalMetricCompare={compareMetricEntries}
 													metaMetrics={connector.metaMetrics}
 												/>
-											))
-										: sortedInstances.map((inst) => {
-												return (
-													<InstanceMetricsTable
-														key={inst?.attributes?.id || inst.name}
-														instance={inst}
-														naturalMetricCompare={compareMetricEntries}
-														metaMetrics={connector.metaMetrics}
-													/>
-												);
-											})}
+											);
+										})}
 								</AccordionDetails>
 							</Accordion>
 						);

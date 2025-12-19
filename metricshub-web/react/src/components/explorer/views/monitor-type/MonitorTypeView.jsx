@@ -182,6 +182,28 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						<DialogTitle>Select Metrics</DialogTitle>
 						<DialogContent dividers>
 							<FormGroup>
+								<FormControlLabel
+									control={
+										<Checkbox
+											checked={
+												availableMetrics?.length > 0 &&
+												selectedMetrics.length === availableMetrics.length
+											}
+											indeterminate={
+												selectedMetrics.length > 0 &&
+												selectedMetrics.length < availableMetrics?.length
+											}
+											onChange={(e) => {
+												if (e.target.checked) {
+													setSelectedMetrics([...availableMetrics]);
+												} else {
+													setSelectedMetrics([]);
+												}
+											}}
+										/>
+									}
+									label="Select All"
+								/>
 								{availableMetrics?.map((metric) => (
 									<FormControlLabel
 										key={metric}
@@ -197,8 +219,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 							</FormGroup>
 						</DialogContent>
 						<DialogActions>
-							<Button onClick={() => setSelectedMetrics([...availableMetrics])}>Check All</Button>
-							<Button onClick={() => setSelectedMetrics([])}>Uncheck All</Button>
 							<Button onClick={() => setIsSettingsOpen(false)}>Close</Button>
 						</DialogActions>
 					</Dialog>
