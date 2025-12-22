@@ -1,10 +1,11 @@
 import React from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Box, useTheme } from "@mui/material";
 
 const MetricNameHighlighter = ({ name }) => {
 	const theme = useTheme();
+	const isDark = theme.palette.mode === "dark";
 
 	// We can try to detect if it's a path-like metric (dots) and treat it as a specific language
 	// or just generic. 'properties' or 'yaml' might work well for dot notation.
@@ -32,13 +33,13 @@ const MetricNameHighlighter = ({ name }) => {
 		>
 			<SyntaxHighlighter
 				language="javascript"
-				style={vscDarkPlus}
+				style={isDark ? vscDarkPlus : vs}
 				customStyle={{
 					margin: 0,
 					padding: "2px 6px",
 					borderRadius: "4px",
 					fontSize: "0.85em",
-					backgroundColor: theme.palette.mode === "dark" ? "#1e1e1e" : "#f5f5f5", // Adaptive bg
+					backgroundColor: isDark ? "#1e1e1e" : "#f5f5f5", // Adaptive bg
 				}}
 				wrapLongLines={false}
 			>

@@ -98,14 +98,27 @@ const InstanceMetricsTable = ({
 					if (group.type === "single") {
 						const meta = getMetricMetadata(group.key, metaMetrics);
 						return (
-							<HoverInfo
-								title={group.key}
-								description={meta?.description}
-								unit={meta?.unit}
-								sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+							<Box
+								sx={{
+									display: "flex",
+									alignItems: "center",
+									flexWrap: "wrap",
+									columnGap: 2,
+									rowGap: 0.5,
+									height: "100%",
+								}}
 							>
-								<MetricNameHighlighter name={group.key} />
-							</HoverInfo>
+								<Box component="span" sx={{ maxWidth: "100%", overflow: "hidden" }}>
+									<HoverInfo
+										title={group.key}
+										description={meta?.description}
+										unit={meta?.unit}
+										sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+									>
+										<MetricNameHighlighter name={group.key} />
+									</HoverInfo>
+								</Box>
+							</Box>
 						);
 					}
 					const baseMeta = getMetricMetadata(group.baseName, metaMetrics);
