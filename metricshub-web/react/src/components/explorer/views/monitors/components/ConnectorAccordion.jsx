@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "@mui/material/styles";
 import {
 	Box,
 	Typography,
@@ -13,8 +14,11 @@ import {
 	TableRow,
 	Tooltip,
 } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import SettingsInputHdmiIcon from "@mui/icons-material/SettingsInputHdmi";
 import { prettifyKey } from "../../../../../utils/text-prettifier";
+import { dataGridSx } from "../../common/table-styles";
 import {
 	getMetricMetadata,
 	getMetricValue,
@@ -98,6 +102,8 @@ const ConnectorAccordion = ({
 	highlightedId,
 	isLast,
 }) => {
+	const theme = useTheme();
+	const isDarkMode = theme.palette.mode === "dark";
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const uiState = useSelector((state) =>
@@ -172,34 +178,67 @@ const ConnectorAccordion = ({
 				sx={{
 					minHeight: 48,
 					cursor: "pointer",
-					bgcolor: "action.hover",
+					bgcolor:
+						statusValue && statusValue !== "ok"
+							? isDarkMode
+								? "error.darkest"
+								: "error.lightest"
+							: "action.hover",
+					color:
+						statusValue && statusValue !== "ok"
+							? isDarkMode
+								? "white"
+								: "error.darkest"
+							: "inherit",
 					"&:hover": {
-						bgcolor: "action.selected",
+						bgcolor:
+							statusValue && statusValue !== "ok"
+								? isDarkMode
+									? "error.dark"
+									: "error.light"
+								: "action.selected",
 					},
 					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+					"& .MuiAccordionSummary-expandIconWrapper": {
+						color:
+							statusValue && statusValue !== "ok"
+								? isDarkMode
+									? "white"
+									: "error.darkest"
+								: "inherit",
+					},
 				}}
 			>
 				<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
 					<Box sx={{ display: "flex", alignItems: "center" }}>
-						<Typography
-							variant="h6"
+						<SettingsInputHdmiIcon
 							sx={{
-								fontWeight: 600,
-								flexShrink: 0,
+								mr: 1,
+								color:
+									statusValue === "ok"
+										? "success.main"
+										: statusValue
+											? isDarkMode
+												? "inherit"
+												: "error.darkest"
+											: "inherit",
 							}}
+						/>
+						<Tooltip
+							title={statusValue && statusValue !== "ok" ? "This connector has failed" : ""}
+							placement="top"
 						>
-							{prettifyKey(connector.name)}
-						</Typography>
+							<Typography
+								variant="h6"
+								sx={{
+									fontWeight: 600,
+									flexShrink: 0,
+								}}
+							>
+								{prettifyKey(connector.name)}
+							</Typography>
+						</Tooltip>
 						<CountBadge count={monitors.length} title="Number of monitor types" sx={{ ml: 1 }} />
-						{statusValue && (
-							<CountBadge
-								count={statusValue}
-								title={`Status of ${prettifyKey(connector.name)}`}
-								bgcolor={statusValue === "ok" ? "success.main" : "error.main"}
-								color="white"
-								sx={{ ml: 1, textTransform: "uppercase" }}
-							/>
-						)}
 					</Box>
 				</Box>
 			</AccordionSummary>
@@ -214,7 +253,23 @@ const ConnectorAccordion = ({
 									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 										Attributes
 									</Typography>
-									<DashboardTable>
+									<DataGrid
+										rows={Object.entries(connector.attributes).map(([key, value]) => ({
+											id: key,
+											key,
+											value,
+										}))}
+										columns={[
+											{ field: "key", headerName: "Key", flex: 1 },
+											{ field: "value", headerName: "Value", flex: 1 },
+										]}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										sx={dataGridSx}
+									/>
+									{/* <DashboardTable>
 										<TableHead>
 											<TableRow>
 												<TableCell sx={{ width: "50%" }}>Key</TableCell>
@@ -222,7 +277,7 @@ const ConnectorAccordion = ({
 											</TableRow>
 										</TableHead>
 										<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-									</DashboardTable>
+									</DashboardTable> */}
 								</Box>
 							)}
 
@@ -232,7 +287,58 @@ const ConnectorAccordion = ({
 									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
 										Metrics
 									</Typography>
-									<DashboardTable>
+									<DataGrid
+										rows={Object.entries(connector.metrics).map(([name, metric]) => {
+											let value = metric;
+											let unit = undefined;
+
+											if (metric && typeof metric === "object" && "value" in metric) {
+												value = metric.value;
+												unit = metric.unit;
+											}
+
+											if (!unit) {
+												const meta = getMetricMetadata(name, connector.metaMetrics);
+												if (meta?.unit) unit = meta.unit;
+											}
+											return {
+												id: name,
+												name,
+												value,
+												unit,
+											};
+										})}
+										columns={[
+											{
+												field: "name",
+												headerName: "Name",
+												flex: 1,
+												renderCell: (params) => (
+													<TruncatedText text={params.value}>{params.value}</TruncatedText>
+												),
+											},
+											{
+												field: "value",
+												headerName: "Value",
+												flex: 1,
+												align: "left",
+												headerAlign: "left",
+												renderCell: (params) => (
+													<MetricValueCell
+														value={params.row.value}
+														unit={params.row.unit}
+														align="left"
+													/>
+												),
+											},
+										]}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										sx={dataGridSx}
+									/>
+									{/* <DashboardTable>
 										<TableHead>
 											<TableRow>
 												<TableCell sx={{ width: "50%" }}>Name</TableCell>
@@ -266,7 +372,7 @@ const ConnectorAccordion = ({
 												);
 											})}
 										</TableBody>
-									</DashboardTable>
+									</DashboardTable> */}
 								</Box>
 							)}
 						</Box>

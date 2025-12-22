@@ -1,11 +1,12 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "./DashboardTable";
 import { renderAttributesRows } from "./ExplorerTableHelpers.jsx";
-import { sectionTitleSx } from "./table-styles";
+import { sectionTitleSx, dataGridSx } from "./table-styles";
 
 /**
  * Generic header section for an entity (Resource, Resource Group, Agent),
@@ -48,7 +49,23 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 					<Typography variant="h6" sx={attributesTitleSx}>
 						Attributes
 					</Typography>
-					<DashboardTable
+					<DataGrid
+						rows={Object.entries(attributes).map(([key, value]) => ({
+							id: key,
+							key,
+							value,
+						}))}
+						columns={[
+							{ field: "key", headerName: "Key", flex: 1 },
+							{ field: "value", headerName: "Value", flex: 1 },
+						]}
+						disableRowSelectionOnClick
+						hideFooter
+						autoHeight
+						density="compact"
+						sx={dataGridSx}
+					/>
+					{/* <DashboardTable
 						sx={{ tableLayout: "fixed", width: "100%" }}
 						style={{ tableLayout: "fixed" }}
 						containerProps={{ sx: { width: "100%" } }}
@@ -60,7 +77,7 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 							</TableRow>
 						</TableHead>
 						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</DashboardTable>
+					</DashboardTable> */}
 				</Box>
 			)}
 		</Box>
