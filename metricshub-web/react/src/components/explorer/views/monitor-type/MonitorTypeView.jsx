@@ -23,6 +23,7 @@ import {
 	TableSortLabel,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
+import { DataGrid } from "@mui/x-data-grid";
 import {
 	selectCurrentResource,
 	selectResourceLoading,
@@ -34,6 +35,7 @@ import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithA
 import DashboardTable from "../common/DashboardTable";
 import HoverInfo from "../monitors/components/HoverInfo";
 import MetricValueCell from "../common/MetricValueCell";
+import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
 	getMetricMetadata,
@@ -51,6 +53,7 @@ import {
 } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
+import { dataGridSx } from "../common/table-styles";
 
 const TAB_INSTANCES = 0;
 const TAB_METRICS = 1;
@@ -98,6 +101,74 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const handleTabChange = React.useCallback((event, newValue) => {
 		setTabValue(newValue);
 	}, []);
+
+	const columns = React.useMemo(() => {
+		const cols = [
+			{
+				field: "instanceName",
+				headerName: "Instance Name",
+				flex: 1,
+				renderCell: (params) => (
+					<InstanceNameWithAttributes
+						displayName={getInstanceDisplayName(params.row)}
+						attributes={params.row.attributes}
+					/>
+				),
+				valueGetter: (value, row) => getInstanceDisplayName(row),
+			},
+		];
+
+		selectedMetrics.forEach((metric) => {
+			const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+			const cleanedUnit = cleanUnit(meta?.unit);
+			const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
+
+			cols.push({
+				field: metric,
+				headerName: metric,
+				flex: 1,
+				align: "left",
+				headerAlign: "left",
+				renderHeader: () => (
+					<HoverInfo
+						title={metric}
+						description={meta?.description}
+						unit={displayUnit}
+						sx={{ display: "inline-block" }}
+					>
+						{metric}
+					</HoverInfo>
+				),
+				renderCell: (params) => {
+					const val = params.row.metrics?.[metric];
+					const value = getMetricValue(val);
+
+					if (cleanedUnit === "1") {
+						return (
+							<Box sx={{ width: "100%" }}>
+								<UtilizationStack parts={[{ key: metric, value: value, pct: value * 100 }]} />
+							</Box>
+						);
+					}
+
+					return <MetricValueCell value={value} unit={meta?.unit} />;
+				},
+				valueGetter: (value, row) => {
+					const val = row.metrics?.[metric];
+					return getMetricValue(val);
+				},
+			});
+		});
+
+		return cols;
+	}, [selectedMetrics, monitorData.metaMetrics]);
+
+	const rows = React.useMemo(() => {
+		return sortedMetricsInstances.map((instance, index) => ({
+			id: instance.name || index,
+			...instance,
+		}));
+	}, [sortedMetricsInstances]);
 
 	const highlightedId = useScrollToHash();
 
@@ -224,7 +295,14 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 					</Dialog>
 
 					<Box sx={{ flex: 1, width: "100%", overflow: "hidden" }}>
-						<DashboardTable
+						<DataGrid
+							rows={rows}
+							columns={columns}
+							disableRowSelectionOnClick
+							hideFooter
+							sx={dataGridSx}
+						/>
+						{/* <DashboardTable
 							containerProps={{
 								sx: {
 									maxHeight: "100%",
@@ -296,7 +374,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 									</TableRow>
 								))}
 							</TableBody>
-						</DashboardTable>
+						</DashboardTable> */}
 					</Box>
 				</Box>
 			)}

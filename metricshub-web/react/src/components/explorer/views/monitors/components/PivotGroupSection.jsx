@@ -1,13 +1,14 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography, TableBody, TableCell, TableRow } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import PivotGroupHeader from "./PivotGroupHeader";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
-import { truncatedCellSx } from "../../common/table-styles";
+import { truncatedCellSx, dataGridSx } from "../../common/table-styles";
 
 import {
 	getMetricMetadata,
@@ -114,6 +115,101 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		);
 	}, [open, isUtilizationGroup, sortedInstances, group.metricKeys]);
 
+	const columns = React.useMemo(() => {
+		const cols = [
+			{
+				field: "instanceName",
+				headerName: "Instance Name",
+				flex: 1,
+				renderCell: (params) => {
+					if (params.row.isAverage) {
+						return (
+							<Typography variant="body2" sx={{ fontWeight: 500 }}>
+								Average {displayBaseName}
+							</Typography>
+						);
+					}
+					return (
+						<InstanceNameWithAttributes
+							displayName={getInstanceDisplayName(params.row)}
+							attributes={params.row.attributes}
+						/>
+					);
+				},
+				valueGetter: (value, row) => {
+					if (row.isAverage) return `Average ${displayBaseName}`;
+					return getInstanceDisplayName(row);
+				},
+			},
+		];
+
+		if (isUtilizationGroup) {
+			cols.push({
+				field: "utilization",
+				headerName: "Utilization",
+				flex: 1,
+				renderCell: (params) => {
+					if (params.row.isAverage) {
+						return <UtilizationStack parts={params.row.averageParts} />;
+					}
+					const metrics = params.row.metrics ?? {};
+					const entries = group.metricKeys.map((key) => ({ key, value: metrics[key] }));
+					const hasData = entries.some((e) => e.value !== undefined && e.value !== null);
+					const parts = hasData ? buildUtilizationParts(entries) : [];
+					return hasData ? <UtilizationStack parts={parts} /> : "-";
+				},
+			});
+		} else {
+			group.metricKeys.forEach((key) => {
+				const meta = getMetricMetadata(key, metaMetrics);
+				cols.push({
+					field: key,
+					headerName: key,
+					flex: 1,
+					align: "left",
+					headerAlign: "left",
+					renderHeader: () => (
+						<HoverInfo
+							title={key}
+							description={meta?.description}
+							unit={meta?.unit}
+							sx={{ display: "inline-block" }}
+						>
+							{key}
+						</HoverInfo>
+					),
+					renderCell: (params) => {
+						if (params.row.isAverage) return null;
+						const val = getMetricValue(params.row.metrics?.[key]);
+						return <MetricValueCell value={val} unit={meta?.unit} align="left" />;
+					},
+					valueGetter: (value, row) => {
+						if (row.isAverage) return null;
+						return getMetricValue(row.metrics?.[key]);
+					},
+				});
+			});
+		}
+
+		return cols;
+	}, [isUtilizationGroup, displayBaseName, group.metricKeys, metaMetrics]);
+
+	const rows = React.useMemo(() => {
+		const r = sortedInstances.map((inst, index) => ({
+			id: inst.name || index,
+			...inst,
+		}));
+
+		if (isUtilizationGroup && averageParts) {
+			r.unshift({
+				id: "average-row",
+				isAverage: true,
+				averageParts,
+			});
+		}
+		return r;
+	}, [sortedInstances, isUtilizationGroup, averageParts]);
+
 	return (
 		<Box>
 			<Box
@@ -195,7 +291,23 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 
 			{open && (
 				<Box sx={{ mt: 1, mb: 2 }}>
-					<DashboardTable stickyHeader={false}>
+					<DataGrid
+						rows={rows}
+						columns={columns}
+						disableRowSelectionOnClick
+						hideFooter
+						autoHeight
+						density="compact"
+						sx={{
+							...dataGridSx,
+							"& .MuiDataGrid-cell": {
+								alignItems: "center",
+								display: "flex",
+								...dataGridSx["& .MuiDataGrid-cell"],
+							},
+						}}
+					/>
+					{/* <DashboardTable stickyHeader={false}>
 						<PivotGroupHeader
 							group={group}
 							isUtilizationGroup={isUtilizationGroup}
@@ -259,7 +371,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 								);
 							})}
 						</TableBody>
-					</DashboardTable>
+					</DashboardTable> */}
 				</Box>
 			)}
 		</Box>

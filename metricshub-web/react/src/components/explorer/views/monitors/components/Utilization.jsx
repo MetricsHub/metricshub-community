@@ -126,6 +126,7 @@ const emptyBarSx = {
 	overflow: "hidden",
 	bgcolor: "action.hover",
 	display: "flex",
+	width: "100%",
 };
 
 /**
@@ -156,6 +157,8 @@ const UtilizationStackComponent = ({ parts }) => {
 				overflow: "hidden",
 				bgcolor: "action.hover",
 				display: "flex",
+				width: "100%",
+				flexGrow: 1,
 			}}
 		>
 			{filteredParts.map((p) => {

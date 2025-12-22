@@ -1,11 +1,12 @@
 import * as React from "react";
 import { Box, TableBody, TableCell, TableHead, TableRow, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
-import { truncatedCellSx } from "../../common/table-styles";
+import { truncatedCellSx, dataGridSx } from "../../common/table-styles";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -86,6 +87,120 @@ const InstanceMetricsTable = ({
 		return groups;
 	}, [sortedEntries, metaMetrics]);
 
+	const columns = React.useMemo(
+		() => [
+			{
+				field: "name",
+				headerName: "Name",
+				flex: 1,
+				renderCell: (params) => {
+					const group = params.row;
+					if (group.type === "single") {
+						const meta = getMetricMetadata(group.key, metaMetrics);
+						return (
+							<HoverInfo
+								title={group.key}
+								description={meta?.description}
+								unit={meta?.unit}
+								sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+							>
+								<TruncatedText text={group.key} sx={{ width: "fit-content", maxWidth: "100%" }}>
+									{group.key}
+								</TruncatedText>
+							</HoverInfo>
+						);
+					}
+					const baseMeta = getMetricMetadata(group.baseName, metaMetrics);
+					const parts = buildUtilizationParts(group.entries);
+					const sortedParts = [...parts].sort(compareUtilizationParts);
+					return (
+						<Box
+							sx={{
+								display: "flex",
+								alignItems: "center",
+								flexWrap: "wrap",
+								columnGap: 2,
+								rowGap: 0.5,
+								height: "100%",
+							}}
+						>
+							<Box component="span" sx={{ maxWidth: "100%", overflow: "hidden" }}>
+								<HoverInfo
+									title={group.baseName}
+									description={baseMeta?.description}
+									unit={baseMeta?.unit}
+									sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
+								>
+									<TruncatedText text={group.baseName} sx={{ width: "auto", maxWidth: "100%" }}>
+										{group.baseName}
+									</TruncatedText>
+								</HoverInfo>
+							</Box>
+							<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+								{sortedParts.map((p) => {
+									const label = colorLabelFromKey(p.key);
+									return (
+										<Box
+											key={p.key}
+											sx={{
+												display: "flex",
+												alignItems: "center",
+												gap: 0.5,
+												fontSize: 10,
+											}}
+										>
+											<Box
+												sx={{
+													width: 8,
+													height: 8,
+													borderRadius: 0.5,
+													bgcolor: colorFor(label),
+												}}
+											/>
+											<Box component="span">{label}</Box>
+										</Box>
+									);
+								})}
+							</Box>
+						</Box>
+					);
+				},
+			},
+			{
+				field: "value",
+				headerName: "Value",
+				flex: 1,
+				align: "left",
+				headerAlign: "left",
+				renderCell: (params) => {
+					const group = params.row;
+					if (group.type === "single") {
+						const meta = getMetricMetadata(group.key, metaMetrics);
+						const { unit } = meta;
+						if (isUtilizationUnit(unit)) {
+							const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
+							return <UtilizationStack parts={parts} />;
+						}
+						return <MetricValueCell value={group.value} unit={unit} align="left" />;
+					}
+					const parts = buildUtilizationParts(group.entries);
+					const sortedParts = [...parts].sort(compareUtilizationParts);
+					return <UtilizationStack parts={sortedParts} />;
+				},
+			},
+		],
+		[metaMetrics],
+	);
+
+	const rows = React.useMemo(
+		() =>
+			groupedEntries.map((group, index) => ({
+				id: group.key || group.baseName || index,
+				...group,
+			})),
+		[groupedEntries],
+	);
+
 	return (
 		<Box mb={1}>
 			<Box
@@ -102,7 +217,24 @@ const InstanceMetricsTable = ({
 				/>
 			</Box>
 
-			<DashboardTable stickyHeader={false}>
+			<DataGrid
+				rows={rows}
+				columns={columns}
+				disableRowSelectionOnClick
+				hideFooter
+				autoHeight
+				density="compact"
+				sx={{
+					...dataGridSx,
+					"& .MuiDataGrid-cell": {
+						alignItems: "center",
+						display: "flex",
+						...dataGridSx["& .MuiDataGrid-cell"],
+					},
+				}}
+			/>
+
+			{/* <DashboardTable stickyHeader={false}>
 				<TableHead>
 					<TableRow>
 						<TableCell sx={{ width: "50%" }}>Name</TableCell>
@@ -238,7 +370,7 @@ const InstanceMetricsTable = ({
 						})
 					)}
 				</TableBody>
-			</DashboardTable>
+			</DashboardTable> */}
 		</Box>
 	);
 };

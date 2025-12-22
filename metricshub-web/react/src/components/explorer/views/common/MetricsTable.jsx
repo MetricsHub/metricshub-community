@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, truncatedCellSx } from "./table-styles";
+import { emptyStateCellSx, truncatedCellSx, dataGridSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
 import MetricValueCell from "./MetricValueCell";
 
@@ -81,7 +82,33 @@ const MetricsTable = ({ metrics }) => {
 	}
 
 	return (
-		<DashboardTable>
+		<DataGrid
+			rows={rows.map((r) => ({ id: r.name, ...r }))}
+			columns={[
+				{
+					field: "name",
+					headerName: "Name",
+					flex: 1,
+					renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+				},
+				{
+					field: "value",
+					headerName: "Value",
+					flex: 1,
+					align: "left",
+					headerAlign: "left",
+					renderCell: (params) => (
+						<MetricValueCell value={params.row.value} unit={params.row.unit} align="left" />
+					),
+				},
+			]}
+			disableRowSelectionOnClick
+			hideFooter
+			autoHeight
+			density="compact"
+			sx={dataGridSx}
+		/>
+		/* <DashboardTable>
 			<TableHead>
 				<TableRow>
 					<TableCell sx={{ width: colWidth }}>Name</TableCell>
@@ -91,7 +118,7 @@ const MetricsTable = ({ metrics }) => {
 				</TableRow>
 			</TableHead>
 			<TableBody>{renderMetricsRows(rows)}</TableBody>
-		</DashboardTable>
+		</DashboardTable> */
 	);
 };
 

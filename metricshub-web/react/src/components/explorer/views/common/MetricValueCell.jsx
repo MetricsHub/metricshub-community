@@ -1,5 +1,5 @@
 import * as React from "react";
-import { TableCell, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import HoverInfo from "../monitors/components/HoverInfo";
 import TruncatedText from "./TruncatedText";
 import { formatMetricValue } from "../../../../utils/formatters";
@@ -17,7 +17,9 @@ import { truncatedCellSx } from "./table-styles";
  */
 const MetricValueCell = ({ value, unit, align = "left" }) => {
 	if (value === undefined || value === null) {
-		return <TableCell align={align}>-</TableCell>;
+		return (
+			<Box sx={{ ...truncatedCellSx, textAlign: align, width: "100%" }}>-</Box>
+		);
 	}
 
 	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";
@@ -27,7 +29,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 	const showRaw = typeof value === "number" && formattedValue !== rawValue && formattedValue !== "";
 
 	return (
-		<TableCell align={align} sx={truncatedCellSx}>
+		<Box sx={{ ...truncatedCellSx, textAlign: align, width: "100%" }}>
 			{showRaw ? (
 				<HoverInfo
 					title={
@@ -42,7 +44,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 			) : (
 				<TruncatedText text={formattedValue}>{formattedValue}</TruncatedText>
 			)}
-		</TableCell>
+		</Box>
 	);
 };
 
