@@ -89,18 +89,13 @@ const collectAllExpandableIds = (root) => {
 /**
  * Renders the explorer hierarchy and dispatches focus callbacks for leaf nodes.
  *
- * @param {Object} props
- * @param {string|null} [props.selectedNodeId] The ID of the node to highlight/select in the tree.
- * @param {(name: string) => void} [props.onResourceGroupFocus] Called when a resource group is selected.
- * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
- * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
+ * @param {object} props - Component props
+ * @param {string|null} [props.selectedNodeId] - The ID of the node to highlight/select in the tree.
+ * @param {(name: string) => void} [props.onResourceGroupFocus] - Called when a resource group is selected.
+ * @param {() => void} [props.onAgentFocus] - Called when an agent node is selected.
+ * @param {(resource: object, group?: object) => void} [props.onResourceFocus] - Called when a resource leaf is selected.
  */
-export default function ExplorerTree({
-	selectedNodeId,
-	onResourceGroupFocus,
-	onAgentFocus,
-	onResourceFocus,
-}) {
+const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onResourceFocus }) => {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -220,4 +215,6 @@ export default function ExplorerTree({
 			<Box sx={{ flex: 1, overflowY: "auto" }}>{renderContent()}</Box>
 		</Box>
 	);
-}
+};
+
+export default React.memo(ExplorerTree);

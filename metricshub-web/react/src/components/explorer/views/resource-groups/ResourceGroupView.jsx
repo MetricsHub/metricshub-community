@@ -14,10 +14,9 @@ import ResourcesTable from "../common/ResourcesTable";
  * Resource group focused page. Mirrors the welcome page behaviour but
  * focuses on a single resource group.
  *
- * @param {{
- *   resourceGroupName?: string,
- *   onResourceClick?: (resource: unknown) => void,
- * }} props
+ * @param {object} props - Component props
+ * @param {string} [props.resourceGroupName] - The name of the resource group
+ * @param {(resource: unknown) => void} [props.onResourceClick] - Callback for resource click
  * @returns {JSX.Element | null}
  */
 const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {

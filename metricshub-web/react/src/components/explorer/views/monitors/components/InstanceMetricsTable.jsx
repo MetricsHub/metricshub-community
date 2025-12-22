@@ -27,13 +27,12 @@ import { flashBlueAnimation } from "../../../../../utils/animations";
  * Displays a table of metrics for a single monitor instance.
  * Groups utilization metrics into a single row with a stacked progress bar.
  *
- * @param {{
- *   instance: any,
- *   metricEntries?: Array<[string, any]>,
- *   naturalMetricCompare: (a: [string, any], b: [string, any]) => number,
- *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>,
- *   highlighted?: boolean
- * }} props
+ * @param {object} props - Component props
+ * @param {any} props.instance - The monitor instance object
+ * @param {Array<[string, any]>} [props.metricEntries] - Optional pre-sorted metric entries
+ * @param {(a: [string, any], b: [string, any]) => number} props.naturalMetricCompare - Comparator for sorting metrics
+ * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
+ * @param {boolean} [props.highlighted] - Whether the table should be highlighted
  */
 const InstanceMetricsTable = ({
 	instance,

@@ -5,7 +5,10 @@ import MetricsAccordion from "../common/MetricsAccordion";
 
 /**
  * Agent header, attributes and metrics section for the welcome page.
- * @param {{ agent: { attributes?: Record<string, unknown>, metrics?: Record<string, any> } | null, totalResources?: number }} props
+ *
+ * @param {object} props - Component props
+ * @param {{ attributes?: Record<string, unknown>, metrics?: Record<string, any> } | null} props.agent - The agent object
+ * @param {number} [props.totalResources] - Total number of resources
  * @returns {JSX.Element | null}
  */
 const AgentData = ({ agent, totalResources }) => {

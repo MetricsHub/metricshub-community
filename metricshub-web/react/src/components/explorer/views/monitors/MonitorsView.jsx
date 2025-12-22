@@ -18,7 +18,12 @@ import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
  * - Shows a "last updated" label based on when the resource
  *   data was last fetched (provided by parent).
  *
- * @param {{ connectors?: any[], lastUpdatedAt?: number | string | Date, resourceId?: string, resourceName?: string, resourceGroupName?: string }} props
+ * @param {object} props - Component props
+ * @param {any[]} [props.connectors] - List of connectors
+ * @param {number | string | Date} [props.lastUpdatedAt] - Last updated timestamp
+ * @param {string} [props.resourceId] - The ID of the resource
+ * @param {string} [props.resourceName] - The name of the resource
+ * @param {string} [props.resourceGroupName] - The name of the resource group
  */
 const MonitorsView = ({
 	connectors,

@@ -131,7 +131,9 @@ const emptyBarSx = {
 
 /**
  * Renders a stacked progress bar for utilization metrics.
- * @param {{parts: Array<{key: string, value: number, pct: number}>}} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{key: string, value: number, pct: number}>} props.parts - Utilization parts to render
  */
 const UtilizationStackComponent = ({ parts }) => {
 	const sortedParts = React.useMemo(() => {

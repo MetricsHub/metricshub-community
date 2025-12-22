@@ -6,15 +6,14 @@ import { Tooltip, Box, Typography } from "@mui/material";
  * - If `description` is provided, shows title/description/unit.
  * - If `value` is provided (number), shows label + percentage (legacy behavior for utilization bars).
  *
- * @param {{
- *   label?: string,
- *   value?: number,
- *   title?: string,
- *   description?: string,
- *   unit?: string,
- *   children: React.ReactNode,
- *   [key: string]: any
- * }} props
+ * @param {object} props - Component props
+ * @param {string} [props.label] - Label for the value
+ * @param {number} [props.value] - Value to display as percentage
+ * @param {string} [props.title] - Tooltip title
+ * @param {string} [props.description] - Tooltip description
+ * @param {string} [props.unit] - Unit of the value
+ * @param {React.ReactNode} props.children - Child elements
+ * @param {import("@mui/material").SxProps} [props.sx] - Custom styles
  */
 const HoverInfo = ({ label, value, title, description, unit, children, sx, ...props }) => {
 	const displayUnit = React.useMemo(() => (unit === "1" ? "%" : unit), [unit]);

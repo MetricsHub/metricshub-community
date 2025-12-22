@@ -8,13 +8,12 @@ import { sectionTitleSx, dataGridSx } from "./table-styles";
  * Generic header section for an entity (Resource, Resource Group, Agent),
  * showing its title/icon and attributes.
  *
- * @param {{
- *   title: React.ReactNode,
- *   iconType?: string,
- *   attributes?: Record<string, unknown>,
- *   children?: React.ReactNode,
- *   action?: React.ReactNode
- * }} props
+ * @param {object} props - Component props
+ * @param {React.ReactNode} props.title - The title of the entity
+ * @param {string} [props.iconType] - The type of icon to display
+ * @param {Record<string, unknown>} [props.attributes] - Attributes of the entity
+ * @param {React.ReactNode} [props.children] - Child elements
+ * @param {React.ReactNode} [props.action] - Action element to display on the right
  * @returns {JSX.Element | null}
  */
 const EntityHeader = ({ title, iconType, attributes, children, action }) => {

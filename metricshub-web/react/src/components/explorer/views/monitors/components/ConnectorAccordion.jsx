@@ -78,15 +78,14 @@ const buildPivotGroups = (instances) => {
 /**
  * Renders a single connector accordion with its attributes, metrics, and nested monitors.
  *
- * @param {{
- *   connector: any,
- *   connectorIndex: number,
- *   resourceId: string,
- *   resourceName: string,
- *   resourceGroupName: string,
- *   highlightedId: string,
- *   isLast: boolean
- * }} props
+ * @param {object} props - Component props
+ * @param {any} props.connector - The connector object
+ * @param {number} props.connectorIndex - The index of the connector
+ * @param {string} props.resourceId - The ID of the resource
+ * @param {string} props.resourceName - The name of the resource
+ * @param {string} props.resourceGroupName - The name of the resource group
+ * @param {string} props.highlightedId - The ID of the highlighted element
+ * @param {boolean} props.isLast - Whether this is the last connector in the list
  */
 const ConnectorAccordion = ({
 	connector,

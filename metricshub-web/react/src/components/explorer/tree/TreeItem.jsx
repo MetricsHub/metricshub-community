@@ -6,11 +6,11 @@ import NodeTypeIcons from "./icons/NodeTypeIcons";
 /**
  * Presentational label used by explorer tree items.
  *
- * @param {Object} props
- * @param {string} props.name Display name of the node.
- * @param {string} [props.type] Backend node type.
- * @param {boolean} props.isFolder Whether the node represents a folder/branch.
- * @param {React.ReactNode} [props.right] Optional right-aligned adornment.
+ * @param {object} props - Component props
+ * @param {string} props.name - Display name of the node
+ * @param {string} [props.type] - Backend node type
+ * @param {boolean} props.isFolder - Whether the node represents a folder/branch
+ * @param {React.ReactNode} [props.right] - Optional right-aligned adornment
  */
 const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 	name,
@@ -47,9 +47,9 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 /**
  * Renders a single explorer tree item and its children.
  *
- * @param {Object} props
- * @param {{ id:string, name:string, type?:string, children?:any[], isExpandable?:boolean }} props.node Normalized explorer node.
- * @param {React.ReactNode} [props.right] Optional right-aligned adornment.
+ * @param {object} props - Component props
+ * @param {{ id: string, name: string, type?: string, children?: any[], isExpandable?: boolean }} props.node - Normalized explorer node
+ * @param {React.ReactNode} [props.right] - Optional right-aligned adornment
  */
 const ExplorerTreeItem = React.memo(function ExplorerTreeItem({ node, right }) {
 	const isFolder = !!node.isExpandable;

@@ -23,7 +23,9 @@ const COLOR_GETTERS = {
  * Accepts only: agent | resource-group | resource.
  * Unknown types fall back to resource icon & neutral color.
  *
- * @param {{ type: string, fontSize?: 'small'|'medium'|'large' }} props
+ * @param {object} props - Component props
+ * @param {string} props.type - The type of node
+ * @param {"small" | "medium" | "large"} [props.fontSize="small"] - The size of the icon
  */
 const NodeTypeIconsComponent = ({ type, fontSize = "small" }) => {
 	const key = ICONS[type] ? type : "resource"; // fallback

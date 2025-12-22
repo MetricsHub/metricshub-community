@@ -3,6 +3,12 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Box, useTheme } from "@mui/material";
 
+/**
+ * Renders a metric name with syntax highlighting.
+ *
+ * @param {object} props - Component props
+ * @param {string} props.name - The metric name to highlight
+ */
 const MetricNameHighlighter = ({ name }) => {
 	const theme = useTheme();
 	const isDark = theme.palette.mode === "dark";
@@ -49,4 +55,4 @@ const MetricNameHighlighter = ({ name }) => {
 	);
 };
 
-export default MetricNameHighlighter;
+export default React.memo(MetricNameHighlighter);
