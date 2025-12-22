@@ -33,11 +33,9 @@ import {
 	selectResourceUiState,
 	setMonitorExpanded,
 } from "../../../../../store/slices/explorer-slice";
-import { renderAttributesRows } from "../../common/ExplorerTableHelpers.jsx";
 import DashboardTable from "../../common/DashboardTable";
 import TruncatedText from "../../common/TruncatedText";
 import MetricValueCell from "../../common/MetricValueCell";
-import { truncatedCellSx } from "../../common/table-styles";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
 

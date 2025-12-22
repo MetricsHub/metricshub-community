@@ -5,7 +5,6 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import DashboardTable from "./DashboardTable";
-import { renderAttributesRows } from "./ExplorerTableHelpers.jsx";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
 
 /**

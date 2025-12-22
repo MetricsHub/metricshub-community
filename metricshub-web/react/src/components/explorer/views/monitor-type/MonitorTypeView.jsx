@@ -84,7 +84,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const monitorData = useMonitorData(currentResource, decodedConnectorId, decodedMonitorType);
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
-	const { sortedInstances, sortedMetricsInstances, sortConfig, handleRequestSort } =
+	const { sortedInstances, sortedMetricsInstances } =
 		useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);

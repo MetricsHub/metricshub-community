@@ -6,7 +6,7 @@ import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
-import { truncatedCellSx, dataGridSx } from "../../common/table-styles";
+import { dataGridSx } from "../../common/table-styles";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
