@@ -29,6 +29,7 @@ import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
 import HoverInfo from "../monitors/components/HoverInfo";
 import MetricValueCell from "../common/MetricValueCell";
+import MetricNameHighlighter from "../common/MetricNameHighlighter.jsx";
 import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
@@ -96,6 +97,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	}, []);
 
 	const columns = React.useMemo(() => {
+		if (!monitorData) return [];
 		const cols = [
 			{
 				field: "instanceName",
@@ -129,20 +131,12 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						unit={displayUnit}
 						sx={{ display: "inline-block" }}
 					>
-						{metric}
+						<MetricNameHighlighter name={metric} />
 					</HoverInfo>
 				),
 				renderCell: (params) => {
 					const val = params.row.metrics?.[metric];
 					const value = getMetricValue(val);
-
-					if (cleanedUnit === "1") {
-						return (
-							<Box sx={{ width: "100%" }}>
-								<UtilizationStack parts={[{ key: metric, value: value, pct: value * 100 }]} />
-							</Box>
-						);
-					}
 
 					return <MetricValueCell value={value} unit={meta?.unit} />;
 				},
@@ -154,7 +148,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		});
 
 		return cols;
-	}, [selectedMetrics, monitorData.metaMetrics]);
+	}, [selectedMetrics, monitorData]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({
