@@ -3,10 +3,12 @@ import { useLocation, Link as RouterLink, matchPath } from "react-router-dom";
 import { Breadcrumbs, Link, Typography, Box } from "@mui/material";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { paths } from "../../paths";
+import NodeTypeIcons from "../explorer/tree/icons/NodeTypeIcons";
+import MonitorTypeIcon from "../explorer/views/monitors/icons/MonitorTypeIcon";
 
 /**
  * Configuration for Explorer routes to generate breadcrumbs.
- * @type {Array<{pattern: string, getBreadcrumbs: (params: Record<string, string>) => Array<{label: string, to: string|null}>}>}
+ * @type {Array<{pattern: string, getBreadcrumbs: (params: Record<string, string>) => Array<{label: string, to: string|null, iconType?: string, monitorType?: string}>}>}
  */
 const EXPLORER_ROUTES = [
 	{
@@ -16,9 +18,9 @@ const EXPLORER_ROUTES = [
 			const resource = decodeURIComponent(params.resource);
 			const monitorType = decodeURIComponent(params.monitorType);
 			return [
-				{ label: group, to: paths.explorerResourceGroup(group) },
-				{ label: resource, to: paths.explorerResource(group, resource) },
-				{ label: monitorType, to: null },
+				{ label: group, to: paths.explorerResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: paths.explorerResource(group, resource), iconType: "resource" },
+				{ label: monitorType, to: null, monitorType },
 			];
 		},
 	},
@@ -28,8 +30,8 @@ const EXPLORER_ROUTES = [
 			const resource = decodeURIComponent(params.resource);
 			const monitorType = decodeURIComponent(params.monitorType);
 			return [
-				{ label: resource, to: paths.explorerResource(null, resource) },
-				{ label: monitorType, to: null },
+				{ label: resource, to: paths.explorerResource(null, resource), iconType: "resource" },
+				{ label: monitorType, to: null, monitorType },
 			];
 		},
 	},
@@ -39,8 +41,8 @@ const EXPLORER_ROUTES = [
 			const group = decodeURIComponent(params.group);
 			const resource = decodeURIComponent(params.resource);
 			return [
-				{ label: group, to: paths.explorerResourceGroup(group) },
-				{ label: resource, to: null },
+				{ label: group, to: paths.explorerResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: null, iconType: "resource" },
 			];
 		},
 	},
@@ -48,14 +50,14 @@ const EXPLORER_ROUTES = [
 		pattern: "/explorer/resource-groups/:name",
 		getBreadcrumbs: (params) => {
 			const name = decodeURIComponent(params.name);
-			return [{ label: name, to: null }];
+			return [{ label: name, to: null, iconType: "resource-group" }];
 		},
 	},
 	{
 		pattern: "/explorer/resources/:resource",
 		getBreadcrumbs: (params) => {
 			const resource = decodeURIComponent(params.resource);
-			return [{ label: resource, to: null }];
+			return [{ label: resource, to: null, iconType: "resource" }];
 		},
 	},
 ];
@@ -75,7 +77,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 		const items = [];
 
 		if (currentPath.startsWith("/explorer")) {
-			items.push({ label: "Explorer", to: paths.explorerWelcome });
+			items.push({ label: "Explorer", to: paths.explorerWelcome, iconType: "agent" });
 
 			for (const route of EXPLORER_ROUTES) {
 				const match = matchPath({ path: route.pattern, end: true }, currentPath);
@@ -105,9 +107,36 @@ const AppBreadcrumbs = ({ sx, action }) => {
 			<Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
 				{crumbs.map((crumb, index) => {
 					const isLast = index === crumbs.length - 1;
+					const icon = crumb.monitorType ? (
+						<MonitorTypeIcon type={crumb.monitorType} />
+					) : crumb.iconType ? (
+						<NodeTypeIcons type={crumb.iconType} />
+					) : null;
+
+					const content = (
+						<Box
+							component="span"
+							sx={{
+								display: "inline-flex",
+								alignItems: "center",
+								gap: 0.75,
+								verticalAlign: "middle",
+							}}
+						>
+							{icon && (
+								<Box component="span" sx={{ display: "flex", alignItems: "center" }}>
+									{icon}
+								</Box>
+							)}
+							<Box component="span" sx={{ mt: "1px" }}>
+								{crumb.label}
+							</Box>
+						</Box>
+					);
+
 					return isLast ? (
 						<Typography key={crumb.label} color="text.primary" variant="body2">
-							{crumb.label}
+							{content}
 						</Typography>
 					) : (
 						<Link
@@ -118,7 +147,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 							to={crumb.to}
 							variant="body2"
 						>
-							{crumb.label}
+							{content}
 						</Link>
 					);
 				})}

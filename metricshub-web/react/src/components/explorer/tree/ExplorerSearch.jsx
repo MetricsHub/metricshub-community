@@ -8,6 +8,7 @@ import {
 	selectSearchLoading,
 	clearSearchResults,
 } from "../../../store/slices/explorer-slice";
+import NodeTypeIcons from "../tree/icons/NodeTypeIcons";
 
 /**
  * Explorer Search component.
@@ -117,11 +118,16 @@ const ExplorerSearch = () => {
 				const { key, ...otherProps } = props;
 				return (
 					<li key={key} {...otherProps}>
-						<Box>
-							<Typography variant="body1">{option.name}</Typography>
-							<Typography variant="caption" color="text.secondary">
-								{option.type} {option.path ? `- ${option.path}` : ""}
-							</Typography>
+						<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+							<NodeTypeIcons type={option.type} name={option.name} />
+							<Box sx={{ minWidth: 0, flex: 1 }}>
+								<Typography variant="body1" noWrap>
+									{option.name}
+								</Typography>
+								<Typography variant="caption" color="text.secondary" noWrap display="block">
+									{option.type} {option.path ? `- ${option.path}` : ""}
+								</Typography>
+							</Box>
 						</Box>
 					</li>
 				);

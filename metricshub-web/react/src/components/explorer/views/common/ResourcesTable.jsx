@@ -35,20 +35,25 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				field: "name",
 				headerName: "Key",
 				flex: 1,
-				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+				renderCell: (params) => (
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+						<NodeTypeIcons type="resource" />
+						<TruncatedText text={params.value}>{params.value}</TruncatedText>
+					</Box>
+				),
 			},
 			{
 				field: "hostName",
 				headerName: "host.name",
 				flex: 1,
-				valueGetter: (params) => params.row.attributes?.["host.name"] ?? "",
+				valueGetter: (value, row) => row.attributes?.["host.name"] ?? "",
 				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
 			},
 			{
 				field: "hostType",
 				headerName: "host.type",
 				flex: 1,
-				valueGetter: (params) => params.row.attributes?.["host.type"] ?? "",
+				valueGetter: (value, row) => row.attributes?.["host.type"] ?? "",
 				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
 			},
 		];
@@ -57,7 +62,7 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				field: "osType",
 				headerName: "os.type",
 				flex: 1,
-				valueGetter: (params) => params.row.attributes?.["os.type"] ?? "",
+				valueGetter: (value, row) => row.attributes?.["os.type"] ?? "",
 				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
 			});
 		}

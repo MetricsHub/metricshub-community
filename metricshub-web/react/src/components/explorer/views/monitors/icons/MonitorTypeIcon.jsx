@@ -30,22 +30,56 @@ const ICONS = {
 	Voltage: BoltIcon,
 	"Disk Controller": SettingsInputComponentIcon,
 	"Logical Disk": PieChartIcon,
+	Enclosure: StorageIcon,
 };
 
 /**
  * Icon component for monitor types.
  *
- * @param {{ type: string, fontSize?: 'small'|'medium'|'large' }} props
+ * @param {{ type: string, fontSize?: 'small'|'medium'|'large', fallback?: React.ReactNode }} props
  */
-const MonitorTypeIcon = ({ type, fontSize = "small" }) => {
-	const IconEl = ICONS[type] || HelpOutlineIcon;
+const MonitorTypeIcon = ({ type, fontSize = "small", fallback = null }) => {
+	if (!type) return null;
 
-	// If the type is not in our map, we might want to return null or a default icon.
-	// For now, let's return null if not found to avoid cluttering unknown types,
-	// or use a default if requested.
-	// The user asked for icons for "all these", implying specific ones.
-	if (!ICONS[type]) {
-		return null;
+	const normalizedType = type.toLowerCase();
+
+	// Try to find a match in our icon map
+	let IconEl = null;
+
+	// Exact match (case-insensitive)
+	const exactKey = Object.keys(ICONS).find((k) => k.toLowerCase() === normalizedType);
+	if (exactKey) {
+		IconEl = ICONS[exactKey];
+	} else {
+		// Partial match
+		if (normalizedType.includes("cpu") || normalizedType.includes("processor")) {
+			IconEl = DeveloperBoardIcon;
+		} else if (normalizedType.includes("memory") || normalizedType.includes("ram")) {
+			IconEl = MemoryIcon;
+		} else if (normalizedType.includes("network") || normalizedType.includes("interface")) {
+			IconEl = LanIcon;
+		} else if (
+			normalizedType.includes("disk") ||
+			normalizedType.includes("storage") ||
+			normalizedType.includes("file") ||
+			normalizedType.includes("volume")
+		) {
+			IconEl = StorageIcon;
+		} else if (normalizedType.includes("system")) {
+			IconEl = ComputerIcon;
+		} else if (normalizedType.includes("fan") || normalizedType.includes("cooling")) {
+			IconEl = WindPowerIcon;
+		} else if (normalizedType.includes("temp")) {
+			IconEl = DeviceThermostatIcon;
+		} else if (normalizedType.includes("volt") || normalizedType.includes("power")) {
+			IconEl = BoltIcon;
+		} else if (normalizedType.includes("page") || normalizedType.includes("swap")) {
+			IconEl = SwapHorizIcon;
+		}
+	}
+
+	if (!IconEl) {
+		return fallback;
 	}
 
 	return <IconEl fontSize={fontSize} sx={{ color: "text.secondary" }} />;

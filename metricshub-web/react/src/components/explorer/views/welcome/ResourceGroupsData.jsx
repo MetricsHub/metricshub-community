@@ -80,7 +80,10 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 						headerName: "Key",
 						flex: 1,
 						renderCell: (params) => (
-							<TruncatedText text={params.value}>{params.value}</TruncatedText>
+							<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+								<NodeTypeIcons type="resource-group" />
+								<TruncatedText text={params.value}>{params.value}</TruncatedText>
+							</Box>
 						),
 					},
 					{

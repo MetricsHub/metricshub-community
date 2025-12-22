@@ -161,6 +161,7 @@ const UtilizationStackComponent = ({ parts }) => {
 				display: "flex",
 				width: "100%",
 				flexGrow: 1,
+				alignSelf: "center",
 			}}
 		>
 			{filteredParts.map((p) => {

@@ -28,8 +28,8 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 				pr: 1,
 			}}
 		>
-			<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-				<NodeTypeIcons type={type} />
+			<Box sx={{ display: "flex", alignItems: "center", minWidth: 0, gap: 1 }}>
+				<NodeTypeIcons type={type} name={name} />
 				<Typography
 					component="span"
 					noWrap

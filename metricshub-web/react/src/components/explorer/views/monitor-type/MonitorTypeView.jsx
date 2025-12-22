@@ -28,6 +28,7 @@ import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
 import HoverInfo from "../monitors/components/HoverInfo";
+import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
 import MetricNameHighlighter from "../common/MetricNameHighlighter.jsx";
 import { UtilizationStack } from "../monitors/components/Utilization";
@@ -187,6 +188,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
 			<EntityHeader
 				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
+				icon={<MonitorTypeIcon type={decodedMonitorType} fontSize="large" />}
 			/>
 
 			<Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
