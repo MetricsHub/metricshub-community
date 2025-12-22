@@ -15,21 +15,21 @@ import BoltIcon from "@mui/icons-material/Bolt";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 const ICONS = {
-    "CPU": DeveloperBoardIcon,
-    "File System": FolderIcon,
-    "Filesystem": FolderIcon,
-    "Memory": MemoryIcon,
-    "Network": LanIcon,
-    "Paging": SwapHorizIcon,
-    "Paging Activity": SwapVertIcon,
-    "Physical Disk": StorageIcon,
-    "System": ComputerIcon,
-    "Fan": WindPowerIcon,
-    "GPU": DeveloperBoardIcon,
-    "Temperature": DeviceThermostatIcon,
-    "Voltage": BoltIcon,
-    "Disk Controller": SettingsInputComponentIcon,
-    "Logical Disk": PieChartIcon,
+	CPU: DeveloperBoardIcon,
+	"File System": FolderIcon,
+	Filesystem: FolderIcon,
+	Memory: MemoryIcon,
+	Network: LanIcon,
+	Paging: SwapHorizIcon,
+	"Paging Activity": SwapVertIcon,
+	"Physical Disk": StorageIcon,
+	System: ComputerIcon,
+	Fan: WindPowerIcon,
+	GPU: DeveloperBoardIcon,
+	Temperature: DeviceThermostatIcon,
+	Voltage: BoltIcon,
+	"Disk Controller": SettingsInputComponentIcon,
+	"Logical Disk": PieChartIcon,
 };
 
 /**
@@ -38,17 +38,17 @@ const ICONS = {
  * @param {{ type: string, fontSize?: 'small'|'medium'|'large' }} props
  */
 const MonitorTypeIcon = ({ type, fontSize = "small" }) => {
-    const IconEl = ICONS[type] || HelpOutlineIcon;
+	const IconEl = ICONS[type] || HelpOutlineIcon;
 
-    // If the type is not in our map, we might want to return null or a default icon.
-    // For now, let's return null if not found to avoid cluttering unknown types, 
-    // or use a default if requested. 
-    // The user asked for icons for "all these", implying specific ones.
-    if (!ICONS[type]) {
-        return null;
-    }
+	// If the type is not in our map, we might want to return null or a default icon.
+	// For now, let's return null if not found to avoid cluttering unknown types,
+	// or use a default if requested.
+	// The user asked for icons for "all these", implying specific ones.
+	if (!ICONS[type]) {
+		return null;
+	}
 
-    return <IconEl fontSize={fontSize} sx={{ color: "text.secondary" }} />;
+	return <IconEl fontSize={fontSize} sx={{ color: "text.secondary" }} />;
 };
 
 export default React.memo(MonitorTypeIcon);

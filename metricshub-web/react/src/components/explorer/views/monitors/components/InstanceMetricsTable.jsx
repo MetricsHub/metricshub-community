@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
+import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
@@ -103,9 +104,7 @@ const InstanceMetricsTable = ({
 								unit={meta?.unit}
 								sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
 							>
-								<TruncatedText text={group.key} sx={{ width: "fit-content", maxWidth: "100%" }}>
-									{group.key}
-								</TruncatedText>
+								<MetricNameHighlighter name={group.key} />
 							</HoverInfo>
 						);
 					}
@@ -130,9 +129,7 @@ const InstanceMetricsTable = ({
 									unit={baseMeta?.unit}
 									sx={{ display: "block", width: "fit-content", maxWidth: "100%" }}
 								>
-									<TruncatedText text={group.baseName} sx={{ width: "auto", maxWidth: "100%" }}>
-										{group.baseName}
-									</TruncatedText>
+									<MetricNameHighlighter name={group.baseName} />
 								</HoverInfo>
 							</Box>
 							<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
