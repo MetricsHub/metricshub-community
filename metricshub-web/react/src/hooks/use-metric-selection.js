@@ -15,7 +15,11 @@ export const useMetricSelection = (instances) => {
 		// Check first 50 instances to gather available metrics
 		for (const instance of instances.slice(0, 50)) {
 			if (instance.metrics) {
-				Object.keys(instance.metrics).forEach((k) => metricsSet.add(k));
+				Object.keys(instance.metrics).forEach((k) => {
+					if (!k.startsWith("__")) {
+						metricsSet.add(k);
+					}
+				});
 			}
 		}
 		return Array.from(metricsSet).sort();
