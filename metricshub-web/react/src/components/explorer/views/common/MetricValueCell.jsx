@@ -26,7 +26,17 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 	const showRaw = typeof value === "number" && formattedValue !== rawValue && formattedValue !== "";
 
 	return (
-		<Box sx={{ ...truncatedCellSx, textAlign: align, width: "100%" }}>
+		<Box
+			sx={{
+				...truncatedCellSx,
+				textAlign: align,
+				width: "100%",
+				display: "flex",
+				alignItems: "center",
+				justifyContent:
+					align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start",
+			}}
+		>
 			{showRaw ? (
 				<HoverInfo
 					title={
@@ -34,7 +44,12 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 							Raw value : {value} {displayUnit}
 						</Typography>
 					}
-					sx={{ display: "inline-block", maxWidth: "100%", ...truncatedCellSx }}
+					sx={{
+						display: "inline-flex",
+						alignItems: "center",
+						maxWidth: "100%",
+						...truncatedCellSx,
+					}}
 				>
 					{formattedValue}
 				</HoverInfo>

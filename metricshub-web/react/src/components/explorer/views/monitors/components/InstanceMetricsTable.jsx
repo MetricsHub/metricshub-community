@@ -232,14 +232,7 @@ const InstanceMetricsTable = ({
 				hideFooter
 				autoHeight
 				density="compact"
-				sx={{
-					...dataGridSx,
-					"& .MuiDataGrid-cell": {
-						alignItems: "center",
-						display: "flex",
-						...dataGridSx["& .MuiDataGrid-cell"],
-					},
-				}}
+				sx={dataGridSx}
 			/>
 		</Box>
 	);

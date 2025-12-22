@@ -61,7 +61,7 @@ describe("AppBreadcrumbs", () => {
 
 		it("renders Explorer as a link for resource group", () => {
 			renderWithPath("/explorer/resource-groups/TestGroup");
-			const explorerLink = screen.getByRole("link", { name: "Explorer" });
+			const explorerLink = screen.getByRole("link", { name: /Explorer/i });
 			expect(explorerLink).toBeInTheDocument();
 			expect(explorerLink).toHaveAttribute("href", paths.explorerWelcome);
 		});
@@ -70,8 +70,9 @@ describe("AppBreadcrumbs", () => {
 			renderWithPath("/explorer/resource-groups/TestGroup");
 			const groupText = screen.getByText("TestGroup");
 			expect(groupText).toBeInTheDocument();
-			expect(groupText.tagName).toBe("P"); // Typography renders as <p>
-			expect(screen.queryByRole("link", { name: "TestGroup" })).not.toBeInTheDocument();
+			// The text is now inside a span which is inside a Typography (p)
+			expect(groupText.closest("p")).toBeInTheDocument();
+			expect(screen.queryByRole("link", { name: /TestGroup/i })).not.toBeInTheDocument();
 		});
 	});
 
@@ -91,8 +92,8 @@ describe("AppBreadcrumbs", () => {
 
 		it("renders Explorer and group as links", () => {
 			renderWithPath("/explorer/resource-groups/MyGroup/resources/MyResource");
-			const explorerLink = screen.getByRole("link", { name: "Explorer" });
-			const groupLink = screen.getByRole("link", { name: "MyGroup" });
+			const explorerLink = screen.getByRole("link", { name: /Explorer/i });
+			const groupLink = screen.getByRole("link", { name: /MyGroup/i });
 			expect(explorerLink).toBeInTheDocument();
 			expect(groupLink).toBeInTheDocument();
 			expect(groupLink).toHaveAttribute("href", paths.explorerResourceGroup("MyGroup"));
@@ -102,8 +103,8 @@ describe("AppBreadcrumbs", () => {
 			renderWithPath("/explorer/resource-groups/MyGroup/resources/MyResource");
 			const resourceText = screen.getByText("MyResource");
 			expect(resourceText).toBeInTheDocument();
-			expect(resourceText.tagName).toBe("P"); // Typography renders as <p>
-			expect(screen.queryByRole("link", { name: "MyResource" })).not.toBeInTheDocument();
+			expect(resourceText.closest("p")).toBeInTheDocument();
+			expect(screen.queryByRole("link", { name: /MyResource/i })).not.toBeInTheDocument();
 		});
 	});
 
@@ -121,7 +122,7 @@ describe("AppBreadcrumbs", () => {
 
 		it("renders Explorer as a link", () => {
 			renderWithPath("/explorer/resources/StandaloneResource");
-			const explorerLink = screen.getByRole("link", { name: "Explorer" });
+			const explorerLink = screen.getByRole("link", { name: /Explorer/i });
 			expect(explorerLink).toBeInTheDocument();
 			expect(explorerLink).toHaveAttribute("href", paths.explorerWelcome);
 		});
@@ -130,8 +131,8 @@ describe("AppBreadcrumbs", () => {
 			renderWithPath("/explorer/resources/StandaloneResource");
 			const resourceText = screen.getByText("StandaloneResource");
 			expect(resourceText).toBeInTheDocument();
-			expect(resourceText.tagName).toBe("P");
-			expect(screen.queryByRole("link", { name: "StandaloneResource" })).not.toBeInTheDocument();
+			expect(resourceText.closest("p")).toBeInTheDocument();
+			expect(screen.queryByRole("link", { name: /StandaloneResource/i })).not.toBeInTheDocument();
 		});
 	});
 

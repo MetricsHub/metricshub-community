@@ -3,6 +3,7 @@ import { Box } from "@mui/material";
 import DeviceHubIcon from "@mui/icons-material/DeviceHub";
 import DomainIcon from "@mui/icons-material/Domain";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
+import MonitorTypeIcon from "../../views/monitors/icons/MonitorTypeIcon";
 
 const ICONS = {
 	agent: DeviceHubIcon,
@@ -24,10 +25,11 @@ const COLOR_GETTERS = {
  * Unknown types fall back to resource icon & neutral color.
  *
  * @param {object} props - Component props
- * @param {string} props.type - The type of node
+ * @param {string} props.type - The type of node (agent, resource-group, resource, monitor-type)
+ * @param {string} [props.name] - The specific name of the node (e.g. for monitor types)
  * @param {"small" | "medium" | "large"} [props.fontSize="small"] - The size of the icon
  */
-const NodeTypeIconsComponent = ({ type, fontSize = "small" }) => {
+const NodeTypeIconsComponent = ({ type, name, fontSize = "small" }) => {
 	const key = ICONS[type] ? type : "resource"; // fallback
 	const IconEl = ICONS[key];
 	const getColor = COLOR_GETTERS[key];
@@ -45,7 +47,6 @@ const NodeTypeIconsComponent = ({ type, fontSize = "small" }) => {
 			sx={{
 				display: "inline-flex",
 				alignItems: "center",
-				mr: 1,
 				...(colorSx ? { color: colorSx } : {}),
 			}}
 		>
@@ -57,7 +58,11 @@ const NodeTypeIconsComponent = ({ type, fontSize = "small" }) => {
 					sx={{ width: imgSize, height: imgSize, display: "block" }}
 				/>
 			) : (
-				<IconEl fontSize={fontSize} />
+				<MonitorTypeIcon
+					type={name || type}
+					fontSize={fontSize}
+					fallback={<IconEl fontSize={fontSize} />}
+				/>
 			)}
 		</Box>
 	);

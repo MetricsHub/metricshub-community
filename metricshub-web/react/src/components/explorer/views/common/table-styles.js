@@ -33,6 +33,8 @@ export const dataGridSx = {
 	"& .MuiDataGrid-cell": {
 		borderBottom: 1,
 		borderColor: "divider",
+		display: "flex",
+		alignItems: "center",
 	},
 	"& .MuiDataGrid-footerContainer": {
 		borderTop: 1,

@@ -10,13 +10,14 @@ import { sectionTitleSx, dataGridSx } from "./table-styles";
  *
  * @param {object} props - Component props
  * @param {React.ReactNode} props.title - The title of the entity
- * @param {string} [props.iconType] - The type of icon to display
+ * @param {string} [props.iconType] - The type of icon to display (agent, resource-group, resource)
+ * @param {React.ReactNode} [props.icon] - A custom icon element to display
  * @param {Record<string, unknown>} [props.attributes] - Attributes of the entity
  * @param {React.ReactNode} [props.children] - Child elements
  * @param {React.ReactNode} [props.action] - Action element to display on the right
  * @returns {JSX.Element | null}
  */
-const EntityHeader = ({ title, iconType, attributes, children, action }) => {
+const EntityHeader = ({ title, iconType, icon, attributes, children, action }) => {
 	const hasAttributes = React.useMemo(
 		() => attributes && Object.keys(attributes).length > 0,
 		[attributes],
@@ -31,7 +32,13 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
 					<Typography variant="h4" gutterBottom sx={titleSx}>
-						{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
+						{icon ? (
+							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
+								{icon}
+							</Box>
+						) : (
+							iconType && <NodeTypeIcons type={iconType} fontSize="large" />
+						)}
 						{title}
 					</Typography>
 					{children}
