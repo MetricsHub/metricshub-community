@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
+import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
@@ -173,7 +174,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							unit={meta?.unit}
 							sx={{ display: "inline-block" }}
 						>
-							{key}
+							<MetricNameHighlighter name={key} />
 						</HoverInfo>
 					),
 					renderCell: (params) => {
