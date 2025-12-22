@@ -1,9 +1,5 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import DashboardTable from "./DashboardTable";
 import { dataGridSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
 import MetricValueCell from "./MetricValueCell";
@@ -76,17 +72,6 @@ const MetricsTable = ({ metrics }) => {
 			density="compact"
 			sx={dataGridSx}
 		/>
-		/* <DashboardTable>
-			<TableHead>
-				<TableRow>
-					<TableCell sx={{ width: colWidth }}>Name</TableCell>
-					<TableCell align={valueAlign} sx={{ width: colWidth }}>
-						Value
-					</TableCell>
-				</TableRow>
-			</TableHead>
-			<TableBody>{renderMetricsRows(rows)}</TableBody>
-		</DashboardTable> */
 	);
 };
 

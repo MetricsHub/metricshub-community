@@ -6,12 +6,6 @@ export const sectionTitleSx = {
 	mb: 1,
 };
 
-export const emptyStateCellSx = {
-	fontStyle: "italic",
-	color: "text.secondary",
-	textAlign: "center",
-};
-
 export const truncatedCellSx = {
 	whiteSpace: "nowrap",
 	overflow: "hidden",

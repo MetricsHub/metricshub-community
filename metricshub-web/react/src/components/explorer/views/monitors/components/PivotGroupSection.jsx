@@ -1,11 +1,9 @@
 import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Box, Typography, TableBody, TableCell, TableRow } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import DashboardTable from "../../common/DashboardTable";
 import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
-import PivotGroupHeader from "./PivotGroupHeader";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
@@ -307,71 +305,6 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							},
 						}}
 					/>
-					{/* <DashboardTable stickyHeader={false}>
-						<PivotGroupHeader
-							group={group}
-							isUtilizationGroup={isUtilizationGroup}
-							metaMetrics={metaMetrics}
-						/>
-						<TableBody>
-							{isUtilizationGroup && averageParts && (
-								<TableRow>
-									<TableCell sx={truncatedCellSx}>
-										<Typography variant="body2" sx={{ fontWeight: 500 }}>
-											Average {displayBaseName}
-										</Typography>
-									</TableCell>
-									<TableCell>
-										<UtilizationStack parts={averageParts} />
-									</TableCell>
-								</TableRow>
-							)}
-							{sortedInstances.map((inst, rowIndex) => {
-								const attrs = inst?.attributes ?? {};
-								const id = attrs.id || inst.name;
-								const displayName = getInstanceDisplayName(inst, id);
-								const metrics = inst?.metrics ?? {};
-
-								if (isUtilizationGroup) {
-									const entries = group.metricKeys.map((key) => ({ key, value: metrics[key] }));
-									const hasData = entries.some((e) => e.value !== undefined && e.value !== null);
-									const parts = hasData ? buildUtilizationParts(entries) : [];
-
-									return (
-										<TableRow key={id || rowIndex}>
-											<TableCell sx={truncatedCellSx}>
-												<Box sx={{ overflow: "hidden" }}>
-													<InstanceNameWithAttributes
-														displayName={displayName}
-														attributes={attrs}
-													/>
-												</Box>
-											</TableCell>
-											<TableCell>{hasData ? <UtilizationStack parts={parts} /> : "-"}</TableCell>
-										</TableRow>
-									);
-								}
-
-								return (
-									<TableRow key={id || rowIndex}>
-										<TableCell sx={truncatedCellSx}>
-											<Box sx={{ overflow: "hidden" }}>
-												<InstanceNameWithAttributes displayName={displayName} attributes={attrs} />
-											</Box>
-										</TableCell>
-										{group.metricKeys.map((key) => {
-											const meta = getMetricMetadata(key, metaMetrics);
-											const val = getMetricValue(metrics[key]);
-
-											return (
-												<MetricValueCell key={key} value={val} unit={meta?.unit} align="left" />
-											);
-										})}
-									</TableRow>
-								);
-							})}
-						</TableBody>
-					</DashboardTable> */}
 				</Box>
 			)}
 		</Box>

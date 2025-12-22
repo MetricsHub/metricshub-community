@@ -1,8 +1,8 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "../common/DashboardTable";
-import { emptyStateCellSx, sectionTitleSx, truncatedCellSx } from "../common/table-styles";
+import { sectionTitleSx, dataGridSx } from "../common/table-styles";
 import TruncatedText from "../common/TruncatedText";
 
 /**
@@ -51,17 +51,11 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 		}));
 	}, [resourceGroups]);
 
-	const hasGroups = React.useMemo(() => processedGroups.length > 0, [processedGroups.length]);
-	const rowCursorSx = React.useMemo(
-		() => ({ cursor: onResourceGroupClick ? "pointer" : "default" }),
-		[onResourceGroupClick],
-	);
-
 	// Memoized click handler factory to avoid recreating functions in map
 	const handleGroupClick = React.useCallback(
-		(group) => {
+		(params) => {
 			if (onResourceGroupClick) {
-				onResourceGroupClick(group);
+				onResourceGroupClick(params.row);
 			}
 		},
 		[onResourceGroupClick],
@@ -73,36 +67,38 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 				<NodeTypeIcons type="resource-group" />
 				Resource Groups
 			</Typography>
-			<DashboardTable>
-				<TableHead>
-					<TableRow>
-						<TableCell sx={{ width: "50%" }}>Key</TableCell>
-						<TableCell align="left" sx={{ width: "50%" }}>
-							Resources
-						</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{!hasGroups ? (
-						<TableRow>
-							<TableCell colSpan={2} sx={emptyStateCellSx}>
-								No resource groups
-							</TableCell>
-						</TableRow>
-					) : (
-						processedGroups.map((g) => (
-							<TableRow key={g.name} hover sx={rowCursorSx} onClick={() => handleGroupClick(g)}>
-								<TableCell sx={truncatedCellSx}>
-									<TruncatedText text={g.displayLabel}>{g.displayLabel}</TruncatedText>
-								</TableCell>
-								<TableCell align="left" sx={truncatedCellSx}>
-									<TruncatedText text={String(g.resourceCount)}>{g.resourceCount}</TruncatedText>
-								</TableCell>
-							</TableRow>
-						))
-					)}
-				</TableBody>
-			</DashboardTable>
+			<DataGrid
+				rows={processedGroups.map((g) => ({ id: g.name, ...g }))}
+				columns={[
+					{
+						field: "displayLabel",
+						headerName: "Key",
+						flex: 1,
+						renderCell: (params) => (
+							<TruncatedText text={params.value}>{params.value}</TruncatedText>
+						),
+					},
+					{
+						field: "resourceCount",
+						headerName: "Resources",
+						flex: 1,
+						renderCell: (params) => (
+							<TruncatedText text={String(params.value)}>{params.value}</TruncatedText>
+						),
+					},
+				]}
+				onRowClick={handleGroupClick}
+				disableRowSelectionOnClick
+				hideFooter
+				autoHeight
+				density="compact"
+				sx={{
+					...dataGridSx,
+					"& .MuiDataGrid-row": {
+						cursor: onResourceGroupClick ? "pointer" : "default",
+					},
+				}}
+			/>
 		</Box>
 	);
 };
