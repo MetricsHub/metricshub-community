@@ -17,9 +17,7 @@ import { truncatedCellSx } from "./table-styles";
  */
 const MetricValueCell = ({ value, unit, align = "left" }) => {
 	if (value === undefined || value === null) {
-		return (
-			<Box sx={{ ...truncatedCellSx, textAlign: align, width: "100%" }}>-</Box>
-		);
+		return <Box sx={{ ...truncatedCellSx, textAlign: align, width: "100%" }}>-</Box>;
 	}
 
 	const cleanUnit = unit ? unit.replace(/[{}]/g, "") : "";

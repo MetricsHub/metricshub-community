@@ -4,37 +4,9 @@ import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, truncatedCellSx, dataGridSx } from "./table-styles";
+import { dataGridSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
 import MetricValueCell from "./MetricValueCell";
-
-/**
- * Render table rows for a list of metrics.
- *
- * @param {Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }>} metrics
- * @returns {JSX.Element | JSX.Element[]}
- */
-const renderMetricsRows = (metrics) => {
-	const list = Array.isArray(metrics) ? metrics : [];
-	if (list.length === 0) {
-		return (
-			<TableRow>
-				<TableCell colSpan={2} sx={emptyStateCellSx}>
-					No metrics
-				</TableCell>
-			</TableRow>
-		);
-	}
-
-	return list.map((m) => (
-		<TableRow key={m.name}>
-			<TableCell sx={truncatedCellSx}>
-				<TruncatedText text={m.name}>{m.name}</TruncatedText>
-			</TableCell>
-			<MetricValueCell value={m.value} unit={m.unit} align="left" />
-		</TableRow>
-	));
-};
 
 /**
  * Generic Metrics section.
@@ -72,10 +44,6 @@ const MetricsTable = ({ metrics }) => {
 		}
 		return [];
 	}, [metrics]);
-
-	const valueAlign = "left";
-
-	const colWidth = "50%";
 
 	if (rows.length === 0) {
 		return null;
