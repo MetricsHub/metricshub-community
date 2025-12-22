@@ -7,11 +7,11 @@ import TruncatedText from "./TruncatedText";
 
 /**
  * Table displaying resources.
- * @param {{
- *   resources?: Array<{ name: string, attributes?: Record<string, unknown> }>,
- *   onResourceClick?: (resource:any) => void,
- *   showOsType?: boolean
- * }} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, attributes?: Record<string, unknown> }>} [props.resources] - List of resources to display
+ * @param {(resource: any) => void} [props.onResourceClick] - Callback for row click
+ * @param {boolean} [props.showOsType=false] - Whether to show the OS type column
  * @returns {JSX.Element}
  */
 const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {

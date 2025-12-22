@@ -7,7 +7,8 @@ import CountBadge from "./CountBadge";
 /**
  * Accordion for displaying metrics with a count bubble.
  *
- * @param {{ metrics: Record<string, any> | Array<any> }} props
+ * @param {object} props - Component props
+ * @param {Record<string, any> | Array<any>} props.metrics - Metrics to display
  * @returns {JSX.Element | null}
  */
 const MetricsAccordion = ({ metrics }) => {

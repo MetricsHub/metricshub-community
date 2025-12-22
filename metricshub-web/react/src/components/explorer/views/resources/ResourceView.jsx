@@ -26,12 +26,11 @@ import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 /**
  * Single resource focused page.
  *
- * @param {{
- *   resourceName?: string,
- *   resourceGroupName?: string,
- *   isPaused?: boolean,
- *   onTogglePause?: () => void
- * }} props
+ * @param {object} props - Component props
+ * @param {string} [props.resourceName] - The name of the resource
+ * @param {string} [props.resourceGroupName] - The name of the resource group
+ * @param {boolean} [props.isPaused] - Whether collection is paused
+ * @param {() => void} [props.onTogglePause] - Callback to toggle pause
  * @returns {JSX.Element | null}
  */
 const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause }) => {
@@ -271,4 +270,4 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 	);
 };
 
-export default ResourceView;
+export default React.memo(ResourceView);

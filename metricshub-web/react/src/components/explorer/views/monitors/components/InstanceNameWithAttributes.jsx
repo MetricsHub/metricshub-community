@@ -6,13 +6,12 @@ import TruncatedText from "../../common/TruncatedText";
 /**
  * Renders an instance name along with an info icon that shows attributes in a tooltip.
  *
- * @param {{
- *   displayName: string,
- *   attributes: Record<string, any>,
- *   sx?: import("@mui/material").SxProps,
- *   variant?: import("@mui/material/styles").TypographyVariant,
- *   fontWeight?: number | string
- * }} props
+ * @param {object} props - Component props
+ * @param {string} props.displayName - The display name of the instance
+ * @param {Record<string, any>} props.attributes - Attributes of the instance
+ * @param {import("@mui/material").SxProps} [props.sx] - Custom styles
+ * @param {import("@mui/material/styles").TypographyVariant} [props.variant="body2"] - Typography variant
+ * @param {number | string} [props.fontWeight] - Font weight
  */
 const InstanceNameWithAttributes = ({
 	displayName,
@@ -60,4 +59,4 @@ const InstanceNameWithAttributes = ({
 	);
 };
 
-export default InstanceNameWithAttributes;
+export default React.memo(InstanceNameWithAttributes);

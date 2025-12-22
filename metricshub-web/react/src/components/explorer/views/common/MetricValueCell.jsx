@@ -9,11 +9,10 @@ import { truncatedCellSx } from "./table-styles";
  * Renders a table cell for a metric value.
  * Handles formatting and showing raw value on hover.
  *
- * @param {{
- *   value: any,
- *   unit?: string,
- *   align?: "left" | "right" | "center" | "justify" | "inherit"
- * }} props
+ * @param {object} props - Component props
+ * @param {any} props.value - The metric value
+ * @param {string} [props.unit] - The unit of the metric
+ * @param {"left" | "right" | "center" | "justify" | "inherit"} [props.align="left"] - Text alignment
  */
 const MetricValueCell = ({ value, unit, align = "left" }) => {
 	if (value === undefined || value === null) {

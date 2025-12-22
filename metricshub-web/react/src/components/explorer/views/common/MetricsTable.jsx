@@ -7,9 +7,8 @@ import MetricValueCell from "./MetricValueCell";
 /**
  * Generic Metrics section.
  *
- * @param {{
- *   metrics?: Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }> | Record<string, any> | null,
- * }} props
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }> | Record<string, any> | null} [props.metrics] - Metrics to display
  * @returns {JSX.Element | null}
  */
 const MetricsTable = ({ metrics }) => {

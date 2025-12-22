@@ -57,11 +57,11 @@ const TAB_METRICS = 1;
  * Monitor Type View component.
  * Displays instances and metrics for a specific monitor type.
  *
- * @param {Object} props - Component props.
- * @param {string} props.resourceName - The name of the resource.
- * @param {string} props.resourceGroupName - The name of the resource group.
- * @param {string} props.connectorId - The ID of the connector.
- * @param {string} props.monitorType - The type of the monitor.
+ * @param {object} props - Component props
+ * @param {string} props.resourceName - The name of the resource
+ * @param {string} props.resourceGroupName - The name of the resource group
+ * @param {string} props.connectorId - The ID of the connector
+ * @param {string} props.monitorType - The type of the monitor
  * @returns {JSX.Element} The rendered component.
  */
 const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitorType }) => {
@@ -296,4 +296,4 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	);
 };
 
-export default MonitorTypeView;
+export default React.memo(MonitorTypeView);

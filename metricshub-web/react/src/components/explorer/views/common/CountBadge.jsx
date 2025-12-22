@@ -5,13 +5,12 @@ import HoverInfo from "../monitors/components/HoverInfo";
 /**
  * A circular badge to display a count or status.
  *
- * @param {{
- *   count: number | string,
- *   title?: string,
- *   bgcolor?: string,
- *   color?: string,
- *   sx?: object
- * }} props
+ * @param {object} props - Component props
+ * @param {number | string} props.count - The count or status to display
+ * @param {string} [props.title] - Tooltip title
+ * @param {string} [props.bgcolor="action.disabledBackground"] - Background color
+ * @param {string} [props.color="text.primary"] - Text color
+ * @param {import("@mui/material").SxProps} [props.sx={}] - Custom styles
  */
 const CountBadge = ({
 	count,

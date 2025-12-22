@@ -32,12 +32,13 @@ import {
  * Renders a pivoted table for a group of metrics (e.g. all cpu.utilization metrics).
  * Allows expanding/collapsing the table.
  *
- * @param {{
- *   group: { baseName: string, metricKeys: string[] },
- *   sortedInstances: any[],
- *   resourceId: string,
- *   metaMetrics?: Record<string, { unit?: string, description?: string, type?: string }>
- * }} props
+ * @param {object} props - Component props
+ * @param {object} props.group - The metric group to render
+ * @param {string} props.group.baseName - The base name of the metric group
+ * @param {string[]} props.group.metricKeys - The keys of the metrics in the group
+ * @param {any[]} props.sortedInstances - Sorted list of monitor instances
+ * @param {string} props.resourceId - The ID of the resource
+ * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
  */
 const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
@@ -145,7 +146,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		if (isUtilizationGroup) {
 			cols.push({
 				field: "utilization",
-				headerName: "Utilization",
+				headerName: "Value",
 				flex: 1,
 				renderCell: (params) => {
 					if (params.row.isAverage) {

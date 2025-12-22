@@ -14,7 +14,7 @@ import {
  * Provides an autocomplete search bar to navigate through the resource hierarchy.
  * Uses Redux for state management and debounced search.
  */
-export default function ExplorerSearch() {
+const ExplorerSearch = () => {
 	const [open, setOpen] = React.useState(false);
 	const [inputValue, setInputValue] = React.useState("");
 	const [value, setValue] = React.useState(null);
@@ -128,4 +128,6 @@ export default function ExplorerSearch() {
 			}}
 		/>
 	);
-}
+};
+
+export default React.memo(ExplorerSearch);

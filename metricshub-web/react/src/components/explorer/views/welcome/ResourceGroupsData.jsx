@@ -7,7 +7,8 @@ import TruncatedText from "../common/TruncatedText";
 
 /**
  * Count resources in a resource group.
- * @param {{ resources?: unknown[] }} group
+ *
+ * @param {object} group - The resource group
  * @returns {number}
  */
 const countResources = (group) => {
@@ -17,7 +18,8 @@ const countResources = (group) => {
 
 /**
  * Build the display label for a resource group using its attributes.
- * @param {{ name?: string, attributes?: Record<string, unknown> }} group
+ *
+ * @param {object} group - The resource group
  * @returns {string}
  */
 const buildGroupLabel = (group) => {
@@ -37,7 +39,10 @@ const buildGroupLabel = (group) => {
 
 /**
  * Table displaying resource groups handled by the agent.
- * @param {{ resourceGroups?: Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }>, onResourceGroupClick?:(group:any) => void }} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }>} [props.resourceGroups] - List of resource groups
+ * @param {(group: any) => void} [props.onResourceGroupClick] - Callback for resource group click
  * @returns {JSX.Element}
  */
 const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {

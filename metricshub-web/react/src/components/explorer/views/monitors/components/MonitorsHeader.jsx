@@ -4,7 +4,8 @@ import { Box, Typography } from "@mui/material";
 /**
  * Header for the Monitors section.
  *
- * @param {{ lastUpdatedLabel: string }} props
+ * @param {object} props - Component props
+ * @param {string} props.lastUpdatedLabel - Label for the last updated time
  */
 const MonitorsHeader = React.memo(({ lastUpdatedLabel }) => (
 	<Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
