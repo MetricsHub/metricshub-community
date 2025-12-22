@@ -8,10 +8,6 @@ import {
 	Accordion,
 	AccordionSummary,
 	AccordionDetails,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
 	Tooltip,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
@@ -33,7 +29,6 @@ import {
 	selectResourceUiState,
 	setMonitorExpanded,
 } from "../../../../../store/slices/explorer-slice";
-import DashboardTable from "../../common/DashboardTable";
 import TruncatedText from "../../common/TruncatedText";
 import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
@@ -244,137 +239,93 @@ const ConnectorAccordion = ({
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (
-						<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-							{/* Connector Attributes Table */}
-							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-										Attributes
-									</Typography>
-									<DataGrid
-										rows={Object.entries(connector.attributes).map(([key, value]) => ({
-											id: key,
-											key,
+					<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+						{/* Connector Attributes Table */}
+						{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+							<Box>
+								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+									Attributes
+								</Typography>
+								<DataGrid
+									rows={Object.entries(connector.attributes).map(([key, value]) => ({
+										id: key,
+										key,
+										value,
+									}))}
+									columns={[
+										{ field: "key", headerName: "Key", flex: 1 },
+										{ field: "value", headerName: "Value", flex: 1 },
+									]}
+									disableRowSelectionOnClick
+									hideFooter
+									autoHeight
+									density="compact"
+									sx={dataGridSx}
+								/>
+							</Box>
+						)}
+
+						{/* Connector Metrics Table */}
+						{showMetricsTable && (
+							<Box>
+								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+									Metrics
+								</Typography>
+								<DataGrid
+									rows={Object.entries(connector.metrics).map(([name, metric]) => {
+										let value = metric;
+										let unit = undefined;
+
+										if (metric && typeof metric === "object" && "value" in metric) {
+											value = metric.value;
+											unit = metric.unit;
+										}
+
+										if (!unit) {
+											const meta = getMetricMetadata(name, connector.metaMetrics);
+											if (meta?.unit) unit = meta.unit;
+										}
+										return {
+											id: name,
+											name,
 											value,
-										}))}
-										columns={[
-											{ field: "key", headerName: "Key", flex: 1 },
-											{ field: "value", headerName: "Value", flex: 1 },
-										]}
-										disableRowSelectionOnClick
-										hideFooter
-										autoHeight
-										density="compact"
-										sx={dataGridSx}
-									/>
-									{/* <DashboardTable>
-										<TableHead>
-											<TableRow>
-												<TableCell sx={{ width: "50%" }}>Key</TableCell>
-												<TableCell sx={{ width: "50%" }}>Value</TableCell>
-											</TableRow>
-										</TableHead>
-										<TableBody>{renderAttributesRows(connector.attributes)}</TableBody>
-									</DashboardTable> */}
-								</Box>
-							)}
-
-							{/* Connector Metrics Table */}
-							{showMetricsTable && (
-								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-										Metrics
-									</Typography>
-									<DataGrid
-										rows={Object.entries(connector.metrics).map(([name, metric]) => {
-											let value = metric;
-											let unit = undefined;
-
-											if (metric && typeof metric === "object" && "value" in metric) {
-												value = metric.value;
-												unit = metric.unit;
-											}
-
-											if (!unit) {
-												const meta = getMetricMetadata(name, connector.metaMetrics);
-												if (meta?.unit) unit = meta.unit;
-											}
-											return {
-												id: name,
-												name,
-												value,
-												unit,
-											};
-										})}
-										columns={[
-											{
-												field: "name",
-												headerName: "Name",
-												flex: 1,
-												renderCell: (params) => (
-													<TruncatedText text={params.value}>{params.value}</TruncatedText>
-												),
-											},
-											{
-												field: "value",
-												headerName: "Value",
-												flex: 1,
-												align: "left",
-												headerAlign: "left",
-												renderCell: (params) => (
-													<MetricValueCell
-														value={params.row.value}
-														unit={params.row.unit}
-														align="left"
-													/>
-												),
-											},
-										]}
-										disableRowSelectionOnClick
-										hideFooter
-										autoHeight
-										density="compact"
-										sx={dataGridSx}
-									/>
-									{/* <DashboardTable>
-										<TableHead>
-											<TableRow>
-												<TableCell sx={{ width: "50%" }}>Name</TableCell>
-												<TableCell align="left" sx={{ width: "50%" }}>
-													Value
-												</TableCell>
-											</TableRow>
-										</TableHead>
-										<TableBody>
-											{Object.entries(connector.metrics).map(([name, metric]) => {
-												let value = metric;
-												let unit = undefined;
-
-												if (metric && typeof metric === "object" && "value" in metric) {
-													value = metric.value;
-													unit = metric.unit;
-												}
-
-												if (!unit) {
-													const meta = getMetricMetadata(name, connector.metaMetrics);
-													if (meta?.unit) unit = meta.unit;
-												}
-
-												return (
-													<TableRow key={name}>
-														<TableCell sx={truncatedCellSx}>
-															<TruncatedText text={name}>{name}</TruncatedText>
-														</TableCell>
-														<MetricValueCell value={value} unit={unit} align="left" />
-													</TableRow>
-												);
-											})}
-										</TableBody>
-									</DashboardTable> */}
-								</Box>
-							)}
-						</Box>
-					)}
+											unit,
+										};
+									})}
+									columns={[
+										{
+											field: "name",
+											headerName: "Name",
+											flex: 1,
+											renderCell: (params) => (
+												<TruncatedText text={params.value}>{params.value}</TruncatedText>
+											),
+										},
+										{
+											field: "value",
+											headerName: "Value",
+											flex: 1,
+											align: "left",
+											headerAlign: "left",
+											renderCell: (params) => (
+												<MetricValueCell
+													value={params.row.value}
+													unit={params.row.unit}
+													align="left"
+												/>
+											),
+										},
+									]}
+									disableRowSelectionOnClick
+									hideFooter
+									autoHeight
+									density="compact"
+									sx={dataGridSx}
+								/>
+							</Box>
+						)}
+					</Box>
+				)}
 
 				{/* Monitors Section */}
 				<Box sx={{ display: "flex", flexDirection: "column" }}>
@@ -470,24 +421,24 @@ const ConnectorAccordion = ({
 								<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 									{pivotGroups.length > 0
 										? pivotGroups.map((group) => (
-											<PivotGroupSection
-												key={group.baseName}
-												group={group}
-												sortedInstances={sortedInstances}
-												resourceId={resourceId}
-												metaMetrics={connector.metaMetrics}
-											/>
-										))
-										: sortedInstances.map((inst) => {
-											return (
-												<InstanceMetricsTable
-													key={inst?.attributes?.id || inst.name}
-													instance={inst}
-													naturalMetricCompare={compareMetricEntries}
+												<PivotGroupSection
+													key={group.baseName}
+													group={group}
+													sortedInstances={sortedInstances}
+													resourceId={resourceId}
 													metaMetrics={connector.metaMetrics}
 												/>
-											);
-										})}
+											))
+										: sortedInstances.map((inst) => {
+												return (
+													<InstanceMetricsTable
+														key={inst?.attributes?.id || inst.name}
+														instance={inst}
+														naturalMetricCompare={compareMetricEntries}
+														metaMetrics={connector.metaMetrics}
+													/>
+												);
+											})}
 								</AccordionDetails>
 							</Accordion>
 						);

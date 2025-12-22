@@ -1,10 +1,7 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "./DashboardTable";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
 
 /**
@@ -64,19 +61,6 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 						density="compact"
 						sx={dataGridSx}
 					/>
-					{/* <DashboardTable
-						sx={{ tableLayout: "fixed", width: "100%" }}
-						style={{ tableLayout: "fixed" }}
-						containerProps={{ sx: { width: "100%" } }}
-					>
-						<TableHead>
-							<TableRow>
-								<TableCell sx={{ width: "50%" }}>Key</TableCell>
-								<TableCell sx={{ width: "50%" }}>Value</TableCell>
-							</TableRow>
-						</TableHead>
-						<TableBody>{renderAttributesRows(attributes)}</TableBody>
-					</DashboardTable> */}
 				</Box>
 			)}
 		</Box>

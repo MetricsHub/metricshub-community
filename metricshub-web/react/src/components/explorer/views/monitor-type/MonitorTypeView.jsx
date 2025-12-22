@@ -8,10 +8,6 @@ import {
 	TextField,
 	CircularProgress,
 	IconButton,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableRow,
 	Dialog,
 	DialogTitle,
 	DialogContent,
@@ -20,7 +16,6 @@ import {
 	FormGroup,
 	FormControlLabel,
 	Checkbox,
-	TableSortLabel,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { DataGrid } from "@mui/x-data-grid";
@@ -32,7 +27,6 @@ import {
 import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
-import DashboardTable from "../common/DashboardTable";
 import HoverInfo from "../monitors/components/HoverInfo";
 import MetricValueCell from "../common/MetricValueCell";
 import { UtilizationStack } from "../monitors/components/Utilization";
@@ -84,8 +78,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const monitorData = useMonitorData(currentResource, decodedConnectorId, decodedMonitorType);
 	const instances = React.useMemo(() => monitorData?.monitor?.instances || [], [monitorData]);
 
-	const { sortedInstances, sortedMetricsInstances } =
-		useInstanceSorting(instances);
+	const { sortedInstances, sortedMetricsInstances } = useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
 
@@ -302,79 +295,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 							hideFooter
 							sx={dataGridSx}
 						/>
-						{/* <DashboardTable
-							containerProps={{
-								sx: {
-									maxHeight: "100%",
-									minWidth: selectedMetrics.length + 1 >= 5 ? "100%" : undefined,
-									overflowX: selectedMetrics.length + 1 >= 5 ? "auto" : "hidden",
-									overflowY: "auto",
-								},
-							}}
-							fixedLayout={selectedMetrics.length + 1 < 5}
-							sx={selectedMetrics.length + 1 >= 5 ? { minWidth: "100%" } : undefined}
-						>
-							<TableHead>
-								<TableRow>
-									<TableCell>
-										<TableSortLabel
-											active={sortConfig.key === SORT_KEY_INSTANCE_ID}
-											direction={
-												sortConfig.key === SORT_KEY_INSTANCE_ID
-													? sortConfig.direction
-													: SORT_DIRECTION_ASC
-											}
-											onClick={() => handleRequestSort(SORT_KEY_INSTANCE_ID)}
-										>
-											Instance Name
-										</TableSortLabel>
-									</TableCell>
-									{selectedMetrics?.map((metric) => {
-										const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-										const cleanedUnit = cleanUnit(meta?.unit);
-										const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
-										return (
-											<TableCell key={metric}>
-												<TableSortLabel
-													active={sortConfig.key === metric}
-													direction={
-														sortConfig.key === metric ? sortConfig.direction : SORT_DIRECTION_ASC
-													}
-													onClick={() => handleRequestSort(metric)}
-												>
-													<HoverInfo
-														title={metric}
-														description={meta?.description}
-														unit={displayUnit}
-														sx={{ display: "inline-block" }}
-													>
-														{metric}
-													</HoverInfo>
-												</TableSortLabel>
-											</TableCell>
-										);
-									})}
-								</TableRow>
-							</TableHead>
-							<TableBody>
-								{sortedMetricsInstances?.map((instance, index) => (
-									<TableRow key={index}>
-										<TableCell>
-											<InstanceNameWithAttributes
-												displayName={getInstanceDisplayName(instance)}
-												attributes={instance.attributes}
-											/>
-										</TableCell>
-										{selectedMetrics?.map((metric) => {
-											const val = instance.metrics?.[metric];
-											const value = getMetricValue(val);
-											const meta = getMetricMetadata(metric, monitorData.metaMetrics);
-											return <MetricValueCell key={metric} value={value} unit={meta?.unit} />;
-										})}
-									</TableRow>
-								))}
-							</TableBody>
-						</DashboardTable> */}
 					</Box>
 				</Box>
 			)}
