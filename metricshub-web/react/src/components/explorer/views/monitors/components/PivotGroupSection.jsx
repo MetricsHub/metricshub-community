@@ -2,9 +2,8 @@ import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import HoverInfo from "./HoverInfo";
 import TruncatedText from "../../common/TruncatedText";
-import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
+import { renderMetricHeader } from "../../common/metric-column-helper";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
@@ -164,20 +163,12 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 				const meta = getMetricMetadata(key, metaMetrics);
 				cols.push({
 					field: key,
-					headerName: key,
+					headerName: key.toLowerCase(),
+					headerClassName: "metric-header",
 					flex: 1,
 					align: "left",
 					headerAlign: "left",
-					renderHeader: () => (
-						<HoverInfo
-							title={key}
-							description={meta?.description}
-							unit={meta?.unit}
-							sx={{ display: "inline-block" }}
-						>
-							<MetricNameHighlighter name={key} />
-						</HoverInfo>
-					),
+					renderHeader: () => renderMetricHeader(key, meta),
 					renderCell: (params) => {
 						if (params.row.isAverage) return null;
 						const val = getMetricValue(params.row.metrics?.[key]);

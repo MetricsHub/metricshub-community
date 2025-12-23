@@ -11,9 +11,14 @@ vi.mock("../../../hooks/store", () => ({
 	useAppSelector: vi.fn(),
 }));
 
-vi.mock("react-router-dom", () => ({
-	useNavigate: vi.fn(),
-}));
+vi.mock("react-router-dom", async () => {
+	const actual = await vi.importActual("react-router-dom");
+	return {
+		...actual,
+		useNavigate: vi.fn(),
+		matchPath: actual.matchPath, // Ensure matchPath is explicitly exported if needed
+	};
+});
 
 vi.mock("../../../store/thunks/explorer-thunks", () => ({
 	searchExplorer: vi.fn(),

@@ -9,6 +9,7 @@ import {
 	clearSearchResults,
 } from "../../../store/slices/explorer-slice";
 import NodeTypeIcons from "../tree/icons/NodeTypeIcons";
+import { getBreadcrumbText } from "../../../utils/breadcrumb-helper";
 
 /**
  * Explorer Search component.
@@ -116,6 +117,8 @@ const ExplorerSearch = () => {
 			)}
 			renderOption={(props, option) => {
 				const { key, ...otherProps } = props;
+				const breadcrumbText = option.path ? getBreadcrumbText(option.path) : "";
+
 				return (
 					<li key={key} {...otherProps}>
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
@@ -125,7 +128,7 @@ const ExplorerSearch = () => {
 									{option.name}
 								</Typography>
 								<Typography variant="caption" color="text.secondary" noWrap display="block">
-									{option.type} {option.path ? `- ${option.path}` : ""}
+									{option.type} {breadcrumbText ? `• ${breadcrumbText}` : ""}
 								</Typography>
 							</Box>
 						</Box>

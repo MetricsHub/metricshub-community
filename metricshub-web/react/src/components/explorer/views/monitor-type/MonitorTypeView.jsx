@@ -27,10 +27,9 @@ import {
 import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
-import HoverInfo from "../monitors/components/HoverInfo";
 import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
-import MetricNameHighlighter from "../common/MetricNameHighlighter.jsx";
+import { renderMetricHeader } from "../common/metric-column-helper";
 import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
@@ -42,11 +41,7 @@ import { cleanUnit } from "../../../../utils/formatters";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 import { useMonitorData } from "../../../../hooks/use-monitor-data";
-import {
-	useInstanceSorting,
-	SORT_KEY_INSTANCE_ID,
-	SORT_DIRECTION_ASC,
-} from "../../../../hooks/use-instance-sorting";
+import { useInstanceSorting } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
 import { dataGridSx } from "../common/table-styles";
@@ -121,20 +116,12 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 
 			cols.push({
 				field: metric,
-				headerName: metric,
+				headerName: metric.toLowerCase(),
+				headerClassName: "metric-header",
 				flex: 1,
 				align: "left",
 				headerAlign: "left",
-				renderHeader: () => (
-					<HoverInfo
-						title={metric}
-						description={meta?.description}
-						unit={displayUnit}
-						sx={{ display: "inline-block" }}
-					>
-						<MetricNameHighlighter name={metric} />
-					</HoverInfo>
-				),
+				renderHeader: () => renderMetricHeader(metric, meta, displayUnit),
 				renderCell: (params) => {
 					const val = params.row.metrics?.[metric];
 					const value = getMetricValue(val);
@@ -230,7 +217,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+				<Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
@@ -283,12 +270,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						</DialogActions>
 					</Dialog>
 
-					<Box sx={{ flex: 1, width: "100%", overflow: "hidden" }}>
+					<Box sx={{ width: "100%", overflow: "hidden" }}>
 						<DataGrid
 							rows={rows}
 							columns={columns}
 							disableRowSelectionOnClick
 							hideFooter
+							autoHeight
 							sx={dataGridSx}
 						/>
 					</Box>

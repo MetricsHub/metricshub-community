@@ -145,30 +145,32 @@ const InstanceMetricsTable = ({
 								</HoverInfo>
 							</Box>
 							<Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-								{sortedParts.map((p) => {
-									const label = colorLabelFromKey(p.key);
-									return (
-										<Box
-											key={p.key}
-											sx={{
-												display: "flex",
-												alignItems: "center",
-												gap: 0.5,
-												fontSize: 10,
-											}}
-										>
+								{sortedParts
+									.filter((p) => p.key !== "none")
+									.map((p) => {
+										const label = colorLabelFromKey(p.key);
+										return (
 											<Box
+												key={p.key}
 												sx={{
-													width: 8,
-													height: 8,
-													borderRadius: 0.5,
-													bgcolor: colorFor(label),
+													display: "flex",
+													alignItems: "center",
+													gap: 0.5,
+													fontSize: 10,
 												}}
-											/>
-											<Box component="span">{label}</Box>
-										</Box>
-									);
-								})}
+											>
+												<Box
+													sx={{
+														width: 8,
+														height: 8,
+														borderRadius: 0.5,
+														bgcolor: colorFor(label),
+													}}
+												/>
+												<Box component="span">{label}</Box>
+											</Box>
+										);
+									})}
 							</Box>
 						</Box>
 					);
@@ -186,7 +188,7 @@ const InstanceMetricsTable = ({
 						const meta = getMetricMetadata(group.key, metaMetrics);
 						const { unit } = meta;
 						if (isUtilizationUnit(unit)) {
-							const parts = [{ key: group.key, value: group.value, pct: group.value * 100 }];
+							const parts = buildUtilizationParts([{ key: group.key, value: group.value }]);
 							return <UtilizationStack parts={parts} />;
 						}
 						return <MetricValueCell value={group.value} unit={unit} align="left" />;
