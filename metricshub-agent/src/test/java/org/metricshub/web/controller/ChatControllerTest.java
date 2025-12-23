@@ -22,36 +22,53 @@ package org.metricshub.web.controller;
  */
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.openai.client.OpenAIClient;
+import com.openai.core.http.StreamResponse;
+import com.openai.models.responses.ResponseCreateParams;
+import com.openai.models.responses.ResponseStreamEvent;
+import com.openai.models.responses.Tool;
 import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
+import org.metricshub.web.config.ToolCallbackConfiguration;
 import org.metricshub.web.dto.chat.ChatRequest;
+import org.metricshub.web.mcp.PingToolService;
 import org.mockito.Mockito;
-import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import reactor.core.publisher.Flux;
 
 /**
  * Tests for ChatController.
  */
+@SpringJUnitConfig(classes = { ToolCallbackConfiguration.class, ChatControllerTest.TestConfig.class })
 class ChatControllerTest {
+
+	@Autowired
+	private ToolCallbackProvider toolCallbackProvider;
 
 	@Test
 	void testShouldReturnSseEmitterWhenApiKeyMissing() {
 		// Setup
 		final ChatOpenAiConfigurationProperties chatConfig = new ChatOpenAiConfigurationProperties();
 		chatConfig.setApiKey(""); // Empty API key
-		final ChatClient chatClient = mock(ChatClient.class);
-		final ChatController controller = new ChatController(chatClient, chatConfig);
+		final OpenAIClient client = mock(OpenAIClient.class);
+		final ChatController controller = new ChatController(client, chatConfig, List.of(), toolCallbackProvider);
 
 		final ChatRequest request = new ChatRequest("Hello", new ArrayList<>());
 
 		// Execute
-		final SseEmitter emitter = controller.streamChat(request);
+		final SseEmitter emitter = controller.stream(request);
 
 		// Verify
 		assertNotNull(emitter, "SseEmitter should not be null");
@@ -59,23 +76,50 @@ class ChatControllerTest {
 
 	@Test
 	void testShouldReturnSseEmitterWhenApiKeyConfigured() {
-		// Setup
+		// Setup config
 		final ChatOpenAiConfigurationProperties chatConfig = new ChatOpenAiConfigurationProperties();
 		chatConfig.setApiKey("sk-test-key");
+		chatConfig.setModel("gpt-5"); // or whatever default your props require
 
-		// Deep-stub the fluent API: prompt().messages(...).stream().content()
-		final ChatClient chatClient = mock(ChatClient.class, Mockito.RETURNS_DEEP_STUBS);
+		// OpenAI client deep stubs
+		final OpenAIClient client = mock(OpenAIClient.class, Mockito.RETURNS_DEEP_STUBS);
 
-		when(chatClient.prompt().messages(anyList()).stream().content())
-			.thenReturn(Flux.just("hello").concatWith(Flux.empty()));
+		// Mock StreamResponse + its stream() method
+		@SuppressWarnings("unchecked")
+		final StreamResponse<ResponseStreamEvent> streamResponse = mock(StreamResponse.class);
 
-		final ChatController controller = new ChatController(chatClient, chatConfig);
+		// empty stream -> controller ends and sends "done"
+		when(streamResponse.stream()).thenReturn(java.util.stream.Stream.empty());
+
+		// Return our mocked stream response
+		when(client.responses().createStreaming(any(ResponseCreateParams.class))).thenReturn(streamResponse);
+
+		// Controller under test
+		final List<Tool> tools = List.of();
+		final ChatController controller = new ChatController(client, chatConfig, tools, toolCallbackProvider);
+
 		final ChatRequest request = new ChatRequest("Hello", new ArrayList<>());
 
 		// Execute
-		final SseEmitter emitter = controller.streamChat(request);
+		final SseEmitter emitter = controller.stream(request);
 
-		// Verify
+		// Verify immediate return value
 		assertNotNull(emitter, "SseEmitter should not be null");
+
+		// Verify async call happened
+		verify(client.responses(), timeout(1000)).createStreaming(any(ResponseCreateParams.class));
+
+		// Verify the response stream was consumed and then closed by try-with-resources
+		verify(streamResponse, timeout(1000)).stream();
+		verify(streamResponse, timeout(1000)).close();
+	}
+
+	@Configuration
+	static class TestConfig {
+
+		@Bean
+		public PingToolService pingToolService() {
+			return mock(PingToolService.class);
+		}
 	}
 }

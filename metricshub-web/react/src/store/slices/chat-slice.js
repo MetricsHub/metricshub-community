@@ -56,11 +56,13 @@ const chatSlice = createSlice({
 				state.currentConversationId = newId;
 				state.conversations[newId].messages.push({
 					...message,
+					reasoning: message.reasoning || "",
 					timestamp: message.timestamp || Date.now(),
 				});
 			} else {
 				state.conversations[conversationId].messages.push({
 					...message,
+					reasoning: message.reasoning || "",
 					timestamp: message.timestamp || Date.now(),
 				});
 				state.conversations[conversationId].updatedAt = Date.now();
@@ -114,6 +116,28 @@ const chatSlice = createSlice({
 			if (messageIndex !== -1) {
 				const currentContent = conversation.messages[messageIndex].content || "";
 				conversation.messages[messageIndex].content = currentContent + chunk;
+				conversation.updatedAt = Date.now();
+			}
+		},
+		/**
+		 * Append reasoning text to a message (used for reasoning streaming)
+		 * @param {ChatState} state
+		 * @param {Object} action
+		 * @param {number|string} action.payload.messageId - ID of the message to update
+		 * @param {string} action.payload.chunk - Reasoning chunk to append
+		 */
+		appendReasoningToMessage(state, action) {
+			const { messageId, chunk } = action.payload;
+			const conversationId = state.currentConversationId;
+			if (!conversationId || !state.conversations[conversationId]) return;
+
+			const conversation = state.conversations[conversationId];
+			const messageIndex = conversation.messages.findIndex((msg) => {
+				return msg.id !== undefined && msg.id !== null && msg.id === messageId;
+			});
+			if (messageIndex !== -1) {
+				const currentReasoning = conversation.messages[messageIndex].reasoning || "";
+				conversation.messages[messageIndex].reasoning = currentReasoning + chunk;
 				conversation.updatedAt = Date.now();
 			}
 		},
@@ -185,6 +209,7 @@ export const {
 	addMessage,
 	updateMessage,
 	appendToMessage,
+	appendReasoningToMessage,
 	setCurrentConversation,
 	deleteConversation,
 	clearAllConversations,

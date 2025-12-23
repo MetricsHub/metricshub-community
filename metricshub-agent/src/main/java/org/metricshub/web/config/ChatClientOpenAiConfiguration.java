@@ -23,7 +23,11 @@ package org.metricshub.web.config;
 
 import com.openai.client.OpenAIClient;
 import com.openai.client.okhttp.OpenAIOkHttpClient;
+import com.openai.models.responses.Tool;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.common.helpers.ResourceHelper;
+import org.metricshub.web.service.openai.SpringToolsToOpenAiTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +38,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties(ChatOpenAiConfigurationProperties.class)
+@RequiredArgsConstructor
 public class ChatClientOpenAiConfiguration {
 
 	/**
@@ -41,31 +46,24 @@ public class ChatClientOpenAiConfiguration {
 	 */
 	public static final String SYSTEM_PROMPT = ResourceHelper.getClassPathResourceContent("system-prompt.md");
 
-	private final ChatOpenAiConfigurationProperties chatConfig;
-	private final ToolCallbackProvider toolCallbackProvider;
-
-	/**
-	 * Constructor for ChatClientOpenAiConfiguration.
-	 *
-	 * @param chatConfig           the chat configuration properties
-	 * @param toolCallbackProvider the tool callback provider from ToolCallbackConfiguration
-	 */
-	public ChatClientOpenAiConfiguration(
-		final ChatOpenAiConfigurationProperties chatConfig,
-		final ToolCallbackProvider toolCallbackProvider
-	) {
-		this.chatConfig = chatConfig;
-		this.toolCallbackProvider = toolCallbackProvider;
-	}
-
 	/**
 	 * Creates a ChatClient bean configured with the ChatModel and tools.
 	 *
-	 * @param chatModelOpenAi the ChatModel to use (OpenAi)
+	 * @param chatConfig the chat configuration properties
 	 * @return the configured ChatClient
 	 */
 	@Bean
-	OpenAIClient openAIClient(ChatOpenAiConfigurationProperties props) {
-		return OpenAIOkHttpClient.builder().apiKey(props.getApiKey()).build();
+	public OpenAIClient openAIClient(ChatOpenAiConfigurationProperties chatConfig) {
+		return OpenAIOkHttpClient.builder().apiKey(chatConfig.getApiKey()).build();
+	}
+
+	/**
+	 * Creates a list of OpenAI tools from the provided ToolCallbackProvider.
+	 * @param toolCallbackProvider the provider of tool callbacks
+	 * @return the list of OpenAI tools
+	 */
+	@Bean
+	public List<Tool> openAiTools(final ToolCallbackProvider toolCallbackProvider) {
+		return SpringToolsToOpenAiTools.buildOpenAiTools(toolCallbackProvider.getToolCallbacks());
 	}
 }

@@ -30,7 +30,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Configuration properties for the Chat AI feature.
  * Reads configuration from metricshub.yaml under the web.ai.openai prefix.
  */
-@ConfigurationProperties(prefix = "spring.ai.openai")
+@ConfigurationProperties(prefix = "ai.openai")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

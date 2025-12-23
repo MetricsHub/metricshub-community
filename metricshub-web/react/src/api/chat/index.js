@@ -84,7 +84,11 @@ class ChatApi {
 					if (eventName === "connected") {
 						// Connection established, continue
 						return false; // Don't stop reading
-					} else if (eventName === "reasoning") {
+					} else if (
+						eventName === "reasoning" ||
+						eventName === "reasoning_summary" ||
+						eventName === "function_call_requested"
+					) {
 						if (onReasoning) {
 							onReasoning(eventData);
 						}

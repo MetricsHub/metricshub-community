@@ -219,18 +219,14 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 					sx={{
 						p: 2.5,
 						bgcolor: isUser
-							? theme.palette.mode === "dark"
-								? theme.palette.primary.alpha50
-								: theme.palette.primary.main
+							? theme.palette.primary.main
 							: theme.palette.mode === "dark"
 								? theme.palette.neutral[800]
 								: theme.palette.background.paper,
 						borderRadius: 2,
 						border: `1px solid ${
 							isUser
-								? theme.palette.mode === "dark"
-									? theme.palette.primary.alpha50
-									: theme.palette.primary.main
+								? theme.palette.primary.main
 								: theme.palette.mode === "dark"
 									? theme.palette.neutral[700]
 									: theme.palette.neutral[300]
@@ -300,10 +296,7 @@ const ChatMessage = React.memo(({ role, content, isStreaming = false }) => {
 						alignItems: "center",
 						justifyContent: "center",
 						flexShrink: 0,
-						bgcolor:
-							theme.palette.mode === "dark"
-								? theme.palette.primary.alpha50
-								: theme.palette.primary.main,
+						bgcolor: theme.palette.primary.main,
 						color: theme.palette.primary.contrastText,
 					}}
 				>

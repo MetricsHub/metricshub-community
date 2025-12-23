@@ -103,18 +103,8 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.ai</groupId>
-			<artifactId>spring-ai-starter-mcp-server-webflux</artifactId>
-			<version>${spring.ai.version}</version>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-logging</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-		<!-- Add official OpenAI SDK -->
+
+		<!-- Official OpenAI SDK -->
 		<dependency>
 			<groupId>com.openai</groupId>
 			<artifactId>openai-java</artifactId>
@@ -124,6 +114,23 @@
 			<groupId>com.openai</groupId>
 			<artifactId>openai-java-client-okhttp</artifactId>
 			<version>4.13.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+			<version>5.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.core5</groupId>
+			<artifactId>httpcore5</artifactId>
+			<version>5.4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.httpcomponents.core5</groupId>
+					<artifactId>httpcore5-h2</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
