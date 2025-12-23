@@ -17,6 +17,8 @@ const COLOR_GETTERS = {
 	// folders should be neutral/grey, not warning/orange
 	"resource-group": (t) => t.palette.text.secondary,
 	resource: (t) => t.palette.info.main,
+	"monitor-type": (t) => t.palette.warning.main,
+	instance: (t) => t.palette.success.main,
 };
 
 /**

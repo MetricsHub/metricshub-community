@@ -22,8 +22,14 @@ export const dataGridSx = {
 			theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],
 		color: "text.secondary",
 		fontSize: "0.75rem",
-		textTransform: "uppercase",
-		letterSpacing: 1,
+		textTransform: "none",
+		letterSpacing: "1px",
+		"& .metric-header": {
+			letterSpacing: "0px !important",
+			"& .MuiDataGrid-columnHeaderTitle": {
+				letterSpacing: "0px !important",
+			},
+		},
 	},
 	"& .MuiDataGrid-row": {
 		"&:hover": {

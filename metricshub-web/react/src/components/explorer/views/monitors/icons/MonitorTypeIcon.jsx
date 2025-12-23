@@ -56,7 +56,7 @@ const MonitorTypeIcon = ({ type, fontSize = "small", fallback = null }) => {
 			IconEl = DeveloperBoardIcon;
 		} else if (normalizedType.includes("memory") || normalizedType.includes("ram")) {
 			IconEl = MemoryIcon;
-		} else if (normalizedType.includes("network") || normalizedType.includes("interface")) {
+		} else if (normalizedType.includes("network")) {
 			IconEl = LanIcon;
 		} else if (
 			normalizedType.includes("disk") ||
@@ -82,7 +82,7 @@ const MonitorTypeIcon = ({ type, fontSize = "small", fallback = null }) => {
 		return fallback;
 	}
 
-	return <IconEl fontSize={fontSize} sx={{ color: "text.secondary" }} />;
+	return <IconEl fontSize={fontSize} sx={{ color: "inherit" }} />;
 };
 
 export default React.memo(MonitorTypeIcon);
