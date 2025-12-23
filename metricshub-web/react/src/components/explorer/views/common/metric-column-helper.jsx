@@ -1,5 +1,5 @@
 import * as React from "react";
-import HoverInfo from "./HoverInfo";
+import HoverInfo from "../monitors/components/HoverInfo";
 import MetricNameHighlighter from "./MetricNameHighlighter";
 
 /**
