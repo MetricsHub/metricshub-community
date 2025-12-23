@@ -16,7 +16,7 @@ From [MetricsHub's Web site](https://metricshub.com/downloads), download **metri
 ### Install
 Double-click the `.msi` file you previously downloaded. The Installation Wizard will automatically start and guide you through the installation process.
 
-When complete, the MetricsHub's files are deployed to the destination folder (by default under `C:\Program Files\MetricsHub`) and the MetricsHubEnterprise Agent is started as a service and appears in services.msc.
+When complete, the MetricsHub's files are deployed to the destination folder (by default under `C:\Program Files\MetricsHub`) and the MetricsHub Enterprise Agent is started as a service and appears in services.msc.
 
 MetricsHub operates using the configuration located in the `ProgramData\MetricsHub` directory
 
@@ -53,96 +53,38 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
 
 ### Download
 
-Download the Windows package, `metricshub-community-windows-${communityVersion}.zip`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page.
+From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-community-${communityVersion}.msi**.
 
 ### Install
 
-Unzip the content of `metricshub-community-windows-${communityVersion}.zip` into a program folder, like `C:\Program Files`. There is no need to create a specific subdirectory for `MetricsHub` as the zip archive already contains a `MetricsHub` directory.
+Double-click the `.msi` file you previously downloaded. The Installation Wizard will automatically start and guide you through the installation process.
 
-> Note: You will need administrative privileges to unzip into `C:\Program Files`.
+When complete, the MetricsHub's files are deployed to the destination folder (by default under `C:\Program Files\MetricsHub`) and the MetricsHub Community Agent is started as a service and appears in services.msc.
+
+MetricsHub operates using the configuration located in the `ProgramData\MetricsHub` directory
 
 ### Configure
 
 After installing **MetricsHub**, you need to:
 
-* [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
-* [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [define the OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
+1. [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file(s)
+2. [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
+3. [define the OpenTelemetry Protocol endpoint](../configuration/configure-monitoring.md#otlp-exporter-settings) that will receive the MetricsHub signals.
 
-To assist with the setup process, the configuration example `.\config\metricshub-example.yaml` is provided for guidance in the installation directory (typically, `C:\Program Files\MetricsHub`).
+To assist with the setup process, a configuration example (`.\config\metricshub-config-example.yaml`) is provided for guidance in the installation directory (`C:\Program Files\MetricsHub`).
 
 ### Start
 
-To start **MetricsHub Service** in `CMD.EXE` or [`Windows Terminal`](https://www.microsoft.com/en-us/p/windows-terminal/9n0dx20hk701?activetab=pivot:overviewtab), run the command below:
-
-```shell-session
-cd "c:\Program Files\MetricsHub"
-MetricsHubServiceManager
-```
-
-> Note: Run `CMD.EXE` or `Windows Terminal` with elevated privileges (**Run As Administrator**).
-
-Run the command below to start **MetricsHub** with an alternate configuration file:
-
-```shell-session
-cd "c:\Program Files\MetricsHub"
-MetricsHubServiceManager --config <PATH>
-```
-
-Example:
-
-```shell-session
-cd "c:\Program Files\MetricsHub"
-MetricsHubServiceManager --config C:\ProgramData\MetricsHub\config\my-metricshub.yaml
-```
-
-To start **MetricsHub** as a **Windows service**, run the following commands under the installation folder (assuming the product has been installed in `C:\Program Files`):
-
-```shell-session
-cd "c:\Program Files\MetricsHub"
-service-installer install MetricsHub "c:\Program Files\MetricsHub\MetricsHubServiceManager.exe"
-service-installer set MetricsHub AppDirectory "c:\Program Files\MetricsHub"
-service-installer set MetricsHub DisplayName MetricsHub
-service-installer set MetricsHub Start SERVICE_AUTO_START
-```
-
-To check MetricsHub's status, run the following command:
-
-```shell-session
-sc query MetricsHub
-```
-
-The service will appear as `MetricsHub` in the `services.msc` console.
-
-### Stop
-
-**Interactive Terminal**
-
-To stop the **MetricsHub Service** manually, use the keyboard shortcut `CTRL+C`. This will interrupt the running process and terminate the **MetricsHub Service**.
-
-**Background Process**
-
-If the **MetricsHub Service** is running in the background, execute the `taskkill` command as follows:
-
-```batch
-taskkill /F /IM MetricsHubServiceManager.exe
-```
-
-**Service**
-
-To stop the **MetricsHub Service** started as a **Windows service**:
-
-1. Run `services.msc` to access all the Windows services.
-2. In the Services window, locate the `MetricsHub`service you manually created.
-3. Right-click the `MetricsHub` service and click **Stop**.
+To start the **MetricsHub Community** service, open **services.msc** and start the **MetricsHub Community** service.
 
 ### Uninstall
 
-1. Stop the **MetricsHub Service**.
-2. Navigate to the folder where **MetricsHub** is installed (e.g., `C:\Program Files`) and delete the entire `MetricsHub` folder.
+To uninstall **MetricsHub Community**, double-click the **metricshub-community-${communityVersion}.msi** file and click **Remove** when prompted.
 
-If the **MetricsHub Service** was set up as a **Windows Service**, run the following command to remove it:
+### Upgrade
 
-  ```batch
-  sc delete MetricsHub
-  ```
+If you have installed a previous version of **MetricsHub Community** and want to upgrade to the latest version **${communityVersion}**, follow these steps:
+
+1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-community-${communityVersion}.msi**.
+2. Open **services.msc** and stop the **MetricsHub Community** service.
+3. Double-click the `.msi` file you previously downloaded. The Installation Wizard will automatically start and guide you through the upgrade process.
