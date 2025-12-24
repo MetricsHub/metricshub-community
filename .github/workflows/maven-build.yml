@@ -99,7 +99,7 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       with:
         detached: true
-        sudo: false
+        sudo: true
         install-dependencies: true
 
     - name: Configure additional installation path for Maven artifacts
