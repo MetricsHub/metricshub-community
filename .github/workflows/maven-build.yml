@@ -94,16 +94,14 @@ jobs:
           ]
         servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}]'
         sonatypeSnapshots: true
-  
-    - name: Install tmate
-      run: sudo apt-get update && sudo apt-get install -y tmate
 
     - name: Setup tmate SSH session
       uses: mxschmitt/action-tmate@v3
       with:
         detached: true
-        sudo: false
-        install-dependencies: false
+        sudo: true
+        install-dependencies: true
+      if: ${{ inputs.ssh }}
 
     - name: Configure additional installation path for Maven artifacts
       shell: bash
