@@ -9,6 +9,7 @@ import { paths } from "../../paths";
 import { NavLink } from "react-router-dom";
 import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/application-status-thunks";
@@ -138,6 +139,22 @@ const NavBar = ({ onToggleTheme }) => {
 											}}
 										/>
 									)}
+								</Box>
+							</Button>
+							<Button component={NavLink} size="large" to={paths.chat} sx={navBtnSx}>
+								<Box sx={{ display: "inline-flex", alignItems: "baseline", position: "relative" }}>
+									<span>M8B</span>
+									<AutoAwesomeIcon
+										sx={{
+											fontSize: "0.8rem",
+											color: "#FFD700", // Golden color
+											filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.2))",
+											position: "relative",
+											top: "-0.5em",
+											ml: 0.25,
+											lineHeight: 0,
+										}}
+									/>
 								</Box>
 							</Button>
 						</Box>

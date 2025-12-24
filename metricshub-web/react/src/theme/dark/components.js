@@ -17,6 +17,9 @@ export const buildComponents = ({ palette }) => {
 					"&:active": {
 						transform: "scale(0.92)",
 					},
+					[`&.${filledInputClasses.disabled}`]: {
+						backgroundColor: "transparent",
+					},
 				},
 			},
 		},
