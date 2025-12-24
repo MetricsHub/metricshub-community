@@ -366,7 +366,9 @@ function ChatPage() {
 						px: 2,
 						py: 1.5,
 						borderBottom: `1px solid ${
-							theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[200]
+							theme.palette.mode === "dark"
+								? theme.palette.neutral[800]
+								: theme.palette.neutral[200]
 						}`,
 					}}
 				>
@@ -419,7 +421,8 @@ function ChatPage() {
 										"& p:last-of-type": { mb: 0 },
 										"& ul, & ol": { pl: 3, my: 0 },
 										"& code": {
-											fontFamily: "ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace",
+											fontFamily:
+												"ui-monospace, SFMono-Regular, SFMono, Menlo, Consolas, monospace",
 											fontSize: "0.9em",
 										},
 									}}
