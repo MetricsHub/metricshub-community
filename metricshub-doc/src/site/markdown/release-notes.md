@@ -3,7 +3,7 @@ description: Learn more about the new features, changes and improvements, and bu
 
 # Release Notes
 
-<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
 ## MetricsHub Enterprise Edition v3.0.03
 

@@ -21,6 +21,8 @@ To reflect this organization, you are asked to define your **resource group** fi
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
+> Note: To assist with the setup process, a configuration example, `metricshub-config-example.yaml`, is provided for guidance in the installation directory (`./metricshub`).
+
 ## Step 1: Structure your configuration
 
 Before diving into your monitoring setup, take a moment to choose the right configuration structure. A thoughtful approach will make ongoing maintenance and updates much easier.

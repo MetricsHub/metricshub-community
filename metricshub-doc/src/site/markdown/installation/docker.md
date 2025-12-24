@@ -1,54 +1,48 @@
 keywords: install, upgrade, firewalls
-description: How to install MetricsHub on Linux, Windows, and Docker.
+description: How to install MetricsHub on Docker.
 
 # Installation
 
-<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-## Enterprise Edition
+## MetricsHub Enterprise
 
-### Download
+### Install MetricsHub Enterprise
 
-First, authenticate to the MetricsHub Docker registry using the credentials provided in your onboarding email:
+1. Authenticate to the MetricsHub Docker registry using the credentials provided in your onboarding email:
 
-```bash
-docker login docker.metricshub.com
-```
+    ```bash
+    docker login docker.metricshub.com
+    ```
 
-Once logged in, download the latest **MetricsHub Enterprise** image:
+2. Once logged in, download the latest **MetricsHub Enterprise** image:
 
-```bash
-docker pull docker.metricshub.com/metricshub-enterprise:${enterpriseVersion}
-```
+    ```bash
+      docker pull docker.metricshub.com/metricshub-enterprise:${enterpriseVersion}
+    ```
 
-### Configure
+3. Create the required local directories for configuration and logs:
 
-Create the required local directories for configuration and logs:
+    ```bash
+    mkdir -p /opt/metricshub/{logs,config,otel}
+    ```
 
-```bash
-mkdir -p /opt/metricshub/{logs,config,otel}
-```
+4. Download the example configuration files to help you get started:
 
-Next, download the example configuration files to help you get started:
+    ```shell-session
+    cd /opt/metricshub
 
-```shell-session
-cd /opt/metricshub
+    wget -O ./otel/otel-config.yaml https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml
+    wget -O ./config/metricshub.yaml https://metricshub.com/docs/latest/resources/config/linux/metricshub-example.yaml
+     ```
 
-wget -O ./otel/otel-config.yaml https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml
-wget -O ./config/metricshub.yaml https://metricshub.com/docs/latest/resources/config/linux/metricshub-example.yaml
-```
+ > **IMPORTANT:** The container runs as a non-root user with UID `1000` (`metricshub`). To avoid permission issues, make sure the container has access to the directories by updating ownership and permissions:
 
-* [Structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
-* [Configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
-* In the **./otel/otel-config.yaml** file, specify where the _OpenTelemetry Collector_ should [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
+ ```bash
+ chown -R 1000:1000 /opt/metricshub && chmod -R 775 /opt/metricshub
+ ```
 
-> **Note:** The container runs as a non-root user with UID `1000` (`metricshub`). To avoid permission issues, make sure the container has access to the directories by updating ownership and permissions:
-
-```bash
-chown -R 1000:1000 /opt/metricshub && chmod -R 775 /opt/metricshub
-```
-
-### Start
+### Start MetricsHub Enterprise
 
 To start **MetricsHub Enterprise** using the local configuration files, run the following command from **/opt/metricshub** directory:
 
@@ -90,25 +84,25 @@ services:
     restart: unless-stopped
 ```
 
-### Stop
+### Stop MetricsHub Enterprise
 
-To stop the container, run:
+To stop **MetricsHub Enterprise**, run the following command:
 
 ```bash
 docker stop metricshub-enterprise
 ```
 
-### Remove
+### Remove MetricsHub Enterprise
 
-To remove the container, run:
+To remove **MetricsHub Enterprise**, run the following command:
 
 ```bash
 docker rm metricshub-enterprise
 ```
 
-### Upgrade
+### Upgrade MetricsHub Enterprise
 
-To upgrade to a newer version of **MetricsHub Enterprise**:
+To upgrade to the latest version:
 
 1. **Stop and remove** the existing container:
 
@@ -138,108 +132,113 @@ To upgrade to a newer version of **MetricsHub Enterprise**:
      docker.metricshub.com/metricshub-enterprise:${enterpriseVersion}
    ```
 
-## Community Edition
+## MetricsHub Community
 
-### Download
+### Install MetricsHub Community
 
-Download the Docker package, `metricshub-community-linux-${communityVersion}-docker.tar.gz`, from the [MetricsHub Release v${communityVersion}](https://github.com/metricshub/metricshub-community/releases/tag/v${communityVersion}) page using the following command:
+To install **MetricsHub Community**:
 
-```shell-session
-wget -P /tmp https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}-docker.tar.gz
-```
+1. Download the latest **MetricsHub Community** image from Docker Hub:
 
-### Install
+    ```bash
+    docker pull metricshub/metricshub-community:${communityVersion}
+    ```
 
-Unzip and untar the content of `metricshub-community-linux-${communityVersion}-docker.tar.gz` into a directory, like `/docker`.
+2. Create the required local directories for configuration and logs:
 
-```shell-session
-sudo mkdir -p /docker
-sudo tar xzf /tmp/metricshub-community-linux-${communityVersion}-docker.tar.gz -C /docker
-```
+    ```bash
+    mkdir -p /opt/metricshub/{logs,config}
+    ```
 
-### Configure
+3. Download the example configuration file to help you get started:
 
-In the `./lib/config/metricshub.yaml` file, located under the `./metricshub` installation directory, configure:
+    ```shell-session
+      cd /opt/metricshub
 
-* the [resources to be monitored.](../configuration/configure-monitoring.md#configure-resources)
-* the [OpenTelemetry Protocol endpoint](../configuration/send-telemetry.html#configure-the-otlp-exporter-28community-edition-29) that will receive the MetricsHub signals.
+      wget -O ./config/metricshub.yaml https://metricshub.com/docs/latest/resources/config/linux/metricshub-example.yaml
+    ```
 
-To assist with the setup process, a configuration example `./lib/config/metricshub-example.yaml` is provided in the installation directory (`./metricshub`).
+    > **IMPORTANT:** The container runs as a non-root user with UID `1000` (`metricshub`). To avoid permission issues, make sure the container has access to the directories by updating ownership and permissions:
 
-### Build the docker image
+    ```bash
+    chown -R 1000:1000 /opt/metricshub && chmod -R 775 /opt/metricshub
+    ```
 
-Run the following command to build the docker image:
+### Start MetricsHub Community
 
-```shell-session
-cd /docker/metricshub
-sudo docker build -t metricshub:latest .
-```
+To start **MetricsHub Community** using the local configuration files, run the following command from **/opt/metricshub** directory:
 
-### Start
-
-Run the following command to start **MetricsHub** with the default configuration file, `./lib/config/metricshub.yaml`:
-
-```shell-session
-cd /docker/metricshub
-sudo docker run -d --name=metricshub metricshub:latest
-```
-
-You can start **MetricsHub** with an alternate configuration file with the following command:
-
-```shell-session
-cd /docker/metricshub
-sudo docker run -d --name=metricshub -v /docker/metricshub/lib/config:/opt/metricshub/lib/config -v /docker/metricshub/lib/logs:/opt/metricshub/lib/logs metricshub:latest
+```bash
+# Run docker using local configuration files as volumes
+cd /opt/metricshub && docker run -d \
+  --name=metricshub-community \
+  -v $(pwd)/config:/opt/metricshub/lib/config \
+  -v $(pwd)/logs:/opt/metricshub/lib/logs \
+  metricshub/metricshub-community:${communityVersion}
 ```
 
 **Docker Compose Example**
 
-You can start **MetricsHub** with docker compose:
+Alternatively, you can launch **MetricsHub Community** using Docker Compose:
 
 ```shell-session
-sudo docker compose up -d --build
+sudo docker compose up -d
 ```
 
-Example (`docker-compose.yaml`):
+Here’s an example of docker-compose.yaml file located under **/opt/metricshub**:
 
 ```yaml
-version: "2.1"
 services:
   metricshub:
-    # for image we will use ``image: metricshub/metricshub-community:latest``
-    build: .
-    container_name: metricshub
+    image: metricshub/metricshub-community:${communityVersion}
+    container_name: metricshub-community
     volumes:
-      # Mount the volume ./lib/logs into /opt/metricshub/lib/logs in the container
-      - ./lib/logs:/opt/metricshub/lib/logs
-      # Mount the volume ./lib/config into /opt/metricshub/lib/config in the container
-      - ./lib/config:/opt/metricshub/lib/config
+      - ./logs:/opt/metricshub/lib/logs                                    # Mount the volume ./logs into /opt/metricshub/lib/logs in the container
+      - ./config:/opt/metricshub/lib/config                                # Inject the local ./config directory into the container
     restart: unless-stopped
 ```
 
-### Stop
+### Stop MetricsHub Community
 
-Adjust the below commands to meet your specific requirements for stopping and removing the Docker container running **MetricsHub**.
+To stop MetricsHub Community, run the following command:
 
-If:
-
-* **MetricsHub** is started as a docker container, run:
-
-    ```shell-session
-    sudo docker stop metricshub
-    ```
-
-* you are using **Docker Compose** from the `./metricshub` directory, run:
-
-  ```shell-session
-  sudo docker compose down
-  ```
-
-### Uninstall
-
-To force-stop and remove the **MetricsHub** container, run the following commands:
-
-```shell-session
-cd /docker/metricshub
-sudo docker stop -f metricshub
-sudo docker rm -f metricshub
+```bash
+docker stop metricshub-community
 ```
+
+### Remove MetricsHub Community
+
+To remove MetricsHub Community, run the following command:
+
+```bash
+docker rm metricshub-community
+```
+
+### Upgrade MetricsHub Community
+
+To upgrade to the latest version:
+
+1. **Stop and remove** the existing container:
+
+   ```bash
+   docker stop metricshub-community
+   docker rm metricshub-community
+   ```
+
+2. **Pull the latest image**:
+
+   ```bash
+   docker pull metricshub/metricshub-community:${communityVersion}
+   ```
+
+3. **Restart the container** with your existing configuration and volume mounts:
+
+   ```bash
+   cd /opt/metricshub
+
+   docker run -d \
+     --name=metricshub-community \
+     -v $(pwd)/config:/opt/metricshub/lib/config \
+     -v $(pwd)/logs:/opt/metricshub/lib/logs \
+     metricshub/metricshub-community:${communityVersion}
+   ```

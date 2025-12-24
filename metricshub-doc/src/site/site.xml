@@ -75,8 +75,8 @@
 		<menu name="Introduction">
 			<item name="Overview" href="index.html" />
 			<item name="Release Notes" href="release-notes.html" />
-			<item name="Connectors Directory" href="metricshub-connectors-directory.html" />
-			<item name="Connectors Full Listing" href="metricshub-connectors-full-listing.html" />
+			<item name="Supported Platforms" href="metricshub-connectors-directory.html" />
+			<item name="Connectors Directory" href="metricshub-connectors-full-listing.html" />
 		</menu>
 
 		<menu name="Installation">
