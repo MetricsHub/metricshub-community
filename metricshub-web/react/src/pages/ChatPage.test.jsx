@@ -77,7 +77,7 @@ describe("ChatPage", () => {
 		renderChatPage();
 
 		expect(screen.getByText("Start a conversation with M8B")).toBeInTheDocument();
-		expect(screen.getByPlaceholderText("Type your message...")).toBeInTheDocument();
+		expect(screen.getByPlaceholderText("Tell me about your systems...")).toBeInTheDocument();
 	});
 
 	it("sends a message, streams a response, and updates UI state", async () => {
@@ -91,7 +91,7 @@ describe("ChatPage", () => {
 			return abortController;
 		});
 
-		const input = screen.getByPlaceholderText("Type your message...");
+		const input = screen.getByPlaceholderText("Tell me about your systems...");
 		await user.type(input, "Hello");
 		await user.keyboard("{Enter}");
 

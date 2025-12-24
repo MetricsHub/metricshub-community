@@ -263,7 +263,7 @@ function ChatPage() {
 						fullWidth
 						multiline
 						maxRows={4}
-						placeholder="Type your message..."
+						placeholder="Tell me about your systems..."
 						value={input}
 						onChange={(e) => setInput(e.target.value)}
 						onKeyDown={handleKeyDown}
@@ -458,8 +458,23 @@ function ChatPage() {
 				flexDirection: "column",
 				bgcolor:
 					theme.palette.mode === "dark" ? theme.palette.neutral[900] : theme.palette.neutral[50],
+				position: "relative",
+				overflow: "hidden",
 			}}
 		>
+			<Box
+				aria-hidden
+				sx={{
+					position: "absolute",
+					inset: 0,
+					pointerEvents: "none",
+					zIndex: 0,
+					backgroundImage:
+						"radial-gradient(60% 60% at 50% 42%, rgba(0, 255, 255, 0.06), transparent 65%), radial-gradient(55% 55% at 50% 64%, rgba(175, 120, 255, 0.05), transparent 70%)",
+					mixBlendMode: "screen",
+					opacity: 1,
+				}}
+			/>
 			<Box
 				sx={{
 					flex: 1,
@@ -467,6 +482,7 @@ function ChatPage() {
 					minHeight: 0,
 					pr: isReasoningPanelOpen ? reasoningPanelPadding : 0,
 					position: "relative",
+					zIndex: 1,
 				}}
 			>
 				<Box sx={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
@@ -609,10 +625,7 @@ function ChatPage() {
 																overflowY: "auto",
 																width: "100%",
 																color: theme.palette.text.disabled,
-																bgcolor:
-																	theme.palette.mode === "dark"
-																		? theme.palette.neutral[900]
-																		: theme.palette.neutral[50],
+																bgcolor: "transparent",
 																border: "none",
 																borderRadius: 1,
 																px: 1,
