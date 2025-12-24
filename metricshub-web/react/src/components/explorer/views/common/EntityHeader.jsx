@@ -1,53 +1,44 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import { Box, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "./DashboardTable";
-import { renderAttributesRows } from "./ExplorerTableHelpers.jsx";
-import { sectionTitleSx } from "./table-styles";
+import { sectionTitleSx, dataGridSx } from "./table-styles";
 
 /**
  * Generic header section for an entity (Resource, Resource Group, Agent),
  * showing its title/icon and attributes.
  *
- * @param {{
- *   title: React.ReactNode,
- *   iconType?: string,
- *   attributes?: Record<string, unknown>,
- *   children?: React.ReactNode,
- *   action?: React.ReactNode
- * }} props
+ * @param {object} props - Component props
+ * @param {React.ReactNode} props.title - The title of the entity
+ * @param {string} [props.iconType] - The type of icon to display (agent, resource-group, resource)
+ * @param {React.ReactNode} [props.icon] - A custom icon element to display
+ * @param {Record<string, unknown>} [props.attributes] - Attributes of the entity
+ * @param {React.ReactNode} [props.children] - Child elements
+ * @param {React.ReactNode} [props.action] - Action element to display on the right
  * @returns {JSX.Element | null}
  */
-const EntityHeader = ({ title, iconType, attributes, children, action }) => {
-	const [expanded, setExpanded] = React.useState(false);
-
-	const attributeEntries = React.useMemo(() => {
-		return attributes ? Object.entries(attributes) : [];
-	}, [attributes]);
-
+const EntityHeader = ({ title, iconType, icon, attributes, children, action }) => {
 	const hasAttributes = React.useMemo(
 		() => attributes && Object.keys(attributes).length > 0,
 		[attributes],
 	);
 
-	const shouldFold = React.useMemo(() => attributeEntries.length > 6, [attributeEntries.length]);
-
 	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
 
-	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
-
-	const handleToggleExpanded = React.useCallback(() => {
-		setExpanded((prev) => !prev);
-	}, []);
+	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 1 }), []);
 
 	return (
 		<Box display="flex" flexDirection="column" gap={3}>
 			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
 					<Typography variant="h4" gutterBottom sx={titleSx}>
-						{iconType && <NodeTypeIcons type={iconType} fontSize="large" />}
+						{icon ? (
+							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
+								{icon}
+							</Box>
+						) : (
+							iconType && <NodeTypeIcons type={iconType} fontSize="large" />
+						)}
 						{title}
 					</Typography>
 					{children}
@@ -57,31 +48,25 @@ const EntityHeader = ({ title, iconType, attributes, children, action }) => {
 
 			{hasAttributes && (
 				<Box>
-					<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-						<Typography variant="h6" sx={attributesTitleSx}>
-							Attributes
-						</Typography>
-						{shouldFold && (
-							<Button
-								size="small"
-								onClick={handleToggleExpanded}
-								endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-							>
-								{expanded ? "Hide" : `Show (${attributeEntries.length})`}
-							</Button>
-						)}
-					</Box>
-					{(!shouldFold || expanded) && (
-						<DashboardTable>
-							<TableHead>
-								<TableRow>
-									<TableCell>Key</TableCell>
-									<TableCell>Value</TableCell>
-								</TableRow>
-							</TableHead>
-							<TableBody>{renderAttributesRows(attributes)}</TableBody>
-						</DashboardTable>
-					)}
+					<Typography variant="h6" sx={attributesTitleSx}>
+						Attributes
+					</Typography>
+					<DataGrid
+						rows={Object.entries(attributes).map(([key, value]) => ({
+							id: key,
+							key,
+							value,
+						}))}
+						columns={[
+							{ field: "key", headerName: "Key", flex: 1 },
+							{ field: "value", headerName: "Value", flex: 1 },
+						]}
+						disableRowSelectionOnClick
+						hideFooter
+						autoHeight
+						density="compact"
+						sx={dataGridSx}
+					/>
 				</Box>
 			)}
 		</Box>

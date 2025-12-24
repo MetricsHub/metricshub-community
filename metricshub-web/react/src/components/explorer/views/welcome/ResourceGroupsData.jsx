@@ -1,12 +1,14 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "../common/DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "../common/table-styles";
+import { sectionTitleSx, dataGridSx } from "../common/table-styles";
+import TruncatedText from "../common/TruncatedText";
 
 /**
  * Count resources in a resource group.
- * @param {{ resources?: unknown[] }} group
+ *
+ * @param {object} group - The resource group
  * @returns {number}
  */
 const countResources = (group) => {
@@ -16,7 +18,8 @@ const countResources = (group) => {
 
 /**
  * Build the display label for a resource group using its attributes.
- * @param {{ name?: string, attributes?: Record<string, unknown> }} group
+ *
+ * @param {object} group - The resource group
  * @returns {string}
  */
 const buildGroupLabel = (group) => {
@@ -36,7 +39,10 @@ const buildGroupLabel = (group) => {
 
 /**
  * Table displaying resource groups handled by the agent.
- * @param {{ resourceGroups?: Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }>, onResourceGroupClick?:(group:any) => void }} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, attributes?: Record<string, unknown>, resources?: unknown[] }>} [props.resourceGroups] - List of resource groups
+ * @param {(group: any) => void} [props.onResourceGroupClick] - Callback for resource group click
  * @returns {JSX.Element}
  */
 const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
@@ -50,17 +56,11 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 		}));
 	}, [resourceGroups]);
 
-	const hasGroups = React.useMemo(() => processedGroups.length > 0, [processedGroups.length]);
-	const rowCursorSx = React.useMemo(
-		() => ({ cursor: onResourceGroupClick ? "pointer" : "default" }),
-		[onResourceGroupClick],
-	);
-
 	// Memoized click handler factory to avoid recreating functions in map
 	const handleGroupClick = React.useCallback(
-		(group) => {
+		(params) => {
 			if (onResourceGroupClick) {
-				onResourceGroupClick(group);
+				onResourceGroupClick(params.row);
 			}
 		},
 		[onResourceGroupClick],
@@ -72,30 +72,41 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 				<NodeTypeIcons type="resource-group" />
 				Resource Groups
 			</Typography>
-			<DashboardTable>
-				<TableHead>
-					<TableRow>
-						<TableCell>Key</TableCell>
-						<TableCell align="right">Resources</TableCell>
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{!hasGroups ? (
-						<TableRow>
-							<TableCell colSpan={2} sx={emptyStateCellSx}>
-								No resource groups
-							</TableCell>
-						</TableRow>
-					) : (
-						processedGroups.map((g) => (
-							<TableRow key={g.name} hover sx={rowCursorSx} onClick={() => handleGroupClick(g)}>
-								<TableCell>{g.displayLabel}</TableCell>
-								<TableCell align="right">{g.resourceCount}</TableCell>
-							</TableRow>
-						))
-					)}
-				</TableBody>
-			</DashboardTable>
+			<DataGrid
+				rows={processedGroups.map((g) => ({ id: g.name, ...g }))}
+				columns={[
+					{
+						field: "displayLabel",
+						headerName: "Key",
+						flex: 1,
+						renderCell: (params) => (
+							<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+								<NodeTypeIcons type="resource-group" />
+								<TruncatedText text={params.value}>{params.value}</TruncatedText>
+							</Box>
+						),
+					},
+					{
+						field: "resourceCount",
+						headerName: "Resources",
+						flex: 1,
+						renderCell: (params) => (
+							<TruncatedText text={String(params.value)}>{params.value}</TruncatedText>
+						),
+					},
+				]}
+				onRowClick={handleGroupClick}
+				disableRowSelectionOnClick
+				hideFooter
+				autoHeight
+				density="compact"
+				sx={{
+					...dataGridSx,
+					"& .MuiDataGrid-row": {
+						cursor: onResourceGroupClick ? "pointer" : "default",
+					},
+				}}
+			/>
 		</Box>
 	);
 };

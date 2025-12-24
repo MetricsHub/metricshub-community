@@ -53,3 +53,21 @@ export const fetchGroupedResource = createAsyncThunk(
 		}
 	},
 );
+
+/**
+ * Search for resources.
+ *
+ * @param {string} query
+ * @returns {Promise<any[]>} List of matches
+ */
+export const searchExplorer = createAsyncThunk(
+	"explorer/search",
+	async (query, { rejectWithValue }) => {
+		try {
+			const data = await explorerApi.search(query);
+			return data;
+		} catch (e) {
+			return rejectWithValue(e?.message || "Failed to search explorer");
+		}
+	},
+);

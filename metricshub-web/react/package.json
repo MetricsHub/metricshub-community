@@ -23,6 +23,7 @@
 		"@emotion/styled": "^11.14.1",
 		"@mui/icons-material": "^7.3.2",
 		"@mui/material": "^7.3.2",
+		"@mui/x-data-grid": "^8.22.1",
 		"@mui/x-tree-view": "^8.11.2",
 		"@reduxjs/toolkit": "^2.9.0",
 		"@uiw/react-codemirror": "^4.25.2",
@@ -36,6 +37,7 @@
 		"react-dom": "^19.1.1",
 		"react-redux": "^9.2.0",
 		"react-router-dom": "^7.8.2",
+		"react-syntax-highlighter": "^16.1.0",
 		"relative-time-format": "^1.1.11",
 		"yaml": "^2.8.1",
 		"yup": "^1.7.0"
