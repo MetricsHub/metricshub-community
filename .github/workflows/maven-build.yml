@@ -36,7 +36,7 @@ on:
         type: boolean
         description: "Enable SSH session to the runner"
         required: false
-        default: true
+        default: false
       additionalInstallPath:
         type: boolean
         description: "Additional install path for Maven artifacts"
@@ -101,7 +101,6 @@ jobs:
         detached: true
         sudo: false
         install-dependencies: false
-      if: ${{ inputs.ssh }}
 
     - name: Configure additional installation path for Maven artifacts
       shell: bash
