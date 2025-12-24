@@ -191,7 +191,8 @@ const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onRe
 		return (
 			<SimpleTreeView
 				aria-label="Explorer hierarchy"
-				defaultExpandedItems={[treeRoot.id]}
+				defaultExpandedItems={expandedItems}
+				selectedItems={selectedItems}
 				multiSelect={false}
 				// Only the arrow/icon should expand/collapse. Row click just selects + triggers focus logic.
 				expansionTrigger="iconContainer"

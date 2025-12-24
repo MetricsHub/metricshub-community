@@ -22,8 +22,8 @@ web:
   spring.ai.mcp.server.capabilities.resource: true
   spring.ai.mcp.server.capabilities.tool: true
   spring.ai.mcp.server.request-timeout: 5m
-  spring.ai.openai.api-key: "unconfigured"
-  spring.ai.openai.model: "gpt-4o-mini"
+  ai.openai.api-key: "unconfigured"
+  ai.openai.model: "gpt-4o-mini"
   jwt.short_expire: 3600
   jwt.long_expire: 86400
   jwt.secret: eyJhbGciOiJIUzI1NiJ9.ew0KICAic3ViIjogInNlbnRyeSIsDQogICJuYW1lIjogIlNlbnRyeSBTb2Z3YXJlIiwNCiAgImlhdCI6IDE1MTYyMzkwMjINCn0.UUUxmysmx49zKKRt8_pQln-WqXjaTVQlwgjg3SbidF4
