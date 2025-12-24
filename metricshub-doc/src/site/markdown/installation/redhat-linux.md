@@ -1,84 +1,77 @@
 keywords: install, enterprise, community
-description: How to install MetricsHub on RedHat Enterprise Linux.
+description: How to install MetricsHub on Re dHat Enterprise Linux.
 
 # Installation
 
-<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-> MetricsHub supports RedHat/CentOS v8.
+> MetricsHub Community and MetricsHub Enterprise support Red Hat/CentOS v8.
 
-## Enterprise Edition
+## MetricsHub Enterprise
 
-### Download
+### Install MetricsHub Enterprise
 
-From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy it into `/usr/local`:
+To install **MetricsHub Enterprise** on Red Hat Linux:
 
-* For **x86_64** (amd64) systems: **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm**
-* For **aarch64** (arm64) systems: **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm**
+1. Download from [MetricsHub's Web site](https://metricshub.com/downloads) the package corresponding to your system architecture:
 
-### Install
+   * **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm** (for x86_64 (amd64) systems)
+   * **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm** (for aarch64 (arm64) systems)
+  
+2. Copy the package into `/usr/local`
+3. Run the following `rpm` command:
 
-Once you have downloaded the RPM package, run the following `rpm` command:
+   **For x86_64 systems:**
 
-**For x86_64 systems:**
+   ```shell-session
+   cd /usr/local
+   sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm
+   ```
 
-```shell-session
-cd /usr/local
-sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm
-```
+   **For aarch64 systems:**
 
-**For aarch64 systems:**
+   ```shell-session
+   cd /usr/local
+   sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm
+   ```
 
-```shell-session
-cd /usr/local
-sudo rpm -i metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm
-```
+When complete, the **MetricsHub Enterprise**'s files are deployed in `/opt/metricshub` and the **MetricsHub Enterprise Agent** is started as a service.
 
-When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and the **MetricsHubEnterprise Agent** is started as a service.
+You can now configure the [resources to be monitored](../configuration/configure-monitoring.md) and where to [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
 
-### Configure
+### Start / Stop MetricsHub Enterprise
 
-* [Structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file
-* [Configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources
-* In the **./lib/otel/otel-config.yaml** file, located under the `/opt/metricshub` installation directory, specify where the _OpenTelemetry Collector_ should [send the collected data.](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29)
+Run the following command:
 
-To assist with the setup process, two configuration examples are provided for guidance in the installation directory (`./metricshub`):
+* to start **MetricsHub Enterprise**:
 
-* `./lib/config/metricshub-config-example.yaml`, a configuration example of the MetricsHub agent.
-* `./lib/otel/otel-config-example.yaml`, a configuration example of the OpenTelemetry Collector.
+   ```shell-session
+   systemctl start metricshub-enterprise-service
+   ```
 
-### Start
+* to stop **MetricsHub Enterprise**:
 
-To start the **MetricsHub Enterprise** service, run the command below:
-
-```shell-session
-systemctl start metricshub-enterprise-service
-```
+   ```shell-session
+   systemctl stop metricshub-enterprise-service
+   ```
 
 <p id="redhat"> You can start <strong>MetricsHub</strong> in an interactive terminal with an alternate <strong>MetricsHub Agent</strong>'s configuration file with the command below:</p>
 
 ```shell-session
-cd /opt/metricshub/bin
-./enterprise-service --config=<PATH>
-```
-Example:
+   cd /opt/metricshub/bin
+   ./enterprise-service --config=<PATH>
+   ```
 
-```shell-session
-cd /opt/metricshub/bin
-./enterprise-service --config=config/my-metricshub-config.yaml
-```
+   Example:
 
-### Stop
+   ```shell-session
+   cd /opt/metricshub/bin
+   ./enterprise-service --config=config/my-metricshub-config.yaml
+   ```
 
-To stop the **MetricsHub Enterprise** service, run the command below:
+### Uninstall MetricsHub Enterprise
 
-```shell-session
-systemctl stop metricshub-enterprise-service
-```
-
-### Uninstall
-
-To uninstall **MetricsHub Enterprise**, run the appropriate command below based on your architecture:
+To uninstall **MetricsHub Enterprise**, run the following command:
 
 **For x86_64 systems:**
 
@@ -92,21 +85,23 @@ sudo rpm -e metricshub-${enterpriseVersion}-1.x86_64
 sudo rpm -e metricshub-${enterpriseVersion}-1.aarch64
 ```
 
-### Upgrade
+### Upgrade MetricsHub Enterprise
 
-If you have installed a previous version of **MetricsHub Enterprise** and want to upgrade to the latest version **${enterpriseVersion}**, follow these steps:
+To upgrade to the latest version:
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy the file into the `/usr/local` directory:
-   * For **x86_64** (amd64) systems: **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm**
-   * For **aarch64** (arm64) systems: **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm**
+1. Download from [MetricsHub's Web site](https://metricshub.com/downloads) the package corresponding to your system architecture:
 
-2. Run the following command to stop the **MetricsHub Enterprise** service:
+   * **metricshub-enterprise-${enterpriseVersion}-1.x86_64.rpm** (for x86_64 (amd64) systems)
+   * **metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm** (for aarch64 (arm64) systems)
+
+2. Copy the package into `/usr/local`
+3. Run the following command to stop **MetricsHub Enterprise**:
 
    ```shell-session
    systemctl stop metricshub-enterprise-service
    ```
 
-3. Run the following `rpm` command with the appropriate package for your architecture:
+4. Run the following `rpm` command:
 
    **For x86_64 systems:**
 
@@ -122,44 +117,40 @@ If you have installed a previous version of **MetricsHub Enterprise** and want t
    sudo rpm -U metricshub-enterprise-${enterpriseVersion}-1.aarch64.rpm
    ```
 
+## MetricsHub Community
 
-## Community Edition
+### Install MetricsHub Community
 
-You can install **MetricsHub Community Edition** in two ways:
+To install **MetricsHub Community**, you can either:
 
-1. **Automatically** using the official installation script (recommended)
-2. **Manually** by downloading and installing the `metricshub-community-${communityVersion}-{arch}.rpm` package
+* run the official installation script (**recommended**)
+* or download and manually install the  `metricshub-community-${communityVersion}-{arch}.rpm` package
 
-### Automatic Install (Recommended)
+#### Automatic Install (Recommended)
 
-Run the following command to install **MetricsHub Community**:
+First, run the following command to install **MetricsHub Community**:
 
 ```shell-session
 curl -fsSL https://get.metricshub.com | bash
 ```
 
-This command will:
-
-* Download the latest version of **MetricsHub Community Edition**
-* Install it to `${esc.d}HOME/metricshub`
-* Run a version check to confirm successful installation
-
-Finally, run the below command to ensure **MetricsHub Community** is properly installed:
+Then, run the following command to ensure that the product has been successfully installed:
 
 ```shell-session
 ${esc.d}HOME/metricshub/bin/metricshub --version
 ```
 
-### Manual Install
+#### Manual Install
 
-If you prefer a manual setup, follow these steps:
+To manually install **MetricsHub Community**:
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy it into `/usr/local`:
+1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture:
 
    * For **x86_64** (amd64) systems: **metricshub-community-${communityVersion}-1.x86_64.rpm**
    * For **aarch64** (arm64) systems: **metricshub-community-${communityVersion}-1.aarch64.rpm**
 
-2. Run the following `rpm` command:
+2. Copy the package into `/usr/local`
+3. Run the following `rpm` command:
 
    **For amd64 systems:**
 
@@ -175,35 +166,29 @@ If you prefer a manual setup, follow these steps:
    sudo rpm -i metricshub-community-${communityVersion}-1.aarch64.rpm
    ```
 
-When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and the **MetricsHub Community Agent** is started as a service.
+When complete, the **MetricsHub Community**'s files are deployed in `/opt/metricshub` and the **MetricsHub Community Agent** is started as a service.
 
-#### Configure
+You can now configure the [resources to be monitored](../configuration/configure-monitoring.md) and the [OTLP exporter](../configuration/configure-monitoring.md#otlp-exporter-settings).
 
-In the **./lib/config/** directory, located under the `/opt/metricshub` installation directory:
+### Start / Stop MetricsHub Community
 
-1. [structure your configuration](../configuration/configure-monitoring.md#step-1-structure-your-configuration) by creating either one single or multiple configuration file(s)
-2. [configure your resource groups](../configuration/configure-monitoring.md#step-2-configure-resource-groups) and [resources to be monitored.](../configuration/configure-monitoring.md#step-3-configure-resources)
-3. [define the OpenTelemetry Protocol endpoint](../configuration/configure-monitoring.md#otlp-exporter-settings) that will receive the MetricsHub signals.
+Run the following command:
 
+* to start **MetricsHub Community**:
 
-To assist with the setup process, a configuration example (`./lib/config/metricshub-config-example.yaml`) is provided for guidance in the installation directory (`/opt/metricshub`).
-
-#### Start / Stop the Service
-
-To start the **MetricsHub Community** service, run the command below:
 ```shell-session
 systemctl start metricshub-community-service
 ```
 
-To stop the **MetricsHub Community** service, run the command below:
+* to stop **MetricsHub Community**:
 
 ```shell-session
 systemctl stop metricshub-community-service
 ```
 
-#### Uninstall
+### Uninstall MetricsHub Community
 
-To uninstall **MetricsHub Community**, run the appropriate command below based on your architecture:
+To uninstall **MetricsHub Community**, run the following command:
 
 **For x86_64 systems:**
 
@@ -217,21 +202,23 @@ sudo rpm -e metricshub-${communityVersion}-1.x86_64
 sudo rpm -e metricshub-${communityVersion}-1.aarch64
 ```
 
-#### Upgrade
+### Upgrade MetricsHub Community
 
-If you have installed a previous version of **MetricsHub Community** and want to upgrade to the latest version **${communityVersion}**, follow these steps:
+To upgrade to the latest version:
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the appropriate RPM package for your system architecture and copy the file into the `/usr/local` directory:
-   * For **x86_64** (amd64) systems: **metricshub-community-${communityVersion}-1.x86_64.rpm**
-   * For **aarch64** (arm64) systems: **metricshub-community-${communityVersion}-1.aarch64.rpm**
+1. From [MetricsHub's Web site](https://metricshub.com/downloads), download the package corresponding to your system architecture:
 
-2. Run the following command to stop the **MetricsHub Community** service:
+   * **metricshub-community-${communityVersion}-1.x86_64.rpm** (for x86_64 (amd64) systems)
+   * **metricshub-community-${communityVersion}-1.aarch64.rpm** (for aarch64 (arm64) systems)
+
+2. Copy the package into `/usr/local`
+3. Run the following command to stop **MetricsHub Community**:
 
    ```shell-session
    systemctl stop metricshub-community-service
    ```
 
-3. Run the following `rpm` command with the appropriate package for your architecture:
+4. Run the following `rpm` command:
 
    **For amd64 systems:**
 

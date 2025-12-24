@@ -3,13 +3,13 @@ description: How to install MetricsHub on Debian Linux.
 
 # Installation
 
-<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
    > MetricsHub Community and MetricsHub Enterprise support Debian v10.
 
-## Enterprise Edition
+## MetricsHub Enterprise
 
-### Install
+### Install MetricsHub Enterprise
 
 To install **MetricsHub Enterprise** on Debian Linux:
 
@@ -55,7 +55,7 @@ Run the following command:
    systemctl stop metricshub-enterprise-service
    ```
 
-### Uninstall
+### Uninstall MetricsHub Enterprise
 
 To uninstall **MetricsHub Enterprise**, run the following command:
 
@@ -63,7 +63,7 @@ To uninstall **MetricsHub Enterprise**, run the following command:
 sudo dpkg -r metricshub
 ```
 
-### Upgrade
+### Upgrade MetricsHub Enterprise
 
 To upgrade to the latest version:
 
@@ -94,14 +94,16 @@ To upgrade to the latest version:
    sudo dpkg -i metricshub-enterprise_${enterpriseVersion}_arm64.deb
    ```
 
-## Community Edition
+## MetricsHub Community
+
+### Install MetricsHub Community
 
 To install **MetricsHub Community**, you can either:
 
 * run the official installation script (**recommended**)
 * or download and manually install the `metricshub-community_${communityVersion}_{arch}.deb` package.
 
-### Automatic Install (Recommended)
+#### Automatic Install (Recommended)
 
 First, run the following command to install **MetricsHub Community**:
 
@@ -115,7 +117,7 @@ Then, run the following command to ensure that the product has been successfully
 ${esc.d}HOME/metricshub/bin/metricshub --version
 ```
 
-### Manual Install
+#### Manual Install
 
 To manually install **MetricsHub Community**:
 
@@ -141,7 +143,7 @@ To manually install **MetricsHub Community**:
    sudo dpkg -i metricshub-community_${communityVersion}_arm64.deb
    ```
 
-When complete, the **MetricsHub**'s files are deployed in `/opt/metricshub` and the **MetricsHub Community Agent** is started as a service.
+When complete, the **MetricsHub Community**'s files are deployed in `/opt/metricshub` and the **MetricsHub Community Agent** is started as a service.
 
 You can now configure the [resources to be monitored](../configuration/configure-monitoring.md) and the [OTLP exporter](../configuration/configure-monitoring.md#otlp-exporter-settings).
 
@@ -161,7 +163,7 @@ Run the following command:
    systemctl stop metricshub-community-service
    ```
 
-### Uninstall
+### Uninstall MetricsHub Community
 
 To uninstall **MetricsHub Community**, run the following command:
 
@@ -169,7 +171,7 @@ To uninstall **MetricsHub Community**, run the following command:
 sudo dpkg -r metricshub
 ```
 
-### Upgrade
+### Upgrade MetricsHub Community
 
 To upgrade to the latest version:
 
@@ -178,13 +180,14 @@ To upgrade to the latest version:
    * **metricshub-community_${communityVersion}_amd64.deb** (for amd64 (x86_64) systems)
    * **metricshub-community_${communityVersion}_arm64.deb** (for arm64 (aarch64) systems)
 
-2. Run the following command to stop **MetricsHub Community**:
+2. Copy the package into `/usr/local`
+3. Run the following command to stop **MetricsHub Community**:
 
    ```shell-session
    systemctl stop metricshub-community-service
    ```
 
-3. Run the following `dpkg` command:
+4. Run the following `dpkg` command:
 
    **For amd64 systems:**
 
