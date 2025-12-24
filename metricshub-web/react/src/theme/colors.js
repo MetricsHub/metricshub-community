@@ -76,6 +76,6 @@ export const error = withAlphas({
 
 // Divider colors for light and dark themes
 export const divider = {
-	light: "#DEE2E6",
+	light: neutral[400],
 	dark: "#2D3748",
 };

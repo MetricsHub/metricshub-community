@@ -1,56 +1,17 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow, Button } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
-
-/**
- * Render table rows for a list of metrics.
- *
- * @param {Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }>} metrics
- * @param {boolean} showUnit
- * @param {boolean} showLastUpdate
- * @returns {JSX.Element | JSX.Element[]}
- */
-const renderMetricsRows = (metrics, showUnit, showLastUpdate) => {
-	const list = Array.isArray(metrics) ? metrics : [];
-	if (list.length === 0) {
-		const colSpan = 2 + (showUnit ? 1 : 0) + (showLastUpdate ? 1 : 0);
-		return (
-			<TableRow>
-				<TableCell colSpan={colSpan} sx={emptyStateCellSx}>
-					No metrics
-				</TableCell>
-			</TableRow>
-		);
-	}
-
-	return list.map((m) => (
-		<TableRow key={m.name}>
-			<TableCell>{m.name}</TableCell>
-			<TableCell align={showUnit || showLastUpdate ? "left" : "right"}>
-				{String(m.value ?? "")}
-			</TableCell>
-			{showUnit && <TableCell>{m.unit === "1" ? "%" : (m.unit ?? "")}</TableCell>}
-			{showLastUpdate && <TableCell align="right">{m.lastUpdate ?? ""}</TableCell>}
-		</TableRow>
-	));
-};
+import { DataGrid } from "@mui/x-data-grid";
+import { dataGridSx } from "./table-styles";
+import TruncatedText from "./TruncatedText";
+import MetricValueCell from "./MetricValueCell";
 
 /**
  * Generic Metrics section.
  *
- * @param {{
- *   metrics?: Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }> | Record<string, any> | null,
- *   showUnit?: boolean,
- *   showLastUpdate?: boolean
- * }} props
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, value?: unknown, unit?: string, lastUpdate?: string | null }> | Record<string, any> | null} [props.metrics] - Metrics to display
  * @returns {JSX.Element | null}
  */
-const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
-	const [expanded, setExpanded] = React.useState(false);
-
+const MetricsTable = ({ metrics }) => {
 	const rows = React.useMemo(() => {
 		if (!metrics) return [];
 		if (Array.isArray(metrics)) {
@@ -79,53 +40,37 @@ const MetricsTable = ({ metrics, showUnit = true, showLastUpdate = true }) => {
 		return [];
 	}, [metrics]);
 
-	const shouldFold = React.useMemo(() => rows.length > 6, [rows.length]);
-
-	const titleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 0 }), []);
-
-	const valueAlign = React.useMemo(
-		() => (showUnit || showLastUpdate ? "left" : "right"),
-		[showUnit, showLastUpdate],
-	);
-
-	const handleToggleExpanded = React.useCallback(() => {
-		setExpanded((prev) => !prev);
-	}, []);
-
 	if (rows.length === 0) {
 		return null;
 	}
 
 	return (
-		<Box>
-			<Box display="flex" alignItems="center" gap={1} mb={!shouldFold || expanded ? 1 : 0}>
-				<Typography variant="h6" sx={titleSx}>
-					Metrics
-				</Typography>
-				{shouldFold && (
-					<Button
-						size="small"
-						onClick={handleToggleExpanded}
-						endIcon={expanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-					>
-						{expanded ? "Hide" : `Show (${rows.length})`}
-					</Button>
-				)}
-			</Box>
-			{(!shouldFold || expanded) && (
-				<DashboardTable>
-					<TableHead>
-						<TableRow>
-							<TableCell>Name</TableCell>
-							<TableCell align={valueAlign}>Value</TableCell>
-							{showUnit && <TableCell>Unit</TableCell>}
-							{showLastUpdate && <TableCell align="right">Last Update</TableCell>}
-						</TableRow>
-					</TableHead>
-					<TableBody>{renderMetricsRows(rows, showUnit, showLastUpdate)}</TableBody>
-				</DashboardTable>
-			)}
-		</Box>
+		<DataGrid
+			rows={rows.map((r) => ({ id: r.name, ...r }))}
+			columns={[
+				{
+					field: "name",
+					headerName: "Name",
+					flex: 1,
+					renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+				},
+				{
+					field: "value",
+					headerName: "Value",
+					flex: 1,
+					align: "left",
+					headerAlign: "left",
+					renderCell: (params) => (
+						<MetricValueCell value={params.row.value} unit={params.row.unit} align="left" />
+					),
+				},
+			]}
+			disableRowSelectionOnClick
+			hideFooter
+			autoHeight
+			density="compact"
+			sx={dataGridSx}
+		/>
 	);
 };
 
