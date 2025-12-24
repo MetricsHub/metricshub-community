@@ -32,6 +32,7 @@ import {
 import ChatMessage from "../components/chat/ChatMessage";
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
+import PsychologyIcon from "@mui/icons-material/Psychology";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -581,6 +582,7 @@ function ChatPage() {
 														<Button
 															size="small"
 															variant="text"
+															startIcon={<PsychologyIcon fontSize="inherit" />}
 															endIcon={<ArrowForwardIosIcon fontSize="inherit" />}
 															onClick={() => openReasoningPanel(reasoningKey)}
 															sx={{
@@ -590,6 +592,9 @@ function ChatPage() {
 																py: 0.5,
 																pl: 1.5,
 																gap: 0.5,
+																"& .MuiButton-startIcon": {
+																	mr: 0.25,
+																},
 															}}
 														>
 															Thinking
