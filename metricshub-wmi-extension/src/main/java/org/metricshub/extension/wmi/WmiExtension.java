@@ -310,7 +310,7 @@ public class WmiExtension implements IProtocolExtension {
 			resultList = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, query, namespace);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
-			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
+			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
 			return null;
 		}
 		final String[] columns = StringHelper.extractColumns(query);
