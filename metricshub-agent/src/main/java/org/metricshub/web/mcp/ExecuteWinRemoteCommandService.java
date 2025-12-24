@@ -129,6 +129,20 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 			.orElseGet(() -> MultiHostToolResponse.buildError("No Extension found for remote Windows commands."));
 	}
 
+	/**
+	 * Safely executes a Windows remote command using the provided protocol extension.
+	 * This method resolves all host configurations from the agent context for the given hostname,
+	 * filters them to find the first valid configuration accepted by the extension, and then
+	 * executes the command. If no valid configuration is found, returns a QueryResponse with
+	 * an error message.
+	 *
+	 * @param extension  the protocol extension (WMI or WinRM) to use for command execution
+	 * @param hostname   the target hostname on which to execute the command
+	 * @param commandline the Windows OS command (CMD command) to execute
+	 * @param timeout    optional timeout in seconds for command execution; may be null
+	 * @return a {@link QueryResponse} containing the command output or an error message
+	 *         if no valid configuration is found
+	 */
 	private QueryResponse executeWindowsRemoteCommandWithExtensionSafe(
 		final IProtocolExtension extension,
 		final String hostname,
@@ -152,6 +166,23 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 			);
 	}
 
+	/**
+	 * Safely executes a query using the provided protocol extension and configuration.
+	 * This method sets the hostname and timeout on the configuration copy, creates a JSON
+	 * query node with the commandline and query type, and then executes the query through
+	 * the extension. Any exceptions thrown during execution are caught and returned as an
+	 * error in the QueryResponse.
+	 *
+	 * @param extension         the protocol extension to use for query execution
+	 * @param configurationCopy a copy of the configuration that will be modified with
+	 *                          hostname and timeout before execution
+	 * @param hostname          the target hostname to set on the configuration
+	 * @param commandline       the Windows OS command (CMD command) to execute
+	 * @param timeout           optional timeout in seconds; defaults to
+	 *                          {@value #DEFAULT_COMMANDLINE_TIMEOUT} if null or non-positive
+	 * @return a {@link QueryResponse} containing the extension response or an error message
+	 *         if execution fails
+	 */
 	private static QueryResponse executeQuerySafe(
 		final IProtocolExtension extension,
 		final IConfiguration configurationCopy,
@@ -190,6 +221,13 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 		);
 	}
 
+	/**
+	 * Checks whether Windows remote command execution is enabled for MCP tools.
+	 * This method reads the system property {@code metricshub.mcp.tool.win.remote.enabled}
+	 * to determine if remote Windows connections should be allowed for MCP tool execution.
+	 *
+	 * @return {@code true} if Windows remote is enabled for MCP, {@code false} otherwise
+	 */
 	static boolean isWinRemoteEnabledForMCP() {
 		return Boolean.getBoolean("metricshub.mcp.tool.win.remote.enabled");
 	}
