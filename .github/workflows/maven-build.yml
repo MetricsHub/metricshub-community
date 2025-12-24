@@ -36,7 +36,7 @@ on:
         type: boolean
         description: "Enable SSH session to the runner"
         required: false
-        default: false
+        default: true
       additionalInstallPath:
         type: boolean
         description: "Additional install path for Maven artifacts"
