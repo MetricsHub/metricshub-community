@@ -126,7 +126,7 @@ jobs:
 
     - name: Create Pull Request from ${{ env.BRANCH_NAME }} to ${{ github.event.repository.default_branch }}
       if: steps.check_release.outputs.create_pr == 'true'
-      uses: devops-infra/action-pull-request@v0.6.1
+      uses: devops-infra/action-pull-request@v1.0.2
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ env.BRANCH_NAME }}
