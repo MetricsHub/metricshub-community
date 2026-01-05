@@ -40,6 +40,7 @@ const MetricsAccordion = ({ metrics }) => {
 		<Accordion
 			expanded={expanded}
 			onChange={handleToggle}
+			TransitionProps={{ unmountOnExit: true }}
 			disableGutters
 			elevation={0}
 			square
@@ -80,11 +81,9 @@ const MetricsAccordion = ({ metrics }) => {
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
-				{expanded && (
-					<Box sx={{ p: 2 }}>
-						<MetricsTable metrics={metrics} />
-					</Box>
-				)}
+				<Box sx={{ p: 2 }}>
+					<MetricsTable metrics={metrics} />
+				</Box>
 			</AccordionDetails>
 		</Accordion>
 	);

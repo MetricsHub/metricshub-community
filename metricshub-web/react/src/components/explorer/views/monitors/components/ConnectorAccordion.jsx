@@ -76,7 +76,7 @@ const buildPivotGroups = (instances) => {
 };
 
 const MonitorAccordion = React.memo(
-	function MonitorAccordion({
+	({
 		monitor,
 		connectorKey,
 		resourceId,
@@ -86,7 +86,7 @@ const MonitorAccordion = React.memo(
 		expandedMonitors,
 		handleMonitorToggle,
 		navigate,
-	}) {
+	}) => {
 		const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
 		const instances = React.useMemo(
 			() => (Array.isArray(monitor.instances) ? monitor.instances : []),
@@ -104,6 +104,7 @@ const MonitorAccordion = React.memo(
 			<Accordion
 				expanded={isMonitorExpanded}
 				onChange={handleMonitorToggle(uniqueMonitorKey)}
+				TransitionProps={{ unmountOnExit: true }}
 				disableGutters
 				elevation={0}
 				square
@@ -179,28 +180,26 @@ const MonitorAccordion = React.memo(
 					</Box>
 				</AccordionSummary>
 				<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
-					{isMonitorExpanded && (
-						pivotGroups.length > 0
-							? pivotGroups.map((group) => (
-								<PivotGroupSection
-									key={group.baseName}
-									group={group}
-									sortedInstances={sortedInstances}
-									resourceId={resourceId}
+					{pivotGroups.length > 0
+						? pivotGroups.map((group) => (
+							<PivotGroupSection
+								key={group.baseName}
+								group={group}
+								sortedInstances={sortedInstances}
+								resourceId={resourceId}
+								metaMetrics={connector.metaMetrics}
+							/>
+						))
+						: sortedInstances.map((inst) => {
+							return (
+								<InstanceMetricsTable
+									key={inst?.attributes?.id || inst.name}
+									instance={inst}
+									naturalMetricCompare={compareMetricEntries}
 									metaMetrics={connector.metaMetrics}
 								/>
-							))
-							: sortedInstances.map((inst) => {
-								return (
-									<InstanceMetricsTable
-										key={inst?.attributes?.id || inst.name}
-										instance={inst}
-										naturalMetricCompare={compareMetricEntries}
-										metaMetrics={connector.metaMetrics}
-									/>
-								);
-							})
-					)}
+							);
+						})}
 				</AccordionDetails>
 			</Accordion>
 		);
@@ -289,6 +288,7 @@ const ConnectorAccordion = ({
 			id={connectorKey}
 			expanded={isConnectorExpanded}
 			onChange={handleConnectorToggle}
+			TransitionProps={{ unmountOnExit: true }}
 			disableGutters
 			elevation={0}
 			square
@@ -370,116 +370,112 @@ const ConnectorAccordion = ({
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
-				{isConnectorExpanded && (
-					<>
-						{/* Connector Attributes & Metrics Container */}
-						{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
-							showMetricsTable) && (
-								<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-									{/* Connector Attributes Table */}
-									{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Attributes
-											</Typography>
-											<DataGrid
-												rows={Object.entries(connector.attributes).map(([key, value]) => ({
-													id: key,
-													key,
-													value,
-												}))}
-												columns={[
-													{ field: "key", headerName: "Key", flex: 1 },
-													{ field: "value", headerName: "Value", flex: 1 },
-												]}
-												disableRowSelectionOnClick
-												hideFooter
-												autoHeight
-												density="compact"
-												sx={dataGridSx}
-											/>
-										</Box>
-									)}
-
-									{/* Connector Metrics Table */}
-									{showMetricsTable && (
-										<Box>
-											<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
-												Metrics
-											</Typography>
-											<DataGrid
-												rows={Object.entries(connector.metrics).map(([name, metric]) => {
-													let value = metric;
-													let unit = undefined;
-
-													if (metric && typeof metric === "object" && "value" in metric) {
-														value = metric.value;
-														unit = metric.unit;
-													}
-
-													if (!unit) {
-														const meta = getMetricMetadata(name, connector.metaMetrics);
-														if (meta?.unit) unit = meta.unit;
-													}
-													return {
-														id: name,
-														name,
-														value,
-														unit,
-													};
-												})}
-												columns={[
-													{
-														field: "name",
-														headerName: "Name",
-														flex: 1,
-														renderCell: (params) => <MetricNameHighlighter name={params.value} />,
-													},
-													{
-														field: "value",
-														headerName: "Value",
-														flex: 1,
-														align: "left",
-														headerAlign: "left",
-														renderCell: (params) => (
-															<MetricValueCell
-																value={params.row.value}
-																unit={params.row.unit}
-																align="left"
-															/>
-														),
-													},
-												]}
-												disableRowSelectionOnClick
-												hideFooter
-												autoHeight
-												density="compact"
-												sx={dataGridSx}
-											/>
-										</Box>
-									)}
+				{/* Connector Attributes & Metrics Container */}
+				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
+					showMetricsTable) && (
+						<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+							{/* Connector Attributes Table */}
+							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Attributes
+									</Typography>
+									<DataGrid
+										rows={Object.entries(connector.attributes).map(([key, value]) => ({
+											id: key,
+											key,
+											value,
+										}))}
+										columns={[
+											{ field: "key", headerName: "Key", flex: 1 },
+											{ field: "value", headerName: "Value", flex: 1 },
+										]}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										sx={dataGridSx}
+									/>
 								</Box>
 							)}
 
-						{/* Monitors Section */}
-						<Box sx={{ display: "flex", flexDirection: "column" }}>
-							{monitors.map((monitor) => (
-								<MonitorAccordion
-									key={`${connectorKey}-${monitor.name}`}
-									monitor={monitor}
-									connectorKey={connectorKey}
-									resourceId={resourceId}
-									resourceGroupName={resourceGroupName}
-									resourceName={resourceName}
-									connector={connector}
-									expandedMonitors={expandedMonitors}
-									handleMonitorToggle={handleMonitorToggle}
-									navigate={navigate}
-								/>
-							))}
+							{/* Connector Metrics Table */}
+							{showMetricsTable && (
+								<Box>
+									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+										Metrics
+									</Typography>
+									<DataGrid
+										rows={Object.entries(connector.metrics).map(([name, metric]) => {
+											let value = metric;
+											let unit = undefined;
+
+											if (metric && typeof metric === "object" && "value" in metric) {
+												value = metric.value;
+												unit = metric.unit;
+											}
+
+											if (!unit) {
+												const meta = getMetricMetadata(name, connector.metaMetrics);
+												if (meta?.unit) unit = meta.unit;
+											}
+											return {
+												id: name,
+												name,
+												value,
+												unit,
+											};
+										})}
+										columns={[
+											{
+												field: "name",
+												headerName: "Name",
+												flex: 1,
+												renderCell: (params) => <MetricNameHighlighter name={params.value} />,
+											},
+											{
+												field: "value",
+												headerName: "Value",
+												flex: 1,
+												align: "left",
+												headerAlign: "left",
+												renderCell: (params) => (
+													<MetricValueCell
+														value={params.row.value}
+														unit={params.row.unit}
+														align="left"
+													/>
+												),
+											},
+										]}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										sx={dataGridSx}
+									/>
+								</Box>
+							)}
 						</Box>
-					</>
-				)}
+					)}
+
+				{/* Monitors Section */}
+				<Box sx={{ display: "flex", flexDirection: "column" }}>
+					{monitors.map((monitor) => (
+						<MonitorAccordion
+							key={`${connectorKey}-${monitor.name}`}
+							monitor={monitor}
+							connectorKey={connectorKey}
+							resourceId={resourceId}
+							resourceGroupName={resourceGroupName}
+							resourceName={resourceName}
+							connector={connector}
+							expandedMonitors={expandedMonitors}
+							handleMonitorToggle={handleMonitorToggle}
+							navigate={navigate}
+						/>
+					))}
+				</Box>
 			</AccordionDetails>
 		</Accordion>
 	);

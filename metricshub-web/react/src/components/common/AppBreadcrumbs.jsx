@@ -122,6 +122,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 								alignItems: "center",
 								gap: 0.75,
 								verticalAlign: "middle",
+								transition: "color 0.4s ease",
 							}}
 						>
 							{icon && (
@@ -136,12 +137,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 					);
 
 					return isLast ? (
-						<Typography
-							key={crumb.label}
-							color="text.primary"
-							variant="body2"
-							sx={{ transition: "color 0.4s ease" }}
-						>
+						<Typography key={crumb.label} color="text.primary" variant="body2">
 							{content}
 						</Typography>
 					) : (
@@ -152,7 +148,6 @@ const AppBreadcrumbs = ({ sx, action }) => {
 							component={RouterLink}
 							to={crumb.to}
 							variant="body2"
-							sx={{ transition: "color 0.4s ease" }}
 						>
 							{content}
 						</Link>
