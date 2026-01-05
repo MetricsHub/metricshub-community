@@ -77,24 +77,24 @@ export const colorLabelFromKey = (key) => {
 /**
  * Returns a color function for a given metric label.
  * @param {string} name
- * @returns {(theme: any) => string}
+ * @returns {string}
  */
 export const colorFor = (name) => {
 	const n = name.toLowerCase();
-	if (n.includes("used")) return (theme) => theme.palette.primary.main;
-	if (n.includes("free")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("cache")) return (theme) => theme.palette.warning.main;
-	if (n.includes("buffer")) return (theme) => theme.palette.warning.light;
-	if (n.includes("idle")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("system")) return (theme) => theme.palette.error.main;
-	if (n.includes("user")) return (theme) => theme.palette.info.main;
-	if (n.includes("nice")) return (theme) => theme.palette.success.main;
-	if (n.includes("wait")) return (theme) => theme.palette.warning.dark; // io_wait, iowait
-	if (n.includes("steal")) return (theme) => theme.palette.text.primary;
-	if (n.includes("irq")) return (theme) => theme.palette.secondary.main; // irq, softirq
-	if (n.includes("receive")) return (theme) => theme.palette.success.main;
-	if (n.includes("transmit")) return (theme) => theme.palette.secondary.main;
-	if (n === "none") return (theme) => theme.palette.action.hover;
+	if (n.includes("used")) return "primary.main";
+	if (n.includes("free")) return "action.disabled";
+	if (n.includes("cache")) return "warning.main";
+	if (n.includes("buffer")) return "warning.light";
+	if (n.includes("idle")) return "action.disabled";
+	if (n.includes("system")) return "error.main";
+	if (n.includes("user")) return "info.main";
+	if (n.includes("nice")) return "success.main";
+	if (n.includes("wait")) return "warning.dark"; // io_wait, iowait
+	if (n.includes("steal")) return "text.primary";
+	if (n.includes("irq")) return "secondary.main"; // irq, softirq
+	if (n.includes("receive")) return "success.main";
+	if (n.includes("transmit")) return "secondary.main";
+	if (n === "none") return "action.hover";
 
 	// Fallback: generate a consistent color based on the string hash
 	let hash = 0;
@@ -102,7 +102,7 @@ export const colorFor = (name) => {
 		hash = n.charCodeAt(i) + ((hash << 5) - hash);
 	}
 	const hue = Math.abs(hash) % 360;
-	return () => `hsl(${hue}, 70%, 50%)`;
+	return `hsl(${hue}, 70%, 50%)`;
 };
 
 /**
@@ -178,6 +178,7 @@ const UtilizationStackComponent = ({ parts }) => {
 
 	return (
 		<Box
+			className="utilization-stack"
 			sx={{
 				position: "relative",
 				height: 16,
@@ -188,7 +189,6 @@ const UtilizationStackComponent = ({ parts }) => {
 				width: "100%",
 				flexGrow: 1,
 				alignSelf: "center",
-				transition: "background-color 0.4s ease",
 			}}
 		>
 			{filteredParts.map((p) => {
@@ -199,6 +199,7 @@ const UtilizationStackComponent = ({ parts }) => {
 
 				const bar = (
 					<Box
+						className="utilization-bar"
 						sx={{
 							width: "100%",
 							height: "100%",
@@ -206,7 +207,6 @@ const UtilizationStackComponent = ({ parts }) => {
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
-							transition: "background-color 0.4s ease",
 						}}
 					>
 						{showText && (

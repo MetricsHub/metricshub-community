@@ -18,8 +18,6 @@ import CountBadge from "./CountBadge";
  * @returns {JSX.Element | null}
  */
 const MetricsAccordion = ({ metrics }) => {
-	const transition = "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease";
-
 	const [expanded, setExpanded] = React.useState(false);
 
 	const metricsList = React.useMemo(() => {
@@ -49,7 +47,6 @@ const MetricsAccordion = ({ metrics }) => {
 				bgcolor: "transparent",
 				borderTop: "1px solid",
 				borderColor: "divider",
-				transition,
 				"&:before": {
 					display: "none",
 				},
@@ -61,7 +58,6 @@ const MetricsAccordion = ({ metrics }) => {
 					minHeight: 48,
 					cursor: "pointer",
 					bgcolor: "action.hover",
-					transition,
 					"&:hover": {
 						bgcolor: "action.selected",
 					},

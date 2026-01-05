@@ -64,7 +64,7 @@ const NavBar = ({ onToggleTheme }) => {
 		minWidth: 90,
 		color: "text.primary",
 		borderBottom: "2px solid transparent",
-		transition: "all 0.4s ease",
+		transition: "background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease",
 		"&:hover": { bgcolor: "action.hover", color: "text.primary" },
 		"&.active": (t) => ({
 			bgcolor: t.palette.action.selected,

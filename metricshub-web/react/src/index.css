@@ -31,3 +31,28 @@
 body {
     transition: background-color 0.4s ease, color 0.4s ease;
 }
+
+/* DataGrid Transitions - Moved to CSS for performance */
+.MuiDataGrid-root,
+.MuiDataGrid-columnHeaders,
+.MuiDataGrid-columnHeader,
+.MuiDataGrid-columnHeaderTitleContainer,
+.MuiDataGrid-columnHeaderTitle,
+.MuiDataGrid-cell,
+.MuiDataGrid-footerContainer,
+.MuiDataGrid-row,
+.MuiDataGrid-virtualScroller,
+.MuiDataGrid-columnSeparator {
+    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, opacity 0.4s ease !important;
+}
+
+/* Utilization Bar Transitions */
+.utilization-stack,
+.utilization-bar {
+    transition: background-color 0.4s ease, border-color 0.4s ease !important;
+}
+
+/* Ensure the header separator syncs with the rest */
+.MuiDataGrid-columnSeparator svg {
+    transition: fill 0.4s ease !important;
+}

@@ -7,16 +7,11 @@ import { inputLabelClasses } from "@mui/material";
  */
 export const buildComponents = () => {
 	return {
-		MuiCssBaseline: {
-			styleOverrides: `
-				body {
-					transition: background-color 0.4s ease, color 0.4s ease;
-				}`,
-		},
 		MuiTypography: {
 			styleOverrides: {
 				root: {
-					transition: "color 0.4s ease, font-size 0.4s ease",
+					// Removed global transition for performance. 
+					// Specific components handle their own transitions.
 				},
 			},
 		},
@@ -178,7 +173,7 @@ export const buildComponents = () => {
 		MuiInputLabel: {
 			styleOverrides: {
 				root: {
-					transition: "color 0.4s ease, transform 0.4s ease",
+					transition: "color 0.4s ease",
 				},
 			},
 		},
@@ -274,31 +269,12 @@ export const buildComponents = () => {
 		MuiDataGrid: {
 			styleOverrides: {
 				root: {
-					transition: "all 0.4s ease",
-					"& *": {
-						transition: "all 0.4s ease",
-					},
-					"& .MuiDataGrid-withBorderColor": {
-						transition: "all 0.4s ease",
-					},
+					// Transitions moved to index.css for performance
 				},
 				columnHeaders: ({ theme }) => ({
 					backgroundColor:
 						theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],
-					transition: "all 0.4s ease",
 				}),
-				columnHeader: {
-					transition: "all 0.4s ease",
-				},
-				cell: {
-					transition: "all 0.4s ease",
-				},
-				row: {
-					transition: "all 0.4s ease",
-				},
-				footerContainer: {
-					transition: "all 0.4s ease",
-				},
 			},
 		},
 	};

@@ -7,7 +7,6 @@ const truncatedSx = {
 	textOverflow: "ellipsis",
 	display: "block",
 	width: "100%",
-	transition: "color 0.4s ease",
 };
 
 /**
