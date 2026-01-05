@@ -2,6 +2,7 @@ import * as React from "react";
 import { SimpleTreeView, treeItemClasses } from "@mui/x-tree-view";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import ExplorerTreeItem from "./TreeItem";
+import ExplorerSearch from "./ExplorerSearch";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { fetchExplorerHierarchy } from "../../../store/thunks/explorer-thunks";
 import {
@@ -88,18 +89,13 @@ const collectAllExpandableIds = (root) => {
 /**
  * Renders the explorer hierarchy and dispatches focus callbacks for leaf nodes.
  *
- * @param {Object} props
- * @param {string|null} [props.selectedNodeId] The ID of the node to highlight/select in the tree.
- * @param {(name: string) => void} [props.onResourceGroupFocus] Called when a resource group is selected.
- * @param {() => void} [props.onAgentFocus] Called when an agent node is selected.
- * @param {(resource: ExplorerNode, group?: ExplorerNode) => void} [props.onResourceFocus] Called when a resource leaf is selected.
+ * @param {object} props - Component props
+ * @param {string|null} [props.selectedNodeId] - The ID of the node to highlight/select in the tree.
+ * @param {(name: string) => void} [props.onResourceGroupFocus] - Called when a resource group is selected.
+ * @param {() => void} [props.onAgentFocus] - Called when an agent node is selected.
+ * @param {(resource: object, group?: object) => void} [props.onResourceFocus] - Called when a resource leaf is selected.
  */
-export default function ExplorerTree({
-	selectedNodeId,
-	onResourceGroupFocus,
-	onAgentFocus,
-	onResourceFocus,
-}) {
+const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onResourceFocus }) => {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const loading = useAppSelector(selectExplorerLoading);
@@ -162,50 +158,63 @@ export default function ExplorerTree({
 		[treeRoot, handleLabelClick],
 	);
 
-	if (loading && !treeRoot) {
-		return (
-			<Box sx={{ p: 1, display: "flex", alignItems: "center", gap: 1 }}>
-				<CircularProgress size={18} />
-				<Typography variant="body2">Loading hierarchy…</Typography>
-			</Box>
-		);
-	}
+	const renderContent = () => {
+		if (loading && !treeRoot) {
+			return (
+				<Box sx={{ p: 1, display: "flex", alignItems: "center", gap: 1 }}>
+					<CircularProgress size={18} />
+					<Typography variant="body2">Loading hierarchy…</Typography>
+				</Box>
+			);
+		}
 
-	if (error && !treeRoot) {
-		return (
-			<Box sx={{ p: 1 }}>
-				<Typography variant="body2" color="error">
-					Failed to load hierarchy: {error}
-				</Typography>
-			</Box>
-		);
-	}
+		if (error && !treeRoot) {
+			return (
+				<Box sx={{ p: 1 }}>
+					<Typography variant="body2" color="error">
+						Failed to load hierarchy: {error}
+					</Typography>
+				</Box>
+			);
+		}
 
-	if (!treeRoot) {
+		if (!treeRoot) {
+			return (
+				<Box sx={{ p: 1 }}>
+					<Typography variant="body2" color="text.secondary">
+						No hierarchy data.
+					</Typography>
+				</Box>
+			);
+		}
+
 		return (
-			<Box sx={{ p: 1 }}>
-				<Typography variant="body2" color="text.secondary">
-					No hierarchy data.
-				</Typography>
-			</Box>
+			<SimpleTreeView
+				aria-label="Explorer hierarchy"
+				defaultExpandedItems={expandedItems}
+				selectedItems={selectedItems}
+				multiSelect={false}
+				// Only the arrow/icon should expand/collapse. Row click just selects + triggers focus logic.
+				expansionTrigger="iconContainer"
+				onItemClick={handleItemClick}
+				sx={{
+					[`& .${treeItemClasses.content}`]: { py: 0.25, width: "100%" },
+					[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
+				}}
+			>
+				<ExplorerTreeItem node={treeRoot} />
+			</SimpleTreeView>
 		);
-	}
+	};
 
 	return (
-		<SimpleTreeView
-			aria-label="Explorer hierarchy"
-			defaultExpandedItems={expandedItems}
-			selectedItems={selectedItems}
-			multiSelect={false}
-			// Only the arrow/icon should expand/collapse. Row click just selects + triggers focus logic.
-			expansionTrigger="iconContainer"
-			onItemClick={handleItemClick}
-			sx={{
-				[`& .${treeItemClasses.content}`]: { py: 0.25, width: "100%" },
-				[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
-			}}
-		>
-			<ExplorerTreeItem node={treeRoot} />
-		</SimpleTreeView>
+		<Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+			<Box sx={{ p: 1 }}>
+				<ExplorerSearch />
+			</Box>
+			<Box sx={{ flex: 1, overflowY: "auto" }}>{renderContent()}</Box>
+		</Box>
 	);
-}
+};
+
+export default React.memo(ExplorerTree);

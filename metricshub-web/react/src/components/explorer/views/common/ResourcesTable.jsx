@@ -1,42 +1,17 @@
 import * as React from "react";
-import { Box, Typography, TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
-import DashboardTable from "./DashboardTable";
-import { emptyStateCellSx, sectionTitleSx } from "./table-styles";
-
-/**
- * Render a single resource row.
- * @param {{ resource: { name: string, attributes?: Record<string, unknown> }, onClick?: (resource:any) => void, showOsType?: boolean }} props
- * @returns {JSX.Element}
- */
-const ResourceRow = React.memo(function ResourceRow({ resource, onClick, showOsType }) {
-	const attrs = React.useMemo(() => resource.attributes ?? {}, [resource.attributes]);
-
-	const rowSx = React.useMemo(() => ({ cursor: onClick ? "pointer" : "default" }), [onClick]);
-
-	const handleClick = React.useCallback(() => {
-		if (onClick) {
-			onClick(resource);
-		}
-	}, [onClick, resource]);
-
-	return (
-		<TableRow hover={Boolean(onClick)} sx={rowSx} onClick={onClick ? handleClick : undefined}>
-			<TableCell>{resource.name}</TableCell>
-			<TableCell>{attrs["host.name"] ?? ""}</TableCell>
-			<TableCell>{attrs["host.type"] ?? ""}</TableCell>
-			{showOsType && <TableCell>{attrs["os.type"] ?? ""}</TableCell>}
-		</TableRow>
-	);
-});
+import { sectionTitleSx, dataGridSx } from "./table-styles";
+import TruncatedText from "./TruncatedText";
 
 /**
  * Table displaying resources.
- * @param {{
- *   resources?: Array<{ name: string, attributes?: Record<string, unknown> }>,
- *   onResourceClick?: (resource:any) => void,
- *   showOsType?: boolean
- * }} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{ name: string, attributes?: Record<string, unknown> }>} [props.resources] - List of resources to display
+ * @param {(resource: any) => void} [props.onResourceClick] - Callback for row click
+ * @param {boolean} [props.showOsType=false] - Whether to show the OS type column
  * @returns {JSX.Element}
  */
 const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
@@ -45,9 +20,54 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 		[resources],
 	);
 
-	const hasResources = React.useMemo(() => allResources.length > 0, [allResources.length]);
+	const handleRowClick = React.useCallback(
+		(params) => {
+			if (onResourceClick) {
+				onResourceClick(params.row);
+			}
+		},
+		[onResourceClick],
+	);
 
-	const emptyStateColSpan = React.useMemo(() => (showOsType ? 4 : 3), [showOsType]);
+	const columns = React.useMemo(() => {
+		const cols = [
+			{
+				field: "name",
+				headerName: "Key",
+				flex: 1,
+				renderCell: (params) => (
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+						<NodeTypeIcons type="resource" />
+						<TruncatedText text={params.value}>{params.value}</TruncatedText>
+					</Box>
+				),
+			},
+			{
+				field: "hostName",
+				headerName: "host.name",
+				flex: 1,
+				valueGetter: (value, row) => row.attributes?.["host.name"] ?? "",
+				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+			},
+			{
+				field: "hostType",
+				headerName: "host.type",
+				flex: 1,
+				valueGetter: (value, row) => row.attributes?.["host.type"] ?? "",
+				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+			},
+		];
+		if (showOsType) {
+			cols.push({
+				field: "osType",
+				headerName: "os.type",
+				flex: 1,
+				valueGetter: (value, row) => row.attributes?.["os.type"] ?? "",
+				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+			});
+		}
+		return cols;
+	}, [showOsType]);
 
 	return (
 		<Box>
@@ -55,34 +75,21 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				<NodeTypeIcons type="resource" />
 				Resources
 			</Typography>
-			<DashboardTable>
-				<TableHead>
-					<TableRow>
-						<TableCell>Key</TableCell>
-						<TableCell>host.name</TableCell>
-						<TableCell>host.type</TableCell>
-						{showOsType && <TableCell>os.type</TableCell>}
-					</TableRow>
-				</TableHead>
-				<TableBody>
-					{!hasResources ? (
-						<TableRow>
-							<TableCell colSpan={emptyStateColSpan} sx={emptyStateCellSx}>
-								No resources
-							</TableCell>
-						</TableRow>
-					) : (
-						allResources.map((resource) => (
-							<ResourceRow
-								key={resource.name || resource.key}
-								resource={resource}
-								onClick={onResourceClick}
-								showOsType={showOsType}
-							/>
-						))
-					)}
-				</TableBody>
-			</DashboardTable>
+			<DataGrid
+				rows={allResources.map((r) => ({ id: r.name || r.key, ...r }))}
+				columns={columns}
+				onRowClick={handleRowClick}
+				disableRowSelectionOnClick
+				hideFooter
+				autoHeight
+				density="compact"
+				sx={{
+					...dataGridSx,
+					"& .MuiDataGrid-row": {
+						cursor: onResourceClick ? "pointer" : "default",
+					},
+				}}
+			/>
 		</Box>
 	);
 };

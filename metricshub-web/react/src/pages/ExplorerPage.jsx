@@ -1,6 +1,8 @@
 import * as React from "react";
-import { Box } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { setLastVisitedPath } from "../store/slices/explorer-slice";
 import { selectExplorerHierarchy } from "../store/slices/explorer-slice";
@@ -68,10 +70,20 @@ const ExplorerPage = () => {
 	const location = useLocation();
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
+	const [isPaused, setIsPaused] = React.useState(false);
 
 	React.useEffect(() => {
 		dispatch(setLastVisitedPath(location.pathname));
 	}, [location.pathname, dispatch]);
+
+	// Reset paused state when location changes
+	React.useEffect(() => {
+		setIsPaused(false);
+	}, [location.pathname]);
+
+	const handleTogglePause = React.useCallback(() => {
+		setIsPaused((prev) => !prev);
+	}, []);
 
 	const resourceGroupName = params.name;
 	const resourceName = params.resource;
@@ -83,6 +95,10 @@ const ExplorerPage = () => {
 	const isResource = Boolean(resourceName) && !isMonitorType;
 	const isResourceGroup = Boolean(resourceGroupName) && !isResource && !isMonitorType;
 	const isWelcome = !isResourceGroup && !isResource && !isMonitorType;
+
+	const actionButton = React.useMemo(() => {
+		return null;
+	}, []);
 
 	// Compute selected node ID based on URL params
 	const selectedNodeId = React.useMemo(
@@ -137,7 +153,7 @@ const ExplorerPage = () => {
 				</Box>
 			</Left>
 			<Right>
-				<AppBreadcrumbs />
+				<AppBreadcrumbs action={actionButton} />
 				{isWelcome && (
 					<WelcomeView
 						renderResourceGroups={(props) => (
@@ -155,7 +171,14 @@ const ExplorerPage = () => {
 						onResourceClick={handleResourceClick}
 					/>
 				)}
-				{isResource && <ResourceView resourceName={resourceName} resourceGroupName={groupParam} />}
+				{isResource && (
+					<ResourceView
+						resourceName={resourceName}
+						resourceGroupName={groupParam}
+						isPaused={isPaused}
+						onTogglePause={handleTogglePause}
+					/>
+				)}
 				{isMonitorType && (
 					<MonitorTypeView
 						resourceName={resourceName}
