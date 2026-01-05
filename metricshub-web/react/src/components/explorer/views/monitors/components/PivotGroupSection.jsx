@@ -227,6 +227,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							display: "flex",
 							alignItems: "center",
 							columnGap: 1,
+							transition: "color 0.4s ease",
 						}}
 					>
 						{displayBaseName}

@@ -121,6 +121,7 @@ const MonitorAccordion = React.memo(
 						cursor: "pointer",
 						bgcolor: "background.default",
 						pl: 4, // Indent nested monitors
+						transition: "background-color 0.4s ease, color 0.4s ease",
 						"&:hover": {
 							bgcolor: "action.hover",
 						},
@@ -305,6 +306,7 @@ const ConnectorAccordion = ({
 				sx={{
 					minHeight: 48,
 					cursor: "pointer",
+					transition: "background-color 0.4s ease, color 0.4s ease",
 					bgcolor:
 						statusValue && statusValue !== "ok"
 							? isDarkMode
@@ -327,6 +329,7 @@ const ConnectorAccordion = ({
 					},
 					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 					"& .MuiAccordionSummary-expandIconWrapper": {
+						transition: "color 0.4s ease",
 						color:
 							statusValue && statusValue !== "ok"
 								? isDarkMode
@@ -341,6 +344,7 @@ const ConnectorAccordion = ({
 						<SettingsInputHdmiIcon
 							sx={{
 								mr: 1,
+								transition: "color 0.4s ease",
 								color:
 									statusValue === "ok"
 										? "success.main"
@@ -360,6 +364,7 @@ const ConnectorAccordion = ({
 								sx={{
 									fontWeight: 600,
 									flexShrink: 0,
+									transition: "color 0.4s ease",
 								}}
 							>
 								{prettifyKey(connector.name)}
@@ -377,7 +382,11 @@ const ConnectorAccordion = ({
 							{/* Connector Attributes Table */}
 							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
 								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+									<Typography
+										variant="subtitle2"
+										gutterBottom
+										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+									>
 										Attributes
 									</Typography>
 									<DataGrid
@@ -402,7 +411,11 @@ const ConnectorAccordion = ({
 							{/* Connector Metrics Table */}
 							{showMetricsTable && (
 								<Box>
-									<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+									<Typography
+										variant="subtitle2"
+										gutterBottom
+										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+									>
 										Metrics
 									</Typography>
 									<DataGrid

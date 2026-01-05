@@ -82,7 +82,7 @@ const MonitorTypeIcon = ({ type, fontSize = "small", fallback = null }) => {
 		return fallback;
 	}
 
-	return <IconEl fontSize={fontSize} sx={{ color: "inherit" }} />;
+	return <IconEl fontSize={fontSize} sx={{ color: "inherit", transition: "color 0.4s ease" }} />;
 };
 
 export default React.memo(MonitorTypeIcon);

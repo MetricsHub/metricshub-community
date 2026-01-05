@@ -105,7 +105,15 @@ const AppBreadcrumbs = ({ sx, action }) => {
 				...sx,
 			}}
 		>
-			<Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
+			<Breadcrumbs
+				separator={<NavigateNextIcon fontSize="small" />}
+				aria-label="breadcrumb"
+				sx={{
+					"& .MuiBreadcrumbs-separator": {
+						transition: "color 0.4s ease",
+					},
+				}}
+			>
 				{crumbs.map((crumb, index) => {
 					const isLast = index === crumbs.length - 1;
 					const icon = crumb.monitorType ? (
@@ -130,14 +138,19 @@ const AppBreadcrumbs = ({ sx, action }) => {
 									{icon}
 								</Box>
 							)}
-							<Box component="span" sx={{ mt: "1px" }}>
+							<Box component="span" sx={{ mt: "1px", transition: "color 0.4s ease" }}>
 								{crumb.label}
 							</Box>
 						</Box>
 					);
 
 					return isLast ? (
-						<Typography key={crumb.label} color="text.primary" variant="body2">
+						<Typography
+							key={crumb.label}
+							color="text.primary"
+							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
+						>
 							{content}
 						</Typography>
 					) : (
@@ -148,6 +161,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 							component={RouterLink}
 							to={crumb.to}
 							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
 						>
 							{content}
 						</Link>

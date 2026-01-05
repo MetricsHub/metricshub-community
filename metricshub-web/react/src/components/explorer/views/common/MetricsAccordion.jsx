@@ -59,6 +59,7 @@ const MetricsAccordion = ({ metrics }) => {
 					minHeight: 48,
 					cursor: "pointer",
 					bgcolor: "action.hover",
+					transition: "background-color 0.4s ease, color 0.4s ease",
 					"&:hover": {
 						bgcolor: "action.selected",
 					},
@@ -72,6 +73,7 @@ const MetricsAccordion = ({ metrics }) => {
 							sx={{
 								fontWeight: 600,
 								flexShrink: 0,
+								transition: "color 0.4s ease",
 							}}
 						>
 							Metrics

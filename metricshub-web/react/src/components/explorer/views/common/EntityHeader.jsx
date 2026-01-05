@@ -31,7 +31,11 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 		<Box display="flex" flexDirection="column" gap={3}>
 			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-					<Typography variant="h4" gutterBottom sx={titleSx}>
+					<Typography
+						variant="h4"
+						gutterBottom
+						sx={{ ...titleSx, transition: "color 0.4s ease" }}
+					>
 						{icon ? (
 							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
 								{icon}
@@ -48,7 +52,10 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 
 			{hasAttributes && (
 				<Box>
-					<Typography variant="h6" sx={attributesTitleSx}>
+					<Typography
+						variant="h6"
+						sx={{ ...attributesTitleSx, transition: "color 0.4s ease" }}
+					>
 						Attributes
 					</Typography>
 					<DataGrid
