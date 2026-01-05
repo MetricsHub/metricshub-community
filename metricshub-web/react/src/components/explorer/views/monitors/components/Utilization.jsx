@@ -75,26 +75,26 @@ export const colorLabelFromKey = (key) => {
 };
 
 /**
- * Returns a color function for a given metric label.
+ * Returns a color for a given metric label.
  * @param {string} name
- * @returns {string}
+ * @returns {string|((theme: any) => string)}
  */
 export const colorFor = (name) => {
 	const n = name.toLowerCase();
-	if (n.includes("used")) return "primary.main";
-	if (n.includes("free")) return "action.disabled";
-	if (n.includes("cache")) return "warning.main";
-	if (n.includes("buffer")) return "warning.light";
-	if (n.includes("idle")) return "action.disabled";
-	if (n.includes("system")) return "error.main";
-	if (n.includes("user")) return "info.main";
-	if (n.includes("nice")) return "success.main";
-	if (n.includes("wait")) return "warning.dark"; // io_wait, iowait
-	if (n.includes("steal")) return "text.primary";
-	if (n.includes("irq")) return "secondary.main"; // irq, softirq
-	if (n.includes("receive")) return "success.main";
-	if (n.includes("transmit")) return "secondary.main";
-	if (n === "none") return "action.hover";
+	if (n.includes("used")) return (t) => t.palette.primary.main;
+	if (n.includes("free")) return (t) => t.palette.action.disabled;
+	if (n.includes("cache")) return (t) => t.palette.warning.main;
+	if (n.includes("buffer")) return (t) => t.palette.warning.light;
+	if (n.includes("idle")) return (t) => t.palette.action.disabled;
+	if (n.includes("system")) return (t) => t.palette.error.main;
+	if (n.includes("user")) return (t) => t.palette.info.main;
+	if (n.includes("nice")) return (t) => t.palette.success.main;
+	if (n.includes("wait")) return (t) => t.palette.warning.dark; // io_wait, iowait
+	if (n.includes("steal")) return (t) => t.palette.text.primary;
+	if (n.includes("irq")) return (t) => t.palette.secondary.main; // irq, softirq
+	if (n.includes("receive")) return (t) => t.palette.success.main;
+	if (n.includes("transmit")) return (t) => t.palette.secondary.main;
+	if (n === "none") return (t) => t.palette.action.hover;
 
 	// Fallback: generate a consistent color based on the string hash
 	let hash = 0;
@@ -102,7 +102,7 @@ export const colorFor = (name) => {
 		hash = n.charCodeAt(i) + ((hash << 5) - hash);
 	}
 	const hue = Math.abs(hash) % 360;
-	return `hsl(${hue}, 70%, 50%)`;
+	return () => `hsl(${hue}, 70%, 50%)`;
 };
 
 /**
