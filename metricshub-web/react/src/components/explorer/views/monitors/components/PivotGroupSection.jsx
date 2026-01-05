@@ -212,7 +212,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 					px: 0.75,
 					py: 0.5,
 					bgcolor: "transparent",
-					transition: "background-color 0.3s ease",
+					transition: "background-color 0.4s ease",
 					"&:hover": {
 						bgcolor: "action.hover",
 					},
@@ -252,7 +252,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 											height: 10,
 											borderRadius: 0.5,
 											bgcolor: colorFor(label),
-											transition: "background-color 0.3s ease",
+											transition: "background-color 0.4s ease",
 										}}
 									/>
 									<Box component="span">{label}</Box>

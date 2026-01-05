@@ -35,6 +35,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 				alignItems: "center",
 				justifyContent:
 					align === "right" ? "flex-end" : align === "center" ? "center" : "flex-start",
+				transition: "color 0.4s ease",
 			}}
 		>
 			{showRaw ? (

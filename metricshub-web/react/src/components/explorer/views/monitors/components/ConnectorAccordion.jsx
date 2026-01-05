@@ -99,9 +99,7 @@ const ConnectorAccordion = ({
 	const theme = useTheme();
 	const isDarkMode = theme.palette.mode === "dark";
 
-	const transition = theme.transitions.create(["background-color", "border-color", "color"], {
-		duration: theme.transitions.duration.standard,
-	});
+	const transition = "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease";
 
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
