@@ -7,17 +7,16 @@ import {
 	selectExplorerError,
 } from "../../../../store/slices/explorer-slice";
 import EntityHeader from "../common/EntityHeader";
-import MetricsTable from "../common/MetricsTable";
+import MetricsAccordion from "../common/MetricsAccordion";
 import ResourcesTable from "../common/ResourcesTable";
 
 /**
  * Resource group focused page. Mirrors the welcome page behaviour but
  * focuses on a single resource group.
  *
- * @param {{
- *   resourceGroupName?: string,
- *   onResourceClick?: (resource: unknown) => void,
- * }} props
+ * @param {object} props - Component props
+ * @param {string} [props.resourceGroupName] - The name of the resource group
+ * @param {(resource: unknown) => void} [props.onResourceClick] - Callback for resource click
  * @returns {JSX.Element | null}
  */
 const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
@@ -58,11 +57,6 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 		return false;
 	}, [metrics]);
 
-	const hasAttributes = React.useMemo(
-		() => !!(group?.attributes && Object.keys(group.attributes).length > 0),
-		[group?.attributes],
-	);
-
 	if (loading && !hierarchy) {
 		return (
 			<Box display="flex" justifyContent="center" alignItems="center" height="100%">
@@ -102,13 +96,8 @@ const ResourceGroupView = ({ resourceGroupName, onResourceClick }) => {
 				iconType="resource-group"
 				attributes={group.attributes}
 			/>
-			{(hasAttributes || hasMetrics) && <Divider />}
-			{hasMetrics && (
-				<>
-					<MetricsTable metrics={metrics} showUnit={false} showLastUpdate={false} />
-					<Divider />
-				</>
-			)}
+			{hasMetrics && <MetricsAccordion metrics={metrics} />}
+			<Divider />
 			<ResourcesTable resources={resources} onResourceClick={onResourceClick} />
 		</Box>
 	);

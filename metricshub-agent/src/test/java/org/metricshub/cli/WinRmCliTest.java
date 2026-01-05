@@ -32,6 +32,7 @@ public class WinRmCliTest {
 		winRmCli.setQuery(WINRM_TEST_QUERY);
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WINRM_TEST_QUERY));
+		queryNode.set("queryType", new TextNode("wmi"));
 		assertEquals(queryNode, winRmCli.getQuery());
 	}
 

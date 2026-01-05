@@ -16,7 +16,9 @@ import ResourcesTable from "../common/ResourcesTable";
  * Optionally accepts a render prop to customize the ResourceGroups section,
  * so that parent components can inject navigation behaviour.
  *
- * @param {{ renderResourceGroups?:(props:{ resourceGroups:any[] }) => JSX.Element, onRogueResourceClick?: (resource: any) => void }} props
+ * @param {object} props - Component props
+ * @param {(props: { resourceGroups: any[] }) => JSX.Element} [props.renderResourceGroups] - Optional render prop for resource groups
+ * @param {(resource: any) => void} [props.onRogueResourceClick] - Callback for rogue resource click
  * @returns {JSX.Element}
  */
 const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
