@@ -274,27 +274,30 @@ export const buildComponents = () => {
 		MuiDataGrid: {
 			styleOverrides: {
 				root: {
-					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 					"& *": {
-						transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+						transition: "all 0.4s ease",
+					},
+					"& .MuiDataGrid-withBorderColor": {
+						transition: "all 0.4s ease",
 					},
 				},
 				columnHeaders: ({ theme }) => ({
 					backgroundColor:
 						theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],
-					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 				}),
 				columnHeader: {
-					transition: "background-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 				},
 				cell: {
-					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 				},
 				row: {
-					transition: "background-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 				},
 				footerContainer: {
-					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+					transition: "all 0.4s ease",
 				},
 			},
 		},
