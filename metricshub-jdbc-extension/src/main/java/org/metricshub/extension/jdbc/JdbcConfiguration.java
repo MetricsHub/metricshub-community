@@ -161,7 +161,7 @@ public class JdbcConfiguration implements IConfiguration {
 	static Integer getDefaultPort(String databaseType) {
 		return switch (databaseType.toLowerCase()) {
 			case "postgresql" -> DEFAULT_POSTGRESQL_PORT;
-			case "mysql" -> DEFAULT_MYSQL_PORT;
+			case "mysql", "mariadb" -> DEFAULT_MYSQL_PORT;
 			case "oracle" -> DEFAULT_ORACLE_PORT;
 			case "mssql" -> DEFAULT_MSSQL_PORT;
 			case "informix" -> DEFAULT_INFORMIX_PORT;
@@ -178,6 +178,9 @@ public class JdbcConfiguration implements IConfiguration {
 		return switch (type.toLowerCase()) {
 			case "mysql" -> String
 				.format("jdbc:mysql://%s:%d/%s", hostname, port, database != null ? database : "")
+				.toCharArray();
+			case "mariadb" -> String
+				.format("jdbc:mariadb://%s:%d/%s", hostname, port, database != null ? database : "")
 				.toCharArray();
 			case "postgresql" -> String
 				.format("jdbc:postgresql://%s:%d/%s", hostname, port, database != null ? database : "postgres")
