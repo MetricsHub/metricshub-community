@@ -1,11 +1,5 @@
 import * as React from "react";
-import {
-	Box,
-	Typography,
-	Accordion,
-	AccordionSummary,
-	AccordionDetails,
-} from "@mui/material";
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MetricsTable from "./MetricsTable";
 import CountBadge from "./CountBadge";

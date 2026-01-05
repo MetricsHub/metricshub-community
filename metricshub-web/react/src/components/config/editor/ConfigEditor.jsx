@@ -23,9 +23,7 @@ export default function ConfigEditor({
 	return (
 		<Box sx={{ height }}>
 			<React.Suspense
-				fallback={
-					<Box sx={{ p: 2, transition: "color 0.4s ease" }}>Loading editor…</Box>
-				}
+				fallback={<Box sx={{ p: 2, transition: "color 0.4s ease" }}>Loading editor…</Box>}
 			>
 				<YamlEditor
 					value={value}

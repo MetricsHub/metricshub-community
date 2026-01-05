@@ -10,7 +10,7 @@ export const buildComponents = () => {
 		MuiTypography: {
 			styleOverrides: {
 				root: {
-					// Removed global transition for performance. 
+					// Removed global transition for performance.
 					// Specific components handle their own transitions.
 				},
 			},
@@ -71,7 +71,8 @@ export const buildComponents = () => {
 					textTransform: "none",
 					fontWeight: 500,
 					padding: ".5em .85em",
-					transition: "background-color 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease, color 0.4s ease",
+					transition:
+						"background-color 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease, color 0.4s ease",
 				},
 				contained: ({ theme }) => ({
 					"&.Mui-disabled": {
@@ -224,7 +225,8 @@ export const buildComponents = () => {
 			styleOverrides: {
 				root: {
 					backgroundImage: "none",
-					transition: "background-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease",
+					transition:
+						"background-color 0.4s ease, color 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease",
 				},
 			},
 		},

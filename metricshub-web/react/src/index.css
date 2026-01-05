@@ -1,35 +1,43 @@
 @font-face {
-    font-family: "Poppins";
-    src: url("./assets/fonts/Poppins-ExtraBold.woff2") format("woff2"),
-        url("./assets/fonts/Poppins-ExtraBold.woff") format("woff"),
-        url("./assets/fonts/Poppins-ExtraBold.ttf") format("truetype"), local("Helvetica");
-    font-weight: 800;
-    font-style: normal;
-    font-display: swap;
+	font-family: "Poppins";
+	src:
+		url("./assets/fonts/Poppins-ExtraBold.woff2") format("woff2"),
+		url("./assets/fonts/Poppins-ExtraBold.woff") format("woff"),
+		url("./assets/fonts/Poppins-ExtraBold.ttf") format("truetype"),
+		local("Helvetica");
+	font-weight: 800;
+	font-style: normal;
+	font-display: swap;
 }
 
 @font-face {
-    font-family: "Poppins";
-    src: url("./assets/fonts/Poppins-Bold.woff2") format("woff2"),
-        url("./assets/fonts/Poppins-Bold.woff") format("woff"),
-        url("./assets/fonts/Poppins-Bold.ttf") format("truetype"), local("Helvetica");
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
+	font-family: "Poppins";
+	src:
+		url("./assets/fonts/Poppins-Bold.woff2") format("woff2"),
+		url("./assets/fonts/Poppins-Bold.woff") format("woff"),
+		url("./assets/fonts/Poppins-Bold.ttf") format("truetype"),
+		local("Helvetica");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
 }
 
 @font-face {
-    font-family: "Poppins";
-    src: url("./assets/fonts/Poppins-Regular.woff2") format("woff2"),
-        url("./assets/fonts/Poppins-Regular.woff") format("woff"),
-        url("./assets/fonts/Poppins-Regular.ttf") format("truetype"), local("Helvetica");
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
+	font-family: "Poppins";
+	src:
+		url("./assets/fonts/Poppins-Regular.woff2") format("woff2"),
+		url("./assets/fonts/Poppins-Regular.woff") format("woff"),
+		url("./assets/fonts/Poppins-Regular.ttf") format("truetype"),
+		local("Helvetica");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
 }
 
 body {
-    transition: background-color 0.4s ease, color 0.4s ease;
+	transition:
+		background-color 0.4s ease,
+		color 0.4s ease;
 }
 
 /* DataGrid Transitions - Moved to CSS for performance */
@@ -43,16 +51,22 @@ body {
 .MuiDataGrid-row,
 .MuiDataGrid-virtualScroller,
 .MuiDataGrid-columnSeparator {
-    transition: background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease, opacity 0.4s ease !important;
+	transition:
+		background-color 0.4s ease,
+		border-color 0.4s ease,
+		color 0.4s ease,
+		opacity 0.4s ease !important;
 }
 
 /* Utilization Bar Transitions */
 .utilization-stack,
 .utilization-bar {
-    transition: background-color 0.4s ease, border-color 0.4s ease !important;
+	transition:
+		background-color 0.4s ease,
+		border-color 0.4s ease !important;
 }
 
 /* Ensure the header separator syncs with the rest */
 .MuiDataGrid-columnSeparator svg {
-    transition: fill 0.4s ease !important;
+	transition: fill 0.4s ease !important;
 }
