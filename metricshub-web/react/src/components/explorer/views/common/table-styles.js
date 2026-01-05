@@ -17,9 +17,11 @@ export const dataGridSx = {
 	borderColor: "divider",
 	borderRadius: 1,
 	backgroundColor: "transparent",
+	transition: "background-color 0.3s ease, border-color 0.3s ease",
 	"& .MuiDataGrid-columnHeaders": {
 		backgroundColor: (theme) =>
 			theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],
+		transition: "background-color 0.3s ease",
 		color: "text.secondary",
 		fontSize: "0.75rem",
 		textTransform: "none",
@@ -32,6 +34,7 @@ export const dataGridSx = {
 		},
 	},
 	"& .MuiDataGrid-row": {
+		transition: "background-color 0.3s ease",
 		"&:hover": {
 			backgroundColor: "action.hover",
 		},
@@ -39,14 +42,17 @@ export const dataGridSx = {
 	"& .MuiDataGrid-cell": {
 		borderBottom: 1,
 		borderColor: "divider",
+		transition: "border-color 0.3s ease",
 		display: "flex",
 		alignItems: "center",
 	},
 	"& .MuiDataGrid-footerContainer": {
 		borderTop: 1,
 		borderColor: "divider",
+		transition: "border-color 0.3s ease",
 	},
 	"& .MuiDataGrid-virtualScroller": {
 		backgroundColor: "transparent",
+		transition: "background-color 0.3s ease",
 	},
 };

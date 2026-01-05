@@ -1,13 +1,4 @@
 import { inputLabelClasses } from "@mui/material";
-import PoppinsExtraBoldwoff2 from "../../assets/fonts/Poppins-ExtraBold.woff2";
-import PoppinsExtraBoldwoff from "../../assets/fonts/Poppins-ExtraBold.woff";
-import PoppinsExtraBoldttf from "../../assets/fonts/Poppins-ExtraBold.ttf";
-import PoppinsBoldwoff2 from "../../assets/fonts/Poppins-Bold.woff2";
-import PoppinsBoldwoff from "../../assets/fonts/Poppins-Bold.woff";
-import PoppinsBoldttf from "../../assets/fonts/Poppins-Bold.ttf";
-import PoppinsRegularwoff2 from "../../assets/fonts/Poppins-Regular.woff2";
-import PoppinsRegularwoff from "../../assets/fonts/Poppins-Regular.woff";
-import PoppinsRegularttf from "../../assets/fonts/Poppins-Regular.ttf";
 
 /**
  * Build component style overrides and default props.
@@ -18,36 +9,16 @@ export const buildComponents = () => {
 	return {
 		MuiCssBaseline: {
 			styleOverrides: `
-				@font-face {
-					font-family: 'Poppins';
-					src: url(${PoppinsExtraBoldwoff2}) format('woff2'),
-						url(${PoppinsExtraBoldwoff}) format('woff'),
-						url(${PoppinsExtraBoldttf}) format('truetype'),
-						local('Helvetica');
-					font-weight: 800;
-					font-style: normal;
-					font-display: swap;
-				}	
-				@font-face {
-					font-family: 'Poppins';
-					src: url(${PoppinsBoldwoff2}) format('woff2'),
-						url(${PoppinsBoldwoff}) format('woff'),
-						url(${PoppinsBoldttf}) format('truetype'),
-						local('Helvetica');
-					font-weight: 700;
-					font-style: normal;
-					font-display: swap;
-				}
-				@font-face {
-					font-family: 'Poppins';
-					src: url(${PoppinsRegularwoff2}) format('woff2'),
-						url(${PoppinsRegularwoff}) format('woff'),
-						url(${PoppinsRegularttf}) format('truetype'),
-						local('Helvetica');
-					font-weight: 400;
-					font-style: normal;
-					font-display: swap;
+				body {
+					transition: background-color 0.3s ease, color 0.3s ease;
 				}`,
+		},
+		MuiTypography: {
+			styleOverrides: {
+				root: {
+					transition: "color 0.3s ease, font-size 0.3s ease",
+				},
+			},
 		},
 		MuiTextField: {
 			defaultProps: {

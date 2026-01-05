@@ -188,6 +188,7 @@ const UtilizationStackComponent = ({ parts }) => {
 				width: "100%",
 				flexGrow: 1,
 				alignSelf: "center",
+				transition: "background-color 0.3s ease",
 			}}
 		>
 			{filteredParts.map((p) => {
@@ -205,6 +206,7 @@ const UtilizationStackComponent = ({ parts }) => {
 							display: "flex",
 							alignItems: "center",
 							justifyContent: "center",
+							transition: "background-color 0.3s ease",
 						}}
 					>
 						{showText && (

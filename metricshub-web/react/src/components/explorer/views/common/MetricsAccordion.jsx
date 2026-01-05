@@ -1,5 +1,12 @@
 import * as React from "react";
-import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import {
+	Box,
+	Typography,
+	Accordion,
+	AccordionSummary,
+	AccordionDetails,
+	useTheme,
+} from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MetricsTable from "./MetricsTable";
 import CountBadge from "./CountBadge";
@@ -12,6 +19,11 @@ import CountBadge from "./CountBadge";
  * @returns {JSX.Element | null}
  */
 const MetricsAccordion = ({ metrics }) => {
+	const theme = useTheme();
+	const transition = theme.transitions.create(["background-color", "border-color", "color"], {
+		duration: theme.transitions.duration.standard,
+	});
+
 	const [expanded, setExpanded] = React.useState(false);
 
 	const metricsList = React.useMemo(() => {
@@ -41,6 +53,7 @@ const MetricsAccordion = ({ metrics }) => {
 				bgcolor: "transparent",
 				borderTop: "1px solid",
 				borderColor: "divider",
+				transition,
 				"&:before": {
 					display: "none",
 				},
@@ -52,6 +65,7 @@ const MetricsAccordion = ({ metrics }) => {
 					minHeight: 48,
 					cursor: "pointer",
 					bgcolor: "action.hover",
+					transition,
 					"&:hover": {
 						bgcolor: "action.selected",
 					},

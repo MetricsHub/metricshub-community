@@ -65,6 +65,7 @@ const NavBar = ({ onToggleTheme }) => {
 		minWidth: 90,
 		color: "text.primary",
 		borderBottom: "2px solid transparent",
+		transition: "all 0.3s ease",
 		"&:hover": { bgcolor: "action.hover", color: "text.primary" },
 		"&.active": (t) => ({
 			bgcolor: t.palette.action.selected,
@@ -85,6 +86,7 @@ const NavBar = ({ onToggleTheme }) => {
 					borderBottom: 1,
 					borderColor: t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
+					transition: "background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease",
 				})}
 			>
 				<Toolbar sx={{ gap: 1.5 }}>
