@@ -118,17 +118,40 @@ export default function YamlEditor({
 
 	return (
 		<Box
-			sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}
+			sx={{
+				height,
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				position: "relative",
+				transition: "background-color 0.4s ease",
+			}}
 		>
 			<Box
 				sx={{
 					flex: 1,
 					minHeight: 0,
 					borderTop: 0,
-					".cm-editor": { height: "100%" },
+					".cm-editor": {
+						height: "100%",
+						transition: "background-color 0.4s ease, color 0.4s ease",
+					},
+					".cm-gutters": {
+						transition: "background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease",
+					},
+					".cm-content": {
+						transition: "background-color 0.4s ease, color 0.4s ease",
+					},
+					".cm-activeLine": {
+						transition: "background-color 0.4s ease",
+					},
+					".cm-activeLineGutter": {
+						transition: "background-color 0.4s ease",
+					},
 					// Allow scroll chaining so the parent container can scroll when the editor
 					// can't (fixes mouse wheel not scrolling when editor is focused)
 					".cm-scroller": { overflow: "auto", overscrollBehavior: "auto" },
+					transition: "background-color 0.4s ease",
 				}}
 			>
 				<CodeMirror
