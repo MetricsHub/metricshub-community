@@ -7,14 +7,6 @@ import { inputLabelClasses } from "@mui/material";
  */
 export const buildComponents = () => {
 	return {
-		MuiTypography: {
-			styleOverrides: {
-				root: {
-					// Removed global transition for performance.
-					// Specific components handle their own transitions.
-				},
-			},
-		},
 		MuiLink: {
 			styleOverrides: {
 				root: {
@@ -270,9 +262,6 @@ export const buildComponents = () => {
 		},
 		MuiDataGrid: {
 			styleOverrides: {
-				root: {
-					// Transitions moved to index.css for performance
-				},
 				columnHeaders: ({ theme }) => ({
 					backgroundColor:
 						theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],

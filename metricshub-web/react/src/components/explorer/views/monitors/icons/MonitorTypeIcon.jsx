@@ -12,6 +12,7 @@ import SettingsInputComponentIcon from "@mui/icons-material/SettingsInputCompone
 import PieChartIcon from "@mui/icons-material/PieChart";
 import DeviceThermostatIcon from "@mui/icons-material/DeviceThermostat";
 import BoltIcon from "@mui/icons-material/Bolt";
+import LayersIcon from "@mui/icons-material/Layers";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 
 const ICONS = {
@@ -31,6 +32,8 @@ const ICONS = {
 	"Disk Controller": SettingsInputComponentIcon,
 	"Logical Disk": PieChartIcon,
 	Enclosure: StorageIcon,
+	Pool: LayersIcon,
+	Blade: StorageIcon,
 };
 
 /**
