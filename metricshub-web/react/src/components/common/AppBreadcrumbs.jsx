@@ -136,7 +136,12 @@ const AppBreadcrumbs = ({ sx, action }) => {
 					);
 
 					return isLast ? (
-						<Typography key={crumb.label} color="text.primary" variant="body2">
+						<Typography
+							key={crumb.label}
+							color="text.primary"
+							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
+						>
 							{content}
 						</Typography>
 					) : (
@@ -147,6 +152,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 							component={RouterLink}
 							to={crumb.to}
 							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
 						>
 							{content}
 						</Link>

@@ -80,9 +80,11 @@ const MetricsAccordion = ({ metrics }) => {
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
-				<Box sx={{ p: 2 }}>
-					<MetricsTable metrics={metrics} />
-				</Box>
+				{expanded && (
+					<Box sx={{ p: 2 }}>
+						<MetricsTable metrics={metrics} />
+					</Box>
+				)}
 			</AccordionDetails>
 		</Accordion>
 	);
