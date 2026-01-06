@@ -187,14 +187,14 @@ jobs:
         ls -l packaging-assets/
 
     - name: Upload Community Package Artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: package-artifacts
         include-hidden-files: true
         path: packaging-assets/
 
     - name: Upload Site Artifact
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: metricshub-site-${{ inputs.releaseVersion }}
         path: |

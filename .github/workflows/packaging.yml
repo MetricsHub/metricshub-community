@@ -270,7 +270,7 @@ jobs:
         REPO_NAME: ${{ inputs.rpmRepository }}
 
     - name: Upload Linux Packages
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: linux-packages
         path: packages/*
@@ -408,7 +408,7 @@ jobs:
         }
 
     - name: Upload Windows Packages
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: windows-packages
         path: packages/metricshub-community-*
