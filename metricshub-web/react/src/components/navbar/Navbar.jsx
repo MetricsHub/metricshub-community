@@ -27,7 +27,6 @@ const STATUS_REFRESH_MS = 30000;
 const NavBar = ({ onToggleTheme }) => {
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
-	const metricshubLogo = theme.palette.mode === "dark" ? logoDark : logoLight;
 
 	const handleSignOut = useCallback(async () => {
 		await signOut();
@@ -66,6 +65,7 @@ const NavBar = ({ onToggleTheme }) => {
 		minWidth: 90,
 		color: "text.primary",
 		borderBottom: "2px solid transparent",
+		transition: "background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease",
 		"&:hover": { bgcolor: "action.hover", color: "text.primary" },
 		"&.active": (t) => ({
 			bgcolor: t.palette.action.selected,
@@ -86,11 +86,12 @@ const NavBar = ({ onToggleTheme }) => {
 					borderBottom: 1,
 					borderColor: t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
+					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
 				})}
 			>
-				<Toolbar sx={{ gap: 1.5 }}>
+				<Toolbar sx={{ gap: 1.5, minHeight: 64, height: 64 }}>
 					{/* ================= LEFT SIDE ================= */}
-					<Box sx={{ display: "flex", gap: 2.5, height: "100%" }}>
+					<Box sx={{ display: "flex", gap: 2.5, height: "100%", alignItems: "stretch" }}>
 						{/* Logo + Status */}
 						<Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
 							<Box
@@ -99,9 +100,37 @@ const NavBar = ({ onToggleTheme }) => {
 								target="_blank"
 								rel="noopener noreferrer"
 								aria-label="Open MetricsHub website in a new tab"
-								sx={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+								sx={{
+									display: "inline-flex",
+									alignItems: "center",
+									textDecoration: "none",
+									position: "relative",
+									width: 80,
+									height: 24,
+								}}
 							>
-								<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
+								<img
+									src={logoDark}
+									alt="MetricsHub"
+									style={{
+										width: 80,
+										height: "auto",
+										position: "absolute",
+										opacity: theme.palette.mode === "dark" ? 1 : 0,
+										transition: "opacity 0.4s ease",
+									}}
+								/>
+								<img
+									src={logoLight}
+									alt="MetricsHub"
+									style={{
+										width: 80,
+										height: "auto",
+										position: "absolute",
+										opacity: theme.palette.mode === "light" ? 1 : 0,
+										transition: "opacity 0.4s ease",
+									}}
+								/>
 							</Box>
 							<StatusText sx={{ ml: 0.5 }} />
 							<OtelStatusIcon />

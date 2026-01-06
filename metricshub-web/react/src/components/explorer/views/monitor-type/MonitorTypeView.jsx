@@ -16,6 +16,7 @@ import {
 	FormGroup,
 	FormControlLabel,
 	Checkbox,
+	Pagination,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { DataGrid } from "@mui/x-data-grid";
@@ -78,6 +79,38 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const { sortedInstances, sortedMetricsInstances } = useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
+
+	const [page, setPage] = React.useState(1);
+	const pageSize = 5;
+
+	React.useEffect(() => {
+		setPage(1);
+	}, [searchTerm]);
+
+	const paginatedInstances = React.useMemo(() => {
+		const startIndex = (page - 1) * pageSize;
+		return filteredInstances.slice(startIndex, startIndex + pageSize);
+	}, [filteredInstances, page, pageSize]);
+
+	const handlePageChange = React.useCallback((event, value) => {
+		setPage(value);
+	}, []);
+
+	const highlightedId = useScrollToHash();
+	const lastHighlightedIdRef = React.useRef(null);
+
+	React.useEffect(() => {
+		if (highlightedId && highlightedId !== lastHighlightedIdRef.current) {
+			const index = filteredInstances.findIndex((ins) => ins.name === highlightedId);
+			if (index !== -1) {
+				const targetPage = Math.floor(index / pageSize) + 1;
+				setPage(targetPage);
+				lastHighlightedIdRef.current = highlightedId;
+			}
+		} else if (!highlightedId) {
+			lastHighlightedIdRef.current = null;
+		}
+	}, [highlightedId, filteredInstances, pageSize]);
 
 	const {
 		selectedMetrics,
@@ -145,8 +178,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		}));
 	}, [sortedMetricsInstances]);
 
-	const highlightedId = useScrollToHash();
-
 	if (loading && !currentResource) {
 		return (
 			<Box sx={{ display: "flex", justifyContent: "center", p: 4 }}>
@@ -198,7 +229,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						/>
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-						{filteredInstances.map((instance, index) => {
+						{paginatedInstances.map((instance, index) => {
 							const isHighlighted = highlightedId === instance.name;
 							return (
 								<Box key={index} id={instance.name}>
@@ -212,12 +243,22 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 							);
 						})}
 						{filteredInstances.length === 0 && <Typography>No instances found.</Typography>}
+						{filteredInstances.length > pageSize && (
+							<Box sx={{ display: "flex", justifyContent: "center", mt: 2, mb: 2 }}>
+								<Pagination
+									count={Math.ceil(filteredInstances.length / pageSize)}
+									page={page}
+									onChange={handlePageChange}
+									color="primary"
+								/>
+							</Box>
+						)}
 					</Box>
 				</Box>
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+				<Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
@@ -270,13 +311,18 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						</DialogActions>
 					</Dialog>
 
-					<Box sx={{ width: "100%", overflow: "hidden" }}>
+					<Box sx={{ width: "100%" }}>
 						<DataGrid
 							rows={rows}
 							columns={columns}
 							disableRowSelectionOnClick
-							hideFooter
 							autoHeight
+							pageSizeOptions={[5, 10, 20, 50, 100]}
+							initialState={{
+								pagination: {
+									paginationModel: { pageSize: 10, page: 0 },
+								},
+							}}
 							sx={dataGridSx}
 						/>
 					</Box>

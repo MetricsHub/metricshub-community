@@ -1,7 +1,7 @@
 import * as React from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import { dataGridSx } from "./table-styles";
-import TruncatedText from "./TruncatedText";
+import MetricNameHighlighter from "./MetricNameHighlighter.jsx";
 import MetricValueCell from "./MetricValueCell";
 
 /**
@@ -52,7 +52,7 @@ const MetricsTable = ({ metrics }) => {
 					field: "name",
 					headerName: "Name",
 					flex: 1,
-					renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+					renderCell: (params) => <MetricNameHighlighter name={params.value} />,
 				},
 				{
 					field: "value",
