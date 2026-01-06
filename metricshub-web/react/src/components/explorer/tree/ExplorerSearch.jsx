@@ -89,6 +89,7 @@ const ExplorerSearch = () => {
 			onOpen={() => setOpen(true)}
 			onClose={() => setOpen(false)}
 			value={value}
+			filterOptions={(x) => x}
 			isOptionEqualToValue={(option, value) =>
 				option.name === value.name && option.type === value.type
 			}
