@@ -203,7 +203,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	}
 
 	return (
-		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
+		<Box sx={{ p: 3, display: "flex", flexDirection: "column" }}>
 			<EntityHeader
 				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
 				icon={<MonitorTypeIcon type={decodedMonitorType} fontSize="large" />}
@@ -217,7 +217,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			</Box>
 
 			{tabValue === TAB_INSTANCES && (
-				<Box sx={{ flex: 1, overflow: "auto" }}>
+				<Box>
 					<Box sx={{ mb: 2 }}>
 						<TextField
 							fullWidth
@@ -258,7 +258,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "auto" }}>
+				<Box sx={{ display: "flex", flexDirection: "column" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
