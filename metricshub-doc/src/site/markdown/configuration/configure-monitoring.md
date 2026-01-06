@@ -212,7 +212,7 @@ Whatever the syntax adopted, replace:
   * `oob` for Out-of-band management cards
   * [`storage`](../connectors/tags/storage.html) for storage systems
   * [`aix`](../connectors/tags/aix.html) for IBM AIX systems
-  * [`hpux`](../connectors/tags/hpux.html) for HP UX systems
+  * [`hpux`](../connectors/tags/hp-ux.html) for HP UX systems
   * [`solaris`](../connectors/tags/solaris.html) for Oracle Solaris systems
   * [`tru64`](../connectors/tags/hpe.html) for HP Tru64 systems
   * [`vms`](../connectors/tags/hpe.html) for HP Open VMS systems.
