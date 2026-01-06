@@ -112,6 +112,9 @@ const AppBreadcrumbs = ({ sx, action }) => {
 					"& .MuiBreadcrumbs-separator": {
 						transition: "color 0.4s ease",
 					},
+					"& .MuiBreadcrumbs-li": {
+						transition: "color 0.4s ease",
+					},
 				}}
 			>
 				{crumbs.map((crumb, index) => {
@@ -157,7 +160,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 						<Link
 							key={`${crumb.label}-${index}`}
 							underline="hover"
-							color="inherit"
+							color="text.secondary"
 							component={RouterLink}
 							to={crumb.to}
 							variant="body2"
