@@ -40,6 +40,7 @@ import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.config.ToolCallbackConfiguration;
 import org.metricshub.web.dto.chat.ChatRequest;
 import org.metricshub.web.mcp.PingToolService;
+import org.metricshub.web.service.openai.ToolResponseManagerService;
 import org.mockito.Mockito;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,7 +64,14 @@ class ChatControllerTest {
 		final ChatOpenAiConfigurationProperties chatConfig = new ChatOpenAiConfigurationProperties();
 		chatConfig.setApiKey(""); // Empty API key
 		final OpenAIClient client = mock(OpenAIClient.class);
-		final ChatController controller = new ChatController(client, chatConfig, List.of(), toolCallbackProvider);
+		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
+		final ChatController controller = new ChatController(
+			client,
+			chatConfig,
+			List.of(),
+			toolCallbackProvider,
+			toolResponseManagerService
+		);
 
 		final ChatRequest request = new ChatRequest("Hello", new ArrayList<>());
 
@@ -96,7 +104,16 @@ class ChatControllerTest {
 
 		// Controller under test
 		final List<Tool> tools = List.of();
-		final ChatController controller = new ChatController(client, chatConfig, tools, toolCallbackProvider);
+		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
+		when(toolResponseManagerService.adaptTelemetryToolOutputOrManifest(any(), any()))
+			.thenAnswer(inv -> inv.getArgument(1));
+		final ChatController controller = new ChatController(
+			client,
+			chatConfig,
+			tools,
+			toolCallbackProvider,
+			toolResponseManagerService
+		);
 
 		final ChatRequest request = new ChatRequest("Hello", new ArrayList<>());
 

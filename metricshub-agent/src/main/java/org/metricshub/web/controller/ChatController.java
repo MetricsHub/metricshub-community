@@ -62,6 +62,7 @@ import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.dto.chat.ChatErrorResponse;
 import org.metricshub.web.dto.chat.ChatMessage;
 import org.metricshub.web.dto.chat.ChatRequest;
+import org.metricshub.web.service.openai.ToolResponseManagerService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.http.MediaType;
@@ -149,6 +150,11 @@ public class ChatController {
 	 * Tool callback provider for executing tool functions.
 	 */
 	private final ToolCallbackProvider toolCallbackProvider;
+
+	/**
+	 * Adapts telemetry tool outputs to stay within OpenAI limits.
+	 */
+	private final ToolResponseManagerService toolResponseManagerService;
 
 	/**
 	 * Handles streaming chat requests.
@@ -386,13 +392,18 @@ public class ChatController {
 				throw new IllegalStateException("Tool " + toolName + " execution failed: " + ex.getMessage(), ex);
 			}
 
+			final String adaptedToolResultJson = toolResponseManagerService.adaptTelemetryToolOutputOrManifest(
+				toolName,
+				toolResultJson
+			);
+
 			followUpInputs.add(
 				ResponseInputItem.ofFunctionCallOutput(
 					ResponseInputItem.FunctionCallOutput
 						.builder()
 						.status(ResponseInputItem.FunctionCallOutput.Status.COMPLETED)
 						.callId(tc.getCallId())
-						.outputAsJson(JsonField.of(toolResultJson))
+						.outputAsJson(JsonField.of(adaptedToolResultJson))
 						.build()
 				)
 			);

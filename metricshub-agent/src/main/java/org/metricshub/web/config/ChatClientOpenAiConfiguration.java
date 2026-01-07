@@ -37,7 +37,7 @@ import org.springframework.context.annotation.Configuration;
  * Configuration class for creating ChatClient with OpenAI and MetricsHub tools.
  */
 @Configuration
-@EnableConfigurationProperties(ChatOpenAiConfigurationProperties.class)
+@EnableConfigurationProperties({ ChatOpenAiConfigurationProperties.class, OpenAiTelemetryChunkingProperties.class })
 @RequiredArgsConstructor
 public class ChatClientOpenAiConfiguration {
 

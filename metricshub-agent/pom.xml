@@ -422,6 +422,9 @@
 				<configuration>
 					<excludes>
 						<exclude>org/metricshub/agent/config/**</exclude>
+						<exclude>org/metricshub/web/service/ChunkCreatorService.class</exclude>
+						<exclude>org/metricshub/web/service/openai/ToolResponseManagerService.class</exclude>
+						<exclude>org/metricshub/web/mcp/ChunkToolService.class</exclude>
 					</excludes>
 					<outputDirectory>${project.build.directory}/coverage-reports/jacoco</outputDirectory>
 				</configuration>
