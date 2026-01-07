@@ -87,21 +87,27 @@ export default function YamlEditor({
 		// Ensure search navigation follows matches even when the editor is
 		// nested in other scrollable containers. Using DOM scrollIntoView will
 		// scroll ancestor containers as needed, not just the CM scroller.
-		const followSearchSelection = EditorView.updateListener.of((update) => {
+		const followSelection = EditorView.updateListener.of((update) => {
 			if (!update.transactions.length) return;
+
 			const isSearchMove = update.transactions.some((tr) => tr.isUserEvent("select.search"));
-			if (!isSearchMove) return;
-			const range = update.state.selection.main;
-			const domAt = update.view.domAtPos(range.head);
-			let el = domAt?.node || null;
-			if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
-			if (el && el.scrollIntoView) {
-				// Scroll ancestors as well so the active match is centered reliably
-				el.scrollIntoView({ block: "center", inline: "nearest" });
+			const isSelectionChange = update.selectionSet;
+
+			if (isSearchMove || isSelectionChange) {
+				const range = update.state.selection.main;
+				const domAt = update.view.domAtPos(range.head);
+				let el = domAt?.node || null;
+				if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
+
+				if (el && el.scrollIntoView) {
+					// Use center for search moves, nearest for regular navigation
+					const block = isSearchMove ? "center" : "nearest";
+					el.scrollIntoView({ block, inline: "nearest" });
+				}
 			}
 		});
 
-		return [cmYaml(), history(), keymap.of(km), followSearchSelection, ...validationExtension];
+		return [cmYaml(), history(), keymap.of(km), followSelection, ...validationExtension];
 	}, [onSave, canSave, validationExtension]);
 
 	/**
