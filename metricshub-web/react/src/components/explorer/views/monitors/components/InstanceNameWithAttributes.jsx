@@ -26,7 +26,11 @@ const InstanceNameWithAttributes = ({
 		<Box display="flex" alignItems="center" sx={{ minWidth: 0, ...sx }}>
 			<Box sx={{ minWidth: 0, flexShrink: 1, mr: 1 }}>
 				<TruncatedText text={displayName}>
-					<Typography variant={variant} sx={{ fontWeight }} component="span">
+					<Typography
+						variant={variant}
+						sx={{ fontWeight, transition: "color 0.4s ease" }}
+						component="span"
+					>
 						{displayName}
 					</Typography>
 				</TruncatedText>

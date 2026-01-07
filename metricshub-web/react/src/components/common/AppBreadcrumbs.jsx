@@ -37,6 +37,30 @@ const EXPLORER_ROUTES = [
 		},
 	},
 	{
+		pattern: "/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			const connectorId = decodeURIComponent(params.connectorId);
+			return [
+				{ label: group, to: paths.explorerResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: paths.explorerResource(group, resource), iconType: "resource" },
+				{ label: connectorId, to: null },
+			];
+		},
+	},
+	{
+		pattern: "/explorer/resources/:resource/connectors/:connectorId",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			const connectorId = decodeURIComponent(params.connectorId);
+			return [
+				{ label: resource, to: paths.explorerResource(null, resource), iconType: "resource" },
+				{ label: connectorId, to: null },
+			];
+		},
+	},
+	{
 		pattern: "/explorer/resource-groups/:group/resources/:resource",
 		getBreadcrumbs: (params) => {
 			const group = decodeURIComponent(params.group);
@@ -105,7 +129,18 @@ const AppBreadcrumbs = ({ sx, action }) => {
 				...sx,
 			}}
 		>
-			<Breadcrumbs separator={<NavigateNextIcon fontSize="small" />} aria-label="breadcrumb">
+			<Breadcrumbs
+				separator={<NavigateNextIcon fontSize="small" />}
+				aria-label="breadcrumb"
+				sx={{
+					"& .MuiBreadcrumbs-separator": {
+						transition: "color 0.4s ease",
+					},
+					"& .MuiBreadcrumbs-li": {
+						transition: "color 0.4s ease",
+					},
+				}}
+			>
 				{crumbs.map((crumb, index) => {
 					const isLast = index === crumbs.length - 1;
 					const icon = crumb.monitorType ? (
@@ -122,6 +157,7 @@ const AppBreadcrumbs = ({ sx, action }) => {
 								alignItems: "center",
 								gap: 0.75,
 								verticalAlign: "middle",
+								transition: "color 0.4s ease",
 							}}
 						>
 							{icon && (
@@ -129,24 +165,30 @@ const AppBreadcrumbs = ({ sx, action }) => {
 									{icon}
 								</Box>
 							)}
-							<Box component="span" sx={{ mt: "1px" }}>
+							<Box component="span" sx={{ mt: "1px", transition: "color 0.4s ease" }}>
 								{crumb.label}
 							</Box>
 						</Box>
 					);
 
 					return isLast ? (
-						<Typography key={crumb.label} color="text.primary" variant="body2">
+						<Typography
+							key={crumb.label}
+							color="text.primary"
+							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
+						>
 							{content}
 						</Typography>
 					) : (
 						<Link
 							key={`${crumb.label}-${index}`}
 							underline="hover"
-							color="inherit"
+							color="text.secondary"
 							component={RouterLink}
 							to={crumb.to}
 							variant="body2"
+							sx={{ transition: "color 0.4s ease" }}
 						>
 							{content}
 						</Link>
