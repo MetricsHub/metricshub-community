@@ -15,7 +15,6 @@ import { fetchApplicationStatus } from "../../store/thunks/application-status-th
 import { selectLastVisitedPath } from "../../store/slices/explorer-slice";
 
 import StatusText from "./status/StatusText";
-import StatusDetailsMenu from "./status/StatusDetailsMenu";
 import OtelStatusIcon from "./status/OtelStatusIcon";
 import ProfileMenu from "./ProfileMenu";
 import ToggleTheme from "./ToggleTheme";
@@ -174,7 +173,6 @@ const NavBar = ({ onToggleTheme }) => {
 
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
-						<StatusDetailsMenu />
 						{/* Docs link button */}
 						<Tooltip title="Documentation" arrow enterDelay={200}>
 							<IconButton
