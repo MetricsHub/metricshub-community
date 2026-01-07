@@ -75,6 +75,135 @@ const buildPivotGroups = (instances) => {
 	}));
 };
 
+const MonitorAccordion = React.memo(function MonitorAccordion({
+	monitor,
+	connectorKey,
+	resourceId,
+	resourceGroupName,
+	resourceName,
+	connector,
+	expandedMonitors,
+	handleMonitorToggle,
+	navigate,
+}) {
+	const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
+	const instances = React.useMemo(
+		() => (Array.isArray(monitor.instances) ? monitor.instances : []),
+		[monitor.instances],
+	);
+	const sortedInstances = React.useMemo(
+		() => [...instances].sort((a, b) => compareMetricEntries([a.name || ""], [b.name || ""])),
+		[instances],
+	);
+	const pivotGroups = React.useMemo(() => buildPivotGroups(sortedInstances), [sortedInstances]);
+	const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
+
+	return (
+		<Accordion
+			expanded={isMonitorExpanded}
+			onChange={handleMonitorToggle(uniqueMonitorKey)}
+			TransitionProps={{ unmountOnExit: true }}
+			disableGutters
+			elevation={0}
+			square
+			sx={{
+				bgcolor: "transparent",
+				borderTop: "1px solid",
+				borderColor: "divider",
+			}}
+		>
+			<AccordionSummary
+				expandIcon={<ExpandMoreIcon />}
+				sx={{
+					minHeight: 40,
+					cursor: "pointer",
+					bgcolor: "background.default",
+					pl: 4, // Indent nested monitors
+					transition: "background-color 0.4s ease, color 0.4s ease",
+					"&:hover": {
+						bgcolor: "action.hover",
+					},
+					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
+				}}
+			>
+				<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
+					<Box
+						sx={{
+							flexShrink: 0,
+							mr: 1,
+							display: "flex",
+							alignItems: "center",
+							gap: 1,
+						}}
+					>
+						<MonitorTypeIcon type={prettifyKey(monitor.name)} />
+						<Tooltip title="Open Monitor Type Page" arrow placement="top" disableInteractive>
+							<Box component="span" sx={{ display: "inline-block" }}>
+								<Typography
+									variant="subtitle1"
+									component="span"
+									onClick={(e) => {
+										e.stopPropagation();
+										navigate(
+											paths.explorerMonitorType(
+												resourceGroupName,
+												resourceName,
+												connector.name,
+												monitor.name,
+											),
+										);
+									}}
+									sx={{
+										fontWeight: 500,
+										cursor: "pointer",
+										color: "primary.main",
+										"&:hover": {
+											color: "common.white",
+											textDecoration: "underline",
+										},
+									}}
+								>
+									{prettifyKey(monitor.name)}
+								</Typography>
+							</Box>
+						</Tooltip>
+					</Box>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+						<CountBadge
+							count={instances.length}
+							title="Number of instances"
+							bgcolor="action.selected"
+							sx={{ fontWeight: 500 }}
+						/>
+					</Box>
+				</Box>
+			</AccordionSummary>
+			<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
+				{pivotGroups.length > 0
+					? pivotGroups.map((group) => (
+							<PivotGroupSection
+								key={group.baseName}
+								group={group}
+								sortedInstances={sortedInstances}
+								resourceId={resourceId}
+								metaMetrics={connector.metaMetrics}
+							/>
+						))
+					: sortedInstances.map((inst) => {
+							return (
+								<InstanceMetricsTable
+									key={inst?.attributes?.id || inst.name}
+									instance={inst}
+									naturalMetricCompare={compareMetricEntries}
+									metaMetrics={connector.metaMetrics}
+								/>
+							);
+						})}
+			</AccordionDetails>
+		</Accordion>
+	);
+});
+
 /**
  * Renders a single connector accordion with its attributes, metrics, and nested monitors.
  *
@@ -98,6 +227,7 @@ const ConnectorAccordion = ({
 }) => {
 	const theme = useTheme();
 	const isDarkMode = theme.palette.mode === "dark";
+
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const uiState = useSelector((state) =>
@@ -156,6 +286,7 @@ const ConnectorAccordion = ({
 			id={connectorKey}
 			expanded={isConnectorExpanded}
 			onChange={handleConnectorToggle}
+			TransitionProps={{ unmountOnExit: true }}
 			disableGutters
 			elevation={0}
 			square
@@ -172,6 +303,7 @@ const ConnectorAccordion = ({
 				sx={{
 					minHeight: 48,
 					cursor: "pointer",
+					transition: "background-color 0.4s ease, color 0.4s ease",
 					bgcolor:
 						statusValue && statusValue !== "ok"
 							? isDarkMode
@@ -194,6 +326,7 @@ const ConnectorAccordion = ({
 					},
 					"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
 					"& .MuiAccordionSummary-expandIconWrapper": {
+						transition: "color 0.4s ease",
 						color:
 							statusValue && statusValue !== "ok"
 								? isDarkMode
@@ -208,6 +341,7 @@ const ConnectorAccordion = ({
 						<SettingsInputHdmiIcon
 							sx={{
 								mr: 1,
+								transition: "color 0.4s ease",
 								color:
 									statusValue === "ok"
 										? "success.main"
@@ -227,6 +361,7 @@ const ConnectorAccordion = ({
 								sx={{
 									fontWeight: 600,
 									flexShrink: 0,
+									transition: "color 0.4s ease",
 								}}
 							>
 								{prettifyKey(connector.name)}
@@ -244,7 +379,11 @@ const ConnectorAccordion = ({
 						{/* Connector Attributes Table */}
 						{connector.attributes && Object.keys(connector.attributes).length > 0 && (
 							<Box>
-								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+								<Typography
+									variant="subtitle2"
+									gutterBottom
+									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+								>
 									Attributes
 								</Typography>
 								<DataGrid
@@ -269,7 +408,11 @@ const ConnectorAccordion = ({
 						{/* Connector Metrics Table */}
 						{showMetricsTable && (
 							<Box>
-								<Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600, mb: 1 }}>
+								<Typography
+									variant="subtitle2"
+									gutterBottom
+									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+								>
 									Metrics
 								</Typography>
 								<DataGrid
@@ -328,124 +471,20 @@ const ConnectorAccordion = ({
 
 				{/* Monitors Section */}
 				<Box sx={{ display: "flex", flexDirection: "column" }}>
-					{monitors.map((monitor) => {
-						const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
-						const instances = Array.isArray(monitor.instances) ? monitor.instances : [];
-						const sortedInstances = [...instances].sort((a, b) =>
-							compareMetricEntries([a.name || ""], [b.name || ""]),
-						);
-						const pivotGroups = buildPivotGroups(sortedInstances);
-						const isMonitorExpanded = !!expandedMonitors[uniqueMonitorKey];
-
-						return (
-							<Accordion
-								key={uniqueMonitorKey}
-								expanded={isMonitorExpanded}
-								onChange={handleMonitorToggle(uniqueMonitorKey)}
-								disableGutters
-								elevation={0}
-								square
-								sx={{
-									bgcolor: "transparent",
-									borderTop: "1px solid",
-									borderColor: "divider",
-								}}
-							>
-								<AccordionSummary
-									expandIcon={<ExpandMoreIcon />}
-									sx={{
-										minHeight: 40,
-										cursor: "pointer",
-										bgcolor: "background.default",
-										pl: 4, // Indent nested monitors
-										"&:hover": {
-											bgcolor: "action.hover",
-										},
-										"& .MuiAccordionSummary-content": { my: 0, ml: 0 },
-									}}
-								>
-									<Box sx={{ display: "flex", alignItems: "center", width: "100%", pr: 2 }}>
-										<Box
-											sx={{
-												flexShrink: 0,
-												mr: 1,
-												display: "flex",
-												alignItems: "center",
-												gap: 1,
-											}}
-										>
-											<MonitorTypeIcon type={prettifyKey(monitor.name)} />
-											<Tooltip
-												title="Open Monitor Type Page"
-												arrow
-												placement="top"
-												disableInteractive
-											>
-												<Box component="span" sx={{ display: "inline-block" }}>
-													<Typography
-														variant="subtitle1"
-														component="span"
-														onClick={(e) => {
-															e.stopPropagation();
-															navigate(
-																paths.explorerMonitorType(
-																	resourceGroupName,
-																	resourceName,
-																	connector.name,
-																	monitor.name,
-																),
-															);
-														}}
-														sx={{
-															fontWeight: 500,
-															cursor: "pointer",
-															color: "primary.main",
-															"&:hover": {
-																color: "common.white",
-																textDecoration: "underline",
-															},
-														}}
-													>
-														{prettifyKey(monitor.name)}
-													</Typography>
-												</Box>
-											</Tooltip>
-										</Box>
-										<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-											<CountBadge
-												count={instances.length}
-												title="Number of instances"
-												bgcolor="action.selected"
-												sx={{ fontWeight: 500 }}
-											/>
-										</Box>
-									</Box>
-								</AccordionSummary>
-								<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
-									{pivotGroups.length > 0
-										? pivotGroups.map((group) => (
-												<PivotGroupSection
-													key={group.baseName}
-													group={group}
-													sortedInstances={sortedInstances}
-													resourceId={resourceId}
-													metaMetrics={connector.metaMetrics}
-												/>
-											))
-										: sortedInstances.map((inst) => {
-												return (
-													<InstanceMetricsTable
-														key={inst?.attributes?.id || inst.name}
-														instance={inst}
-														naturalMetricCompare={compareMetricEntries}
-														metaMetrics={connector.metaMetrics}
-													/>
-												);
-											})}
-								</AccordionDetails>
-							</Accordion>
-						);
-					})}
+					{monitors.map((monitor) => (
+						<MonitorAccordion
+							key={`${connectorKey}-${monitor.name}`}
+							monitor={monitor}
+							connectorKey={connectorKey}
+							resourceId={resourceId}
+							resourceGroupName={resourceGroupName}
+							resourceName={resourceName}
+							connector={connector}
+							expandedMonitors={expandedMonitors}
+							handleMonitorToggle={handleMonitorToggle}
+							navigate={navigate}
+						/>
+					))}
 				</Box>
 			</AccordionDetails>
 		</Accordion>

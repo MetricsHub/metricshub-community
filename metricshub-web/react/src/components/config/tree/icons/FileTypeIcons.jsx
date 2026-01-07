@@ -25,7 +25,10 @@ const FileTypeIconComponent = ({ type }) => {
 	const TreeIcon = ICONS[type] || ICONS.file;
 
 	return (
-		<Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 1 }}>
+		<Box
+			component="span"
+			sx={{ display: "inline-flex", alignItems: "center", mr: 1, transition: "color 0.4s ease" }}
+		>
 			<TreeIcon fontSize="small" />
 		</Box>
 	);

@@ -33,6 +33,30 @@ const EXPLORER_ROUTES = [
 		},
 	},
 	{
+		pattern: "/explorer/resource-groups/:group/resources/:resource/connectors/:connectorId",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			const connectorId = decodeURIComponent(params.connectorId);
+			return [
+				{ label: group, to: paths.explorerResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: paths.explorerResource(group, resource), iconType: "resource" },
+				{ label: connectorId, to: null },
+			];
+		},
+	},
+	{
+		pattern: "/explorer/resources/:resource/connectors/:connectorId",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			const connectorId = decodeURIComponent(params.connectorId);
+			return [
+				{ label: resource, to: paths.explorerResource(null, resource), iconType: "resource" },
+				{ label: connectorId, to: null },
+			];
+		},
+	},
+	{
 		pattern: "/explorer/resource-groups/:group/resources/:resource",
 		getBreadcrumbs: (params) => {
 			const group = decodeURIComponent(params.group);
@@ -69,8 +93,6 @@ export const getBreadcrumbsForPath = (path) => {
 	const items = [];
 
 	if (path.startsWith("/explorer")) {
-		items.push({ label: "Explorer", to: paths.explorerWelcome, iconType: "agent" });
-
 		for (const route of EXPLORER_ROUTES) {
 			const match = matchPath({ path: route.pattern, end: true }, path);
 			if (match && match.params) {

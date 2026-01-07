@@ -75,26 +75,26 @@ export const colorLabelFromKey = (key) => {
 };
 
 /**
- * Returns a color function for a given metric label.
+ * Returns a color for a given metric label.
  * @param {string} name
- * @returns {(theme: any) => string}
+ * @returns {string|((theme: any) => string)}
  */
 export const colorFor = (name) => {
 	const n = name.toLowerCase();
-	if (n.includes("used")) return (theme) => theme.palette.primary.main;
-	if (n.includes("free")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("cache")) return (theme) => theme.palette.warning.main;
-	if (n.includes("buffer")) return (theme) => theme.palette.warning.light;
-	if (n.includes("idle")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("system")) return (theme) => theme.palette.error.main;
-	if (n.includes("user")) return (theme) => theme.palette.info.main;
-	if (n.includes("nice")) return (theme) => theme.palette.success.main;
-	if (n.includes("wait")) return (theme) => theme.palette.warning.dark; // io_wait, iowait
-	if (n.includes("steal")) return (theme) => theme.palette.text.primary;
-	if (n.includes("irq")) return (theme) => theme.palette.secondary.main; // irq, softirq
-	if (n.includes("receive")) return (theme) => theme.palette.success.main;
-	if (n.includes("transmit")) return (theme) => theme.palette.secondary.main;
-	if (n === "none") return (theme) => theme.palette.action.hover;
+	if (n.includes("used")) return (t) => t.palette.primary.main;
+	if (n.includes("free")) return (t) => t.palette.action.disabled;
+	if (n.includes("cache")) return (t) => t.palette.warning.main;
+	if (n.includes("buffer")) return (t) => t.palette.warning.light;
+	if (n.includes("idle")) return (t) => t.palette.action.disabled;
+	if (n.includes("system")) return (t) => t.palette.error.main;
+	if (n.includes("user")) return (t) => t.palette.info.main;
+	if (n.includes("nice")) return (t) => t.palette.success.main;
+	if (n.includes("wait")) return (t) => t.palette.warning.dark; // io_wait, iowait
+	if (n.includes("steal")) return (t) => t.palette.text.primary;
+	if (n.includes("irq")) return (t) => t.palette.secondary.main; // irq, softirq
+	if (n.includes("receive")) return (t) => t.palette.success.main;
+	if (n.includes("transmit")) return (t) => t.palette.secondary.main;
+	if (n === "none") return (t) => t.palette.action.hover;
 
 	// Fallback: generate a consistent color based on the string hash
 	let hash = 0;
@@ -178,6 +178,7 @@ const UtilizationStackComponent = ({ parts }) => {
 
 	return (
 		<Box
+			className="utilization-stack"
 			sx={{
 				position: "relative",
 				height: 16,
@@ -198,6 +199,7 @@ const UtilizationStackComponent = ({ parts }) => {
 
 				const bar = (
 					<Box
+						className="utilization-bar"
 						sx={{
 							width: "100%",
 							height: "100%",
