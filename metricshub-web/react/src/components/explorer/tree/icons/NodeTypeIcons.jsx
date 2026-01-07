@@ -49,6 +49,7 @@ const NodeTypeIconsComponent = ({ type, name, fontSize = "small" }) => {
 			sx={{
 				display: "inline-flex",
 				alignItems: "center",
+				transition: "color 0.4s ease",
 				...(colorSx ? { color: colorSx } : {}),
 			}}
 		>
