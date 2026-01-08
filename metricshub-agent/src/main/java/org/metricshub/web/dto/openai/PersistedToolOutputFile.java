@@ -1,4 +1,4 @@
-package org.metricshub.web.dto;
+package org.metricshub.web.dto.openai;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
@@ -27,14 +27,16 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Result returned by {@code ChunkCreatorService} after splitting an oversized telemetry tool output into multiple pages.
+ * Holds persisted tool output file information
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ChunkCreationResult {
+public class PersistedToolOutputFile {
 
 	private String resultId;
-	private int pageCount;
+	private String absolutePath;
+	private long sizeBytes;
+	private String toolName;
 }

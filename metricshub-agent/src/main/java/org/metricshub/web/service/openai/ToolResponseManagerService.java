@@ -21,24 +21,18 @@ package org.metricshub.web.service.openai;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
-import lombok.Builder;
-import lombok.Data;
+import java.nio.file.Path;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.web.config.OpenAiTelemetryChunkingProperties;
-import org.metricshub.web.dto.ChunkCreationResult;
-import org.metricshub.web.service.ChunkCreatorService;
+import org.metricshub.web.config.OpenAiToolOutputProperties;
+import org.metricshub.web.dto.openai.PersistedToolOutputFile;
+import org.metricshub.web.dto.openai.UploadedToolOutputManifest;
 import org.springframework.stereotype.Service;
 
 /**
- * Adapts tool outputs before they are sent to OpenAI, ensuring telemetry troubleshooting tool outputs never exceed
- * OpenAI's maximum tool output size.
- * <p>
- * For enabled telemetry tools, oversized outputs are chunked into temp files and replaced with a small manifest JSON that
- * instructs the assistant to fetch pages via {@code FetchResponseChunk}.
+ * Adapts tool outputs before they are sent to OpenAI: if oversized, persists and uploads them, returning a manifest.
  */
 @Service
 @RequiredArgsConstructor
@@ -46,90 +40,70 @@ import org.springframework.stereotype.Service;
 public class ToolResponseManagerService {
 
 	private final ObjectMapper objectMapper;
-	private final OpenAiTelemetryChunkingProperties properties;
-	private final ChunkCreatorService chunkCreatorService;
+	private final OpenAiToolOutputProperties properties;
+	private final ToolOutputFilePersistService persistService;
+	private final ToolOutputFileUploadService uploadService;
 
 	/**
-	 * Return {@code toolResultJson} unchanged unless:
-	 * <ul>
-	 *   <li>the tool is in {@code enabledToolNames}</li>
-	 *   <li>the UTF-8 byte size exceeds {@code maxToolOutputBytes - safetyDeltaBytes}</li>
-	 * </ul>
-	 * In that case, this method stores chunk pages on disk and returns a manifest JSON.
+	 * Returns the original tool output unless it exceeds the allowed size; if so, persists and uploads then returns a manifest.
 	 *
-	 * @param toolName      tool name
-	 * @param toolResultJson JSON tool output
-	 * @return tool output JSON or response manifest JSON
+	 * @param toolName       the tool name
+	 * @param toolResultJson JSON string returned by the tool
+	 * @return original JSON or manifest JSON
 	 */
-	public String adaptTelemetryToolOutputOrManifest(final String toolName, final String toolResultJson) {
-		if (toolName == null || toolResultJson == null) {
+	public String adaptToolOutputOrManifest(final String toolName, final String toolResultJson) {
+		if (toolResultJson == null) {
 			return toolResultJson;
 		}
 
-		if (properties.getEnabledToolNames() == null || !properties.getEnabledToolNames().contains(toolName)) {
-			return toolResultJson;
-		}
-
-		final long max = properties.getMaxToolOutputBytes();
-		final long safety = properties.getSafetyDeltaBytes();
-		final long authorizedLimitBytes = Math.max(0, max - safety);
-
+		final long authorizedLimitBytes = Math.max(
+			0,
+			properties.getMaxToolOutputBytes() - properties.getSafetyDeltaBytes()
+		);
 		final int sizeBytes = toolResultJson.getBytes(StandardCharsets.UTF_8).length;
 		if (sizeBytes <= authorizedLimitBytes) {
 			return toolResultJson;
 		}
 
 		log.info(
-			"Tool output is oversized; chunking telemetry tool output (toolName={}, sizeBytes={}, authorizedLimitBytes={})",
+			"Oversized tool output detected; persisting and uploading (tool={}, sizeBytes={}, authorizedLimitBytes={})",
 			toolName,
 			sizeBytes,
 			authorizedLimitBytes
 		);
 
-		final ChunkCreationResult result = chunkCreatorService.createTelemetryResultChunks(
-			toolResultJson,
-			authorizedLimitBytes
-		);
-		final ResponseManifest manifest = ResponseManifest
-			.builder()
-			.type("response_manifest")
-			.resultId(result.getResultId())
-			.tool("FetchResponseChunk")
-			.firstResultNumber(0)
-			.pageCount(result.getPageCount())
-			.description(
-				"Tool output was chunked. Call FetchResponseChunk(resultId, resultNumber) starting at 0. " +
-				"Continue calling it with next_result while has_more is true. Stop when has_more is false."
-			)
-			.build();
+		final PersistedToolOutputFile persisted = persistService.persist(toolName, toolResultJson);
+
+		// Upload to OpenAI Files API
+		final UploadedToolOutputManifest manifest = uploadService.uploadToOpenAi(Path.of(persisted.getAbsolutePath()));
+
+		deleteLocalFileSilently(persisted.getAbsolutePath());
 
 		try {
-			return objectMapper.writeValueAsString(manifest);
+			final String manifestJson = objectMapper.writeValueAsString(manifest);
+			final int manifestSize = manifestJson.getBytes(StandardCharsets.UTF_8).length;
+			if (manifestSize > authorizedLimitBytes) {
+				throw new IllegalStateException(
+					"Manifest JSON exceeds authorized limit: " + manifestSize + " > " + authorizedLimitBytes
+				);
+			}
+			return manifestJson;
 		} catch (Exception e) {
-			throw new IllegalStateException("Failed to serialize response manifest JSON", e);
+			throw new IllegalStateException("Failed to serialize tool output manifest JSON", e);
 		}
 	}
 
 	/**
-	 * Manifest returned to OpenAI when a telemetry tool output has been chunked.
+	 * Best-effort deletion of the persisted file after upload.
+	 *
+	 * @param absolutePath file to delete
 	 */
-	@Builder
-	@Data
-	private static class ResponseManifest {
-
-		private String type;
-
-		@JsonProperty("result_id")
-		private String resultId;
-
-		private String tool;
-
-		@JsonProperty("first_result_number")
-		private int firstResultNumber;
-
-		@JsonProperty("page_count")
-		private int pageCount;
-
-		private String description;
+	private void deleteLocalFileSilently(final String absolutePath) {
+		try {
+			java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(absolutePath));
+		} catch (Exception e) {
+			log.error("Failed to delete persisted tool output file {}: {}", absolutePath, e.getMessage());
+			log.debug("Exception details:", e);
+		}
 	}
 }

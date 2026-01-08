@@ -21,6 +21,8 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openai.client.OpenAIClient;
 import com.openai.core.JsonField;
 import com.openai.core.http.StreamResponse;
@@ -53,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -152,9 +155,11 @@ public class ChatController {
 	private final ToolCallbackProvider toolCallbackProvider;
 
 	/**
-	 * Adapts telemetry tool outputs to stay within OpenAI limits.
+	 * Adapts tool outputs to stay within OpenAI limits.
 	 */
 	private final ToolResponseManagerService toolResponseManagerService;
+
+	private final ObjectMapper objectMapper;
 
 	/**
 	 * Handles streaming chat requests.
@@ -328,24 +333,37 @@ public class ChatController {
 				return;
 			}
 
-			final List<ResponseInputItem> followUpInputs;
+			final FunctionCallResponse functionCallResponse;
 			try {
-				followUpInputs = callFunctions(emitter, terminated, toolCalls);
+				functionCallResponse = callFunctions(emitter, terminated, toolCalls);
 			} catch (Exception ex) {
 				log.error("Error during tool function calls", ex);
 				return;
 			}
 
-			currentParams =
-				ResponseCreateParams
-					.builder()
-					.store(true)
-					.model(chatConfig.getModel())
-					.previousResponseId(prevId)
-					.input(ResponseCreateParams.Input.ofResponse(followUpInputs))
-					.reasoning(Reasoning.builder().effort(ReasoningEffort.MEDIUM).summary(Reasoning.Summary.AUTO).build())
-					.tools(tools)
-					.build();
+			final ResponseCreateParams.Builder builder = ResponseCreateParams
+				.builder()
+				.store(true)
+				.model(chatConfig.getModel())
+				.previousResponseId(prevId)
+				.input(ResponseCreateParams.Input.ofResponse(functionCallResponse.getInputs()))
+				.reasoning(Reasoning.builder().effort(ReasoningEffort.MEDIUM).summary(Reasoning.Summary.AUTO).build())
+				.tools(tools);
+
+			// If there are uploaded file IDs, add Code Interpreter tool with those files
+			final var uploadedFileIds = functionCallResponse.getUploadedFileIds();
+
+			if (!uploadedFileIds.isEmpty()) {
+				builder.addCodeInterpreterTool(
+					Tool.CodeInterpreter.Container.CodeInterpreterToolAuto
+						.builder()
+						.fileIds(uploadedFileIds)
+						.memoryLimit(Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.MemoryLimit._4G)
+						.build()
+				);
+			}
+
+			currentParams = builder.build();
 		}
 	}
 
@@ -355,14 +373,16 @@ public class ChatController {
 	 * @param emitter    SseEmitter to send events to the client
 	 * @param terminated AtomicBoolean indicating if the stream has been terminated
 	 * @param toolCalls  List of ToolCallData representing the tool calls to execute
-	 * @return List of ResponseInputItem representing the function call outputs
+	 * @return List of ResponseInputItem representing the function call outputs and the uploaded file IDs
 	 */
-	private List<ResponseInputItem> callFunctions(
+	private FunctionCallResponse callFunctions(
 		final SseEmitter emitter,
 		final AtomicBoolean terminated,
 		final List<ToolCallData> toolCalls
 	) {
 		final List<ResponseInputItem> followUpInputs = new ArrayList<>();
+		final List<String> fileIds = new ArrayList<>();
+
 		for (ToolCallData tc : toolCalls) {
 			final var toolName = tc.getToolName();
 			final var callback = findToolCallback(toolName);
@@ -392,10 +412,13 @@ public class ChatController {
 				throw new IllegalStateException("Tool " + toolName + " execution failed: " + ex.getMessage(), ex);
 			}
 
-			final String adaptedToolResultJson = toolResponseManagerService.adaptTelemetryToolOutputOrManifest(
+			final String adaptedToolResultJson = toolResponseManagerService.adaptToolOutputOrManifest(
 				toolName,
 				toolResultJson
 			);
+
+			// Collect uploaded file IDs from the adapted tool result JSON
+			collectUploadedFile(adaptedToolResultJson).ifPresent(fileIds::add);
 
 			followUpInputs.add(
 				ResponseInputItem.ofFunctionCallOutput(
@@ -409,7 +432,29 @@ public class ChatController {
 			);
 		}
 
-		return followUpInputs;
+		return new FunctionCallResponse(followUpInputs, fileIds);
+	}
+
+	/**
+	 * Collect uploaded file IDs from the follow-up inputs.
+	 *
+	 * @param followUpInputs list of ResponseInputItem from follow-up function calls
+	 * @return list of uploaded file IDs
+	 */
+	private Optional<String> collectUploadedFile(final String followUpInput) {
+		try {
+			final JsonNode node = objectMapper.readTree(followUpInput);
+			if (
+				node != null &&
+				node.has("type") &&
+				"tool_output_manifest".equals(node.get("type").asText()) &&
+				node.has("openai_file_id")
+			) {
+				return Optional.ofNullable(node.get("openai_file_id").asText());
+			}
+		} catch (Exception ignored) {}
+
+		return Optional.empty();
 	}
 
 	/**
@@ -745,6 +790,7 @@ public class ChatController {
 	/**
 	 * Data class representing a tool call.
 	 */
+	@AllArgsConstructor
 	static final class ToolCallData {
 
 		@Getter
@@ -755,19 +801,6 @@ public class ChatController {
 
 		@Getter
 		private final String argsJson;
-
-		/**
-		 * Constructor for ToolCallData.
-		 *
-		 * @param toolName The name of the tool (function) being called.
-		 * @param callId   The unique identifier for the tool call.
-		 * @param argsJson The JSON string of arguments for the tool call.
-		 */
-		ToolCallData(String toolName, String callId, String argsJson) {
-			this.toolName = toolName;
-			this.callId = callId;
-			this.argsJson = argsJson;
-		}
 	}
 
 	/**
@@ -815,5 +848,18 @@ public class ChatController {
 		synchronized long getOutputIndex() {
 			return outputIndex;
 		}
+	}
+
+	/**
+	 * Class representing the response from function calls.
+	 */
+	@RequiredArgsConstructor
+	static class FunctionCallResponse {
+
+		@Getter
+		private final List<ResponseInputItem> inputs;
+
+		@Getter
+		private final List<String> uploadedFileIds;
 	}
 }

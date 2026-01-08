@@ -21,50 +21,23 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties controlling how oversized OpenAI tool outputs are handled for telemetry troubleshooting tools.
- * <p>
- * When an enabled tool output exceeds {@code maxToolOutputBytes - safetyDeltaBytes}, the output is chunked and replaced by a
- * manifest instructing the assistant to fetch pages through the {@code FetchResponseChunk} tool.
+ * Properties controlling generic tool-output handling for oversized payloads.
  */
-@ConfigurationProperties(prefix = "ai.openai.telemetry-chunking")
+@ConfigurationProperties(prefix = "ai.openai.tool-output")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OpenAiTelemetryChunkingProperties {
+public class OpenAiToolOutputProperties {
 
-	/**
-	 * Maximum number of UTF-8 bytes allowed for an OpenAI tool output.
-	 */
 	private long maxToolOutputBytes = 10_485_760;
 
-	/**
-	 * Safety margin applied before chunking to avoid hitting hard OpenAI limits.
-	 */
 	private long safetyDeltaBytes = 2_097_152;
 
-	/**
-	 * Delay after the last chunk is fetched before cleaning up temporary chunk files.
-	 */
-	private long cleanupDelaySeconds = 15;
-
-	/**
-	 * Base directory where chunk pages are written.
-	 */
 	private String baseTempDir = System.getProperty("java.io.tmpdir") + "/metricshub/ai";
-
-	/**
-	 * Tool names for which telemetry output chunking is enabled.
-	 */
-	private List<String> enabledToolNames = List.of(
-		"CollectMetricsForHost",
-		"GetMetricsFromCacheForHost",
-		"TestAvailableConnectorsForHost"
-	);
 }
