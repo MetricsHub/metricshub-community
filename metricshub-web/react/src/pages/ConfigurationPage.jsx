@@ -246,6 +246,7 @@ function ConfigurationPage() {
 						// CodeMirror remains the primary scroll area for the document.
 						overflow: "auto",
 						minHeight: 0,
+						transition: "background-color 0.4s ease, color 0.4s ease",
 					}}
 				>
 					<Box
@@ -259,6 +260,7 @@ function ConfigurationPage() {
 							bgcolor: "background.default",
 							borderBottom: 1,
 							borderColor: "divider",
+							transition: "background-color 0.4s ease, border-color 0.4s ease",
 						}}
 					>
 						<EditorHeader
@@ -273,7 +275,12 @@ function ConfigurationPage() {
 						<ConfigEditorContainer ref={editorRef} />
 					</Box>
 					{loadingContent && (
-						<Stack direction="row" alignItems="center" spacing={1}>
+						<Stack
+							direction="row"
+							alignItems="center"
+							spacing={1}
+							sx={{ transition: "color 0.4s ease" }}
+						>
 							<CircularProgress size={18} />
 							Loading content…
 						</Stack>

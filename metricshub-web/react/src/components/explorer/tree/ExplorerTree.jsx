@@ -198,7 +198,11 @@ const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onRe
 				expansionTrigger="iconContainer"
 				onItemClick={handleItemClick}
 				sx={{
-					[`& .${treeItemClasses.content}`]: { py: 0.25, width: "100%" },
+					[`& .${treeItemClasses.content}`]: {
+						py: 0.25,
+						width: "100%",
+						transition: "background-color 0.4s ease",
+					},
 					[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 				}}
 			>

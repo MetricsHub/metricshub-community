@@ -189,6 +189,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 				border: 1,
 				borderColor: "divider",
 				overflow: "hidden",
+				transition: "border-color 0.4s ease",
 				...rest.sx,
 			}}
 		>
@@ -214,6 +215,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 						width: "2px",
 						bgcolor: "grey.500",
 						opacity: 0.5,
+						transition: "background-color 0.4s ease",
 					},
 				}}
 			/>

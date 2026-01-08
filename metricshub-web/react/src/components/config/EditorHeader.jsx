@@ -32,7 +32,10 @@ export default function EditorHeader({ selected, saving, onSave }) {
 				{/* File name + unsaved indicator */}
 				<Stack direction="row" alignItems="center" spacing={0}>
 					{selected && <FileTypeIcon type={isBackup ? "backup" : "file"} />}
-					<Typography variant="subtitle1" sx={{ fontWeight: isDirty ? 510 : 500 }}>
+					<Typography
+						variant="subtitle1"
+						sx={{ fontWeight: isDirty ? 510 : 500, transition: "color 0.4s ease" }}
+					>
 						{selected ?? "Select a file to edit"}
 					</Typography>
 
@@ -46,6 +49,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 								borderRadius: "50%",
 								bgcolor: (t) => (hasErrors ? t.palette.error.main : t.palette.warning.main),
 								ml: 0.25,
+								transition: "background-color 0.4s ease",
 							}}
 						/>
 					)}
@@ -73,6 +77,7 @@ export default function EditorHeader({ selected, saving, onSave }) {
 						maxHeight: 96,
 						overflow: "auto",
 						mt: 0.5,
+						transition: "color 0.4s ease",
 					}}
 				>
 					{nonPosErrors.join("\n")}
