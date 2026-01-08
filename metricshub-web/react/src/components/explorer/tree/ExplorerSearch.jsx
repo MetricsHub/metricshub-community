@@ -89,6 +89,8 @@ const ExplorerSearch = () => {
 			onOpen={() => setOpen(true)}
 			onClose={() => setOpen(false)}
 			value={value}
+			inputValue={inputValue}
+			clearOnBlur={false}
 			filterOptions={(x) => x}
 			isOptionEqualToValue={(option, value) =>
 				option.name === value.name && option.type === value.type
@@ -96,8 +98,10 @@ const ExplorerSearch = () => {
 			getOptionLabel={(option) => option.name}
 			options={options}
 			loading={loading}
-			onInputChange={(event, newInputValue) => {
-				setInputValue(newInputValue);
+			onInputChange={(event, newInputValue, reason) => {
+				if (reason !== "reset") {
+					setInputValue(newInputValue);
+				}
 			}}
 			onChange={handleChange}
 			renderInput={(params) => (

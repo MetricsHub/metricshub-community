@@ -22,10 +22,17 @@ const MetricNameHighlighter = ({ name }) => {
 					padding: "4px 8px !important",
 					borderRadius: "4px",
 					backgroundColor: "transparent !important",
+					border: "none !important",
+					boxShadow: "none !important",
 				},
 				"& code": {
-					fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important",
+					fontFamily: isDark
+						? "inherit"
+						: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important",
 					fontSize: "0.85rem",
+					border: "none !important",
+					boxShadow: "none !important",
+					//fontWeight: isDark ? "inherit" : "400 !important",
 				},
 				maxWidth: "100%",
 				overflow: "hidden",
@@ -40,6 +47,26 @@ const MetricNameHighlighter = ({ name }) => {
 					borderRadius: "4px",
 					fontSize: "0.85em",
 					backgroundColor: isDark ? "#1e1e1e" : "#f5f5f5",
+					border: "none",
+					boxShadow: "none",
+					...(isDark
+						? {}
+						: {
+								fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+								fontWeight: 400,
+							}),
+				}}
+				codeTagProps={{
+					style: {
+						border: "none",
+						boxShadow: "none",
+						...(isDark
+							? {}
+							: {
+									fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+									fontWeight: 400,
+								}),
+					},
 				}}
 				wrapLongLines={false}
 			>
