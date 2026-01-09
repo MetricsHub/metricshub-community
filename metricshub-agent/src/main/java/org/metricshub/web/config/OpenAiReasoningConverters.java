@@ -28,15 +28,28 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 
+/**
+ * Converters for OpenAI reasoning properties.
+ */
 @Configuration
 public class OpenAiReasoningConverters {
 
+	/**
+	 * Converter for ReasoningEffort from String.
+	 *
+	 * @return the converter instance
+	 */
 	@Bean
 	@ConfigurationPropertiesBinding
 	public Converter<String, ReasoningEffort> reasoningEffortConverter() {
 		return ChatOpenAiConfigurationProperties.ReasoningProperties::parseEffort;
 	}
 
+	/**
+	 * Converter for Reasoning.Summary from String.
+	 *
+	 * @return the converter instance
+	 */
 	@Bean
 	@ConfigurationPropertiesBinding
 	public Converter<String, Reasoning.Summary> reasoningSummaryConverter() {

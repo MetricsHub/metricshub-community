@@ -48,10 +48,10 @@ public class ChatClientOpenAiConfiguration {
 	public static final String SYSTEM_PROMPT = ResourceHelper.getClassPathResourceContent("system-prompt.md");
 
 	/**
-	 * Creates a ChatClient bean configured with the ChatModel and tools.
+	 * Creates a OpenAIClient bean configured with the ChatModel and tools.
 	 *
 	 * @param chatConfig the chat configuration properties
-	 * @return the configured ChatClient
+	 * @return the configured OpenAIOkHttpClient
 	 */
 	@Bean
 	@ConditionalOnProperty(prefix = "ai.openai", name = "api-key")
