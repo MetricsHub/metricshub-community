@@ -3,6 +3,7 @@ import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
+import AddIcon from "@mui/icons-material/Add";
 
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
@@ -19,6 +20,7 @@ import {
 	setContent,
 	renameLocalFile,
 	deleteLocalFile,
+	clearError,
 } from "../store/slices/config-slice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
@@ -27,6 +29,8 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { paths } from "../paths";
+import { useSnackbar } from "../hooks/use-snackbar";
+import { isBackupFileName } from "../utils/backup-names";
 
 /**
  * Configuration page component.
@@ -35,12 +39,20 @@ import { paths } from "../paths";
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const snackbar = useSnackbar();
 	const { name: routeName } = useParams();
 	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
 		useAppSelector((s) => s.config);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null);
+
+	React.useEffect(() => {
+		if (error) {
+			snackbar.show(error, { severity: "error" });
+			dispatch(clearError());
+		}
+	}, [error, snackbar, dispatch]);
 
 	/**
 	 * Fetch the configuration file list on component mount.
@@ -147,16 +159,50 @@ function ConfigurationPage() {
 			return;
 		}
 		const meta = list.find((f) => f.name === deleteTarget);
+
+		// Determine next file to select if we are deleting the current one
+		let nextSelected = null;
+		if (selected === deleteTarget) {
+			const visibleFiles = list
+				.filter((f) => !isBackupFileName(f.name))
+				.sort((a, b) => a.name.localeCompare(b.name));
+
+			const idx = visibleFiles.findIndex((f) => f.name === deleteTarget);
+			if (idx >= 0 && visibleFiles.length > 1) {
+				// Pick next, or previous if at the end
+				const nextIdx = idx + 1 < visibleFiles.length ? idx + 1 : idx - 1;
+				nextSelected = visibleFiles[nextIdx]?.name;
+			}
+		}
+
 		if (meta?.localOnly) {
 			dispatch(deleteLocalFile(deleteTarget));
 		} else {
 			dispatch(deleteConfig(deleteTarget));
 		}
 		if (selected === deleteTarget) {
-			navigate(paths.configuration, { replace: true });
+			if (nextSelected) {
+				navigate(paths.configurationFile(nextSelected), { replace: true });
+			} else {
+				navigate(paths.configuration, { replace: true });
+			}
 		}
 		setDeleteOpen(false);
 	}, [dispatch, deleteTarget, list, selected, navigate]);
+
+	const handleCreate = React.useCallback(() => {
+		const base = "new-config.yaml";
+		let name = base;
+		let i = 1;
+		while (list.some((f) => f.name === name)) {
+			name = `new-config-${i}.yaml`;
+			i++;
+		}
+
+		const content = "# MetricsHub Configuration\n";
+		dispatch(addLocalFile({ name, content }));
+		navigate(paths.configurationFile(name), { replace: false });
+	}, [dispatch, list, navigate]);
 
 	const editorRef = React.useRef(null);
 
@@ -173,6 +219,16 @@ function ConfigurationPage() {
 							onClick={() => dispatch(fetchConfigList())}
 						>
 							Refresh
+						</Button>
+
+						<Button
+							size="small"
+							variant="outlined"
+							color="inherit"
+							startIcon={<AddIcon />}
+							onClick={handleCreate}
+						>
+							Create
 						</Button>
 
 						<Button
@@ -203,7 +259,6 @@ function ConfigurationPage() {
 						</Button>
 
 						{loadingList && <CircularProgress size={18} />}
-						{error && <Chip size="small" color="error" label={error} sx={{ maxWidth: 280 }} />}
 					</Stack>
 
 					<ConfigTree

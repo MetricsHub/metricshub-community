@@ -66,6 +66,7 @@ const slice = createSlice({
 			state.selected = name;
 			state.content = content;
 			state.validation = null;
+			state.dirtyByName[name] = true;
 		},
 
 		renameLocalFile(state, action) {
@@ -86,6 +87,12 @@ const slice = createSlice({
 				delete state.filesByName[oldName];
 			}
 
+			// move dirty status
+			if (state.dirtyByName[oldName]) {
+				state.dirtyByName[newName] = state.dirtyByName[oldName];
+				delete state.dirtyByName[oldName];
+			}
+
 			// update current selection
 			if (state.selected === oldName) {
 				state.selected = newName;
@@ -99,6 +106,8 @@ const slice = createSlice({
 			if (!meta?.localOnly) return; // only delete locally if it's unsaved
 			state.list = state.list.filter((f) => f.name !== name);
 			delete state.filesByName[name];
+			delete state.dirtyByName[name];
+			delete state.originalsByName[name];
 			if (state.selected === name) {
 				state.selected = null;
 				state.content = "";

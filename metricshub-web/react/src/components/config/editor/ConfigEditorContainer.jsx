@@ -87,6 +87,11 @@ function ConfigEditorContainer(props) {
 		}
 	}, [canSave, dispatch, selected, local]);
 
+	const forceSave = React.useCallback(async () => {
+		setDialog(null);
+		await dispatch(saveConfig({ name: selected, content: local, skipValidation: true }));
+	}, [dispatch, local, selected]);
+
 	// expose wrappedSave to parent via ref prop
 	React.useImperativeHandle(
 		forwardedRef,
@@ -133,6 +138,12 @@ function ConfigEditorContainer(props) {
 					</>
 				}
 				actionButtons={[
+					{
+						btnTitle: "Save anyway",
+						btnColor: "error",
+						btnVariant: "contained",
+						callback: forceSave,
+					},
 					{
 						btnTitle: "OK",
 						callback: () => setDialog((d) => (d ? { ...d, open: false } : d)),
