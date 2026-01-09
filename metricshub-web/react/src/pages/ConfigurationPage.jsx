@@ -13,6 +13,7 @@ import {
 	fetchConfigContent,
 	deleteConfig,
 	renameConfig,
+	saveConfig,
 } from "../store/thunks/config-thunks";
 import {
 	select as selectFile,
@@ -199,8 +200,10 @@ function ConfigurationPage() {
 			i++;
 		}
 
-		const content = "# MetricsHub Configuration\n";
+		const content = "# MetricsHub Configuration\n\n\ncollectPeriod: 1m\n";
 		dispatch(addLocalFile({ name, content }));
+		dispatch(saveConfig({ name, content, skipValidation: false }));
+
 		navigate(paths.configurationFile(name), { replace: false });
 	}, [dispatch, list, navigate]);
 
