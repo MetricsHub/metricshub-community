@@ -45,8 +45,7 @@ const MetricValueCell = ({ value, unit, align = "left" }) => {
 						</Typography>
 					}
 					sx={{
-						display: "inline-flex",
-						alignItems: "center",
+						display: "block",
 						maxWidth: "100%",
 						...truncatedCellSx,
 					}}

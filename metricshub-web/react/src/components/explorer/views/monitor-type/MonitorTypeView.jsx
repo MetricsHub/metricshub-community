@@ -125,8 +125,15 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		setTabValue(newValue);
 	}, []);
 
+	// Stable reference for metaMetrics to prevent column re-creation
+	const metaMetrics = monitorData?.metaMetrics || {};
+	const stableMetaMetrics = React.useMemo(
+		() => metaMetrics,
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[JSON.stringify(metaMetrics)],
+	);
+
 	const columns = React.useMemo(() => {
-		if (!monitorData) return [];
 		const cols = [
 			{
 				field: "instanceName",
@@ -143,7 +150,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		];
 
 		selectedMetrics.forEach((metric) => {
-			const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+			const meta = getMetricMetadata(metric, stableMetaMetrics);
 			const cleanedUnit = cleanUnit(meta?.unit);
 			const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
 
@@ -169,7 +176,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		});
 
 		return cols;
-	}, [selectedMetrics, monitorData]);
+	}, [selectedMetrics, stableMetaMetrics]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({
