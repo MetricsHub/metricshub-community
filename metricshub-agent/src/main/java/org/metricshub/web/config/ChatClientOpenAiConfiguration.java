@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.web.service.openai.SpringToolsToOpenAiTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -53,6 +54,7 @@ public class ChatClientOpenAiConfiguration {
 	 * @return the configured ChatClient
 	 */
 	@Bean
+	@ConditionalOnProperty(prefix = "ai.openai", name = "api-key")
 	public OpenAIClient openAIClient(ChatOpenAiConfigurationProperties chatConfig) {
 		return OpenAIOkHttpClient.builder().apiKey(chatConfig.getApiKey()).build();
 	}

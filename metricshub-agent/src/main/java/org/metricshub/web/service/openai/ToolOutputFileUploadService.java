@@ -25,6 +25,7 @@ import com.openai.client.OpenAIClient;
 import com.openai.models.files.FileCreateParams;
 import com.openai.models.files.FilePurpose;
 import java.nio.file.Path;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.web.dto.openai.UploadedToolOutputManifest;
@@ -38,7 +39,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class ToolOutputFileUploadService {
 
-	private final OpenAIClient openAIClient;
+	private final Optional<OpenAIClient> openAIClient;
 
 	/**
 	 * Uploads the given file to the OpenAI Files API.
@@ -49,6 +50,7 @@ public class ToolOutputFileUploadService {
 	public UploadedToolOutputManifest uploadToOpenAi(final Path filePath) {
 		try {
 			final var uploadedFile = openAIClient
+				.orElseThrow(() -> new IllegalStateException("OpenAI Client is not configured"))
 				.files()
 				.create(FileCreateParams.builder().file(filePath).purpose(FilePurpose.USER_DATA).build());
 

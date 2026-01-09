@@ -36,6 +36,7 @@ import com.openai.models.responses.ResponseStreamEvent;
 import com.openai.models.responses.Tool;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.config.ToolCallbackConfiguration;
@@ -68,7 +69,7 @@ class ChatControllerTest {
 		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
 		final ObjectMapper objectMapper = new ObjectMapper();
 		final ChatController controller = new ChatController(
-			client,
+			Optional.of(client),
 			chatConfig,
 			List.of(),
 			toolCallbackProvider,
@@ -111,7 +112,7 @@ class ChatControllerTest {
 		final ObjectMapper objectMapper = new ObjectMapper();
 		when(toolResponseManagerService.adaptToolOutputOrManifest(any(), any())).thenAnswer(inv -> inv.getArgument(1));
 		final ChatController controller = new ChatController(
-			client,
+			Optional.of(client),
 			chatConfig,
 			tools,
 			toolCallbackProvider,

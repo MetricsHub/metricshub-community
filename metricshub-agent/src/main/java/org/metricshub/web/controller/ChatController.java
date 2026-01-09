@@ -27,10 +27,10 @@ import com.openai.client.OpenAIClient;
 import com.openai.core.JsonField;
 import com.openai.core.http.StreamResponse;
 import com.openai.models.Reasoning;
-import com.openai.models.ReasoningEffort;
 import com.openai.models.responses.EasyInputMessage;
 import com.openai.models.responses.ResponseCompletedEvent;
 import com.openai.models.responses.ResponseCreateParams;
+import com.openai.models.responses.ResponseCreateParams.Builder;
 import com.openai.models.responses.ResponseCreatedEvent;
 import com.openai.models.responses.ResponseFunctionCallArgumentsDeltaEvent;
 import com.openai.models.responses.ResponseFunctionToolCall;
@@ -55,7 +55,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -125,11 +124,6 @@ public class ChatController {
 	private static final String ERROR_EVENT_CODE = "error";
 
 	/**
-	 * String constant for unconfigured API key.
-	 */
-	private static final String UNCONFIGURED_API_KEY = "unconfigured";
-
-	/**
 	 * SSE timeout in milliseconds (5 minutes).
 	 */
 	private static final long SSE_TIMEOUT_MS = 300_000L;
@@ -137,7 +131,7 @@ public class ChatController {
 	/**
 	 * OpenAI client for making API calls.
 	 */
-	private final OpenAIClient openAIClient;
+	private final Optional<OpenAIClient> openAIClient;
 
 	/**
 	 * Chat configuration properties.
@@ -173,7 +167,7 @@ public class ChatController {
 		produces = MediaType.TEXT_EVENT_STREAM_VALUE
 	)
 	public SseEmitter stream(@Valid @RequestBody final ChatRequest request) {
-		if (!hasApiKey() || openAIClient == null) {
+		if (openAIClient.isEmpty()) {
 			return sendImmediateError("OpenAI API key is not configured");
 		}
 
@@ -228,20 +222,31 @@ public class ChatController {
 		// Build initial input (history + user message)
 		final List<ResponseInputItem> initialInputs = buildInputItems(request.history(), request.message());
 
+		final String model = chatConfig.getModel();
+
 		// Build initial response parameters using
 		// - OpenAI model from config
 		// - Input items (history + user message)
-		// - Medium reasoning effort with auto summary
 		// - Available tools exposed to the model
 		// - Store the response
-		final ResponseCreateParams initialParams = ResponseCreateParams
+		final Builder builder = ResponseCreateParams
 			.builder()
 			.store(true)
-			.model(chatConfig.getModel())
+			.model(model)
 			.input(ResponseCreateParams.Input.ofResponse(initialInputs))
-			.reasoning(Reasoning.builder().effort(ReasoningEffort.MEDIUM).summary(Reasoning.Summary.AUTO).build())
-			.tools(tools)
-			.build();
+			.tools(tools);
+
+		// Enable reasoning if enabled in the configuration
+		if (chatConfig.getReasoning().isEnabled()) {
+			builder.reasoning(
+				Reasoning
+					.builder()
+					.effort(chatConfig.getReasoning().getEffort())
+					.summary(chatConfig.getReasoning().getSummary())
+					.build()
+			);
+		}
+		final ResponseCreateParams initialParams = builder.build();
 
 		try {
 			// Run the tool execution loop
@@ -292,7 +297,12 @@ public class ChatController {
 			final AtomicReference<String> currentResponseId = new AtomicReference<>();
 			final AtomicReference<String> completedResponseId = new AtomicReference<>();
 
-			try (StreamResponse<ResponseStreamEvent> stream = openAIClient.responses().createStreaming(currentParams)) {
+			try (
+				StreamResponse<ResponseStreamEvent> stream = openAIClient
+					.orElseThrow(() -> new IllegalStateException("OpenAI Client is not configured"))
+					.responses()
+					.createStreaming(currentParams)
+			) {
 				streamRef.set(stream);
 
 				stream
@@ -347,8 +357,18 @@ public class ChatController {
 				.model(chatConfig.getModel())
 				.previousResponseId(prevId)
 				.input(ResponseCreateParams.Input.ofResponse(functionCallResponse.getInputs()))
-				.reasoning(Reasoning.builder().effort(ReasoningEffort.MEDIUM).summary(Reasoning.Summary.AUTO).build())
 				.tools(tools);
+
+			// Enable reasoning for follow-up calls if configured
+			if (chatConfig.getReasoning().isEnabled()) {
+				builder.reasoning(
+					Reasoning
+						.builder()
+						.effort(chatConfig.getReasoning().getEffort())
+						.summary(chatConfig.getReasoning().getSummary())
+						.build()
+				);
+			}
 
 			// If there are uploaded file IDs, add Code Interpreter tool with those files
 			final var uploadedFileIds = functionCallResponse.getUploadedFileIds();
@@ -452,7 +472,10 @@ public class ChatController {
 			) {
 				return Optional.ofNullable(node.get("openai_file_id").asText());
 			}
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+			log.warn("Failed to parse follow-up input JSON for uploaded file ID: {}", e.getMessage());
+			log.debug("Exception details:", e);
+		}
 
 		return Optional.empty();
 	}
@@ -707,7 +730,10 @@ public class ChatController {
 		}
 		try {
 			stream.close();
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+			log.warn("Unable to close OpenAI stream: {}", e.getMessage());
+			log.debug("Exception details:", e);
+		}
 	}
 
 	/**
@@ -725,19 +751,12 @@ public class ChatController {
 		} finally {
 			try {
 				emitter.complete();
-			} catch (Exception ignored) {}
+			} catch (Exception e) {
+				log.warn("Unable to complete immediate SSE error emitter: {}", e.getMessage());
+				log.debug("Exception details:", e);
+			}
 		}
 		return emitter;
-	}
-
-	/**
-	 * Check if the OpenAI API key is configured.
-	 *
-	 * @return true if the API key is configured, false otherwise
-	 */
-	private boolean hasApiKey() {
-		final String apiKey = chatConfig.getApiKey();
-		return StringHelper.nonNullNonBlank(apiKey) && !apiKey.equals(UNCONFIGURED_API_KEY);
 	}
 
 	/**
@@ -784,13 +803,16 @@ public class ChatController {
 		}
 		try {
 			emitter.complete();
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+			log.warn("Unable to complete SSE emitter: {}", e.getMessage());
+			log.debug("Exception details:", e);
+		}
 	}
 
 	/**
 	 * Data class representing a tool call.
 	 */
-	@AllArgsConstructor
+	@RequiredArgsConstructor
 	static final class ToolCallData {
 
 		@Getter
@@ -854,7 +876,7 @@ public class ChatController {
 	 * Class representing the response from function calls.
 	 */
 	@RequiredArgsConstructor
-	static class FunctionCallResponse {
+	static final class FunctionCallResponse {
 
 		@Getter
 		private final List<ResponseInputItem> inputs;
