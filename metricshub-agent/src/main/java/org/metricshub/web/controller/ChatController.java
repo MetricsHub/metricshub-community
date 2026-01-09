@@ -44,6 +44,8 @@ import com.openai.models.responses.ResponseReasoningTextDeltaEvent;
 import com.openai.models.responses.ResponseStreamEvent;
 import com.openai.models.responses.ResponseTextDeltaEvent;
 import com.openai.models.responses.Tool;
+import com.openai.models.responses.WebSearchTool;
+import com.openai.models.responses.WebSearchTool.Type;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -229,12 +231,14 @@ public class ChatController {
 		// - Input items (history + user message)
 		// - Available tools exposed to the model
 		// - Store the response
+		// - Web search tool always included
 		final Builder builder = ResponseCreateParams
 			.builder()
 			.store(true)
 			.model(model)
 			.input(ResponseCreateParams.Input.ofResponse(initialInputs))
-			.tools(tools);
+			.tools(tools)
+			.addTool(WebSearchTool.builder().type(Type.WEB_SEARCH).build());
 
 		// Enable reasoning if enabled in the configuration
 		if (chatConfig.getReasoning().isEnabled()) {
