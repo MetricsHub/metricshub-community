@@ -57,9 +57,9 @@ const MetricNameHighlighter = ({ name }) => {
 					...(isDark
 						? {}
 						: {
-							fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-							fontWeight: 400,
-						}),
+								fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+								fontWeight: 400,
+							}),
 				}}
 				codeTagProps={{
 					style: {
@@ -69,9 +69,9 @@ const MetricNameHighlighter = ({ name }) => {
 						...(isDark
 							? {}
 							: {
-								fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
-								fontWeight: 400,
-							}),
+									fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+									fontWeight: 400,
+								}),
 					},
 				}}
 				wrapLongLines={false}
@@ -83,4 +83,3 @@ const MetricNameHighlighter = ({ name }) => {
 };
 
 export default React.memo(MetricNameHighlighter);
-
