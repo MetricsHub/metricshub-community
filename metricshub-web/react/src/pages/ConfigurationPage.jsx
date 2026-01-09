@@ -13,7 +13,7 @@ import {
 	fetchConfigContent,
 	deleteConfig,
 	renameConfig,
-	saveConfig,
+	saveDraftConfig,
 } from "../store/thunks/config-thunks";
 import {
 	select as selectFile,
@@ -154,7 +154,7 @@ function ConfigurationPage() {
 	/**
 	 * Submit the delete action after confirmation.
 	 */
-	const submitDelete = React.useCallback(() => {
+	const submitDelete = React.useCallback(async () => {
 		if (!deleteTarget) {
 			setDeleteOpen(false);
 			return;
@@ -176,11 +176,6 @@ function ConfigurationPage() {
 			}
 		}
 
-		if (meta?.localOnly) {
-			dispatch(deleteLocalFile(deleteTarget));
-		} else {
-			dispatch(deleteConfig(deleteTarget));
-		}
 		if (selected === deleteTarget) {
 			if (nextSelected) {
 				navigate(paths.configurationFile(nextSelected), { replace: true });
@@ -188,26 +183,52 @@ function ConfigurationPage() {
 				navigate(paths.configuration, { replace: true });
 			}
 		}
+
+		// Wait slightly for navigation to start before deleting, to avoid "File not found"
+		// error when the editor tries to re-fetch or validate the deleting file.
+		setTimeout(() => {
+			if (meta?.localOnly) {
+				dispatch(deleteLocalFile(deleteTarget));
+			} else {
+				dispatch(deleteConfig(deleteTarget));
+			}
+		}, 50);
+
 		setDeleteOpen(false);
 	}, [dispatch, deleteTarget, list, selected, navigate]);
 
 	const handleCreate = React.useCallback(() => {
-		const base = "new-config.yaml";
+		const base = "new-config.yaml.draft";
 		let name = base;
 		let i = 1;
 		while (list.some((f) => f.name === name)) {
-			name = `new-config-${i}.yaml`;
+			name = `new-config-${i}.yaml.draft`;
 			i++;
 		}
 
 		const content = "# MetricsHub Configuration\n\n\ncollectPeriod: 1m\n";
 		dispatch(addLocalFile({ name, content }));
-		dispatch(saveConfig({ name, content, skipValidation: false }));
+		dispatch(saveDraftConfig({ name, content, skipValidation: true }));
 
 		navigate(paths.configurationFile(name), { replace: false });
 	}, [dispatch, list, navigate]);
 
 	const editorRef = React.useRef(null);
+
+	const handleMakeDraft = React.useCallback(
+		(fileName) => {
+			const newName = fileName + ".draft";
+			if (list.some((f) => f.name === fileName && f.localOnly)) {
+				dispatch(renameLocalFile({ oldName: fileName, newName }));
+			} else {
+				dispatch(renameConfig({ oldName: fileName, newName }));
+			}
+			if (selected === fileName) {
+				navigate(paths.configurationFile(newName), { replace: true });
+			}
+		},
+		[dispatch, list, selected, navigate],
+	);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -270,6 +291,7 @@ function ConfigurationPage() {
 						onSelect={onSelect}
 						onRename={handleInlineRename}
 						onDelete={openDelete}
+						onMakeDraft={handleMakeDraft}
 					/>
 
 					<QuestionDialog
@@ -325,6 +347,7 @@ function ConfigurationPage() {
 							selected={selected}
 							saving={saving}
 							onSave={() => editorRef.current?.save?.()}
+							onApply={() => editorRef.current?.apply?.()}
 						/>
 					</Box>
 

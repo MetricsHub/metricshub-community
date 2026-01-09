@@ -4,6 +4,7 @@ import {
 	fetchConfigList,
 	fetchConfigContent,
 	saveConfig,
+	saveDraftConfig,
 	validateConfig,
 	deleteConfig,
 	renameConfig,
@@ -192,6 +193,35 @@ const slice = createSlice({
 				s.error = a.payload || a.error?.message;
 			})
 
+			.addCase(saveDraftConfig.pending, (s) => {
+				s.saving = true;
+				s.error = null;
+			})
+			.addCase(saveDraftConfig.fulfilled, (s, a) => {
+				s.saving = false;
+				const meta = a.payload.meta;
+				const name = meta.name;
+				const i = s.list.findIndex((f) => f.name === name);
+				if (i >= 0) s.list[i] = meta;
+				else s.list.push(meta);
+				const cur = s.filesByName[name] || {};
+				const savedContent = a.payload?.content ?? cur.content ?? s.content ?? "";
+
+				s.filesByName[name] = { ...cur, content: savedContent, localOnly: false };
+				if (!isBackupFileName(name)) {
+					s.originalsByName[name] = savedContent;
+					s.dirtyByName[name] = false;
+				}
+
+				if (s.selected === name) {
+					s.content = savedContent;
+				}
+			})
+			.addCase(saveDraftConfig.rejected, (s, a) => {
+				s.saving = false;
+				s.error = a.payload || a.error?.message;
+			})
+
 			.addCase(validateConfig.fulfilled, (s, a) => {
 				// global selected validation
 				const result = a.payload?.result ?? null;
@@ -229,8 +259,36 @@ const slice = createSlice({
 
 			.addCase(renameConfig.fulfilled, (s, a) => {
 				const { oldName, meta } = a.payload;
-				s.list = s.list.filter((f) => f.name === oldName).concat(meta);
-				if (s.selected === oldName) s.selected = meta.name;
+				const newName = meta.name;
+
+				// Update list
+				const idx = s.list.findIndex((f) => f.name === oldName);
+				if (idx !== -1) {
+					s.list[idx] = { ...s.list[idx], ...meta };
+				} else {
+					// Fallback if not found in list (shouldn't happen)
+					s.list.push(meta);
+				}
+
+				// Move cached content
+				if (s.filesByName[oldName]) {
+					s.filesByName[newName] = { ...s.filesByName[oldName] };
+					delete s.filesByName[oldName];
+				}
+
+				// Move dirty status
+				if (s.dirtyByName[oldName] !== undefined) {
+					s.dirtyByName[newName] = s.dirtyByName[oldName];
+					delete s.dirtyByName[oldName];
+				}
+
+				// Move original content
+				if (s.originalsByName[oldName] !== undefined) {
+					s.originalsByName[newName] = s.originalsByName[oldName];
+					delete s.originalsByName[oldName];
+				}
+
+				if (s.selected === oldName) s.selected = newName;
 			});
 	},
 });

@@ -37,8 +37,11 @@ const NavBar = ({ onToggleTheme }) => {
 	// Config dirty/error status for navbar dot indicator
 	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
 	const filesByName = useAppSelector((s) => s.config?.filesByName) || {};
-	const hasDirty = Object.values(dirtyByName).some(Boolean);
-	const hasError = Object.values(filesByName).some((v) => {
+	const hasDirty = Object.entries(dirtyByName).some(
+		([name, isDirty]) => isDirty && !name.endsWith(".draft"),
+	);
+	const hasError = Object.entries(filesByName).some(([name, v]) => {
+		if (name.endsWith(".draft")) return false;
 		const val = v?.validation;
 		return val && val.valid === false;
 	});

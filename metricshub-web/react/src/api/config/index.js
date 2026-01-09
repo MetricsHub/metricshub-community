@@ -90,6 +90,29 @@ class ConfigApi {
 	}
 
 	/**
+	 * Save a draft file (PUT). Returns the file metadata from backend.
+	 * @param {string} name    The file name
+	 * @param {string} content The raw file content
+	 * @param {{ skipValidation?: boolean, signal?: AbortSignal }} opts Axios request options
+	 * @returns {Promise<Object>} // ConfigurationFile
+	 */
+	saveDraft(name, content, opts = {}) {
+		const { skipValidation = false, signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/draft/${encodeURIComponent(name)}`,
+				method: "PUT",
+				signal,
+				params: { skipValidation },
+				data: content,
+				headers: { "Content-Type": "text/plain", Accept: "application/json" },
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e)));
+		});
+	}
+
+	/**
 	 * Validate a file (POST). Returns { valid:boolean, error?:string }.
 	 * @param {string} name    The file name
 	 * @param {string} content The raw file content
