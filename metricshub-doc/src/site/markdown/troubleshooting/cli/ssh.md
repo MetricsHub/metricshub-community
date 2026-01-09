@@ -5,7 +5,7 @@ description: How to execute remote commands on SSH-enabled devices with the Metr
 
 The **MetricsHub SSH CLI** allows you to execute commands on SSH-enabled devices. When running the CLI, you can choose to authenticate yourself with credentials or a public key and configure additional settings, such as timeout and port.
 
-Before using the CLI, ensure your platform supports SSH monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports SSH monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

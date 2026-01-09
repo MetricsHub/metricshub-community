@@ -5,7 +5,7 @@ description: How to use MetricsHub SNMP CLI to interact with SNMP-enabled device
 
 The **MetricsHub SNMP CLI** allows you to interact with SNMP-enabled devices using the `GET`, `GETNEXT`, `WALK`, and `TABLE` queries. When running the CLI, you can configure the SNMP version to be used (v1 or v2c), community string, port, and retry intervals. To use SNMP v3, refer to MetricsHub [SNMPv3 CLI](snmpv3.md).
 
-Before using the CLI, ensure your platform supports SNMP monitoring by checking the [Connector Directory](https://www.aws-dev.metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports SNMP monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

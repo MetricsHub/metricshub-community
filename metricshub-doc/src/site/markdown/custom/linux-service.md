@@ -31,7 +31,7 @@ To achieve this use case, we:
             timeout: 30
 ```
 
-* Add a new instance of the [`LinuxService`](https://metricshub.com/docs/latest/connectors/linuxservice.html) connector for the monitoring of the `httpd` service, and name it `LinuxServiceHttpd` for example:
+* Add a new instance of the [`LinuxService`](../connectors/linuxservice.html) connector for the monitoring of the `httpd` service, and name it `LinuxServiceHttpd` for example:
 
 ```yaml
         additionalConnectors:
