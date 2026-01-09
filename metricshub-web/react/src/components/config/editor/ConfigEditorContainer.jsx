@@ -85,7 +85,7 @@ function ConfigEditorContainer(props) {
 
 		try {
 			// Validate first
-			const res = await dispatch(validateConfig({ name: targetName, content: local })).unwrap();
+			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
 			const result = res?.result ?? { valid: true };
 
 			if (result.valid) {
@@ -188,6 +188,26 @@ function ConfigEditorContainer(props) {
 		[dispatch],
 	);
 
+	const actions = React.useMemo(() => {
+		const btns = [];
+		// Only offer "convert to draft" if we are not already on a draft
+		if (!isDraft) {
+			btns.push({
+				btnTitle: "Save and convert to draft",
+				btnColor: "error",
+				btnVariant: "contained",
+				callback: forceSaveAsDraft,
+			});
+		}
+		btns.push({
+			btnTitle: "OK",
+			callback: () => setDialog((d) => (d ? { ...d, open: false } : d)),
+			btnVariant: "contained",
+			autoFocus: true,
+		});
+		return btns;
+	}, [isDraft, forceSaveAsDraft]);
+
 	return (
 		<>
 			<ConfigEditor
@@ -211,20 +231,7 @@ function ConfigEditorContainer(props) {
 						<Typography sx={{ whiteSpace: "pre-wrap", m: 0 }}>{dialog?.message}</Typography>
 					</>
 				}
-				actionButtons={[
-					{
-						btnTitle: "Save and convert to draft",
-						btnColor: "error",
-						btnVariant: "contained",
-						callback: forceSaveAsDraft,
-					},
-					{
-						btnTitle: "OK",
-						callback: () => setDialog((d) => (d ? { ...d, open: false } : d)),
-						btnVariant: "contained",
-						autoFocus: true,
-					},
-				]}
+				actionButtons={actions}
 				onClose={() => setDialog((d) => (d ? { ...d, open: false } : d))}
 			/>
 		</>
