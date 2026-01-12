@@ -20,3 +20,4 @@ To help you get started and make the most out of **MetricsHub**, this section pr
 * **Windows-related use cases**:
   * [Windows Process Monitoring](./windows-process.md)
   * [Windows Service Monitoring](./windows-service.md)
+  * [Windows Event Log Monitoring](./windows-event-log.md)

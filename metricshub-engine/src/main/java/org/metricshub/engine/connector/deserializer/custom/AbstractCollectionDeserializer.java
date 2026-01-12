@@ -31,6 +31,7 @@ import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 
 /**
@@ -66,6 +67,7 @@ public abstract class AbstractCollectionDeserializer<T> extends JsonDeserializer
 						.stream(str.split(","))
 						.map(String::trim) // optional: trim spaces
 						.map(valueExtractor()) // apply the custom extractor
+						.filter(getFilterPredicate())
 						.collect(collector())
 				) // collect into your custom container
 				.orElse(emptyCollection());
@@ -73,6 +75,14 @@ public abstract class AbstractCollectionDeserializer<T> extends JsonDeserializer
 			throw new IOException(e.getMessage());
 		}
 	}
+
+	/**
+	 * Returns a predicate used to filter extracted values during comma-separated string deserialization.
+	 * Applied after {@link #valueExtractor()} and before collecting into the final collection.
+	 *
+	 * @return a {@link Predicate} that tests whether an extracted value should be included in the collection
+	 */
+	protected abstract Predicate<? super T> getFilterPredicate();
 
 	/**
 	 * Value extractor function to execute when reading the string value

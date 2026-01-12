@@ -48,6 +48,7 @@ import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
@@ -232,7 +233,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetSupportedSources() {
 		assertEquals(
-			Set.of(IpmiSource.class, CommandLineSource.class, WmiSource.class),
+			Set.of(IpmiSource.class, CommandLineSource.class, WmiSource.class, EventLogSource.class),
 			winRmExtension.getSupportedSources()
 		);
 	}
@@ -248,7 +249,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetConfigurationToSourceMapping() {
 		assertEquals(
-			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class)),
+			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class)),
 			winRmExtension.getConfigurationToSourceMapping()
 		);
 	}

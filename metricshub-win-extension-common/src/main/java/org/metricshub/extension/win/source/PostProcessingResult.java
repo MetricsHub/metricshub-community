@@ -1,8 +1,8 @@
-package org.metricshub.engine.connector.deserializer.custom;
+package org.metricshub.extension.win.source;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Engine
+ * MetricsHub Win Extension Common
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2025 MetricsHub
  * ჻჻჻჻჻჻
@@ -21,36 +21,22 @@ package org.metricshub.engine.connector.deserializer.custom;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
-import org.metricshub.engine.connector.model.common.DeviceKind;
+import java.util.ArrayList;
+import java.util.List;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Builder.Default;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-/**
- * Custom deserializer for a collection of {@link DeviceKind} objects.
- */
-public class DeviceKindSetDeserializer extends AbstractCollectionDeserializer<DeviceKind> {
+@Builder
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class PostProcessingResult {
 
-	@Override
-	protected Function<String, DeviceKind> valueExtractor() {
-		return DeviceKind::detect;
-	}
+	private int cursor;
 
-	@Override
-	protected Collection<DeviceKind> emptyCollection() {
-		return new HashSet<>();
-	}
-
-	@Override
-	protected Collector<DeviceKind, ?, Collection<DeviceKind>> collector() {
-		return Collectors.toCollection(HashSet::new);
-	}
-
-	@Override
-	protected Predicate<? super DeviceKind> getFilterPredicate() {
-		return kind -> true;
-	}
+	@Default
+	private List<List<String>> results = new ArrayList<>();
 }

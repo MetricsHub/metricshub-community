@@ -21,41 +21,43 @@ package org.metricshub.engine.connector.deserializer.custom;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.Objects;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogLevel;
 
 /**
- * An abstract base class for deserializers handling non-null and non-blank values in collections.
- * Extends {@link AbstractCollectionDeserializer} and provides an implementation for extracting
- * non-null and non-blank values using a {@link Function}.
+ * Custom deserializer for a collection of {@link EventLogLevel} values.
+ * <p>
+ * Accepts either:
+ * <ul>
+ *   <li>a YAML/JSON array (e.g. {@code ["error", "warning"]})</li>
+ *   <li>a comma-separated string (e.g. {@code "error,warning"})</li>
+ * </ul>
+ * Values are parsed using {@link EventLogLevel#detectFromString(String)}.
  */
-public abstract class AbstractNonBlankNonNullInCollectionDeserializer extends AbstractCollectionDeserializer<String> {
+public class EventLogLevelSetDeserializer extends AbstractCollectionDeserializer<EventLogLevel> {
 
 	@Override
-	protected Function<String, String> valueExtractor() {
-		return nonNullNonBlankExtractor();
+	protected Function<String, EventLogLevel> valueExtractor() {
+		return EventLogLevel::detectFromString;
 	}
-
-	/**
-	 * Return a function that extracts a non-null and non-blank value
-	 *
-	 * @return {@link Function} instance
-	 */
-	private Function<String, String> nonNullNonBlankExtractor() {
-		return str -> {
-			if (Objects.nonNull(str) && !str.isBlank()) {
-				return str;
-			}
-
-			throw new IllegalArgumentException(getErrorMessage());
-		};
-	}
-
-	protected abstract String getErrorMessage();
 
 	@Override
-	protected Predicate<? super String> getFilterPredicate() {
-		return str -> true;
+	protected Collection<EventLogLevel> emptyCollection() {
+		return new HashSet<>();
+	}
+
+	@Override
+	protected Collector<EventLogLevel, ?, Collection<EventLogLevel>> collector() {
+		return Collectors.toCollection(HashSet::new);
+	}
+
+	@Override
+	protected Predicate<? super EventLogLevel> getFilterPredicate() {
+		return level -> level != null;
 	}
 }

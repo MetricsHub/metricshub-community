@@ -21,41 +21,49 @@ package org.metricshub.engine.connector.deserializer.custom;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 /**
- * An abstract base class for deserializers handling non-null and non-blank values in collections.
- * Extends {@link AbstractCollectionDeserializer} and provides an implementation for extracting
- * non-null and non-blank values using a {@link Function}.
+ * Custom deserializer for a {@link LinkedHashSet} of strings.
+ * <p>
+ * Accepts either:
+ * <ul>
+ *   <li>a YAML/JSON array (e.g. {@code ["value1", "value2"]})</li>
+ *   <li>a comma-separated string (e.g. {@code "value1,value2"})</li>
+ * </ul>
+ * Blank strings are filtered out. Null values are rejected.
  */
-public abstract class AbstractNonBlankNonNullInCollectionDeserializer extends AbstractCollectionDeserializer<String> {
+public class LinkedHashSetDeserializer extends AbstractCollectionDeserializer<String> {
 
 	@Override
 	protected Function<String, String> valueExtractor() {
-		return nonNullNonBlankExtractor();
-	}
-
-	/**
-	 * Return a function that extracts a non-null and non-blank value
-	 *
-	 * @return {@link Function} instance
-	 */
-	private Function<String, String> nonNullNonBlankExtractor() {
 		return str -> {
-			if (Objects.nonNull(str) && !str.isBlank()) {
+			if (Objects.nonNull(str)) {
 				return str;
 			}
 
-			throw new IllegalArgumentException(getErrorMessage());
+			throw new IllegalArgumentException("Null value is not accepted in sets.");
 		};
 	}
 
-	protected abstract String getErrorMessage();
+	@Override
+	protected Collection<String> emptyCollection() {
+		return new LinkedHashSet<>();
+	}
+
+	@Override
+	protected Collector<String, ?, Collection<String>> collector() {
+		return Collectors.toCollection(LinkedHashSet::new);
+	}
 
 	@Override
 	protected Predicate<? super String> getFilterPredicate() {
-		return str -> true;
+		return str -> !str.isBlank();
 	}
 }

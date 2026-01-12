@@ -49,6 +49,9 @@ public class ConnectorNamespace {
 	private boolean isStatusOk;
 
 	@Default
+	private Map<String, Integer> eventLogCursors = new HashMap<>();
+
+	@Default
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
 
 	/**
@@ -69,5 +72,25 @@ public class ConnectorNamespace {
 	 */
 	public SourceTable getSourceTable(@NonNull String key) {
 		return sourceTables.get(key);
+	}
+
+	/**
+	 * Gets the event log cursor (RecordNumber) for the specified source.
+	 *
+	 * @param sourceKey the source key identifying the event log source
+	 * @return the cursor value, or null if not set
+	 */
+	public Integer getEventLogCursor(@NonNull String sourceKey) {
+		return eventLogCursors.get(sourceKey);
+	}
+
+	/**
+	 * Sets the event log cursor (RecordNumber) for the specified source.
+	 *
+	 * @param sourceKey the source key identifying the event log source
+	 * @param cursor the cursor value to set, or null to clear
+	 */
+	public void setEventLogCursor(@NonNull String sourceKey, @NonNull Integer cursor) {
+		eventLogCursors.put(sourceKey, cursor);
 	}
 }
