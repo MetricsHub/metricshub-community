@@ -35,6 +35,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
@@ -279,15 +280,41 @@ public class WinRmExtension implements IProtocolExtension {
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String query = queryNode.get("query").asText();
+		final String queryType = queryNode.get("queryType").asText();
 		final WinRmConfiguration winRmConfiguration = (WinRmConfiguration) configuration;
 		final String namespace = winRmConfiguration.getNamespace();
 		final String hostname = configuration.getHostname();
-		final List<List<String>> resultList = winRmRequestExecutor.executeWmi(
-			hostname,
-			winRmConfiguration,
-			query,
-			namespace
-		);
+
+		return queryType.equals("wmi")
+			? executeWmiQuery(hostname, winRmConfiguration, query, namespace)
+			: winRmRequestExecutor.executeWinRemoteCommand(hostname, winRmConfiguration, query, null);
+	}
+
+	/**
+	 * Executes a WMI query on the specified host via WinRM and returns the result as a formatted text table.
+	 * The method extracts columns from the query and formats the results accordingly. If the query
+	 * selects all columns (using '*'), the result table is generated without column headers.
+	 *
+	 * @param hostname            The hostname or IP address of the target Windows system.
+	 * @param winRmConfiguration   The WinRM configuration containing authentication credentials and settings.
+	 * @param query               The WQL (WMI Query Language) query to execute.
+	 * @param namespace           The WMI namespace where the query should be executed (e.g., "root\\cimv2").
+	 * @return A formatted text table containing the query results, or {@code null} if an error occurs during execution.
+	 */
+	private String executeWmiQuery(
+		final String hostname,
+		final WinRmConfiguration winRmConfiguration,
+		final String query,
+		final String namespace
+	) {
+		List<List<String>> resultList;
+		try {
+			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace);
+		} catch (ClientException e) {
+			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
+			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
+			return null;
+		}
 		final String[] columns = StringHelper.extractColumns(query);
 		if (columns.length == 1 && columns[0].equals("*")) {
 			return TextTableHelper.generateTextTable(resultList);

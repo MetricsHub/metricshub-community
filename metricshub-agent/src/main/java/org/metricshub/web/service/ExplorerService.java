@@ -91,6 +91,16 @@ public class ExplorerService {
 	 * @return root node describing the agent hierarchy
 	 */
 	public AgentTelemetry getHierarchy() {
+		return getHierarchy(false);
+	}
+
+	/**
+	 * Builds the hierarchy tree under the current agent.
+	 *
+	 * @param deep if true, builds the full tree including connectors and monitors
+	 * @return root node describing the agent hierarchy
+	 */
+	private AgentTelemetry getHierarchy(boolean deep) {
 		final var agentContext = agentContextHolder.getAgentContext();
 		final Map<String, String> agentAttributes = agentContext.getAgentInfo().getAttributes();
 		final String agentName = agentAttributes.getOrDefault(
@@ -112,7 +122,7 @@ public class ExplorerService {
 			.filter(entry -> !TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY.equals(entry.getKey()))
 			.sorted(Map.Entry.comparingByKey())
 			.map((Entry<String, Map<String, TelemetryManager>> entry) ->
-				buildResourceGroupNode(entry.getKey(), entry.getValue())
+				buildResourceGroupNode(entry.getKey(), entry.getValue(), deep)
 			)
 			.toList();
 
@@ -123,7 +133,7 @@ public class ExplorerService {
 			TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
 			Map.of()
 		);
-		root.getResources().addAll(buildResources(topLevelResources));
+		root.getResources().addAll(buildResources(topLevelResources, deep));
 
 		return root;
 	}
@@ -135,12 +145,15 @@ public class ExplorerService {
 	 * @param groupName the display name/key of the resource group
 	 * @param groupTms  the map of resource keys to their {@link TelemetryManager}
 	 *                  instances for this group
+	 * @param deep      if true, builds the full tree including connectors and
+	 *                  monitors
 	 * @return a {@link ResourceGroupTelemetry} representing the resource-group
 	 *         subtree
 	 */
 	private static ResourceGroupTelemetry buildResourceGroupNode(
 		final String groupName,
-		final Map<String, TelemetryManager> groupTms
+		final Map<String, TelemetryManager> groupTms,
+		boolean deep
 	) {
 		final Map<String, String> groupAttributes = new HashMap<>();
 		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry
@@ -149,7 +162,7 @@ public class ExplorerService {
 			.attributes(groupAttributes)
 			.build();
 
-		groupNode.getResources().addAll(buildResources(groupTms));
+		groupNode.getResources().addAll(buildResources(groupTms, deep));
 
 		// Optionally, aggregate resource metrics (sum/avg/etc.)
 		groupNode
@@ -172,9 +185,11 @@ public class ExplorerService {
 	 * @param resourcesTarget the target list to which resource children will be
 	 *                        appended
 	 * @param tms             a map of resource key to {@link TelemetryManager}
+	 * @param deep            if true, builds the full tree including connectors and
+	 *                        monitors
 	 * @return list of built {@link ResourceTelemetry} nodes
 	 */
-	private static List<ResourceTelemetry> buildResources(final Map<String, TelemetryManager> tms) {
+	private static List<ResourceTelemetry> buildResources(final Map<String, TelemetryManager> tms, boolean deep) {
 		if (tms == null || tms.isEmpty()) {
 			return new ArrayList<>();
 		}
@@ -185,6 +200,10 @@ public class ExplorerService {
 			.map((Entry<String, TelemetryManager> entry) -> {
 				final String resourceKey = entry.getKey();
 				final TelemetryManager tm = entry.getValue();
+
+				if (deep && tm != null) {
+					return buildFullResourceNode(resourceKey, tm);
+				}
 
 				final Map<String, String> attributes = new HashMap<>();
 				final Map<String, Object> metrics = new HashMap<>();
@@ -498,6 +517,14 @@ public class ExplorerService {
 		connectorNode.getMonitors().add(monitorTypeNode);
 	}
 
+	private static final List<String> INSTANCE_DISPLAY_NAME_KEYS = List.of(
+		"system.device",
+		"name",
+		"network.interface.name",
+		"process.name",
+		"system.service.name"
+	);
+
 	/**
 	 * Appends monitor instances to the given monitor-type node.
 	 *
@@ -505,7 +532,17 @@ public class ExplorerService {
 	 * @param monitor         the monitor instance to append
 	 */
 	private static void appendInstances(final MonitorTypeTelemetry monitorTypeNode, Monitor monitor) {
-		final InstanceTelemetry instanceNode = InstanceTelemetry.builder().name(monitor.getId()).build();
+		String name = monitor.getId();
+		if (monitor.getAttributes() != null) {
+			for (String key : INSTANCE_DISPLAY_NAME_KEYS) {
+				if (monitor.getAttributes().containsKey(key)) {
+					name = monitor.getAttributes().get(key);
+					break;
+				}
+			}
+		}
+
+		final InstanceTelemetry instanceNode = InstanceTelemetry.builder().name(name).build();
 		if (monitor.getAttributes() != null) {
 			instanceNode.getAttributes().putAll(monitor.getAttributes());
 		}
@@ -538,7 +575,7 @@ public class ExplorerService {
 
 	/**
 	 * Performs a search across hierarchy elements (excluding virtual container
-	 * nodes) using Jaro–Winkler
+	 * nodes).
 	 *
 	 * @param query raw query string
 	 * @return ranked list of matches
@@ -548,7 +585,7 @@ public class ExplorerService {
 		if (q.isEmpty()) {
 			return List.of();
 		}
-		return searchService.search(q, getHierarchy());
+		return searchService.search(q, getHierarchy(true));
 	}
 
 	/**

@@ -3,6 +3,7 @@ import {
 	fetchExplorerHierarchy,
 	fetchTopLevelResource,
 	fetchGroupedResource,
+	searchExplorer,
 } from "../thunks/explorer-thunks";
 
 /**
@@ -14,6 +15,9 @@ import {
  * @property {any|null} currentResource - The currently focused resource subtree
  * @property {boolean} resourceLoading - Loading flag for resource fetch
  * @property {string|null} resourceError - Error message when resource fetch fails
+ * @property {any[]} searchResults - Search results
+ * @property {boolean} searchLoading - Loading flag for search
+ * @property {string|null} searchError - Error message when search fails
  */
 
 /** @type {ExplorerState} */
@@ -26,6 +30,10 @@ const initialState = {
 	currentResource: null,
 	resourceLoading: false,
 	resourceError: null,
+	/** @type {any[]} */
+	searchResults: [],
+	searchLoading: false,
+	searchError: null,
 	/**
 	 * UI state persistence (scroll position, expanded items)
 	 * Keyed by resource ID (or composite key)
@@ -84,6 +92,11 @@ const explorerSlice = createSlice({
 		setLastVisitedPath(state, action) {
 			state.lastVisitedPath = action.payload;
 		},
+		clearSearchResults(state) {
+			state.searchResults = [];
+			state.searchLoading = false;
+			state.searchError = null;
+		},
 	},
 	extraReducers: (b) => {
 		b.addCase(fetchExplorerHierarchy.pending, (s) => {
@@ -121,6 +134,18 @@ const explorerSlice = createSlice({
 			.addCase(fetchGroupedResource.rejected, (s, a) => {
 				s.resourceLoading = false;
 				s.resourceError = a.payload || a.error?.message || "Unable to fetch resource details";
+			})
+			.addCase(searchExplorer.pending, (s) => {
+				s.searchLoading = true;
+				s.searchError = null;
+			})
+			.addCase(searchExplorer.fulfilled, (s, a) => {
+				s.searchLoading = false;
+				s.searchResults = a.payload ?? [];
+			})
+			.addCase(searchExplorer.rejected, (s, a) => {
+				s.searchLoading = false;
+				s.searchError = a.payload || a.error?.message || "Unable to search explorer";
 			});
 	},
 });
@@ -131,6 +156,7 @@ export const {
 	setMonitorExpanded,
 	setPivotGroupExpanded,
 	setLastVisitedPath,
+	clearSearchResults,
 } = explorerSlice.actions;
 export const explorerReducer = explorerSlice.reducer;
 
@@ -143,6 +169,9 @@ export const selectCurrentResource = createSelector([base], (s) => s.currentReso
 export const selectResourceLoading = createSelector([base], (s) => s.resourceLoading);
 export const selectResourceError = createSelector([base], (s) => s.resourceError);
 export const selectLastVisitedPath = createSelector([base], (s) => s.lastVisitedPath);
+export const selectSearchResults = createSelector([base], (s) => s.searchResults);
+export const selectSearchLoading = createSelector([base], (s) => s.searchLoading);
+export const selectSearchError = createSelector([base], (s) => s.searchError);
 
 // Default UI state object - stable reference to avoid creating new objects
 const defaultUiState = { scrollTop: 0, monitors: {}, pivotGroups: {} };
