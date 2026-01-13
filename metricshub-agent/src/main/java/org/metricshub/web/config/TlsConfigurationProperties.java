@@ -72,11 +72,12 @@ public class TlsConfigurationProperties {
 		/**
 		 * Optional key password. Defaults to the keystore password when not set.
 		 */
-		private String keyPassword = "NOPWD";
+		private String keyPassword;
 
 		/**
-		 * Key alias to load from the keystore. Defaults to {@code tls-selfsigned}.
+		 * Optional Key alias to load from the keystore.
+		 * If not provided we load the keystore and the first suitable private-key entry is used.
 		 */
-		private String keyAlias = "tls-selfsigned";
+		private String keyAlias;
 	}
 }

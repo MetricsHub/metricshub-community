@@ -23,6 +23,7 @@ package org.metricshub.web.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.security.ApiKeyAuthFilter;
 import org.metricshub.web.security.SecurityHelper;
@@ -51,6 +52,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableConfigurationProperties(TlsConfigurationProperties.class)
+@Slf4j
 public class SecurityConfig {
 
 	private ApiKeyAuthFilter apiKeyAuthFilter;
@@ -164,25 +166,29 @@ public class SecurityConfig {
 				throw new IllegalStateException("tls.keystore.path must be set");
 			}
 
-			final String keyAlias = keystore.getKeyAlias();
-			if (!StringHelper.nonNullNonBlank(keyAlias)) {
-				throw new IllegalStateException("tls.keystore.key-alias must be set");
+			final String keystorePassword = keystore.getPassword();
+
+			if (!StringHelper.nonNullNonBlank(keystorePassword)) {
+				throw new IllegalStateException("tls.keystore.password must be set");
 			}
 
-			final String keystorePassword = keystore.getPassword();
-			final String keyPassword = keystore.getKeyPassword();
+			// Default key password to keystore password when not set
+			final String keyPassword = StringHelper.nonNullNonBlank(keystore.getKeyPassword())
+				? keystore.getKeyPassword()
+				: keystorePassword;
+
+			log.info("Enabling TLS on embedded web server using keystore at {}", keystoreLocation);
 
 			final Ssl ssl = new Ssl();
 			ssl.setEnabled(true);
 			ssl.setKeyStore(keystoreLocation);
 			ssl.setKeyStoreType("PKCS12");
-			if (keystorePassword != null) {
-				ssl.setKeyStorePassword(keystorePassword);
+			ssl.setKeyStorePassword(keystorePassword);
+			ssl.setKeyPassword(keyPassword);
+
+			if (StringHelper.nonNullNonBlank(keystore.getKeyAlias())) {
+				ssl.setKeyAlias(keystore.getKeyAlias());
 			}
-			if (keyPassword != null) {
-				ssl.setKeyPassword(keyPassword);
-			}
-			ssl.setKeyAlias(keyAlias);
 
 			factory.setSsl(ssl);
 		};
