@@ -27,7 +27,7 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
-class HostMonitorEnergyAndPowerEstimatorTest {
+class HostMonitorPowerAndEnergyEstimatorTest {
 
 	/**
 	 * Build a new host monitor
@@ -323,5 +323,25 @@ class HostMonitorEnergyAndPowerEstimatorTest {
 		hostMonitorEnergyAndPowerEstimator.computeMeasuredEnergy();
 
 		assertEquals(3520255.0, CollectHelper.getNumberMetricValue(host, HW_HOST_MEASURED_ENERGY, false));
+	}
+
+	@Test
+	void testGetAdjustedPowerConsumption() {
+		final HostMonitorPowerAndEnergyEstimator estimator = new HostMonitorPowerAndEnergyEstimator(null, null);
+
+		// null numerator
+		assertEquals(0.0, estimator.getAdjustedPowerConsumption(null, 10.0, 50.0));
+
+		// zero numerator
+		assertEquals(0.0, estimator.getAdjustedPowerConsumption(0.0, 10.0, 50.0));
+
+		// zero denominator
+		assertEquals(0.0, estimator.getAdjustedPowerConsumption(5.0, 0.0, 50.0));
+
+		// normal case: (2 / 10) * 50 = 10.0
+		assertEquals(10.0, estimator.getAdjustedPowerConsumption(2.0, 10.0, 50.0));
+
+		// HALF_UP rounding case
+		assertEquals(1.67, estimator.getAdjustedPowerConsumption(1.0, 6.0, 10.0), 0.0001);
 	}
 }
