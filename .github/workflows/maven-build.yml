@@ -101,7 +101,6 @@ jobs:
         detached: true
         sudo: true
         install-dependencies: true
-      if: ${{ inputs.ssh }}
 
     - name: Configure additional installation path for Maven artifacts
       shell: bash
