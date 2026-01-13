@@ -7,7 +7,7 @@ description: How to configure MetricsHub to monitor Windows Event Logs (via WMI 
 
 You can configure **MetricsHub** to monitor Windows Event Logs. In the example below, we configured **MetricsHub** to run a connector that defines a single `eventLog` source (Security) on the `prod-win-web` resource using **WMI**.
 
-> Note: Event log collection is incremental. MetricsHub keeps a per-host cursor per EventLog source to avoid re-reading the same events.
+> Note: Event log collection is incremental. MetricsHub keeps a per-host, per-EventLog-source cursor to avoid re-reading the same events.
 
 ## Procedure
 
@@ -23,7 +23,7 @@ To achieve this use case, we:
           host.type: windows
 ```
 
-* Configure the `WMI` protocol protocol with credentials and timeout:
+* Configure the `WMI` protocol with credentials and timeout:
 
 ```yaml
         protocols:
@@ -37,23 +37,23 @@ To achieve this use case, we:
 
 * Define the `WindowsEventLog` source
 
-This example demonstrates 
+This example demonstrates:
 
 - retrieving events from the **Security** log
-- applying computes to keep wanted events (having `failed` word)
-- mapping the results into metrics
+- filtering and counting events containing `failed` word.
+- mapping the results into a metric
 
 Each source returns the following columns:
 
-1. `RecordNumber`, 2. `TimeGenerated`, 3. `TimeWritten`, 4. `EventCode`, 5. `EventType`,
-2. `EventIdentifier`, 7. `SourceName`, 8. `InsertionStrings`, 9. `Message`, 10. `LogFile`
+1/ `RecordNumber`, 2/ `TimeGenerated`, 3/ `TimeWritten`, 4/ `EventCode`, 5/ `EventType`,
+6/ `EventIdentifier`, 7/ `SourceName`, 8/ `InsertionStrings`, 9/ `Message`, 10/ `LogFile`
 
 ```yaml
 monitors:
   logs:
     simple:
       sources:
-        eventLogSource:
+        windowsEventLogSource:
           # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
           # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
           type: eventLog
@@ -64,8 +64,8 @@ monitors:
             - type: awk
               script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
       mapping:
-        # Mapping is executed per row returned by the source.
-        source: ${esc.d}{source::eventLogSource}
+        # Mapping is executed on the result produced by the source (after computes are applied).
+        source: ${esc.d}{source::windowsEventLogSource}
         attributes:
           log.file.name: Security
           log.match.pattern: ".*failed.*"
