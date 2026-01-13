@@ -7,7 +7,7 @@ description: How to test connectivity to HTTP-based resources with MetricsHub HT
 
 The **MetricsHub HTTP CLI** is a powerful command-line utility for interacting with monitored resources. It supports common HTTP methods (`GET`, `POST`, `PUT`, and `DELETE`) to validate configurations, troubleshoot connectivity issues, and perform HTTP-based operations directly from the command line. The CLI supports authentication, custom headers, and request body configurations.
 
-Before using the CLI, ensure your platform supports HTTP monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports HTTP monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

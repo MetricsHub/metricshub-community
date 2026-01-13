@@ -228,6 +228,15 @@ public class HostMonitorPowerAndEnergyEstimator {
 		final Double totalEstimatedPowerConsumption,
 		final Double totalMeasuredPowerConsumption
 	) {
+		// Return 0.0 when the adjusted power cannot be computed
+		// (zero estimated power or zero total estimated power)
+		if (
+			estimatedPowerConsumption == null ||
+			estimatedPowerConsumption.equals(0.0) ||
+			totalEstimatedPowerConsumption.equals(0.0)
+		) {
+			return 0.0;
+		}
 		return NumberHelper.round(
 			(estimatedPowerConsumption / totalEstimatedPowerConsumption) * totalMeasuredPowerConsumption,
 			2,

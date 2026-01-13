@@ -12,5 +12,6 @@ export const paths = {
 			: `/explorer/resources/${encodeURIComponent(resource)}/connectors/${encodeURIComponent(connectorId)}/monitors/${encodeURIComponent(monitorType)}`,
 	configuration: "/configuration",
 	configurationFile: (name) => `/configuration/${encodeURIComponent(name)}`,
+	chat: "/chat",
 	login: "/login",
 };

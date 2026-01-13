@@ -996,10 +996,10 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
 			oscmd
 				.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand fru"), anyLong(), eq(null)))
-				.thenReturn("impiResultFru");
+				.thenReturn("ipmiResultFru");
 			oscmd
 				.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand -v sdr elist all"), anyLong(), eq(null)))
-				.thenReturn("impiResultSdr");
+				.thenReturn("ipmiResultSdr");
 			final SourceTable ipmiResult = osCommandExtension.processSource(
 				new IpmiSource(),
 				MY_CONNECTOR_1_NAME,
@@ -1036,7 +1036,7 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
 			oscmd
 				.when(() -> OsCommandService.runSshCommand(eq("ipmiCommand fru"), any(), any(), anyLong(), any(), any(), any()))
-				.thenReturn("impiResultFru");
+				.thenReturn("ipmiResultFru");
 			oscmd
 				.when(() ->
 					OsCommandService.runSshCommand(
@@ -1049,7 +1049,7 @@ class OsCommandExtensionTest {
 						any()
 					)
 				)
-				.thenReturn("impiResultSdr");
+				.thenReturn("ipmiResultSdr");
 			final SourceTable ipmiResult = osCommandExtension.processSource(
 				new IpmiSource(),
 				MY_CONNECTOR_1_NAME,
