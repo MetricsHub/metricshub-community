@@ -18,7 +18,7 @@ package org.metricshub.extension.win.source;
  *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAULT_NAMESPACE;
@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.StringHelper.nonNullNonBlank;
 import static org.metricshub.engine.connector.model.monitor.task.source.EventLogSource.UNLIMITED_EVENTS_PER_POLL;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -88,6 +87,11 @@ public class EventLogSourceProcessor {
 	 * Column index for {@code Message} in the WMI result rows.
 	 */
 	private static final int MESSAGE_COLUMN = 8;
+
+	/**
+	 * Escape string for new lines.
+	 */
+	private static final String NEW_LINE_ESCAPE_STRING = "@{newLine}@";
 
 	/**
 	 * Returns whether this is the first poll for a given host/source.
@@ -187,8 +191,8 @@ public class EventLogSourceProcessor {
 				"""
 				Hostname {} - EventLog poll
 				Source: {}
-				Current cursor: {}
-				New cursor: {}
+				Current RecordNumber cursor: {}
+				New recordNumber cursor: {}
 				Returning {} rows
 				""",
 				hostname,
@@ -265,16 +269,16 @@ public class EventLogSourceProcessor {
 				final int level = Integer.parseInt(line.get(EVENT_LOG_LEVEL_COLUMN));
 				line.set(EVENT_LOG_LEVEL_COLUMN, EventLogLevel.detectFromCode(level).getAlias());
 
-				// Encode InsertionStrings to Base64 (the source returns it as a raw string).
+				// Escape the new line \r\n character by a special character to avoid any problem using AWK scripts.
 				final String insertionStrings = line.get(INSERTION_STRINGS_COLUMN);
 				if (insertionStrings != null && !insertionStrings.isBlank()) {
-					line.set(INSERTION_STRINGS_COLUMN, Base64.getEncoder().encodeToString(insertionStrings.getBytes()));
+					line.set(INSERTION_STRINGS_COLUMN, escapeNewLines(insertionStrings));
 				}
 
-				// Encode Message to Base64 (the source returns it as a raw string, which can be very long).
+				// Escape the new line \r\n character by a special character to avoid any problem using AWK scripts.
 				final String message = line.get(MESSAGE_COLUMN);
 				if (message != null && !message.isBlank()) {
-					line.set(MESSAGE_COLUMN, Base64.getEncoder().encodeToString(message.getBytes()));
+					line.set(MESSAGE_COLUMN, escapeNewLines(message));
 				}
 			});
 		}
@@ -446,5 +450,25 @@ public class EventLogSourceProcessor {
 		}
 		// Escape single quotes by doubling them
 		return value.replace("'", "''");
+	}
+
+	/**
+	 * Escapes newline characters in a string by replacing them with a placeholder.
+	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
+	 *
+	 * @param value the string to escape
+	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or empty string if input is null
+	 */
+	static String escapeNewLines(final String value) {
+		if (value == null) {
+			return "";
+		}
+
+		// Replace \r\n first (Windows line endings), then handle any remaining \r or \n
+		// Use replace() for literal replacements to avoid regex interpretation of $ in replacement string
+		return value
+			.replace("\r\n", NEW_LINE_ESCAPE_STRING)
+			.replace("\n", NEW_LINE_ESCAPE_STRING)
+			.replace("\r", NEW_LINE_ESCAPE_STRING);
 	}
 }

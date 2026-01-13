@@ -9,7 +9,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -632,15 +631,15 @@ class EventLogSourceProcessorTest {
 	}
 
 	@Test
-	void testPostProcessEventLogs_encodesInsertionStringsAndMessageToBase64_whenNotFirstPoll() {
-		// cursor != null => level alias replacement + Base64 encoding of InsertionStrings and Message
+	void testPostProcessEventLogs_escapesNewlinesInInsertionStringsAndMessage_whenNotFirstPoll() {
+		// cursor != null => level alias replacement + newline escaping for InsertionStrings and Message
 		final EventLogSource source = EventLogSource.builder().maxEventsPerPoll(10).build();
 
 		final String insertionStrings = "S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|";
-		final String message =
-			"An account was logged off.\n\nSubject:\n\tSecurity ID:\t\tS-1-5-21-1098790905\n\tAccount Name:\t\tAdministrator";
-		final String expectedInsertionStringsBase64 = Base64.getEncoder().encodeToString(insertionStrings.getBytes());
-		final String expectedMessageBase64 = Base64.getEncoder().encodeToString(message.getBytes());
+		final String messageWithNewlines =
+			"An account was logged off.\r\n\r\nSubject:\r\n\tSecurity ID:\t\tS-1-5-21-1098790905\r\n\tAccount Name:\t\tAdministrator";
+		final String expectedMessageEscaped =
+			"An account was logged off.@{newLine}@@{newLine}@Subject:@{newLine}@\tSecurity ID:\t\tS-1-5-21-1098790905@{newLine}@\tAccount Name:\t\tAdministrator";
 
 		// RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, EventIdentifier, SourceName,
 		// InsertionStrings, Message, LogFile
@@ -654,6 +653,44 @@ class EventLogSourceProcessorTest {
 				"2147489653",
 				"EventLog",
 				insertionStrings,
+				messageWithNewlines,
+				"System"
+			)
+		);
+
+		final PostProcessingResult output = processor.postProcessEventLogs(requestResult, source, 10);
+
+		assertEquals(1, output.getResults().size(), "Expected one returned row.");
+		final List<String> row = output.getResults().get(0);
+
+		assertEquals(insertionStrings, row.get(7), "InsertionStrings without newlines must remain unchanged.");
+
+		assertEquals(expectedMessageEscaped, row.get(8), "Message must have newlines escaped by postProcessEventLogs().");
+	}
+
+	@Test
+	void testPostProcessEventLogs_escapesNewlinesInInsertionStrings_whenNotFirstPoll() {
+		// cursor != null => newline escaping for InsertionStrings with newlines
+		final EventLogSource source = EventLogSource.builder().maxEventsPerPoll(10).build();
+
+		final String insertionStringsWithNewlines =
+			"S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|\r\nAdditional info";
+		final String expectedInsertionStringsEscaped =
+			"S-1-5-21-1098790905-104752506-1616813648-500|Administrator|EC-WIN-01|0xe2ba137|3|@{newLine}@Additional info";
+		final String message = "Simple message";
+
+		// RecordNumber, TimeGenerated, TimeWritten, EventCode, EventType, EventIdentifier, SourceName,
+		// InsertionStrings, Message, LogFile
+		final List<List<String>> requestResult = List.of(
+			List.of(
+				"2",
+				"1767087755",
+				"1767087755",
+				"6005",
+				"3",
+				"2147489653",
+				"EventLog",
+				insertionStringsWithNewlines,
 				message,
 				"System"
 			)
@@ -665,21 +702,45 @@ class EventLogSourceProcessorTest {
 		final List<String> row = output.getResults().get(0);
 
 		assertEquals(
-			expectedInsertionStringsBase64,
+			expectedInsertionStringsEscaped,
 			row.get(7),
-			"InsertionStrings must be Base64-encoded by postProcessEventLogs()."
-		);
-		assertEquals(
-			insertionStrings,
-			new String(Base64.getDecoder().decode(row.get(7))),
-			"Encoded InsertionStrings must be decodable back to the original value."
+			"InsertionStrings with newlines must have newlines escaped."
 		);
 
-		assertEquals(expectedMessageBase64, row.get(8), "Message must be Base64-encoded by postProcessEventLogs().");
+		assertEquals(message, row.get(8), "Message without newlines must remain unchanged.");
+	}
+
+	@Test
+	void testEscapeNewLines_handlesAllNewlineVariants() {
 		assertEquals(
-			message,
-			new String(Base64.getDecoder().decode(row.get(8))),
-			"Encoded Message must be decodable back to the original value."
+			"Line1@{newLine}@Line2",
+			EventLogSourceProcessor.escapeNewLines("Line1\r\nLine2"),
+			"escapeNewLines() must replace Windows line endings (\\r\\n) with @{newLine}@."
+		);
+
+		assertEquals(
+			"Line1@{newLine}@Line2",
+			EventLogSourceProcessor.escapeNewLines("Line1\rLine2"),
+			"escapeNewLines() must replace Mac line endings (\\r) with @{newLine}@."
+		);
+
+		assertEquals(
+			"Line1@{newLine}@@{newLine}@Line2",
+			EventLogSourceProcessor.escapeNewLines("Line1\r\n\r\nLine2"),
+			"escapeNewLines() must replace multiple Windows line endings."
+		);
+
+		assertEquals(
+			"Line1@{newLine}@Line2@{newLine}@Line3",
+			EventLogSourceProcessor.escapeNewLines("Line1\nLine2\r\nLine3"),
+			"escapeNewLines() must handle mixed line endings."
+		);
+
+		assertEquals("", EventLogSourceProcessor.escapeNewLines(null), "escapeNewLines(null) must return empty string.");
+		assertEquals(
+			"No newlines",
+			EventLogSourceProcessor.escapeNewLines("No newlines"),
+			"escapeNewLines() must preserve strings without newlines."
 		);
 	}
 

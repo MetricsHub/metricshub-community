@@ -23,7 +23,7 @@ To achieve this use case, we:
           host.type: windows
 ```
 
-* Configure **either** the `WMI` protocol protocol with credentials and timeout:
+* Configure the `WMI` protocol protocol with credentials and timeout:
 
 ```yaml
         protocols:
@@ -46,7 +46,7 @@ This example demonstrates
 Each source returns the following columns:
 
 1. `RecordNumber`, 2. `TimeGenerated`, 3. `TimeWritten`, 4. `EventCode`, 5. `EventType`,
-2. `EventIdentifier`, 7. `SourceName`, 8. `InsertionStrings` (in Base64), 9. `Message`, 10. `LogFile`
+2. `EventIdentifier`, 7. `SourceName`, 8. `InsertionStrings`, 9. `Message`, 10. `LogFile`
 
 ```yaml
 monitors:
@@ -55,36 +55,22 @@ monitors:
       sources:
         eventLogSource:
           # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
-          # 7.SourceName, 8.InsertionStrings (Base64), 9.Message (Base64), 10.LogFile
+          # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
           type: eventLog
           logName: Security
           sources: Microsoft-Windows-Security-Auditing
           maxEventsPerPoll: 20
           computes:
-            # Decode InsertionStrings before filtering/matching.
-            - type: decode
-              column: 8
-              encoding: Base64
-            # Example: keep only events where decoded insertion strings contain a keyword.
-            - type: keepOnlyMatchingLines
-              column: 8
-              regExp: ".*failed.*"
-        eventCountSource:
-          type: copy
-          from: ${esc.d}{source::eventLogSource}
-          computes:
-            # Aggregate: replace the whole table by a single row containing the number of remaining rows (NR).
             - type: awk
-              script: END { print NR }
-
+              script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
       mapping:
         # Mapping is executed per row returned by the source.
-        source: ${esc.d}{source::eventCountSource}
+        source: ${esc.d}{source::eventLogSource}
         attributes:
           log.file.name: Security
           log.match.pattern: ".*failed.*"
         metrics:
-          # Emit a single datapoint: number of rows that matched after keepOnlyMatchingLines.
+          # Emit a single datapoint: number of rows that matched after the awk script.
           log.count: $1
 ```
 
@@ -101,43 +87,31 @@ Here is the complete YAML configuration:
             username: <username>
             password: <password>
             timeout: 240
-        monitors:
-          logs:
-            simple:
-              sources:
-                eventLogSource:
-                  # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
-                  # 7.SourceName, 8.InsertionStrings (Base64), 9.Message (Base64), 10.LogFile
-                  type: eventLog
-                  logName: Security
-                  sources: Microsoft-Windows-Security-Auditing
-                  maxEventsPerPoll: 20
-                  computes:
-                    # Decode InsertionStrings before filtering/matching.
-                    - type: decode
-                      column: 8
-                      encoding: Base64
-                    # Example: keep only events where decoded insertion strings contain a keyword.
-                    - type: keepOnlyMatchingLines
-                      column: 8
-                      regExp: ".*failed.*"
-                eventCountSource:
-                  type: copy
-                  from: ${esc.d}{source::eventLogSource}
-                  computes:
-                    # Aggregate: replace the whole table by a single row containing the number of remaining rows (NR).
-                    - type: awk
-                      script: END { print NR }
-
-              mapping:
-                # Mapping is executed per row returned by the source.
-                source: ${esc.d}{source::eventCountSource}
-                attributes:
-                  log.file.name: Security
-                  log.match.pattern: ".*failed.*"
-                metrics:
-                  # Emit a single datapoint: number of rows that matched after keepOnlyMatchingLines.
-                  log.count: $1
+monitors:
+  logs:
+    simple:
+      sources:
+        eventLogSource:
+          # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
+          # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
+          type: eventLog
+          logName: Security
+          sources: Microsoft-Windows-Security-Auditing
+          maxEventsPerPoll: 20
+          # Optional: filter by event IDs (e.g., eventIds: [4624, 4625])
+          # Optional: filter by levels (e.g., levels: ["error", "warning", "audit failure"])
+          computes:
+            - type: awk
+              script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
+      mapping:
+        # Mapping is executed per row returned by the source.
+        source: ${esc.d}{source::eventLogSource}
+        attributes:
+          log.file.name: Security
+          log.match.pattern: ".*failed.*"
+        metrics:
+          # Emit a single datapoint: number of rows that matched after the awk script.
+          log.count: $1
 ```
 
 ## Supporting Resources
