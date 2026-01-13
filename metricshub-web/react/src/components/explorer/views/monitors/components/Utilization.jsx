@@ -5,7 +5,7 @@ import HoverInfo from "./HoverInfo";
 /**
  * Converts raw metric entries into utilization parts with percentages.
  * @param {Array<{key: string, value: number}>} entries
- * @returns {Array<{key: string, value: number, pct: number}>}
+ * @returns {Array<{key: string, value: number, pct: number, rawPct: number}>}
  */
 export const buildUtilizationParts = (entries) => {
 	const parts = entries
@@ -20,13 +20,37 @@ export const buildUtilizationParts = (entries) => {
 	if (parts.length === 0) return [];
 
 	const sum = parts.reduce((acc, p) => acc + p.value, 0);
-	const total = Math.max(sum, 1);
+	// Metrics can be in 0-1 range or 0-100 range.
+	// We use a small epsilon to handle floating point issues.
+	const is0to100 = sum > 1.05;
+	const total = is0to100 ? Math.max(sum, 100) : Math.max(sum, 1);
 
-	return parts.map((p) => ({
-		key: p.key,
-		value: p.value,
-		pct: Math.round((p.value / total) * 100),
-	}));
+	const result = parts.map((p) => {
+		const rawPct = (p.value / total) * 100;
+		let pct = Math.round(rawPct);
+		// If value is > 0 but rounds to 0, clamp to 1 for visual readability
+		if (p.value > 0 && pct === 0) pct = 1;
+		return {
+			key: p.key,
+			value: p.value,
+			pct,
+			rawPct,
+		};
+	});
+
+	const currentPctSum = result.reduce((acc, p) => acc + p.pct, 0);
+	if (currentPctSum < 100) {
+		const noneValue = total - sum;
+		const rawPct = (noneValue / total) * 100;
+		result.push({
+			key: "none",
+			value: noneValue,
+			pct: 100 - currentPctSum,
+			rawPct,
+		});
+	}
+
+	return result;
 };
 
 /**
@@ -51,25 +75,26 @@ export const colorLabelFromKey = (key) => {
 };
 
 /**
- * Returns a color function for a given metric label.
+ * Returns a color for a given metric label.
  * @param {string} name
- * @returns {(theme: any) => string}
+ * @returns {string|((theme: any) => string)}
  */
 export const colorFor = (name) => {
 	const n = name.toLowerCase();
-	if (n.includes("used")) return (theme) => theme.palette.primary.main;
-	if (n.includes("free")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("cache")) return (theme) => theme.palette.warning.main;
-	if (n.includes("buffer")) return (theme) => theme.palette.warning.light;
-	if (n.includes("idle")) return (theme) => theme.palette.action.disabled;
-	if (n.includes("system")) return (theme) => theme.palette.error.main;
-	if (n.includes("user")) return (theme) => theme.palette.info.main;
-	if (n.includes("nice")) return (theme) => theme.palette.success.main;
-	if (n.includes("wait")) return (theme) => theme.palette.warning.dark; // io_wait, iowait
-	if (n.includes("steal")) return (theme) => theme.palette.text.primary;
-	if (n.includes("irq")) return (theme) => theme.palette.secondary.main; // irq, softirq
-	if (n.includes("receive")) return (theme) => theme.palette.success.main;
-	if (n.includes("transmit")) return (theme) => theme.palette.secondary.main;
+	if (n.includes("used")) return (t) => t.palette.primary.main;
+	if (n.includes("free")) return (t) => t.palette.action.disabled;
+	if (n.includes("cache")) return (t) => t.palette.warning.main;
+	if (n.includes("buffer")) return (t) => t.palette.warning.light;
+	if (n.includes("idle")) return (t) => t.palette.action.disabled;
+	if (n.includes("system")) return (t) => t.palette.error.main;
+	if (n.includes("user")) return (t) => t.palette.info.main;
+	if (n.includes("nice")) return (t) => t.palette.success.main;
+	if (n.includes("wait")) return (t) => t.palette.warning.dark; // io_wait, iowait
+	if (n.includes("steal")) return (t) => t.palette.text.primary;
+	if (n.includes("irq")) return (t) => t.palette.secondary.main; // irq, softirq
+	if (n.includes("receive")) return (t) => t.palette.success.main;
+	if (n.includes("transmit")) return (t) => t.palette.secondary.main;
+	if (n === "none") return (t) => t.palette.action.hover;
 
 	// Fallback: generate a consistent color based on the string hash
 	let hash = 0;
@@ -97,6 +122,7 @@ export const getPriority = (label) => {
 	if (label.includes("buffer")) return 45;
 	if (label.includes("free")) return 90;
 	if (label.includes("idle")) return 100;
+	if (label === "none") return 1000;
 	return 50;
 };
 
@@ -126,11 +152,14 @@ const emptyBarSx = {
 	overflow: "hidden",
 	bgcolor: "action.hover",
 	display: "flex",
+	width: "100%",
 };
 
 /**
  * Renders a stacked progress bar for utilization metrics.
- * @param {{parts: Array<{key: string, value: number, pct: number}>}} props
+ *
+ * @param {object} props - Component props
+ * @param {Array<{key: string, value: number, pct: number}>} props.parts - Utilization parts to render
  */
 const UtilizationStackComponent = ({ parts }) => {
 	const sortedParts = React.useMemo(() => {
@@ -149,6 +178,7 @@ const UtilizationStackComponent = ({ parts }) => {
 
 	return (
 		<Box
+			className="utilization-stack"
 			sx={{
 				position: "relative",
 				height: 16,
@@ -156,45 +186,57 @@ const UtilizationStackComponent = ({ parts }) => {
 				overflow: "hidden",
 				bgcolor: "action.hover",
 				display: "flex",
+				width: "100%",
+				flexGrow: 1,
+				alignSelf: "center",
 			}}
 		>
 			{filteredParts.map((p) => {
 				const label = colorLabelFromKey(p.key);
+				const isNone = p.key === "none";
+				const threshold = 12;
+				const showText = p.pct > threshold;
+
+				const bar = (
+					<Box
+						className="utilization-bar"
+						sx={{
+							width: "100%",
+							height: "100%",
+							bgcolor: colorFor(label),
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "center",
+						}}
+					>
+						{showText && (
+							<Box
+								component="span"
+								sx={{
+									color: !isNone ? "common.white" : "text.secondary",
+									fontSize: "0.7rem",
+									fontWeight: 600,
+									lineHeight: 1,
+									textShadow: !isNone ? "0px 0px 2px rgba(0,0,0,0.5)" : "none",
+									userSelect: "none",
+								}}
+							>
+								{p.pct}%
+							</Box>
+						)}
+					</Box>
+				);
+
 				return (
 					<HoverInfo
 						key={p.key}
-						label={label}
-						value={p.pct / 100}
+						label={isNone ? "None" : label}
+						value={p.rawPct / 100}
 						sx={{
 							width: `${p.pct}%`,
 						}}
 					>
-						<Box
-							sx={{
-								width: "100%",
-								height: "100%",
-								bgcolor: colorFor(label),
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "center",
-							}}
-						>
-							{p.pct > 10 && (
-								<Box
-									component="span"
-									sx={{
-										color: "common.white",
-										fontSize: "0.7rem",
-										fontWeight: 600,
-										lineHeight: 1,
-										textShadow: "0px 0px 2px rgba(0,0,0,0.5)",
-										userSelect: "none",
-									}}
-								>
-									{p.pct}%
-								</Box>
-							)}
-						</Box>
+						{bar}
 					</HoverInfo>
 				);
 			})}

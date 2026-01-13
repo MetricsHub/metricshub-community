@@ -9,7 +9,7 @@ description: The MetricsHub CLI is the core MetricsHub's engine wrapped in a com
 
 The `metricshub` CLI is the core **MetricsHub**'s engine wrapped in a command line interface. System administrators can easily invoke this tool in a shell to discover and report problems related to the specified resources, including hardware, systems, applications, services, etc.
 
-The detailed list of systems supported by the **MetricsHub** community (manufacturer and product family and the required instrumentation stack) is listed in [Connectors Directory](../metricshub-connectors-directory.html).
+The detailed list of systems supported by **MetricsHub** (manufacturer and product family and the required instrumentation stack) is listed in the [Supported Platforms](../supported-platforms.html).
 
 The quantity and quality of the information that **MetricsHub** will gather depends on the instrumentation stack available on the targeted resource (host).
 

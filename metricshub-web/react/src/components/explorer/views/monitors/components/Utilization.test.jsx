@@ -33,9 +33,10 @@ describe("Utilization Helpers", () => {
 				{ key: "high", value: 1.5 },
 			];
 			const result = buildUtilizationParts(input);
-			// -0.5 becomes 0
-			// 1.5 stays 1.5 (no longer clamped to 1)
-			expect(result).toHaveLength(2);
+			// -0.5 becomes 0 (pct 0)
+			// 1.5 stays 1.5 (rawPct 1.5, rounded to 2 for total=100)
+			// Plus "none" part (pct 98)
+			expect(result).toHaveLength(3);
 
 			const low = result.find((p) => p.key === "low");
 			expect(low).toBeDefined();
@@ -45,7 +46,12 @@ describe("Utilization Helpers", () => {
 			const high = result.find((p) => p.key === "high");
 			expect(high).toBeDefined();
 			expect(high.value).toBe(1.5);
-			expect(high.pct).toBe(100);
+			// sum=1.5 > 1.05 -> total=100. 1.5/100 -> 1.5 -> rounded to 2%
+			expect(high.pct).toBe(2);
+
+			const none = result.find((p) => p.key === "none");
+			expect(none).toBeDefined();
+			expect(none.pct).toBe(98); // 100 - (0 + 2)
 		});
 
 		it("filters out zero values", () => {
@@ -54,14 +60,11 @@ describe("Utilization Helpers", () => {
 				{ key: "valid", value: 0.5 },
 			];
 			const result = buildUtilizationParts(input);
-			// We now keep 0 values to ensure they exist in the parts list,
-			// but they might not be rendered if width is 0.
-			// However, the filter in buildUtilizationParts is .filter((p) => p.value >= 0)
-			// Wait, the previous implementation filtered p.value >= 0.
-			// If input has 0, it should be kept?
-			// Let's check the implementation: .filter((p) => p.value >= 0)
-			// So 0 is kept.
-			expect(result).toHaveLength(2);
+			// zero: pct 0
+			// valid: pct 50 (raw 0.5/1.0)
+			// none: pct 50
+			expect(result).toHaveLength(3);
+			expect(result.find((p) => p.key === "none")).toBeDefined();
 			expect(result.find((p) => p.key === "zero")).toBeDefined();
 			expect(result.find((p) => p.key === "valid")).toBeDefined();
 		});
@@ -180,14 +183,14 @@ describe("UtilizationStack", () => {
 		expect(screen.getByText("40%")).toBeInTheDocument();
 	});
 
-	it("hides percentage text for small values (<= 10%)", () => {
+	it("hides percentage text for small values (<= 12%)", () => {
 		const parts = [
-			{ key: "user", value: 0.05, pct: 5 },
-			{ key: "idle", value: 0.95, pct: 95 },
+			{ key: "user", value: 0.1, pct: 10 },
+			{ key: "idle", value: 0.9, pct: 90 },
 		];
 		render(<UtilizationStack parts={parts} />);
 
-		expect(screen.queryByText("5%")).not.toBeInTheDocument();
-		expect(screen.getByText("95%")).toBeInTheDocument();
+		expect(screen.queryByText("10%")).not.toBeInTheDocument();
+		expect(screen.getByText("90%")).toBeInTheDocument();
 	});
 });

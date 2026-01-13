@@ -128,7 +128,7 @@ public class Constants {
 	public static final String HOST_CAMEL_CASE = "Host";
 
 	// IPMI message
-	public static final String IPMI_CONNECTION_SUCCESS_WITH_IMPI_OVER_LAN_MESSAGE =
+	public static final String IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE =
 		"Successfully connected to the IPMI BMC chip with the IPMI-over-LAN " + "interface.";
 
 	// Exception messages

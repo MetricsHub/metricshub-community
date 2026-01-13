@@ -7,7 +7,7 @@ Windows Remote Management (WinRM) is a protocol designed for remote management a
 
 The **MetricsHub WinRM CLI** allows users to execute WinRM queries on remote systems. It supports querying namespaces, retrieving specific data, and authenticating using protocols like NTLM and Kerberos.
 
-Before using the CLI, ensure your platform supports WinRM monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports WinRM monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

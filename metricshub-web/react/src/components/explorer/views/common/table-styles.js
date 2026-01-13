@@ -6,8 +6,46 @@ export const sectionTitleSx = {
 	mb: 1,
 };
 
-export const emptyStateCellSx = {
-	fontStyle: "italic",
-	color: "text.secondary",
-	textAlign: "center",
+export const truncatedCellSx = {
+	whiteSpace: "nowrap",
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+};
+
+export const dataGridSx = {
+	border: 1,
+	borderColor: "divider",
+	borderRadius: 1,
+	backgroundColor: "transparent",
+	"& .MuiDataGrid-columnHeaders": {
+		color: "text.secondary",
+		fontSize: "0.75rem",
+		textTransform: "none",
+		letterSpacing: "1px",
+		"& .metric-header": {
+			letterSpacing: "0px !important",
+			"& .MuiDataGrid-columnHeaderTitle": {
+				letterSpacing: "0px !important",
+			},
+		},
+	},
+	"& .MuiDataGrid-row": {
+		"&:hover": {
+			backgroundColor: "action.hover",
+		},
+	},
+	"& .MuiDataGrid-cell": {
+		borderBottom: 1,
+		borderColor: "divider",
+		display: "flex",
+		alignItems: "center",
+		color: "text.primary",
+	},
+	"& .MuiDataGrid-footerContainer": {
+		borderTop: 1,
+		borderColor: "divider",
+	},
+	"& .MuiDataGrid-virtualScroller": {
+		backgroundColor: "transparent",
+	},
 };

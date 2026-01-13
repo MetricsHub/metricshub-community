@@ -523,7 +523,7 @@ class WinRmExtensionTest {
 	}
 
 	@Test
-	void tesExecuteQuery() throws Exception {
+	void testExecuteQuery() throws Exception {
 		initWinRm();
 
 		doReturn(WQL_SUCCESS_RESPONSE)
@@ -532,6 +532,7 @@ class WinRmExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode("wmi"));
 		WinRmConfiguration configuration = WinRmConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -549,7 +550,7 @@ class WinRmExtensionTest {
 	}
 
 	@Test
-	void tesExecuteQueryThrow() throws Exception {
+	void testExecuteQueryThrow() throws Exception {
 		initWinRm();
 
 		doThrow(ClientException.class)
@@ -558,6 +559,7 @@ class WinRmExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode("wmi"));
 		WinRmConfiguration configuration = WinRmConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -566,6 +568,6 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.namespace(WINRM_TEST_NAMESPACE)
 			.build();
-		assertThrows(ClientException.class, () -> winRmExtension.executeQuery(configuration, queryNode));
+		assertNull(winRmExtension.executeQuery(configuration, queryNode), "Expected null response");
 	}
 }
