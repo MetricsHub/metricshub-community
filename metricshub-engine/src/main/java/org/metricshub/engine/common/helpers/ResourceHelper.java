@@ -29,6 +29,7 @@ import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.jar.JarFile;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.util.Assert;
 
 /**
@@ -131,5 +133,26 @@ public class ResourceHelper {
 			name = name.substring(0, separator);
 		}
 		return new File(name);
+	}
+
+	/**
+	 * Get the resource content from the classpath as a String.
+	 *
+	 * @param resourcePath the path to the resource in the classpath
+	 * @return the content of the resource as a String
+	 */
+	public static final String getClassPathResourceContent(final String resourcePath) {
+		final var resource = new ClassPathResource(resourcePath);
+		try (
+			var inputStream = resource.getInputStream();
+			var reader = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))
+		) {
+			return reader.lines().collect(Collectors.joining("\n"));
+		} catch (IOException e) {
+			throw new IllegalStateException(
+				"Cannot read classpath resource file: " + resourcePath + ". Message: " + e.getMessage(),
+				e
+			);
+		}
 	}
 }
