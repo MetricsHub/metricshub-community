@@ -63,9 +63,10 @@ public class SecurityConfig {
 	/**
 	 * Constructor for SecurityConfig.
 	 *
-	 * @param apiKeyAuthFilter the API key authentication filter
-	 * @param jwtComponent     the JWT component for handling JWT tokens
-	 * @param userService      the user service for user-related operations
+	 * @param apiKeyAuthFilter           the API key authentication filter
+	 * @param jwtComponent               the JWT component for handling JWT tokens
+	 * @param userService                the user service for user-related operations
+	 * @param tlsConfigurationProperties the TLS configuration properties
 	 */
 	@Autowired
 	public SecurityConfig(
