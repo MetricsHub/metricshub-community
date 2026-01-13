@@ -206,7 +206,7 @@ function ConfigurationPage() {
 			i++;
 		}
 
-		const content = "# MetricsHub Configuration\n\n\ncollectPeriod: 1m\n";
+		const content = "# MetricsHub Configuration\n\n";
 		dispatch(addLocalFile({ name, content }));
 		dispatch(saveDraftConfig({ name, content, skipValidation: true }));
 
