@@ -352,7 +352,7 @@
 				<version>2.0.0</version>
 				<executions>
 					<execution>
-						<id>create-default-web-keystore</id>
+						<id>create-default-m8b-keystore</id>
 						<phase>generate-resources</phase>
 						<goals>
 							<goal>generateKeyPair</goal>
@@ -367,9 +367,8 @@
 							<storetype>PKCS12</storetype>
 							<storepass>NOPWD</storepass>
 							<keypass>NOPWD</keypass>
-							<keystore>${project.build.outputDirectory}/web-keystore.p12</keystore>
+							<keystore>${project.build.outputDirectory}/m8b-keystore.p12</keystore>
 							<skipIfExist>true</skipIfExist>
-							<workingDirectory>${project.build.directory}</workingDirectory>
 						</configuration>
 					</execution>
 				</executions>

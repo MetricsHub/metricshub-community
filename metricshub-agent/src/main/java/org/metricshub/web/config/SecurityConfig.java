@@ -141,7 +141,7 @@ public class SecurityConfig {
 	/**
 	 * Configure the embedded web server to use HTTPS when TLS is enabled, falling back to HTTP otherwise.
 	 * <p>
-	 * Defaults to the packaged {@code classpath:web-keystore.p12} with password {@code NOPWD}
+	 * Defaults to the packaged {@code classpath:m8b-keystore.p12} with password {@code NOPWD}
 	 * and alias {@code tls-selfsigned}, but will use a user-provided keystore when configured.
 	 * </p>
 	 *

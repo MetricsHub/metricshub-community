@@ -29,7 +29,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * TLS configuration for the embedded web server.
  * <p>
- * By default TLS is enabled and uses the bundled {@code web-keystore.p12} on the classpath
+ * By default TLS is enabled and uses the bundled {@code m8b-keystore.p12} on the classpath
  * with password {@code NOPWD}. Users can override by providing {@code tls.keystore.path}
  * and {@code tls.keystore.password}.
  * </p>
@@ -60,9 +60,9 @@ public class TlsConfigurationProperties {
 
 		/**
 		 * Path to the keystore. Supports {@code classpath:} URLs. Defaults to the bundled
-		 * {@code web-keystore.p12} when not set.
+		 * {@code m8b-keystore.p12} when not set.
 		 */
-		private String path = "classpath:web-keystore.p12";
+		private String path = "classpath:m8b-keystore.p12";
 
 		/**
 		 * Keystore password; reused as key password. Defaults to {@code NOPWD} when not set.
