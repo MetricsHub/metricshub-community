@@ -82,7 +82,7 @@ public abstract class AbstractCollectionDeserializer<T> extends JsonDeserializer
 	 *
 	 * @return a {@link Predicate} that tests whether an extracted value should be included in the collection
 	 */
-	protected abstract Predicate<? super T> getFilterPredicate();
+	protected abstract Predicate<T> getFilterPredicate();
 
 	/**
 	 * Value extractor function to execute when reading the string value

@@ -128,6 +128,8 @@ public class EventLogSource extends Source {
 	@Override
 	public void update(UnaryOperator<String> updater) {
 		logName = updater.apply(logName);
+		eventIds = eventIds.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+		sources = sources.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
 	}
 
 	@Override

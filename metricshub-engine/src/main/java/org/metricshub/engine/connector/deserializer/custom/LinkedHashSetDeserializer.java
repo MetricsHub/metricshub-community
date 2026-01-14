@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
  * Custom deserializer for a {@link LinkedHashSet} of strings.
  * <p>
  * Accepts either:
+ * </p>
  * <ul>
  *   <li>a YAML/JSON array (e.g. {@code ["value1", "value2"]})</li>
  *   <li>a comma-separated string (e.g. {@code "value1,value2"})</li>
@@ -63,7 +64,7 @@ public class LinkedHashSetDeserializer extends AbstractCollectionDeserializer<St
 	}
 
 	@Override
-	protected Predicate<? super String> getFilterPredicate() {
+	protected Predicate<String> getFilterPredicate() {
 		return str -> !str.isBlank();
 	}
 }

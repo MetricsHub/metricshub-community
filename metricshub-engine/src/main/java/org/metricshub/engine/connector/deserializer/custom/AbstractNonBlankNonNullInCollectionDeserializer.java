@@ -55,7 +55,7 @@ public abstract class AbstractNonBlankNonNullInCollectionDeserializer extends Ab
 	protected abstract String getErrorMessage();
 
 	@Override
-	protected Predicate<? super String> getFilterPredicate() {
+	protected Predicate<String> getFilterPredicate() {
 		return str -> true;
 	}
 }

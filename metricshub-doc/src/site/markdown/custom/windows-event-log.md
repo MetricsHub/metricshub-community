@@ -15,116 +15,116 @@ In the example below, we configured **MetricsHub** to:
 
 ## Procedure
 
-To achieve this use case, we:
+To achieve this use case, follow these steps:
 
 * Declare the resource to be monitored (`prod-win-web`) and its attributes (`host.name`, `host.type`)
 
 ```yaml
-   resources:
-     prod-win-web:
-       attributes:
-         host.name: prod-win-web
-         host.type: windows
+resources:
+  prod-win-web:
+    attributes:
+      host.name: prod-win-web
+      host.type: windows
 ```
 
-* Configure the `WMI` protocol with credentials and timeout:
+* Configure the `WMI` protocol with credentials and timeout
 
 ```yaml
-       protocols:
-         wmi:
-           username: <username>
-           password: <password>
-           timeout: 240
+    protocols:
+      wmi:
+        username: <username>
+        password: <password>
+        timeout: 240
 ```
 
-> Important: For large Windows Event Logs onputs, make sure you configure a **high enough timeout** (e.g. `240` seconds).
+> Important: For large Windows Event Logs, make sure you configure a **high enough timeout** (e.g. `240` seconds).
 
-* Configure the monitor job targeting the desired Windows Event Logs​
+* Configure the monitor job targeting the desired Windows Event Logs
 
 ```yaml
-       monitors:
-         logs:
-           simple:
+    monitors:
+      logs:
+        simple:
 ```
 
 * Collect Windows Events from the **Security** Log
 
 ```yaml
-             sources:
-               # Columns
-               # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
-               # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
-               windowsEventLogSource:
-                 type: eventLog
-                 logName: Security
-                 sources: Microsoft-Windows-Security-Auditing
-                 maxEventsPerPoll: 20
+          sources:
+            # Columns
+            # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
+            # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
+            windowsEventLogSource:
+              type: eventLog
+              logName: Security
+              sources: Microsoft-Windows-Security-Auditing
+              maxEventsPerPoll: 20
 ```
 
 * Filter and count Windows Event Logs indicating failures
 
 ```yaml
-                 computes:
-                 - type: awk
-                   script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
+              computes:
+              - type: awk
+                script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
 ```
 
 * Create attributes
 
 ```yaml
-             mapping:
-               # Mapping is executed on the result produced by the source (after computes are applied).
-               source: ${esc.d}{source::windowsEventLogSource}
-               attributes:
-                 log.file.name: Security
-                 log.match.pattern: ".*failed.*"
+          mapping:
+            # Mapping is executed on the result produced by the source (after computes are applied).
+            source: ${esc.d}{source::windowsEventLogSource}
+            attributes:
+              log.file.name: Security
+              log.match.pattern: ".*failed.*"
 ```
 
 * Extract and expose the `log.count` metric
 
 ```yaml
-               metrics:
-                 # Emit a single datapoint: number of rows that matched after the awk script.
-                 log.count: $1
+            metrics:
+              # Emit a single datapoint: number of rows that matched after the awk script.
+              log.count: $1
 ```
 
 Here is the complete YAML configuration:
 
 ```yaml
-   resources:
-     prod-win-web:
-       attributes:
-         host.name: prod-win-web
-         host.type: windows
-       protocols:
-         wmi:
-           username: <username>
-           password: <password>
-           timeout: 240
-       monitors:
-         logs:
-           simple:
-             sources:
-               # Columns
-               # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
-               # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
-               windowsEventLogSource:
-                 type: eventLog
-                 logName: Security
-                 sources: Microsoft-Windows-Security-Auditing
-                 maxEventsPerPoll: 20
-                 computes:
-                 - type: awk
-                   script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
-             mapping:
-               # Mapping is executed on the result produced by the source (after computes are applied).
-               source: ${esc.d}{source::windowsEventLogSource}
-               attributes:
-                 log.file.name: Security
-                 log.match.pattern: ".*failed.*"
-               metrics:
-                 # Emit a single datapoint: number of rows that matched after the awk script.
-                 log.count: $1
+resources:
+  prod-win-web:
+    attributes:
+      host.name: prod-win-web
+      host.type: windows
+    protocols:
+      wmi:
+        username: <username>
+        password: <password>
+        timeout: 240
+    monitors:
+      logs:
+        simple:
+          sources:
+            # Columns
+            # 1.RecordNumber, 2.TimeGenerated, 3.TimeWritten, 4.EventCode, 5.EventType, 6.EventIdentifier,
+            # 7.SourceName, 8.InsertionStrings, 9.Message, 10.LogFile
+            windowsEventLogSource:
+              type: eventLog
+              logName: Security
+              sources: Microsoft-Windows-Security-Auditing
+              maxEventsPerPoll: 20
+              computes:
+              - type: awk
+                script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
+          mapping:
+            # Mapping is executed on the result produced by the source (after computes are applied).
+            source: ${esc.d}{source::windowsEventLogSource}
+            attributes:
+              log.file.name: Security
+              log.match.pattern: ".*failed.*"
+            metrics:
+              # Emit a single datapoint: number of rows that matched after the awk script.
+              log.count: $1
 ```
 
 ## Supporting Resources

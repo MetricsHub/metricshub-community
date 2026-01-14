@@ -57,7 +57,7 @@ public class EventLogLevelSetDeserializer extends AbstractCollectionDeserializer
 	}
 
 	@Override
-	protected Predicate<? super EventLogLevel> getFilterPredicate() {
+	protected Predicate<EventLogLevel> getFilterPredicate() {
 		return level -> level != null;
 	}
 }
