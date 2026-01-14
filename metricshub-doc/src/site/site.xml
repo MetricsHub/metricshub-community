@@ -75,9 +75,8 @@
 		<menu name="Introduction">
 			<item name="Overview" href="index.html" />
 			<item name="Release Notes" href="release-notes.html" />
-			<item name="Upgrade Notes" href="upgrade.html" />
-			<item name="Connectors Directory" href="metricshub-connectors-directory.html" />
-			<item name="Connectors Full Listing" href="metricshub-connectors-full-listing.html" />
+			<item name="Supported Platforms" href="supported-platforms.html" />
+			<item name="Connectors Directory" href="connectors-directory.html" />
 		</menu>
 
 		<menu name="Installation">
@@ -125,6 +124,7 @@
 			<item name="Web Request" href="custom/web-request.html"/>
 			<item name="Windows Process" href="custom/windows-process.html"/>
 			<item name="Windows Service" href="custom/windows-service.html"/>
+			<item name="Windows Event Log" href="custom/windows-event-log.html"/>
 		</menu>
 
 		<menu name="Troubleshooting">

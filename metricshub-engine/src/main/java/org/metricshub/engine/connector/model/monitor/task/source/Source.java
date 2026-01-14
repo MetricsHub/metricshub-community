@@ -68,7 +68,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 		@JsonSubTypes.Type(value = WbemSource.class, name = "wbem"),
 		@JsonSubTypes.Type(value = WmiSource.class, name = "wmi"),
 		@JsonSubTypes.Type(value = SqlSource.class, name = "sql"),
-		@JsonSubTypes.Type(value = JmxSource.class, name = "jmx")
+		@JsonSubTypes.Type(value = JmxSource.class, name = "jmx"),
+		@JsonSubTypes.Type(value = EventLogSource.class, name = "eventLog")
 	}
 )
 @Data

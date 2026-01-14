@@ -21,6 +21,8 @@ To reflect this organization, you are asked to define your **resource group** fi
  [vscode.dev](https://vscode.dev),
  with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
+> Note: To assist with the setup process, a configuration example, `metricshub-config-example.yaml`, is provided for guidance in the installation directory (`./metricshub`).
+
 ## Step 1: Structure your configuration
 
 Before diving into your monitoring setup, take a moment to choose the right configuration structure. A thoughtful approach will make ongoing maintenance and updates much easier.
@@ -204,17 +206,17 @@ Whatever the syntax adopted, replace:
 
 * `<hostname>` with the actual hostname or IP address of the resource
 * `<type>` with the type of resource to be monitored. Possible values are:
-  * [`win`](https://metricshub.com/docs/latest/connectors/tags/windows.html) for Microsoft Windows systems
-  * [`linux`](https://metricshub.com/docs/latest/connectors/tags/linux.html) for Linux systems
-  * [`network`](https://metricshub.com/docs/latest/connectors/tags/network.html) for network devices
+  * [`win`](../connectors/tags/windows.html) for Microsoft Windows systems
+  * [`linux`](../connectors/tags/linux.html) for Linux systems
+  * [`network`](../connectors/tags/network.html) for network devices
   * `oob` for Out-of-band management cards
-  * [`storage`](https://metricshub.com/docs/latest/connectors/tags/storage.html) for storage systems
-  * [`aix`](https://metricshub.com/docs/latest/connectors/tags/aix.html) for IBM AIX systems
-  * [`hpux`](https://metricshub.com/docs/latest/connectors/tags/hp-ux.html) for HP UX systems
-  * [`solaris`](https://metricshub.com/docs/latest/connectors/tags/solaris.html) for Oracle Solaris systems
-  * [`tru64`](https://metricshub.com/docs/latest/connectors/tags/hpe.html) for HP Tru64 systems
-  * [`vms`](https://metricshub.com/docs/latest/connectors/tags/hpe.html) for HP Open VMS systems.
-  Check out the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html) to find out which type corresponds to your system.
+  * [`storage`](../connectors/tags/storage.html) for storage systems
+  * [`aix`](../connectors/tags/aix.html) for IBM AIX systems
+  * [`hpux`](../connectors/tags/hp-ux.html) for HP UX systems
+  * [`solaris`](../connectors/tags/solaris.html) for Oracle Solaris systems
+  * [`tru64`](../connectors/tags/hpe.html) for HP Tru64 systems
+  * [`vms`](../connectors/tags/hpe.html) for HP Open VMS systems.
+  Check out the [Supported Platforms](../supported-platforms.html) to find out which type corresponds to your system.
 * `<protocol-configuration>` with the protocol(s) **MetricsHub** will use to communicate with the resources:
  [`http`](./configure-monitoring.md#http), [`ipmi`](./configure-monitoring.md#ipmi), [`jdbc`](./configure-monitoring.md#jdbc), [`jmx`](./configure-monitoring.md#jmx), [`oscommand`](./configure-monitoring.md#os-commands), [`ping`](./configure-monitoring.md#icmp-ping), [`ssh`](./configure-monitoring.md#ssh), [`snmp`](./configure-monitoring.md#snmp), [`wbem`](./configure-monitoring.md#wbem),[`wmi`](./configure-monitoring.md#wmi),  or [`winrm`](./configure-monitoring.md#winrm).
  Refer to [Protocols and Credentials](./configure-monitoring.html#protocols-and-credentials) for more details.
@@ -1136,7 +1138,7 @@ resourceGroups:
 
   The core engine will perform automatic detection on connectors categorized under `hardware`, excluding the `MIB2` connector.
 
-To know which connectors are available, refer to [Connectors Directory](../metricshub-connectors-directory.html).
+To know which connectors are available, refer to the [Supported Platforms](../supported-platforms.html).
 
 Otherwise, you can list the available connectors using the below command:
 
@@ -1170,7 +1172,7 @@ loggerLevel: ...
 | `matchUser`        | [Linux - Processes (ps)](../connectors/linuxprocess.html#linux---processes-28ps-29)                                                                              | Used to specify the users to include.                                      |
 | `serviceNames`     | [Linux - Service (systemctl)](../connectors/linuxservice.html) <br/> [Windows - Services (WMI)](../connectors/windowsservice.html#!#windows---services-28wmi-29) | Used to specify the services to monitor on a Linux or Windows server.      |
 
-Refer to the [Connectors directory](../metricshub-connectors-directory.html#) and more especially to the `Variables` section of the connector to know the supported variables and their accepted values.
+Refer to the [Supported Platforms](../supported-platforms.html) and more especially to the `Variables` section of the connector to know the supported variables and their accepted values.
 
 ##### Procedure
 
@@ -1231,7 +1233,7 @@ The `monitorFilters` parameter accepts the following values:
 
 To obtain the monitor name:
 
-1. Refer to the [`MetricsHub Connector Library`](../metricshub-connectors-directory.html)
+1. Refer to the **MetricsHub** [`Supported Platforms`](../supported-platforms.html)
 2. Click the connector of your choice (e.g.: [WindowsOS Metrics](../connectors/windows.html))
 3. Scroll-down to the **Metrics** section and note down the relevant monitor **Type**.
 
