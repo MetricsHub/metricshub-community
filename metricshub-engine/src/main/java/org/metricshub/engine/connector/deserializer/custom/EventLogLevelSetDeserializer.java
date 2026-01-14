@@ -27,30 +27,37 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import org.metricshub.engine.connector.model.common.DeviceKind;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogLevel;
 
 /**
- * Custom deserializer for a collection of {@link DeviceKind} objects.
+ * Custom deserializer for a collection of {@link EventLogLevel} values.
+ * <p>
+ * Accepts either:
+ * <ul>
+ *   <li>a YAML/JSON array (e.g. {@code ["error", "warning"]})</li>
+ *   <li>a comma-separated string (e.g. {@code "error,warning"})</li>
+ * </ul>
+ * Values are parsed using {@link EventLogLevel#detectFromString(String)}.
  */
-public class DeviceKindSetDeserializer extends AbstractCollectionDeserializer<DeviceKind> {
+public class EventLogLevelSetDeserializer extends AbstractCollectionDeserializer<EventLogLevel> {
 
 	@Override
-	protected Function<String, DeviceKind> valueExtractor() {
-		return DeviceKind::detect;
+	protected Function<String, EventLogLevel> valueExtractor() {
+		return EventLogLevel::detectFromString;
 	}
 
 	@Override
-	protected Collection<DeviceKind> emptyCollection() {
+	protected Collection<EventLogLevel> emptyCollection() {
 		return new HashSet<>();
 	}
 
 	@Override
-	protected Collector<DeviceKind, ?, Collection<DeviceKind>> collector() {
+	protected Collector<EventLogLevel, ?, Collection<EventLogLevel>> collector() {
 		return Collectors.toCollection(HashSet::new);
 	}
 
 	@Override
-	protected Predicate<DeviceKind> getFilterPredicate() {
-		return kind -> true;
+	protected Predicate<EventLogLevel> getFilterPredicate() {
+		return level -> level != null;
 	}
 }

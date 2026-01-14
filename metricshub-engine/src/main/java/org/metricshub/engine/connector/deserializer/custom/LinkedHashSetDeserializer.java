@@ -22,35 +22,49 @@ package org.metricshub.engine.connector.deserializer.custom;
  */
 
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import org.metricshub.engine.connector.model.common.DeviceKind;
 
 /**
- * Custom deserializer for a collection of {@link DeviceKind} objects.
+ * Custom deserializer for a {@link LinkedHashSet} of strings.
+ * <p>
+ * Accepts either:
+ * </p>
+ * <ul>
+ *   <li>a YAML/JSON array (e.g. {@code ["value1", "value2"]})</li>
+ *   <li>a comma-separated string (e.g. {@code "value1,value2"})</li>
+ * </ul>
+ * Blank strings are filtered out. Null values are rejected.
  */
-public class DeviceKindSetDeserializer extends AbstractCollectionDeserializer<DeviceKind> {
+public class LinkedHashSetDeserializer extends AbstractCollectionDeserializer<String> {
 
 	@Override
-	protected Function<String, DeviceKind> valueExtractor() {
-		return DeviceKind::detect;
+	protected Function<String, String> valueExtractor() {
+		return str -> {
+			if (Objects.nonNull(str)) {
+				return str;
+			}
+
+			throw new IllegalArgumentException("Null value is not accepted in sets.");
+		};
 	}
 
 	@Override
-	protected Collection<DeviceKind> emptyCollection() {
-		return new HashSet<>();
+	protected Collection<String> emptyCollection() {
+		return new LinkedHashSet<>();
 	}
 
 	@Override
-	protected Collector<DeviceKind, ?, Collection<DeviceKind>> collector() {
-		return Collectors.toCollection(HashSet::new);
+	protected Collector<String, ?, Collection<String>> collector() {
+		return Collectors.toCollection(LinkedHashSet::new);
 	}
 
 	@Override
-	protected Predicate<DeviceKind> getFilterPredicate() {
-		return kind -> true;
+	protected Predicate<String> getFilterPredicate() {
+		return str -> !str.isBlank();
 	}
 }

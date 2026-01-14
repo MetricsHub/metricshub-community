@@ -124,6 +124,7 @@
 			<item name="Web Request" href="custom/web-request.html"/>
 			<item name="Windows Process" href="custom/windows-process.html"/>
 			<item name="Windows Service" href="custom/windows-service.html"/>
+			<item name="Windows Event Log" href="custom/windows-event-log.html"/>
 		</menu>
 
 		<menu name="Troubleshooting">
