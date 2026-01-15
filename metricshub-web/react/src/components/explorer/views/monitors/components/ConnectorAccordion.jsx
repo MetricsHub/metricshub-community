@@ -109,6 +109,12 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 	handleMonitorToggle,
 	navigate,
 }) {
+	const monitorStorageKeyPrefix = React.useMemo(() => {
+		const resourceKey = resourceId || "unknown";
+		const monitorKey = monitor?.name || "unknown";
+		return `explorer.monitorView.${resourceKey}.${connectorKey}.${monitorKey}`;
+	}, [resourceId, connectorKey, monitor?.name]);
+
 	const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
 	const instances = React.useMemo(
 		() => (Array.isArray(monitor.instances) ? monitor.instances : []),
@@ -210,6 +216,7 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 							sortedInstances={sortedInstances}
 							resourceId={resourceId}
 							metaMetrics={connector.metaMetrics}
+							storageKeyPrefix={monitorStorageKeyPrefix}
 						/>
 					))
 					: sortedInstances.map((inst) => {
@@ -219,6 +226,7 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 								instance={inst}
 								naturalMetricCompare={compareMetricEntries}
 								metaMetrics={connector.metaMetrics}
+								storageKeyPrefix={monitorStorageKeyPrefix}
 							/>
 						);
 					})}
@@ -251,16 +259,6 @@ const ConnectorAccordion = ({
 	const theme = useTheme();
 	const isDarkMode = theme.palette.mode === "dark";
 
-	const {
-		columns: attributeColumnsWithWidths,
-		onColumnWidthChange: handleAttributeColumnWidthChange,
-	} = useDataGridColumnWidths(ATTRIBUTE_COLUMNS);
-
-	const {
-		columns: metricColumnsWithWidths,
-		onColumnWidthChange: handleMetricColumnWidthChange,
-	} = useDataGridColumnWidths(METRIC_COLUMNS);
-
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
 	const uiState = useSelector((state) =>
@@ -273,8 +271,26 @@ const ConnectorAccordion = ({
 		[connector.monitors],
 	);
 	const connectorKey = connector.name || `connector-${connectorIndex}`;
+	const connectorStorageKeyPrefix = React.useMemo(() => {
+		const resourceKey = resourceId || "unknown";
+		return `explorer.monitorView.${resourceKey}.${connectorKey}`;
+	}, [resourceId, connectorKey]);
 	const isConnectorExpanded = !!expandedMonitors[connectorKey];
 	const isHighlighted = highlightedId === connectorKey;
+
+	const {
+		columns: attributeColumnsWithWidths,
+		onColumnWidthChange: handleAttributeColumnWidthChange,
+	} = useDataGridColumnWidths(ATTRIBUTE_COLUMNS, {
+		storageKey: `${connectorStorageKeyPrefix}.attributes`,
+	});
+
+	const {
+		columns: metricColumnsWithWidths,
+		onColumnWidthChange: handleMetricColumnWidthChange,
+	} = useDataGridColumnWidths(METRIC_COLUMNS, {
+		storageKey: `${connectorStorageKeyPrefix}.metrics`,
+	});
 
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);

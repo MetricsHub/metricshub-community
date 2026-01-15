@@ -70,6 +70,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedConnectorId = connectorId ? decodeURIComponent(connectorId) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
+	const monitorTypeStorageKeyBase = React.useMemo(() => {
+		const groupKey = resourceGroupName || "unknown";
+		const resourceKey = decodedName || "unknown";
+		const connectorKey = decodedConnectorId || "unknown";
+		const monitorKey = decodedMonitorType || "unknown";
+		return `explorer.monitorType.${groupKey}.${resourceKey}.${connectorKey}.${monitorKey}`;
+	}, [resourceGroupName, decodedName, decodedConnectorId, decodedMonitorType]);
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
@@ -181,12 +188,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const {
 		columns: columnsWithWidths,
 		onColumnWidthChange: handleColumnWidthChange,
-		resetColumnWidths,
-	} = useDataGridColumnWidths(columns);
+	} = useDataGridColumnWidths(columns, {
+		storageKey: `${monitorTypeStorageKeyBase}.metrics`,
+	});
 
-	React.useEffect(() => {
-		resetColumnWidths();
-	}, [decodedConnectorId, decodedMonitorType, resetColumnWidths]);
+	const instanceTableStorageKeyPrefix = React.useMemo(() => {
+		return `${monitorTypeStorageKeyBase}.instances`;
+	}, [monitorTypeStorageKeyBase]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({
@@ -255,6 +263,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 										naturalMetricCompare={compareMetricEntries}
 										metaMetrics={monitorData?.metaMetrics}
 										highlighted={isHighlighted}
+										storageKeyPrefix={instanceTableStorageKeyPrefix}
 									/>
 								</Box>
 							);

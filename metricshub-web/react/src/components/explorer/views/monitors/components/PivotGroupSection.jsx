@@ -2,7 +2,6 @@ import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import TruncatedText from "../../common/TruncatedText";
 import { renderMetricHeader } from "../../common/metric-column-helper";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
@@ -39,8 +38,9 @@ import {
  * @param {any[]} props.sortedInstances - Sorted list of monitor instances
  * @param {string} props.resourceId - The ID of the resource
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
+ * @param {string} [props.storageKeyPrefix] - Optional localStorage key prefix for column widths
  */
-const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
+const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics, storageKeyPrefix }) => {
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
@@ -186,10 +186,15 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		return cols;
 	}, [isUtilizationGroup, displayBaseName, group.metricKeys, metaMetrics]);
 
+	const storageKey = React.useMemo(() => {
+		if (!storageKeyPrefix) return undefined;
+		return `${storageKeyPrefix}.pivot.${group.baseName}`;
+	}, [storageKeyPrefix, group.baseName]);
+
 	const {
 		columns: columnsWithWidths,
 		onColumnWidthChange: handleColumnWidthChange,
-	} = useDataGridColumnWidths(columns);
+	} = useDataGridColumnWidths(columns, { storageKey });
 
 	const rows = React.useMemo(() => {
 		const r = sortedInstances.map((inst, index) => ({
