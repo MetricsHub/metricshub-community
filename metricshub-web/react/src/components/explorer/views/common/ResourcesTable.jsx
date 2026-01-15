@@ -5,6 +5,45 @@ import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
 import TruncatedText from "./TruncatedText";
 
+const COLUMNS_BASE = [
+	{
+		field: "name",
+		headerName: "Key",
+		flex: 1,
+		renderCell: (params) => (
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+				<NodeTypeIcons type="resource" />
+				<TruncatedText text={params.value}>{params.value}</TruncatedText>
+			</Box>
+		),
+	},
+	{
+		field: "hostName",
+		headerName: "host.name",
+		flex: 1,
+		valueGetter: (value, row) => row.attributes?.["host.name"] ?? "",
+		renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+	},
+	{
+		field: "hostType",
+		headerName: "host.type",
+		flex: 1,
+		valueGetter: (value, row) => row.attributes?.["host.type"] ?? "",
+		renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+	},
+];
+
+const COLUMNS_WITH_OS = [
+	...COLUMNS_BASE,
+	{
+		field: "osType",
+		headerName: "os.type",
+		flex: 1,
+		valueGetter: (value, row) => row.attributes?.["os.type"] ?? "",
+		renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
+	},
+];
+
 /**
  * Table displaying resources.
  *
@@ -15,8 +54,8 @@ import TruncatedText from "./TruncatedText";
  * @returns {JSX.Element}
  */
 const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
-	const allResources = React.useMemo(
-		() => (Array.isArray(resources) ? resources : []),
+	const rows = React.useMemo(
+		() => (Array.isArray(resources) ? resources.map((r) => ({ id: r.name || r.key, ...r })) : []),
 		[resources],
 	);
 
@@ -29,45 +68,7 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 		[onResourceClick],
 	);
 
-	const columns = React.useMemo(() => {
-		const cols = [
-			{
-				field: "name",
-				headerName: "Key",
-				flex: 1,
-				renderCell: (params) => (
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-						<NodeTypeIcons type="resource" />
-						<TruncatedText text={params.value}>{params.value}</TruncatedText>
-					</Box>
-				),
-			},
-			{
-				field: "hostName",
-				headerName: "host.name",
-				flex: 1,
-				valueGetter: (value, row) => row.attributes?.["host.name"] ?? "",
-				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
-			},
-			{
-				field: "hostType",
-				headerName: "host.type",
-				flex: 1,
-				valueGetter: (value, row) => row.attributes?.["host.type"] ?? "",
-				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
-			},
-		];
-		if (showOsType) {
-			cols.push({
-				field: "osType",
-				headerName: "os.type",
-				flex: 1,
-				valueGetter: (value, row) => row.attributes?.["os.type"] ?? "",
-				renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
-			});
-		}
-		return cols;
-	}, [showOsType]);
+	const columns = showOsType ? COLUMNS_WITH_OS : COLUMNS_BASE;
 
 	return (
 		<Box>
@@ -76,7 +77,7 @@ const ResourcesTable = ({ resources, onResourceClick, showOsType = false }) => {
 				Resources
 			</Typography>
 			<DataGrid
-				rows={allResources.map((r) => ({ id: r.name || r.key, ...r }))}
+				rows={rows}
 				columns={columns}
 				onRowClick={handleRowClick}
 				disableRowSelectionOnClick
