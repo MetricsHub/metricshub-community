@@ -69,23 +69,24 @@ resources:
                 script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
 ```
 
-* Create attributes
+* Create identification attributes
 
 ```yaml
           mapping:
             # Mapping is executed on the result produced by the source (after computes are applied).
             source: ${esc.d}{source::windowsEventLogSource}
             attributes:
-              log.file.name: Security
-              log.match.pattern: ".*failed.*"
+              id: Microsoft-Windows-Security-Auditing
+              log.name: Security
+              log.pattern: ".*failed.*"
 ```
 
-* Extract and expose the `log.count` metric
+* Extract and expose the `windows.event.logs` metric
 
 ```yaml
             metrics:
               # Emit a single datapoint: number of rows that matched after the awk script.
-              log.count: $1
+              windows.event.logs: $1
 ```
 
 Here is the complete YAML configuration:
@@ -120,11 +121,12 @@ resources:
             # Mapping is executed on the result produced by the source (after computes are applied).
             source: ${esc.d}{source::windowsEventLogSource}
             attributes:
-              log.file.name: Security
-              log.match.pattern: ".*failed.*"
+              id: Microsoft-Windows-Security-Auditing
+              log.name: Security
+              log.pattern: ".*failed.*"
             metrics:
               # Emit a single datapoint: number of rows that matched after the awk script.
-              log.count: $1
+              windows.event.logs: $1
 ```
 
 ## Supporting Resources
