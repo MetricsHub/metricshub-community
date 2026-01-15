@@ -29,10 +29,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.web.config.OpenAiToolOutputProperties;
 import org.metricshub.web.dto.openai.PersistedToolOutputFile;
 import org.metricshub.web.dto.openai.UploadedToolOutputManifest;
+import org.metricshub.web.mcp.TroubleshootHostService;
 import org.springframework.stereotype.Service;
 
 /**
- * Adapts tool outputs before they are sent to OpenAI: if oversized, persists and uploads them, returning a manifest.
+ * Adapts tool outputs before they are sent to OpenAI: if oversized or troubleshooting tool output,
+ * persists and uploads them, returning a manifest.
  */
 @Service
 @RequiredArgsConstructor
@@ -45,7 +47,7 @@ public class ToolResponseManagerService {
 	private final ToolOutputFileUploadService uploadService;
 
 	/**
-	 * Returns the original tool output unless it exceeds the allowed size; if so, persists and uploads then returns a manifest.
+	 * Returns the original tool output unless it's a troubleshooting tool output or oversized
 	 *
 	 * @param toolName       the tool name
 	 * @param toolResultJson JSON string returned by the tool
@@ -55,18 +57,21 @@ public class ToolResponseManagerService {
 		if (toolResultJson == null) {
 			return toolResultJson;
 		}
+		final var isTroubleshootingTool = isTroubleshootingTool(toolName);
 
 		final long authorizedLimitBytes = Math.max(
 			0,
 			properties.getMaxToolOutputBytes() - properties.getSafetyDeltaBytes()
 		);
 		final int sizeBytes = toolResultJson.getBytes(StandardCharsets.UTF_8).length;
-		if (sizeBytes <= authorizedLimitBytes) {
+
+		if (!isTroubleshootingTool && sizeBytes <= authorizedLimitBytes) {
 			return toolResultJson;
 		}
 
 		log.info(
-			"Oversized tool output detected; persisting and uploading (tool={}, sizeBytes={}, authorizedLimitBytes={})",
+			"{} tool output detected; persisting and uploading (tool={}, sizeBytes={}, authorizedLimitBytes={})",
+			isTroubleshootingTool ? "Troubleshooting" : "Oversized",
 			toolName,
 			sizeBytes,
 			authorizedLimitBytes
@@ -91,6 +96,15 @@ public class ToolResponseManagerService {
 		} catch (Exception e) {
 			throw new IllegalStateException("Failed to serialize tool output manifest JSON", e);
 		}
+	}
+
+	/**
+	 * Checks if the tool is a troubleshooting tool.
+	 *
+	 * @return true if it is a troubleshooting tool, false otherwise
+	 */
+	private static boolean isTroubleshootingTool(final String toolName) {
+		return TroubleshootHostService.TOOL_NAMES.contains(toolName);
 	}
 
 	/**

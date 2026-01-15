@@ -238,7 +238,13 @@ public class ChatController {
 			.model(model)
 			.input(ResponseCreateParams.Input.ofResponse(initialInputs))
 			.tools(tools)
-			.addTool(WebSearchTool.builder().type(Type.WEB_SEARCH).build());
+			.addTool(WebSearchTool.builder().type(Type.WEB_SEARCH).build())
+			.addCodeInterpreterTool(
+				Tool.CodeInterpreter.Container.CodeInterpreterToolAuto
+					.builder()
+					.memoryLimit(Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.MemoryLimit._4G)
+					.build()
+			);
 
 		// Enable reasoning if enabled in the configuration
 		if (chatConfig.getReasoning().isEnabled()) {
