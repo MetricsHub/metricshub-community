@@ -43,8 +43,6 @@ The `OTLP gRPC Receiver` is configured as follows in the `otel/otel-config.yaml`
           key_file: ../security/otel.key
 ```
 
-To customize the default TLS settings, see [Customizing TLS Certificates](settings.md#Customizing_TLS_Certificates).
-
 ### Requests authentication
 
 Once TLS is established, the `OTLP gRPC Receiver` uses the `basicauth` authenticator to authenticate any incoming request:
