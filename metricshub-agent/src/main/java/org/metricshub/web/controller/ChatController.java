@@ -86,6 +86,11 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class ChatController {
 
 	/**
+	 * Exception details log message prefix.
+	 */
+	private static final String EXCEPTION_DETAILS_MESSAGE = "Exception details:";
+
+	/**
 	 * Assistant role string constant.
 	 */
 	private static final String ASSISTANT_ROLE = "assistant";
@@ -484,7 +489,7 @@ public class ChatController {
 			}
 		} catch (Exception e) {
 			log.warn("Failed to parse follow-up input JSON for uploaded file ID: {}", e.getMessage());
-			log.debug("Exception details:", e);
+			log.debug(EXCEPTION_DETAILS_MESSAGE, e);
 		}
 
 		return Optional.empty();
@@ -670,7 +675,7 @@ public class ChatController {
 	private ToolCallback findToolCallback(String toolName) {
 		for (ToolCallback cb : toolCallbackProvider.getToolCallbacks()) {
 			var def = cb.getToolDefinition();
-			if (toolName.equals(def.name())) {
+			if (toolName.equalsIgnoreCase(def.name())) {
 				return cb;
 			}
 		}
@@ -742,7 +747,7 @@ public class ChatController {
 			stream.close();
 		} catch (Exception e) {
 			log.warn("Unable to close OpenAI stream: {}", e.getMessage());
-			log.debug("Exception details:", e);
+			log.debug(EXCEPTION_DETAILS_MESSAGE, e);
 		}
 	}
 
@@ -763,7 +768,7 @@ public class ChatController {
 				emitter.complete();
 			} catch (Exception e) {
 				log.warn("Unable to complete immediate SSE error emitter: {}", e.getMessage());
-				log.debug("Exception details:", e);
+				log.debug(EXCEPTION_DETAILS_MESSAGE, e);
 			}
 		}
 		return emitter;
@@ -815,7 +820,7 @@ public class ChatController {
 			emitter.complete();
 		} catch (Exception e) {
 			log.warn("Unable to complete SSE emitter: {}", e.getMessage());
-			log.debug("Exception details:", e);
+			log.debug(EXCEPTION_DETAILS_MESSAGE, e);
 		}
 	}
 

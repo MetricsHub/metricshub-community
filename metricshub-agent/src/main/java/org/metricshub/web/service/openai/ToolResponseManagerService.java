@@ -104,7 +104,7 @@ public class ToolResponseManagerService {
 	 * @return true if it is a troubleshooting tool, false otherwise
 	 */
 	private static boolean isTroubleshootingTool(final String toolName) {
-		return TroubleshootHostService.TOOL_NAMES.contains(toolName);
+		return TroubleshootHostService.TOOL_NAMES.stream().anyMatch(t -> t.equalsIgnoreCase(toolName));
 	}
 
 	/**
