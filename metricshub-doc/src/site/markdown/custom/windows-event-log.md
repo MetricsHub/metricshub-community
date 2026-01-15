@@ -69,7 +69,7 @@ resources:
                 script: 'BEGIN {c=0} /failed./ {c++} END {print c}'
 ```
 
-* Create attributes
+* Create identification attributes
 
 ```yaml
           mapping:
