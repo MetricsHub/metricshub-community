@@ -205,24 +205,24 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 			<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 				{pivotGroups.length > 0
 					? pivotGroups.map((group) => (
-							<PivotGroupSection
-								key={group.baseName}
-								group={group}
-								sortedInstances={sortedInstances}
-								resourceId={resourceId}
+						<PivotGroupSection
+							key={group.baseName}
+							group={group}
+							sortedInstances={sortedInstances}
+							resourceId={resourceId}
+							metaMetrics={connector.metaMetrics}
+						/>
+					))
+					: sortedInstances.map((inst) => {
+						return (
+							<InstanceMetricsTable
+								key={inst?.attributes?.id || inst.name}
+								instance={inst}
+								naturalMetricCompare={compareMetricEntries}
 								metaMetrics={connector.metaMetrics}
 							/>
-						))
-					: sortedInstances.map((inst) => {
-							return (
-								<InstanceMetricsTable
-									key={inst?.attributes?.id || inst.name}
-									instance={inst}
-									naturalMetricCompare={compareMetricEntries}
-									metaMetrics={connector.metaMetrics}
-								/>
-							);
-						})}
+						);
+					})}
 			</AccordionDetails>
 		</Accordion>
 	);
@@ -249,6 +249,8 @@ const ConnectorAccordion = ({
 	highlightedId,
 	isLast,
 }) => {
+	const [attributeColumnWidths, setAttributeColumnWidths] = React.useState({});
+	const [metricColumnWidths, setMetricColumnWidths] = React.useState({});
 	const theme = useTheme();
 	const isDarkMode = theme.palette.mode === "dark";
 
@@ -304,6 +306,50 @@ const ConnectorAccordion = ({
 		},
 		[dispatch, resourceId],
 	);
+
+	const attributeColumnsWithWidths = React.useMemo(() => {
+		if (!attributeColumnWidths || Object.keys(attributeColumnWidths).length === 0) {
+			return ATTRIBUTE_COLUMNS;
+		}
+		return ATTRIBUTE_COLUMNS.map((col) => {
+			const width = attributeColumnWidths[col.field];
+			if (!width) return col;
+			return {
+				...col,
+				width,
+				flex: undefined,
+			};
+		});
+	}, [attributeColumnWidths]);
+
+	const metricColumnsWithWidths = React.useMemo(() => {
+		if (!metricColumnWidths || Object.keys(metricColumnWidths).length === 0) {
+			return METRIC_COLUMNS;
+		}
+		return METRIC_COLUMNS.map((col) => {
+			const width = metricColumnWidths[col.field];
+			if (!width) return col;
+			return {
+				...col,
+				width,
+				flex: undefined,
+			};
+		});
+	}, [metricColumnWidths]);
+
+	const handleAttributeColumnWidthChange = React.useCallback((params) => {
+		setAttributeColumnWidths((prev) => ({
+			...prev,
+			[params.colDef.field]: params.width,
+		}));
+	}, []);
+
+	const handleMetricColumnWidthChange = React.useCallback((params) => {
+		setMetricColumnWidths((prev) => ({
+			...prev,
+			[params.colDef.field]: params.width,
+		}));
+	}, []);
 
 	return (
 		<Accordion
@@ -399,75 +445,77 @@ const ConnectorAccordion = ({
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (
-					<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-						{/* Connector Attributes Table */}
-						{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-							<Box>
-								<Typography
-									variant="subtitle2"
-									gutterBottom
-									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
-								>
-									Attributes
-								</Typography>
-								<DataGrid
-									rows={Object.entries(connector.attributes).map(([key, value]) => ({
-										id: key,
-										key,
-										value,
-									}))}
-									columns={ATTRIBUTE_COLUMNS}
-									disableRowSelectionOnClick
-									hideFooter
-									autoHeight
-									density="compact"
-									sx={dataGridSx}
-								/>
-							</Box>
-						)}
-
-						{/* Connector Metrics Table */}
-						{showMetricsTable && (
-							<Box>
-								<Typography
-									variant="subtitle2"
-									gutterBottom
-									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
-								>
-									Metrics
-								</Typography>
-								<DataGrid
-									rows={Object.entries(connector.metrics).map(([name, metric]) => {
-										let value = metric;
-										let unit = undefined;
-
-										if (metric && typeof metric === "object" && "value" in metric) {
-											value = metric.value;
-											unit = metric.unit;
-										}
-
-										if (!unit) {
-											const meta = getMetricMetadata(name, connector.metaMetrics);
-											if (meta?.unit) unit = meta.unit;
-										}
-										return {
-											id: name,
-											name,
+						<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+							{/* Connector Attributes Table */}
+							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+								<Box>
+									<Typography
+										variant="subtitle2"
+										gutterBottom
+										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+									>
+										Attributes
+									</Typography>
+									<DataGrid
+										rows={Object.entries(connector.attributes).map(([key, value]) => ({
+											id: key,
+											key,
 											value,
-											unit,
-										};
-									})}
-									columns={METRIC_COLUMNS}
-									disableRowSelectionOnClick
-									hideFooter
-									autoHeight
-									density="compact"
-									sx={dataGridSx}
-								/>
-							</Box>
-						)}
-					</Box>
-				)}
+										}))}
+										columns={attributeColumnsWithWidths}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										onColumnWidthChange={handleAttributeColumnWidthChange}
+										sx={dataGridSx}
+									/>
+								</Box>
+							)}
+
+							{/* Connector Metrics Table */}
+							{showMetricsTable && (
+								<Box>
+									<Typography
+										variant="subtitle2"
+										gutterBottom
+										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+									>
+										Metrics
+									</Typography>
+									<DataGrid
+										rows={Object.entries(connector.metrics).map(([name, metric]) => {
+											let value = metric;
+											let unit = undefined;
+
+											if (metric && typeof metric === "object" && "value" in metric) {
+												value = metric.value;
+												unit = metric.unit;
+											}
+
+											if (!unit) {
+												const meta = getMetricMetadata(name, connector.metaMetrics);
+												if (meta?.unit) unit = meta.unit;
+											}
+											return {
+												id: name,
+												name,
+												value,
+												unit,
+											};
+										})}
+										columns={metricColumnsWithWidths}
+										disableRowSelectionOnClick
+										hideFooter
+										autoHeight
+										density="compact"
+										onColumnWidthChange={handleMetricColumnWidthChange}
+										sx={dataGridSx}
+									/>
+								</Box>
+							)}
+						</Box>
+					)}
 
 				{/* Monitors Section */}
 				<Box sx={{ display: "flex", flexDirection: "column" }}>

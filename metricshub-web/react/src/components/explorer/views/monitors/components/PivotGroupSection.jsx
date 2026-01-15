@@ -40,6 +40,7 @@ import {
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
  */
 const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
+	const [columnWidths, setColumnWidths] = React.useState({});
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
@@ -185,6 +186,28 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		return cols;
 	}, [isUtilizationGroup, displayBaseName, group.metricKeys, metaMetrics]);
 
+	const columnsWithWidths = React.useMemo(() => {
+		if (!columnWidths || Object.keys(columnWidths).length === 0) {
+			return columns;
+		}
+		return columns.map((col) => {
+			const width = columnWidths[col.field];
+			if (!width) return col;
+			return {
+				...col,
+				width,
+				flex: undefined,
+			};
+		});
+	}, [columns, columnWidths]);
+
+	const handleColumnWidthChange = React.useCallback((params) => {
+		setColumnWidths((prev) => ({
+			...prev,
+			[params.colDef.field]: params.width,
+		}));
+	}, []);
+
 	const rows = React.useMemo(() => {
 		const r = sortedInstances.map((inst, index) => ({
 			id: inst.name || index,
@@ -286,11 +309,12 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 				<Box sx={{ mt: 1, mb: 2 }}>
 					<DataGrid
 						rows={rows}
-						columns={columns}
+						columns={columnsWithWidths}
 						disableRowSelectionOnClick
 						hideFooter
 						autoHeight
 						density="compact"
+						onColumnWidthChange={handleColumnWidthChange}
 						sx={{
 							...dataGridSx,
 							"& .MuiDataGrid-cell": {

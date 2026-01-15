@@ -41,6 +41,7 @@ const InstanceMetricsTable = ({
 	metaMetrics,
 	highlighted,
 }) => {
+	const [columnWidths, setColumnWidths] = React.useState({});
 	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
 	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
@@ -202,6 +203,28 @@ const InstanceMetricsTable = ({
 		[metaMetrics],
 	);
 
+	const columnsWithWidths = React.useMemo(() => {
+		if (!columnWidths || Object.keys(columnWidths).length === 0) {
+			return columns;
+		}
+		return columns.map((col) => {
+			const width = columnWidths[col.field];
+			if (!width) return col;
+			return {
+				...col,
+				width,
+				flex: undefined,
+			};
+		});
+	}, [columns, columnWidths]);
+
+	const handleColumnWidthChange = React.useCallback((params) => {
+		setColumnWidths((prev) => ({
+			...prev,
+			[params.colDef.field]: params.width,
+		}));
+	}, []);
+
 	const rows = React.useMemo(
 		() =>
 			groupedEntries.map((group, index) => ({
@@ -229,11 +252,12 @@ const InstanceMetricsTable = ({
 
 			<DataGrid
 				rows={rows}
-				columns={columns}
+				columns={columnsWithWidths}
 				disableRowSelectionOnClick
 				hideFooter
 				autoHeight
 				density="compact"
+				onColumnWidthChange={handleColumnWidthChange}
 				sx={dataGridSx}
 			/>
 		</Box>
