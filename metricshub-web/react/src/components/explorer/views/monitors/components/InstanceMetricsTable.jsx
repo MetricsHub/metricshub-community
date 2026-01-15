@@ -7,6 +7,7 @@ import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -41,7 +42,6 @@ const InstanceMetricsTable = ({
 	metaMetrics,
 	highlighted,
 }) => {
-	const [columnWidths, setColumnWidths] = React.useState({});
 	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
 	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
 
@@ -203,27 +203,10 @@ const InstanceMetricsTable = ({
 		[metaMetrics],
 	);
 
-	const columnsWithWidths = React.useMemo(() => {
-		if (!columnWidths || Object.keys(columnWidths).length === 0) {
-			return columns;
-		}
-		return columns.map((col) => {
-			const width = columnWidths[col.field];
-			if (!width) return col;
-			return {
-				...col,
-				width,
-				flex: undefined,
-			};
-		});
-	}, [columns, columnWidths]);
-
-	const handleColumnWidthChange = React.useCallback((params) => {
-		setColumnWidths((prev) => ({
-			...prev,
-			[params.colDef.field]: params.width,
-		}));
-	}, []);
+	const {
+		columns: columnsWithWidths,
+		onColumnWidthChange: handleColumnWidthChange,
+	} = useDataGridColumnWidths(columns);
 
 	const rows = React.useMemo(
 		() =>

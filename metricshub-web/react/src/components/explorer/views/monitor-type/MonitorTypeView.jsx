@@ -31,7 +31,6 @@ import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithA
 import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
 import { renderMetricHeader } from "../common/metric-column-helper";
-import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
 	getMetricMetadata,
@@ -46,6 +45,7 @@ import { useInstanceSorting } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
 import { dataGridSx } from "../common/table-styles";
+import { useDataGridColumnWidths } from "../common/use-data-grid-column-widths";
 
 const TAB_INSTANCES = 0;
 const TAB_METRICS = 1;
@@ -63,7 +63,6 @@ const TAB_METRICS = 1;
  */
 const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitorType }) => {
 	const [tabValue, setTabValue] = React.useState(TAB_INSTANCES);
-	const [columnWidths, setColumnWidths] = React.useState({});
 	const currentResource = useSelector(selectCurrentResource);
 	const loading = useSelector(selectResourceLoading);
 	const error = useSelector(selectResourceError);
@@ -71,10 +70,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedConnectorId = connectorId ? decodeURIComponent(connectorId) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
-
-	React.useEffect(() => {
-		setColumnWidths({});
-	}, [decodedConnectorId, decodedMonitorType]);
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
@@ -183,27 +178,15 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		return cols;
 	}, [selectedMetrics, stableMetaMetrics]);
 
-	const columnsWithWidths = React.useMemo(() => {
-		if (!columnWidths || Object.keys(columnWidths).length === 0) {
-			return columns;
-		}
-		return columns.map((col) => {
-			const width = columnWidths[col.field];
-			if (!width) return col;
-			return {
-				...col,
-				width,
-				flex: undefined,
-			};
-		});
-	}, [columns, columnWidths]);
+	const {
+		columns: columnsWithWidths,
+		onColumnWidthChange: handleColumnWidthChange,
+		resetColumnWidths,
+	} = useDataGridColumnWidths(columns);
 
-	const handleColumnWidthChange = React.useCallback((params) => {
-		setColumnWidths((prev) => ({
-			...prev,
-			[params.colDef.field]: params.width,
-		}));
-	}, []);
+	React.useEffect(() => {
+		resetColumnWidths();
+	}, [decodedConnectorId, decodedMonitorType, resetColumnWidths]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({

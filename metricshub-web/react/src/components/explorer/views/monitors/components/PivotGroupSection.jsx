@@ -7,6 +7,7 @@ import { renderMetricHeader } from "../../common/metric-column-helper";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
 
 import {
 	getMetricMetadata,
@@ -40,7 +41,6 @@ import {
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
  */
 const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
-	const [columnWidths, setColumnWidths] = React.useState({});
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
@@ -186,27 +186,10 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		return cols;
 	}, [isUtilizationGroup, displayBaseName, group.metricKeys, metaMetrics]);
 
-	const columnsWithWidths = React.useMemo(() => {
-		if (!columnWidths || Object.keys(columnWidths).length === 0) {
-			return columns;
-		}
-		return columns.map((col) => {
-			const width = columnWidths[col.field];
-			if (!width) return col;
-			return {
-				...col,
-				width,
-				flex: undefined,
-			};
-		});
-	}, [columns, columnWidths]);
-
-	const handleColumnWidthChange = React.useCallback((params) => {
-		setColumnWidths((prev) => ({
-			...prev,
-			[params.colDef.field]: params.width,
-		}));
-	}, []);
+	const {
+		columns: columnsWithWidths,
+		onColumnWidthChange: handleColumnWidthChange,
+	} = useDataGridColumnWidths(columns);
 
 	const rows = React.useMemo(() => {
 		const r = sortedInstances.map((inst, index) => ({

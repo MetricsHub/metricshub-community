@@ -23,19 +23,18 @@ import {
 } from "../../../../../utils/metrics-helper";
 import PivotGroupSection from "./PivotGroupSection";
 import InstanceMetricsTable from "./InstanceMetricsTable";
-import HoverInfo from "./HoverInfo";
 import CountBadge from "../../common/CountBadge";
 import {
 	selectResourceUiState,
 	setMonitorExpanded,
 } from "../../../../../store/slices/explorer-slice";
-import TruncatedText from "../../common/TruncatedText";
 import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
 
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
 const ATTRIBUTE_COLUMNS = [
 	{ field: "key", headerName: "Key", flex: 1 },
 	{ field: "value", headerName: "Value", flex: 1 },
@@ -249,10 +248,18 @@ const ConnectorAccordion = ({
 	highlightedId,
 	isLast,
 }) => {
-	const [attributeColumnWidths, setAttributeColumnWidths] = React.useState({});
-	const [metricColumnWidths, setMetricColumnWidths] = React.useState({});
 	const theme = useTheme();
 	const isDarkMode = theme.palette.mode === "dark";
+
+	const {
+		columns: attributeColumnsWithWidths,
+		onColumnWidthChange: handleAttributeColumnWidthChange,
+	} = useDataGridColumnWidths(ATTRIBUTE_COLUMNS);
+
+	const {
+		columns: metricColumnsWithWidths,
+		onColumnWidthChange: handleMetricColumnWidthChange,
+	} = useDataGridColumnWidths(METRIC_COLUMNS);
 
 	const dispatch = useDispatch();
 	const navigate = useNavigate();
@@ -306,50 +313,6 @@ const ConnectorAccordion = ({
 		},
 		[dispatch, resourceId],
 	);
-
-	const attributeColumnsWithWidths = React.useMemo(() => {
-		if (!attributeColumnWidths || Object.keys(attributeColumnWidths).length === 0) {
-			return ATTRIBUTE_COLUMNS;
-		}
-		return ATTRIBUTE_COLUMNS.map((col) => {
-			const width = attributeColumnWidths[col.field];
-			if (!width) return col;
-			return {
-				...col,
-				width,
-				flex: undefined,
-			};
-		});
-	}, [attributeColumnWidths]);
-
-	const metricColumnsWithWidths = React.useMemo(() => {
-		if (!metricColumnWidths || Object.keys(metricColumnWidths).length === 0) {
-			return METRIC_COLUMNS;
-		}
-		return METRIC_COLUMNS.map((col) => {
-			const width = metricColumnWidths[col.field];
-			if (!width) return col;
-			return {
-				...col,
-				width,
-				flex: undefined,
-			};
-		});
-	}, [metricColumnWidths]);
-
-	const handleAttributeColumnWidthChange = React.useCallback((params) => {
-		setAttributeColumnWidths((prev) => ({
-			...prev,
-			[params.colDef.field]: params.width,
-		}));
-	}, []);
-
-	const handleMetricColumnWidthChange = React.useCallback((params) => {
-		setMetricColumnWidths((prev) => ({
-			...prev,
-			[params.colDef.field]: params.width,
-		}));
-	}, []);
 
 	return (
 		<Accordion
