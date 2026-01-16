@@ -180,7 +180,7 @@ otel:
 Run the below command to start the **MetricsHub Agent**:
 
 ```shell
-cd /opt/metricsHub/bin
+cd /opt/metricshub/bin
 sudo ./service
 ```
 
