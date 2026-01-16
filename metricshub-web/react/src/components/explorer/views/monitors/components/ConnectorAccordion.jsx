@@ -210,26 +210,26 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 			<AccordionDetails sx={{ pl: 5, pr: 1.5, py: 0 }}>
 				{pivotGroups.length > 0
 					? pivotGroups.map((group) => (
-						<PivotGroupSection
-							key={group.baseName}
-							group={group}
-							sortedInstances={sortedInstances}
-							resourceId={resourceId}
-							metaMetrics={connector.metaMetrics}
-							storageKeyPrefix={monitorStorageKeyPrefix}
-						/>
-					))
-					: sortedInstances.map((inst) => {
-						return (
-							<InstanceMetricsTable
-								key={inst?.attributes?.id || inst.name}
-								instance={inst}
-								naturalMetricCompare={compareMetricEntries}
+							<PivotGroupSection
+								key={group.baseName}
+								group={group}
+								sortedInstances={sortedInstances}
+								resourceId={resourceId}
 								metaMetrics={connector.metaMetrics}
 								storageKeyPrefix={monitorStorageKeyPrefix}
 							/>
-						);
-					})}
+						))
+					: sortedInstances.map((inst) => {
+							return (
+								<InstanceMetricsTable
+									key={inst?.attributes?.id || inst.name}
+									instance={inst}
+									naturalMetricCompare={compareMetricEntries}
+									metaMetrics={connector.metaMetrics}
+									storageKeyPrefix={monitorStorageKeyPrefix}
+								/>
+							);
+						})}
 			</AccordionDetails>
 		</Accordion>
 	);
@@ -285,12 +285,10 @@ const ConnectorAccordion = ({
 		storageKey: `${connectorStorageKeyPrefix}.attributes`,
 	});
 
-	const {
-		columns: metricColumnsWithWidths,
-		onColumnWidthChange: handleMetricColumnWidthChange,
-	} = useDataGridColumnWidths(METRIC_COLUMNS, {
-		storageKey: `${connectorStorageKeyPrefix}.metrics`,
-	});
+	const { columns: metricColumnsWithWidths, onColumnWidthChange: handleMetricColumnWidthChange } =
+		useDataGridColumnWidths(METRIC_COLUMNS, {
+			storageKey: `${connectorStorageKeyPrefix}.metrics`,
+		});
 
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);
@@ -424,77 +422,77 @@ const ConnectorAccordion = ({
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (
-						<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-							{/* Connector Attributes Table */}
-							{connector.attributes && Object.keys(connector.attributes).length > 0 && (
-								<Box>
-									<Typography
-										variant="subtitle2"
-										gutterBottom
-										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
-									>
-										Attributes
-									</Typography>
-									<DataGrid
-										rows={Object.entries(connector.attributes).map(([key, value]) => ({
-											id: key,
-											key,
+					<Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+						{/* Connector Attributes Table */}
+						{connector.attributes && Object.keys(connector.attributes).length > 0 && (
+							<Box>
+								<Typography
+									variant="subtitle2"
+									gutterBottom
+									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+								>
+									Attributes
+								</Typography>
+								<DataGrid
+									rows={Object.entries(connector.attributes).map(([key, value]) => ({
+										id: key,
+										key,
+										value,
+									}))}
+									columns={attributeColumnsWithWidths}
+									disableRowSelectionOnClick
+									hideFooter
+									autoHeight
+									density="compact"
+									onColumnWidthChange={handleAttributeColumnWidthChange}
+									sx={dataGridSx}
+								/>
+							</Box>
+						)}
+
+						{/* Connector Metrics Table */}
+						{showMetricsTable && (
+							<Box>
+								<Typography
+									variant="subtitle2"
+									gutterBottom
+									sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
+								>
+									Metrics
+								</Typography>
+								<DataGrid
+									rows={Object.entries(connector.metrics).map(([name, metric]) => {
+										let value = metric;
+										let unit = undefined;
+
+										if (metric && typeof metric === "object" && "value" in metric) {
+											value = metric.value;
+											unit = metric.unit;
+										}
+
+										if (!unit) {
+											const meta = getMetricMetadata(name, connector.metaMetrics);
+											if (meta?.unit) unit = meta.unit;
+										}
+										return {
+											id: name,
+											name,
 											value,
-										}))}
-										columns={attributeColumnsWithWidths}
-										disableRowSelectionOnClick
-										hideFooter
-										autoHeight
-										density="compact"
-										onColumnWidthChange={handleAttributeColumnWidthChange}
-										sx={dataGridSx}
-									/>
-								</Box>
-							)}
-
-							{/* Connector Metrics Table */}
-							{showMetricsTable && (
-								<Box>
-									<Typography
-										variant="subtitle2"
-										gutterBottom
-										sx={{ fontWeight: 600, mb: 1, transition: "color 0.4s ease" }}
-									>
-										Metrics
-									</Typography>
-									<DataGrid
-										rows={Object.entries(connector.metrics).map(([name, metric]) => {
-											let value = metric;
-											let unit = undefined;
-
-											if (metric && typeof metric === "object" && "value" in metric) {
-												value = metric.value;
-												unit = metric.unit;
-											}
-
-											if (!unit) {
-												const meta = getMetricMetadata(name, connector.metaMetrics);
-												if (meta?.unit) unit = meta.unit;
-											}
-											return {
-												id: name,
-												name,
-												value,
-												unit,
-											};
-										})}
-										columns={metricColumnsWithWidths}
-										disableRowSelectionOnClick
-										hideFooter
-										autoHeight
-										density="compact"
-										onColumnWidthChange={handleMetricColumnWidthChange}
-										sx={dataGridSx}
-									/>
-								</Box>
-							)}
-						</Box>
-					)}
+											unit,
+										};
+									})}
+									columns={metricColumnsWithWidths}
+									disableRowSelectionOnClick
+									hideFooter
+									autoHeight
+									density="compact"
+									onColumnWidthChange={handleMetricColumnWidthChange}
+									sx={dataGridSx}
+								/>
+							</Box>
+						)}
+					</Box>
+				)}
 
 				{/* Monitors Section */}
 				<Box sx={{ display: "flex", flexDirection: "column" }}>

@@ -40,7 +40,13 @@ import {
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
  * @param {string} [props.storageKeyPrefix] - Optional localStorage key prefix for column widths
  */
-const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics, storageKeyPrefix }) => {
+const PivotGroupSection = ({
+	group,
+	sortedInstances,
+	resourceId,
+	metaMetrics,
+	storageKeyPrefix,
+}) => {
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
@@ -191,10 +197,8 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics, st
 		return `${storageKeyPrefix}.pivot.${group.baseName}`;
 	}, [storageKeyPrefix, group.baseName]);
 
-	const {
-		columns: columnsWithWidths,
-		onColumnWidthChange: handleColumnWidthChange,
-	} = useDataGridColumnWidths(columns, { storageKey });
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, { storageKey });
 
 	const rows = React.useMemo(() => {
 		const r = sortedInstances.map((inst, index) => ({

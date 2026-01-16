@@ -210,10 +210,8 @@ const InstanceMetricsTable = ({
 		return `${storageKeyPrefix}.instance.${instanceKey}`;
 	}, [storageKeyPrefix, instance?.attributes?.id, instance?.name]);
 
-	const {
-		columns: columnsWithWidths,
-		onColumnWidthChange: handleColumnWidthChange,
-	} = useDataGridColumnWidths(columns, { storageKey });
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, { storageKey });
 
 	const rows = React.useMemo(
 		() =>

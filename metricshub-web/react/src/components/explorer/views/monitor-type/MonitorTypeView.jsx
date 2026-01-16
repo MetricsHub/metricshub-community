@@ -185,12 +185,10 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		return cols;
 	}, [selectedMetrics, stableMetaMetrics]);
 
-	const {
-		columns: columnsWithWidths,
-		onColumnWidthChange: handleColumnWidthChange,
-	} = useDataGridColumnWidths(columns, {
-		storageKey: `${monitorTypeStorageKeyBase}.metrics`,
-	});
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, {
+			storageKey: `${monitorTypeStorageKeyBase}.metrics`,
+		});
 
 	const instanceTableStorageKeyPrefix = React.useMemo(() => {
 		return `${monitorTypeStorageKeyBase}.instances`;
