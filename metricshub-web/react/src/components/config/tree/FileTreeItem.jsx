@@ -1,12 +1,13 @@
 import * as React from "react";
 import { TreeItem } from "@mui/x-tree-view";
-import { Box, IconButton, Menu, MenuItem, TextField, Stack, Typography } from "@mui/material";
+import { Box, IconButton, Menu, MenuItem, TextField, Stack, Typography, Chip } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
 import DeleteIcon from "@mui/icons-material/Delete";
 import BackupIcon from "@mui/icons-material/Backup";
 import RestoreIcon from "@mui/icons-material/Restore";
 import DownloadIcon from "@mui/icons-material/Download";
+import PushPinIcon from "@mui/icons-material/PushPin";
 import FileTypeIcon from "./icons/FileTypeIcons";
 import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
@@ -24,13 +25,14 @@ import { parseBackupFileName } from "../../../utils/backup-names";
 
 /**
  * File tree item component.
- * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void}} props The component props.
+ * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void}} props The component props.
  * @returns {JSX.Element} The file tree item component.
  */
 export default function FileTreeItem({
 	file,
 	onRename,
 	onDelete,
+	onMakeDraft,
 	isDirty = false,
 	validation = null,
 	itemId, // optional selection id
@@ -51,7 +53,8 @@ export default function FileTreeItem({
 	const [restoreOpen, setRestoreOpen] = React.useState(false);
 
 	const treeItemId = itemId ?? file.name;
-	const displayName = labelName ?? file.name;
+	const isDraft = file.name.endsWith(".draft");
+	const displayName = labelName ?? (isDraft ? file.name.replace(/\.draft$/, "") : file.name);
 
 	// detect backup files: flat name using backupNames utils
 	const parsed = parseBackupFileName(file.name);
@@ -242,6 +245,20 @@ export default function FileTreeItem({
 							>
 								{displayName}
 							</Typography>
+							{isDraft && (
+								<Chip
+									label="Draft"
+									size="small"
+									color="secondary"
+									icon={<PushPinIcon style={{ fontSize: 14 }} />}
+									sx={{
+										height: 20,
+										ml: 1,
+										"& .MuiChip-label": { px: 0.5, fontSize: "0.7rem" },
+										"& .MuiChip-icon": { ml: 0.5 },
+									}}
+								/>
+							)}
 							{isDirty && (
 								<Box
 									component="span"
@@ -326,6 +343,18 @@ export default function FileTreeItem({
 					<MenuItem onClick={askRestore}>
 						<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 						Restore{backupId ? ` (${backupId})` : ""}
+					</MenuItem>
+				)}
+
+				{!isBackupFile && !isDraft && onMakeDraft && (
+					<MenuItem
+						onClick={() => {
+							closeMenu();
+							onMakeDraft(file.name);
+						}}
+					>
+						<PushPinIcon fontSize="small" sx={{ mr: 1 }} />
+						Make draft
 					</MenuItem>
 				)}
 

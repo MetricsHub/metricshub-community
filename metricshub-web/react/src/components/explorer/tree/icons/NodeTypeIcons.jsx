@@ -60,6 +60,8 @@ const NodeTypeIconsComponent = ({ type, name, fontSize = "small" }) => {
 					alt="MetricsHub Agent"
 					sx={{ width: imgSize, height: imgSize, display: "block" }}
 				/>
+			) : ICONS[type] ? (
+				<IconEl fontSize={fontSize} />
 			) : (
 				<MonitorTypeIcon
 					type={name || type}

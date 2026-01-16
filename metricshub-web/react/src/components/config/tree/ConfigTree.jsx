@@ -49,10 +49,17 @@ const FolderLabel = React.memo(function FolderLabel({ name, onMenuClick }) {
 /**
  * Configuration tree component.
  *
- * @param {{files:{name:string,size:number,lastModificationTime:string,localOnly?:boolean}[],selectedName:string,onSelect:(name:string)=>void,onRename?:(oldName:string,newName:string)=>void,onDelete?:(name:string)=>void}} props The component props.
+ * @param {{files:{name:string,size:number,lastModificationTime:string,localOnly?:boolean}[],selectedName:string,onSelect:(name:string)=>void,onRename?:(oldName:string,newName:string)=>void,onDelete?:(name:string)=>void,onMakeDraft?:(name:string)=>void}} props The component props.
  * @returns {JSX.Element} The configuration tree component.
  */
-export default function ConfigTree({ files, selectedName, onSelect, onRename, onDelete }) {
+export default function ConfigTree({
+	files,
+	selectedName,
+	onSelect,
+	onRename,
+	onDelete,
+	onMakeDraft,
+}) {
 	const dispatch = useAppDispatch();
 	const list = useAppSelector((s) => s.config.list);
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
@@ -156,6 +163,7 @@ export default function ConfigTree({ files, selectedName, onSelect, onRename, on
 							onSelect={onSelect}
 							onRename={onRename}
 							onDelete={onDelete}
+							onMakeDraft={onMakeDraft}
 						/>
 					))}
 				</TreeItem>

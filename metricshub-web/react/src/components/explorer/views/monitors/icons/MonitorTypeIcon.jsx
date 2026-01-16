@@ -14,6 +14,8 @@ import DeviceThermostatIcon from "@mui/icons-material/DeviceThermostat";
 import BoltIcon from "@mui/icons-material/Bolt";
 import LayersIcon from "@mui/icons-material/Layers";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 const ICONS = {
 	CPU: DeveloperBoardIcon,
@@ -34,6 +36,8 @@ const ICONS = {
 	Enclosure: StorageIcon,
 	Pool: LayersIcon,
 	Blade: StorageIcon,
+	Service: MiscellaneousServicesIcon,
+	Process: AccountTreeIcon,
 };
 
 /**

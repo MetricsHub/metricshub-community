@@ -23,18 +23,41 @@ import {
 } from "../../../../../utils/metrics-helper";
 import PivotGroupSection from "./PivotGroupSection";
 import InstanceMetricsTable from "./InstanceMetricsTable";
-import HoverInfo from "./HoverInfo";
 import CountBadge from "../../common/CountBadge";
 import {
 	selectResourceUiState,
 	setMonitorExpanded,
 } from "../../../../../store/slices/explorer-slice";
-import TruncatedText from "../../common/TruncatedText";
 import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
+
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
+const ATTRIBUTE_COLUMNS = [
+	{ field: "key", headerName: "Key", flex: 1 },
+	{ field: "value", headerName: "Value", flex: 1 },
+];
+
+const METRIC_COLUMNS = [
+	{
+		field: "name",
+		headerName: "Name",
+		flex: 1,
+		renderCell: (params) => <MetricNameHighlighter name={params.value} />,
+	},
+	{
+		field: "value",
+		headerName: "Value",
+		flex: 1,
+		align: "left",
+		headerAlign: "left",
+		renderCell: (params) => (
+			<MetricValueCell value={params.row.value} unit={params.row.unit} align="left" />
+		),
+	},
+];
 
 /**
  * Decide whether we can pivot a monitor into one or more
@@ -86,6 +109,12 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 	handleMonitorToggle,
 	navigate,
 }) {
+	const monitorStorageKeyPrefix = React.useMemo(() => {
+		const resourceKey = resourceId || "unknown";
+		const monitorKey = monitor?.name || "unknown";
+		return `explorer.monitorView.${resourceKey}.${connectorKey}.${monitorKey}`;
+	}, [resourceId, connectorKey, monitor?.name]);
+
 	const uniqueMonitorKey = `${connectorKey}-${monitor.name}`;
 	const instances = React.useMemo(
 		() => (Array.isArray(monitor.instances) ? monitor.instances : []),
@@ -187,6 +216,7 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 								sortedInstances={sortedInstances}
 								resourceId={resourceId}
 								metaMetrics={connector.metaMetrics}
+								storageKeyPrefix={monitorStorageKeyPrefix}
 							/>
 						))
 					: sortedInstances.map((inst) => {
@@ -196,6 +226,7 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 									instance={inst}
 									naturalMetricCompare={compareMetricEntries}
 									metaMetrics={connector.metaMetrics}
+									storageKeyPrefix={monitorStorageKeyPrefix}
 								/>
 							);
 						})}
@@ -240,8 +271,24 @@ const ConnectorAccordion = ({
 		[connector.monitors],
 	);
 	const connectorKey = connector.name || `connector-${connectorIndex}`;
+	const connectorStorageKeyPrefix = React.useMemo(() => {
+		const resourceKey = resourceId || "unknown";
+		return `explorer.monitorView.${resourceKey}.${connectorKey}`;
+	}, [resourceId, connectorKey]);
 	const isConnectorExpanded = !!expandedMonitors[connectorKey];
 	const isHighlighted = highlightedId === connectorKey;
+
+	const {
+		columns: attributeColumnsWithWidths,
+		onColumnWidthChange: handleAttributeColumnWidthChange,
+	} = useDataGridColumnWidths(ATTRIBUTE_COLUMNS, {
+		storageKey: `${connectorStorageKeyPrefix}.attributes`,
+	});
+
+	const { columns: metricColumnsWithWidths, onColumnWidthChange: handleMetricColumnWidthChange } =
+		useDataGridColumnWidths(METRIC_COLUMNS, {
+			storageKey: `${connectorStorageKeyPrefix}.metrics`,
+		});
 
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);
@@ -392,14 +439,12 @@ const ConnectorAccordion = ({
 										key,
 										value,
 									}))}
-									columns={[
-										{ field: "key", headerName: "Key", flex: 1 },
-										{ field: "value", headerName: "Value", flex: 1 },
-									]}
+									columns={attributeColumnsWithWidths}
 									disableRowSelectionOnClick
 									hideFooter
 									autoHeight
 									density="compact"
+									onColumnWidthChange={handleAttributeColumnWidthChange}
 									sx={dataGridSx}
 								/>
 							</Box>
@@ -436,32 +481,12 @@ const ConnectorAccordion = ({
 											unit,
 										};
 									})}
-									columns={[
-										{
-											field: "name",
-											headerName: "Name",
-											flex: 1,
-											renderCell: (params) => <MetricNameHighlighter name={params.value} />,
-										},
-										{
-											field: "value",
-											headerName: "Value",
-											flex: 1,
-											align: "left",
-											headerAlign: "left",
-											renderCell: (params) => (
-												<MetricValueCell
-													value={params.row.value}
-													unit={params.row.unit}
-													align="left"
-												/>
-											),
-										},
-									]}
+									columns={metricColumnsWithWidths}
 									disableRowSelectionOnClick
 									hideFooter
 									autoHeight
 									density="compact"
+									onColumnWidthChange={handleMetricColumnWidthChange}
 									sx={dataGridSx}
 								/>
 							</Box>

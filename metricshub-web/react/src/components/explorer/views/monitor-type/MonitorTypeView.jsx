@@ -31,7 +31,6 @@ import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithA
 import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
 import { renderMetricHeader } from "../common/metric-column-helper";
-import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
 	getMetricMetadata,
@@ -46,6 +45,7 @@ import { useInstanceSorting } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
 import { dataGridSx } from "../common/table-styles";
+import { useDataGridColumnWidths } from "../common/use-data-grid-column-widths";
 
 const TAB_INSTANCES = 0;
 const TAB_METRICS = 1;
@@ -70,6 +70,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedConnectorId = connectorId ? decodeURIComponent(connectorId) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
+	const monitorTypeStorageKeyBase = React.useMemo(() => {
+		const groupKey = resourceGroupName || "unknown";
+		const resourceKey = decodedName || "unknown";
+		const connectorKey = decodedConnectorId || "unknown";
+		const monitorKey = decodedMonitorType || "unknown";
+		return `explorer.monitorType.${groupKey}.${resourceKey}.${connectorKey}.${monitorKey}`;
+	}, [resourceGroupName, decodedName, decodedConnectorId, decodedMonitorType]);
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
@@ -125,8 +132,15 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		setTabValue(newValue);
 	}, []);
 
+	// Stable reference for metaMetrics to prevent column re-creation
+	const metaMetrics = monitorData?.metaMetrics || {};
+	const stableMetaMetrics = React.useMemo(
+		() => metaMetrics,
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[JSON.stringify(metaMetrics)],
+	);
+
 	const columns = React.useMemo(() => {
-		if (!monitorData) return [];
 		const cols = [
 			{
 				field: "instanceName",
@@ -143,7 +157,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		];
 
 		selectedMetrics.forEach((metric) => {
-			const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+			const meta = getMetricMetadata(metric, stableMetaMetrics);
 			const cleanedUnit = cleanUnit(meta?.unit);
 			const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
 
@@ -169,7 +183,16 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		});
 
 		return cols;
-	}, [selectedMetrics, monitorData]);
+	}, [selectedMetrics, stableMetaMetrics]);
+
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, {
+			storageKey: `${monitorTypeStorageKeyBase}.metrics`,
+		});
+
+	const instanceTableStorageKeyPrefix = React.useMemo(() => {
+		return `${monitorTypeStorageKeyBase}.instances`;
+	}, [monitorTypeStorageKeyBase]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({
@@ -238,6 +261,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 										naturalMetricCompare={compareMetricEntries}
 										metaMetrics={monitorData?.metaMetrics}
 										highlighted={isHighlighted}
+										storageKeyPrefix={instanceTableStorageKeyPrefix}
 									/>
 								</Box>
 							);
@@ -314,10 +338,11 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 					<Box sx={{ width: "100%" }}>
 						<DataGrid
 							rows={rows}
-							columns={columns}
+							columns={columnsWithWidths}
 							disableRowSelectionOnClick
 							autoHeight
 							pageSizeOptions={[5, 10, 20, 50, 100]}
+							onColumnWidthChange={handleColumnWidthChange}
 							initialState={{
 								pagination: {
 									paginationModel: { pageSize: 10, page: 0 },
