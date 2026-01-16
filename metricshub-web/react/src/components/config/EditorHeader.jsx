@@ -87,7 +87,7 @@ export default function EditorHeader({ selected, saving, onSave, onApply }) {
 							variant="text"
 							color="secondary"
 						>
-							{saving ? "Applying..." : "Save & Apply"}
+							{saving ? "Applying..." : "Apply"}
 						</Button>
 					)}
 					<Button

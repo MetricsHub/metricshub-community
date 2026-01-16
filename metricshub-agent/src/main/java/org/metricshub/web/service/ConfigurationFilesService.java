@@ -366,10 +366,7 @@ public class ConfigurationFilesService {
 	 */
 	private Path resolveSafeDraft(final Path baseDir, final String fileName) throws ConfigFilesException {
 		validateSimpleFileName(fileName);
-		if (!fileName.endsWith(DRAFT_EXTENSION)) {
-			// This check might be redundant if I append it, but good for safety
-			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_EXTENSION, "Draft files must end with .draft");
-		}
+
 		final String baseName = fileName.substring(0, fileName.length() - DRAFT_EXTENSION.length());
 		if (!hasYamlExtension(baseName)) {
 			throw new ConfigFilesException(
