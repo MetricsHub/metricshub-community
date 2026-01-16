@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 
 /**
  * Hook to manage metric selection and settings dialog.
@@ -9,6 +9,7 @@ import { useState, useMemo, useCallback } from "react";
 export const useMetricSelection = (instances) => {
 	const [selectedMetrics, setSelectedMetrics] = useState([]);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [hasInitialized, setHasInitialized] = useState(false);
 
 	const availableMetrics = useMemo(() => {
 		const metricsSet = new Set();
@@ -24,6 +25,13 @@ export const useMetricSelection = (instances) => {
 		}
 		return Array.from(metricsSet).sort();
 	}, [instances]);
+
+	useEffect(() => {
+		if (!hasInitialized && availableMetrics.length > 0) {
+			setSelectedMetrics(availableMetrics);
+			setHasInitialized(true);
+		}
+	}, [availableMetrics, hasInitialized]);
 
 	const handleMetricToggle = useCallback((metric) => {
 		setSelectedMetrics((prev) =>
