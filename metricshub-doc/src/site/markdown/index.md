@@ -1,33 +1,49 @@
-keywords: about
-description: MetricsHub is a universal metrics collection agent for OpenTelemetry, which extracts metrics from any resource and pushes them to any observability back-end.
+keywords: monitoring, observability, opentelemetry, metrics, infrastructure
+description: MetricsHub is a universal metrics collection agent for OpenTelemetry that monitors servers, storage, networks, and applications — pushing data to any observability platform.
 
-# Overview
+# MetricsHub Documentation
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-**MetricsHub®** is a universal metrics collection solution for [OpenTelemetry](https://opentelemetry.io/docs) which **extracts metrics from any local or remote resource** - such as a host, service, or application - and **pushes the collected data to any observability back-end** supporting OpenTelemetry like Prometheus, New Relic, ServiceNow, and Splunk.
+**MetricsHub** is a universal metrics collector for [OpenTelemetry](https://opentelemetry.io/docs). It monitors your entire infrastructure — servers, storage systems, network devices, databases, and applications — and exports metrics to any observability platform.
 
-## Operating Principle
+## Why MetricsHub?
 
-**MetricsHub** acts as an agent within the infrastructure. It pulls data from systems and applications using various protocols like `SNMP`, `WMI`, `REST APIs`, or `SSH`.
+| Challenge | How MetricsHub Helps |
+|-----------|---------------------|
+| **Vendor lock-in** | OpenTelemetry-native — export to Prometheus, Datadog, Splunk, New Relic, or 30+ platforms |
+| **Complex setups** | Single agent monitors hundreds of systems via SNMP, WMI, SSH, REST, IPMI, and more |
+| **Limited coverage** | 200+ built-in connectors for enterprise hardware and software |
+| **Custom needs** | Extend monitoring with simple YAML — no coding required |
+| **Sustainability** | Track energy consumption and carbon footprint out of the box |
 
-![](./images/otel-metricshub.png)
+## How It Works
 
-**MetricsHub**  includes a library of YAML files - called **connectors** - which describe how to collect metrics about [operating systems and a variety of platforms.](supported-platforms.html)
+**MetricsHub** runs as an agent on your infrastructure. It collects metrics from local and remote systems using standard protocols, then pushes data to your observability platform via OpenTelemetry (OTLP).
 
-**MetricsHub**  uses the OTLP protocol to send metrics to observability platforms that support OpenTelemetry natively like Datadog, New Relic, Prometheus, and Splunk.
+![MetricsHub Architecture](./images/otel-metricshub.png)
 
-Because it is recommended to use an OpenTelemetry Collector in a production environment, **MetricsHub Enterprise** is bundled with OpenTelemetry Collector Contrib to facilitate connections to over [30 different observability platforms](https://opentelemetry.io/ecosystem/registry/?component=exporter).
+The collection logic is defined in **connectors** — YAML files that describe what to monitor and how. MetricsHub Enterprise includes connectors for [200+ platforms](supported-platforms.html), from HPE servers to Cisco switches to Oracle databases.
 
-## Monitoring Coverage
+## Key Features
 
-**MetricsHub Enterprise** provides out-of-the box support for hundreds of  [servers, storage systems, network devices, and databases](supported-platforms.html) through its built-in library of connectors.
+* **Multi-protocol collection** — HTTP, IPMI, JMX, SNMP, SSH, WBEM, WinRM, WMI
+* **OpenTelemetry native** — Semantic conventions, OTLP export, collector integration
+* **200+ connectors** — Servers, storage, network, databases, applications
+* **Extensible** — Add custom monitoring with YAML, no code required
+* **Sustainability metrics** — Power consumption, carbon intensity, electricity costs
+* **Enterprise-ready** — Web UI, password encryption, 24×7 support
 
-Fully customizable, **MetricsHub** can also be configured to **cover new use cases in no time**, such as the monitoring of systems or applications not covered out-of-the-box through protocols like `HTTP`, `IPMI`, `JMX`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
+## Get Started
 
-## Main Features
+1. **[Choose your edition](getting-started/editions.html)** — Community (free) or Enterprise
+2. **Follow a quick start guide:**
+   * [Quick Start — Community Edition](getting-started/quick-start-community-prometheus.html)
+   * [Quick Start — Enterprise Edition](getting-started/quick-start-enterprise.html)
+3. **[Configure monitoring](configuration/configure-monitoring.html)** for your resources
 
-* **Remote Monitoring**: Gathers metrics from remote systems using various protocols like `HTTP`, `IPMI`, `JMX`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
-* **OpenTelemetry native**: Pulls metrics from diverse systems and applications while strictly adhering to OpenTelemetry's semantic conventions.
-* **Out-of-the-box support for 200+ systems and apps**.
-* **Extensible**: Adds support for new systems, platforms, or applications with just a few lines of YAML.
+## Learn More
+
+* [Key Concepts](concepts.html) — Understand resources, monitors, connectors, and metrics
+* [Supported Platforms](supported-platforms.html) — See what MetricsHub monitors out of the box
+* [Integrations](integrations/index.html) — Connect to Prometheus, Grafana, Datadog, and more

@@ -75,83 +75,73 @@
 		<menu name="Introduction">
 			<item name="Overview" href="index.html" />
 			<item name="Release Notes" href="release-notes.html" />
+			<item name="Key Concepts" href="concepts.html" />
+			<item name="Getting Started" href="getting-started/index.html">
+				<item name="Choose Your Edition" href="getting-started/editions.html" />
+				<item name="Quick Start (Community)" href="getting-started/quick-start-community-prometheus.html" />
+				<item name="Quick Start (Enterprise)" href="getting-started/quick-start-enterprise.html" />
+			</item>
 			<item name="Supported Platforms" href="supported-platforms.html" />
+		</menu>
+
+		<menu name="User Guide">
+			<item name="Installation" href="installation/index.html">
+				<item name="Windows (Community)" href="installation/community-windows.html" />
+				<item name="Windows (Enterprise)" href="installation/enterprise-windows.html" />
+				<item name="Debian/Ubuntu (Community)" href="installation/community-debian.html" />
+				<item name="Debian/Ubuntu (Enterprise)" href="installation/enterprise-debian.html" />
+				<item name="Red Hat/CentOS (Community)" href="installation/community-redhat.html" />
+				<item name="Red Hat/CentOS (Enterprise)" href="installation/enterprise-redhat.html" />
+				<item name="Docker (Community)" href="installation/community-docker.html" />
+				<item name="Docker (Enterprise)" href="installation/enterprise-docker.html" />
+				<item name="Upgrading" href="upgrade.html"/>
+			</item>
+			<item name="Web Interface" href="operating-web-ui.html" />
+			<item name="Configuration" href="configuration/configure-monitoring.html">
+				<item name="Protocols and Credentials" href="configuration/protocols-and-credentials.html" />
+				<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
+				<item name="Fine-Tuning Monitoring" href="configuration/fine-tuning-monitoring.html" />
+				<item name="Programmable Configuration" href="configuration/programmable-configuration.html" />
+			</item>
+			<item name="Custom Monitoring" href="custom/index.html">
+				<item name="Database Query" href="custom/database-query.html" />
+				<item name="JMX Query" href="custom/jmx-query.html" />
+				<item name="Linux Service" href="custom/linux-service.html" />
+				<item name="Linux Process" href="custom/linux-process.html" />
+				<item name="SNMP Polling" href="custom/snmp-polling.html" />
+				<item name="Web Request" href="custom/web-request.html" />
+				<item name="Windows Process" href="custom/windows-process.html" />
+				<item name="Windows Service" href="custom/windows-service.html" />
+				<item name="Windows Event Log" href="custom/windows-event-log.html" />
+			</item>
+			<item name="Security" href="security/security.html">
+				<item name="Password Encryption" href="security/passwords.html" />
+				<item name="API Keys" href="security/api-keys.html" />
+			</item>
+			<item name="Integrations" href="integrations/index.html">
+				<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />
+				<item name="BMC Helix" href="integrations/bmc-helix.html" />
+				<item name="Datadog" href="integrations/datadog.html" />
+				<item name="Prometheus" href="integrations/prometheus.html" />
+				<item name="Alertmanager" href="integrations/alertmanager.html" />
+				<item name="Grafana Dashboards" href="integrations/grafana.html" />
+			</item>
+			<item name="Sustainability Metrics" href="guides/configure-sustainability-metrics.html"/>
+			<item name="Troubleshooting" href="troubleshooting/index.html">
+				<item name="Health Check" href="troubleshooting/health-check.html"/>
+				<item name="Managing Logs" href="troubleshooting/metricshub-logs.html"/>
+				<item name="OTel Collector Logs" href="troubleshooting/otel-logs.html"/>
+				<item name="Self-Observability" href="troubleshooting/self-observability.html"/>
+				<item name="Protocol CLIs" href="troubleshooting/cli/index.html"/>
+				<item name="Degraded Performance" href="troubleshooting/degraded-performance.html"/>
+				<item name="No Data for a Resource" href="troubleshooting/no-data-resources.html"/>
+				<item name="No Data in Platforms" href="troubleshooting/no-data-observability-platforms.html"/>
+			</item>
+		</menu>
+
+		<menu name="Reference">
 			<item name="Connectors Directory" href="connectors-directory.html" />
-		</menu>
-
-		<menu name="Installation">
-			<item name="Overview" href="installation/index.html "/>
-			<item name="On Debian Linux" href="installation/debian-linux.html "/>
-			<item name="On Docker" href="installation/docker.html "/>
-			<item name="On Red Hat Enteprise Linux" href="installation/redhat-linux.html "/>
-			<item name="On Windows" href="installation/windows.html "/>
-		</menu>
-
-		<menu name="The Web UI &lt;span class='label label-primary'&gt;Beta&lt;/span&gt;">
-			<item name="Operating the Web UI" href="operating-web-ui.html"/>
-		</menu>
-		
-		<menu name="Configuration">
-			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
-			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
-			<item name="Password Encryption" href="security/passwords.html" />
-			<item name="API Keys" href="security/api-keys.html" />
-		</menu>
-
-		<menu name="Integrations">
-			<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />
-			<item name="BMC Helix" href="integrations/bmc-helix.html" />
-			<item name="Datadog" href="integrations/datadog.html" />
-			<item name="Prometheus" href="prometheus/prometheus.html">
-				<item name="Prometheus Alertmanager" href="prometheus/alertmanager.html" />
-				<item name="Grafana Dashboards" href="prometheus/grafana.html" />
-			</item>
-		</menu>
-
-		<menu name="Guides">
-			<item name="Quick Start (Community Edition)" href="guides/quick-start-community-prometheus.html"/>
-			<item name="Sustainability " href="guides/configure-sustainability-metrics.html" />
-			<item name="Health Check (Enterprise Edition)" href="guides/status.html" />
-		</menu>
-
-		<menu name="Custom Monitoring">
-			<item name="Overview" href="custom/index.html"/>
-			<item name="Database Query" href="custom/database-query.html"/>
-			<item name="JMX Query" href="custom/jmx-query.html"/>
-			<item name="Linux Service" href="custom/linux-service.html"/>
-			<item name="Linux Process" href="custom/linux-process.html"/>
-			<item name="SNMP Polling" href="custom/snmp-polling.html"/>
-			<item name="Web Request" href="custom/web-request.html"/>
-			<item name="Windows Process" href="custom/windows-process.html"/>
-			<item name="Windows Service" href="custom/windows-service.html"/>
-			<item name="Windows Event Log" href="custom/windows-event-log.html"/>
-		</menu>
-
-		<menu name="Troubleshooting">
-			<item name="Overview" href="troubleshooting/index.html"/>
-			<item name="Degraded Performance" href="troubleshooting/degraded-performance.html"/>
-			<item name="No Data for a Specific Resource" href="troubleshooting/no-data-resources.html"/>
-			<item name="No Data in Observability Platforms" href="troubleshooting/no-data-observability-platforms.html"/>
-			<item name="MetricsHub Logs" href="troubleshooting/metricshub-logs.html"/>
-			<item name="OTel Logs" href="troubleshooting/otel-logs.html"/>
-			<item name="Self-Observability" href="troubleshooting/self-observability.html"/>
-			<item name="Protocol CLIs" href="troubleshooting/cli/index.html">
-				<item name="HTTP CLI" href="troubleshooting/cli/http.html"/>
-				<item name="IPMI CLI" href="troubleshooting/cli/ipmi.html"/>
-				<item name="JDBC CLI" href="troubleshooting/cli/jdbc.html"/>
-				<item name="JMX CLI" href="troubleshooting/cli/jmx.html"/>
-				<item name="Ping CLI" href="troubleshooting/cli/ping.html"/>
-				<item name="SNMP CLI" href="troubleshooting/cli/snmp.html"/>
-				<item name="SNMPv3 CLI" href="troubleshooting/cli/snmpv3.html"/>
-				<item name="SSH CLI" href="troubleshooting/cli/ssh.html"/>
-				<item name="WBEM CLI" href="troubleshooting/cli/wbem.html"/>
-				<item name="WinRm CLI" href="troubleshooting/cli/winrm.html"/>
-				<item name="WMI CLI" href="troubleshooting/cli/wmi.html"/>
-			</item>
-		</menu>
-
-		<menu name="Appendix">
-			<item name="MetricsHub CLI (&lt;code&gt;metricshub&lt;/code&gt;)" href="appendix/cli.html" />
+			<item name="MetricsHub CLI" href="appendix/cli.html" />
 		</menu>
 	</body>
 </project>
