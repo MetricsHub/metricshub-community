@@ -41,11 +41,11 @@ Before configuring the AI agents integration, make sure that:
 * the `31888` port is accessible from your machine or MCP client
 * you have generated an [API key](../security/api-keys.md) to authenticate against the **MetricsHub MCP Server**.
 
-> **Important**: Some MCP clients may require **HTTPS with a valid TLS certificate**. In such cases, you must enable HTTPS on your **MetricsHub** instance. One common approach is to place **MetricsHub** behind a reverse proxy (e.g., NGINX or Apache) with TLS termination, and ensure that the certificate is trusted by the client.
+> **Important:** Some MCP clients require **HTTPS with a valid TLS certificate**. If so, keep **HTTPS enabled** on your **MetricsHub** instance and ensure the client **trusts the SSL certificate** (see [Updating the SSL certificate](../operating-web-ui.md#updating-the-ssl-certificate)). If you use a reverse proxy, forward requests to the **MetricsHub MCP Server** on port `31888`.
 
 ## Configuring the integration
 
-Configure your AI assistant to connect to `http://<hostname>:31888/sse`. Make sure to replace `<hostname>` with the actual hostname or IP address of the machine where **MetricsHub** is running.
+Configure your AI assistant to connect to `https://<hostname>:31888/sse`. Make sure to replace `<hostname>` with the actual hostname or IP address of the machine where **MetricsHub** is running.
 
 Each request to the **MetricsHub MCP Server** must include the [API key](../security/api-keys.md) in the `Authorization` header as follows:
 
@@ -94,3 +94,4 @@ The command will return this type of response:
   ]
 }
 ```
+
