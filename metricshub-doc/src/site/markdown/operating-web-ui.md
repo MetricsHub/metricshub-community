@@ -93,12 +93,15 @@ From there, you can:
 
 ## Interacting with M8B
 
-**M8B** is a virtual assistant that helps with routine operations and supports system administrators in analysis and troubleshooting tasks. To be able to interact with **M8B**, you need to specify your OpenAI key in the yaml configuration file (`/opt/metricshub/config/metricshub.yaml` for Linux or `C:\ProgramData\MetricsHub\config\metricshub.yaml` for Windows) as follows:
+**M8B** is a virtual assistant that helps with routine operations and supports system administrators in analysis and troubleshooting tasks. To be able to interact with **M8B**:
 
-```yaml
-web:
-  ai.openai.api-key: "<Your-API-Key>"
-```
+1. Specify your OpenAI key in the yaml configuration file (`/opt/metricshub/config/metricshub.yaml` for Linux or `C:\ProgramData\MetricsHub\config\metricshub.yaml` for Windows) as follows:
+   ```yaml
+   web:
+     ai.openai.api-key: "<Your-API-Key>"
+   ```
+2. Restart **MetricsHub** to apply the new configuration
+3. Connect to  `https://<machine-where-metricshub-is-running>:31888/chat` using your read-write credentials.
 
 ## Updating the SSL Certificate
 
