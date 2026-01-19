@@ -26,6 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.security.ApiKeyAuthFilter;
+import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.jwt.JwtAuthFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
@@ -56,6 +57,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	private ApiKeyAuthFilter apiKeyAuthFilter;
+	private ReadOnlyAccessFilter readOnlyAccessFilter;
 	private JwtComponent jwtComponent;
 	private UserService userService;
 	private TlsConfigurationProperties tlsConfigurationProperties;
@@ -67,15 +69,18 @@ public class SecurityConfig {
 	 * @param jwtComponent               the JWT component for handling JWT tokens
 	 * @param userService                the user service for user-related operations
 	 * @param tlsConfigurationProperties the TLS configuration properties
+	 * @param readOnlyAccessFilter       filter enforcing read-only access
 	 */
 	@Autowired
 	public SecurityConfig(
 		ApiKeyAuthFilter apiKeyAuthFilter,
+		ReadOnlyAccessFilter readOnlyAccessFilter,
 		JwtComponent jwtComponent,
 		UserService userService,
 		TlsConfigurationProperties tlsConfigurationProperties
 	) {
 		this.apiKeyAuthFilter = apiKeyAuthFilter;
+		this.readOnlyAccessFilter = readOnlyAccessFilter;
 		this.jwtComponent = jwtComponent;
 		this.userService = userService;
 		this.tlsConfigurationProperties = tlsConfigurationProperties;
@@ -97,6 +102,7 @@ public class SecurityConfig {
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
+			.addFilterAfter(readOnlyAccessFilter, JwtAuthFilter.class)
 			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
 			.exceptionHandling(ex ->
 				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
@@ -114,7 +120,11 @@ public class SecurityConfig {
 	@Bean
 	@Order(2)
 	public SecurityFilterChain defaultFilterChain(HttpSecurity http) throws Exception {
-		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(authz -> authz.anyRequest().permitAll()).build();
+		return http
+			.csrf(csrf -> csrf.disable())
+			.addFilterAfter(readOnlyAccessFilter, UsernamePasswordAuthenticationFilter.class)
+			.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
+			.build();
 	}
 
 	/**

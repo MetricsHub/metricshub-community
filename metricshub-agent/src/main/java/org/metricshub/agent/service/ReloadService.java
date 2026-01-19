@@ -43,6 +43,7 @@ import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.web.MetricsHubAgentServer;
 
 /**
  * Handles the reload process of the running agent by comparing the current and reloaded configurations.
@@ -114,8 +115,19 @@ public class ReloadService {
 			log.info("Global configuration has changed. Restarting MetricsHub Agent...");
 
 			runningAgentContext.getTaskSchedulingService().stop();
+
+			// ServiceLoader responsibility is to manage the scheduler life cycle
+			// OTEL Collector process is not managed by the current ServiceLoader
+			// And should have its own life cycle hot reload management.
+			// Accordingly, we need to transfer the running OTEL Collector process to the reloaded context
+			reloadedAgentContext.setOtelCollectorProcessService(runningAgentContext.getOtelCollectorProcessService());
+
+			// Point the running context to the reloaded one
 			runningAgentContext = reloadedAgentContext;
 			runningAgentContext.getTaskSchedulingService().start();
+
+			// Update the MetricsHub Agent Server with the new context
+			MetricsHubAgentServer.updateAgentContext(runningAgentContext);
 
 			// Execute the Global restart callback
 			afterGlobalRestartCallback.run();
