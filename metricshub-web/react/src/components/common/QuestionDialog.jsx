@@ -19,6 +19,7 @@ import {
  *   btnColor?: "inherit"|"primary"|"secondary"|"success"|"error"|"info"|"warning",
  *   btnVariant?: "text"|"outlined"|"contained",
  *   btnIcon?: React.ReactNode,
+ *   disabled?: boolean,
  *   autoFocus?: boolean,
  *   callback: () => void
  * }>} props.actionButtons
@@ -40,7 +41,7 @@ export default function QuestionDialog({
 			</DialogContent>
 			<DialogActions>
 				{actionButtons.map(
-					({ btnTitle, btnColor, btnVariant, btnIcon, callback, autoFocus }, i) => (
+					({ btnTitle, btnColor, btnVariant, btnIcon, callback, autoFocus, disabled }, i) => (
 						<Button
 							key={i}
 							color={btnColor}
@@ -48,6 +49,7 @@ export default function QuestionDialog({
 							onClick={callback}
 							startIcon={btnIcon}
 							autoFocus={autoFocus}
+							disabled={disabled}
 						>
 							{btnTitle}
 						</Button>

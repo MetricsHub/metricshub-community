@@ -13,6 +13,7 @@ import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { isBackupFileName } from "../../../utils/backup-names";
 import { Typography } from "@mui/material";
+import { useAuth } from "../../../hooks/use-auth";
 
 /**
  * Container component for the configuration file editor.
@@ -24,6 +25,8 @@ function ConfigEditorContainer(props) {
 	const forwardedRef = props?.ref;
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const { user } = useAuth();
+	const isReadOnly = user?.role === "ro";
 	const {
 		selected,
 		content: storeContent,
@@ -32,7 +35,7 @@ function ConfigEditorContainer(props) {
 	} = useAppSelector((s) => s.config);
 	const isBackupSelected = !!(selected && isBackupFileName(selected));
 	const isDirty = !!(selected && dirtyByName[selected]);
-	const canSave = !!selected && !isBackupSelected && isDirty && !saving;
+	const canSave = !!selected && !isBackupSelected && isDirty && !saving && !isReadOnly;
 
 	const [local, setLocal] = React.useState(storeContent);
 
@@ -74,13 +77,13 @@ function ConfigEditorContainer(props) {
 	// 1. Save (Draft mode): Save as draft, skip validation
 	//    Only active if isDraft = true
 	const handleDraftSave = React.useCallback(async () => {
-		if (!selected || !isDraft) return;
+		if (!selected || !isDraft || isReadOnly) return;
 		await dispatch(saveDraftConfig({ name: selected, content: local, skipValidation: true }));
-	}, [dispatch, selected, isDraft, local]);
+	}, [dispatch, selected, isDraft, local, isReadOnly]);
 
 	// 2. Save and Apply (Draft mode): Validate, Save as Normal, Delete Draft
 	const handleApply = React.useCallback(async () => {
-		if (!selected || !isDraft) return;
+		if (!selected || !isDraft || isReadOnly) return;
 		const targetName = selected.replace(/\.draft$/, "");
 
 		try {
@@ -103,11 +106,11 @@ function ConfigEditorContainer(props) {
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}
-	}, [dispatch, selected, isDraft, local, navigate]);
+	}, [dispatch, selected, isDraft, local, navigate, isReadOnly]);
 
 	// 3. Normal Save (Normal mode): Validate, Save. If error -> Dialog "Save as Draft"
 	const handleNormalSave = React.useCallback(async () => {
-		if (!canSave) return;
+		if (!canSave || isReadOnly) return;
 		try {
 			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
 			const result = res?.result ?? { valid: true };
@@ -120,7 +123,7 @@ function ConfigEditorContainer(props) {
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}
-	}, [canSave, dispatch, selected, local]);
+	}, [canSave, dispatch, selected, local, isReadOnly]);
 
 	// Helper to show validation error dialog
 	const handleValidationError = (result) => {
@@ -191,7 +194,7 @@ function ConfigEditorContainer(props) {
 	const actions = React.useMemo(() => {
 		const btns = [];
 		// Only offer "convert to draft" if we are not already on a draft
-		if (!isDraft) {
+		if (!isDraft && !isReadOnly) {
 			btns.push({
 				btnTitle: "Save and convert to draft",
 				btnColor: "error",
@@ -206,16 +209,16 @@ function ConfigEditorContainer(props) {
 			autoFocus: true,
 		});
 		return btns;
-	}, [isDraft, forceSaveAsDraft]);
+	}, [isDraft, forceSaveAsDraft, isReadOnly]);
 
 	return (
 		<>
 			<ConfigEditor
 				value={local}
-				readOnly={!selected || isBackupSelected}
+				readOnly={!selected || isBackupSelected || isReadOnly}
 				onChange={onChange}
-				onSave={primarySave}
-				canSave={canSave || (isDraft && isDirty)} // Drafts can always save if dirty
+				onSave={isReadOnly ? undefined : primarySave}
+				canSave={!isReadOnly && (canSave || (isDraft && isDirty))} // Drafts can always save if dirty
 				height="100%"
 				fileName={selected}
 				validateFn={validateFn}
