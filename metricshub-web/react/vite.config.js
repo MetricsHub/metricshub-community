@@ -14,10 +14,6 @@ export default defineConfig({
 			"@mui/x-internals",
 		],
 	},
-	build: {
-		minify: false,
-		sourcemap: true,
-	},
 	test: {
 		globals: true,
 		environment: "happy-dom",
