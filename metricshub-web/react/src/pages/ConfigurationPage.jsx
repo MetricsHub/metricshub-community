@@ -32,6 +32,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { paths } from "../paths";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
+import { useAuth } from "../hooks/use-auth";
 
 /**
  * Configuration page component.
@@ -41,6 +42,8 @@ function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
 	const snackbar = useSnackbar();
+	const { user } = useAuth();
+	const isReadOnly = user?.role === "ro";
 	const { name: routeName } = useParams();
 	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
 		useAppSelector((s) => s.config);
@@ -251,6 +254,7 @@ function ConfigurationPage() {
 							color="inherit"
 							startIcon={<AddIcon />}
 							onClick={handleCreate}
+							disabled={isReadOnly}
 						>
 							Create
 						</Button>
@@ -261,12 +265,14 @@ function ConfigurationPage() {
 							variant="outlined"
 							component="label"
 							startIcon={<UploadFileIcon />}
+							disabled={isReadOnly}
 						>
 							Import
 							<input
 								type="file"
 								accept=".yaml,.yml"
 								hidden
+								disabled={isReadOnly}
 								onChange={(e) => {
 									const file = e.target.files?.[0];
 									if (!file) return;
@@ -348,6 +354,7 @@ function ConfigurationPage() {
 							saving={saving}
 							onSave={() => editorRef.current?.save?.()}
 							onApply={() => editorRef.current?.apply?.()}
+							isReadOnly={isReadOnly}
 						/>
 					</Box>
 

@@ -13,6 +13,7 @@ import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { isBackupFileName } from "../../../utils/backup-names";
 import { Typography } from "@mui/material";
+import { useAuth } from "../../../hooks/use-auth";
 
 /**
  * Container component for the configuration file editor.
@@ -24,6 +25,8 @@ function ConfigEditorContainer(props) {
 	const forwardedRef = props?.ref;
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const { user } = useAuth();
+	const isReadOnly = user?.role === "ro";
 	const {
 		selected,
 		content: storeContent,
@@ -32,7 +35,7 @@ function ConfigEditorContainer(props) {
 	} = useAppSelector((s) => s.config);
 	const isBackupSelected = !!(selected && isBackupFileName(selected));
 	const isDirty = !!(selected && dirtyByName[selected]);
-	const canSave = !!selected && !isBackupSelected && isDirty && !saving;
+	const canSave = !!selected && !isBackupSelected && isDirty && !saving && !isReadOnly;
 
 	const [local, setLocal] = React.useState(storeContent);
 
@@ -74,40 +77,47 @@ function ConfigEditorContainer(props) {
 	// 1. Save (Draft mode): Save as draft, skip validation
 	//    Only active if isDraft = true
 	const handleDraftSave = React.useCallback(async () => {
-		if (!selected || !isDraft) return;
+		if (!selected || !isDraft || isReadOnly) return;
 		await dispatch(saveDraftConfig({ name: selected, content: local, skipValidation: true }));
-	}, [dispatch, selected, isDraft, local]);
+	}, [dispatch, selected, isDraft, local, isReadOnly]);
 
 	// 2. Save and Apply (Draft mode): Validate, Save as Normal, Delete Draft
-	const handleApply = React.useCallback(async () => {
-		if (!selected || !isDraft) return;
+	const handleApply = React.useCallback(() => {
+		if (!selected || !isDraft || isReadOnly) return;
 		const targetName = selected.replace(/\.draft$/, "");
 
-		try {
-			// Validate first
-			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
-			const result = res?.result ?? { valid: true };
-
-			if (result.valid) {
+		// Validate first
+		return dispatch(validateConfig({ name: selected, content: local }))
+			.unwrap()
+			.then((res) => {
+				const result = res?.result ?? { valid: true };
+				if (!result.valid) {
+					handleValidationError(result);
+					return null;
+				}
 				// Save as normal file
-				await dispatch(saveConfig({ name: targetName, content: local, skipValidation: false }));
-				// Delete the draft
-				await dispatch(deleteConfig(selected));
+				return dispatch(
+					saveConfig({ name: targetName, content: local, skipValidation: false }),
+				).unwrap();
+			})
+			.then((saved) => {
+				if (!saved) return null;
 				// Navigate to normal file
 				navigate(paths.configurationFile(targetName), { replace: true });
-			} else {
-				// Show error dialog
-				// Reuse logic or create simpler alert? The existing dialog logic is fine.
-				handleValidationError(result);
-			}
-		} catch (e) {
-			setDialog({ open: true, message: e?.message || "Validation failed" });
-		}
-	}, [dispatch, selected, isDraft, local, navigate]);
+				// Delete the draft after navigation starts to avoid re-fetching a deleted file
+				return new Promise((resolve) => setTimeout(resolve, 50));
+			})
+			.then(() => {
+				dispatch(deleteConfig(selected));
+			})
+			.catch((e) => {
+				setDialog({ open: true, message: e?.message || "Validation failed" });
+			});
+	}, [dispatch, selected, isDraft, local, navigate, isReadOnly]);
 
 	// 3. Normal Save (Normal mode): Validate, Save. If error -> Dialog "Save as Draft"
 	const handleNormalSave = React.useCallback(async () => {
-		if (!canSave) return;
+		if (!canSave || isReadOnly) return;
 		try {
 			const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
 			const result = res?.result ?? { valid: true };
@@ -120,7 +130,7 @@ function ConfigEditorContainer(props) {
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}
-	}, [canSave, dispatch, selected, local]);
+	}, [canSave, dispatch, selected, local, isReadOnly]);
 
 	// Helper to show validation error dialog
 	const handleValidationError = (result) => {
@@ -138,24 +148,29 @@ function ConfigEditorContainer(props) {
 	};
 
 	// "Save and convert to draft" - triggered from Dialog on Normal Save error
-	const forceSaveAsDraft = React.useCallback(async () => {
+	const forceSaveAsDraft = React.useCallback(() => {
 		setDialog(null);
 		if (!selected) return;
 
 		const draftName = selected + ".draft";
 		// Save content to draft
-		await dispatch(saveDraftConfig({ name: draftName, content: local, skipValidation: true }));
-		// Delete original regular file
-		await dispatch(deleteConfig(selected));
-		// Navigate to draft
-		navigate(paths.configurationFile(draftName), { replace: true });
+		return dispatch(saveDraftConfig({ name: draftName, content: local, skipValidation: true }))
+			.unwrap()
+			.then(() => {
+				// Navigate to draft
+				navigate(paths.configurationFile(draftName), { replace: true });
+				// Delete original regular file after navigation starts to avoid refetching
+				return new Promise((resolve) => setTimeout(resolve, 50));
+			})
+			.then(() => {
+				dispatch(deleteConfig(selected));
+			});
 	}, [dispatch, local, selected, navigate]);
 
 	// Decide which save handler to expose to the EditorHeader via context or ref
 	// The EditorHeader interacts via ref-exposed methods from ConfigEditorContainer?
 	// Actually EditorHeader is outside ConfigEditorContainer in the parent.
-	// We need to look at ConfigurationPage logic again.
-	// Oh, I see. ConfigurationPage passes `ref={editorRef}` to `ConfigEditorContainer`.
+	// ConfigurationPage passes `ref={editorRef}` to `ConfigEditorContainer`.
 	// And `EditorHeader` calls `editorRef.current.save()`.
 
 	// We need to expose `save` (default action) and `apply` (specific for draft).
@@ -191,7 +206,7 @@ function ConfigEditorContainer(props) {
 	const actions = React.useMemo(() => {
 		const btns = [];
 		// Only offer "convert to draft" if we are not already on a draft
-		if (!isDraft) {
+		if (!isDraft && !isReadOnly) {
 			btns.push({
 				btnTitle: "Save and convert to draft",
 				btnColor: "error",
@@ -206,16 +221,16 @@ function ConfigEditorContainer(props) {
 			autoFocus: true,
 		});
 		return btns;
-	}, [isDraft, forceSaveAsDraft]);
+	}, [isDraft, forceSaveAsDraft, isReadOnly]);
 
 	return (
 		<>
 			<ConfigEditor
 				value={local}
-				readOnly={!selected || isBackupSelected}
+				readOnly={!selected || isBackupSelected || isReadOnly}
 				onChange={onChange}
-				onSave={primarySave}
-				canSave={canSave || (isDraft && isDirty)} // Drafts can always save if dirty
+				onSave={isReadOnly ? undefined : primarySave}
+				canSave={!isReadOnly && (canSave || (isDraft && isDirty))} // Drafts can always save if dirty
 				height="100%"
 				fileName={selected}
 				validateFn={validateFn}

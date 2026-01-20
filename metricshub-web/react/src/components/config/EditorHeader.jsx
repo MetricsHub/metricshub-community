@@ -8,10 +8,10 @@ import FileTypeIcon from "./tree/icons/FileTypeIcons";
 
 /**
  * Editor header component showing file name, save button, and status.
- * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void}} props The component props.
+ * @param {{selected:string|null,saving:boolean,onSave:()=>void,onApply?:()=>void,isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The editor header component.
  */
-export default function EditorHeader({ selected, saving, onSave, onApply }) {
+export default function EditorHeader({ selected, saving, onSave, onApply, isReadOnly = false }) {
 	const dirtyByName = useAppSelector((s) => s.config.dirtyByName) ?? {};
 	const isDirty = !!dirtyByName?.[selected];
 	const filesByName = useAppSelector((s) => s.config.filesByName) ?? {};
@@ -83,7 +83,7 @@ export default function EditorHeader({ selected, saving, onSave, onApply }) {
 							size="small"
 							startIcon={<DoneAllIcon />}
 							onClick={onApply}
-							disabled={!selected || saving}
+							disabled={!selected || saving || isReadOnly}
 							variant="text"
 							color="secondary"
 						>
@@ -94,7 +94,7 @@ export default function EditorHeader({ selected, saving, onSave, onApply }) {
 						size="small"
 						startIcon={<SaveIcon />}
 						onClick={onSave}
-						disabled={!selected || isBackup || !isDirty || saving}
+						disabled={!selected || isBackup || !isDirty || saving || isReadOnly}
 						variant="contained"
 					>
 						{saving ? "Saving..." : "Save"}

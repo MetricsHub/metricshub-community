@@ -1,4 +1,7 @@
 import axios from "axios";
+import { store } from "../store";
+import { openWriteProtectionModal } from "../store/slices/ui-slice";
+import { getUserRole } from "./auth-state";
 
 /**
  * Primary Axios client.
@@ -35,6 +38,44 @@ const triggerLogout = () => {
 };
 
 /**
+ * Helper to trigger the write-protection modal (deduplicated).
+ */
+const triggerWriteProtectionModal = () => {
+	const state = store.getState();
+	if (!state?.ui?.writeProtectionModalOpen) {
+		store.dispatch(openWriteProtectionModal());
+	}
+};
+
+/**
+ * Check if the method is a write method
+ * @param {*} method
+ * @returns {boolean} true if the method is a write method, false otherwise
+ */
+const isWriteMethod = (method = "get") =>
+	["post", "put", "patch", "delete"].includes(String(method).toLowerCase());
+
+const isAuthEndpoint = (url = "") => {
+	const normalized = url.startsWith("/") ? url : `/${url}`;
+	return normalized === "/auth" || normalized === "/auth/refresh";
+};
+
+/**
+ * Request interceptor for read-only enforcement.
+ */
+instance.interceptors.request.use(
+	(config) => {
+		const role = getUserRole();
+		if (role === "ro" && isWriteMethod(config?.method) && !isAuthEndpoint(config?.url || "")) {
+			triggerWriteProtectionModal();
+			return Promise.reject(new Error("Write operation not permitted for read-only users"));
+		}
+		return config;
+	},
+	(error) => Promise.reject(error),
+);
+
+/**
  * Response interceptor for 401 handling.
  *
  * Behavior:
@@ -49,6 +90,11 @@ instance.interceptors.response.use(
 	(r) => r,
 	async (error) => {
 		const { config, response } = error;
+
+		if (response?.status === 403) {
+			triggerWriteProtectionModal();
+			return Promise.reject(error);
+		}
 
 		// No response (network error) or not a 401 → do not attempt refresh
 		if (!response || response.status !== 401) return Promise.reject(error);

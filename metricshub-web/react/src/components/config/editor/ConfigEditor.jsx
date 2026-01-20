@@ -32,7 +32,7 @@ export default function ConfigEditor({
 					onSave={onSave}
 					fileName={fileName}
 					onEditorReady={onEditorReady}
-					validateFn={validateFn}
+					validateFn={readOnly ? undefined : validateFn}
 					canSave={canSave}
 					height={height}
 				/>
