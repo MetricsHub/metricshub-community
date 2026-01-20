@@ -16,8 +16,8 @@
 
 	<properties>
 		<communityVersion>${project.version}</communityVersion>
-		<enterpriseVersion>3.0.03</enterpriseVersion>
-		<otelVersion>0.140.1</otelVersion>
+		<enterpriseVersion>3.9.00</enterpriseVersion>
+		<otelVersion>0.144.0</otelVersion>
 	</properties>
 
 	<dependencies>
@@ -119,7 +119,7 @@
 			<plugin>
 				<groupId>org.metricshub.maven</groupId>
 				<artifactId>metricshub-connector-maven-plugin</artifactId>
-				<version>1.0.13-SNAPSHOT</version>
+				<version>1.0.13</version>
 				<configuration>
 					<sourceDirectory>${project.basedir}/../metricshub-agent/target/connectors</sourceDirectory>
 					<defaultPlatformIconFilename>default.png</defaultPlatformIconFilename>
