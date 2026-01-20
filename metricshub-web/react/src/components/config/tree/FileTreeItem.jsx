@@ -13,6 +13,7 @@ import FileMeta from "./FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { useAppDispatch } from "../../../hooks/store";
 import { useSnackbar } from "../../../hooks/use-snackbar";
+import { useAuth } from "../../../hooks/use-auth";
 import {
 	createConfigBackup,
 	restoreConfigFromBackup,
@@ -25,7 +26,7 @@ import { parseBackupFileName } from "../../../utils/backup-names";
 
 /**
  * File tree item component.
- * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void}} props The component props.
+ * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void,isReadOnly?:boolean}} props The component props.
  * @returns {JSX.Element} The file tree item component.
  */
 export default function FileTreeItem({
@@ -38,8 +39,11 @@ export default function FileTreeItem({
 	itemId, // optional selection id
 	labelName, // optional display name
 	onSelect, // optional, used to navigate after restore
+	isReadOnly = false,
 }) {
 	const dispatch = useAppDispatch();
+	const { user } = useAuth();
+	const effectiveReadOnly = isReadOnly || user?.role === "ro";
 	const [editing, setEditing] = React.useState(false);
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
@@ -66,19 +70,24 @@ export default function FileTreeItem({
 		if (!editing) setDraft(file.name);
 	}, [file.name, editing]);
 
-	const openMenu = React.useCallback((e) => {
-		e.stopPropagation();
-		setMenuAnchor(e.currentTarget);
-	}, []);
+	const openMenu = React.useCallback(
+		(e) => {
+			if (effectiveReadOnly) return;
+			e.stopPropagation();
+			setMenuAnchor(e.currentTarget);
+		},
+		[effectiveReadOnly],
+	);
 
 	const closeMenu = React.useCallback(() => setMenuAnchor(null), []);
 
 	const startRename = React.useCallback(() => {
+		if (effectiveReadOnly) return;
 		closeMenu();
 		rowRef.current?.blur?.();
 		setEditing(true);
 		requestAnimationFrame(() => inputRef.current?.select());
-	}, [closeMenu]);
+	}, [closeMenu, effectiveReadOnly]);
 
 	const cancelRename = React.useCallback(() => {
 		cancelledRef.current = true;
@@ -103,6 +112,7 @@ export default function FileTreeItem({
 	}, [draft, file.name, onRename]);
 
 	const backupThisFile = React.useCallback(async () => {
+		if (effectiveReadOnly) return;
 		document.activeElement?.blur?.();
 		closeMenu();
 		setTimeout(async () => {
@@ -114,16 +124,18 @@ export default function FileTreeItem({
 				showSnackbar("Backup failed", { severity: "error" });
 			}
 		}, 0);
-	}, [dispatch, file.name, showSnackbar, closeMenu]);
+	}, [dispatch, file.name, showSnackbar, closeMenu, effectiveReadOnly]);
 
 	const askRestore = React.useCallback(() => {
+		if (effectiveReadOnly) return;
 		document.activeElement?.blur?.();
 		closeMenu();
 		setRestoreOpen(true);
-	}, [closeMenu]);
+	}, [closeMenu, effectiveReadOnly]);
 
 	const doRestore = React.useCallback(
 		async (overwrite) => {
+			if (effectiveReadOnly) return;
 			setRestoreOpen(false);
 			setTimeout(async () => {
 				try {
@@ -144,7 +156,7 @@ export default function FileTreeItem({
 				}
 			}, 0);
 		},
-		[dispatch, file.name, onSelect, showSnackbar],
+		[dispatch, file.name, onSelect, showSnackbar, effectiveReadOnly],
 	);
 
 	const downloadThisFile = React.useCallback(async () => {
@@ -162,6 +174,7 @@ export default function FileTreeItem({
 
 	// Stable handler for Delete menu action
 	const handleDeleteClick = React.useCallback(async () => {
+		if (effectiveReadOnly) return;
 		closeMenu();
 		if (isBackupFile) {
 			try {
@@ -175,7 +188,7 @@ export default function FileTreeItem({
 		} else {
 			onDelete(file.name);
 		}
-	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete]);
+	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete, effectiveReadOnly]);
 
 	// Prevent default on mousedown for the menu button
 	const preventMouseDownDefault = React.useCallback((e) => e.preventDefault(), []);
@@ -293,6 +306,7 @@ export default function FileTreeItem({
 					aria-label="More actions"
 					onClick={openMenu}
 					onMouseDown={preventMouseDownDefault}
+					disabled={effectiveReadOnly}
 				>
 					<MoreVertIcon fontSize="small" />
 				</IconButton>
@@ -322,7 +336,7 @@ export default function FileTreeItem({
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
 				{!isBackupFile && (
-					<MenuItem onClick={startRename}>
+					<MenuItem onClick={startRename} disabled={effectiveReadOnly}>
 						<DriveFileRenameOutlineIcon fontSize="small" sx={{ mr: 1 }} />
 						Rename
 					</MenuItem>
@@ -335,12 +349,12 @@ export default function FileTreeItem({
 				</MenuItem>
 
 				{!isBackupFile ? (
-					<MenuItem onClick={backupThisFile}>
+					<MenuItem onClick={backupThisFile} disabled={effectiveReadOnly}>
 						<BackupIcon fontSize="small" sx={{ mr: 1 }} />
 						Backup
 					</MenuItem>
 				) : (
-					<MenuItem onClick={askRestore}>
+					<MenuItem onClick={askRestore} disabled={effectiveReadOnly}>
 						<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 						Restore{backupId ? ` (${backupId})` : ""}
 					</MenuItem>
@@ -352,13 +366,14 @@ export default function FileTreeItem({
 							closeMenu();
 							onMakeDraft(file.name);
 						}}
+						disabled={effectiveReadOnly}
 					>
 						<PushPinIcon fontSize="small" sx={{ mr: 1 }} />
 						Make draft
 					</MenuItem>
 				)}
 
-				<MenuItem onClick={handleDeleteClick}>
+				<MenuItem onClick={handleDeleteClick} disabled={effectiveReadOnly}>
 					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete
 				</MenuItem>
@@ -376,12 +391,14 @@ export default function FileTreeItem({
 						btnTitle: "Restore as copy",
 						btnVariant: "contained",
 						callback: () => doRestore(false),
+						disabled: effectiveReadOnly,
 					},
 					{
 						btnTitle: "Overwrite",
 						btnColor: "error",
 						btnVariant: "contained",
 						callback: () => doRestore(true),
+						disabled: effectiveReadOnly,
 					},
 				]}
 			/>

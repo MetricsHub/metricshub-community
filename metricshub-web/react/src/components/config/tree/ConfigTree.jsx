@@ -10,6 +10,7 @@ import FileTreeItem from "./FileTreeItem.jsx";
 import BackupSetNode from "./BackupSetNode.jsx";
 import { parseBackupFileName } from "../../../utils/backup-names.js";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store.js";
+import { useAuth } from "../../../hooks/use-auth.js";
 import { createConfigBackup } from "../../../store/thunks/config-thunks.js";
 import { downloadAllConfigs } from "../../../services/download-service.js";
 
@@ -62,16 +63,23 @@ export default function ConfigTree({
 }) {
 	const dispatch = useAppDispatch();
 	const list = useAppSelector((s) => s.config.list);
+	const { user } = useAuth();
+	const isReadOnly = user?.role === "ro";
 	const selectedIds = React.useMemo(() => (selectedName ? [selectedName] : []), [selectedName]);
 
 	// config root kebab
 	const [rootMenuAnchor, setRootMenuAnchor] = React.useState(null);
-	const openRootMenu = React.useCallback((e) => {
-		e.stopPropagation();
-		setRootMenuAnchor(e.currentTarget);
-	}, []);
+	const openRootMenu = React.useCallback(
+		(e) => {
+			if (isReadOnly) return;
+			e.stopPropagation();
+			setRootMenuAnchor(e.currentTarget);
+		},
+		[isReadOnly],
+	);
 	const closeRootMenu = React.useCallback(() => setRootMenuAnchor(null), []);
 	const handleBackupAll = React.useCallback(async () => {
+		if (isReadOnly) return;
 		document.activeElement?.blur?.();
 		closeRootMenu();
 		try {
@@ -79,12 +87,13 @@ export default function ConfigTree({
 		} catch (e) {
 			console.error("Backup all failed:", e);
 		}
-	}, [closeRootMenu, dispatch]);
+	}, [closeRootMenu, dispatch, isReadOnly]);
 
 	const handleDownloadAll = React.useCallback(async () => {
+		if (isReadOnly) return;
 		closeRootMenu();
 		await downloadAllConfigs(list);
-	}, [closeRootMenu, list]);
+	}, [closeRootMenu, list, isReadOnly]);
 
 	// Deprecated inline labels replaced by <FolderLabel /> to avoid duplication and re-renders
 
@@ -151,7 +160,7 @@ export default function ConfigTree({
 			>
 				<TreeItem
 					itemId={ROOT_ID}
-					label={<FolderLabel name="config" onMenuClick={openRootMenu} />}
+					label={<FolderLabel name="config" onMenuClick={!isReadOnly ? openRootMenu : null} />}
 					sx={{ "& .MuiTreeItem-label": { fontWeight: 400 } }}
 				>
 					{configFiles.map((f) => (
@@ -164,6 +173,7 @@ export default function ConfigTree({
 							onRename={onRename}
 							onDelete={onDelete}
 							onMakeDraft={onMakeDraft}
+							isReadOnly={isReadOnly}
 						/>
 					))}
 				</TreeItem>
@@ -185,6 +195,7 @@ export default function ConfigTree({
 								onSelect={onSelect}
 								onRename={onRename}
 								onDelete={onDelete}
+								isReadOnly={isReadOnly}
 							/>
 						))}
 				</TreeItem>
@@ -200,11 +211,11 @@ export default function ConfigTree({
 				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
-				<MenuItem onClick={handleBackupAll}>
+				<MenuItem onClick={handleBackupAll} disabled={isReadOnly}>
 					<BackupIcon fontSize="small" sx={{ mr: 1 }} />
 					Backup all
 				</MenuItem>
-				<MenuItem onClick={handleDownloadAll}>
+				<MenuItem onClick={handleDownloadAll} disabled={isReadOnly}>
 					<DownloadIcon fontSize="small" sx={{ mr: 1 }} />
 					Download all
 				</MenuItem>

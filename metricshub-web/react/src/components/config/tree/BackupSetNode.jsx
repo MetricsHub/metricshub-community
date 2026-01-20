@@ -8,6 +8,7 @@ import FileTypeIcon from "./icons/FileTypeIcons";
 import FileTreeItem from "./FileTreeItem";
 import QuestionDialog from "../../common/QuestionDialog";
 import { useAppDispatch } from "../../../hooks/store";
+import { useAuth } from "../../../hooks/use-auth";
 import {
 	restoreConfigFromBackup,
 	deleteBackupFile,
@@ -33,14 +34,16 @@ const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick 
 				<FileTypeIcon type="folder" />
 				<span>{`backup-${id}`}</span>
 			</Box>
-			<IconButton
-				size="small"
-				aria-label="More actions"
-				onClick={onMenuClick}
-				onMouseDown={preventMouseDown}
-			>
-				<MoreVertIcon fontSize="small" />
-			</IconButton>
+			{onMenuClick && (
+				<IconButton
+					size="small"
+					aria-label="More actions"
+					onClick={onMenuClick}
+					onMouseDown={preventMouseDown}
+				>
+					<MoreVertIcon fontSize="small" />
+				</IconButton>
+			)}
 		</Box>
 	);
 });
@@ -57,6 +60,7 @@ const BackupGroupLabel = React.memo(function BackupGroupLabel({ id, onMenuClick 
  *   onSelect: (name:string)=>void,
  *   onRename?: (oldName:string,newName:string)=>void,
  *   onDelete?: (name:string)=>void,
+ *   isReadOnly?: boolean,
  * }} props
  */
 export default function BackupSetNode({
@@ -67,8 +71,11 @@ export default function BackupSetNode({
 	onSelect,
 	onRename,
 	onDelete,
+	isReadOnly = false,
 }) {
 	const dispatch = useAppDispatch();
+	const { user } = useAuth();
+	const effectiveReadOnly = isReadOnly || user?.role === "ro";
 
 	// menu + dialogs (keep the set id stable while dialogs are open)
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
@@ -77,10 +84,14 @@ export default function BackupSetNode({
 	const { show: showSnackbar } = useSnackbar();
 
 	// Handlers memoized to avoid unnecessary re-renders
-	const openMenu = React.useCallback((e) => {
-		e.stopPropagation();
-		setMenuAnchor(e.currentTarget);
-	}, []);
+	const openMenu = React.useCallback(
+		(e) => {
+			if (effectiveReadOnly) return;
+			e.stopPropagation();
+			setMenuAnchor(e.currentTarget);
+		},
+		[effectiveReadOnly],
+	);
 
 	const closeMenu = React.useCallback(() => {
 		setMenuAnchor(null);
@@ -88,19 +99,22 @@ export default function BackupSetNode({
 	}, []);
 
 	const askRestoreAll = React.useCallback(() => {
+		if (effectiveReadOnly) return;
 		document.activeElement?.blur?.();
 		closeMenu();
 		setRestoreAllOpen(true);
-	}, [closeMenu]);
+	}, [closeMenu, effectiveReadOnly]);
 
 	const askDeleteSet = React.useCallback(() => {
+		if (effectiveReadOnly) return;
 		document.activeElement?.blur?.();
 		closeMenu();
 		setDeleteSetOpen(true);
-	}, [closeMenu]);
+	}, [closeMenu, effectiveReadOnly]);
 
 	const doRestoreAll = React.useCallback(
 		async (overwrite) => {
+			if (effectiveReadOnly) return;
 			setRestoreAllOpen(false);
 			try {
 				await Promise.all(
@@ -114,10 +128,11 @@ export default function BackupSetNode({
 				showSnackbar("Restore all failed", { severity: "error" });
 			}
 		},
-		[dispatch, files, showSnackbar],
+		[dispatch, files, showSnackbar, effectiveReadOnly],
 	);
 
 	const doDeleteSet = React.useCallback(async () => {
+		if (effectiveReadOnly) return;
 		setDeleteSetOpen(false);
 		try {
 			await Promise.all((files || []).map((f) => dispatch(deleteBackupFile(f.name)).unwrap()));
@@ -126,7 +141,7 @@ export default function BackupSetNode({
 			console.error("Delete backup set failed:", e);
 			showSnackbar("Delete backup set failed", { severity: "error" });
 		}
-	}, [dispatch, files, showSnackbar]);
+	}, [dispatch, files, showSnackbar, effectiveReadOnly]);
 
 	const groupItemId = `__backup_set__/${id}`;
 
@@ -134,7 +149,7 @@ export default function BackupSetNode({
 		<>
 			<TreeItem
 				itemId={groupItemId}
-				label={<BackupGroupLabel id={id} onMenuClick={openMenu} />}
+				label={<BackupGroupLabel id={id} onMenuClick={!effectiveReadOnly ? openMenu : null} />}
 				slotProps={{ content: { sx: { width: "100%" } } }}
 			>
 				{files.map((f) => (
@@ -162,11 +177,11 @@ export default function BackupSetNode({
 				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
 				transformOrigin={{ vertical: "top", horizontal: "right" }}
 			>
-				<MenuItem onClick={askRestoreAll}>
+				<MenuItem onClick={askRestoreAll} disabled={effectiveReadOnly}>
 					<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
 					Restore all
 				</MenuItem>
-				<MenuItem onClick={askDeleteSet}>
+				<MenuItem onClick={askDeleteSet} disabled={effectiveReadOnly}>
 					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete backup
 				</MenuItem>
@@ -188,12 +203,14 @@ export default function BackupSetNode({
 						btnTitle: "Restore as copies",
 						btnVariant: "contained",
 						callback: () => doRestoreAll(false),
+						disabled: effectiveReadOnly,
 					},
 					{
 						btnTitle: "Overwrite all",
 						btnColor: "error",
 						btnVariant: "contained",
 						callback: () => doRestoreAll(true),
+						disabled: effectiveReadOnly,
 					},
 				]}
 			/>
@@ -213,6 +230,7 @@ export default function BackupSetNode({
 						btnColor: "error",
 						btnVariant: "contained",
 						callback: () => doDeleteSet(),
+						disabled: effectiveReadOnly,
 					},
 				]}
 			/>
