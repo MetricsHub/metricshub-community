@@ -262,6 +262,6 @@ processors:
           - set(metric.name, Concat([metric.name, attributes["network.io.direction"]], ".")) where attributes["network.io.direction"] != nil
           - set(metric.name, Concat([metric.name, attributes["system.filesystem.state"]], ".")) where attributes["system.filesystem.state"] != nil
           - set(metric.name, Concat([metric.name, attributes["system.process.status"]], ".")) where attributes["system.process.status"] != nil
-          # Make sure to not rename the metric here if it is already managed by transform/hardware_for_helix
+          # If the metric is managed by transform/hardware_for_helix, do not change its name
           # - set(metric.name, Concat([metric.name, attributes["state"]], ".")) where attributes["state"] != nil
 ```
