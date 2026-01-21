@@ -305,7 +305,7 @@ jobs:
       with:
         role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
         role-session-name: ci
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ vars.AWS_REGION }}
 
     - name: Publish Packages on MetricsHub.com Website
       if: ${{ github.repository_owner == 'MetricsHub' }}
