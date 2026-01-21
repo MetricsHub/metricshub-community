@@ -3,29 +3,20 @@ description: How to install MetricsHub on Linux, Windows, or Docker.
 
 # Installation
 
-Select your **edition** and **platform** to get started:
+MetricsHub runs on Windows, Linux, and Docker. Choose the guide for your platform:
 
-|                      | Enterprise                         | Community                         |
-| -------------------- | ---------------------------------- | --------------------------------- |
-| **Windows**          | [Install](enterprise-windows.html) | [Install](community-windows.html) |
-| **Debian / Ubuntu**  | [Install](enterprise-debian.html)  | [Install](community-debian.html)  |
-| **Red Hat / CentOS** | [Install](enterprise-redhat.html)  | [Install](community-redhat.html)  |
-| **Docker**           | [Install](enterprise-docker.html)  | [Install](community-docker.html)  |
+| Platform | Guide |
+| -------- | ----- |
+| **Windows** | [Installing on Windows](windows.html) |
+| **Linux** (Debian, Ubuntu, RHEL, CentOS) | [Installing on Linux](linux.html) |
+| **Docker** | [Installing on Docker](docker.html) |
 
-## Which Edition?
-
-|                  | Enterprise                          | Community                                 |
-| ---------------- | ----------------------------------- | ----------------------------------------- |
-| **Best for**     | Production, compliance, large-scale | Evaluation, home labs, small environments |
-| **Installation** | MSI, DEB, RPM packages              | Script or manual                          |
-| **Connectors**   | 200+ built-in                       | 20+ built-in                              |
-| **Includes**     | Web UI, embedded OTel Collector     | Agent only                                |
-| **Support**      | 24x7 premium support                | Community Slack                           |
-
-➡️ [Compare editions in detail](../getting-started/editions.html)
+Each guide covers both **Enterprise** and **Community** editions.
 
 ## After Installation
 
-1. [Configure your resources](../configuration/configure-monitoring.html)
-2. [Set up telemetry export](../configuration/send-telemetry.html)
-3. [Explore the Web UI](../operating-web-ui.html) (Enterprise)
+Once installed, you're ready to configure MetricsHub:
+
+1. [Configure your resources](../configuration/configure-monitoring.html) — define what to monitor
+2. [Set up telemetry export](../configuration/send-telemetry.html) — choose where to send metrics
+3. [Explore the Web UI](../operating-web-ui.html) — manage and monitor from your browser

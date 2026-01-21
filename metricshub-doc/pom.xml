@@ -77,6 +77,22 @@
 			</plugin>
 
 			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+
+			<plugin>
 				<groupId>com.hubspot.maven.plugins</groupId>
 				<artifactId>prettier-maven-plugin</artifactId>
 				<configuration>
@@ -111,6 +127,39 @@
 						<configuration>
 							<skip>true</skip>
 						</configuration>
+					</reportSet>
+				</reportSets>
+			</plugin>
+
+			<!-- Skip PMD report -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<reportSets>
+					<reportSet>
+						<reports />
+					</reportSet>
+				</reportSets>
+			</plugin>
+
+			<!-- Skip SpotBugs report -->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<reportSets>
+					<reportSet>
+						<reports />
+					</reportSet>
+				</reportSets>
+			</plugin>
+
+			<!-- Skip Checkstyle report -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<reportSets>
+					<reportSet>
+						<reports />
 					</reportSet>
 				</reportSets>
 			</plugin>

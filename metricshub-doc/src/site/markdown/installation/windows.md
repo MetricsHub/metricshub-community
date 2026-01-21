@@ -1,70 +1,53 @@
-keywords: install, enterprise, community
+keywords: install, windows, enterprise, community
 description: How to install MetricsHub on Windows.
 
-# Installation
+# Installing on Windows
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-> MetricsHub Community and MetricsHub Enterprise support Windows 2012R2 and higher.
+This guide covers installing MetricsHub on Windows Server using the MSI installer.
 
-## MetricsHub Enterprise
+> **Supported versions:** Windows Server 2012 R2 and higher
 
-### Install MetricsHub Enterprise
+## Installing
 
-To install **MetricsHub Enterprise**:
+1. Download the installer for your edition from [metricshub.com/downloads](https://metricshub.com/downloads):
+   - **metricshub-enterprise-${enterpriseVersion}.msi** (Enterprise)
+   - **metricshub-community-${communityVersion}.msi** (Community)
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-${enterpriseVersion}.msi**
-2. Double-click the `.msi` file. The Installation Wizard will automatically start and guide you through the installation process.
+2. Double-click the `.msi` file and follow the Installation Wizard
 
-When complete, the **MetricsHub Enterprise**'s files are deployed to the destination folder (by default under `C:\Program Files\MetricsHub`) and the **MetricsHub Enterprise Agent** is started as a service and appears in `services.msc`.
+When complete:
 
-You can now configure the [resources to be monitored](../configuration/configure-monitoring.md) and where to [send the collected data](../configuration/send-telemetry.html#configure-the-otel-collector-28enterprise-edition-29).
+- Files are deployed to `C:\Program Files\MetricsHub`
+- The MetricsHub Agent service is registered and started
+- Configuration is stored in `C:\ProgramData\MetricsHub`
 
-**MetricsHub Enterprise** operates using the configuration located in the `ProgramData\MetricsHub` directory.
+## Next Steps
 
-### Start MetricsHub Enterprise
+Once installed, you're ready to configure MetricsHub:
 
-To start the **MetricsHub Enterprise** service, open **services.msc** and start the **MetricsHub Enterprise** service.
+1. [Configure your resources](../configuration/configure-monitoring.html) — define what to monitor
+2. [Set up telemetry export](../configuration/send-telemetry.html) — choose where to send metrics
+3. [Access the Web UI](../operating-web-ui.html) — manage and monitor from your browser
 
-### Uninstall MetricsHub Enterprise
+## Managing the Service
 
-To uninstall **MetricsHub Enterprise**, double-click the **metricshub-enterprise-${enterpriseVersion}.msi** file and click **Remove** when prompted.
+MetricsHub runs as a Windows service. Open **services.msc** and locate the **MetricsHub** service:
 
-### Upgrade MetricsHub Enterprise
+- To **start**: Right-click the service and select **Start**
+- To **stop**: Right-click the service and select **Stop**
 
-To upgrade **MetricsHub Enterprise** to the latest version:
+## Uninstalling
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-enterprise-${enterpriseVersion}.msi**.
-2. Open **services.msc** and stop the **MetricsHub Enterprise** service.
-3. Double-click the `.msi` file you previously downloaded. The Installation Wizard will automatically start and guide you through the upgrade process.
+To remove MetricsHub from your system, double-click the original `.msi` file and click **Remove** when prompted.
 
-## MetricsHub Community
+## Upgrading
 
-### Install MetricsHub Community
+To upgrade to a newer version:
 
-To install **MetricsHub Community**:
+1. Download the latest `.msi` from [metricshub.com/downloads](https://metricshub.com/downloads)
+2. Stop the MetricsHub service in **services.msc**
+3. Double-click the new `.msi` file and follow the upgrade prompts
 
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-community-${communityVersion}.msi**.
-2. Double-click the `.msi` file. The Installation Wizard will automatically start and guide you through the installation process.
-
-When complete, the **MetricsHub Community**'s files are deployed to the destination folder (by default under `C:\Program Files\MetricsHub`) and the **MetricsHub Community Agent** is started as a service and appears in `services.msc`.
-
-You can now configure the [resources to be monitored](../configuration/configure-monitoring.md) and the [OTLP exporter](../configuration/configure-monitoring.md#otlp-exporter-settings).
-
-**MetricsHub Community** operates using the configuration located in the `ProgramData\MetricsHub` directory.
-
-### Start MetricsHub Community
-
-To start the **MetricsHub Community** service, open **services.msc** and start the **MetricsHub Community** service.
-
-### Uninstall MetricsHub Community
-
-To uninstall **MetricsHub Community**, double-click the **metricshub-community-${communityVersion}.msi** file and click **Remove** when prompted.
-
-### Upgrade MetricsHub Community
-
-To upgrade **MetricsHub Community** to the latest version:
-
-1. From [MetricsHub's Web site](https://metricshub.com/downloads), download **metricshub-community-${communityVersion}.msi**.
-2. Open **services.msc** and stop the **MetricsHub Community** service.
-3. Double-click the `.msi` file you previously downloaded. The Installation Wizard will automatically start and guide you through the upgrade process.
+Your configuration files are preserved during the upgrade.

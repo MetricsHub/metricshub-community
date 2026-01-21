@@ -86,14 +86,9 @@
 
 		<menu name="User Guide">
 			<item name="Installation" href="installation/index.html">
-				<item name="Windows (Community)" href="installation/community-windows.html" />
-				<item name="Windows (Enterprise)" href="installation/enterprise-windows.html" />
-				<item name="Debian/Ubuntu (Community)" href="installation/community-debian.html" />
-				<item name="Debian/Ubuntu (Enterprise)" href="installation/enterprise-debian.html" />
-				<item name="Red Hat/CentOS (Community)" href="installation/community-redhat.html" />
-				<item name="Red Hat/CentOS (Enterprise)" href="installation/enterprise-redhat.html" />
-				<item name="Docker (Community)" href="installation/community-docker.html" />
-				<item name="Docker (Enterprise)" href="installation/enterprise-docker.html" />
+				<item name="On Windows" href="installation/windows.html" />
+				<item name="On Linux" href="installation/linux.html" />
+				<item name="On Docker" href="installation/docker.html" />
 				<item name="Upgrading" href="upgrade.html"/>
 			</item>
 			<item name="Web Interface" href="operating-web-ui.html" />
