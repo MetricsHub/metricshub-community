@@ -26,26 +26,26 @@ You can paste the encrypted password in your configuration file:
 
 ```yaml
 resourceGroups:
-    <resourceGroupKey>:
-        resources:
-          my-server:
-            attributes:
-              host.name: myhost-01
-              host.type: storage
-            protocols:
-              http:
-                https: true
-                port: 443
-                username: myusername
-                password: GkwzG6bx8cUhoeQW+/1ERI+2LOyB
+  <resourceGroupKey>:
+    resources:
+      my-server:
+        attributes:
+          host.name: myhost-01
+          host.type: storage
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: myusername
+            password: GkwzG6bx8cUhoeQW+/1ERI+2LOyB
 ```
 
-## The *Master Password*
+## The _Master Password_
 
-On first use, the `metricshub-encrypt` command will create the **security/metricshub-keystore.p12** file to store a unique and random *master password*. This *master password* is used to encrypt passwords with `metricshub-encrypt`, and decrypt them from **config/<your_configuration_file>**.
+On first use, the `metricshub-encrypt` command will create the **security/metricshub-keystore.p12** file to store a unique and random _master password_. This _master password_ is used to encrypt passwords with `metricshub-encrypt`, and decrypt them from **config/<your_configuration_file>**.
 
-The **metricshub-keystore.p12** file must not be modified, as this would prevent decryption from working. Any password encrypted with a given **metricshub-keystore.p12** *master password* must be decrypted with the exact same **metricshub-keystore.p12** file.
+The **metricshub-keystore.p12** file must not be modified, as this would prevent decryption from working. Any password encrypted with a given **metricshub-keystore.p12** _master password_ must be decrypted with the exact same **metricshub-keystore.p12** file.
 
 The **metricshub-keystore.p12** file can be shared across several hosts so that a password encrypted on one system can be decrypted on another. Simply copy the **metricshub-keystore.p12** file to the **security** directory. This will make **MetricsHub** able to decrypt the passwords.
 
-> **Note**: On Windows, the **security** directory is located under the **ProgramData\MetricsHub** directory (`C:\ProgramData\MetricsHub\security`) and accessible to *Administrators* only. On Linux, the **security** directory is located under the installation directory (`/opt/metricshub/security`).
+> **Note**: On Windows, the **security** directory is located under the **ProgramData\MetricsHub** directory (`C:\ProgramData\MetricsHub\security`) and accessible to _Administrators_ only. On Linux, the **security** directory is located under the installation directory (`/opt/metricshub/security`).
