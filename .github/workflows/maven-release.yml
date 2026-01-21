@@ -312,10 +312,11 @@ jobs:
       run: |
         packagedir="packages/${{ github.ref_name }}"
         mkdir -p ${packagedir}
+        ls -al
         # Get packages
-        cp "*.rpm" "${packagedir}"
-        cp "*.deb" "${packagedir}"
-        cp "*.msi" "${packagedir}"
+        cp *.rpm "${packagedir}"
+        cp *.deb "${packagedir}"
+        cp *.msi "${packagedir}"
         aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ steps.get_run_id.outputs.version }}/ --recursive
       env:
         AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}
