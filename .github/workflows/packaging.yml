@@ -130,7 +130,7 @@ jobs:
 
         # MetricsHub Docker Image Name
         if [ "${{ inputs.deployDockerHub }}" = "true" ] ; then
-          imageName=metricshub/metricshub-community:${dockerVersion}
+          imageName=metricshub/metricshub-community:${projectVersion}
         else
           imageName=ghcr.io/${repository}:${currentBranch}
         fi
