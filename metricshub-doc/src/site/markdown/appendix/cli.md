@@ -13,7 +13,7 @@ The detailed list of systems supported by **MetricsHub** (manufacturer and produ
 
 The quantity and quality of the information that **MetricsHub** will gather depends on the instrumentation stack available on the targeted resource (host).
 
-![Output example for an Hitachi system](../images/metricshub-hitachi.png)
+![Output example for an Hitachi system](./../images/metricshub-hitachi.png)
 
 Only a few options are required to run the `metricshub` command:
 
@@ -31,7 +31,7 @@ Only a few options are required to run the `metricshub` command:
   * WinRM
 * Credentials
 
-![Usage of MetricsHub](../images/metricshub-usage.png)
+![Usage of MetricsHub](./../images/metricshub-usage.png)
 
 The `metricshub` command can be used to troubleshoot the monitoring performed by the **MetricsHub Agent** (the core engine).
 
@@ -60,7 +60,7 @@ The above command will connect to `server01` (a `Win`dows system), and will dete
 
 Assuming **server01** is an *Hitachi* server, the `metricshub` output will look like:
 
-![Monitoring the server01 Windows system with SNMP](../images/metricshub-hitachi.png)
+![Monitoring the server01 Windows system with SNMP](./../images/metricshub-hitachi.png)
 
 To learn more about the various options available, simply run the below command:
 
@@ -202,41 +202,41 @@ The `--connectors` CLI option allows you to force, select, or exclude specific c
 $ metricshub SERVER01 -t oob --snmp v2c --community public --connectors +MIB2,#hardware,!Windows
 ```
 
-- To force a connector, precede the connector identifier with a plus sign (`+`), as in `+MIB2`.
-- To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (`!`), like `!Windows`.
-- To stage a connector for processing by automatic detection, configure the connector identifier, for instance, `MIB2`.
-- To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (`#`), such as `#hardware` or `#system`.
-- To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (`!#`), such as `!#system`.
+* To force a connector, precede the connector identifier with a plus sign (`+`), as in `+MIB2`.
+* To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (`!`), like `!Windows`.
+* To stage a connector for processing by automatic detection, configure the connector identifier, for instance, `MIB2`.
+* To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (`${esc.h}`), such as `${esc.h}hardware` or `${esc.h}system`.
+* To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (`!${esc.h}`), such as `!${esc.h}system`.
 
 #### Examples
 
 - Example 1:
   ```batch
-  $ metricshub SERVER01 -t win --snmp v2c --community public --connectors "#hardware"
+  $ metricshub SERVER01 -t win --snmp v2c --community public --connectors "${esc.h}hardware"
   ```
   The core engine will automatically detect connectors categorized under `hardware`.
 
 - Example 2:
   ```batch
-  $ metricshub SERVER01 -t win --wmi --connectors !#hardware,#system
+  $ metricshub SERVER01 -t win --wmi --connectors !${esc.h}hardware,${esc.h}system
   ```
   The core engine will perform automatic detection on connectors categorized under `system`, excluding those categorized under `hardware`.
 
 - Example 3:
   ```batch
-  $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors MIB2NT,MIB2,#system
+  $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors MIB2NT,MIB2,${esc.h}system
   ```
   The core engine will automatically detect connectors named `MIB2NT`, `MIB2`, and all connectors under the `system` category.
 
 - Example 4:
   ```batch
-  $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors +DiskPart,MIB2,#system
+  $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors +DiskPart,MIB2,${esc.h}system
   ```
   The core engine will force the execution of the `DiskPart` connector and then proceed with the automatic detection of `MIB2` and all connectors under the `system` category.
 
 - Example 5:
   ```batch
-  $ metricshub SERVER01 -t win --wmi --connectors DiskPart,!#system
+  $ metricshub SERVER01 -t win --wmi --connectors DiskPart,!${esc.h}system
   ```
   The core engine will perform automatic detection exclusively on the `DiskPart` connector.
 
@@ -254,10 +254,9 @@ $ metricshub SERVER01 -t oob --snmp v2c --community public --connectors +MIB2,#h
 
 - Example 8:
   ```batch
-  metricshub SERVER01 -t win --snmp v2c --community public --connectors "#hardware,!MIB2"
+  metricshub SERVER01 -t win --snmp v2c --community public --connectors "${esc.h}hardware,!MIB2"
   ```
   The core engine will perform automatic detection on connectors categorized under `hardware`, excluding the `MIB2` connector.
-
 
 To get the list of connectors bundled in **MetricsHub** and their corresponding internal name (**id**), you can run the below command:
 
@@ -267,7 +266,7 @@ $ metricshub --list
 
 This will provide a list as below:
 
-![Output of the metricshub --list command, listing all connectors, their ID, categories, applicable system types and display name](../images/metricshub-list.png)
+![Output of the metricshub --list command, listing all connectors, their ID, categories, applicable system types and display name](./../images/metricshub-list.png)
 
 This list displays the internal name (**id**) of each connector, its applicable system types and its display name.
 

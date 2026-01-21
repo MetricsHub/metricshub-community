@@ -107,7 +107,7 @@ You can configure several exporters in the same instance of the *OpenTelemetry C
 
 The [healthcheck](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/healthcheckextension) extension checks the status of **MetricsHub Enterprise** . It is activated by default and runs on port 13133 ([`http://localhost:13133`](http://localhost:13133)).
 
-Refer to [Check the collector is up and running](../guides/status.html#check-the-collector-is-up-and-running) for more details.
+Refer to [Check the collector is up and running](../troubleshooting/health-check.html#check-the-collector-is-up-and-running) for more details.
 
 #### zpages
 
@@ -117,7 +117,7 @@ The **zpages** extension provides debug information about all the different comp
 * details about the active pipeline
 * activity details of each receiver and exporter configured in the pipeline.
 
-Refer to [Check the pipelines status](../guides/status.html#check-the-pipelines-status) for more details.
+Refer to [Check the pipelines status](../troubleshooting/health-check.html#check-the-pipelines-status) for more details.
 
 #### Basic Authenticator
 

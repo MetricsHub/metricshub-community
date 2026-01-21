@@ -5,7 +5,7 @@ description: How to push the metrics collected by MetricsHub to Prometheus
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-> Note: This integration procedure is intended for the MetricsHub Enterprise Edition. If you are using the Community Edition, please refer to [Quick Start](../guides/quick-start-community-prometheus.md).
+> Note: This integration procedure is intended for the MetricsHub Enterprise Edition. If you are using the Community Edition, please refer to [Quick Start](../getting-started/quick-start-community-prometheus.md).
 
 **MetricsHub** sends the collected metrics to a Prometheus server using the *Remote Write Protocol*.
 
@@ -16,7 +16,7 @@ description: How to push the metrics collected by MetricsHub to Prometheus
 
 Before you can start viewing the metrics collected by **MetricsHub** in Prometheus, you must have:
 
-1. [Installed Prometheus](../guides/quick-start-community-prometheus.md#step-2-install-prometheus)
+1. [Installed Prometheus](../getting-started/quick-start-community-prometheus.md#step-2-install-prometheus)
 2. [Installed **MetricsHub**](../installation/index.md) on one or more systems that has network access to the resources to be monitored
 3. [Configured the monitoring of your resources](../configuration/configure-monitoring.md).
 

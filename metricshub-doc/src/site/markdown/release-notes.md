@@ -473,7 +473,7 @@ description: Learn more about the new features, changes and improvements, and bu
 |----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | [**\#357**](https://github.com/MetricsHub/metricshub-community/issues/357) | **MetricsHub CLI**: Added the ability to specify connector variables                                                                                                                                                       |
 | [**\#658**](https://github.com/MetricsHub/metricshub-community/issues/658) | The `database` property is no longer required under the `jdbc` configuration                                                                                                                                               |
-| [**\#698**](https://github.com/MetricsHub/metricshub-community/issues/698) | **Prometheus Alert Rules**: Three categories of [alert rules](./prometheus/alertmanager.md#prometheus-alertmanager) are provided to inform you of MetricsHub issues, hardware failures, and system performance degradation |
+| [**\#698**](https://github.com/MetricsHub/metricshub-community/issues/698) | **Prometheus Alert Rules**: Three categories of [alert rules](./integrations/alertmanager.md#prometheus-alertmanager) are provided to inform you of MetricsHub issues, hardware failures, and system performance degradation |
 | [**\#726**](https://github.com/MetricsHub/metricshub-community/issues/726) | **MetricsHub CLI**: The `--list` option now shows connectors that define variables                                                                                                                                         |
 
 #### Fixed Issues
@@ -490,7 +490,7 @@ description: Learn more about the new features, changes and improvements, and bu
 |----------------------------------------------------------------------------|------------------------------------------------------------------------------------------------|
 | [**\#684**](https://github.com/MetricsHub/metricshub-community/issues/684) | Documented [custom monitoring](./custom/index.md) examples                                     |
 | [**\#702**](https://github.com/MetricsHub/metricshub-community/issues/702) | Explained how to implement [custom monitoring through SQL queries](./custom/database-query.md) |
-| [**\#704**](https://github.com/MetricsHub/metricshub-community/issues/704) | Documented [Prometheus Alert Rules](./prometheus/alertmanager.md)                              |
+| [**\#704**](https://github.com/MetricsHub/metricshub-community/issues/704) | Documented [Prometheus Alert Rules](./integrations/alertmanager.md)                            |
 | [**\#705**](https://github.com/MetricsHub/metricshub-community/issues/705) | Documented [BMC Helix integration](./integrations/bmc-helix.md)                                |
 
 ### MetricsHub Community Connectors v1.0.12
