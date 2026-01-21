@@ -82,7 +82,7 @@ jobs:
       uses: actions/checkout@v5
 
     - name: Download Assets
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
@@ -332,7 +332,7 @@ jobs:
         echo "token=${token}" >> $GITHUB_OUTPUT
 
     - name: Download Assets
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
