@@ -13,9 +13,10 @@ import PieChartIcon from "@mui/icons-material/PieChart";
 import DeviceThermostatIcon from "@mui/icons-material/DeviceThermostat";
 import BoltIcon from "@mui/icons-material/Bolt";
 import LayersIcon from "@mui/icons-material/Layers";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import BatteryChargingFullIcon from '@mui/icons-material/BatteryChargingFull';
+import DevicesOtherIcon from '@mui/icons-material/DevicesOther';
 
 const ICONS = {
 	CPU: DeveloperBoardIcon,
@@ -38,6 +39,8 @@ const ICONS = {
 	Blade: StorageIcon,
 	Service: MiscellaneousServicesIcon,
 	Process: AccountTreeIcon,
+	Battery: BatteryChargingFullIcon,
+	"Other Device": DevicesOtherIcon,
 };
 
 /**

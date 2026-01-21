@@ -411,7 +411,7 @@ const ConnectorAccordion = ({
 									transition: "color 0.4s ease",
 								}}
 							>
-								{prettifyKey(connector.name)}
+								{connector.attributes?.name || prettifyKey(connector.name)}
 							</Typography>
 						</Tooltip>
 						<CountBadge count={monitors.length} title="Number of monitor types" sx={{ ml: 1 }} />
