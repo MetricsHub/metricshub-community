@@ -317,6 +317,6 @@ jobs:
         cp *.rpm "${packagedir}"
         cp *.deb "${packagedir}"
         cp *.msi "${packagedir}"
-        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ steps.get_run_id.outputs.version }}/ --recursive
+        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ inputs.releaseVersion }}/ --recursive
       env:
         AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}
