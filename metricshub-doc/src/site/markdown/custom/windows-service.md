@@ -11,64 +11,64 @@ You can configure **MetricsHub** to monitor a Windows service. In the example be
 
 To achieve this use case, we:
 
-* Declare the resource to be monitored (`prod-win-web`)​ and its attributes (`host.name`, `host.type`)​
-  
+- Declare the resource to be monitored (`prod-win-web`)​ and its attributes (`host.name`, `host.type`)​
+
 ```yaml
-    resources:
-      prod-win-web:
-        attributes:
-          host.name: prod-win-web
-          host.type: windows
+resources:
+  prod-win-web:
+    attributes:
+      host.name: prod-win-web
+      host.type: windows
 ```
 
-* Configure the `WMI` protocol with `credentials` and `timeout​`
+- Configure the `WMI` protocol with `credentials` and `timeout​`
 
 ```yaml
-        protocols:
-          wmi:
-            username: <username>
-            password: <password>
-            timeout: 30
+protocols:
+  wmi:
+    username: <username>
+    password: <password>
+    timeout: 30
 ```
 
-* Add an additional connector (`WindowsServiceHttpd`) using the `WindowsService` module​
+- Add an additional connector (`WindowsServiceHttpd`) using the `WindowsService` module​
 
 ```yaml
-        additionalConnectors:
-          WindowsServiceHttpd:
-            uses: WindowsService
+additionalConnectors:
+  WindowsServiceHttpd:
+    uses: WindowsService
 ```
 
-* Set the variable `serviceNames` to specify the service to be monitored (`httpd`).
+- Set the variable `serviceNames` to specify the service to be monitored (`httpd`).
 
 ```yaml
-            variables:
-                serviceNames: httpd
+variables:
+  serviceNames: httpd
 ```
 
 Here is the complete YAML configuration:
 
 ```yaml
-    resources:
-      prod-win-web:
-        attributes:
-          host.name: prod-win-web
-          host.type: windows
-        protocols:
-          wmi:
-            username: <username>
-            password: <password>
-            timeout: 30
-        additionalConnectors:
-          WindowsServiceHttpd:
-            uses: WindowsService
-            variables:
-                serviceNames: httpd
+resources:
+  prod-win-web:
+    attributes:
+      host.name: prod-win-web
+      host.type: windows
+    protocols:
+      wmi:
+        username: <username>
+        password: <password>
+        timeout: 30
+    additionalConnectors:
+      WindowsServiceHttpd:
+        uses: WindowsService
+        variables:
+          serviceNames: httpd
 ```
 
 ## Supporting Resources
 
-* [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
-* [WMI](../configuration/configure-monitoring.md#wmi)
-* [Customize data collection](../configuration/configure-monitoring.md#customize-data-collection)
+- [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
+- [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
+- [WMI](../configuration/configure-monitoring.md#wmi)
+- [Customize data collection](../configuration/configure-monitoring.md#customize-data-collection)

@@ -7,16 +7,16 @@ If you observe delays in data collection, missing data points, or timeouts, enab
 
 When self-monitoring is enabled, the `metricshub.job.duration` metric provides insights into task execution times. Key attributes include:
 
-* **`job.type`**: The operation performed by **MetricsHub**. Possible values are:
-  * `discovery`: Identifies and registers components.
-  * `collect`: Gathers telemetry data from monitored components.
-  * `simple`: Executes a straightforward task.
-  * `beforeAll` or `afterAll`: Performs preparatory or cleanup operations.
-* **`monitor.type`**: The component being monitored, such as:
-  * *Hardware metrics*: `cpu`, `memory`, `physical_disk`, or `disk_controller`.
-  * *Environmental metrics*: `temperature` or `battery`.
-  * *Logical entities*: `connector`.
-* **`connector_id`**: The unique identifier for the connector, such as HPEGen10IloREST for the HPE Gen10 iLO REST connector.
+- **`job.type`**: The operation performed by **MetricsHub**. Possible values are:
+  - `discovery`: Identifies and registers components.
+  - `collect`: Gathers telemetry data from monitored components.
+  - `simple`: Executes a straightforward task.
+  - `beforeAll` or `afterAll`: Performs preparatory or cleanup operations.
+- **`monitor.type`**: The component being monitored, such as:
+  - _Hardware metrics_: `cpu`, `memory`, `physical_disk`, or `disk_controller`.
+  - _Environmental metrics_: `temperature` or `battery`.
+  - _Logical entities_: `connector`.
+- **`connector_id`**: The unique identifier for the connector, such as HPEGen10IloREST for the HPE Gen10 iLO REST connector.
 
 These metrics can be viewed in Prometheus/Grafana or in the `metricshub-agent-$resourceId-$timestamp.log` file. Refer to the [MetricsHub Log Files](./metricshub-logs.md) page for details on locating and interpreting log files.
 
@@ -34,12 +34,12 @@ metricshub.job.duration{job.type="collect", monitor.type="cpu", connector_id="HP
 
 In this example:
 
-* during `discovery`:
-  * The `enclosure` monitor takes `0.020` seconds.
-  * The `cpu` monitor takes `0.030` seconds.
-  * The `temperature` monitor takes `0.025` seconds.
-  * The `connector` monitor takes `0.015` seconds.
-* during `collect`, the `cpu` metrics collection takes `0.015` seconds.
+- during `discovery`:
+  - The `enclosure` monitor takes `0.020` seconds.
+  - The `cpu` monitor takes `0.030` seconds.
+  - The `temperature` monitor takes `0.025` seconds.
+  - The `connector` monitor takes `0.015` seconds.
+- during `collect`, the `cpu` metrics collection takes `0.015` seconds.
 
 These metrics indicate that **MetricsHub** is functioning as expected, with task durations well within acceptable ranges. Jobs exceeding 5 seconds may require further investigation.
 
@@ -54,9 +54,9 @@ metricshub.job.duration{job.type="collect", monitor.type="network", connector_id
 
 You can also:
 
-* **Verify resource availability**: Ensure the monitored system has sufficient CPU, memory, and storage resources to handle monitoring tasks.
-* **Check MetricsHub configuration**: Review your configuration to ensure **MetricsHub** is set up correctly .
-* **Restart services**: If configurations appear correct, try restarting relevant services.
-* **Inspect network configurations**: Check for network latency or connectivity issues between **MetricsHub** and the monitored resources, and ensure network settings (e.g., firewalls or proxies) are not causing delays.
-* **Examine logs**: Look for warnings or errors in the [MetricsHub logs](./metricshub-logs.md) or the monitored system's logs to identify potential problems.
-* **Review timeouts**: Ensure timeout settings are appropriate for the environment to prevent unnecessary delays or retries.
+- **Verify resource availability**: Ensure the monitored system has sufficient CPU, memory, and storage resources to handle monitoring tasks.
+- **Check MetricsHub configuration**: Review your configuration to ensure **MetricsHub** is set up correctly .
+- **Restart services**: If configurations appear correct, try restarting relevant services.
+- **Inspect network configurations**: Check for network latency or connectivity issues between **MetricsHub** and the monitored resources, and ensure network settings (e.g., firewalls or proxies) are not causing delays.
+- **Examine logs**: Look for warnings or errors in the [MetricsHub logs](./metricshub-logs.md) or the monitored system's logs to identify potential problems.
+- **Review timeouts**: Ensure timeout settings are appropriate for the environment to prevent unnecessary delays or retries.

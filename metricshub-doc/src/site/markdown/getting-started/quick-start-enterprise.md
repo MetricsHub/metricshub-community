@@ -9,40 +9,40 @@ This quick start guide provides step-by-step instructions for deploying **Metric
 
 After completing this quick start, you will have:
 
-* **MetricsHub Enterprise** installed on your machine
-* The **MetricsHub Agent** configured to collect metrics from your local host
-* Metrics flowing to your chosen observability platform
+- **MetricsHub Enterprise** installed on your machine
+- The **MetricsHub Agent** configured to collect metrics from your local host
+- Metrics flowing to your chosen observability platform
 
 ## Prerequisites
 
-* Administrator/root access on the target system
-* Network access to the systems you want to monitor
-* A valid license key (or use the 30-day trial)
+- Administrator/root access on the target system
+- Network access to the systems you want to monitor
+- A valid license key (or use the 30-day trial)
 
 ## Step 1: Install MetricsHub Enterprise
 
 Download and install **MetricsHub Enterprise** for your platform:
 
-| Platform | Installation |
-|----------|--------------|
-| Windows | [Download](https://metricshub.com/download) the `.msi` installer and run the wizard |
-| Debian/Ubuntu | [Download](https://metricshub.com/download) the `.deb` package and install via apt or dpkg |
-| Red Hat/CentOS | [Download](https://metricshub.com/download) the `.rpm` package and install via yum or rpm |
-| Docker | Pull from `docker.metricshub.com` |
+| Platform       | Installation                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| Windows        | [Download](https://metricshub.com/download) the `.msi` installer and run the wizard        |
+| Debian/Ubuntu  | [Download](https://metricshub.com/download) the `.deb` package and install via apt or dpkg |
+| Red Hat/CentOS | [Download](https://metricshub.com/download) the `.rpm` package and install via yum or rpm  |
+| Docker         | Pull from `docker.metricshub.com`                                                          |
 
 > **Note**: Registered customers have access to private package repositories. See [Installation](../installation/index.html) for detailed instructions.
 
 After installation:
 
-* **Windows**: MetricsHub is installed to `C:\Program Files\MetricsHub` with configuration in `C:\ProgramData\MetricsHub`
-* **Linux**: MetricsHub is installed to `/opt/metricshub`
+- **Windows**: MetricsHub is installed to `C:\Program Files\MetricsHub` with configuration in `C:\ProgramData\MetricsHub`
+- **Linux**: MetricsHub is installed to `/opt/metricshub`
 
 ## Step 2: Configure Your License
 
 Edit the license configuration file:
 
-* **Windows**: `C:\ProgramData\MetricsHub\config\license.yaml`
-* **Linux**: `/opt/metricshub/lib/config/license.yaml`
+- **Windows**: `C:\ProgramData\MetricsHub\config\license.yaml`
+- **Linux**: `/opt/metricshub/lib/config/license.yaml`
 
 ```yaml
 license:
@@ -59,8 +59,8 @@ license:
 
 Create or edit the main configuration file:
 
-* **Windows**: `C:\ProgramData\MetricsHub\config\metricshub.yaml`
-* **Linux**: `/opt/metricshub/lib/config/metricshub.yaml`
+- **Windows**: `C:\ProgramData\MetricsHub\config\metricshub.yaml`
+- **Linux**: `/opt/metricshub/lib/config/metricshub.yaml`
 
 ### Monitoring the Local Windows Host
 
@@ -99,8 +99,8 @@ resources:
 
 The Enterprise Edition includes a bundled OpenTelemetry Collector. Configure your destination in:
 
-* **Windows**: `C:\ProgramData\MetricsHub\otel\otel-config.yaml`
-* **Linux**: `/opt/metricshub/lib/otel/otel-config.yaml`
+- **Windows**: `C:\ProgramData\MetricsHub\otel\otel-config.yaml`
+- **Linux**: `/opt/metricshub/lib/otel/otel-config.yaml`
 
 ### Example: Sending to Prometheus
 
@@ -157,8 +157,8 @@ sudo systemctl enable metricshub  # Start on boot
 
 Check the service status:
 
-* **Windows**: Open Services and verify "MetricsHub Enterprise" is running
-* **Linux**: `sudo systemctl status metricshub`
+- **Windows**: Open Services and verify "MetricsHub Enterprise" is running
+- **Linux**: `sudo systemctl status metricshub`
 
 Check the health endpoint:
 
@@ -169,7 +169,7 @@ curl http://localhost:13133
 Expected response:
 
 ```json
-{"status":"Server available","upSince":"...","uptime":"..."}
+{ "status": "Server available", "upSince": "...", "uptime": "..." }
 ```
 
 ## Step 6: Access the Web Interface
@@ -186,14 +186,14 @@ https://localhost:31888
 
 ## Next Steps
 
-* [Monitoring Configuration](../configuration/configure-monitoring.html)
-* [Protocols and Credentials](../configuration/protocols-and-credentials.html)
-* [Datadog Integration](../integrations/datadog.html)
-* [Prometheus Alertmanager](../integrations/alertmanager.html)
-* [Troubleshooting](../troubleshooting/index.html)
+- [Monitoring Configuration](../configuration/configure-monitoring.html)
+- [Protocols and Credentials](../configuration/protocols-and-credentials.html)
+- [Datadog Integration](../integrations/datadog.html)
+- [Prometheus Alertmanager](../integrations/alertmanager.html)
+- [Troubleshooting](../troubleshooting/index.html)
 
 ## Getting Help
 
-* **Enterprise Support**: [Support Desk](https://support.metricshub.com)
-* **Community**: [MetricsHub Slack](https://metricshub.slack.com)
-* **Documentation**: [metricshub.com/docs](https://metricshub.com/docs)
+- **Enterprise Support**: [Support Desk](https://support.metricshub.com)
+- **Community**: [MetricsHub Slack](https://metricshub.slack.com)
+- **Documentation**: [metricshub.com/docs](https://metricshub.com/docs)

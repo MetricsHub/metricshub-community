@@ -14,7 +14,9 @@ Before using the CLI, ensure your platform supports HTTP monitoring by checking 
 ```bash
 httpcli <GET|POST|PUT|DELETE> <URL> --username <USERNAME> --password <PASSWORD> [--body <BODY> | --body-file <FILE PATH>] [--header <HEADER> | --header-file <FILE PATH>] --timeout <TIMEOUT>
 ```
+
 or
+
 ```
 httpcli --method <GET|POST|PUT|DELETE> --url <URL> --username <USERNAME> --password <PASSWORD> [--body <BODY> | --body-file <FILE PATH>] [--header <HEADER> | --header-file <FILE PATH>] --timeout <TIMEOUT>
 ```

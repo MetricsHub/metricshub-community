@@ -10,3 +10,11 @@ overrides:
       printWidth: 120
       arrowParens: avoid
       endOfLine: auto
+  - files:
+      - "metricshub-doc/**/*.md"
+    options:
+      proseWrap: preserve
+      tabWidth: 2
+      useTabs: false
+      printWidth: 120
+      endOfLine: auto

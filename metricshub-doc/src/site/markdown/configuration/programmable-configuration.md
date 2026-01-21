@@ -9,9 +9,9 @@ You can write simple [Velocity scripts](https://velocity.apache.org) to automati
 
 This is ideal for:
 
-* **Large environments** with hundreds or thousands of resources
-* **Dynamic infrastructures** where resources are frequently added or removed
-* **Integration with CMDBs** or inventory systems
+- **Large environments** with hundreds or thousands of resources
+- **Dynamic infrastructures** where resources are frequently added or removed
+- **Integration with CMDBs** or inventory systems
 
 ## Getting Started
 
@@ -21,15 +21,15 @@ Place your `.vm` template files in the `/config` directory alongside your regula
 
 To fetch and transform data into valid configuration blocks, use [Velocity Tools](https://velocity.apache.org/tools/3.1/tools-summary.html):
 
-| Tool | Purpose |
-|------|---------|
-| `${esc.d}http` | Making HTTP requests to APIs |
-| `${esc.d}file` | Reading local files |
-| `${esc.d}json` | Parsing JSON data |
-| `${esc.d}collection` | Splitting strings or manipulating collections |
-| `${esc.d}sql` | Executing SQL queries on a database |
-| `${esc.d}env` | Retrieving environment variables |
-| `${esc.d}date`, `${esc.d}number`, `${esc.d}esc` | Date formatting, number formatting, escaping |
+| Tool                                            | Purpose                                       |
+| ----------------------------------------------- | --------------------------------------------- |
+| `${esc.d}http`                                  | Making HTTP requests to APIs                  |
+| `${esc.d}file`                                  | Reading local files                           |
+| `${esc.d}json`                                  | Parsing JSON data                             |
+| `${esc.d}collection`                            | Splitting strings or manipulating collections |
+| `${esc.d}sql`                                   | Executing SQL queries on a database           |
+| `${esc.d}env`                                   | Retrieving environment variables              |
+| `${esc.d}date`, `${esc.d}number`, `${esc.d}esc` | Date formatting, number formatting, escaping  |
 
 > **Reminder**: In [Velocity](https://velocity.apache.org/engine/2.4/user-guide.html), use `${esc.h}` for directives, `${esc.h}${esc.h}` for comments, and `${esc.d}` for variables.
 
@@ -39,15 +39,15 @@ To fetch and transform data into valid configuration blocks, use [Velocity Tools
 
 Use the `${esc.d}http.execute(...)` function to execute HTTP requests directly from templates:
 
-| Argument | Description |
-|----------|-------------|
-| `url` | **(Required)** The HTTP(S) endpoint to call. |
-| `method` | HTTP method (`GET`, `POST`, etc.). (Default: `GET`). |
-| `username` | Username used for authentication. |
-| `password` | Password used for authentication. |
-| `headers` | HTTP headers, written as newline-separated `Key: Value` pairs. |
-| `body` | Payload to send with the request (e.g., for `POST`). |
-| `timeout` | Request timeout in seconds. (Default: `60`). |
+| Argument   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `url`      | **(Required)** The HTTP(S) endpoint to call.                   |
+| `method`   | HTTP method (`GET`, `POST`, etc.). (Default: `GET`).           |
+| `username` | Username used for authentication.                              |
+| `password` | Password used for authentication.                              |
+| `headers`  | HTTP headers, written as newline-separated `Key: Value` pairs. |
+| `body`     | Payload to send with the request (e.g., for `POST`).           |
+| `timeout`  | Request timeout in seconds. (Default: `60`).                   |
 
 > **Note**: Use `${esc.d}http.get(...)` or `${esc.d}http.post(...)` to quickly send `GET` or `POST` requests without specifying a `method`.
 
@@ -57,8 +57,8 @@ Suppose your API endpoint at `https://cmdb/servers` returns:
 
 ```json
 [
-  {"hostname":"host1","OSType":"win","adminUsername":"admin1"},
-  {"hostname":"host2","OSType":"win","adminUsername":"admin2"}
+  { "hostname": "host1", "OSType": "win", "adminUsername": "admin1" },
+  { "hostname": "host2", "OSType": "win", "adminUsername": "admin2" }
 ]
 ```
 
@@ -91,8 +91,8 @@ ${esc.h}end
 
 Use the `${esc.d}file.readAllLines(filePath)` function to read all lines from a local file.
 
-| Argument | Description |
-|----------|-------------|
+| Argument   | Description                                |
+| ---------- | ------------------------------------------ |
 | `filePath` | **(Required)** The path to the local file. |
 
 ### Example: Loading Resources from a CSV File
@@ -134,22 +134,22 @@ ${esc.h}end
 
 Use the `${esc.d}sql.query(query, jdbcUrl, username, password, timeout)` function to execute SQL queries:
 
-| Argument | Description |
-|----------|-------------|
-| `query` | **(Required)** SQL query to execute. |
-| `jdbcUrl` | **(Required)** The JDBC connection URL to access the database. |
-| `username` | Name used for database authentication. |
-| `password` | Password used for database authentication. |
-| `timeout` | (Optional) Query timeout in seconds (Default: 120). |
+| Argument   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `query`    | **(Required)** SQL query to execute.                           |
+| `jdbcUrl`  | **(Required)** The JDBC connection URL to access the database. |
+| `username` | Name used for database authentication.                         |
+| `password` | Password used for database authentication.                     |
+| `timeout`  | (Optional) Query timeout in seconds (Default: 120).            |
 
 ### Example: Loading Resources from an SQL Database
 
 Consider a `hosts` table in your database with the following data:
 
-| hostname | host_type | username | password |
-|----------|-----------|----------|----------|
-| storage-server-1 | storage | admin1 | pwd1 |
-| windows-server-1 | windows | admin2 | pwd2 |
+| hostname         | host_type | username | password |
+| ---------------- | --------- | -------- | -------- |
+| storage-server-1 | storage   | admin1   | pwd1     |
+| windows-server-1 | windows   | admin2   | pwd2     |
 
 You can dynamically create resource blocks by querying the database:
 

@@ -12,6 +12,7 @@ This guide covers installing MetricsHub on Windows Server using the MSI installe
 ## Installing
 
 1. Download the installer for your edition from [metricshub.com/downloads](https://metricshub.com/downloads):
+
    - **metricshub-enterprise-${enterpriseVersion}.msi** (Enterprise)
    - **metricshub-community-${communityVersion}.msi** (Community)
 

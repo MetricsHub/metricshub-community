@@ -9,26 +9,26 @@ description: Compare MetricsHub Community and Enterprise editions to choose the 
 
 ## Feature Comparison
 
-| Feature | Community | Enterprise |
-|---------|:---------:|:----------:|
-| **Core Monitoring** | | |
-| Linux and Windows systems monitoring | ✅ | ✅ |
-| Basic hardware monitoring (Redfish, SNMP, WMI) | ✅ | ✅ |
-| Sustainability metrics | ✅ | ✅ |
-| Remote monitoring | ✅ | ✅ |
-| Custom monitoring (YAML connectors) | ✅ | ✅ |
-| Programmable configuration (Velocity templates) | ✅ | ✅ |
-| **Connectors** | | |
-| Built-in connectors | [20+](https://metricshub.org/community-connectors/metricshub-connectors-directory.html) | [200+](../connectors-directory.html) |
-| **Deployment** | | |
-| Manual setup (unzip archives) | ✅ | ✅ |
-| Installable packages (.deb, .rpm, .msi, Docker) | — | ✅ |
-| Embedded OpenTelemetry Collector | — | ✅ |
-| Integrated Prometheus | — | ✅ |
-| **Support** | | |
-| Community Slack channel | ✅ | ✅ |
-| Premium support (24x7) | — | ✅ |
-| Premium support for Prometheus | — | ✅ |
+| Feature                                         |                                        Community                                        |              Enterprise              |
+| ----------------------------------------------- | :-------------------------------------------------------------------------------------: | :----------------------------------: |
+| **Core Monitoring**                             |                                                                                         |                                      |
+| Linux and Windows systems monitoring            |                                           ✅                                            |                  ✅                  |
+| Basic hardware monitoring (Redfish, SNMP, WMI)  |                                           ✅                                            |                  ✅                  |
+| Sustainability metrics                          |                                           ✅                                            |                  ✅                  |
+| Remote monitoring                               |                                           ✅                                            |                  ✅                  |
+| Custom monitoring (YAML connectors)             |                                           ✅                                            |                  ✅                  |
+| Programmable configuration (Velocity templates) |                                           ✅                                            |                  ✅                  |
+| **Connectors**                                  |                                                                                         |                                      |
+| Built-in connectors                             | [20+](https://metricshub.org/community-connectors/metricshub-connectors-directory.html) | [200+](../connectors-directory.html) |
+| **Deployment**                                  |                                                                                         |                                      |
+| Manual setup (unzip archives)                   |                                           ✅                                            |                  ✅                  |
+| Installable packages (.deb, .rpm, .msi, Docker) |                                            —                                            |                  ✅                  |
+| Embedded OpenTelemetry Collector                |                                            —                                            |                  ✅                  |
+| Integrated Prometheus                           |                                            —                                            |                  ✅                  |
+| **Support**                                     |                                                                                         |                                      |
+| Community Slack channel                         |                                           ✅                                            |                  ✅                  |
+| Premium support (24x7)                          |                                            —                                            |                  ✅                  |
+| Premium support for Prometheus                  |                                            —                                            |                  ✅                  |
 
 ## Which Edition Should I Choose?
 

@@ -86,4 +86,3 @@ winremotecli dev-01 --winrm --winrm-username admin --winrm-password secret --com
 ```bash
 winremotecli dev-01 --winrm --winrm-username admin --winrm-password secret --command "tasklist" --winrm-auth NTLM,KERBEROS
 ```
-

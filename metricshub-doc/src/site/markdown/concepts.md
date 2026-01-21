@@ -17,24 +17,24 @@ A **resource** is any entity you want to monitor: a server, a network switch, a 
 
 ```yaml
 resources:
-  my-server-01:           # Resource ID
+  my-server-01: # Resource ID
     attributes:
-      host.name: 192.168.1.100   # Hostname or IP
-      host.type: linux           # Type of system
+      host.name: 192.168.1.100 # Hostname or IP
+      host.type: linux # Type of system
 ```
 
 ### Resource Types
 
-| Type | Description | Common Protocols |
-|------|-------------|------------------|
-| `linux` | Linux servers | SSH, SNMP |
-| `win` | Windows servers | WMI, WinRM |
-| `network` | Switches, routers, firewalls | SNMP |
-| `storage` | SAN, NAS, storage arrays | HTTP, WBEM, SNMP |
-| `oob` | Out-of-band management (BMC, iLO, iDRAC) | IPMI, HTTP |
-| `aix` | IBM AIX systems | SSH |
-| `hpux` | HP-UX systems | SSH |
-| `solaris` | Oracle Solaris systems | SSH |
+| Type      | Description                              | Common Protocols |
+| --------- | ---------------------------------------- | ---------------- |
+| `linux`   | Linux servers                            | SSH, SNMP        |
+| `win`     | Windows servers                          | WMI, WinRM       |
+| `network` | Switches, routers, firewalls             | SNMP             |
+| `storage` | SAN, NAS, storage arrays                 | HTTP, WBEM, SNMP |
+| `oob`     | Out-of-band management (BMC, iLO, iDRAC) | IPMI, HTTP       |
+| `aix`     | IBM AIX systems                          | SSH              |
+| `hpux`    | HP-UX systems                            | SSH              |
+| `solaris` | Oracle Solaris systems                   | SSH              |
 
 ## Resource Groups
 
@@ -70,18 +70,18 @@ The `site` attribute is required for [sustainability](guides/configure-sustainab
 
 **Protocols** define how **MetricsHub** communicates with your resources to collect metrics. Each protocol has its own authentication and connection parameters.
 
-| Protocol | Use Case |
-|----------|----------|
-| **SSH** | Linux/Unix command execution |
-| **WMI** | Windows local/domain queries |
-| **WinRM** | Windows remote management |
+| Protocol        | Use Case                           |
+| --------------- | ---------------------------------- |
+| **SSH**         | Linux/Unix command execution       |
+| **WMI**         | Windows local/domain queries       |
+| **WinRM**       | Windows remote management          |
 | **SNMP v1/v2c** | Network devices (community string) |
-| **SNMP v3** | Network devices (encrypted) |
-| **HTTP/HTTPS** | REST APIs, web services |
-| **WBEM** | VMware, CIM-based systems |
-| **IPMI** | Hardware management (BMC) |
-| **JDBC** | Database queries |
-| **JMX** | Java application monitoring |
+| **SNMP v3**     | Network devices (encrypted)        |
+| **HTTP/HTTPS**  | REST APIs, web services            |
+| **WBEM**        | VMware, CIM-based systems          |
+| **IPMI**        | Hardware management (BMC)          |
+| **JDBC**        | Database queries                   |
+| **JMX**         | Java application monitoring        |
 
 A resource can use multiple protocols simultaneously:
 
@@ -102,7 +102,7 @@ resources:
 
 ## Connectors
 
-**Connectors** are YAML-based definitions that describe *what* to collect and *how* to interpret the data. They contain:
+**Connectors** are YAML-based definitions that describe _what_ to collect and _how_ to interpret the data. They contain:
 
 - Detection rules (how to identify compatible systems)
 - Data sources (SNMP OIDs, WMI queries, CLI commands, etc.)

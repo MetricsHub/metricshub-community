@@ -5,34 +5,33 @@ description: MetricsHub ships with pre-made alert rules for Prometheus Alertmana
 
 <!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
 
-If your Prometheus server is configured to send alerts to [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/), you need to configure *Alert Rules* to be notified when issues occur. To simplify this process, **MetricsHub** provides the following alert rules that you can tailor to your specific needs:
+If your Prometheus server is configured to send alerts to [Alertmanager](https://prometheus.io/docs/alerting/latest/alertmanager/), you need to configure _Alert Rules_ to be notified when issues occur. To simplify this process, **MetricsHub** provides the following alert rules that you can tailor to your specific needs:
 
-| **Alert Rules** | **When to Use**                       | **Alerts Triggered When**                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-|-----------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **MetricsHub**  | Always                                | <ul><li>A host cannot be reached</li><li>A connector has failed</li><li>A protocol has failed</li><li>The <strong>MetricsHub Agent</strong> is not sending metrics.</li></ul>                                                                                                                                                                                                                                                                                                                          |
-| **Hardware**    | When hardware monitoring is performed | <ul>  <li>Battery charge is critically or abnormally low</li>  <li>Devices report high error rates (e.g. CPU, memory, disks, network)</li>  <li>Fan speed is too low</li>  <li>LUN has too few or no available paths</li>  <li>Network card error ratio is high</li>  <li>Physical disk endurance is low</li>  <li>Power supply usage is abnormally high</li>  <li>Temperature or voltage is out of range</li>  <li>A hardware device is missing, degraded, predicted to fail or failing.</li> </ul> |
-| **System**      | When system monitoring is performed   | <ul><li>CPU usage, file system utilization, memory usage, or bandwidth usage is abnormally high</li><li>Too many network errors are detected</li><li>A high page faults rate occurs over an extended period of time.</li></ul>                                                                                                                                                                                                                                                                       |
+| **Alert Rules** | **When to Use**                       | **Alerts Triggered When**                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MetricsHub**  | Always                                | <ul><li>A host cannot be reached</li><li>A connector has failed</li><li>A protocol has failed</li><li>The <strong>MetricsHub Agent</strong> is not sending metrics.</li></ul>                                                                                                                                                                                                                                                                                                               |
+| **Hardware**    | When hardware monitoring is performed | <ul> <li>Battery charge is critically or abnormally low</li> <li>Devices report high error rates (e.g. CPU, memory, disks, network)</li> <li>Fan speed is too low</li> <li>LUN has too few or no available paths</li> <li>Network card error ratio is high</li> <li>Physical disk endurance is low</li> <li>Power supply usage is abnormally high</li> <li>Temperature or voltage is out of range</li> <li>A hardware device is missing, degraded, predicted to fail or failing.</li> </ul> |
+| **System**      | When system monitoring is performed   | <ul><li>CPU usage, file system utilization, memory usage, or bandwidth usage is abnormally high</li><li>Too many network errors are detected</li><li>A high page faults rate occurs over an extended period of time.</li></ul>                                                                                                                                                                                                                                                              |
 
 > **Notes:**
-> 
+>
 > - These alert rules are distinct from the internal alerts generated by **MetricsHub** and emitted as OpenTelemetry logs. The alert rules described in this page are managed exclusively by **Prometheus Alertmanager**.
-> 
 > - To see alert descriptions, you must use the full **Prometheus Alertmanager** interface (usually available on port `9093`). The simple web UI bundled with Prometheus **does not display this additional alert information.**
 
 ## Alert Rules Thresholds
 
 The alert rules rely on two types of thresholds:
 
-* **Static thresholds**: Used when the same threshold applies to all devices (e.g., battery charge). The alert rule compares the metric to a fixed, hardcoded value.
-* **Dynamic thresholds**: Used when thresholds vary across devices (e.g., temperature or fan speed). In this case, two additional metrics define the *warning* and *critical* thresholds. The alert rules compare the *base metric* to the corresponding *threshold metrics*.
+- **Static thresholds**: Used when the same threshold applies to all devices (e.g., battery charge). The alert rule compares the metric to a fixed, hardcoded value.
+- **Dynamic thresholds**: Used when thresholds vary across devices (e.g., temperature or fan speed). In this case, two additional metrics define the _warning_ and _critical_ thresholds. The alert rules compare the _base metric_ to the corresponding _threshold metrics_.
 
 ### Static Threshold Example
 
 For the `hw_battery_charge_ratio` metric:
 
-* a `warning` alert is triggered when the battery charge is **below 0.5** (50%)
-* a `critical` alert is triggered when the battery charge is **below 0.3** (30%)
-* both `warning` and `critical` alerts are triggered when the value is below 0.3, since the above conditions are met.
+- a `warning` alert is triggered when the battery charge is **below 0.5** (50%)
+- a `critical` alert is triggered when the battery charge is **below 0.3** (30%)
+- both `warning` and `critical` alerts are triggered when the value is below 0.3, since the above conditions are met.
 
 ```yaml
 - name: MetricsHub-Hardware-Battery-Charge
@@ -54,8 +53,8 @@ For the `hw_battery_charge_ratio` metric:
 
 For the `hw_temperature_celsius` metric:
 
-* a `warning` alert is triggered when the temperature exceeds the value of `hw_temperature_limit_celsius{limit_type="high.degraded"}`
-* a `critical` alert is triggered when the temperature exceeds the value of `hw_temperature_limit_celsius{limit_type="high.critical"}`
+- a `warning` alert is triggered when the temperature exceeds the value of `hw_temperature_limit_celsius{limit_type="high.degraded"}`
+- a `critical` alert is triggered when the temperature exceeds the value of `hw_temperature_limit_celsius{limit_type="high.critical"}`
 
 ```yaml
 - name: Temperature
@@ -74,7 +73,7 @@ For the `hw_temperature_celsius` metric:
 The table below summarizes the metrics that should be compared to their corresponding **dynamic threshold metrics**:
 
 | Base Metric                      | Dynamic Threshold Metrics                                                                                                                                             |
-|----------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `rate(hw_errors_total[1h])`      | `ignoring(limit_type) hw_errors_limit{limit_type="degraded"}` <br/> `ignoring(limit_type) hw_errors_limit{limit_type="critical"}`                                     |
 | `hw_fan_speed_rpm`               | `ignoring(limit_type) hw_fan_speed_limit_rpm{limit_type="low.degraded"}` <br/> `ignoring(limit_type) hw_fan_speed_limit_rpm{limit_type="low.critical"}`               |
 | `hw_fan_speed_ratio`             | `ignoring(limit_type) hw_fan_speed_ratio_limit{limit_type="low.degraded"}` <br/> `ignoring(limit_type) hw_fan_speed_ratio_limit{limit_type="low.critical"}`           |
@@ -90,17 +89,18 @@ The table below summarizes the metrics that should be compared to their correspo
 To activate the alert rules:
 
 1. Copy the required configuration files into your `Prometheus` installation folder:
-     * `config/metricshub-rules.yaml`
-     * `config/metricshub-hardware-rules.yaml`
-     * `config/metricshub-system-rules.yaml`
+
+   - `config/metricshub-rules.yaml`
+   - `config/metricshub-hardware-rules.yaml`
+   - `config/metricshub-system-rules.yaml`
 
 2. Declare them in the `prometheus.yaml` file:
 
-    ```yaml
-    rule_files:
-      - metricshub-rules.yaml
-      - metricshub-hardware-rules.yaml
-      - metricshub-system-rules.yaml
-    ```
+   ```yaml
+   rule_files:
+     - metricshub-rules.yaml
+     - metricshub-hardware-rules.yaml
+     - metricshub-system-rules.yaml
+   ```
 
 3. Restart your Prometheus server to take the new rules into account.

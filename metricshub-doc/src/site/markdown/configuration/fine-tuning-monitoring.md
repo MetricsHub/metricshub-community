@@ -47,12 +47,12 @@ resources:
 
 All timeout and period values support these units:
 
-| Unit | Description | Examples |
-|------|-------------|----------|
-| s | seconds | `120s` |
-| m | minutes | `2m`, `1m30s` |
-| h | hours | `1h`, `1h30m` |
-| d | days | `1d` |
+| Unit | Description | Examples      |
+| ---- | ----------- | ------------- |
+| s    | seconds     | `120s`        |
+| m    | minutes     | `2m`, `1m30s` |
+| h    | hours       | `1h`, `1h30m` |
+| d    | days        | `1d`          |
 
 ## Filtering
 
@@ -82,10 +82,10 @@ Separate the hostname used for collection from the one reported in metrics:
 resources:
   myHost1:
     attributes:
-      host.name: reported-hostname  # In metrics
+      host.name: reported-hostname # In metrics
     protocols:
       snmp:
-        hostname: actual-ip-address  # For collection
+        hostname: actual-ip-address # For collection
 ```
 
 ### FQDN Resolution
@@ -114,8 +114,8 @@ resources:
     attributes:
       host.name: my-host-01
       host.type: win
-      app: Jenkins        # Custom
-      environment: prod   # Custom
+      app: Jenkins # Custom
+      environment: prod # Custom
 ```
 
 ## Performance

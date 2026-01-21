@@ -7,20 +7,20 @@ description: How to configure MetricsHub to send telemetry to an observability b
 
 Like any application instrumented with OpenTelemetry, **MetricsHub** utilizes the OTLP protocol to transmit data. Although **MetricsHub Community** can directly send metrics to observability platforms that support OpenTelemetry natively, it is usually recommended in production environments to use an OpenTelemetry Collector to:
 
-* Aggregate metrics across different sources.
-* Serve as a proxy, particularly in firewall-secured areas.
-* Manage error handling, including retries.
+- Aggregate metrics across different sources.
+- Serve as a proxy, particularly in firewall-secured areas.
+- Manage error handling, including retries.
 
 Bundled with OpenTelemetry Collector Contrib, **MetricsHub Enterprise** facilitates connections to over 30 different observability platforms.
 
 ## Configure the OTel Collector (Enterprise Edition)
 
-As a regular *OpenTelemetry Collector*, **MetricsHub Enterprise** consists of:
+As a regular _OpenTelemetry Collector_, **MetricsHub Enterprise** consists of:
 
-* receivers
-* processors
-* exporters
-* and several extensions.
+- receivers
+- processors
+- exporters
+- and several extensions.
 
 **MetricsHub Enterprise v${enterpriseVersion}** leverages **version ${otelVersion}** of OpenTelemetry.
 
@@ -35,36 +35,36 @@ To configure the OpenTelemetry Collector of **MetricsHub Enterprise**, edit the 
 #### OTLP gRPC
 
 > **Warning**: Only update this section if you customized the [MetricsHub Agent settings](configure-monitoring.html#a-28optional-29-additional-settings).
-The **MetricsHub Agent** pushes the collected data to the [`OTLP Receiver`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver) via [gRPC](https://grpc.io/) on port **TCP/4317**.
+> The **MetricsHub Agent** pushes the collected data to the [`OTLP Receiver`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver) via [gRPC](https://grpc.io/) on port **TCP/4317**.
 
 The `OTLP Receiver` is configured by default with the self-signed certificate `security/otel.crt` and the private key `security/otel.key` to enable the TLS protocol. If you wish to set your own certificate file, configure the **MetricsHub Agent** with the correct [Trusted Certificates File](send-telemetry.html#trusted-certificates-file). Because the `OTLP Exporter` of the **MetricsHub Agent** performs hostname verification, you will also have to add the `localhost` entry (`DNS:localhost,IP:127.0.0.1`) to the `Subject Alternative Name (SAN)` extension of the new generated certificate.
 
 Clients requests are authenticated with the [Basic Authenticator extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/basicauthextension).
 
 ```yaml
-  otlp:
-    protocols:
-      grpc:
-        endpoint: localhost:4317
-        tls:
-          cert_file: ../security/otel.crt
-          key_file: ../security/otel.key
-        auth:
-          authenticator: basicauth
+otlp:
+  protocols:
+    grpc:
+      endpoint: localhost:4317
+      tls:
+        cert_file: ../security/otel.crt
+        key_file: ../security/otel.key
+      auth:
+        authenticator: basicauth
 ```
 
 #### OpenTelemetry Collector Internal Exporter for Prometheus
 
-The *OpenTelemetry Collector*'s internal *Exporter for Prometheus* is an optional source of data. It provides information about the collector activity. It's referred to as `prometheus/internal` in the pipeline and leverages the [standard `prometheus` receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/prometheusreceiver).
+The _OpenTelemetry Collector_'s internal _Exporter for Prometheus_ is an optional source of data. It provides information about the collector activity. It's referred to as `prometheus/internal` in the pipeline and leverages the [standard `prometheus` receiver](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/receiver/prometheusreceiver).
 
 ```yaml
-  prometheus/internal:
-    config:
-      scrape_configs:
-        - job_name: otel-collector-internal
-          scrape_interval: 60s
-          static_configs:
-            - targets: [ localhost:8888 ]
+prometheus/internal:
+  config:
+    scrape_configs:
+      - job_name: otel-collector-internal
+        scrape_interval: 60s
+        static_configs:
+          - targets: [localhost:8888]
 ```
 
 Under the `service:telemetry:metrics` section, you can set the metrics `level` or the `address` of the OpenTelemetry Collector Internal Exporter (by default: **localhost:8888**).
@@ -81,25 +81,24 @@ service:
 
 By default, the collected metrics go through 5 processors:
 
-* [`memory_limiter`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor) to limit the memory consumed by the *OpenTelemetry Collector* process (configurable)
-* [`filter`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor) to include or exclude metrics
-* [`batch`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/batchprocessor) to process data in batches of 10 seconds (configurable).
-* [`metricstransform`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/metricstransformprocessor) to enrich the collected metrics, typically with labels required by the observability platforms. The `metricstransform` processor has [many options to add, rename, delete labels and metrics](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/metricstransformprocessor).
-
+- [`memory_limiter`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor) to limit the memory consumed by the _OpenTelemetry Collector_ process (configurable)
+- [`filter`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/filterprocessor) to include or exclude metrics
+- [`batch`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/batchprocessor) to process data in batches of 10 seconds (configurable).
+- [`metricstransform`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/metricstransformprocessor) to enrich the collected metrics, typically with labels required by the observability platforms. The `metricstransform` processor has [many options to add, rename, delete labels and metrics](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/metricstransformprocessor).
 
 ### Exporters
 
 The `exporters` section defines the destination of the collected metrics. **MetricsHub Enterprise** version **${enterpriseVersion}** includes support for all the [OpenTelemetry Collector Contrib exporters](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter), such as:
 
-* [Prometheus Remote Write Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusremotewriteexporter)
-* [Datadog Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/datadogexporter)
-* [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter)
-* [New Relic (OTLP exporter)](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter)
-* [Prometheus Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter)
-* [Splunk SignalFx](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/signalfxexporter)
-* and [many more...](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter)
+- [Prometheus Remote Write Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusremotewriteexporter)
+- [Datadog Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/datadogexporter)
+- [Debug Exporter](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/debugexporter)
+- [New Relic (OTLP exporter)](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/otlpexporter)
+- [Prometheus Exporter](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/prometheusexporter)
+- [Splunk SignalFx](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter/signalfxexporter)
+- and [many more...](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter)
 
-You can configure several exporters in the same instance of the *OpenTelemetry Collector* to send the collected metrics to multiple platforms.
+You can configure several exporters in the same instance of the _OpenTelemetry Collector_ to send the collected metrics to multiple platforms.
 
 ### Extensions
 
@@ -113,21 +112,21 @@ Refer to [Check the collector is up and running](../troubleshooting/health-check
 
 The **zpages** extension provides debug information about all the different components. It notably provides:
 
-* general information about **MetricsHub**
-* details about the active pipeline
-* activity details of each receiver and exporter configured in the pipeline.
+- general information about **MetricsHub**
+- details about the active pipeline
+- activity details of each receiver and exporter configured in the pipeline.
 
 Refer to [Check the pipelines status](../troubleshooting/health-check.html#check-the-pipelines-status) for more details.
 
 #### Basic Authenticator
 
-The [`Basic Authenticator`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/basicauthextension) extension authenticates the `OTLP Exporter` requests by comparing the *Authorization* header sent by the `OTLP Exporter` and the credentials provided in the `security/.htpasswd` file.
+The [`Basic Authenticator`](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/extension/basicauthextension) extension authenticates the `OTLP Exporter` requests by comparing the _Authorization_ header sent by the `OTLP Exporter` and the credentials provided in the `security/.htpasswd` file.
 Refer to the [Apache htpasswd](https://httpd.apache.org/docs/2.4/programs/htpasswd.html) documentation to know how to manage user files for basic authentication.
 
 ```yaml
-  basicauth:
-    htpasswd:
-      file: ../security/.htpasswd
+basicauth:
+  htpasswd:
+    file: ../security/.htpasswd
 ```
 
 The `.htpasswd` file is stored in the `security` directory.
@@ -153,6 +152,7 @@ service:
       processors: [memory_limiter, batch, metricstransform]
       exporters: [prometheusremotewrite/your-server] # List here the platform of your choice
 
+
     # Uncomment the section below to enable logging of hardware alerts.
     # logs:
     #   receivers: [otlp]
@@ -164,8 +164,8 @@ service:
 
 By default, the **MetricsHub Agent** pushes the collected metrics to the [`OTLP Receiver`](https://github.com/open-telemetry/opentelemetry-collector/tree/main/receiver/otlpreceiver) through gRPC on port **TCP/4317**. To push data to the OTLP receiver of your choice:
 
-* locate the `otel` section in your configuration file
-* configure the `otel.exporter.otlp.metrics.endpoint` parameter as follows:
+- locate the `otel` section in your configuration file
+- configure the `otel.exporter.otlp.metrics.endpoint` parameter as follows:
 
 ```yaml
 otel:
@@ -186,7 +186,7 @@ otel:
   otel.exporter.otlp.metrics.protocol: http/protobuf
 ```
 
-where `<prom-server-host>` should be replaced with the hostname or IP address of the server where *Prometheus* is running.
+where `<prom-server-host>` should be replaced with the hostname or IP address of the server where _Prometheus_ is running.
 
 > **Note:**
 > For specific configuration details, refer to the [OpenTelemetry Auto-Configure documentation](https://opentelemetry.io/docs/languages/java/configuration/). This resource provides information about the properties to be configured depending on your deployment requirements.

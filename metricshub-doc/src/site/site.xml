@@ -109,9 +109,10 @@
 				<item name="Windows Service" href="custom/windows-service.html" />
 				<item name="Windows Event Log" href="custom/windows-event-log.html" />
 			</item>
-			<item name="Security" href="security/security.html">
+			<item name="Security" href="security/index.html">
 				<item name="Password Encryption" href="security/passwords.html" />
 				<item name="API Keys" href="security/api-keys.html" />
+				<item name="OTel Collector" href="security/otel-collector.html" />
 			</item>
 			<item name="Integrations" href="integrations/index.html">
 				<item name="AI Agent (MCP)" href="integrations/ai-agent-mcp.html" />

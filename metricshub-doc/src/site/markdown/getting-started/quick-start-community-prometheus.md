@@ -1,5 +1,5 @@
 keywords: quick start, getting started
-description: Short step-by-step instructions to follow for installing and configuring MetricsHub in a Windows and Linux environment. 
+description: Short step-by-step instructions to follow for installing and configuring MetricsHub in a Windows and Linux environment.
 
 # Quick Start - Prometheus
 
@@ -8,18 +8,18 @@ description: Short step-by-step instructions to follow for installing and config
 This quick start guide provides step-by-step instructions for operating **MetricsHub Community Edition** and **Prometheus** in your environment, ensuring you can efficiently monitor your systems.
 
 After completing this quick start, you will have:
-* **MetricsHub** and **Prometheus** installed on your machine
-* The **MetricsHub Agent** configured to collect hardware metrics from your local host and push data to Prometheus
-* **MetricsHub** and **Prometheus** up and running
-* Hardware metrics available in **Prometheus**.
 
+- **MetricsHub** and **Prometheus** installed on your machine
+- The **MetricsHub Agent** configured to collect hardware metrics from your local host and push data to Prometheus
+- **MetricsHub** and **Prometheus** up and running
+- Hardware metrics available in **Prometheus**.
 
 ## Step 1: Install MetricsHub
 
 ### On Linux
 
 1. Download the latest package `metricshub-community-linux-${communityVersion}.tar.gz` using `wget` and save it under `/tmp`:
-   
+
    ```shell
    sudo wget -O /tmp/metricshub-community-linux-${communityVersion}.tar.gz https://github.com/metricshub/metricshub-community/releases/download/v${communityVersion}/metricshub-community-linux-${communityVersion}.tar.gz
    ```
@@ -78,9 +78,9 @@ There is no need to create a specific subdirectory for `metricshub` as the archi
 
 Run the below command to create your configuration file:
 
-   ```shell
-   sudo cp /opt/metricshub/lib/config/metricshub-example.yaml /opt/metricshub/lib/config/metricshub.yaml
-   ```
+```shell
+sudo cp /opt/metricshub/lib/config/metricshub-example.yaml /opt/metricshub/lib/config/metricshub.yaml
+```
 
 #### On Windows
 
@@ -146,30 +146,31 @@ otel:
 
 1. Run the below command to access the directory where Prometheus is installed:
 
-    ```shell
-    cd "/opt/prometheus"
-    ```
+   ```shell
+   cd "/opt/prometheus"
+   ```
 
 1. Run the below command to start Prometheus:
-    ```shell
-    sudo ./prometheus --config.file=prometheus.yml --web.console.templates=consoles --web.console.libraries=console_libraries --storage.tsdb.retention.time=2h --web.enable-lifecycle --web.enable-remote-write-receiver --web.route-prefix=/ --enable-feature=exemplar-storage --enable-feature=otlp-write-receiver
-    ```
 
-4. Type [localhost:9090](http://localhost:9090) in your Web browser.
+   ```shell
+   sudo ./prometheus --config.file=prometheus.yml --web.console.templates=consoles --web.console.libraries=console_libraries --storage.tsdb.retention.time=2h --web.enable-lifecycle --web.enable-remote-write-receiver --web.route-prefix=/ --enable-feature=exemplar-storage --enable-feature=otlp-write-receiver
+   ```
+
+1. Type [localhost:9090](http://localhost:9090) in your Web browser.
 
 #### On Windows
 
 1. Run the below command **as administrator** to access the directory where Prometheus is installed:
 
-    ```shell
-    cd "C:\Program Files\Prometheus"
-    ```
+   ```shell
+   cd "C:\Program Files\Prometheus"
+   ```
 
 2. Run the below command to start Prometheus:
 
-    ```shell
-    prometheus.exe --config.file=prometheus.yml --web.console.templates=consoles --web.console.libraries=console_libraries --storage.tsdb.retention.time=2h --web.enable-lifecycle --web.enable-remote-write-receiver --web.route-prefix=/ --enable-feature=exemplar-storage --enable-feature=otlp-write-receiver
-    ```
+   ```shell
+   prometheus.exe --config.file=prometheus.yml --web.console.templates=consoles --web.console.libraries=console_libraries --storage.tsdb.retention.time=2h --web.enable-lifecycle --web.enable-remote-write-receiver --web.route-prefix=/ --enable-feature=exemplar-storage --enable-feature=otlp-write-receiver
+   ```
 
 3. Type [localhost:9090](http://localhost:9090) in your Web browser.
 
@@ -186,7 +187,7 @@ sudo ./service
 
 #### On Windows
 
-Run the below command **as administrator** to start the MetricsHub Agent: 
+Run the below command **as administrator** to start the MetricsHub Agent:
 
 ```shell
 cd "C:\Program Files\MetricsHub"
@@ -197,62 +198,62 @@ MetricsHubServiceManager.exe
 
 ### Verify that metrics are sent to Prometheus
 
-In [Prometheus](http://localhost:9090), search for any metrics starting with `metricshub_` or `hw_` to confirm that data is actually received. 
-
+In [Prometheus](http://localhost:9090), search for any metrics starting with `metricshub_` or `hw_` to confirm that data is actually received.
 
 ### Check Logs
 
 Several log files are created as soon as the MetricsHub Agent is started:
 
-* a global `MetricsHub` log file
-* one log file per configured host.
+- a global `MetricsHub` log file
+- one log file per configured host.
 
 The log files are stored in the following locations, depending on the environment:
 
-* Linux: /opt/metricshub/lib/logs
-* Windows:
-  * ./logs (relative to the working directory, if writable)
-  * %LOCALAPPDATA%\MetricsHub\logs (if ./logs is not writable)
+- Linux: /opt/metricshub/lib/logs
+- Windows:
+  - ./logs (relative to the working directory, if writable)
+  - %LOCALAPPDATA%\MetricsHub\logs (if ./logs is not writable)
 
 You can configure the log level in the `metricshub.yaml` file by setting the `loggerLevel` parameter to:
 
-* `info` for high level information
-* `warn` for logging warning messages that indicate potential issues which are not immediately critical
-* `all`, `trace`, or `debug` for more comprehensive details
-* `error` or `fatal` for identifying critical issues.
+- `info` for high level information
+- `warn` for logging warning messages that indicate potential issues which are not immediately critical
+- `all`, `trace`, or `debug` for more comprehensive details
+- `error` or `fatal` for identifying critical issues.
 
 `metricshub.yaml` is stored in:
-*  `/opt/metricsHub/lib/config/`(Linux environments)
-* or `C:\ProgramData\MetricsHub\config\` (Windows environments).
+
+- `/opt/metricsHub/lib/config/`(Linux environments)
+- or `C:\ProgramData\MetricsHub\config\` (Windows environments).
 
 The most common errors you may encounter are:
 
 1. **Incorrect Indentation**
 
-    An incorrect indentation in the `metricshub.yaml` file prevents the MetricsHub Agent from starting and  generates the following exception in the `metricshub-agent-global-error-{timestamp}.log` file:
+   An incorrect indentation in the `metricshub.yaml` file prevents the MetricsHub Agent from starting and generates the following exception in the `metricshub-agent-global-error-{timestamp}.log` file:
 
-    ```
-    [2024-04-30T15:56:16,944][ERROR][o.s.m.a.MetricsHubAgentApplication] Failed to start MetricsHub Agent.
-    com.fasterxml.jackson.dataformat.yaml.snakeyaml.error.MarkedYAMLException: mapping values are not allowed here in 'reader', line 29, column 16:
-        host.type:windows
-    ```
+   ```
+   [2024-04-30T15:56:16,944][ERROR][o.s.m.a.MetricsHubAgentApplication] Failed to start MetricsHub Agent.
+   com.fasterxml.jackson.dataformat.yaml.snakeyaml.error.MarkedYAMLException: mapping values are not allowed here in 'reader', line 29, column 16:
+       host.type:windows
+   ```
 
 2. **Wrong Host Configuration**
 
-    The following entry will be created in the `metricshub-agent-{hostname}-{timestamp}.log` file if the host configured cannot be reached:
+   The following entry will be created in the `metricshub-agent-{hostname}-{timestamp}.log` file if the host configured cannot be reached:
 
-    ```css
-    [o.s.m.e.c.h.NetworkHelper] Hostname {hostname} - Could not resolve the hostname to a valid IP address. The host is considered remote.
-    ```
+   ```css
+   [o.s.m.e.c.h.NetworkHelper] Hostname {hostname} - Could not resolve the hostname to a valid IP address. The host is considered remote.
+   ```
 
-    If the host is correctly configured, ensure it is reachable by pinging it and testing your network.
+   If the host is correctly configured, ensure it is reachable by pinging it and testing your network.
 
 3. **Failure to export metrics**
 
 The following error occurs if a local OTLP receiver is unavailable to collect MetricsHub logs:
 
 ```
-Feb 27, 2024 1:24:26 PM io.opentelemetry.sdk.internal.ThrottlingLogger doLog WARNING: Failed to export metrics. 
+Feb 27, 2024 1:24:26 PM io.opentelemetry.sdk.internal.ThrottlingLogger doLog WARNING: Failed to export metrics.
 Server responded with gRPC status code 2. Error message: Failed to connect to localhost/[0:0:0:0:0:0:0:1]:4317
 ```
 

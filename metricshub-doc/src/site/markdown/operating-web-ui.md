@@ -9,16 +9,16 @@ A **Web Interface** is bundled with **MetricsHub Community** and **MetricsHub En
 
 This interface is accessible at `https://<machine-where-metricshub-is-running>:31888/` provided that:
 
-* **MetricsHub** is properly installed
-* You have created a dedicated user as explained below.
+- **MetricsHub** is properly installed
+- You have created a dedicated user as explained below.
 
 ## Managing users
 
 The `user` CLI tool allows you to create, list, and delete users that can access the Web Interface. It is accessible from the **MetricsHub** installation directory:
 
-* **Windows:** `C:\ProgramData\MetricsHub`
-* **Linux:** `/opt/metricshub/lib/bin`
-  
+- **Windows:** `C:\ProgramData\MetricsHub`
+- **Linux:** `/opt/metricshub/lib/bin`
+
 Users are stored securely within the keystore **metricshub-keystore.p12** on the local system.
 
 > On **Windows**, **metricshub-keystore.p12** is located under `C:\ProgramData\MetricsHub\security`, which is typically accessible **only to Administrator users**.
@@ -30,15 +30,15 @@ Users are stored securely within the keystore **metricshub-keystore.p12** on the
 To create a user, run the following command:
 
 ```shell-session
-./user create <username> --password <password> --role <role> 
+./user create <username> --password <password> --role <role>
 ```
 
 Where:
 
-* `<username>` and `<password>` must be replaced with the desired credentials
-* `<role>` must be set to:
-  * `ro` to only visualize collected metrics and existing configurations.
-  * `rw` to be able to configure **MetricsHub** directly from the Web Interface
+- `<username>` and `<password>` must be replaced with the desired credentials
+- `<role>` must be set to:
+  - `ro` to only visualize collected metrics and existing configurations.
+  - `rw` to be able to configure **MetricsHub** directly from the Web Interface
 
 Example:
 
@@ -70,12 +70,12 @@ In your web browser, enter `https://<machine-where-metricshub-is-running>:31888/
 
 To configure resources monitoring from the Web Interface:
 
-1. Connect to  `https://<machine-where-metricshub-is-running>:31888/` using your read-write credentials
-2. Either click **Import** to load an existing configuration file, or create a new configuration from scratch
-3. Edit the configuration in the right-hand panel, as explained in [Monitoring Configuration
-](./configuration/configure-monitoring.md). The Web Interface will guide through the configuration, highlighting possible indentation issues or configuration mismatches.
+1.  Connect to `https://<machine-where-metricshub-is-running>:31888/` using your read-write credentials
+2.  Either click **Import** to load an existing configuration file, or create a new configuration from scratch
+3.  Edit the configuration in the right-hand panel, as explained in [Monitoring Configuration
+    ](./configuration/configure-monitoring.md). The Web Interface will guide through the configuration, highlighting possible indentation issues or configuration mismatches.
 
-    > **IMPORTANT:** Configuration changes are not automatically backed up. It is strongly recommended to create a backup before making significant changes. Click **Backup** whenever needed.
+        > **IMPORTANT:** Configuration changes are not automatically backed up. It is strongly recommended to create a backup before making significant changes. Click **Backup** whenever needed.
 
 ## Exploring collected metrics
 
@@ -85,11 +85,11 @@ To visualize the monitored resources and collected metrics, connect to the Web I
 
 From there, you can:
 
-* search for a specific resource or metric using the search engine
-* display a resource's details and:
-  * trigger a collect
-  * pause or resume collect
-  * visualize its attributes, collected metrics, and connectors used.
+- search for a specific resource or metric using the search engine
+- display a resource's details and:
+  - trigger a collect
+  - pause or resume collect
+  - visualize its attributes, collected metrics, and connectors used.
 
 ## Interacting with M8B
 
@@ -131,17 +131,16 @@ To remove these warnings, configure **MetricsHub** to use a **trusted SSL certif
 
 3. Store the generated `keystore.p12` on the host where **MetricsHub** is running, typically in the `security` directory:
 
-   * **Linux:** `/opt/metricshub/security`
-   * **Windows:** `C:\ProgramData\MetricsHub\security`
-
+   - **Linux:** `/opt/metricshub/security`
+   - **Windows:** `C:\ProgramData\MetricsHub\security`
 
 4. Configure **MetricsHub** to use the created keystore
 
    Edit the `metricshub.yaml` configuration file:
 
-   * **Linux:** `/opt/metricshub/config/metricshub.yaml`
-   * **Windows:** `C:\ProgramData\MetricsHub\config\metricshub.yaml`
-  
+   - **Linux:** `/opt/metricshub/config/metricshub.yaml`
+   - **Windows:** `C:\ProgramData\MetricsHub\config\metricshub.yaml`
+
    Then set:
 
    ```yaml
@@ -154,11 +153,9 @@ To remove these warnings, configure **MetricsHub** to use a **trusted SSL certif
    Where `tls.keystore.path` is the **full path to the keystore file**.
 
 5. Restart **MetricsHub** to apply the new certificate
-   
 6. Then open the **MetricsHub** Web Interface and verify the certificate:
 
-   * Your Web browser should no longer show warnings (if the certificate is trusted)
-   * The certificate details should match the one you installed
+   - Your Web browser should no longer show warnings (if the certificate is trusted)
+   - The certificate details should match the one you installed
 
    Refresh the **MetricsHub** Web Interface if needed.
-

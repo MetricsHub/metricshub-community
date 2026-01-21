@@ -11,9 +11,9 @@ This guide helps you get MetricsHub up and running quickly.
 
 MetricsHub is available in two editions to suit your needs:
 
-| Edition | Best For | Key Features |
-|---------|----------|--------------|
-| **Community** | Home labs, evaluation, small environments | Free, OpenTelemetry export, basic monitoring |
+| Edition        | Best For                                        | Key Features                                            |
+| -------------- | ----------------------------------------------- | ------------------------------------------------------- |
+| **Community**  | Home labs, evaluation, small environments       | Free, OpenTelemetry export, basic monitoring            |
 | **Enterprise** | Production, compliance, large-scale deployments | Web UI, password encryption, support, advanced features |
 
 ➡️ [Compare editions in detail](editions.html)
@@ -22,13 +22,13 @@ MetricsHub is available in two editions to suit your needs:
 
 Choose the guide that matches your edition:
 
-* [Quick Start (Community Edition)](quick-start-community-prometheus.html) — Install MetricsHub Community and export metrics to Prometheus in under 10 minutes
-* [Quick Start (Enterprise Edition)](quick-start-enterprise.html) — Deploy MetricsHub Enterprise with the Web UI for production monitoring
+- [Quick Start (Community Edition)](quick-start-community-prometheus.html) — Install MetricsHub Community and export metrics to Prometheus in under 10 minutes
+- [Quick Start (Enterprise Edition)](quick-start-enterprise.html) — Deploy MetricsHub Enterprise with the Web UI for production monitoring
 
 ## Next Steps
 
 After completing your quick start:
 
-* [Install on your preferred platform](../installation/index.html)
-* [Configure monitoring for your resources](../configuration/configure-monitoring.html)
-* [Explore integrations](../integrations/index.html) with Prometheus, Grafana, Datadog, and more
+- [Install on your preferred platform](../installation/index.html)
+- [Configure monitoring for your resources](../configuration/configure-monitoring.html)
+- [Explore integrations](../integrations/index.html) with Prometheus, Grafana, Datadog, and more

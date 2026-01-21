@@ -11,20 +11,20 @@ The troubleshooting steps vary depending on your edition of **MetricsHub**.
 
 ## MetricsHub Community
 
-  1. [Enable logging](./metricshub-logs.md)
-  2. Check the **resource logs** (`metricshub-agent-$resourceId-$timestamp.log`) and **connector logs** for potential issues, such as:
+1. [Enable logging](./metricshub-logs.md)
+2. Check the **resource logs** (`metricshub-agent-$resourceId-$timestamp.log`) and **connector logs** for potential issues, such as:
 
-       * Misconfigured endpoints (e.g., incorrect hostnames)
-       * Authentication failures (e.g., incorrect credentials).
+   - Misconfigured endpoints (e.g., incorrect hostnames)
+   - Authentication failures (e.g., incorrect credentials).
 
 ## MetricsHub Enterprise
 
-  1. Enable logging for the [MetricsHub Agent](./metricshub-logs.md) and the [OTel Collector](./otel-logs.md)
-  2. Check the **resource logs** (`metricshub-agent-$resourceId-$timestamp.log`) for any errors or anomalies
-  3. Review the **OpenTelemetry Collector logs** (`otelcol-$timestamp.log`) to ensure the following:
+1. Enable logging for the [MetricsHub Agent](./metricshub-logs.md) and the [OTel Collector](./otel-logs.md)
+2. Check the **resource logs** (`metricshub-agent-$resourceId-$timestamp.log`) for any errors or anomalies
+3. Review the **OpenTelemetry Collector logs** (`otelcol-$timestamp.log`) to ensure the following:
 
-       * the **MetricsHub Agent** successfully launched the OpenTelemetry Collector
-       * **Exporters and processors properly started**
-       * **No connection issues or authentication failures** with the configured observability platform(s) (Datadog, BMC Helix, Prometheus, Grafana, etc.).
+   - the **MetricsHub Agent** successfully launched the OpenTelemetry Collector
+   - **Exporters and processors properly started**
+   - **No connection issues or authentication failures** with the configured observability platform(s) (Datadog, BMC Helix, Prometheus, Grafana, etc.).
 
 Refer to [What to look for in otelcol-$timestamp.log](./otel-logs.md#what-to-look-for-in-otelcol--3ctimestamp-3e-log) for more details.

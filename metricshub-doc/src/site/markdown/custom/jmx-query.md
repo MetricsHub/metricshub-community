@@ -9,15 +9,15 @@ You can configure **MetricsHub** to periodically query any Java application expo
 
 In the example below, we configure **MetricsHub** to:
 
-* monitor the `java-app` resource using JMX
-* retrieve the `LoadedClassCount` attribute from the `java.lang:type=ClassLoading` MBean
-* expose the value as an OpenTelemetry metric named [`jvm.class.count`](https://opentelemetry.io/docs/specs/semconv/runtime/jvm-metrics/#metric-jvmclasscount)
+- monitor the `java-app` resource using JMX
+- retrieve the `LoadedClassCount` attribute from the `java.lang:type=ClassLoading` MBean
+- expose the value as an OpenTelemetry metric named [`jvm.class.count`](https://opentelemetry.io/docs/specs/semconv/runtime/jvm-metrics/#metric-jvmclasscount)
 
 ## Procedure
 
 To achieve this use case, we:
 
-* Declare the resource to be monitored (`java-app`) and its attributes (`host.name`, `host.type`):
+- Declare the resource to be monitored (`java-app`) and its attributes (`host.name`, `host.type`):
 
 ```yaml
 resources:
@@ -27,45 +27,45 @@ resources:
       host.type: linux
 ```
 
-* Configure the `jmx` protocol:
+- Configure the `jmx` protocol:
 
 ```yaml
-    protocols:
-      jmx:
-        port: 1099
-        username: myUser
-        password: myPassword
-        timeout: 60s
+protocols:
+  jmx:
+    port: 1099
+    username: myUser
+    password: myPassword
+    timeout: 60s
 ```
 
-* Define a monitor job (`jvm`) to collect the JVM class loading metric:
+- Define a monitor job (`jvm`) to collect the JVM class loading metric:
 
 ```yaml
-    monitors:
-      jvm:
-        simple:
+monitors:
+  jvm:
+    simple:
 ```
 
-* Set up a JMX source (`JvmClassLoading`) to retrieve the `LoadedClassCount` attribute from the `java.lang:type=ClassLoading` MBean:
+- Set up a JMX source (`JvmClassLoading`) to retrieve the `LoadedClassCount` attribute from the `java.lang:type=ClassLoading` MBean:
 
 ```yaml
-          sources:
-            JvmClassLoading:
-              type: jmx
-              objectName: java.lang:type=ClassLoading
-              attributes:
-              - LoadedClassCount
+sources:
+  JvmClassLoading:
+    type: jmx
+    objectName: java.lang:type=ClassLoading
+    attributes:
+      - LoadedClassCount
 ```
 
-* Extract and expose the metric (`jvm.class.count`) from the JMX response:
+- Extract and expose the metric (`jvm.class.count`) from the JMX response:
 
 ```yaml
-          mapping:
-            source: ${esc.d}{source::JvmClassLoading}
-            attributes:
-              id: java-app-classloading
-            metrics:
-              jvm.class.count: ${esc.d}1
+mapping:
+  source: ${esc.d}{source::JvmClassLoading}
+  attributes:
+    id: java-app-classloading
+  metrics:
+    jvm.class.count: ${esc.d}1
 ```
 
 ### Complete Configuration
@@ -90,7 +90,7 @@ resources:
               type: jmx
               objectName: java.lang:type=ClassLoading
               attributes:
-              - LoadedClassCount
+                - LoadedClassCount
           mapping:
             source: ${esc.d}{source::JvmClassLoading}
             attributes:
@@ -101,7 +101,7 @@ resources:
 
 ## Supporting Resources
 
-* [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
-* [JMX](../configuration/configure-monitoring.md#jmx)
-* [Customize resource monitoring](../configuration/configure-monitoring.md#customize-resource-monitoring)
+- [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
+- [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
+- [JMX](../configuration/configure-monitoring.md#jmx)
+- [Customize resource monitoring](../configuration/configure-monitoring.md#customize-resource-monitoring)

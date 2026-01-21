@@ -15,10 +15,10 @@ Each **resource** is typically associated with a **site** (a physical or logical
 
 Store your `.yaml` or `.yml` configuration files in:
 
-| Platform | Path |
-|----------|------|
-| Windows | `C:\ProgramData\MetricsHub\config` |
-| Linux | `./metricshub/lib/config` |
+| Platform | Path                               |
+| -------- | ---------------------------------- |
+| Windows  | `C:\ProgramData\MetricsHub\config` |
+| Linux    | `./metricshub/lib/config`          |
 
 > **Important**: We recommend using an editor supporting the [Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML files (Example: [Visual Studio Code](https://code.visualstudio.com/download) with [RedHat's YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
 
@@ -31,17 +31,17 @@ Here's the minimal configuration to monitor a single Linux host via SSH:
 ```yaml
 # metricshub.yaml
 attributes:
-  site: my-datacenter  # Where your resources are located
+  site: my-datacenter # Where your resources are located
 
 resources:
-  my-first-host:                    # <-- Change: unique identifier for this resource
+  my-first-host: # <-- Change: unique identifier for this resource
     attributes:
-      host.name: 192.168.1.100      # <-- Change: IP address or hostname
-      host.type: linux              # <-- Change: win, linux, network, storage, etc.
+      host.name: 192.168.1.100 # <-- Change: IP address or hostname
+      host.type: linux # <-- Change: win, linux, network, storage, etc.
     protocols:
-      ssh:                          # <-- Change: protocol to use (see Protocols below)
-        username: admin             # <-- Change: your credentials
-        password: changeme          # <-- Change: your password
+      ssh: # <-- Change: protocol to use (see Protocols below)
+        username: admin # <-- Change: your credentials
+        password: changeme # <-- Change: your password
         timeout: 120s
 ```
 
@@ -56,16 +56,16 @@ resources:
 
 ### Supported Host Types
 
-| Type | Description |
-|------|-------------|
-| `win` | Microsoft Windows systems |
-| `linux` | Linux systems |
-| `network` | Network devices |
-| `oob` | Out-of-band management cards |
-| `storage` | Storage systems |
-| `aix` | IBM AIX systems |
-| `hpux` | HP-UX systems |
-| `solaris` | Oracle Solaris systems |
+| Type      | Description                  |
+| --------- | ---------------------------- |
+| `win`     | Microsoft Windows systems    |
+| `linux`   | Linux systems                |
+| `network` | Network devices              |
+| `oob`     | Out-of-band management cards |
+| `storage` | Storage systems              |
+| `aix`     | IBM AIX systems              |
+| `hpux`    | HP-UX systems                |
+| `solaris` | Oracle Solaris systems       |
 
 Check the [Supported Platforms](../supported-platforms.html) to find the correct type for your system.
 
@@ -134,16 +134,16 @@ resources:
       ssh:
         username: admin
         password: changeme
-    connectors: [ "#hardware", "!MIB2" ]  # Hardware connectors, exclude MIB2
+    connectors: ["#hardware", "!MIB2"] # Hardware connectors, exclude MIB2
 ```
 
 Use the below syntax for the `connectors` property to force or exclude specific connectors or categories of connectors:
 
-| Prefix | Meaning |
-|--------|--------|
-| `+` | Force connector (e.g. `+MySQL` to force the MySQL connector) |
-| `!` | Exclude connector (e.g. `!IpmiTool` to disable the IpmiTool connector) |
-| `#` | Include category (see [available categories](../connectors-directory.html#connector-tags)) |
+| Prefix | Meaning                                                                                    |
+| ------ | ------------------------------------------------------------------------------------------ |
+| `+`    | Force connector (e.g. `+MySQL` to force the MySQL connector)                               |
+| `!`    | Exclude connector (e.g. `!IpmiTool` to disable the IpmiTool connector)                     |
+| `#`    | Include category (see [available categories](../connectors-directory.html#connector-tags)) |
 
 See [Connectors Directory](../connectors-directory.html) for the full listing of available connectors. Alternatively, you can also use the below command line:
 
@@ -268,7 +268,7 @@ If multiple resources share the same configuration (credentials, type), use arra
 resources:
   linux-servers:
     attributes:
-      host.name: [ server-01, server-02, server-03 ]
+      host.name: [server-01, server-02, server-03]
       host.type: linux
     protocols:
       ssh:
@@ -295,8 +295,8 @@ resources:
 
 ## Next Steps
 
-* [Protocols and Credentials](./protocols-and-credentials.html)
-* [Sending Telemetry Data](./send-telemetry.html)
-* [Programmable Configuration](./programmable-configuration.html)
-* [Fine-Tuning Monitoring](./fine-tuning-monitoring.html)
-* [Password Encryption](../security/passwords.html)
+- [Protocols and Credentials](./protocols-and-credentials.html)
+- [Sending Telemetry Data](./send-telemetry.html)
+- [Programmable Configuration](./programmable-configuration.html)
+- [Fine-Tuning Monitoring](./fine-tuning-monitoring.html)
+- [Password Encryption](../security/passwords.html)

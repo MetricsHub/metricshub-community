@@ -21,65 +21,66 @@ Before integrating **MetricsHub** with BMC Helix:
 
 1. Edit the `otel/otel-config.yaml` configuration file
 2. In the `exporters` section, configure the BMC Helix Exporter as follows:
-    
-    ```yaml
-    exporters:
-      bmchelix/helix1:
-        endpoint: https://company.onbmc.com
-        api_key: <api-key>
-        timeout: 20s
-    ```
 
-    where:
+   ```yaml
+   exporters:
+     bmchelix/helix1:
+       endpoint: https://company.onbmc.com
+       api_key: <api-key>
+       timeout: 20s
+   ```
+
+   where:
+
    - `endpoint` is the URL of your BMC Helix Portal (e.g., `*.onbmc.com` for SaaS tenants, or your on-premises Helix instance URL)
    - `api_key` is the API key used to authenticate the exporter. To obtain it, connect to BMC Helix, navigate to **Administration > Repository** and click **Copy API Key**
    - `timeout` is the number of seconds before a request times out (default = `10s`).
- 
+
 3. `(Optional)` Enable automatic retries in case of export failures by adding:
 
-    ```yaml
-        retry_on_failure:
-        enabled: true
-        initial_interval: 5s
-        max_interval: 1m
-        max_elapsed_time: 8m
-    ```
+   ```yaml
+   retry_on_failure:
+   enabled: true
+   initial_interval: 5s
+   max_interval: 1m
+   max_elapsed_time: 8m
+   ```
 
-    Where
-     - `enabled` activates the retry mechanism when set to `true`
-     - `initial_interval` is the time to wait after the first failure before retrying. Ignored if `enabled` is `false`. Default: `5s`.
-     - `max_interval` is the maximum wait time between retry attempts. Ignored if `enabled` is `false`. Default: `30s`.
-     - `max_elapsed_time` is the maximum total time to attempt sending a batch. If set to 0, the retries are never stopped. Ignored if `enabled` is `false`. Set to `0` for unlimited retries. Default: `300s`.
+   Where
 
+   - `enabled` activates the retry mechanism when set to `true`
+   - `initial_interval` is the time to wait after the first failure before retrying. Ignored if `enabled` is `false`. Default: `5s`.
+   - `max_interval` is the maximum wait time between retry attempts. Ignored if `enabled` is `false`. Default: `30s`.
+   - `max_elapsed_time` is the maximum total time to attempt sending a batch. If set to 0, the retries are never stopped. Ignored if `enabled` is `false`. Set to `0` for unlimited retries. Default: `300s`.
 
-    > For more details, refer to the [Exporter Helper](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/exporterhelper#configuration)
+   > For more details, refer to the [Exporter Helper](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter/exporterhelper#configuration)
 
 4. Configure the [transform processor](#transformer-example-for-hardware-metrics) to ensure metrics are properly formatted for BMC Helix.
 
 5. Declare the **BMC Helix Exporter** and the **transform processor** in a separate pipeline dedicated to BMC Helix, to avoid affecting other exporters with metrics formatted for BMC Helix:
 
-    ```yaml
-    service:
-      extensions: [health_check, basicauth, basicauth/partner]
-      pipelines:
-        # Dedicated pipeline for BMC Helix
-        metrics/bmchelix:
-          receivers: [otlp, prometheus/internal]
-          processors: [memory_limiter, batch, transform/hardware_for_helix]
-          exporters: [bmchelix/helix1]
-    ```
+   ```yaml
+   service:
+     extensions: [health_check, basicauth, basicauth/partner]
+     pipelines:
+       # Dedicated pipeline for BMC Helix
+       metrics/bmchelix:
+         receivers: [otlp, prometheus/internal]
+         processors: [memory_limiter, batch, transform/hardware_for_helix]
+         exporters: [bmchelix/helix1]
+   ```
 
 6. Restart the **MetricsHub** service to apply the changes.
 
 ### Transforming metrics
 
-To ensure metrics are properly ingested by BMC Helix, the following attributes must be set either at the *Resource* level, or  *Metric* level:  
+To ensure metrics are properly ingested by BMC Helix, the following attributes must be set either at the _Resource_ level, or _Metric_ level:
 
 - `entityName`: Unique identifier for the entity. Used as display name if `instanceName` is missing.
 - `entityTypeId`: Type identifier for the entity.
 - `instanceName`: Display name of the entity.
 
-> **Note:**  Metrics missing `entityName` or `entityTypeId` will not be exported.
+> **Note:** Metrics missing `entityName` or `entityTypeId` will not be exported.
 
 To populate these attributes, we recommend using the [transform processor](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/transformprocessor) with [OTTL](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/pkg/ottl), and include it in the configuration of the telemetry pipeline.
 
@@ -91,13 +92,11 @@ The following example shows how to assign `entityName`, `instanceName`, and `ent
 
 ```yaml
 processors:
-
   # ...
 
   transform/hardware_for_helix:
     # Apply transformations to all metrics
     metric_statements:
-
       - context: datapoint
         statements:
           # Create a new attribute 'entityName' with the value of 'id'

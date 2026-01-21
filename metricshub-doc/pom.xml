@@ -96,7 +96,9 @@
 				<groupId>com.hubspot.maven.plugins</groupId>
 				<artifactId>prettier-maven-plugin</artifactId>
 				<configuration>
-					<skip>true</skip>
+					<inputGlobs>
+						<inputGlob>src/site/markdown/**/*.md</inputGlob>
+					</inputGlobs>
 				</configuration>
 			</plugin>
 

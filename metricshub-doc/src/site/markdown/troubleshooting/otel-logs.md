@@ -25,11 +25,11 @@ Then, restart **MetricsHub** for these new settings to be considered.
 
 Finally, check the **logs/otelcol-\<timestamp\>.log** file, where `<timestamp>` is the time at which the log was started.
 
-> Note: The **logs/otelcol-\<timestamp\>.log** file is reset each time the *Collector* is started. Previous logs are identified with the `<timestamp>` value (ex: `otelcol-2022-09-19-02-05-18.log`). **MetricsHub** rotates the **otelcol-\<timestamp\>.log** file when it reaches a maximum size of **100MB** and retains old log files for **2 days**.
+> Note: The **logs/otelcol-\<timestamp\>.log** file is reset each time the _Collector_ is started. Previous logs are identified with the `<timestamp>` value (ex: `otelcol-2022-09-19-02-05-18.log`). **MetricsHub** rotates the **otelcol-\<timestamp\>.log** file when it reaches a maximum size of **100MB** and retains old log files for **2 days**.
 
 ### What to look for in otelcol-\<timestamp\>.log
 
-First check that the **MetricsHub Agent** successfully launched the *OpenTelemetry Collector*.
+First check that the **MetricsHub Agent** successfully launched the _OpenTelemetry Collector_.
 
 Then check that the exporters and processors properly started.
 
@@ -37,13 +37,13 @@ Finally look for any connection issues or authentication failures to the configu
 
 ### Get more details about the exported data
 
-You can enable the `debug` exporter in the **otel/otel-config.yaml** file to check which metrics, labels, and values are sent by the *Collector* to the observability platforms and verify that the configured processors did not alter the collected data.
+You can enable the `debug` exporter in the **otel/otel-config.yaml** file to check which metrics, labels, and values are sent by the _Collector_ to the observability platforms and verify that the configured processors did not alter the collected data.
 
 First, list the `debug` exporter under the `exporters` section and set `verbosity` to `detailed`:
 
 ```yaml
 exporters:
-# [...]
+  # [...]
   debug:
     verbosity: detailed
 ```
@@ -56,14 +56,14 @@ service:
     metrics:
       receivers: # receivers
       processors: # processors
-      exporters: [prometheusremotewrite/your-server,debug] # <-- added debug
+      exporters: [prometheusremotewrite/your-server, debug] # <-- added debug
 ```
 
-Restart the *Collector* for the new settings to be considered.
+Restart the _Collector_ for the new settings to be considered.
 
 The metric name, its labels and value are listed in the **logs/otelcol-\<timestamp\>.log** file.
 
-> **Important**: Disable the `debug` exporter when unused as its operation may affect the overall performance of the *Collector* and fill your file system.
+> **Important**: Disable the `debug` exporter when unused as its operation may affect the overall performance of the _Collector_ and fill your file system.
 
 ### Reduce the amount of information logged
 
@@ -76,17 +76,17 @@ processors:
       include:
         match_type: expr
         expressions:
-        - Label("host.name") == "my-server.big-corp.com"
+          - Label("host.name") == "my-server.big-corp.com"
 ```
 
-We then declared the `filter/keep1HostOnly` processor in the pipeline and restarted the *Collector*:
+We then declared the `filter/keep1HostOnly` processor in the pipeline and restarted the _Collector_:
 
 ```yaml
 service:
   pipelines:
     metrics:
       receivers: [otlp, prometheus/internal]
-      processors: [memory_limiter,batch,filter/keep1HostOnly] # <-- added filter
+      processors: [memory_limiter, batch, filter/keep1HostOnly] # <-- added filter
       exporters: # exporters
 ```
 

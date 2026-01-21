@@ -28,18 +28,18 @@ The **metrics** range from the number of requests sent for each protocol to the 
 All JVM metrics share these attributes:
 `host.arch`, `host.name`, `os.description`, `os.type`, `pool`, `process.command_line`, `process.executable.path`, `process.pid`, `process.runtime.description`, `process.runtime.name`, `process.runtime.version`, `service.name`, `service`, `telemetry.auto.version`, `telemetry.sdk.language`, `telemetry.sdk.name`, `telemetry.sdkversion`, `type`, `host`.
 
-| JVM Metrics                 | Description                                                   | Type    | Unit |
-| --------------------------- | ------------------------------------------------------------- | ------- | ---- |
-| jvm.cpu.recent_utilization  | Recent CPU utilization for the JVM process                    | Gauge   |      |
-| jvm.system.cpu.utilization  | Recent CPU utilization for the whole system                   | Gauge   |      |
-| jvm.classes.count           | Number of classes currently loaded by the JVM process         | Gauge   |      |
-| jvm.classes.unloaded        | Number of classes unloaded by the JVM process since its start | Counter |      |
-| jvm.classes.loaded          | Number loaded classes by the JVM process since its start      | Counter |      |
-| jvm.threads.count           | JVM process's number of executing threads                     | Gauge   |      |
-| jvm.memory.committed        | JVM process's memory committed                                | Gauge   | By   |
-| jvm.memory.init             | JVM process's initial memory requested                        | Gauge   | By   |
-| jvm.memory.limit            | JVM process's memory size limit                               | Gauge   | By   |
-| jvm.memory.used             | JVM process's memory usage                                    | Gauge   | By   |
+| JVM Metrics                | Description                                                   | Type    | Unit |
+| -------------------------- | ------------------------------------------------------------- | ------- | ---- |
+| jvm.cpu.recent_utilization | Recent CPU utilization for the JVM process                    | Gauge   |      |
+| jvm.system.cpu.utilization | Recent CPU utilization for the whole system                   | Gauge   |      |
+| jvm.classes.count          | Number of classes currently loaded by the JVM process         | Gauge   |      |
+| jvm.classes.unloaded       | Number of classes unloaded by the JVM process since its start | Counter |      |
+| jvm.classes.loaded         | Number loaded classes by the JVM process since its start      | Counter |      |
+| jvm.threads.count          | JVM process's number of executing threads                     | Gauge   |      |
+| jvm.memory.committed       | JVM process's memory committed                                | Gauge   | By   |
+| jvm.memory.init            | JVM process's initial memory requested                        | Gauge   | By   |
+| jvm.memory.limit           | JVM process's memory size limit                               | Gauge   | By   |
+| jvm.memory.used            | JVM process's memory usage                                    | Gauge   | By   |
 
 ## Self-Observe
 
@@ -99,7 +99,7 @@ A span is created for each request. Here’s an example:
 ```log
 
 ScopeSpans #2
-ScopeSpans SchemaURL: 
+ScopeSpans SchemaURL:
 InstrumentationScope io.opentelemetry.opentelemetry-instrumentation-annotations-1.16 2.15.0-alpha
 Span #0
     Trace ID       : 0b29d8113037e88b1c94fec651324ed8
@@ -110,7 +110,7 @@ Span #0
     Start time     : 2025-04-25 11:35:25.307855 +0000 UTC
     End time       : 2025-04-25 11:35:25.4769308 +0000 UTC
     Status code    : Unset
-    Status message : 
+    Status message :
 Attributes:
     code.namespace : Str(org.metricshub.extension.snmp.AbstractSnmpRequestExecutor)
     code.function  : Str(executeSNMPGetNext)

@@ -36,20 +36,19 @@ service:
         - pull:
             exporter:
               prometheus:
-                host: '0.0.0.0'
+                host: "0.0.0.0"
                 port: 8888
 ```
 
-
 By default, the `otel-config.yaml` file is stored in:
 
-* `/opt/metricshub/lib/otel/otel-config.yaml` **(Linux)**
-* or `C:\ProgramData\MetricsHub\otel\otel-config.yaml` **(Windows)**.
+- `/opt/metricshub/lib/otel/otel-config.yaml` **(Linux)**
+- or `C:\ProgramData\MetricsHub\otel\otel-config.yaml` **(Windows)**.
 
 If you have any doubt, you can refer to the example files provided for the different operating systems:
 
-* `/opt/metricshub/lib/otel/otel-config-example.yaml` **(Linux)**
-* `C:\Program Files\MetricsHub\otel\otel-config-example.yaml` **(Windows)**
+- `/opt/metricshub/lib/otel/otel-config-example.yaml` **(Linux)**
+- `C:\Program Files\MetricsHub\otel\otel-config-example.yaml` **(Windows)**
 
 or download the latest **[otel-config-example.yaml](https://metricshub.com/docs/latest/resources/config/otel/otel-config-example.yaml)** example.
 
@@ -61,6 +60,6 @@ or download the latest **[otel-config-example.yaml](https://metricshub.com/docs/
 
 **To prevent configuration conflicts, duplicates, or unintended overrides**:
 
-* Move backup or example files to a subfolder such as `config/examples/` or `config/backups/`.
-* Disable unused files by renaming them with a non-YAML extension (e.g., `.bak`, `.txt`, or `.disabled`).
-* Regularly check the files stored in the `config/` directory to ensure only intended configurations are loaded.
+- Move backup or example files to a subfolder such as `config/examples/` or `config/backups/`.
+- Disable unused files by renaming them with a non-YAML extension (e.g., `.bak`, `.txt`, or `.disabled`).
+- Regularly check the files stored in the `config/` directory to ensure only intended configurations are loaded.

@@ -12,10 +12,10 @@ Integrating **MetricsHub** with your Datadog SaaS platform only requires a few i
 ![MetricsHub integration with Datadog](../images/metricshub-datadog-diagram.png)
 
 > **IMPORTANT**  
-> To ensure seamless integration of **MetricsHub** with Datadog, all metrics collected by MetricsHub must be prefixed with `metricshub.`, as detailed below.  
->  
-> Although this documentation uses standard OpenTelemetry metric names (e.g., `system.cpu.time`), these metrics will appear in Datadog under the `metricshub.` namespace (e.g., `metricshub.system.cpu.time`).  
->  
+> To ensure seamless integration of **MetricsHub** with Datadog, all metrics collected by MetricsHub must be prefixed with `metricshub.`, as detailed below.
+>
+> Although this documentation uses standard OpenTelemetry metric names (e.g., `system.cpu.time`), these metrics will appear in Datadog under the `metricshub.` namespace (e.g., `metricshub.system.cpu.time`).
+>
 > The dashboards and monitors provided with the MetricsHub integration on the Datadog Marketplace are designed to query metrics using this prefix.
 
 ## Prerequisites
@@ -33,45 +33,45 @@ Before you can start viewing the metrics collected by **MetricsHub** in Datadog,
 
 1. Edit the `exporters` section of the `otel/otel-config.yaml` configuration file:
 
-    ```yaml
-    exporters:
-      datadog/api:
-        api:
-          key: <apikey>
-          # site: datadoghq.com
-          # site: datadoghq.eu
-          # site: ddog-gov.com
-          # For further details, refer to https://docs.datadoghq.com/getting_started/site/
-        metrics:
-          resource_attributes_as_tags: true
-    ```
+   ```yaml
+   exporters:
+     datadog/api:
+       api:
+         key: <apikey>
+         # site: datadoghq.com
+         # site: datadoghq.eu
+         # site: ddog-gov.com
+         # For further details, refer to https://docs.datadoghq.com/getting_started/site/
+       metrics:
+         resource_attributes_as_tags: true
+   ```
 
-      where `<apikey>` corresponds to your Datadog API key.
+   where `<apikey>` corresponds to your Datadog API key.
 
 2. To ensure dashboards and monitors provided with the MetricsHub integration function correctly, add a `transform` processor to prefix the metrics collected by MetricsHub with `metricshub.`:
-  
-    ```yaml
-      transform/datadog:
-        # Apply transformations to all metrics
-        metric_statements:
-          - context: datapoint
-            statements:
-              # prefix all metrics by `metricshub.` (except `otelcol` metrics, which come from the OpenTelemetry Collector itself)
-              - set(metric.name, Concat(["metricshub", metric.name], ".")) where not IsMatch(metric.name, "^(metricshub\\.|otelcol_)")
-      ```
+
+   ```yaml
+   transform/datadog:
+     # Apply transformations to all metrics
+     metric_statements:
+       - context: datapoint
+         statements:
+           # prefix all metrics by `metricshub.` (except `otelcol` metrics, which come from the OpenTelemetry Collector itself)
+           - set(metric.name, Concat(["metricshub", metric.name], ".")) where not IsMatch(metric.name, "^(metricshub\\.|otelcol_)")
+   ```
 
 3. Declare the receiver, processor, and exporter in a separate pipeline dedicated to Datadog, to avoid affecting other exporters with metrics prefixed with `metricshub.`:
 
-    ```yaml
-    service:
-      extensions: [health_check, basicauth, basicauth/partner]
-      pipelines:
-        # Dedicated pipeline for Datadog
-        metrics/datadog:
-          receivers: [otlp, prometheus/internal]
-          processors: [memory_limiter, batch, transform/datadog]
-          exporters: [datadog/api]
-    ```
+   ```yaml
+   service:
+     extensions: [health_check, basicauth, basicauth/partner]
+     pipelines:
+       # Dedicated pipeline for Datadog
+       metrics/datadog:
+         receivers: [otlp, prometheus/internal]
+         processors: [memory_limiter, batch, transform/datadog]
+         exporters: [datadog/api]
+   ```
 
 4. Restart **MetricsHub** to apply your changes.
 
@@ -83,7 +83,7 @@ To ensure dashboards are properly populated, you must configure the sustainabili
 
 ## Adding monitors
 
-To be notified in Datadog about any hardware failure, go to **Monitors > New Monitor** and add all the *Recommended* monitors for **MetricsHub**.
+To be notified in Datadog about any hardware failure, go to **Monitors > New Monitor** and add all the _Recommended_ monitors for **MetricsHub**.
 
 Creating your own monitors based on the ones listed as recommended allows you to customize the notification settings of each monitor.
 
@@ -91,9 +91,9 @@ Creating your own monitors based on the ones listed as recommended allows you to
 
 **MetricsHub** comes with the following dashboards which leverage the metrics collected by **MetricsHub**:
 
-| Dashboard             | Description                                                                                 |
-|-----------------------|---------------------------------------------------------------------------------------------|
-| **MetricsHub Hardware Overview** | Overview of all monitored hosts, with a focus on sustainability                             |
-| **MetricsHub Hardware Site** | Hardware metrics associated to one *site* (a data center or a server room) and its monitored *hosts* |
-| **MetricsHub Hardware Host** | Hardware metrics and alerts associated to one *host* and its internal devices                                   |
-| **MetricsHub System Performance** | System performance and capacity metrics for Linux and Windows *hosts* |
+| Dashboard                         | Description                                                                                          |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **MetricsHub Hardware Overview**  | Overview of all monitored hosts, with a focus on sustainability                                      |
+| **MetricsHub Hardware Site**      | Hardware metrics associated to one _site_ (a data center or a server room) and its monitored _hosts_ |
+| **MetricsHub Hardware Host**      | Hardware metrics and alerts associated to one _host_ and its internal devices                        |
+| **MetricsHub System Performance** | System performance and capacity metrics for Linux and Windows _hosts_                                |

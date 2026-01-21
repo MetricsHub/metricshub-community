@@ -17,19 +17,19 @@ The quantity and quality of the information that **MetricsHub** will gather depe
 
 Only a few options are required to run the `metricshub` command:
 
-* Hostname or IP address of the device to be monitored
-* Device type
-* Protocols to be used:
-  * HTTP
-  * IPMI-over-LAN
-  * JDBC
-  * SNMP
-  * SNMPV3
-  * SSH
-  * WBEM
-  * WMI (on Windows only)
-  * WinRM
-* Credentials
+- Hostname or IP address of the device to be monitored
+- Device type
+- Protocols to be used:
+  - HTTP
+  - IPMI-over-LAN
+  - JDBC
+  - SNMP
+  - SNMPV3
+  - SSH
+  - WBEM
+  - WMI (on Windows only)
+  - WinRM
+- Credentials
 
 ![Usage of MetricsHub](./../images/metricshub-usage.png)
 
@@ -37,7 +37,7 @@ The `metricshub` command can be used to troubleshoot the monitoring performed by
 
 ## The Basics
 
-The `metricshub` command invokes the *MetricsHub Engine* against one resource and performs 3 tasks:
+The `metricshub` command invokes the _MetricsHub Engine_ against one resource and performs 3 tasks:
 
 1. Detection of the instrumentation stack on the targeted resource (host)
 2. Discovery of the resource's components
@@ -45,10 +45,10 @@ The `metricshub` command invokes the *MetricsHub Engine* against one resource an
 
 The `metricshub` command requires a few parameters to run:
 
-* the hostname to connect to
-* the type of the resource (Windows, Linux, Management, Storage, Network, AIX, HP-UX, Solaris)
-* the protocols to use to gather information from the resource (HTTP, IPMI, SNMP, SNMPV3, SSH, WBEM or WMI)
-* the credentials
+- the hostname to connect to
+- the type of the resource (Windows, Linux, Management, Storage, Network, AIX, HP-UX, Solaris)
+- the protocols to use to gather information from the resource (HTTP, IPMI, SNMP, SNMPV3, SSH, WBEM or WMI)
+- the credentials
 
 Example:
 
@@ -58,7 +58,7 @@ $ metricshub server01 -t win --snmp 1 --community secret
 
 The above command will connect to `server01` (a `Win`dows system), and will detect which instrumentation stack responds to `SNMP` version `1` with the `secret` community.
 
-Assuming **server01** is an *Hitachi* server, the `metricshub` output will look like:
+Assuming **server01** is an _Hitachi_ server, the `metricshub` output will look like:
 
 ![Monitoring the server01 Windows system with SNMP](./../images/metricshub-hitachi.png)
 
@@ -70,12 +70,12 @@ $ metricshub -h
 
 ### Verbose Modes
 
-To get additional details about the operations performed by the *MetricsHub Engine*, run:
+To get additional details about the operations performed by the _MetricsHub Engine_, run:
 
-* `-v` to display internal warning messages (**WARN**)
-* `-vv` to get details about each operation performed (**INFO**)
-* `-vvv` to get initialization and connections details (**DEBUG**)
-* `-vvvv` to get full visibility about what is happening (**TRACE**)
+- `-v` to display internal warning messages (**WARN**)
+- `-vv` to get details about each operation performed (**INFO**)
+- `-vvv` to get initialization and connections details (**DEBUG**)
+- `-vvvv` to get full visibility about what is happening (**TRACE**)
 
 ## Examples
 
@@ -179,14 +179,14 @@ This command will connect to the `WIN09` system using the `WinRM` protocol to ex
 
 ## Automatic Detection vs Manual Selection
 
-**MetricsHub** is bundled with **Community Connector Library**, a library which consists of a list of *connectors*  that describe how to discover resource components (such as hardware, service and application components) and detect failures in a given system, with a specific instrumentation stack.
+**MetricsHub** is bundled with **Community Connector Library**, a library which consists of a list of _connectors_ that describe how to discover resource components (such as hardware, service and application components) and detect failures in a given system, with a specific instrumentation stack.
 
 Examples of connectors:
 
-* Dell OpenManage Server Administrator (SNMP)
-* Network Cards on Windows (WMI)
-* IBM AIX physical disks, using system commands
-* etc.
+- Dell OpenManage Server Administrator (SNMP)
+- Network Cards on Windows (WMI)
+- IBM AIX physical disks, using system commands
+- etc.
 
 When running the `metricshub` command, the connectors are automatically selected based on the specified system type and the protocol enabled. This is the detection phase.
 
@@ -202,54 +202,68 @@ The `--connectors` CLI option allows you to force, select, or exclude specific c
 $ metricshub SERVER01 -t oob --snmp v2c --community public --connectors +MIB2,#hardware,!Windows
 ```
 
-* To force a connector, precede the connector identifier with a plus sign (`+`), as in `+MIB2`.
-* To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (`!`), like `!Windows`.
-* To stage a connector for processing by automatic detection, configure the connector identifier, for instance, `MIB2`.
-* To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (`${esc.h}`), such as `${esc.h}hardware` or `${esc.h}system`.
-* To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (`!${esc.h}`), such as `!${esc.h}system`.
+- To force a connector, precede the connector identifier with a plus sign (`+`), as in `+MIB2`.
+- To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (`!`), like `!Windows`.
+- To stage a connector for processing by automatic detection, configure the connector identifier, for instance, `MIB2`.
+- To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (`${esc.h}`), such as `${esc.h}hardware` or `${esc.h}system`.
+- To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (`!${esc.h}`), such as `!${esc.h}system`.
 
 #### Examples
 
 - Example 1:
+
   ```batch
   $ metricshub SERVER01 -t win --snmp v2c --community public --connectors "${esc.h}hardware"
   ```
+
   The core engine will automatically detect connectors categorized under `hardware`.
 
 - Example 2:
+
   ```batch
   $ metricshub SERVER01 -t win --wmi --connectors !${esc.h}hardware,${esc.h}system
   ```
+
   The core engine will perform automatic detection on connectors categorized under `system`, excluding those categorized under `hardware`.
 
 - Example 3:
+
   ```batch
   $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors MIB2NT,MIB2,${esc.h}system
   ```
+
   The core engine will automatically detect connectors named `MIB2NT`, `MIB2`, and all connectors under the `system` category.
 
 - Example 4:
+
   ```batch
   $ metricshub SERVER01 -t win --snmp v2c --community public --wmi --connectors +DiskPart,MIB2,${esc.h}system
   ```
+
   The core engine will force the execution of the `DiskPart` connector and then proceed with the automatic detection of `MIB2` and all connectors under the `system` category.
 
 - Example 5:
+
   ```batch
   $ metricshub SERVER01 -t win --wmi --connectors DiskPart,!${esc.h}system
   ```
+
   The core engine will perform automatic detection exclusively on the `DiskPart` connector.
 
 - Example 6:
+
   ```batch
   $ metricshub SERVER01 -t win --snmp v2c --community public --connectors +Windows,MIB2
   ```
+
   The core engine will force the execution of the `Windows` connector and subsequently perform automatic detection on the `MIB2` connector.
 
 - Example 7:
+
   ```batch
   metricshub SERVER01 -t win --snmp v2c --community public --connectors !Linux
   ```
+
   The core engine will perform automatic detection on all connectors except the `Linux` connector.
 
 - Example 8:
@@ -321,7 +335,7 @@ $ metricshub SERVER01 -t linux --snmp v2c --community public --patch-directory /
 
 ## Sequential Mode
 
-By default, the *MetricsHub Engine* sends the queries simultaneously to the host resource. Although the parallel transmission is faster than the sequential one, too many requests at the same time can lead to the failure of the targeted host resource.
+By default, the _MetricsHub Engine_ sends the queries simultaneously to the host resource. Although the parallel transmission is faster than the sequential one, too many requests at the same time can lead to the failure of the targeted host resource.
 
 Use the `--sequential` option to force all the requests to be executed in a sequential order, thus the monitored host is not overloaded.
 
@@ -339,6 +353,7 @@ duration in seconds of the pause between two collect operations.
 ```batch
 $ metricshub SERVER01 -t oob --snmp v2c --community public --iterations 2 --sleep-iteration 5
 ```
+
 ## Filtering Monitor Types
 
 Use the `--monitors` option to filter the monitor types according to the specified inclusion or exclusion criteria.
@@ -360,4 +375,3 @@ To exclude specific monitor types, use the `--monitors` option with a `!` sign b
 ```batch
 $ metricshub STOR02 -t storage --snmpv3 --snmpv3-auth SHA --snmpv3-username USERA --snmpv3-password MySECRET --snmpv3-privacy DES --snmpv3-retry-intervals 5000,10000,15000 --snmpv3-privacy-password MyPrivacySECRET --monitors !cpu,!disk
 ```
-

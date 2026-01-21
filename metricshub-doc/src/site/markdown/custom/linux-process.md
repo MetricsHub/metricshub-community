@@ -11,65 +11,65 @@ You can configure **MetricsHub** to monitor a Linux process. In the example belo
 
 To achieve this use case, we:
 
-* Declare the resource to be monitored (`prod-web`)​ and its attributes (`host.name`, `host.type`)​
+- Declare the resource to be monitored (`prod-web`)​ and its attributes (`host.name`, `host.type`)​
 
 ```yaml
-    resources:
-      prod-web:
-        attributes:
-          host.name: prod-web
-          host.type: linux
+resources:
+  prod-web:
+    attributes:
+      host.name: prod-web
+      host.type: linux
 ```
 
-* Configure the `SSH` protocol with `credentials` and `timeout​`
+- Configure the `SSH` protocol with `credentials` and `timeout​`
 
 ```yaml
-        protocols:
-          ssh:
-            username: <username>
-            password: <password>
-            timeout: 30
+protocols:
+  ssh:
+    username: <username>
+    password: <password>
+    timeout: 30
 ```
 
-* Add a new instance of the [`LinuxProcess`](../connectors/linuxprocess.html) connector for the monitoring of `systemd`. Name this new instance `systemdProcess`, for example:
+- Add a new instance of the [`LinuxProcess`](../connectors/linuxprocess.html) connector for the monitoring of `systemd`. Name this new instance `systemdProcess`, for example:
 
 ```yaml
-        additionalConnectors:
-          systemdProcess: 
-            uses: LinuxProcess
+additionalConnectors:
+  systemdProcess:
+    uses: LinuxProcess
 ```
 
-* Set the variable `matchName` for the service to be monitored (`systemd`):
+- Set the variable `matchName` for the service to be monitored (`systemd`):
 
 ```yaml
-            variables:
-              matchName: systemd
+variables:
+  matchName: systemd
 ```
 
 Here is the complete YAML configuration:
 
 ```yaml
-    resources:
-      prod-web:
-        attributes:
-          host.name: prod-web
-          host.type: linux
-        protocols:
-          ssh:
-            username: <username>
-            password: <username>
-            timeout: 30
-        additionalConnectors:
-          systemdProcess: 
-            uses: LinuxProcess
-            variables:
-              matchName: systemd
+resources:
+  prod-web:
+    attributes:
+      host.name: prod-web
+      host.type: linux
+    protocols:
+      ssh:
+        username: <username>
+        password: <username>
+        timeout: 30
+    additionalConnectors:
+      systemdProcess:
+        uses: LinuxProcess
+        variables:
+          matchName: systemd
 ```
 
 ## Supporting Resources
 
-* [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
-* [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
-* [SSH](../configuration/configure-monitoring.md#ssh)
-* [Customize resource monitoring](../configuration/configure-monitoring.md#customize-resource-monitoring)
-* [Customize data collection](../configuration/configure-monitoring.md#customize-data-collection)
+- [Configure resources](../configuration/configure-monitoring.md#step-3-configure-resources)
+- [Resource attributes](../configuration/configure-monitoring.md#resource-attributes)
+- [SSH](../configuration/configure-monitoring.md#ssh)
+- [Customize resource monitoring](../configuration/configure-monitoring.md#customize-resource-monitoring)
+- [Customize data collection](../configuration/configure-monitoring.md#customize-data-collection)

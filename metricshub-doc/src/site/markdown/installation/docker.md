@@ -104,8 +104,8 @@ services:
     container_name: metricshub-enterprise
     hostname: localhost
     ports:
-      - 13133:13133    # OTel Collector HealthCheck
-      - 24375:24375    # OTel Collector Prometheus Exporter
+      - 13133:13133 # OTel Collector HealthCheck
+      - 24375:24375 # OTel Collector Prometheus Exporter
     volumes:
       - ./logs:/opt/metricshub/lib/logs
       - ./config:/opt/metricshub/lib/config

@@ -9,15 +9,15 @@ description: Examples of custom monitoring.
 
 To help you get started and make the most out of **MetricsHub**, this section provides practical, ready-to-use examples across a variety of scenarios:
 
-* **Cross-platform use cases**:
-  * [Database Query](./database-query.md)
-  * [JMX Query](./jmx-query.md)
-  * [SNMP Polling](./snmp-polling.md)
-  * [Web Request](./web-request.md)
-* **Linux-related use cases**:
-  * [Linux Process Monitoring](./linux-process.md)
-  * [Linux Service Monitoring](./linux-service.md)
-* **Windows-related use cases**:
-  * [Windows Process Monitoring](./windows-process.md)
-  * [Windows Service Monitoring](./windows-service.md)
-  * [Windows Event Log Monitoring](./windows-event-log.md)
+- **Cross-platform use cases**:
+  - [Database Query](./database-query.md)
+  - [JMX Query](./jmx-query.md)
+  - [SNMP Polling](./snmp-polling.md)
+  - [Web Request](./web-request.md)
+- **Linux-related use cases**:
+  - [Linux Process Monitoring](./linux-process.md)
+  - [Linux Service Monitoring](./linux-service.md)
+- **Windows-related use cases**:
+  - [Windows Process Monitoring](./windows-process.md)
+  - [Windows Service Monitoring](./windows-service.md)
+  - [Windows Event Log Monitoring](./windows-event-log.md)

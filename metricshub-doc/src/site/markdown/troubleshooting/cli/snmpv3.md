@@ -36,7 +36,7 @@ snmpv3cli <HOSTNAME> --table <OID> --columns <COLUMN,COLUMN,...> --privacy <DES|
 ## Options
 
 | Option               | Description                                                                                               | Default Value |
-| -------------------- |-----------------------------------------------------------------------------------------------------------| ------------- |
+| -------------------- | --------------------------------------------------------------------------------------------------------- | ------------- |
 | `HOSTNAME`           | Hostname or IP address of the SNMPv3-enabled device. **This option is required.**                         | None          |
 | `--privacy`          | Encryption type. Possible values: `DES`, `AES`, `AES192`, `AES256`, or `none`.                            | None          |
 | `--privacy-password` | Password for SNMPv3 encryption.                                                                           | None          |
