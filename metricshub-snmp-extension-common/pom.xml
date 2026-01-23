@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.15-SNAPSHOT</version>
+		<version>3.9.01-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-snmp-extension-common</artifactId>
