@@ -580,7 +580,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 								)
 							)
 							.fgBrightBlack()
-							.a("https://metricshub.com/docs/latest/metricshub-connectors-full-listing.html")
+							.a("https://metricshub.com/docs/latest/connectors-directory.html")
 							.reset()
 							.toString()
 					);

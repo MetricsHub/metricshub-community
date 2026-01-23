@@ -23,12 +23,19 @@ package org.metricshub.web.config;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.security.ApiKeyAuthFilter;
+import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.jwt.JwtAuthFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
 import org.metricshub.web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.server.Ssl;
+import org.springframework.boot.web.server.WebServerFactoryCustomizer;
+import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -45,24 +52,38 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Security configuration class for the MetricsHub web application.
  */
 @Configuration
+@EnableConfigurationProperties(TlsConfigurationProperties.class)
+@Slf4j
 public class SecurityConfig {
 
 	private ApiKeyAuthFilter apiKeyAuthFilter;
+	private ReadOnlyAccessFilter readOnlyAccessFilter;
 	private JwtComponent jwtComponent;
 	private UserService userService;
+	private TlsConfigurationProperties tlsConfigurationProperties;
 
 	/**
 	 * Constructor for SecurityConfig.
 	 *
-	 * @param apiKeyAuthFilter the API key authentication filter
-	 * @param jwtComponent     the JWT component for handling JWT tokens
-	 * @param userService      the user service for user-related operations
+	 * @param apiKeyAuthFilter           the API key authentication filter
+	 * @param jwtComponent               the JWT component for handling JWT tokens
+	 * @param userService                the user service for user-related operations
+	 * @param tlsConfigurationProperties the TLS configuration properties
+	 * @param readOnlyAccessFilter       filter enforcing read-only access
 	 */
 	@Autowired
-	public SecurityConfig(ApiKeyAuthFilter apiKeyAuthFilter, JwtComponent jwtComponent, UserService userService) {
+	public SecurityConfig(
+		ApiKeyAuthFilter apiKeyAuthFilter,
+		ReadOnlyAccessFilter readOnlyAccessFilter,
+		JwtComponent jwtComponent,
+		UserService userService,
+		TlsConfigurationProperties tlsConfigurationProperties
+	) {
 		this.apiKeyAuthFilter = apiKeyAuthFilter;
+		this.readOnlyAccessFilter = readOnlyAccessFilter;
 		this.jwtComponent = jwtComponent;
 		this.userService = userService;
+		this.tlsConfigurationProperties = tlsConfigurationProperties;
 	}
 
 	/**
@@ -81,6 +102,7 @@ public class SecurityConfig {
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
 			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
+			.addFilterAfter(readOnlyAccessFilter, JwtAuthFilter.class)
 			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
 			.exceptionHandling(ex ->
 				ex.authenticationEntryPoint(jsonAuthEntryPoint()).accessDeniedHandler(jsonForbiddenHandler())
@@ -98,7 +120,11 @@ public class SecurityConfig {
 	@Bean
 	@Order(2)
 	public SecurityFilterChain defaultFilterChain(HttpSecurity http) throws Exception {
-		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(authz -> authz.anyRequest().permitAll()).build();
+		return http
+			.csrf(csrf -> csrf.disable())
+			.addFilterAfter(readOnlyAccessFilter, UsernamePasswordAuthenticationFilter.class)
+			.authorizeHttpRequests(authz -> authz.anyRequest().permitAll())
+			.build();
 	}
 
 	/**
@@ -122,6 +148,60 @@ public class SecurityConfig {
 	public AccessDeniedHandler jsonForbiddenHandler() {
 		return (HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) -> {
 			SecurityHelper.writeForbiddenResponse(response);
+		};
+	}
+
+	/**
+	 * Configure the embedded web server to use HTTPS when TLS is enabled, falling back to HTTP otherwise.
+	 * <p>
+	 * Defaults to the packaged {@code classpath:m8b-keystore.p12} with password {@code NOPWD}
+	 * and alias {@code tls-selfsigned}, but will use a user-provided keystore when configured.
+	 * </p>
+	 *
+	 * @return customizer to configure SSL on the servlet web server factory
+	 */
+	@Bean
+	public WebServerFactoryCustomizer<ConfigurableServletWebServerFactory> tlsWebServerCustomizer() {
+		return factory -> {
+			if (!tlsConfigurationProperties.isEnabled()) {
+				return;
+			}
+
+			final var keystore = tlsConfigurationProperties.getKeystore();
+			if (keystore == null) {
+				throw new IllegalStateException("tls.keystore must be configured");
+			}
+
+			final String keystoreLocation = keystore.getPath();
+			if (!StringHelper.nonNullNonBlank(keystoreLocation)) {
+				throw new IllegalStateException("tls.keystore.path must be set");
+			}
+
+			final String keystorePassword = keystore.getPassword();
+
+			if (!StringHelper.nonNullNonBlank(keystorePassword)) {
+				throw new IllegalStateException("tls.keystore.password must be set");
+			}
+
+			// Default key password to keystore password when not set
+			final String keyPassword = StringHelper.nonNullNonBlank(keystore.getKeyPassword())
+				? keystore.getKeyPassword()
+				: keystorePassword;
+
+			log.info("Enabling TLS on embedded web server using keystore at {}", keystoreLocation);
+
+			final Ssl ssl = new Ssl();
+			ssl.setEnabled(true);
+			ssl.setKeyStore(keystoreLocation);
+			ssl.setKeyStoreType("PKCS12");
+			ssl.setKeyStorePassword(keystorePassword);
+			ssl.setKeyPassword(keyPassword);
+
+			if (StringHelper.nonNullNonBlank(keystore.getKeyAlias())) {
+				ssl.setKeyAlias(keystore.getKeyAlias());
+			}
+
+			factory.setSsl(ssl);
 		};
 	}
 }

@@ -1,8 +1,27 @@
 import * as React from "react";
 import { DataGrid } from "@mui/x-data-grid";
 import { dataGridSx } from "./table-styles";
-import TruncatedText from "./TruncatedText";
+import MetricNameHighlighter from "./MetricNameHighlighter.jsx";
 import MetricValueCell from "./MetricValueCell";
+
+const METRICS_COLUMNS = [
+	{
+		field: "name",
+		headerName: "Name",
+		flex: 1,
+		renderCell: (params) => <MetricNameHighlighter name={params.value} />,
+	},
+	{
+		field: "value",
+		headerName: "Value",
+		flex: 1,
+		align: "left",
+		headerAlign: "left",
+		renderCell: (params) => (
+			<MetricValueCell value={params.row.value} unit={params.row.unit} align="left" />
+		),
+	},
+];
 
 /**
  * Generic Metrics section.
@@ -14,17 +33,17 @@ import MetricValueCell from "./MetricValueCell";
 const MetricsTable = ({ metrics }) => {
 	const rows = React.useMemo(() => {
 		if (!metrics) return [];
+		let normalized = [];
 		if (Array.isArray(metrics)) {
 			// Assume already normalized or close to it
-			return metrics.map((m) => ({
+			normalized = metrics.map((m) => ({
 				name: m.name || m.key,
 				value: m.value,
 				unit: m.unit,
 				lastUpdate: m.lastUpdate,
 			}));
-		}
-		if (typeof metrics === "object") {
-			return Object.entries(metrics).map(([key, val]) => {
+		} else if (typeof metrics === "object") {
+			normalized = Object.entries(metrics).map(([key, val]) => {
 				let value = val;
 				let unit = undefined;
 				let lastUpdate = undefined;
@@ -37,7 +56,8 @@ const MetricsTable = ({ metrics }) => {
 				return { name: key, value, unit, lastUpdate };
 			});
 		}
-		return [];
+
+		return normalized.map((r) => ({ id: r.name, ...r }));
 	}, [metrics]);
 
 	if (rows.length === 0) {
@@ -46,25 +66,8 @@ const MetricsTable = ({ metrics }) => {
 
 	return (
 		<DataGrid
-			rows={rows.map((r) => ({ id: r.name, ...r }))}
-			columns={[
-				{
-					field: "name",
-					headerName: "Name",
-					flex: 1,
-					renderCell: (params) => <TruncatedText text={params.value}>{params.value}</TruncatedText>,
-				},
-				{
-					field: "value",
-					headerName: "Value",
-					flex: 1,
-					align: "left",
-					headerAlign: "left",
-					renderCell: (params) => (
-						<MetricValueCell value={params.row.value} unit={params.row.unit} align="left" />
-					),
-				},
-			]}
+			rows={rows}
+			columns={METRICS_COLUMNS}
 			disableRowSelectionOnClick
 			hideFooter
 			autoHeight

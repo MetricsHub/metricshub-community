@@ -114,6 +114,35 @@ public class ConfigurationFilesController {
 	}
 
 	/**
+	 * Endpoint to create or update a draft configuration file.
+	 *
+	 * @param fileName       the name of the configuration file to create or update.
+	 * @param content        the content to write to the configuration file.
+	 * @param skipValidation if true, skips validation of the content before saving.
+	 * @return a ResponseEntity with the {@link ConfigurationFile} DTO reporting the
+	 *         saved file's metadata.
+	 * @throws ConfigFilesException if the file cannot be written
+	 */
+	@PutMapping(
+		value = "/draft/{fileName}",
+		produces = MediaType.APPLICATION_JSON_VALUE,
+		consumes = MediaType.TEXT_PLAIN_VALUE
+	)
+	public ResponseEntity<ConfigurationFile> saveOrUpdateDraftFile(
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content,
+		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+	) throws ConfigFilesException {
+		if (!skipValidation) {
+			var v = configurationFilesService.validate(content, fileName);
+			if (!v.isValid()) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+			}
+		}
+		return ResponseEntity.ok(configurationFilesService.saveOrUpdateDraftFile(fileName, content));
+	}
+
+	/**
 	 * Endpoint to validate a configuration file's content.<br>
 	 * If no content is provided in the request body, the file content on disk is
 	 * fetched and validated.

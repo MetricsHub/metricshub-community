@@ -24,6 +24,7 @@ package org.metricshub.engine.connector.deserializer.custom;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import org.metricshub.engine.connector.model.identity.ConnectionType;
@@ -46,5 +47,10 @@ public class ConnectionTypeSetDeserializer extends AbstractCollectionDeserialize
 	@Override
 	protected Collector<ConnectionType, ?, Collection<ConnectionType>> collector() {
 		return Collectors.toCollection(HashSet::new);
+	}
+
+	@Override
+	protected Predicate<ConnectionType> getFilterPredicate() {
+		return type -> true;
 	}
 }

@@ -1,5 +1,5 @@
 keywords: ipmi, cli
-description: How to execute IPMI-over-LAN queries to monitor and manage remote servers with MetricsHub IMPI CLI.
+description: How to execute IPMI-over-LAN queries to monitor and manage remote servers with MetricsHub IPMI CLI.
 
 # IPMI CLI Documentation
 
@@ -7,7 +7,7 @@ IPMI (Intelligent Platform Management Interface) is a protocol used for managing
 
 The **MetricsHub IPMI CLI** allows users to execute IPMI-over-LAN queries to monitor and manage remote servers. It supports authentication via username/password and BMC keys.
 
-Before using the CLI, ensure your platform supports IMPI monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports IPMI monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

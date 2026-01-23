@@ -10,6 +10,7 @@ export const truncatedCellSx = {
 	whiteSpace: "nowrap",
 	overflow: "hidden",
 	textOverflow: "ellipsis",
+	minWidth: 0,
 };
 
 export const dataGridSx = {
@@ -18,8 +19,6 @@ export const dataGridSx = {
 	borderRadius: 1,
 	backgroundColor: "transparent",
 	"& .MuiDataGrid-columnHeaders": {
-		backgroundColor: (theme) =>
-			theme.palette.mode === "dark" ? theme.palette.neutral[800] : theme.palette.neutral[100],
 		color: "text.secondary",
 		fontSize: "0.75rem",
 		textTransform: "none",
@@ -41,6 +40,7 @@ export const dataGridSx = {
 		borderColor: "divider",
 		display: "flex",
 		alignItems: "center",
+		color: "text.primary",
 	},
 	"& .MuiDataGrid-footerContainer": {
 		borderTop: 1,

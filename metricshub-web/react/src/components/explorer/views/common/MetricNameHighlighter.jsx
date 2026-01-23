@@ -1,7 +1,8 @@
 import React from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { Box, useTheme } from "@mui/material";
+import { useTheme } from "@mui/material";
+import TruncatedText from "./TruncatedText";
 
 /**
  * Renders a metric name with syntax highlighting.
@@ -14,38 +15,70 @@ const MetricNameHighlighter = ({ name }) => {
 	const isDark = theme.palette.mode === "dark";
 
 	return (
-		<Box
-			className="metric-name-highlighter"
+		<TruncatedText
+			text={name}
 			sx={{
-				"& pre": {
+				// Target the inner container of SyntaxHighlighter
+				"& > span": {
 					margin: "0 !important",
 					padding: "4px 8px !important",
 					borderRadius: "4px",
 					backgroundColor: "transparent !important",
+					border: "none !important",
+					boxShadow: "none !important",
+					display: "inline !important",
 				},
-				"& code": {
-					fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important",
+				// Target the inner code/span elements
+				"& code, & span span": {
+					fontFamily: isDark
+						? "inherit"
+						: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace !important",
 					fontSize: "0.85rem",
+					border: "none !important",
+					boxShadow: "none !important",
 				},
-				maxWidth: "100%",
-				overflow: "hidden",
+				width: "100%",
 			}}
 		>
 			<SyntaxHighlighter
 				language="javascript"
 				style={isDark ? vscDarkPlus : vs}
+				PreTag="span"
+				CodeTag="span"
 				customStyle={{
 					margin: 0,
-					padding: "2px 6px",
+					padding: "0",
 					borderRadius: "4px",
 					fontSize: "0.85em",
 					backgroundColor: isDark ? "#1e1e1e" : "#f5f5f5",
+					border: "none",
+					boxShadow: "none",
+					display: "inline",
+					...(isDark
+						? {}
+						: {
+								fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+								fontWeight: 400,
+							}),
+				}}
+				codeTagProps={{
+					style: {
+						backgroundColor: "transparent",
+						border: "none",
+						boxShadow: "none",
+						...(isDark
+							? {}
+							: {
+									fontFamily: "Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace",
+									fontWeight: 400,
+								}),
+					},
 				}}
 				wrapLongLines={false}
 			>
 				{name}
 			</SyntaxHighlighter>
-		</Box>
+		</TruncatedText>
 	);
 };
 

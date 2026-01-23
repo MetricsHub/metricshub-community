@@ -8,6 +8,7 @@ import { store } from "./store";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
+import WriteProtectionDialog from "./components/common/WriteProtectionDialog";
 import GlobalSnackbarProvider from "./contexts/GlobalSnackbarContext";
 import { AuthProvider } from "./contexts/JwtContext";
 import { useAuth } from "./hooks/use-auth";
@@ -20,6 +21,7 @@ import logoLight from "./assets/logo-light.svg";
 const LoginPage = React.lazy(() => import("./pages/LoginPage")); // already wrapped with AuthLayout
 const Explorer = React.lazy(() => import("./pages/ExplorerPage"));
 const Configuration = React.lazy(() => import("./pages/ConfigurationPage"));
+const Chat = React.lazy(() => import("./pages/ChatPage"));
 const NavBar = React.lazy(() => import("./components/navbar/Navbar"));
 
 /**
@@ -118,6 +120,7 @@ export default function App() {
 			<ReduxProvider store={store}>
 				<GlobalSnackbarProvider>
 					<AuthProvider>
+						<WriteProtectionDialog />
 						<AppContent
 							onToggleTheme={() => setMode((prev) => (prev === "light" ? "dark" : "light"))}
 						/>
@@ -168,6 +171,7 @@ const AppContent = ({ onToggleTheme }) => {
 						/>
 						<Route path={paths.configuration} element={<Configuration />} />
 						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
+						<Route path={paths.chat} element={<Chat />} />
 						{/* Catch-all */}
 						<Route path="*" element={<Navigate to={paths.explorer} replace />} />
 					</Route>

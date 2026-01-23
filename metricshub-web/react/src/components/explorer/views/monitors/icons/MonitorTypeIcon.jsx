@@ -12,7 +12,12 @@ import SettingsInputComponentIcon from "@mui/icons-material/SettingsInputCompone
 import PieChartIcon from "@mui/icons-material/PieChart";
 import DeviceThermostatIcon from "@mui/icons-material/DeviceThermostat";
 import BoltIcon from "@mui/icons-material/Bolt";
-import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import LayersIcon from "@mui/icons-material/Layers";
+import MiscellaneousServicesIcon from "@mui/icons-material/MiscellaneousServices";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import BatteryChargingFullIcon from "@mui/icons-material/BatteryChargingFull";
+import DevicesOtherIcon from "@mui/icons-material/DevicesOther";
+import LightbulbIcon from "@mui/icons-material/Lightbulb";
 
 const ICONS = {
 	CPU: DeveloperBoardIcon,
@@ -31,6 +36,13 @@ const ICONS = {
 	"Disk Controller": SettingsInputComponentIcon,
 	"Logical Disk": PieChartIcon,
 	Enclosure: StorageIcon,
+	Pool: LayersIcon,
+	Blade: StorageIcon,
+	Service: MiscellaneousServicesIcon,
+	Process: AccountTreeIcon,
+	Battery: BatteryChargingFullIcon,
+	"Other Device": DevicesOtherIcon,
+	Led: LightbulbIcon,
 };
 
 /**
@@ -82,7 +94,7 @@ const MonitorTypeIcon = ({ type, fontSize = "small", fallback = null }) => {
 		return fallback;
 	}
 
-	return <IconEl fontSize={fontSize} sx={{ color: "inherit" }} />;
+	return <IconEl fontSize={fontSize} sx={{ color: "inherit", transition: "color 0.4s ease" }} />;
 };
 
 export default React.memo(MonitorTypeIcon);

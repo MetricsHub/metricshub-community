@@ -11,13 +11,11 @@ export const useInstanceFilter = (instances) => {
 	const [searchTerm, setSearchTerm] = useState("");
 
 	const filteredInstances = useMemo(() => {
+		const normalizedSearch = searchTerm.toLowerCase().replace(/\s+/g, "");
 		return instances.filter((instance) => {
-			const id = getInstanceDisplayName(instance);
-			const name = instance.attributes?.name || "";
-			return (
-				id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				name.toLowerCase().includes(searchTerm.toLowerCase())
-			);
+			const id = getInstanceDisplayName(instance).toLowerCase().replace(/\s+/g, "");
+			const name = (instance.attributes?.name || "").toLowerCase().replace(/\s+/g, "");
+			return id.includes(normalizedSearch) || name.includes(normalizedSearch);
 		});
 	}, [instances, searchTerm]);
 

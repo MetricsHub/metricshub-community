@@ -26,7 +26,10 @@ const AgentData = ({ agent, totalResources }) => {
 		return null;
 	}
 
-	const title = "MetricsHub Community";
+	const title =
+		attributes["service.name"] === "MetricsHub Agent"
+			? "MetricsHub Community"
+			: "MetricsHub Enterprise";
 
 	const osType = attributes["os.type"];
 	let action = null;
@@ -34,10 +37,10 @@ const AgentData = ({ agent, totalResources }) => {
 		const lower = osType.toLowerCase();
 		if (lower.includes("windows")) {
 			action = (
-				<Box component="img" src="/windows.svg" alt="Windows" sx={{ width: 60, height: 60 }} />
+				<Box component="img" src="/windows.svg" alt="Windows" sx={{ width: 40, height: 40 }} />
 			);
 		} else if (lower.includes("linux")) {
-			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 80, height: 80 }} />;
+			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 60, height: 60 }} />;
 		}
 	}
 

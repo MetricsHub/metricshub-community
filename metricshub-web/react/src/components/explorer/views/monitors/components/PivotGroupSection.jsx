@@ -2,11 +2,11 @@ import * as React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
-import TruncatedText from "../../common/TruncatedText";
 import { renderMetricHeader } from "../../common/metric-column-helper";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
 
 import {
 	getMetricMetadata,
@@ -38,8 +38,15 @@ import {
  * @param {any[]} props.sortedInstances - Sorted list of monitor instances
  * @param {string} props.resourceId - The ID of the resource
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
+ * @param {string} [props.storageKeyPrefix] - Optional localStorage key prefix for column widths
  */
-const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) => {
+const PivotGroupSection = ({
+	group,
+	sortedInstances,
+	resourceId,
+	metaMetrics,
+	storageKeyPrefix,
+}) => {
 	const displayBaseName = React.useMemo(() => getBaseMetricKey(group.baseName), [group.baseName]);
 
 	const dispatch = useDispatch();
@@ -185,6 +192,14 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 		return cols;
 	}, [isUtilizationGroup, displayBaseName, group.metricKeys, metaMetrics]);
 
+	const storageKey = React.useMemo(() => {
+		if (!storageKeyPrefix) return undefined;
+		return `${storageKeyPrefix}.pivot.${group.baseName}`;
+	}, [storageKeyPrefix, group.baseName]);
+
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, { storageKey });
+
 	const rows = React.useMemo(() => {
 		const r = sortedInstances.map((inst, index) => ({
 			id: inst.name || index,
@@ -212,7 +227,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 					px: 0.75,
 					py: 0.5,
 					bgcolor: "transparent",
-					transition: "background-color 0.15s ease-in-out",
+					transition: "background-color 0.4s ease",
 					"&:hover": {
 						bgcolor: "action.hover",
 					},
@@ -227,6 +242,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 							display: "flex",
 							alignItems: "center",
 							columnGap: 1,
+							transition: "color 0.4s ease",
 						}}
 					>
 						{displayBaseName}
@@ -252,6 +268,7 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 											height: 10,
 											borderRadius: 0.5,
 											bgcolor: colorFor(label),
+											transition: "background-color 0.4s ease",
 										}}
 									/>
 									<Box component="span">{label}</Box>
@@ -284,11 +301,12 @@ const PivotGroupSection = ({ group, sortedInstances, resourceId, metaMetrics }) 
 				<Box sx={{ mt: 1, mb: 2 }}>
 					<DataGrid
 						rows={rows}
-						columns={columns}
+						columns={columnsWithWidths}
 						disableRowSelectionOnClick
 						hideFooter
 						autoHeight
 						density="compact"
+						onColumnWidthChange={handleColumnWidthChange}
 						sx={{
 							...dataGridSx,
 							"& .MuiDataGrid-cell": {

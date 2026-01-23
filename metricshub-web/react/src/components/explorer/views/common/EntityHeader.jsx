@@ -4,6 +4,11 @@ import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
 
+const ATTRIBUTE_COLUMNS = [
+	{ field: "key", headerName: "Key", flex: 1 },
+	{ field: "value", headerName: "Value", flex: 1 },
+];
+
 /**
  * Generic header section for an entity (Resource, Resource Group, Agent),
  * showing its title/icon and attributes.
@@ -23,6 +28,16 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 		[attributes],
 	);
 
+	const rows = React.useMemo(
+		() =>
+			Object.entries(attributes || {}).map(([key, value]) => ({
+				id: key,
+				key,
+				value,
+			})),
+		[attributes],
+	);
+
 	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
 
 	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 1 }), []);
@@ -31,7 +46,7 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 		<Box display="flex" flexDirection="column" gap={3}>
 			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
 				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-					<Typography variant="h4" gutterBottom sx={titleSx}>
+					<Typography variant="h4" gutterBottom sx={{ ...titleSx, transition: "color 0.4s ease" }}>
 						{icon ? (
 							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
 								{icon}
@@ -48,19 +63,12 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 
 			{hasAttributes && (
 				<Box>
-					<Typography variant="h6" sx={attributesTitleSx}>
+					<Typography variant="h6" sx={{ ...attributesTitleSx, transition: "color 0.4s ease" }}>
 						Attributes
 					</Typography>
 					<DataGrid
-						rows={Object.entries(attributes).map(([key, value]) => ({
-							id: key,
-							key,
-							value,
-						}))}
-						columns={[
-							{ field: "key", headerName: "Key", flex: 1 },
-							{ field: "value", headerName: "Value", flex: 1 },
-						]}
+						rows={rows}
+						columns={ATTRIBUTE_COLUMNS}
 						disableRowSelectionOnClick
 						hideFooter
 						autoHeight

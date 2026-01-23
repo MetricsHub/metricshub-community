@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>1.0.15-SNAPSHOT</version>
+	<version>3.9.01-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -79,10 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.17</community-connectors.version>
+		<community-connectors.version>1.0.18</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<project.build.outputTimestamp>2025-12-02T13:11:02Z</project.build.outputTimestamp>
+		<project.build.outputTimestamp>2026-01-22T14:52:13Z</project.build.outputTimestamp>
 
 		<!-- Packaging Properties -->
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
@@ -95,31 +95,31 @@
 	</properties>
 
 	<modules>
+		<module>metricshub-agent</module>
+		<module>metricshub-assets</module>
 		<module>metricshub-classloader-agent</module>
+		<module>metricshub-doc</module>
 		<module>metricshub-engine</module>
-		<module>metricshub-it-common</module>
-		<module>metricshub-win-extension-common</module>
-		<module>metricshub-snmp-extension-common</module>
-		<module>metricshub-snmp-extension</module>
-		<module>metricshub-snmpv3-extension</module>
-		<module>metricshub-oscommand-extension</module>
-		<module>metricshub-ipmi-extension</module>
+		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>
-		<module>metricshub-wbem-extension</module>
-		<module>metricshub-wmi-extension</module>
-		<module>metricshub-winrm-extension</module>
-		<module>metricshub-ping-extension</module>
 		<module>metricshub-internaldb-extension</module>
+		<module>metricshub-ipmi-extension</module>
+		<module>metricshub-it-common</module>
 		<module>metricshub-jawk-extension</module>
 		<module>metricshub-jdbc-extension</module>
 		<module>metricshub-jmx-extension</module>
-		<module>metricshub-hardware</module>
-		<module>metricshub-agent</module>
-		<module>metricshub-doc</module>
-		<module>metricshub-yaml-configuration-extension</module>
+		<module>metricshub-oscommand-extension</module>
+		<module>metricshub-ping-extension</module>
 		<module>metricshub-programmable-configuration-extension</module>
+		<module>metricshub-snmp-extension-common</module>
+		<module>metricshub-snmp-extension</module>
+		<module>metricshub-snmpv3-extension</module>
+		<module>metricshub-wbem-extension</module>
 		<module>metricshub-web</module>
-		<module>metricshub-assets</module>
+		<module>metricshub-win-extension-common</module>
+		<module>metricshub-winrm-extension</module>
+		<module>metricshub-wmi-extension</module>
+		<module>metricshub-yaml-configuration-extension</module>
 	</modules>
 
 	<profiles>
@@ -263,12 +263,12 @@
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-core</artifactId>
-				<version>6.2.12</version>
+				<version>6.2.14</version>
 			</dependency>
 			<dependency>
 				<groupId>org.springframework</groupId>
 				<artifactId>spring-context</artifactId>
-				<version>6.2.12</version>
+				<version>6.2.14</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>

@@ -156,7 +156,9 @@ check_rpm_pkg() {
 if [ "${DISTRIB}" == "debian" ]; then
   step "Checking Debian packaging prerequisites"
   check_deb_pkg "fakeroot"
-  if [ "$(uname -m)" == "x86_64" ] ; check_deb_pkg "gcc-multilib"  
+  if [ "$(uname -m)" == "x86_64" ]; then
+    check_deb_pkg "gcc-multilib"
+  fi
 
 elif [ "${DISTRIB}" == "rhel" ]; then
   step "Checking RedHat packaging prerequisites"

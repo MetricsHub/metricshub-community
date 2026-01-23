@@ -23,6 +23,7 @@ package org.metricshub.web.mcp;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
@@ -46,6 +47,30 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class TroubleshootHostService implements IMCPToolService {
+
+	/**
+	 * Tool name for collecting metrics for a host.
+	 */
+	private static final String COLLECT_METRICS_FOR_HOST = "CollectMetricsForHost";
+
+	/**
+	 * Tool name for getting metrics from cache for a host.
+	 */
+	private static final String GET_METRICS_FROM_CACHE_FOR_HOST = "GetMetricsFromCacheForHost";
+
+	/**
+	 * Tool name for testing available connectors for a host.
+	 */
+	private static final String TEST_AVAILABLE_CONNECTORS_FOR_HOST = "TestAvailableConnectorsForHost";
+
+	/**
+	 * Set of tool names.
+	 */
+	public static final Set<String> TOOL_NAMES = Set.of(
+		COLLECT_METRICS_FOR_HOST,
+		GET_METRICS_FROM_CACHE_FOR_HOST,
+		TEST_AVAILABLE_CONNECTORS_FOR_HOST
+	);
 
 	/**
 	 * Message to be returned when the hostname is not configured in MetricsHub.
@@ -83,7 +108,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@Tool(
-		name = "CollectMetricsForHost",
+		name = COLLECT_METRICS_FOR_HOST,
 		description = """
 		Fetch and collect metrics for the specified host(s) using the configured protocols and credentials,
 		and the applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.).
@@ -144,7 +169,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@Tool(
-		name = "GetMetricsFromCacheForHost",
+		name = GET_METRICS_FROM_CACHE_FOR_HOST,
 		description = """
 		Retrieves metrics from the MetricsHub cache for the specified host(s).
 		Returns the collected metrics and all attributes.
@@ -198,7 +223,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a multi-host response mapping each input hostname to one or more {@link TelemetryResult}, or an error message
 	 */
 	@Tool(
-		name = "TestAvailableConnectorsForHost",
+		name = TEST_AVAILABLE_CONNECTORS_FOR_HOST,
 		description = """
 		Test all applicable MetricsHub connectors (MIB2, Linux, Windows, Dell, RedFish, etc.) against the specified host(s)
 		using the configured credentials and return the list of connectors that work with these hosts.

@@ -2,11 +2,11 @@ import * as React from "react";
 import { Box, Typography } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import HoverInfo from "./HoverInfo";
-import TruncatedText from "../../common/TruncatedText";
 import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import InstanceNameWithAttributes from "./InstanceNameWithAttributes";
 import MetricValueCell from "../../common/MetricValueCell";
 import { dataGridSx } from "../../common/table-styles";
+import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
 import {
 	getMetricMetadata,
 	getBaseMetricKey,
@@ -33,6 +33,7 @@ import { flashBlueAnimation } from "../../../../../utils/animations";
  * @param {(a: [string, any], b: [string, any]) => number} props.naturalMetricCompare - Comparator for sorting metrics
  * @param {Record<string, { unit?: string, description?: string, type?: string }>} [props.metaMetrics] - Metadata for metrics
  * @param {boolean} [props.highlighted] - Whether the table should be highlighted
+ * @param {string} [props.storageKeyPrefix] - Optional localStorage key prefix for column widths
  */
 const InstanceMetricsTable = ({
 	instance,
@@ -40,6 +41,7 @@ const InstanceMetricsTable = ({
 	naturalMetricCompare,
 	metaMetrics,
 	highlighted,
+	storageKeyPrefix,
 }) => {
 	const attrs = React.useMemo(() => instance?.attributes ?? {}, [instance?.attributes]);
 	const displayName = React.useMemo(() => getInstanceDisplayName(instance), [instance]);
@@ -202,6 +204,15 @@ const InstanceMetricsTable = ({
 		[metaMetrics],
 	);
 
+	const storageKey = React.useMemo(() => {
+		if (!storageKeyPrefix) return undefined;
+		const instanceKey = instance?.attributes?.id || instance?.name || "unknown";
+		return `${storageKeyPrefix}.instance.${instanceKey}`;
+	}, [storageKeyPrefix, instance?.attributes?.id, instance?.name]);
+
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, { storageKey });
+
 	const rows = React.useMemo(
 		() =>
 			groupedEntries.map((group, index) => ({
@@ -229,11 +240,12 @@ const InstanceMetricsTable = ({
 
 			<DataGrid
 				rows={rows}
-				columns={columns}
+				columns={columnsWithWidths}
 				disableRowSelectionOnClick
 				hideFooter
 				autoHeight
 				density="compact"
+				onColumnWidthChange={handleColumnWidthChange}
 				sx={dataGridSx}
 			/>
 		</Box>

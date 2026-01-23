@@ -16,6 +16,7 @@ import {
 	FormGroup,
 	FormControlLabel,
 	Checkbox,
+	Pagination,
 } from "@mui/material";
 import SettingsIcon from "@mui/icons-material/Settings";
 import { DataGrid } from "@mui/x-data-grid";
@@ -30,7 +31,6 @@ import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithA
 import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
 import MetricValueCell from "../common/MetricValueCell";
 import { renderMetricHeader } from "../common/metric-column-helper";
-import { UtilizationStack } from "../monitors/components/Utilization";
 import {
 	getMetricValue,
 	getMetricMetadata,
@@ -45,6 +45,7 @@ import { useInstanceSorting } from "../../../../hooks/use-instance-sorting";
 import { useInstanceFilter } from "../../../../hooks/use-instance-filter";
 import { useMetricSelection } from "../../../../hooks/use-metric-selection";
 import { dataGridSx } from "../common/table-styles";
+import { useDataGridColumnWidths } from "../common/use-data-grid-column-widths";
 
 const TAB_INSTANCES = 0;
 const TAB_METRICS = 1;
@@ -69,6 +70,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const decodedName = resourceName ? decodeURIComponent(resourceName) : null;
 	const decodedConnectorId = connectorId ? decodeURIComponent(connectorId) : null;
 	const decodedMonitorType = monitorType ? decodeURIComponent(monitorType) : null;
+	const monitorTypeStorageKeyBase = React.useMemo(() => {
+		const groupKey = resourceGroupName || "unknown";
+		const resourceKey = decodedName || "unknown";
+		const connectorKey = decodedConnectorId || "unknown";
+		const monitorKey = decodedMonitorType || "unknown";
+		return `explorer.monitorType.${groupKey}.${resourceKey}.${connectorKey}.${monitorKey}`;
+	}, [resourceGroupName, decodedName, decodedConnectorId, decodedMonitorType]);
 
 	useResourceFetcher({ resourceName, resourceGroupName });
 
@@ -78,6 +86,38 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	const { sortedInstances, sortedMetricsInstances } = useInstanceSorting(instances);
 
 	const { searchTerm, setSearchTerm, filteredInstances } = useInstanceFilter(sortedInstances);
+
+	const [page, setPage] = React.useState(1);
+	const pageSize = 5;
+
+	React.useEffect(() => {
+		setPage(1);
+	}, [searchTerm]);
+
+	const paginatedInstances = React.useMemo(() => {
+		const startIndex = (page - 1) * pageSize;
+		return filteredInstances.slice(startIndex, startIndex + pageSize);
+	}, [filteredInstances, page, pageSize]);
+
+	const handlePageChange = React.useCallback((event, value) => {
+		setPage(value);
+	}, []);
+
+	const highlightedId = useScrollToHash();
+	const lastHighlightedIdRef = React.useRef(null);
+
+	React.useEffect(() => {
+		if (highlightedId && highlightedId !== lastHighlightedIdRef.current) {
+			const index = filteredInstances.findIndex((ins) => ins.name === highlightedId);
+			if (index !== -1) {
+				const targetPage = Math.floor(index / pageSize) + 1;
+				setPage(targetPage);
+				lastHighlightedIdRef.current = highlightedId;
+			}
+		} else if (!highlightedId) {
+			lastHighlightedIdRef.current = null;
+		}
+	}, [highlightedId, filteredInstances, pageSize]);
 
 	const {
 		selectedMetrics,
@@ -92,8 +132,15 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		setTabValue(newValue);
 	}, []);
 
+	// Stable reference for metaMetrics to prevent column re-creation
+	const metaMetrics = monitorData?.metaMetrics || {};
+	const stableMetaMetrics = React.useMemo(
+		() => metaMetrics,
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[JSON.stringify(metaMetrics)],
+	);
+
 	const columns = React.useMemo(() => {
-		if (!monitorData) return [];
 		const cols = [
 			{
 				field: "instanceName",
@@ -110,7 +157,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		];
 
 		selectedMetrics.forEach((metric) => {
-			const meta = getMetricMetadata(metric, monitorData.metaMetrics);
+			const meta = getMetricMetadata(metric, stableMetaMetrics);
 			const cleanedUnit = cleanUnit(meta?.unit);
 			const displayUnit = cleanedUnit === "1" ? "%" : cleanedUnit;
 
@@ -136,7 +183,16 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		});
 
 		return cols;
-	}, [selectedMetrics, monitorData]);
+	}, [selectedMetrics, stableMetaMetrics]);
+
+	const { columns: columnsWithWidths, onColumnWidthChange: handleColumnWidthChange } =
+		useDataGridColumnWidths(columns, {
+			storageKey: `${monitorTypeStorageKeyBase}.metrics`,
+		});
+
+	const instanceTableStorageKeyPrefix = React.useMemo(() => {
+		return `${monitorTypeStorageKeyBase}.instances`;
+	}, [monitorTypeStorageKeyBase]);
 
 	const rows = React.useMemo(() => {
 		return sortedMetricsInstances.map((instance, index) => ({
@@ -144,8 +200,6 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			...instance,
 		}));
 	}, [sortedMetricsInstances]);
-
-	const highlightedId = useScrollToHash();
 
 	if (loading && !currentResource) {
 		return (
@@ -172,7 +226,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 	}
 
 	return (
-		<Box sx={{ p: 3, height: "100%", display: "flex", flexDirection: "column" }}>
+		<Box sx={{ p: 3, display: "flex", flexDirection: "column" }}>
 			<EntityHeader
 				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
 				icon={<MonitorTypeIcon type={decodedMonitorType} fontSize="large" />}
@@ -186,7 +240,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 			</Box>
 
 			{tabValue === TAB_INSTANCES && (
-				<Box sx={{ flex: 1, overflow: "auto" }}>
+				<Box>
 					<Box sx={{ mb: 2 }}>
 						<TextField
 							fullWidth
@@ -198,7 +252,7 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						/>
 					</Box>
 					<Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
-						{filteredInstances.map((instance, index) => {
+						{paginatedInstances.map((instance, index) => {
 							const isHighlighted = highlightedId === instance.name;
 							return (
 								<Box key={index} id={instance.name}>
@@ -207,17 +261,28 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 										naturalMetricCompare={compareMetricEntries}
 										metaMetrics={monitorData?.metaMetrics}
 										highlighted={isHighlighted}
+										storageKeyPrefix={instanceTableStorageKeyPrefix}
 									/>
 								</Box>
 							);
 						})}
 						{filteredInstances.length === 0 && <Typography>No instances found.</Typography>}
+						{filteredInstances.length > pageSize && (
+							<Box sx={{ display: "flex", justifyContent: "center", mt: 2, mb: 2 }}>
+								<Pagination
+									count={Math.ceil(filteredInstances.length / pageSize)}
+									page={page}
+									onChange={handlePageChange}
+									color="primary"
+								/>
+							</Box>
+						)}
 					</Box>
 				</Box>
 			)}
 
 			{tabValue === TAB_METRICS && (
-				<Box sx={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
+				<Box sx={{ display: "flex", flexDirection: "column" }}>
 					<Box sx={{ display: "flex", alignItems: "center", mb: 2, gap: 1, flexShrink: 0 }}>
 						<IconButton onClick={() => setIsSettingsOpen(true)}>
 							<SettingsIcon />
@@ -270,13 +335,19 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 						</DialogActions>
 					</Dialog>
 
-					<Box sx={{ width: "100%", overflow: "hidden" }}>
+					<Box sx={{ width: "100%" }}>
 						<DataGrid
 							rows={rows}
-							columns={columns}
+							columns={columnsWithWidths}
 							disableRowSelectionOnClick
-							hideFooter
 							autoHeight
+							pageSizeOptions={[5, 10, 20, 50, 100]}
+							onColumnWidthChange={handleColumnWidthChange}
+							initialState={{
+								pagination: {
+									paginationModel: { pageSize: 10, page: 0 },
+								},
+							}}
 							sx={dataGridSx}
 						/>
 					</Box>

@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.15-SNAPSHOT</version>
+		<version>3.9.01-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -16,6 +16,8 @@
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
 		<jjwt.version>0.13.0</jjwt.version>
+		<spring.boot.version>3.5.8</spring.boot.version>
+		<spring.ai.version>1.1.2</spring.ai.version>
 	</properties>
 
 	<dependencies>
@@ -93,7 +95,7 @@
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
-			<version>1.0.3</version>
+			<version>${spring.ai.version}</version>
 			<exclusions>
 				<exclusion>
 					<groupId>org.springframework.boot</groupId>
@@ -101,15 +103,49 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- Official OpenAI SDK -->
+		<dependency>
+			<groupId>com.openai</groupId>
+			<artifactId>openai-java</artifactId>
+			<version>4.13.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.openai</groupId>
+			<artifactId>openai-java-client-okhttp</artifactId>
+			<version>4.13.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+			<version>5.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.core5</groupId>
+			<artifactId>httpcore5</artifactId>
+			<version>5.4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.httpcomponents.core5</groupId>
+					<artifactId>httpcore5-h2</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
-			<version>3.5.6</version>
+			<version>${spring.boot.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-validation</artifactId>
-			<version>3.5.6</version>
+			<version>${spring.boot.version}</version>
 		</dependency>
 
 		<!-- JWT -->
@@ -307,6 +343,35 @@
 					</delimiters>
 					<useDefaultDelimiters>false</useDefaultDelimiters>
 				</configuration>
+			</plugin>
+
+			<!-- Generate default TLS keystore packaged in the agent JAR -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>keytool-maven-plugin</artifactId>
+				<version>2.0.0</version>
+				<executions>
+					<execution>
+						<id>create-default-m8b-keystore</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>generateKeyPair</goal>
+						</goals>
+						<configuration>
+							<alias>tls-selfsigned</alias>
+							<dname>CN=localhost,OU=MetricsHub,O=MetricsHub,C=FR</dname>
+							<keyalg>RSA</keyalg>
+							<keysize>2048</keysize>
+							<sigalg>SHA256withRSA</sigalg>
+							<validity>3650</validity>
+							<storetype>PKCS12</storetype>
+							<storepass>NOPWD</storepass>
+							<keypass>NOPWD</keypass>
+							<keystore>${project.build.outputDirectory}/m8b-keystore.p12</keystore>
+							<skipIfExist>true</skipIfExist>
+						</configuration>
+					</execution>
+				</executions>
 			</plugin>
 
 			<!-- Unpack Connector Library -->

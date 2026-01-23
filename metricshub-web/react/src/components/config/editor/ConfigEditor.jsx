@@ -22,7 +22,9 @@ export default function ConfigEditor({
 }) {
 	return (
 		<Box sx={{ height }}>
-			<React.Suspense fallback={<Box sx={{ p: 2 }}>Loading editor…</Box>}>
+			<React.Suspense
+				fallback={<Box sx={{ p: 2, transition: "color 0.4s ease" }}>Loading editor…</Box>}
+			>
 				<YamlEditor
 					value={value}
 					readOnly={readOnly}
@@ -30,7 +32,7 @@ export default function ConfigEditor({
 					onSave={onSave}
 					fileName={fileName}
 					onEditorReady={onEditorReady}
-					validateFn={validateFn}
+					validateFn={readOnly ? undefined : validateFn}
 					canSave={canSave}
 					height={height}
 				/>
