@@ -13,7 +13,7 @@ description: MetricsHub is a universal metrics collection agent for OpenTelemetr
 
 ![](./images/otel-metricshub.png)
 
-**MetricsHub**  includes a library of YAML files - called **connectors** - which describe how to collect metrics about [operating systems and a variety of platforms.](metricshub-connectors-directory.html)
+**MetricsHub**  includes a library of YAML files - called **connectors** - which describe how to collect metrics about [operating systems and a variety of platforms.](supported-platforms.html)
 
 **MetricsHub**  uses the OTLP protocol to send metrics to observability platforms that support OpenTelemetry natively like Datadog, New Relic, Prometheus, and Splunk.
 
@@ -21,7 +21,7 @@ Because it is recommended to use an OpenTelemetry Collector in a production envi
 
 ## Monitoring Coverage
 
-**MetricsHub Enterprise** provides out-of-the box support for hundreds of  [servers, storage systems, network devices, and databases](metricshub-connectors-directory.html) through its built-in library of connectors.
+**MetricsHub Enterprise** provides out-of-the box support for hundreds of  [servers, storage systems, network devices, and databases](supported-platforms.html) through its built-in library of connectors.
 
 Fully customizable, **MetricsHub** can also be configured to **cover new use cases in no time**, such as the monitoring of systems or applications not covered out-of-the-box through protocols like `HTTP`, `IPMI`, `JMX`, `PING`, `SNMP`, `SSH`, `WBEM`, `WinRM` or `WMI`.
 

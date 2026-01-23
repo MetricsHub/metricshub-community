@@ -70,6 +70,22 @@ export const saveConfig = createAsyncThunk(
 );
 
 /**
+ * Save a configuration file as draft.
+ * @param {{name:string,content:string,skipValidation?:boolean}} param0 The configuration file data.
+ * @returns {Promise<{name:string,size:number,lastModificationTime:string}>} The saved file metadata.
+ */
+export const saveDraftConfig = createAsyncThunk(
+	"config/saveDraft",
+	async ({ name, content, skipValidation = false }, { rejectWithValue }) => {
+		try {
+			return { meta: await configApi.saveDraft(name, content, { skipValidation }), content };
+		} catch (e) {
+			return rejectWithValue(e.message);
+		}
+	},
+);
+
+/**
  * Validate a configuration file's content.
  * @param {{name:string,content:string}} param0 The configuration file data.
  * @returns {Promise<{name:string,result:{valid: boolean, errors: string[]}}>} The validation result.

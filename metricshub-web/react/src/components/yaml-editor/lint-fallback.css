@@ -20,3 +20,29 @@
 	padding: 4px 6px;
 	font-size: 0.8rem;
 }
+
+/* Selection-only whitespace markers */
+.cm-selectionSpace,
+.cm-selectionTab {
+	position: relative;
+	background-image: none;
+}
+
+.cm-selectionSpace::before,
+.cm-selectionTab::before {
+	position: absolute;
+	inset: 0;
+	opacity: 0.45;
+	pointer-events: none;
+	text-align: center;
+	color: currentColor;
+	font-size: 0.85em;
+}
+
+.cm-selectionSpace::before {
+	content: "·";
+}
+
+.cm-selectionTab::before {
+	content: "→";
+}

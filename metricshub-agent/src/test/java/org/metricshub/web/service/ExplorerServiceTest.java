@@ -89,6 +89,14 @@ class ExplorerServiceTest {
 			IntStream.range(0, list.size()).boxed().forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1)))
 		);
 
+		// Initialize ConnectorStore to avoid NPE in ExplorerService
+		final org.metricshub.engine.connector.model.ConnectorStore connectorStore =
+			new org.metricshub.engine.connector.model.ConnectorStore();
+		final org.metricshub.engine.connector.model.Connector connector =
+			new org.metricshub.engine.connector.model.Connector();
+		connectorStore.addOne(connectorId, connector);
+		tm.setConnectorStore(connectorStore);
+
 		return tm;
 	}
 
@@ -277,6 +285,17 @@ class ExplorerServiceTest {
 		tm.addNewMonitor(cpu2dup, "cpu", "cpu-2");
 		tm.addNewMonitor(mem1, "mem", "mem-1");
 		tm.addNewMonitor(hostIgnored, "host", "h1");
+
+		// Initialize ConnectorStore to avoid NPE in ExplorerService
+		final org.metricshub.engine.connector.model.ConnectorStore connectorStore =
+			new org.metricshub.engine.connector.model.ConnectorStore();
+		final org.metricshub.engine.connector.model.Connector connectorA =
+			new org.metricshub.engine.connector.model.Connector();
+		final org.metricshub.engine.connector.model.Connector connectorB =
+			new org.metricshub.engine.connector.model.Connector();
+		connectorStore.addOne(connA, connectorA);
+		connectorStore.addOne(connB, connectorB);
+		tm.setConnectorStore(connectorStore);
 
 		final Map<String, Map<String, TelemetryManager>> telemetryManagers = new HashMap<>();
 		telemetryManagers.put(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY, Map.of("r1", tm));

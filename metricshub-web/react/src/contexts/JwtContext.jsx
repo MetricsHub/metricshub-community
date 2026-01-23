@@ -1,6 +1,7 @@
 import * as React from "react";
 import { authApi } from "../api/auth";
 import { Issuer } from "../utils/auth";
+import { setUserRole } from "../utils/auth-state";
 
 /**
  * Action types for the auth reducer.
@@ -117,6 +118,10 @@ export const AuthProvider = ({ children }) => {
 		window.addEventListener("auth:logout", onForcedLogout);
 		return () => window.removeEventListener("auth:logout", onForcedLogout);
 	}, [dispatch]);
+
+	React.useEffect(() => {
+		setUserRole(state.user?.role ?? null);
+	}, [state.user]);
 
 	/**
 	 * Sign in function.

@@ -13,7 +13,7 @@ import static org.metricshub.engine.constants.Constants.FAILED_OS_DETECTION;
 import static org.metricshub.engine.constants.Constants.HIGH_VERSION_NUMBER;
 import static org.metricshub.engine.constants.Constants.HOST_ID;
 import static org.metricshub.engine.constants.Constants.HTTP;
-import static org.metricshub.engine.constants.Constants.IPMI_CONNECTION_SUCCESS_WITH_IMPI_OVER_LAN_MESSAGE;
+import static org.metricshub.engine.constants.Constants.IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE;
 import static org.metricshub.engine.constants.Constants.LIST_ALL_LINUX_PROCESSES_RESULT;
 import static org.metricshub.engine.constants.Constants.LOCALHOST;
 import static org.metricshub.engine.constants.Constants.LOW_VERSION_NUMBER;
@@ -807,7 +807,7 @@ class CriterionProcessorTest {
 		CriterionTestResult result = CriterionTestResult
 			.builder()
 			.result(SYSTEM_POWER_UP_MESSAGE)
-			.message(IPMI_CONNECTION_SUCCESS_WITH_IMPI_OVER_LAN_MESSAGE)
+			.message(IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE)
 			.success(true)
 			.build();
 
@@ -824,7 +824,7 @@ class CriterionProcessorTest {
 			CriterionTestResult
 				.builder()
 				.result(SYSTEM_POWER_UP_MESSAGE)
-				.message(IPMI_CONNECTION_SUCCESS_WITH_IMPI_OVER_LAN_MESSAGE)
+				.message(IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE)
 				.success(true)
 				.criterion(ipmiCriterion)
 				.build(),

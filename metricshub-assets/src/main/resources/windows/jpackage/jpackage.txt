@@ -7,7 +7,7 @@
 --vendor "MetricsHub"
 --app-version ${project.version.noSnapshot}
 --resource-dir override
---app-content assets\connectors,assets\config,assets\LICENSE,assets\extensions,assets\web,assets\service-installer.exe
+--app-content assets\connectors,assets\config,assets\LICENSE,assets\extensions,assets\web
 --win-console
 --main-class org.metricshub.cli.MetricsHubCliApplication
 --java-options --add-exports

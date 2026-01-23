@@ -177,6 +177,7 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 	public JsonNode getQuery() {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(query));
+		queryNode.set("queryType", new TextNode("wmi"));
 		return queryNode;
 	}
 
