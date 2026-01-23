@@ -70,7 +70,7 @@ goto :enderror
 
 :found_jdk
 
-jlink --version >nul 2>&1
+"%JDK_BIN_DIR%\jlink.exe" --version >nul 2>&1
 if errorlevel 1 (
     call :fail "jlink not found on PATH. Ensure you are using a JDK that provides jlink and it's on PATH."
     goto :enderror
@@ -103,7 +103,7 @@ if not defined MODS (
 
 call :info "Using jlink modules: !MODS!"
 
-jlink --strip-debug --no-header-files --no-man-pages --add-modules !MODS! --output "%BUILD_DIR%\assets-local\jre-windows"
+"%JDK_BIN_DIR%\jlink.exe" --strip-debug --no-header-files --no-man-pages --add-modules !MODS! --output "%BUILD_DIR%\assets-local\jre-windows"
 if errorlevel 1 (
     call :fail "jlink failed to create the custom JRE."
     goto :enderror

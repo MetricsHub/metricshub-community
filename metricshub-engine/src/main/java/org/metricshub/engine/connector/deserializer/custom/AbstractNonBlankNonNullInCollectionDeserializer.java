@@ -23,6 +23,7 @@ package org.metricshub.engine.connector.deserializer.custom;
 
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * An abstract base class for deserializers handling non-null and non-blank values in collections.
@@ -52,4 +53,9 @@ public abstract class AbstractNonBlankNonNullInCollectionDeserializer extends Ab
 	}
 
 	protected abstract String getErrorMessage();
+
+	@Override
+	protected Predicate<String> getFilterPredicate() {
+		return str -> true;
+	}
 }

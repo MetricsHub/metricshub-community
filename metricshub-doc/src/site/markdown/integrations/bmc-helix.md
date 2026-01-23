@@ -87,7 +87,7 @@ A typical pipeline structure looks like: `OTEL metrics --> (batch/memory limit) 
 
 #### Transformer Example for Hardware Metrics
 
-The following example shows how to assign `entityName`, `instanceName`, and `entityTypeId` dynamically:
+The following example shows how to assign `entityName`, `instanceName`, and `entityTypeId` dynamically for hardware metrics:
 
 ```yaml
 processors:
@@ -157,3 +157,111 @@ processors:
 ```
 
 This configuration ensures that required attributes are automatically mapped based on metric names and resource metadata.
+
+### Transformer Example for System Metrics
+
+The following example shows how to assign `entityName`, `instanceName`, and `entityTypeId` dynamically for system metrics:
+
+```yaml
+processors:
+
+  transform/system_for_helix:
+    metric_statements:
+      # ------------------------------------------------------------------------------
+      # 1) Create entityName and instanceName from known attributes
+      # ------------------------------------------------------------------------------
+      - context: datapoint
+        statements:
+          # system.cpu => entityName = system.cpu.logical_number, instanceName = name
+          - set(attributes["entityName"], resource.attributes["system.cpu.logical_number"]) where IsMatch(metric.name, "system\\.cpu\\..*") and resource.attributes["system.cpu.logical_number"] != nil
+          - set(attributes["instanceName"], resource.attributes["name"]) where IsMatch(metric.name, "system\\.cpu\\..*") and resource.attributes["name"] != nil
+
+          # system.memory => entityName = id, instanceName = id
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.memory\\..*") and resource.attributes["id"] != nil
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.memory\\..*") and resource.attributes["id"] != nil
+
+          # system.paging => entityName = id, instanceName = id
+          - set(attributes["entityName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.paging\\..*") and resource.attributes["system.device"] != nil  
+          - set(attributes["instanceName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.paging\\..*") and resource.attributes["system.device"] != nil
+          # Last resort to set entityName and instanceName to id if system.device is not available
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.paging\\..*") and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil 
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.paging\\..*") and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil
+
+          # system.disk => entityName and instanceName could be id or system.device
+          - set(attributes["entityName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.disk\\..*") and resource.attributes["system.device"] != nil
+          - set(attributes["instanceName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.disk\\..*")  and resource.attributes["system.device"] != nil
+          # Last resort to set entityName and instanceName to id if system.device is not available
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.disk\\..*") and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.disk\\..*")  and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil
+
+          # system.filesystem => entityName and instanceName could be id or system.device
+          - set(attributes["entityName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.filesystem\\..*") and resource.attributes["system.device"] != nil
+          - set(attributes["instanceName"], resource.attributes["system.device"]) where IsMatch(metric.name, "system\\.filesystem\\..*")  and resource.attributes["system.device"] != nil
+          # Last resort to set entityName and instanceName to id if system.device is not available
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.filesystem\\..*") and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.filesystem\\..*")  and resource.attributes["id"] != nil and resource.attributes["system.device"] == nil
+
+          # system.network => entityName and instanceName could be id or network.interface.name
+          - set(attributes["entityName"], resource.attributes["network.interface.name"]) where IsMatch(metric.name, "system\\.network\\..*") and resource.attributes["network.interface.name"] != nil
+          - set(attributes["instanceName"], resource.attributes["network.interface.name"]) where IsMatch(metric.name, "system\\.network\\..*")  and resource.attributes["network.interface.name"] != nil
+          # Last resort to set entityName and instanceName to id if network.interface.name is not available
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.network\\..*")  and resource.attributes["id"] != nil and resource.attributes["network.interface.name"] == nil
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.network\\..*") and resource.attributes["id"] != nil and resource.attributes["network.interface.name"] == nil
+
+          # system.process => entityName = process.id, instanceName = process.name
+          - set(attributes["entityName"], resource.attributes["process.id"]) where IsMatch(metric.name, "process\\..*") and resource.attributes["process.id"] != nil
+          - set(attributes["instanceName"], resource.attributes["process.name"]) where IsMatch(metric.name, "process\\..*") and resource.attributes["process.name"] != nil
+
+          # system.service => entityName = id, instanceName = system.service.name
+          - set(attributes["entityName"], resource.attributes["system.service.name"]) where IsMatch(metric.name, "system\\.service\\..*") and resource.attributes["system.service.name"] != nil
+          - set(attributes["instanceName"], resource.attributes["system.service.name"]) where IsMatch(metric.name, "system\\.service\\..*")  and resource.attributes["system.service.name"] != nil
+          # Last resort to set entityName and instanceName to id if system.service.name is not available
+          - set(attributes["instanceName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.service\\..*")  and resource.attributes["id"] != nil and resource.attributes["system.service.name"] == nil
+          - set(attributes["entityName"], resource.attributes["id"]) where IsMatch(metric.name, "system\\.service\\..*") and resource.attributes["id"] != nil and resource.attributes["system.service.name"] == nil
+
+      # ------------------------------------------------------------------------------
+      # 2) [OPTIONAL] Handle any special or "agent-like" metrics, if desired
+      # (Remove if you do not have an agent pattern in your system metrics)
+      # ------------------------------------------------------------------------------
+      - context: datapoint
+        conditions:
+          - IsMatch(metric.name, ".*\\.agent\\..*") or IsMatch(metric.name, "metricshub\\.license\\..*")
+        statements:
+          - set(attributes["entityName"], resource.attributes["host.name"]) where resource.attributes["host.name"] != nil
+          - set(attributes["instanceName"], resource.attributes["service.name"]) where resource.attributes["service.name"] != nil
+          - set(attributes["entityTypeId"], "agent")
+
+
+      # ------------------------------------------------------------------------------
+      # 3) Assign the entityTypeId for each known system metric pattern
+      # ------------------------------------------------------------------------------
+      - context: datapoint
+        statements:
+          - set(attributes["entityTypeId"], "system_cpu") where IsMatch(metric.name, "system\\.cpu\\..*")
+          - set(attributes["entityTypeId"], "system_memory") where IsMatch(metric.name, "system\\.memory\\..*")
+          - set(attributes["entityTypeId"], "system_paging") where IsMatch(metric.name, "system\\.paging\\..*")
+          - set(attributes["entityTypeId"], "system_disk")  where IsMatch(metric.name, "system\\.disk\\..*")
+          - set(attributes["entityTypeId"], "system_filesystem") where IsMatch(metric.name, "system\\.filesystem\\..*")
+          - set(attributes["entityTypeId"], "system_network") where IsMatch(metric.name, "system\\.network\\..*")
+          - set(attributes["entityTypeId"], "system_process") where IsMatch(metric.name, "process\\..*")
+          - set(attributes["entityTypeId"], "system_service") where IsMatch(metric.name, "system\\.service\\..*")
+
+
+      # ------------------------------------------------------------------------------
+      # 4) Rename the metric.name by appending known "state/direction" keys 
+      # ------------------------------------------------------------------------------
+      - context: datapoint
+        statements:
+          - set(metric.name, Concat([metric.name, attributes["cpu.mode"]], ".")) where attributes["cpu.mode"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.cpu.state"]], ".")) where attributes["system.cpu.state"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.memory.state"]], ".")) where attributes["system.memory.state"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.paging.state"]], ".")) where attributes["system.paging.state"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.paging.direction"]], ".")) where attributes["system.paging.direction"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.paging.type"]], ".")) where attributes["system.paging.type"] != nil
+          - set(metric.name, Concat([metric.name, attributes["disk.io.direction"]], ".")) where attributes["disk.io.direction"] != nil
+          - set(metric.name, Concat([metric.name, attributes["network.io.direction"]], ".")) where attributes["network.io.direction"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.filesystem.state"]], ".")) where attributes["system.filesystem.state"] != nil
+          - set(metric.name, Concat([metric.name, attributes["system.process.status"]], ".")) where attributes["system.process.status"] != nil
+          # If the metric is managed by transform/hardware_for_helix, do not change its name
+          # - set(metric.name, Concat([metric.name, attributes["state"]], ".")) where attributes["state"] != nil
+```

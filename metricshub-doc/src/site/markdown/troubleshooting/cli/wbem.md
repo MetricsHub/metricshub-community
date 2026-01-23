@@ -5,7 +5,7 @@ description: How to execute WBEM queries on WBEM-enabled devices or systems with
 
 The **MetricsHub WBEM CLI** allows you to execute WBEM queries on WBEM-enabled devices or systems. It supports querying namespaces, retrieving specific information, and accessing vCenter-hosted resources.
 
-Before using the CLI, ensure your platform supports WBEM monitoring by checking the [Connector Directory](https://metricshub.com/docs/latest/metricshub-connectors-directory.html).
+Before using the CLI, ensure your platform supports WBEM monitoring by checking the [Supported Platforms](../../supported-platforms.html).
 
 ## Syntax
 

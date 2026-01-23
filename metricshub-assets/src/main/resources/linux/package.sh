@@ -73,6 +73,7 @@ COMMON_ARGS=(
   --add-launcher sshcli=metricshub-sshcli.properties
   --add-launcher user=metricshub-user.properties
   --add-launcher wbemcli=metricshub-wbemcli.properties
+  --add-launcher winremotecli=metricshub-winremotecli.properties
   --add-launcher winrmcli=metricshub-winrmcli.properties
   --add-launcher wmicli=metricshub-wmicli.properties
   --dest "${DEST_DIR}"

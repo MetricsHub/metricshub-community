@@ -36,12 +36,12 @@ class SearchServiceTest {
 			() -> "Expected two core matches but got " + instanceMatches
 		);
 		assertEquals(
-			"EdgeAgent/rg-alpha/server-east/snmp/cpu/core-0",
+			"/explorer/resource-groups/rg-alpha/resources/server-east/connectors/snmp/monitors/cpu#core-0",
 			instanceMatches.get(0).getPath(),
 			() -> "Unexpected path for first core match -> " + instanceMatches.get(0).getPath()
 		);
 		assertEquals(
-			"EdgeAgent/rg-alpha/server-east/snmp/cpu/core-1",
+			"/explorer/resource-groups/rg-alpha/resources/server-east/connectors/snmp/monitors/cpu#core-1",
 			instanceMatches.get(1).getPath(),
 			() -> "Unexpected path for second core match -> " + instanceMatches.get(1).getPath()
 		);
@@ -68,12 +68,12 @@ class SearchServiceTest {
 			() -> "Unexpected match order -> " + matches
 		);
 		assertEquals(
-			"TopAgent/group-alpha/match",
+			"/explorer/resource-groups/group-alpha/resources/match",
 			matches.get(0).getPath(),
 			() -> "First match should use the lexicographically smaller path but was " + matches.get(0).getPath()
 		);
 		assertEquals(
-			"TopAgent/match",
+			"/explorer/resources/match",
 			matches.get(1).getPath(),
 			() -> "Second match should be the top-level resource but was " + matches.get(1).getPath()
 		);
@@ -89,6 +89,7 @@ class SearchServiceTest {
 
 	/**
 	 * Builds a telemetry hierarchy for testing the search service.
+	 *
 	 * @return The telemetry hierarchy
 	 */
 	private AgentTelemetry buildTelemetryHierarchy() {
@@ -115,6 +116,7 @@ class SearchServiceTest {
 
 	/**
 	 * Builds a telemetry hierarchy for testing the search service sorting.
+	 *
 	 * @return The telemetry hierarchy
 	 */
 	private AgentTelemetry buildOrderingTelemetryHierarchy() {
@@ -138,6 +140,7 @@ class SearchServiceTest {
 
 	/**
 	 * Builds a telemetry hierarchy for testing the search service threshold.
+	 *
 	 * @return The telemetry hierarchy
 	 */
 	private AgentTelemetry buildThresholdTelemetryHierarchy() {
