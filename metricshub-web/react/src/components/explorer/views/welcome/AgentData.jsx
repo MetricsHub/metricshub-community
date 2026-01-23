@@ -26,7 +26,10 @@ const AgentData = ({ agent, totalResources }) => {
 		return null;
 	}
 
-	const title = "MetricsHub Community";
+	const title =
+		attributes["service.name"] === "MetricsHub Agent"
+			? "MetricsHub Community"
+			: "MetricsHub Enterprise";
 
 	const osType = attributes["os.type"];
 	let action = null;

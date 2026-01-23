@@ -81,6 +81,11 @@ public class ConfigurationFilesService {
 	private static final Set<String> YAML_EXTENSIONS = Set.of(".yml", ".yaml");
 
 	/**
+	 * Extension for draft configuration files.
+	 */
+	private static final String DRAFT_EXTENSION = ".draft";
+
+	/**
 	 * Name of the backup directory for configuration files.
 	 */
 	private static final String BACKUP_DIR_NAME = "backup";
@@ -187,6 +192,50 @@ public class ConfigurationFilesService {
 	}
 
 	/**
+	 * Saves or updates the content of a draft configuration file (atomic write).
+	 *
+	 * @param fileName the configuration file name
+	 * @param content  the content to write
+	 * @return the saved ConfigurationFile with metadata
+	 * @throws ConfigFilesException if the file cannot be written
+	 */
+	public ConfigurationFile saveOrUpdateDraftFile(final String fileName, final String content)
+		throws ConfigFilesException {
+		final Path dir = getConfigDir();
+		String draftFileName = fileName;
+		if (!draftFileName.endsWith(DRAFT_EXTENSION)) {
+			draftFileName += DRAFT_EXTENSION;
+		}
+		final Path target = resolveSafeDraft(dir, draftFileName);
+
+		try {
+			Files.createDirectories(dir);
+			// Write to a temp file, then move atomically
+			final Path tmp = Files.createTempFile(dir, draftFileName + ".", ".tmp");
+			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+
+			try {
+				// Write atomically via temp file + move (ensures no partial writes, even if
+				// process crashes)
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+			} catch (AtomicMoveNotSupportedException amnse) {
+				log.info("Atomic move not supported, falling back to non-atomic move.");
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+
+			return buildConfigurationFile(target);
+		} catch (IOException e) {
+			log.error("Failed to save draft configuration file: '{}'. Error: {}", target, e.getMessage());
+			log.debug("Failed to save draft configuration file: '{}'. Exception:", target, e);
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.IO_FAILURE,
+				"Failed to save draft configuration file.",
+				e
+			);
+		}
+	}
+
+	/**
 	 * Deletes a configuration file.
 	 *
 	 * @param fileName the configuration file name
@@ -285,6 +334,10 @@ public class ConfigurationFilesService {
 	 */
 	private static boolean hasYamlExtension(final String fileName) {
 		final String lower = fileName.toLowerCase(Locale.ROOT);
+		if (lower.endsWith(DRAFT_EXTENSION)) {
+			final String baseName = lower.substring(0, lower.length() - DRAFT_EXTENSION.length());
+			return YAML_EXTENSIONS.stream().anyMatch(baseName::endsWith);
+		}
 		return YAML_EXTENSIONS.stream().anyMatch(lower::endsWith);
 	}
 
@@ -298,7 +351,29 @@ public class ConfigurationFilesService {
 	 * @throws ConfigFilesException if the file name is invalid or resolution fails
 	 */
 	private Path resolveSafeYaml(final Path baseDir, final String fileName) throws ConfigFilesException {
-		ensureYamlExtension(fileName, "Only .yml or .yaml files are allowed.");
+		ensureYamlExtension(fileName, "Only .yml, .yaml or .draft files are allowed.");
+		return resolveWithinDir(baseDir, fileName);
+	}
+
+	/**
+	 * Resolves and validates a draft YAML file name within a base directory (no
+	 * traversal, correct extension).
+	 *
+	 * @param baseDir  configuration directory
+	 * @param fileName simple file name (no path)
+	 * @return resolved path
+	 * @throws ConfigFilesException if the file name is invalid or resolution fails
+	 */
+	private Path resolveSafeDraft(final Path baseDir, final String fileName) throws ConfigFilesException {
+		validateSimpleFileName(fileName);
+
+		final String baseName = fileName.substring(0, fileName.length() - DRAFT_EXTENSION.length());
+		if (!hasYamlExtension(baseName)) {
+			throw new ConfigFilesException(
+				ConfigFilesException.Code.INVALID_EXTENSION,
+				"Draft files must have a .yml or .yaml extension."
+			);
+		}
 		return resolveWithinDir(baseDir, fileName);
 	}
 
@@ -516,7 +591,7 @@ public class ConfigurationFilesService {
 	 * @throws ConfigFilesException if the file name is invalid or resolution fails
 	 */
 	private Path resolveBackupYaml(final String fileName) throws ConfigFilesException {
-		ensureYamlExtension(fileName, "Only .yml or .yaml files are allowed for backup.");
+		ensureYamlExtension(fileName, "Only .yml, .yaml or .draft files are allowed for backup.");
 		return resolveWithinDir(getBackupDir(), fileName);
 	}
 

@@ -47,7 +47,7 @@ USER metricshub
 
 ENV PATH="/opt/metricshub/bin:${PATH}"
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -s http://localhost:13133 | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' | grep -q 'Server available'
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 CMD curl -ksSf https://localhost:31888/login | grep -qi 'metricshub'
 
 ENTRYPOINT ["/opt/metricshub/bin/docker-entrypoint.sh"]
 CMD ["/opt/metricshub/bin/metricshub-community-service"]

@@ -15,7 +15,7 @@ To reflect this organization, you are asked to define your **resource group** fi
 > * `C:\ProgramData\MetricsHub\config` on Windows systems
 > * `./metricshub/lib/config` on Linux systems
 
-> **Important**: We recommend using an editor supporting the
+> **Important**: We recommend using the [Web Interface](../operating-web-ui.md) or an editor supporting the
 [Schemastore](https://www.schemastore.org/metricshub.json) to edit **MetricsHub**'s configuration YAML
  files (Example: [Visual Studio Code](https://code.visualstudio.com/download) and
  [vscode.dev](https://vscode.dev),

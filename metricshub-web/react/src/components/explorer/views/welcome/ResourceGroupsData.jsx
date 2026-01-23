@@ -5,6 +5,28 @@ import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "../common/table-styles";
 import TruncatedText from "../common/TruncatedText";
 
+const COLUMNS = [
+	{
+		field: "displayLabel",
+		headerName: "Key",
+		flex: 1,
+		renderCell: (params) => (
+			<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
+				<NodeTypeIcons type="resource-group" />
+				<TruncatedText text={params.value}>{params.value}</TruncatedText>
+			</Box>
+		),
+	},
+	{
+		field: "resourceCount",
+		headerName: "Resources",
+		flex: 1,
+		renderCell: (params) => (
+			<TruncatedText text={String(params.value)}>{params.value}</TruncatedText>
+		),
+	},
+];
+
 /**
  * Count resources in a resource group.
  *
@@ -74,27 +96,7 @@ const ResourceGroupsData = ({ resourceGroups, onResourceGroupClick }) => {
 			</Typography>
 			<DataGrid
 				rows={processedGroups.map((g) => ({ id: g.name, ...g }))}
-				columns={[
-					{
-						field: "displayLabel",
-						headerName: "Key",
-						flex: 1,
-						renderCell: (params) => (
-							<Box sx={{ display: "flex", alignItems: "center", gap: 1, width: "100%" }}>
-								<NodeTypeIcons type="resource-group" />
-								<TruncatedText text={params.value}>{params.value}</TruncatedText>
-							</Box>
-						),
-					},
-					{
-						field: "resourceCount",
-						headerName: "Resources",
-						flex: 1,
-						renderCell: (params) => (
-							<TruncatedText text={String(params.value)}>{params.value}</TruncatedText>
-						),
-					},
-				]}
+				columns={COLUMNS}
 				onRowClick={handleGroupClick}
 				disableRowSelectionOnClick
 				hideFooter

@@ -4,6 +4,11 @@ import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
 
+const ATTRIBUTE_COLUMNS = [
+	{ field: "key", headerName: "Key", flex: 1 },
+	{ field: "value", headerName: "Value", flex: 1 },
+];
+
 /**
  * Generic header section for an entity (Resource, Resource Group, Agent),
  * showing its title/icon and attributes.
@@ -20,6 +25,16 @@ import { sectionTitleSx, dataGridSx } from "./table-styles";
 const EntityHeader = ({ title, iconType, icon, attributes, children, action }) => {
 	const hasAttributes = React.useMemo(
 		() => attributes && Object.keys(attributes).length > 0,
+		[attributes],
+	);
+
+	const rows = React.useMemo(
+		() =>
+			Object.entries(attributes || {}).map(([key, value]) => ({
+				id: key,
+				key,
+				value,
+			})),
 		[attributes],
 	);
 
@@ -52,15 +67,8 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 						Attributes
 					</Typography>
 					<DataGrid
-						rows={Object.entries(attributes).map(([key, value]) => ({
-							id: key,
-							key,
-							value,
-						}))}
-						columns={[
-							{ field: "key", headerName: "Key", flex: 1 },
-							{ field: "value", headerName: "Value", flex: 1 },
-						]}
+						rows={rows}
+						columns={ATTRIBUTE_COLUMNS}
 						disableRowSelectionOnClick
 						hideFooter
 						autoHeight

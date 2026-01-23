@@ -203,6 +203,8 @@ jobs:
 
     outputs:
       version: ${{ steps.version.outputs.version }}
+      siteArtifact: metricshub-site-${{ steps.version.outputs.version }}
+      packageArtifacts: package-artifacts
 
   # Create Packages for Linux and Windows
   package-community:
@@ -211,7 +213,7 @@ jobs:
     uses: ./.github/workflows/packaging.yml
     with:
       jdkVersion: "21"
-      assetPackage: package-artifacts
+      assetPackage: ${{ needs.release.outputs.packageArtifacts }}
       deploy: true
       deployDockerHub: ${{ inputs.pushToDockerHub }}
       debRepository: apt-releases-public
@@ -236,14 +238,38 @@ jobs:
   finalize:
     name: Finalize release
     runs-on: ubuntu-latest
-    needs: deploy
+    needs:
+    - prepare
+    - release
+    - package-community
+    - deploy
     steps:
 
     - uses: actions/checkout@v6
 
-    - uses: actions/download-artifact@v6
+    - name: Download Site Artifact
+      uses: actions/download-artifact@v6
       with:
         merge-multiple: true
+        name: ${{ needs.release.outputs.siteArtifact }}
+
+    - name: Download Package Artifacts
+      uses: actions/download-artifact@v6
+      with:
+        merge-multiple: true
+        name: ${{ needs.release.outputs.packageArtifacts }}
+
+    - name: Download Linux Package
+      uses: actions/download-artifact@v6
+      with:
+        merge-multiple: true
+        name: ${{ needs.package-community.outputs.linuxPackage }}
+
+    - name: Download Windows Package
+      uses: actions/download-artifact@v6
+      with:
+        merge-multiple: true
+        name: ${{ needs.package-community.outputs.windowsPackage }}
 
     - name: Create a GitHub Release
       uses: softprops/action-gh-release@v2
@@ -279,17 +305,18 @@ jobs:
       with:
         role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
         role-session-name: ci
-        aws-region: ${{ env.AWS_REGION }}
+        aws-region: ${{ vars.AWS_REGION }}
 
     - name: Publish Packages on MetricsHub.com Website
       if: ${{ github.repository_owner == 'MetricsHub' }}
       run: |
         packagedir="packages/${{ github.ref_name }}"
         mkdir -p ${packagedir}
+        ls -al
         # Get packages
-        cp "*.rpm" "${packagedir}"
-        cp "*.deb" "${packagedir}"
-        cp "*.msi" "${packagedir}"
-        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ steps.get_run_id.outputs.version }}/ --recursive
+        cp *.rpm "${packagedir}"
+        cp *.deb "${packagedir}"
+        cp *.msi "${packagedir}"
+        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ inputs.releaseVersion }}/ --recursive
       env:
         AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}

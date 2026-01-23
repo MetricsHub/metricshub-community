@@ -10,6 +10,7 @@ export const truncatedCellSx = {
 	whiteSpace: "nowrap",
 	overflow: "hidden",
 	textOverflow: "ellipsis",
+	minWidth: 0,
 };
 
 export const dataGridSx = {

@@ -87,10 +87,10 @@
 			<item name="On Windows" href="installation/windows.html "/>
 		</menu>
 
-		<menu name="Upgrade">
-			<item name="Upgrade Notes" href="upgrade.html" />
+		<menu name="The Web UI &lt;span class='label label-primary'&gt;Beta&lt;/span&gt;">
+			<item name="Operating the Web UI" href="operating-web-ui.html"/>
 		</menu>
-
+		
 		<menu name="Configuration">
 			<item name="Monitoring Configuration" href="configuration/configure-monitoring.html" />
 			<item name="Sending Telemetry Data" href="configuration/send-telemetry.html" />
@@ -124,6 +124,7 @@
 			<item name="Web Request" href="custom/web-request.html"/>
 			<item name="Windows Process" href="custom/windows-process.html"/>
 			<item name="Windows Service" href="custom/windows-service.html"/>
+			<item name="Windows Event Log" href="custom/windows-event-log.html"/>
 		</menu>
 
 		<menu name="Troubleshooting">

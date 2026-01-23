@@ -8,6 +8,7 @@ import { store } from "./store";
 import { createTheme as createMetricsHubTheme } from "./theme";
 import { paths } from "./paths";
 import UnsavedChangesGuard from "./components/common/UnsavedChangesGuard";
+import WriteProtectionDialog from "./components/common/WriteProtectionDialog";
 import GlobalSnackbarProvider from "./contexts/GlobalSnackbarContext";
 import { AuthProvider } from "./contexts/JwtContext";
 import { useAuth } from "./hooks/use-auth";
@@ -119,6 +120,7 @@ export default function App() {
 			<ReduxProvider store={store}>
 				<GlobalSnackbarProvider>
 					<AuthProvider>
+						<WriteProtectionDialog />
 						<AppContent
 							onToggleTheme={() => setMode((prev) => (prev === "light" ? "dark" : "light"))}
 						/>

@@ -3,6 +3,7 @@ import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
+import AddIcon from "@mui/icons-material/Add";
 
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
@@ -12,6 +13,7 @@ import {
 	fetchConfigContent,
 	deleteConfig,
 	renameConfig,
+	saveDraftConfig,
 } from "../store/thunks/config-thunks";
 import {
 	select as selectFile,
@@ -19,6 +21,7 @@ import {
 	setContent,
 	renameLocalFile,
 	deleteLocalFile,
+	clearError,
 } from "../store/slices/config-slice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
@@ -27,6 +30,9 @@ import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { paths } from "../paths";
+import { useSnackbar } from "../hooks/use-snackbar";
+import { isBackupFileName } from "../utils/backup-names";
+import { useAuth } from "../hooks/use-auth";
 
 /**
  * Configuration page component.
@@ -35,12 +41,22 @@ import { paths } from "../paths";
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const snackbar = useSnackbar();
+	const { user } = useAuth();
+	const isReadOnly = user?.role === "ro";
 	const { name: routeName } = useParams();
 	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
 		useAppSelector((s) => s.config);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null);
+
+	React.useEffect(() => {
+		if (error) {
+			snackbar.show(error, { severity: "error" });
+			dispatch(clearError());
+		}
+	}, [error, snackbar, dispatch]);
 
 	/**
 	 * Fetch the configuration file list on component mount.
@@ -141,24 +157,81 @@ function ConfigurationPage() {
 	/**
 	 * Submit the delete action after confirmation.
 	 */
-	const submitDelete = React.useCallback(() => {
+	const submitDelete = React.useCallback(async () => {
 		if (!deleteTarget) {
 			setDeleteOpen(false);
 			return;
 		}
 		const meta = list.find((f) => f.name === deleteTarget);
-		if (meta?.localOnly) {
-			dispatch(deleteLocalFile(deleteTarget));
-		} else {
-			dispatch(deleteConfig(deleteTarget));
-		}
+
+		// Determine next file to select if we are deleting the current one
+		let nextSelected = null;
 		if (selected === deleteTarget) {
-			navigate(paths.configuration, { replace: true });
+			const visibleFiles = list
+				.filter((f) => !isBackupFileName(f.name))
+				.sort((a, b) => a.name.localeCompare(b.name));
+
+			const idx = visibleFiles.findIndex((f) => f.name === deleteTarget);
+			if (idx >= 0 && visibleFiles.length > 1) {
+				// Pick next, or previous if at the end
+				const nextIdx = idx + 1 < visibleFiles.length ? idx + 1 : idx - 1;
+				nextSelected = visibleFiles[nextIdx]?.name;
+			}
 		}
+
+		if (selected === deleteTarget) {
+			if (nextSelected) {
+				navigate(paths.configurationFile(nextSelected), { replace: true });
+			} else {
+				navigate(paths.configuration, { replace: true });
+			}
+		}
+
+		// Wait slightly for navigation to start before deleting, to avoid "File not found"
+		// error when the editor tries to re-fetch or validate the deleting file.
+		setTimeout(() => {
+			if (meta?.localOnly) {
+				dispatch(deleteLocalFile(deleteTarget));
+			} else {
+				dispatch(deleteConfig(deleteTarget));
+			}
+		}, 50);
+
 		setDeleteOpen(false);
 	}, [dispatch, deleteTarget, list, selected, navigate]);
 
+	const handleCreate = React.useCallback(() => {
+		const base = "new-config.yaml.draft";
+		let name = base;
+		let i = 1;
+		while (list.some((f) => f.name === name)) {
+			name = `new-config-${i}.yaml.draft`;
+			i++;
+		}
+
+		const content = "# MetricsHub Configuration\n\n";
+		dispatch(addLocalFile({ name, content }));
+		dispatch(saveDraftConfig({ name, content, skipValidation: true }));
+
+		navigate(paths.configurationFile(name), { replace: false });
+	}, [dispatch, list, navigate]);
+
 	const editorRef = React.useRef(null);
+
+	const handleMakeDraft = React.useCallback(
+		(fileName) => {
+			const newName = fileName + ".draft";
+			if (list.some((f) => f.name === fileName && f.localOnly)) {
+				dispatch(renameLocalFile({ oldName: fileName, newName }));
+			} else {
+				dispatch(renameConfig({ oldName: fileName, newName }));
+			}
+			if (selected === fileName) {
+				navigate(paths.configurationFile(newName), { replace: true });
+			}
+		},
+		[dispatch, list, selected, navigate],
+	);
 
 	return (
 		<SplitScreen initialLeftPct={35}>
@@ -177,16 +250,29 @@ function ConfigurationPage() {
 
 						<Button
 							size="small"
+							variant="outlined"
+							color="inherit"
+							startIcon={<AddIcon />}
+							onClick={handleCreate}
+							disabled={isReadOnly}
+						>
+							Create
+						</Button>
+
+						<Button
+							size="small"
 							color="inherit"
 							variant="outlined"
 							component="label"
 							startIcon={<UploadFileIcon />}
+							disabled={isReadOnly}
 						>
 							Import
 							<input
 								type="file"
 								accept=".yaml,.yml"
 								hidden
+								disabled={isReadOnly}
 								onChange={(e) => {
 									const file = e.target.files?.[0];
 									if (!file) return;
@@ -203,7 +289,6 @@ function ConfigurationPage() {
 						</Button>
 
 						{loadingList && <CircularProgress size={18} />}
-						{error && <Chip size="small" color="error" label={error} sx={{ maxWidth: 280 }} />}
 					</Stack>
 
 					<ConfigTree
@@ -212,6 +297,7 @@ function ConfigurationPage() {
 						onSelect={onSelect}
 						onRename={handleInlineRename}
 						onDelete={openDelete}
+						onMakeDraft={handleMakeDraft}
 					/>
 
 					<QuestionDialog
@@ -267,6 +353,8 @@ function ConfigurationPage() {
 							selected={selected}
 							saving={saving}
 							onSave={() => editorRef.current?.save?.()}
+							onApply={() => editorRef.current?.apply?.()}
+							isReadOnly={isReadOnly}
 						/>
 					</Box>
 
