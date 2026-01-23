@@ -3,7 +3,82 @@ description: Learn more about the new features, changes and improvements, and bu
 
 # Release Notes
 
-<!-- MACRO{toc|fromDepth=1|toDepth=1|id=toc} -->
+<!-- MACRO{toc|fromDepth=1|toDepth=2|id=toc} -->
+
+## MetricsHub Enterprise Edition v3.9.00
+
+### MetricsHub Enterprise Edition v3.9.00
+
+#### What's New
+
+| ID                                                                         | Description                                                                                                          |
+|----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| [**#157**](https://github.com/MetricsHub/metricshub-enterprise/issues/157) | Added [`winremotecli`](./troubleshooting/cli/winremote.md) to execute remote Windows commands via WMI or WinRM       |
+| [**#161**](https://github.com/MetricsHub/metricshub-enterprise/issues/161) | Added the [MetricsHub Web UI](./operating-web-ui.md), featuring configuration, metrics explorer, and an AI assistant |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                            |
+|----------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#165**](https://github.com/MetricsHub/metricshub-enterprise/issues/165) | Upgraded OpenTelemetry Collector Contrib to version [0.144.0](https://github.com/open-telemetry/opentelemetry-collector-contrib/releases/tag/v0.144.0) |
+
+### MetricsHub Enterprise Connectors v112
+
+#### What's New
+
+| ID                                                                       | Description                                                                           |
+|--------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [**#29**](https://github.com/MetricsHub/enterprise-connectors/issues/29) | Added support for **[HP-UX](./connectors/hpuxsystem.html)** systems via command lines |
+
+#### Changes and Improvements
+
+| ID                                                                         | Description                                                                                                                                             |
+|----------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [**#38**](https://github.com/MetricsHub/enterprise-connectors/issues/38)   | **[Nimble](./connectors/nimble.html)**: Controller power supplies are now monitored on HPE Alletra 6000 systems                                         |
+| [**#169**](https://github.com/MetricsHub/enterprise-connectors/issues/169) | **[HPE iLO4 (ProLiant Gen8, Gen9)](./connectors/hpegen9ilorest.html)**: Credentials are now validated during detection                                  |
+| [**#169**](https://github.com/MetricsHub/enterprise-connectors/issues/169) | **[HPE iLO 5 (ProLiant Gen10)](./connectors/hpegen10ilorest.html)**: Credentials are now validated during detection                                     |
+| [**#169**](https://github.com/MetricsHub/enterprise-connectors/issues/169) | **[HPE iLO 6 (ProLiant Gen11)](./connectors/hpeilo6rest.html)**: Credentials are now validated during detection                                         |
+| [**#173**](https://github.com/MetricsHub/enterprise-connectors/issues/173) | **[Pure Storage FA Series (REST Token Authentication)](./connectors/purestorageresttoken.html)**: Added Storage System performance and capacity metrics |
+
+### MetricsHub Community Edition v3.9.00
+
+#### What's New
+
+| ID                                                                          | Description                                                                                                                      |
+|-----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| [**#983**](https://github.com/MetricsHub/metricshub-community/issues/983)   | Added support for executing remote Windows commands via SSH                                                                      |
+| [**#1016**](https://github.com/MetricsHub/metricshub-community/issues/1016) | Added [`winremotecli`](./troubleshooting/cli/winremote.md) to execute remote Windows commands via WMI or WinRM                   |
+| [**#1017**](https://github.com/MetricsHub/metricshub-community/issues/1017) | Added the `ExecuteWinRemoteCommand` [MCP Tool](./integrations/ai-agent-mcp.md) to run remote Windows commands via WMI or WinRM   |
+| [**#1028**](https://github.com/MetricsHub/metricshub-community/issues/1028) | Added support for [Windows Event Log monitoring](./custom/windows-event-log.md) via WMI                                          |
+| [**#1070**](https://github.com/MetricsHub/metricshub-community/issues/1070) | Added the [MetricsHub Web UI](./operating-web-ui.md), featuring configuration, metrics explorer, and an AI assistant             |
+
+#### Changes and Improvements
+
+| ID                                                                          | Description                                                                                                    |
+|-----------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| [**#1009**](https://github.com/MetricsHub/metricshub-community/issues/1009) | The [installer](./installation/index.md) now registers MetricsHub as a background service on Windows and Linux |
+
+### MetricsHub Community Connectors v1.0.18
+
+#### What's New
+
+| ID                                                                        | Description                                                                      |
+|---------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [**#99**](https://github.com/MetricsHub/community-connectors/issues/99)   | Added support for **[AMD Radeon GPU](./connectors/amdradeon.html)** via ROCm SMI |
+| [**#322**](https://github.com/MetricsHub/community-connectors/issues/322) | Added support for **[MariaDB](./connectors/mariadb.html)** databases via JDBC    |
+| [**#329**](https://github.com/MetricsHub/community-connectors/issues/329) | Added support for servers exposing **[RedFish API](./connectors/redfish.html)**  |
+
+#### Changes and Improvements
+
+| ID                                                                        | Description                                                                                                        |
+|---------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|
+| [**#323**](https://github.com/MetricsHub/community-connectors/issues/323) | **[Windows File Monitoring](./connectors/windowsfile.html)**: Detection now supports WMI, WinRM, and SSH protocols |
+
+#### Fixed Issues
+
+| ID                                                                        | Description                                                                           |
+|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------|
+| [**#328**](https://github.com/MetricsHub/community-connectors/issues/328) | **[Linux System](./connectors/linux.html)**: Raspberry Pi SD cards are not discovered |
 
 ## MetricsHub Enterprise Edition v3.0.03
 

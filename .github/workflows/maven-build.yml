@@ -79,7 +79,7 @@ jobs:
         cache: maven
 
     - name: Set up Maven settings.xml
-      uses: s4u/maven-settings-action@v3.1.0
+      uses: s4u/maven-settings-action@v4.0.0
       with:
         override: true
         repositories: |
@@ -99,8 +99,8 @@ jobs:
       uses: mxschmitt/action-tmate@v3
       with:
         detached: true
-        sudo: false
-        install-dependencies: false
+        sudo: true
+        install-dependencies: true
       if: ${{ inputs.ssh }}
 
     - name: Configure additional installation path for Maven artifacts

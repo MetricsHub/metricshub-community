@@ -31,7 +31,7 @@ To achieve this use case, we:
             timeout: 30
 ```
 
-* Add a new instance of the [`LinuxProcess`](https://metricshub.com/docs/latest/connectors/linuxprocess.html) connector for the monitoring of `systemd`. Name this new instance `systemdProcess`, for example:
+* Add a new instance of the [`LinuxProcess`](../connectors/linuxprocess.html) connector for the monitoring of `systemd`. Name this new instance `systemdProcess`, for example:
 
 ```yaml
         additionalConnectors:

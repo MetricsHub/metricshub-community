@@ -5,12 +5,43 @@ import { useTheme } from "@mui/material/styles";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
 import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
-import { keymap, EditorView } from "@codemirror/view";
+import { keymap, EditorView, Decoration, ViewPlugin } from "@codemirror/view";
+import { RangeSetBuilder } from "@codemirror/state";
+import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 const SAVE_DEBOUNCE_MS = 400; // reduce localStorage IO (align with validation debounce)
+
+/**
+ * Build decorations to show whitespace markers only within selected ranges.
+ * Spaces become dots, tabs become arrows via CSS classes.
+ * @param {import("@codemirror/view").EditorView} view The editor view.
+ * @returns {import("@codemirror/state").DecorationSet} Selection-only decorations.
+ */
+function buildSelectionWhitespaceDecorations(view) {
+	const builder = new RangeSetBuilder();
+
+	for (const range of view.state.selection.ranges) {
+		if (range.empty) continue;
+
+		const from = Math.min(range.from, range.to);
+		const to = Math.max(range.from, range.to);
+		const text = view.state.doc.sliceString(from, to);
+
+		for (let i = 0; i < text.length; i += 1) {
+			const code = text.charCodeAt(i);
+			if (code === 32) {
+				builder.add(from + i, from + i + 1, Decoration.mark({ class: "cm-selectionSpace" }));
+			} else if (code === 9) {
+				builder.add(from + i, from + i + 1, Decoration.mark({ class: "cm-selectionTab" }));
+			}
+		}
+	}
+
+	return builder.finish();
+}
 
 /**
  * YAML Editor component.
@@ -84,24 +115,64 @@ export default function YamlEditor({
 			});
 		}
 
+		// Track selection changes and rebuild markers only for selected ranges
+		const selectionWhitespaceMarkers = ViewPlugin.fromClass(
+			class {
+				constructor(view) {
+					this.decorations = buildSelectionWhitespaceDecorations(view);
+				}
+				update(update) {
+					if (update.docChanged || update.selectionSet) {
+						this.decorations = buildSelectionWhitespaceDecorations(update.view);
+					}
+				}
+			},
+			{
+				decorations: (value) => value.decorations,
+			},
+		);
+
 		// Ensure search navigation follows matches even when the editor is
 		// nested in other scrollable containers. Using DOM scrollIntoView will
 		// scroll ancestor containers as needed, not just the CM scroller.
-		const followSearchSelection = EditorView.updateListener.of((update) => {
+		const followSelection = EditorView.updateListener.of((update) => {
 			if (!update.transactions.length) return;
+
 			const isSearchMove = update.transactions.some((tr) => tr.isUserEvent("select.search"));
-			if (!isSearchMove) return;
-			const range = update.state.selection.main;
-			const domAt = update.view.domAtPos(range.head);
-			let el = domAt?.node || null;
-			if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
-			if (el && el.scrollIntoView) {
-				// Scroll ancestors as well so the active match is centered reliably
-				el.scrollIntoView({ block: "center", inline: "nearest" });
+			const isSelectionChange = update.selectionSet;
+			const isMouseSelecting = update.view.inputState?.mouseSelecting === true;
+
+			if (isSearchMove || (isSelectionChange && isMouseSelecting)) {
+				const range = update.state.selection.main;
+				const domAt = update.view.domAtPos(range.head);
+				let el = domAt?.node || null;
+				if (el && el.nodeType === 3) el = el.parentElement; // text node -> element
+
+				if (el && el.scrollIntoView) {
+					// Use center for search moves, nearest for regular navigation
+					const block = isSearchMove ? "center" : "nearest";
+					el.scrollIntoView({ block, inline: "nearest" });
+				}
 			}
 		});
 
-		return [cmYaml(), history(), keymap.of(km), followSearchSelection, ...validationExtension];
+		return [
+			cmYaml(),
+			indentationMarkers({
+				// Make indent guides clearer in dark mode and a bit darker in light mode
+				colors: {
+					light: "rgba(0, 0, 0, 0.1)",
+					dark: "rgba(255, 255, 255, 0.14)",
+					activeLight: "rgba(0, 0, 0, 0.18)",
+					activeDark: "rgba(255, 255, 255, 0.24)",
+				},
+			}),
+			selectionWhitespaceMarkers,
+			history(),
+			keymap.of(km),
+			followSelection,
+			...validationExtension,
+		];
 	}, [onSave, canSave, validationExtension]);
 
 	/**
@@ -118,17 +189,41 @@ export default function YamlEditor({
 
 	return (
 		<Box
-			sx={{ height, display: "flex", flexDirection: "column", minHeight: 0, position: "relative" }}
+			sx={{
+				height,
+				display: "flex",
+				flexDirection: "column",
+				minHeight: 0,
+				position: "relative",
+				transition: "background-color 0.4s ease",
+			}}
 		>
 			<Box
 				sx={{
 					flex: 1,
 					minHeight: 0,
 					borderTop: 0,
-					".cm-editor": { height: "100%" },
+					".cm-editor": {
+						fontSize: theme.typography.pxToRem(14),
+						height: "100%",
+						transition: "background-color 0.4s ease, color 0.4s ease",
+					},
+					".cm-gutters": {
+						transition: "background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease",
+					},
+					".cm-content": {
+						transition: "background-color 0.4s ease, color 0.4s ease",
+					},
+					".cm-activeLine": {
+						transition: "background-color 0.4s ease",
+					},
+					".cm-activeLineGutter": {
+						transition: "background-color 0.4s ease",
+					},
 					// Allow scroll chaining so the parent container can scroll when the editor
 					// can't (fixes mouse wheel not scrolling when editor is focused)
 					".cm-scroller": { overflow: "auto", overscrollBehavior: "auto" },
+					transition: "background-color 0.4s ease",
 				}}
 			>
 				<CodeMirror

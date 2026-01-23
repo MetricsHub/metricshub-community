@@ -9,12 +9,13 @@ import { paths } from "../../paths";
 import { NavLink } from "react-router-dom";
 import { AppBar, Box, CssBaseline, Toolbar, Button, IconButton, Tooltip } from "@mui/material";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 
 import { useAppDispatch, useAppSelector } from "../../hooks/store";
 import { fetchApplicationStatus } from "../../store/thunks/application-status-thunks";
+import { selectLastVisitedPath } from "../../store/slices/explorer-slice";
 
 import StatusText from "./status/StatusText";
-import StatusDetailsMenu from "./status/StatusDetailsMenu";
 import OtelStatusIcon from "./status/OtelStatusIcon";
 import ProfileMenu from "./ProfileMenu";
 import ToggleTheme from "./ToggleTheme";
@@ -25,7 +26,6 @@ const STATUS_REFRESH_MS = 30000;
 const NavBar = ({ onToggleTheme }) => {
 	const { signOut, user } = useAuth();
 	const theme = useTheme();
-	const metricshubLogo = theme.palette.mode === "dark" ? logoDark : logoLight;
 
 	const handleSignOut = useCallback(async () => {
 		await signOut();
@@ -33,12 +33,16 @@ const NavBar = ({ onToggleTheme }) => {
 	}, [signOut]);
 
 	const dispatch = useAppDispatch();
+	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
 
 	// Config dirty/error status for navbar dot indicator
 	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
 	const filesByName = useAppSelector((s) => s.config?.filesByName) || {};
-	const hasDirty = Object.values(dirtyByName).some(Boolean);
-	const hasError = Object.values(filesByName).some((v) => {
+	const hasDirty = Object.entries(dirtyByName).some(
+		([name, isDirty]) => isDirty && !name.endsWith(".draft"),
+	);
+	const hasError = Object.entries(filesByName).some(([name, v]) => {
+		if (name.endsWith(".draft")) return false;
 		const val = v?.validation;
 		return val && val.valid === false;
 	});
@@ -63,6 +67,7 @@ const NavBar = ({ onToggleTheme }) => {
 		minWidth: 90,
 		color: "text.primary",
 		borderBottom: "2px solid transparent",
+		transition: "background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease",
 		"&:hover": { bgcolor: "action.hover", color: "text.primary" },
 		"&.active": (t) => ({
 			bgcolor: t.palette.action.selected,
@@ -83,11 +88,12 @@ const NavBar = ({ onToggleTheme }) => {
 					borderBottom: 1,
 					borderColor: t.palette.mode === "light" ? t.palette.neutral[400] : t.palette.divider,
 					boxShadow: "none",
+					transition: "background-color 0.4s ease, border-color 0.4s ease, color 0.4s ease",
 				})}
 			>
-				<Toolbar sx={{ gap: 1.5 }}>
+				<Toolbar sx={{ gap: 1.5, minHeight: 64, height: 64 }}>
 					{/* ================= LEFT SIDE ================= */}
-					<Box sx={{ display: "flex", gap: 2.5, height: "100%" }}>
+					<Box sx={{ display: "flex", gap: 2.5, height: "100%", alignItems: "stretch" }}>
 						{/* Logo + Status */}
 						<Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
 							<Box
@@ -96,9 +102,58 @@ const NavBar = ({ onToggleTheme }) => {
 								target="_blank"
 								rel="noopener noreferrer"
 								aria-label="Open MetricsHub website in a new tab"
-								sx={{ display: "inline-flex", alignItems: "center", textDecoration: "none" }}
+								sx={{
+									display: "inline-flex",
+									alignItems: "center",
+									textDecoration: "none",
+									position: "relative",
+									width: 80,
+									height: 24,
+								}}
 							>
-								<img src={metricshubLogo} alt="MetricsHub" style={{ width: 80, height: "auto" }} />
+								<img
+									src={logoDark}
+									alt="MetricsHub"
+									style={{
+										width: 80,
+										height: "auto",
+										position: "absolute",
+										opacity: theme.palette.mode === "dark" ? 1 : 0,
+										transition: "opacity 0.4s ease",
+									}}
+								/>
+								<img
+									src={logoLight}
+									alt="MetricsHub"
+									style={{
+										width: 80,
+										height: "auto",
+										position: "absolute",
+										opacity: theme.palette.mode === "light" ? 1 : 0,
+										transition: "opacity 0.4s ease",
+									}}
+								/>
+								<Box
+									sx={{
+										position: "absolute",
+										top: -6,
+										right: -18,
+										bgcolor: "primary.main",
+										color: "#fff",
+										fontSize: "0.55rem",
+										fontWeight: 800,
+										px: 0.5,
+										py: 0.25,
+										borderRadius: 0.5,
+										lineHeight: 1,
+										letterSpacing: 0.5,
+										boxShadow: 1,
+										pointerEvents: "none",
+										zIndex: 1,
+									}}
+								>
+									BETA
+								</Box>
 							</Box>
 							<StatusText sx={{ ml: 0.5 }} />
 							<OtelStatusIcon />
@@ -106,7 +161,12 @@ const NavBar = ({ onToggleTheme }) => {
 
 						{/* Navigation Buttons */}
 						<Box sx={{ display: "flex", gap: 0, ml: 1, alignSelf: "stretch" }}>
-							<Button component={NavLink} size="large" to={paths.explorer} sx={navBtnSx}>
+							<Button
+								component={NavLink}
+								size="large"
+								to={lastVisitedPath || paths.explorer}
+								sx={navBtnSx}
+							>
 								Explorer
 							</Button>
 							<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
@@ -133,12 +193,27 @@ const NavBar = ({ onToggleTheme }) => {
 									)}
 								</Box>
 							</Button>
+							<Button component={NavLink} size="large" to={paths.chat} sx={navBtnSx}>
+								<Box sx={{ display: "inline-flex", alignItems: "baseline", position: "relative" }}>
+									<span>M8B</span>
+									<AutoAwesomeIcon
+										sx={{
+											fontSize: "0.8rem",
+											color: "#FFD700", // Golden color
+											filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.2))",
+											position: "relative",
+											top: "-0.5em",
+											ml: 0.25,
+											lineHeight: 0,
+										}}
+									/>
+								</Box>
+							</Button>
 						</Box>
 					</Box>
 
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
-						<StatusDetailsMenu />
 						{/* Docs link button */}
 						<Tooltip title="Documentation" arrow enterDelay={200}>
 							<IconButton

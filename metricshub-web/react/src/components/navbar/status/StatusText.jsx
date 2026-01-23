@@ -24,7 +24,7 @@ export default function StatusText({ sx }) {
 					{loading ? (
 						<CircularProgress size={18} thickness={4} />
 					) : (
-						<WifiIcon sx={{ color, fontSize: 26 }} />
+						<WifiIcon sx={{ color, fontSize: 26, transition: "color 0.4s ease" }} />
 					)}
 				</Box>
 			</Tooltip>

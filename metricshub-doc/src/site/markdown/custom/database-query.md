@@ -7,7 +7,7 @@ description: How to configure MetricsHub to poll SQL-compatible databases using 
 
 You can configure **MetricsHub** to periodically poll any SQL-compatible database using JDBC, execute custom queries, retrieve tabular results, and push OpenTelemetry metrics with the extracted values.
 
-> If the datatabase to be monitored is not currently supported by [MetricsHub](https://metricshub.com/docs/latest/connectors/tags/database.html) (e.g., **ClickHouse**, **Sybase**, etc.), you need to download and install the appropriate JDBC driver.
+> If the datatabase to be monitored is not currently supported by [MetricsHub](../connectors/tags/database.html) (e.g., **ClickHouse**, **Sybase**, etc.), you need to download and install the appropriate JDBC driver.
 
 In the example below, we configured **MetricsHub** to:
 
