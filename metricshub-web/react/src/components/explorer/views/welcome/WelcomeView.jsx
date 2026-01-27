@@ -25,6 +25,7 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 	const hierarchy = useSelector(selectExplorerHierarchy);
 	const loading = useSelector(selectExplorerLoading);
 	const error = useSelector(selectExplorerError);
+	const status = useSelector((state) => state.applicationStatus.data);
 
 	// Memoize derived data to avoid recalculating on every render
 	const resourceGroups = React.useMemo(
@@ -68,7 +69,7 @@ const WelcomeView = ({ renderResourceGroups, onRogueResourceClick }) => {
 
 	return (
 		<Box p={2} display="flex" flexDirection="column" gap={2}>
-			<AgentData agent={hierarchy} totalResources={totalResources} />
+			<AgentData agent={hierarchy} totalResources={totalResources} status={status} />
 			<Divider />
 			{renderResourceGroups ? (
 				renderResourceGroups({ resourceGroups })

@@ -6,6 +6,7 @@ import PauseIcon from "@mui/icons-material/Pause";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { setLastVisitedPath } from "../store/slices/explorer-slice";
 import { selectExplorerHierarchy } from "../store/slices/explorer-slice";
+import { fetchApplicationStatus } from "../store/thunks/application-status-thunks";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
 import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
@@ -71,6 +72,11 @@ const ExplorerPage = () => {
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
 	const [isPaused, setIsPaused] = React.useState(false);
+
+	// Fetch status on mount
+	React.useEffect(() => {
+		dispatch(fetchApplicationStatus());
+	}, [dispatch]);
 
 	React.useEffect(() => {
 		dispatch(setLastVisitedPath(location.pathname));

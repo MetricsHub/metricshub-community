@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
@@ -63,18 +64,24 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 
 			{hasAttributes && (
 				<Box>
-					<Typography variant="h6" sx={{ ...attributesTitleSx, transition: "color 0.4s ease" }}>
-						Attributes
-					</Typography>
-					<DataGrid
-						rows={rows}
-						columns={ATTRIBUTE_COLUMNS}
-						disableRowSelectionOnClick
-						hideFooter
-						autoHeight
-						density="compact"
-						sx={dataGridSx}
-					/>
+					<Accordion defaultExpanded={false}>
+						<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+							<Typography variant="h6" sx={{ ...attributesTitleSx, mb: 0 }}>
+								Attributes
+							</Typography>
+						</AccordionSummary>
+						<AccordionDetails>
+							<DataGrid
+								rows={rows}
+								columns={ATTRIBUTE_COLUMNS}
+								disableRowSelectionOnClick
+								hideFooter
+								autoHeight
+								density="compact"
+								sx={dataGridSx}
+							/>
+						</AccordionDetails>
+					</Accordion>
 				</Box>
 			)}
 		</Box>
