@@ -1,7 +1,5 @@
 package org.metricshub.web.service;
 
-import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
-
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
@@ -22,6 +20,8 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
+
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
 
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
@@ -65,20 +65,20 @@ public class ApplicationStatusService {
 	public ApplicationStatus reportApplicationStatus() {
 		final var agentContext = agentContextHolder.getAgentContext();
 		return ApplicationStatus
-			.builder()
-			.status(determineApplicationStatus(agentContext))
-			.agentInfo(readAgentInfo(agentContext))
-			.otelCollectorStatus(determineOtelCollectorStatus(agentContext))
-			.numberOfObservedResources(determineNumberOfObservedResources(agentContext))
-			.numberOfConfiguredResources(determineNumberOfConfiguredResources(agentContext))
-			.numberOfMonitors(determineNumberOfMonitors(agentContext))
-			.numberOfJobs(determineNumberOfJobs(agentContext))
-			.memoryUsageBytes(determineMemoryUsageBytes())
-			.memoryUsagePercent(determineMemoryUsagePercent())
-			.cpuUsage(determineCpuUsage())
-			.licenseDaysRemaining(determineLicenseDaysRemaining(agentContext))
-			.licenseType(determineLicenseType(agentContext))
-			.build();
+				.builder()
+				.status(determineApplicationStatus(agentContext))
+				.agentInfo(readAgentInfo(agentContext))
+				.otelCollectorStatus(determineOtelCollectorStatus(agentContext))
+				.numberOfObservedResources(determineNumberOfObservedResources(agentContext))
+				.numberOfConfiguredResources(determineNumberOfConfiguredResources(agentContext))
+				.numberOfMonitors(determineNumberOfMonitors(agentContext))
+				.numberOfJobs(determineNumberOfJobs(agentContext))
+				.memoryUsageBytes(determineMemoryUsageBytes())
+				.memoryUsagePercent(determineMemoryUsagePercent())
+				.cpuUsage(determineCpuUsage())
+				.licenseDaysRemaining(determineLicenseDaysRemaining(agentContext))
+				.licenseType(determineLicenseType(agentContext))
+				.build();
 	}
 
 	/**
@@ -91,7 +91,8 @@ public class ApplicationStatusService {
 		final var agentInfo = agentContext.getAgentInfo();
 		if (agentInfo != null) {
 			final var attributes = agentInfo.getAttributes();
-			if (attributes != null && "MetricsHub Agent".equals(attributes.get(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY))) {
+			if (attributes != null
+					&& "MetricsHub Agent".equals(attributes.get(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY))) {
 				return "Community";
 			}
 		}
@@ -175,10 +176,11 @@ public class ApplicationStatusService {
 			return 0;
 		}
 		return telemetryManagers
-			.values()
-			.stream()
-			.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values().stream())
-			.count();
+				.values()
+				.stream()
+				.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values()
+						.stream())
+				.count();
 	}
 
 	/**
@@ -193,11 +195,13 @@ public class ApplicationStatusService {
 			return 0;
 		}
 		return telemetryManagers
-			.values()
-			.stream()
-			.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values().stream())
-			.mapToLong(telemetryManager -> telemetryManager.getMonitors().values().stream().mapToLong(Map::size).sum())
-			.sum();
+				.values()
+				.stream()
+				.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values()
+						.stream())
+				.mapToLong(
+						telemetryManager -> telemetryManager.getMonitors().values().stream().mapToLong(Map::size).sum())
+				.sum();
 	}
 
 	/**
