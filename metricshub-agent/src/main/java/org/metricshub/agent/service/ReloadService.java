@@ -46,9 +46,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.MetricsHubAgentServer;
 
 /**
- * Handles the reload process of the running agent by comparing the current and reloaded configurations.
+ * Handles the reload process of the running agent by comparing the current and
+ * reloaded configurations.
  * <p>
- * Applies changes dynamically when possible (e.g., resource additions/removals/updates) and performs a full restart
+ * Applies changes dynamically when possible (e.g., resource
+ * additions/removals/updates) and performs a full restart
  * if global settings have changed.
  * </p>
  */
@@ -65,7 +67,8 @@ public class ReloadService {
 	private AgentContext runningAgentContext;
 
 	/**
-	 * The Agent Context that have been created after that the configuration file(s) have been modified.
+	 * The Agent Context that have been created after that the configuration file(s)
+	 * have been modified.
 	 */
 	private AgentContext reloadedAgentContext;
 
@@ -94,16 +97,24 @@ public class ReloadService {
 	private IntSupplier resourceQuotaSupplier = () -> UNLIMITED_RESOURCE_QUOTA;
 
 	/**
-	 * Reloads the running agent context by comparing it with the reloaded configuration.
+	 * Force the reload of the agent even if the configuration has not changed.
+	 */
+	@Builder.Default
+	private boolean force = false;
+
+	/**
+	 * Reloads the running agent context by comparing it with the reloaded
+	 * configuration.
 	 * <p>
-	 * Applies resource-level changes dynamically, and triggers a full restart if global configuration changes are detected.
+	 * Applies resource-level changes dynamically, and triggers a full restart if
+	 * global configuration changes are detected.
 	 * </p>
 	 */
 	public void reload() {
 		log.info("Reloading the Agent Context...");
 
 		// No changes have been made to Agent Context
-		if (runningAgentContext.getAgentConfig().equals(reloadedAgentContext.getAgentConfig())) {
+		if (!force && runningAgentContext.getAgentConfig().equals(reloadedAgentContext.getAgentConfig())) {
 			return;
 		}
 
@@ -111,16 +122,26 @@ public class ReloadService {
 		beforeRestartCallback.run();
 
 		// Compare global configurations
-		if (globalConfigurationHasChanged(runningAgentContext.getAgentConfig(), reloadedAgentContext.getAgentConfig())) {
+		if (
+			force ||
+			globalConfigurationHasChanged(runningAgentContext.getAgentConfig(), reloadedAgentContext.getAgentConfig())
+		) {
 			log.info("Global configuration has changed. Restarting MetricsHub Agent...");
 
 			runningAgentContext.getTaskSchedulingService().stop();
 
-			// ServiceLoader responsibility is to manage the scheduler life cycle
-			// OTEL Collector process is not managed by the current ServiceLoader
-			// And should have its own life cycle hot reload management.
-			// Accordingly, we need to transfer the running OTEL Collector process to the reloaded context
-			reloadedAgentContext.setOtelCollectorProcessService(runningAgentContext.getOtelCollectorProcessService());
+			if (force) {
+				log.info("Force restart detected. Restarting OpenTelemetry Collector...");
+				runningAgentContext.getOtelCollectorProcessService().stop();
+				reloadedAgentContext.getOtelCollectorProcessService().launch();
+			} else {
+				// ServiceLoader responsibility is to manage the scheduler life cycle
+				// OTEL Collector process is not managed by the current ServiceLoader
+				// And should have its own life cycle hot reload management.
+				// Accordingly, we need to transfer the running OTEL Collector process to the
+				// reloaded context
+				reloadedAgentContext.setOtelCollectorProcessService(runningAgentContext.getOtelCollectorProcessService());
+			}
 
 			// Point the running context to the reloaded one
 			runningAgentContext = reloadedAgentContext;
@@ -168,13 +189,15 @@ public class ReloadService {
 	}
 
 	/**
-	 * Checks whether the global agent configuration has changed between the current and reloaded context.
+	 * Checks whether the global agent configuration has changed between the current
+	 * and reloaded context.
 	 * <p>
-	 * If any of the high-level settings (like timeouts, directories, filters, etc.) differ, this method returns {@code true}.
+	 * If any of the high-level settings (like timeouts, directories, filters, etc.)
+	 * differ, this method returns {@code true}.
 	 * </p>
 	 *
 	 * @param runningConf current agent configuration
-	 * @param newConf reloaded agent configuration
+	 * @param newConf     reloaded agent configuration
 	 * @return {@code true} if global settings have changed, otherwise {@code false}
 	 */
 	public boolean globalConfigurationHasChanged(final AgentConfig runningConf, final AgentConfig newConf) {
@@ -202,19 +225,26 @@ public class ReloadService {
 	}
 
 	/**
-	 * Compares the current set of running resources with a newly loaded set of resources for a given resource group,
-	 * and determines the changes that need to be applied. This includes detecting resources that were added, updated,
+	 * Compares the current set of running resources with a newly loaded set of
+	 * resources for a given resource group,
+	 * and determines the changes that need to be applied. This includes detecting
+	 * resources that were added, updated,
 	 * or removed, and updating the scheduling service accordingly.
 	 * <p>
-	 * - Resources present in {@code runningResources} but missing in {@code newResources} are stopped and removed.<br>
-	 * - Resources present in {@code newResources} but missing in {@code runningResources} are added and scheduled.<br>
+	 * - Resources present in {@code runningResources} but missing in
+	 * {@code newResources} are stopped and removed.<br>
+	 * - Resources present in {@code newResources} but missing in
+	 * {@code runningResources} are added and scheduled.<br>
 	 * - Resources present in both but with differences are updated and rescheduled.
 	 * </p>
 	 *
-	 * @param resourceGroupKey the unique key identifying the resource group (or the top-level group)
-	 * @param runningResources the map of currently running resource configurations (mutable and updated by this method)
+	 * @param resourceGroupKey the unique key identifying the resource group (or the
+	 *                         top-level group)
+	 * @param runningResources the map of currently running resource configurations
+	 *                         (mutable and updated by this method)
 	 * @param newResources     the map of newly loaded resource configurations
-	 * @return a map of resources that need to be (re)scheduled, where the key is the resource ID and the value is the updated {@link ResourceConfig}
+	 * @return a map of resources that need to be (re)scheduled, where the key is
+	 *         the resource ID and the value is the updated {@link ResourceConfig}
 	 */
 	public Map<String, ResourceConfig> compareResources(
 		final String resourceGroupKey,
@@ -278,13 +308,19 @@ public class ReloadService {
 	}
 
 	/**
-	 * Compares the current set of running resource groups with a newly loaded set of resource groups,
-	 * and determines the changes that need to be applied. Each resource group is processed independently,
-	 * and the necessary additions, removals, or updates are applied to the running context.
+	 * Compares the current set of running resource groups with a newly loaded set
+	 * of resource groups,
+	 * and determines the changes that need to be applied. Each resource group is
+	 * processed independently,
+	 * and the necessary additions, removals, or updates are applied to the running
+	 * context.
 	 *
-	 * @param runningResourceGroups the current resource groups in the running context (mutable and updated by this method)
-	 * @param newResourceGroups     the newly loaded resource groups to compare against
-	 * @return a map where each key is a resource group ID, and the value is a map of resources within that group
+	 * @param runningResourceGroups the current resource groups in the running
+	 *                              context (mutable and updated by this method)
+	 * @param newResourceGroups     the newly loaded resource groups to compare
+	 *                              against
+	 * @return a map where each key is a resource group ID, and the value is a map
+	 *         of resources within that group
 	 *         that need to be (re)scheduled
 	 */
 	public Map<String, Map<String, ResourceConfig>> compareResourceGroups(
@@ -337,15 +373,19 @@ public class ReloadService {
 	 * <p>
 	 * This method performs the following actions:
 	 * <ul>
-	 *   <li>Removes the resource group configuration from the agent's configuration.</li>
-	 *   <li>Cancels and removes the resource group-level schedule (if any).</li>
-	 *   <li>Stops and removes all scheduled resources within the group and their associated telemetry managers.</li>
-	 *   <li>Removes the telemetry manager entry for the resource group itself.</li>
+	 * <li>Removes the resource group configuration from the agent's
+	 * configuration.</li>
+	 * <li>Cancels and removes the resource group-level schedule (if any).</li>
+	 * <li>Stops and removes all scheduled resources within the group and their
+	 * associated telemetry managers.</li>
+	 * <li>Removes the telemetry manager entry for the resource group itself.</li>
 	 * </ul>
 	 * </p>
 	 *
-	 * @param resourceGroupKey    the unique identifier of the resource group to remove
-	 * @param resourceGroupConfig the configuration of the resource group being removed
+	 * @param resourceGroupKey    the unique identifier of the resource group to
+	 *                            remove
+	 * @param resourceGroupConfig the configuration of the resource group being
+	 *                            removed
 	 */
 	private void handleRemovedGroup(String resourceGroupKey, ResourceGroupConfig resourceGroupConfig) {
 		log.info("The Resource Group '{}' is removed from the configuration.", resourceGroupKey);
@@ -381,12 +421,13 @@ public class ReloadService {
 	/**
 	 * Handles the addition of a new resource group to the running agent context.
 	 * <p>
-	 * This method simply updates the agent's configuration by adding the new resource group
+	 * This method simply updates the agent's configuration by adding the new
+	 * resource group
 	 * and its associated configuration.
 	 * </p>
 	 *
-	 * @param resourceGroupKey   the unique identifier of the resource group to add
-	 * @param resourceGroup the configuration of the new resource group
+	 * @param resourceGroupKey the unique identifier of the resource group to add
+	 * @param resourceGroup    the configuration of the new resource group
 	 */
 	private void handleAddedGroup(String resourceGroupKey, ResourceGroupConfig resourceGroup) {
 		log.info("The Resource Group '{}' is added to the configuration.", resourceGroupKey);
@@ -400,15 +441,18 @@ public class ReloadService {
 	 * <p>
 	 * This method restarts the specified resource group by:
 	 * <ul>
-	 *   <li>Updating the agent's configuration with the new resource group configuration.</li>
-	 *   <li>Removing associated telemetry managers.</li>
-	 *   <li>Cancelling and removing the resource group-level schedule.</li>
-	 *   <li>Removing all individual resource schedules and telemetry managers associated with the old group.</li>
+	 * <li>Updating the agent's configuration with the new resource group
+	 * configuration.</li>
+	 * <li>Removing associated telemetry managers.</li>
+	 * <li>Cancelling and removing the resource group-level schedule.</li>
+	 * <li>Removing all individual resource schedules and telemetry managers
+	 * associated with the old group.</li>
 	 * </ul>
 	 * After this method, the updated group will be ready to be rescheduled.
 	 * </p>
 	 *
-	 * @param resourceGroupKey the unique identifier of the resource group being updated
+	 * @param resourceGroupKey the unique identifier of the resource group being
+	 *                         updated
 	 * @param oldGroup         the previous configuration of the resource group
 	 * @param newGroup         the updated configuration of the resource group
 	 */
@@ -448,16 +492,21 @@ public class ReloadService {
 	}
 
 	/**
-	 * Determines if the global configuration of a resource group has changed between
+	 * Determines if the global configuration of a resource group has changed
+	 * between
 	 * the running and newly loaded configurations.
 	 * <p>
-	 * This method compares global-level settings of the resource group such as logging level,
-	 * output directory, collection intervals, filters, attributes, and other metadata.
+	 * This method compares global-level settings of the resource group such as
+	 * logging level,
+	 * output directory, collection intervals, filters, attributes, and other
+	 * metadata.
 	 * Any difference in these fields indicates that the group requires a restart.
 	 * </p>
 	 *
-	 * @param runningResourceGroupConfig the current (running) resource group configuration
-	 * @param newResourceGroupConfig     the newly loaded resource group configuration
+	 * @param runningResourceGroupConfig the current (running) resource group
+	 *                                   configuration
+	 * @param newResourceGroupConfig     the newly loaded resource group
+	 *                                   configuration
 	 * @return {@code true} if any global settings differ, otherwise {@code false}
 	 */
 	public boolean resourceGroupGlobalConfigHasChanged(
@@ -496,15 +545,19 @@ public class ReloadService {
 	}
 
 	/**
-	 * Adds or updates the {@link TelemetryManager} instance for a specific resource in the
-	 * running agent context, using the telemetry manager from the reloaded agent context.
+	 * Adds or updates the {@link TelemetryManager} instance for a specific resource
+	 * in the
+	 * running agent context, using the telemetry manager from the reloaded agent
+	 * context.
 	 * <p>
 	 * If the resource group does not exist in the current telemetry structure,
 	 * it is initialized before adding the resource's telemetry manager.
 	 * </p>
 	 *
-	 * @param resourceGroupKey the key identifying the resource group the resource belongs to
-	 * @param resourceKey      the unique key of the resource whose telemetry manager is to be added or updated
+	 * @param resourceGroupKey the key identifying the resource group the resource
+	 *                         belongs to
+	 * @param resourceKey      the unique key of the resource whose telemetry
+	 *                         manager is to be added or updated
 	 */
 	public void addOrUpdateTelemetryManagerInTaskSchedulingService(
 		final String resourceGroupKey,
@@ -524,17 +577,22 @@ public class ReloadService {
 	}
 
 	/**
-	 * Stops and removes a scheduled resource along with its associated {@link TelemetryManager}.
+	 * Stops and removes a scheduled resource along with its associated
+	 * {@link TelemetryManager}.
 	 * <p>
-	 * This method cancels the resource's scheduled task (if present) and removes it from
+	 * This method cancels the resource's scheduled task (if present) and removes it
+	 * from
 	 * the schedules map. It also removes the resource's telemetry manager from the
-	 * {@link TaskSchedulingService}. If the resource group has no remaining telemetry managers,
+	 * {@link TaskSchedulingService}. If the resource group has no remaining
+	 * telemetry managers,
 	 * the group itself is removed from the telemetry map.
 	 * </p>
 	 *
-	 * @param resourceGroupKey       the key identifying the resource group the resource belongs to
+	 * @param resourceGroupKey       the key identifying the resource group the
+	 *                               resource belongs to
 	 * @param resourceKey            the unique identifier of the resource to remove
-	 * @param resourceSchedulingName the full internal name used to schedule the resource
+	 * @param resourceSchedulingName the full internal name used to schedule the
+	 *                               resource
 	 */
 	public void removeResourceFromTaskSchedulingService(
 		final String resourceGroupKey,
@@ -556,7 +614,8 @@ public class ReloadService {
 			log.warn("Attempted to remove resource '{}', but it was not scheduled.", resourceSchedulingName);
 		}
 
-		// Remove Telemetry Manager from task scheduling service, if the map still exists
+		// Remove Telemetry Manager from task scheduling service, if the map still
+		// exists
 		runningAgentContext
 			.getTaskSchedulingService()
 			.getTelemetryManagers()
@@ -573,13 +632,17 @@ public class ReloadService {
 	/**
 	 * Schedules the given resources for monitoring, respecting the provided quota.
 	 * <p>
-	 * Each resource is either scheduled or, if the maximum number of allowed resources
-	 * (quota) is reached, removed from the configuration. Resource groups with at least
+	 * Each resource is either scheduled or, if the maximum number of allowed
+	 * resources
+	 * (quota) is reached, removed from the configuration. Resource groups with at
+	 * least
 	 * one scheduled resource are also scheduled.
 	 * </p>
 	 *
-	 * @param resourcesToSchedule a map of resource group keys and their resources to schedule
-	 * @param quota the maximum number of resources allowed; use {@link #UNLIMITED_RESOURCE_QUOTA} for no limit
+	 * @param resourcesToSchedule a map of resource group keys and their resources
+	 *                            to schedule
+	 * @param quota               the maximum number of resources allowed; use
+	 *                            {@link #UNLIMITED_RESOURCE_QUOTA} for no limit
 	 */
 	public void scheduleResources(
 		final Map<String, Map<String, ResourceConfig>> resourcesToSchedule,
@@ -639,22 +702,34 @@ public class ReloadService {
 	}
 
 	/**
-	 * Processes a single resource group by scheduling its resources or marking them for removal if the quota is exceeded.
+	 * Processes a single resource group by scheduling its resources or marking them
+	 * for removal if the quota is exceeded.
 	 * <p>
 	 * Each resource in the group is evaluated:
 	 * <ul>
-	 *     <li>If the resource quota has not been reached (or quota is unlimited), the resource is scheduled, and the group's
-	 *     key is added to {@code scheduledResourceGroups}.</li>
-	 *     <li>If the resource quota is exceeded, the resource is marked for removal by adding it to {@code resourcesToRemove}.</li>
+	 * <li>If the resource quota has not been reached (or quota is unlimited), the
+	 * resource is scheduled, and the group's
+	 * key is added to {@code scheduledResourceGroups}.</li>
+	 * <li>If the resource quota is exceeded, the resource is marked for removal by
+	 * adding it to {@code resourcesToRemove}.</li>
 	 * </ul>
 	 * </p>
 	 *
-	 * @param resourceGroupKey        the key identifying the resource group being processed
-	 * @param resourceGroup           the resources belonging to the group to process
-	 * @param quota                   the maximum number of resources allowed to be scheduled (use {@code UNLIMITED_RESOURCE_QUOTA} for unlimited)
-	 * @param currentQuota            the current number of resources already scheduled
-	 * @param resourcesToRemove       a map of resources that could not be scheduled (will be updated by this method)
-	 * @param scheduledResourceGroups a set of resource groups that contain at least one successfully scheduled resource (will be updated by this method)
+	 * @param resourceGroupKey        the key identifying the resource group being
+	 *                                processed
+	 * @param resourceGroup           the resources belonging to the group to
+	 *                                process
+	 * @param quota                   the maximum number of resources allowed to be
+	 *                                scheduled (use
+	 *                                {@code UNLIMITED_RESOURCE_QUOTA} for
+	 *                                unlimited)
+	 * @param currentQuota            the current number of resources already
+	 *                                scheduled
+	 * @param resourcesToRemove       a map of resources that could not be scheduled
+	 *                                (will be updated by this method)
+	 * @param scheduledResourceGroups a set of resource groups that contain at least
+	 *                                one successfully scheduled resource (will be
+	 *                                updated by this method)
 	 * @return the updated count of scheduled resources after processing the group
 	 */
 	private int processResourceGroup(
@@ -695,17 +770,21 @@ public class ReloadService {
 	}
 
 	/**
-	 * Schedules a single resource for monitoring and ensures its {@link TelemetryManager} is updated.
+	 * Schedules a single resource for monitoring and ensures its
+	 * {@link TelemetryManager} is updated.
 	 *
 	 * This method performs two main tasks:
 	 * <ul>
-	 *     <li>Updates or adds the resource's telemetry manager in the task scheduling service.</li>
-	 *     <li>Schedules the resource for periodic monitoring based on its configuration.</li>
+	 * <li>Updates or adds the resource's telemetry manager in the task scheduling
+	 * service.</li>
+	 * <li>Schedules the resource for periodic monitoring based on its
+	 * configuration.</li>
 	 * </ul>
 	 *
 	 * @param resourceGroupKey the key of the resource group the resource belongs to
 	 * @param resourceKey      the unique identifier of the resource to schedule
-	 * @param resourceConfig   the {@link ResourceConfig} containing the configuration for the resource
+	 * @param resourceConfig   the {@link ResourceConfig} containing the
+	 *                         configuration for the resource
 	 */
 	public void scheduleResource(
 		final String resourceGroupKey,
