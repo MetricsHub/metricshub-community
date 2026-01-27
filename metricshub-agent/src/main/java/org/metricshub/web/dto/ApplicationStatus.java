@@ -41,6 +41,13 @@ public class ApplicationStatus {
 	private String otelCollectorStatus;
 	private long numberOfObservedResources;
 	private long numberOfConfiguredResources;
+	private long numberOfMonitors;
+	private long numberOfJobs;
+	private long memoryUsageBytes;
+	private double memoryUsagePercent;
+	private double cpuUsage;
+	private Long licenseDaysRemaining;
+	private String licenseType;
 
 	/**
 	 * Enumeration representing the status of the application.
