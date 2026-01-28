@@ -131,7 +131,7 @@ jobs:
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
     - name: Upload Maven Artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       if: ${{ inputs.additionalInstallPath }}
       with:
         name: maven-artifacts
@@ -147,14 +147,14 @@ jobs:
         ls -l packaging-assets/
 
     - name: Upload Community Package Artifacts
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: package-artifacts
         include-hidden-files: true
         path: packaging-assets/
 
     - name: Upload Site Artifact v${{ steps.version.outputs.version }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: metricshub-site-${{ steps.version.outputs.version }}
         path: ./metricshub-doc/target/metricshub-doc-${{ steps.version.outputs.version }}-site.jar
