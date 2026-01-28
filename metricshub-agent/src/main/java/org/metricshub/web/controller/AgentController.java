@@ -24,9 +24,9 @@ package org.metricshub.web.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
-import org.metricshub.agent.service.ReloadService;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.service.AgentLifecycleService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -43,15 +43,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentController {
 
 	private final AgentContextHolder agentContextHolder;
+	private final AgentLifecycleService agentLifecycleService;
 
 	/**
 	 * Constructor for AgentController.
 	 *
-	 * @param agentContextHolder the AgentContextHolder to access the running agent
-	 *                           context.
+	 * @param agentContextHolder    the AgentContextHolder to access the running
+	 *                              agent context.
+	 * @param agentLifecycleService the AgentLifecycleService to manage the agent
+	 *                              lifecycle.
 	 */
-	public AgentController(AgentContextHolder agentContextHolder) {
+	public AgentController(AgentContextHolder agentContextHolder, AgentLifecycleService agentLifecycleService) {
 		this.agentContextHolder = agentContextHolder;
+		this.agentLifecycleService = agentLifecycleService;
 	}
 
 	/**
@@ -75,20 +79,15 @@ public class AgentController {
 			final String configDir = runningContext.getConfigDirectory().toAbsolutePath().toString();
 			final AgentContext reloadedContext = new AgentContext(configDir, extensionManager);
 
-			ReloadService
-				.builder()
-				.withRunningAgentContext(runningContext)
-				.withReloadedAgentContext(reloadedContext)
-				.withForce(true)
-				.build()
-				.reload();
+			// Use the Lifecycle service to perform a clean restart
+			agentLifecycleService.restart(runningContext, reloadedContext);
 
 			return ResponseEntity.ok("{\"message\": \"MetricsHub Agent restarted successfully.\"}");
 		} catch (Exception e) {
 			log.error("Failed to restart MetricsHub Agent.", e);
 			return ResponseEntity
-				.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body("{\"error\": \"Failed to restart MetricsHub Agent: " + e.getMessage() + "\"}");
+					.status(HttpStatus.INTERNAL_SERVER_ERROR)
+					.body("{\"error\": \"Failed to restart MetricsHub Agent: " + e.getMessage() + "\"}");
 		}
 	}
 }

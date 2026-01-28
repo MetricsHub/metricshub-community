@@ -62,6 +62,26 @@ const AgentData = ({ agent, totalResources, status }) => {
 		[agent?.metrics],
 	);
 
+	const {
+		numberOfConfiguredResources,
+		numberOfMonitors,
+		memoryUsageBytes,
+		memoryUsagePercent,
+		cpuUsage,
+		licenseDaysRemaining,
+	} = status || {};
+
+	const licenseWarning = React.useMemo(() => {
+		if (licenseDaysRemaining === null || licenseDaysRemaining === undefined) return null;
+		if (licenseDaysRemaining < 7) {
+			return { severity: "error", message: `License expires in ${licenseDaysRemaining} days!` };
+		}
+		if (licenseDaysRemaining < 30) {
+			return { severity: "warning", message: `License expires in ${licenseDaysRemaining} days.` };
+		}
+		return null;
+	}, [licenseDaysRemaining]);
+
 	if (!agent) {
 		return null;
 	}
@@ -84,27 +104,7 @@ const AgentData = ({ agent, totalResources, status }) => {
 		}
 	}
 
-	const {
-		numberOfConfiguredResources,
-		numberOfMonitors,
-		memoryUsageBytes,
-		memoryUsagePercent,
-		cpuUsage,
-		licenseDaysRemaining,
-	} = status || {};
-
 	const displayedResources = numberOfConfiguredResources ?? totalResources;
-
-	const licenseWarning = React.useMemo(() => {
-		if (licenseDaysRemaining === null || licenseDaysRemaining === undefined) return null;
-		if (licenseDaysRemaining < 7) {
-			return { severity: "error", message: `License expires in ${licenseDaysRemaining} days!` };
-		}
-		if (licenseDaysRemaining < 30) {
-			return { severity: "warning", message: `License expires in ${licenseDaysRemaining} days.` };
-		}
-		return null;
-	}, [licenseDaysRemaining]);
 
 	return (
 		<Box display="flex" flexDirection="column" gap={2}>

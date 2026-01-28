@@ -61,8 +61,7 @@ public class MetricsHubAgentServer {
 
 			// Build the Spring application context with the provided AgentContextHolder
 			// and the application arguments then run it
-			context =
-				new SpringApplicationBuilder()
+			context = new SpringApplicationBuilder()
 					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) -> {
 						final var beanFactory = applicationContext.getBeanFactory();
@@ -77,7 +76,8 @@ public class MetricsHubAgentServer {
 	}
 
 	/**
-	 * Merge the default MetricsHub web configuration with a user-provided configuration.
+	 * Merge the default MetricsHub web configuration with a user-provided
+	 * configuration.
 	 *
 	 * @param agentConfig the agent configuration that may contain web overrides
 	 * @return a new {@link Map} containing the merged configuration
@@ -141,7 +141,8 @@ public class MetricsHubAgentServer {
 
 	/**
 	 * Updates the AgentContext in the application context.
-	 * This method retrieves the AgentContextHolder bean from the application context
+	 * This method retrieves the AgentContextHolder bean from the application
+	 * context
 	 * and updates its AgentContext with the provided one.
 	 *
 	 * @param agentContext the AgentContext to update
