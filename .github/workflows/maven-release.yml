@@ -248,25 +248,25 @@ jobs:
     - uses: actions/checkout@v6
 
     - name: Download Site Artifact
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         merge-multiple: true
         name: ${{ needs.release.outputs.siteArtifact }}
 
     - name: Download Package Artifacts
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         merge-multiple: true
         name: ${{ needs.release.outputs.packageArtifacts }}
 
     - name: Download Linux Package
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         merge-multiple: true
         name: ${{ needs.package-community.outputs.linuxPackage }}
 
     - name: Download Windows Package
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         merge-multiple: true
         name: ${{ needs.package-community.outputs.windowsPackage }}
