@@ -50,7 +50,7 @@ To start **MetricsHub Enterprise** using the local configuration files, run the 
 # Run docker using local configuration files as volumes
 cd /opt/metricshub && docker run -d \
   --name=metricshub-enterprise \
-  -p 24375:24375 -p 13133:13133 \
+  -p 24375:24375 -p 13133:13133 -p 31888:31888 \
   -v $(pwd)/config:/opt/metricshub/lib/config \
   -v $(pwd)/otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml \
   -v $(pwd)/logs:/opt/metricshub/lib/logs \
@@ -75,6 +75,7 @@ services:
     container_name: metricshub-enterprise
     hostname: localhost
     ports:
+      - 31888:31888                                                        # MetricsHub Web UI
       - 13133:13133                                                        # OpenTelemetry Collector HealthCheck
       - 24375:24375                                                        # OpenTelemetry Collector Prometheus Exporter
     volumes:
@@ -124,7 +125,7 @@ To upgrade to the latest version:
 
    docker run -d \
      --name=metricshub-enterprise \
-     -p 24375:24375 -p 13133:13133 \
+     -p 24375:24375 -p 13133:13133 -p 31888:31888 \
      -v $(pwd)/config:/opt/metricshub/lib/config \
      -v $(pwd)/otel/otel-config.yaml:/opt/metricshub/lib/otel/otel-config.yaml \
      -v $(pwd)/logs:/opt/metricshub/lib/logs \
@@ -172,6 +173,7 @@ To start **MetricsHub Community** using the local configuration files, run the f
 # Run docker using local configuration files as volumes
 cd /opt/metricshub && docker run -d \
   --name=metricshub-community \
+  -p 31888:31888 \
   -v $(pwd)/config:/opt/metricshub/lib/config \
   -v $(pwd)/logs:/opt/metricshub/lib/logs \
   metricshub/metricshub-community:${communityVersion}
@@ -192,6 +194,8 @@ services:
   metricshub:
     image: metricshub/metricshub-community:${communityVersion}
     container_name: metricshub-community
+    ports:
+      - 31888:31888                                                        # MetricsHub Web UI
     volumes:
       - ./logs:/opt/metricshub/lib/logs                                    # Mount the volume ./logs into /opt/metricshub/lib/logs in the container
       - ./config:/opt/metricshub/lib/config                                # Inject the local ./config directory into the container
@@ -238,6 +242,7 @@ To upgrade to the latest version:
 
    docker run -d \
      --name=metricshub-community \
+     -p 31888:31888 \
      -v $(pwd)/config:/opt/metricshub/lib/config \
      -v $(pwd)/logs:/opt/metricshub/lib/logs \
      metricshub/metricshub-community:${communityVersion}
