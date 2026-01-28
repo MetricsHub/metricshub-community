@@ -79,7 +79,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Download Assets
       uses: actions/download-artifact@v7
@@ -302,7 +302,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up JDK ${{ inputs.jdkVersion }}
       id: jdk
