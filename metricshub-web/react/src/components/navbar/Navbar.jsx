@@ -245,7 +245,6 @@ const NavBar = ({ onToggleTheme }) => {
 								</Button>
 							</Box>
 						)}
-
 					</Box>
 
 					{/* ================= RIGHT SIDE ================= */}
@@ -368,7 +367,6 @@ const NavBar = ({ onToggleTheme }) => {
 								</Menu>
 							</>
 						)}
-
 					</Box>
 				</Toolbar>
 			</AppBar>

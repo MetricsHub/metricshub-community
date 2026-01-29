@@ -1,9 +1,21 @@
 // src/pages/ConfigurationPage.jsx
 import * as React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Button, Chip, CircularProgress, Stack } from "@mui/material";
+import {
+	Box,
+	Button,
+	Chip,
+	CircularProgress,
+	Stack,
+	Drawer,
+	IconButton,
+	Typography,
+	useMediaQuery,
+} from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
 import AddIcon from "@mui/icons-material/Add";
+import FolderIcon from "@mui/icons-material/Folder";
+import CloseIcon from "@mui/icons-material/Close";
 
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
@@ -44,6 +56,8 @@ function ConfigurationPage() {
 	const snackbar = useSnackbar();
 	const { user } = useAuth();
 	const isReadOnly = user?.role === "ro";
+	const isSmallScreen = useMediaQuery("(max-width:900px)");
+	const [drawerOpen, setDrawerOpen] = React.useState(false);
 	const { name: routeName } = useParams();
 	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
 		useAppSelector((s) => s.config);
@@ -118,8 +132,12 @@ function ConfigurationPage() {
 			if (url !== window.location.pathname) {
 				navigate(url, { replace: false });
 			}
+			// Close drawer on small screens after selection
+			if (isSmallScreen) {
+				setDrawerOpen(false);
+			}
 		},
-		[navigate],
+		[navigate, isSmallScreen],
 	);
 
 	/**
@@ -233,149 +251,193 @@ function ConfigurationPage() {
 		[dispatch, list, selected, navigate],
 	);
 
-	return (
-		<SplitScreen initialLeftPct={35}>
-			<Left>
-				<Stack spacing={1.5} sx={{ p: 1.5 }}>
-					<Stack direction="row" spacing={1} alignItems="center">
-						<Button
-							size="small"
-							variant="outlined"
-							color="inherit"
-							startIcon={<RefreshIcon />}
-							onClick={() => dispatch(fetchConfigList())}
-						>
-							Refresh
-						</Button>
-
-						<Button
-							size="small"
-							variant="outlined"
-							color="inherit"
-							startIcon={<AddIcon />}
-							onClick={handleCreate}
-							disabled={isReadOnly}
-						>
-							Create
-						</Button>
-
-						<Button
-							size="small"
-							color="inherit"
-							variant="outlined"
-							component="label"
-							startIcon={<UploadFileIcon />}
-							disabled={isReadOnly}
-						>
-							Import
-							<input
-								type="file"
-								accept=".yaml,.yml"
-								hidden
-								disabled={isReadOnly}
-								onChange={(e) => {
-									const file = e.target.files?.[0];
-									if (!file) return;
-									const reader = new FileReader();
-									reader.onload = (evt) => {
-										const content = evt.target.result;
-										dispatch(addLocalFile({ name: file.name, content }));
-										// Navigate to new local file so URL reflects selection
-										navigate(paths.configurationFile(file.name), { replace: false });
-									};
-									reader.readAsText(file);
-								}}
-							/>
-						</Button>
-
-						{loadingList && <CircularProgress size={18} />}
-					</Stack>
-
-					<ConfigTree
-						files={list}
-						selectedName={selected}
-						onSelect={onSelect}
-						onRename={handleInlineRename}
-						onDelete={openDelete}
-						onMakeDraft={handleMakeDraft}
-					/>
-
-					<QuestionDialog
-						open={deleteOpen}
-						title="Delete file"
-						question={`Are you sure you want to delete "${deleteTarget ?? ""}"? This action cannot be undone.`}
-						onClose={() => setDeleteOpen(false)}
-						actionButtons={[
-							{ btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
-							{
-								btnTitle: "Delete",
-								btnColor: "error",
-								btnVariant: "contained",
-								btnIcon: <DeleteIcon />,
-								callback: submitDelete,
-							},
-						]}
-					/>
-				</Stack>
-			</Left>
-
-			<Right disableScroll>
-				<Stack
-					sx={{
-						px: 1.5,
-						pt: 0,
-						pb: 1.5,
-						gap: 1,
-						height: "100%",
-						// Allow right pane to scroll for non-editor content (e.g., messages),
-						// while we also keep the editor itself fully height-constrained so
-						// CodeMirror remains the primary scroll area for the document.
-						overflow: "auto",
-						minHeight: 0,
-						transition: "background-color 0.4s ease, color 0.4s ease",
-					}}
+	// Tree content used in both Left pane (desktop) and Drawer (mobile)
+	const treeContent = (
+		<Stack spacing={1.5} sx={{ p: 1.5 }}>
+			<Stack direction="row" spacing={1} alignItems="center">
+				<Button
+					size="small"
+					variant="outlined"
+					color="inherit"
+					startIcon={<RefreshIcon />}
+					onClick={() => dispatch(fetchConfigList())}
 				>
-					<Box
+					Refresh
+				</Button>
+
+				<Button
+					size="small"
+					variant="outlined"
+					color="inherit"
+					startIcon={<AddIcon />}
+					onClick={handleCreate}
+					disabled={isReadOnly}
+				>
+					Create
+				</Button>
+
+				<Button
+					size="small"
+					color="inherit"
+					variant="outlined"
+					component="label"
+					startIcon={<UploadFileIcon />}
+					disabled={isReadOnly}
+				>
+					Import
+					<input
+						type="file"
+						accept=".yaml,.yml"
+						hidden
+						disabled={isReadOnly}
+						onChange={(e) => {
+							const file = e.target.files?.[0];
+							if (!file) return;
+							const reader = new FileReader();
+							reader.onload = (evt) => {
+								const content = evt.target.result;
+								dispatch(addLocalFile({ name: file.name, content }));
+								// Navigate to new local file so URL reflects selection
+								navigate(paths.configurationFile(file.name), { replace: false });
+							};
+							reader.readAsText(file);
+						}}
+					/>
+				</Button>
+
+				{loadingList && <CircularProgress size={18} />}
+			</Stack>
+
+			<ConfigTree
+				files={list}
+				selectedName={selected}
+				onSelect={onSelect}
+				onRename={handleInlineRename}
+				onDelete={openDelete}
+				onMakeDraft={handleMakeDraft}
+			/>
+
+			<QuestionDialog
+				open={deleteOpen}
+				title="Delete file"
+				question={`Are you sure you want to delete "${deleteTarget ?? ""}"? This action cannot be undone.`}
+				onClose={() => setDeleteOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
+					{
+						btnTitle: "Delete",
+						btnColor: "error",
+						btnVariant: "contained",
+						btnIcon: <DeleteIcon />,
+						callback: submitDelete,
+					},
+				]}
+			/>
+		</Stack>
+	);
+
+	// Header for small screens with button to open file drawer
+	const smallScreenHeader = (
+		<Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1 }}>
+			<IconButton
+				size="small"
+				onClick={() => setDrawerOpen(true)}
+				sx={{ border: 1, borderColor: "divider", borderRadius: 1 }}
+			>
+				<FolderIcon fontSize="small" />
+			</IconButton>
+			<Typography variant="body2" noWrap sx={{ flex: 1 }}>
+				{selected || "Files"}
+			</Typography>
+		</Stack>
+	);
+
+	return (
+		<>
+			{/* Drawer for mobile tree view */}
+			<Drawer
+				anchor="left"
+				open={drawerOpen}
+				onClose={() => setDrawerOpen(false)}
+				PaperProps={{
+					sx: { width: "85%", maxWidth: 360 },
+				}}
+			>
+				<Stack
+					direction="row"
+					alignItems="center"
+					justifyContent="space-between"
+					sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
+				>
+					<Typography variant="h6">Files</Typography>
+					<IconButton size="small" onClick={() => setDrawerOpen(false)}>
+						<CloseIcon />
+					</IconButton>
+				</Stack>
+				{treeContent}
+			</Drawer>
+
+			<SplitScreen initialLeftPct={35} smallScreenHeader={smallScreenHeader}>
+				<Left>{treeContent}</Left>
+
+				<Right disableScroll>
+					<Stack
 						sx={{
-							position: "sticky",
-							top: 0,
-							zIndex: (t) => t.zIndex.appBar,
-							mx: -1.5,
 							px: 1.5,
-							py: 1,
-							bgcolor: "background.default",
-							borderBottom: 1,
-							borderColor: "divider",
-							transition: "background-color 0.4s ease, border-color 0.4s ease",
+							pt: 0,
+							pb: 1.5,
+							gap: 1,
+							height: "100%",
+							// Allow right pane to scroll for non-editor content (e.g., messages),
+							// while we also keep the editor itself fully height-constrained so
+							// CodeMirror remains the primary scroll area for the document.
+							overflow: "auto",
+							minHeight: 0,
+							transition: "background-color 0.4s ease, color 0.4s ease",
 						}}
 					>
-						<EditorHeader
-							selected={selected}
-							saving={saving}
-							onSave={() => editorRef.current?.save?.()}
-							onApply={() => editorRef.current?.apply?.()}
-							isReadOnly={isReadOnly}
-						/>
-					</Box>
-
-					{/* Let the editor take the remaining space without vh hacks */}
-					<Box sx={{ flex: 1, minHeight: 0 }}>
-						<ConfigEditorContainer ref={editorRef} />
-					</Box>
-					{loadingContent && (
-						<Stack
-							direction="row"
-							alignItems="center"
-							spacing={1}
-							sx={{ transition: "color 0.4s ease" }}
+						<Box
+							sx={{
+								position: "sticky",
+								top: 0,
+								zIndex: (t) => t.zIndex.appBar,
+								mx: -1.5,
+								px: 1.5,
+								py: 1,
+								bgcolor: "background.default",
+								borderBottom: 1,
+								borderColor: "divider",
+								transition: "background-color 0.4s ease, border-color 0.4s ease",
+							}}
 						>
-							<CircularProgress size={18} />
-							Loading content…
-						</Stack>
-					)}
-				</Stack>
-			</Right>
-		</SplitScreen>
+							<EditorHeader
+								selected={selected}
+								saving={saving}
+								onSave={() => editorRef.current?.save?.()}
+								onApply={() => editorRef.current?.apply?.()}
+								isReadOnly={isReadOnly}
+							/>
+						</Box>
+
+						{/* Let the editor take the remaining space without vh hacks */}
+						<Box sx={{ flex: 1, minHeight: 0 }}>
+							<ConfigEditorContainer ref={editorRef} />
+						</Box>
+						{loadingContent && (
+							<Stack
+								direction="row"
+								alignItems="center"
+								spacing={1}
+								sx={{ transition: "color 0.4s ease" }}
+							>
+								<CircularProgress size={18} />
+								Loading content…
+							</Stack>
+						)}
+					</Stack>
+				</Right>
+			</SplitScreen>
+		</>
 	);
 }
 
