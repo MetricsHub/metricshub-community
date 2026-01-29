@@ -47,56 +47,57 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class AgentControllerTest {
 
-    private MockMvc mockMvc;
-    private AgentContextHolder agentContextHolder;
-    private AgentLifecycleService agentLifecycleService;
+	private MockMvc mockMvc;
+	private AgentContextHolder agentContextHolder;
+	private AgentLifecycleService agentLifecycleService;
 
-    @BeforeEach
-    void setup() {
-        agentContextHolder = mock(AgentContextHolder.class);
-        agentLifecycleService = mock(AgentLifecycleService.class);
-        final AgentController controller = new AgentController(agentContextHolder, agentLifecycleService);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
-    }
+	@BeforeEach
+	void setup() {
+		agentContextHolder = mock(AgentContextHolder.class);
+		agentLifecycleService = mock(AgentLifecycleService.class);
+		final AgentController controller = new AgentController(agentContextHolder, agentLifecycleService);
+		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+	}
 
-    @Test
-    @SuppressWarnings("resource")
-    void testRestartShouldSucceed() throws Exception {
-        final AgentContext runningContext = mock(AgentContext.class);
-        final Path mockPath = mock(Path.class);
-        final Path absolutePath = mock(Path.class);
-        when(agentContextHolder.getAgentContext()).thenReturn(runningContext);
-        when(runningContext.getConfigDirectory()).thenReturn(mockPath);
-        when(mockPath.toAbsolutePath()).thenReturn(absolutePath);
-        when(absolutePath.toString()).thenReturn("/mock/config");
+	@Test
+	@SuppressWarnings("resource")
+	void testRestartShouldSucceed() throws Exception {
+		final AgentContext runningContext = mock(AgentContext.class);
+		final Path mockPath = mock(Path.class);
+		final Path absolutePath = mock(Path.class);
+		when(agentContextHolder.getAgentContext()).thenReturn(runningContext);
+		when(runningContext.getConfigDirectory()).thenReturn(mockPath);
+		when(mockPath.toAbsolutePath()).thenReturn(absolutePath);
+		when(absolutePath.toString()).thenReturn("/mock/config");
 
-        final ExtensionManager extensionManager = mock(ExtensionManager.class);
+		final ExtensionManager extensionManager = mock(ExtensionManager.class);
 
-        try (
-                MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class);
-                MockedConstruction<AgentContext> mockedContextConstruction = mockConstruction(AgentContext.class)) {
-            mockedConfigHelper.when(ConfigHelper::loadExtensionManager).thenReturn(extensionManager);
+		try (
+			MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class);
+			MockedConstruction<AgentContext> mockedContextConstruction = mockConstruction(AgentContext.class)
+		) {
+			mockedConfigHelper.when(ConfigHelper::loadExtensionManager).thenReturn(extensionManager);
 
-            mockMvc
-                    .perform(post("/api/agent/restart"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.message").value("MetricsHub Agent restarted successfully."));
+			mockMvc
+				.perform(post("/api/agent/restart"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.message").value("MetricsHub Agent restarted successfully."));
 
-            // Verify AgentContext was constructed
-            assertEquals(1, mockedContextConstruction.constructed().size());
-            final AgentContext reloadedContext = mockedContextConstruction.constructed().get(0);
+			// Verify AgentContext was constructed
+			assertEquals(1, mockedContextConstruction.constructed().size());
+			final AgentContext reloadedContext = mockedContextConstruction.constructed().get(0);
 
-            verify(agentLifecycleService).restart(eq(runningContext), eq(reloadedContext));
-        }
-    }
+			verify(agentLifecycleService).restart(eq(runningContext), eq(reloadedContext));
+		}
+	}
 
-    @Test
-    void testRestartShouldHandleException() throws Exception {
-        when(agentContextHolder.getAgentContext()).thenThrow(new RuntimeException("Context error"));
+	@Test
+	void testRestartShouldHandleException() throws Exception {
+		when(agentContextHolder.getAgentContext()).thenThrow(new RuntimeException("Context error"));
 
-        mockMvc
-                .perform(post("/api/agent/restart"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.error").value("Failed to restart MetricsHub Agent: Context error"));
-    }
+		mockMvc
+			.perform(post("/api/agent/restart"))
+			.andExpect(status().isInternalServerError())
+			.andExpect(jsonPath("$.error").value("Failed to restart MetricsHub Agent: Context error"));
+	}
 }

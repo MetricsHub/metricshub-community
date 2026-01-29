@@ -61,7 +61,8 @@ public class MetricsHubAgentServer {
 
 			// Build the Spring application context with the provided AgentContextHolder
 			// and the application arguments then run it
-			context = new SpringApplicationBuilder()
+			context =
+				new SpringApplicationBuilder()
 					.sources(MetricsHubAgentServer.class)
 					.initializers((ConfigurableApplicationContext applicationContext) -> {
 						final var beanFactory = applicationContext.getBeanFactory();

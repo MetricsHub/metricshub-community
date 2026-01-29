@@ -36,44 +36,44 @@ import org.mockito.MockedStatic;
 
 class AgentLifecycleServiceTest {
 
-    private AgentLifecycleService agentLifecycleService;
+	private AgentLifecycleService agentLifecycleService;
 
-    @BeforeEach
-    void setUp() {
-        agentLifecycleService = new AgentLifecycleService();
-    }
+	@BeforeEach
+	void setUp() {
+		agentLifecycleService = new AgentLifecycleService();
+	}
 
-    @Test
-    void testRestartShouldStopOldServicesAndStartNewOnes() {
-        // Mock contexts
-        final AgentContext runningContext = mock(AgentContext.class);
-        final AgentContext reloadedContext = mock(AgentContext.class);
+	@Test
+	void testRestartShouldStopOldServicesAndStartNewOnes() {
+		// Mock contexts
+		final AgentContext runningContext = mock(AgentContext.class);
+		final AgentContext reloadedContext = mock(AgentContext.class);
 
-        // Mock services
-        final TaskSchedulingService runningSchedulingService = mock(TaskSchedulingService.class);
-        final OtelCollectorProcessService runningOtelService = mock(OtelCollectorProcessService.class);
-        final TaskSchedulingService reloadedSchedulingService = mock(TaskSchedulingService.class);
-        final OtelCollectorProcessService reloadedOtelService = mock(OtelCollectorProcessService.class);
+		// Mock services
+		final TaskSchedulingService runningSchedulingService = mock(TaskSchedulingService.class);
+		final OtelCollectorProcessService runningOtelService = mock(OtelCollectorProcessService.class);
+		final TaskSchedulingService reloadedSchedulingService = mock(TaskSchedulingService.class);
+		final OtelCollectorProcessService reloadedOtelService = mock(OtelCollectorProcessService.class);
 
-        when(runningContext.getTaskSchedulingService()).thenReturn(runningSchedulingService);
-        when(runningContext.getOtelCollectorProcessService()).thenReturn(runningOtelService);
-        when(reloadedContext.getTaskSchedulingService()).thenReturn(reloadedSchedulingService);
-        when(reloadedContext.getOtelCollectorProcessService()).thenReturn(reloadedOtelService);
+		when(runningContext.getTaskSchedulingService()).thenReturn(runningSchedulingService);
+		when(runningContext.getOtelCollectorProcessService()).thenReturn(runningOtelService);
+		when(reloadedContext.getTaskSchedulingService()).thenReturn(reloadedSchedulingService);
+		when(reloadedContext.getOtelCollectorProcessService()).thenReturn(reloadedOtelService);
 
-        try (MockedStatic<MetricsHubAgentServer> mockedServer = mockStatic(MetricsHubAgentServer.class)) {
-            // Execute restart
-            agentLifecycleService.restart(runningContext, reloadedContext);
+		try (MockedStatic<MetricsHubAgentServer> mockedServer = mockStatic(MetricsHubAgentServer.class)) {
+			// Execute restart
+			agentLifecycleService.restart(runningContext, reloadedContext);
 
-            // Verify old services were stopped
-            verify(runningSchedulingService).stop();
-            verify(runningOtelService).stop();
+			// Verify old services were stopped
+			verify(runningSchedulingService).stop();
+			verify(runningOtelService).stop();
 
-            // Verify new services were started
-            verify(reloadedOtelService).launch();
-            verify(reloadedSchedulingService).start();
+			// Verify new services were started
+			verify(reloadedOtelService).launch();
+			verify(reloadedSchedulingService).start();
 
-            // Verify context was updated in server
-            mockedServer.verify(() -> MetricsHubAgentServer.updateAgentContext(reloadedContext));
-        }
-    }
+			// Verify context was updated in server
+			mockedServer.verify(() -> MetricsHubAgentServer.updateAgentContext(reloadedContext));
+		}
+	}
 }
