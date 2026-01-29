@@ -4,11 +4,17 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import PauseIcon from "@mui/icons-material/Pause";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
-import { setLastVisitedPath } from "../store/slices/explorer-slice";
-import { selectExplorerHierarchy } from "../store/slices/explorer-slice";
+import {
+	setLastVisitedPath,
+	selectExplorerHierarchy,
+	selectExplorerLoading,
+	selectExplorerError,
+} from "../store/slices/explorer-slice";
 import { fetchApplicationStatus } from "../store/thunks/application-status-thunks";
+import { fetchExplorerHierarchy } from "../store/thunks/explorer-thunks";
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 import ExplorerTree from "../components/explorer/tree/ExplorerTree";
+import ExplorerSearch from "../components/explorer/tree/ExplorerSearch";
 import WelcomeView from "../components/explorer/views/welcome/WelcomeView";
 import ResourceGroupsData from "../components/explorer/views/welcome/ResourceGroupsData";
 import ResourceGroupView from "../components/explorer/views/resource-groups/ResourceGroupView";
@@ -71,7 +77,16 @@ const ExplorerPage = () => {
 	const location = useLocation();
 	const dispatch = useAppDispatch();
 	const hierarchyRaw = useAppSelector(selectExplorerHierarchy);
+	const loading = useAppSelector(selectExplorerLoading);
+	const error = useAppSelector(selectExplorerError);
 	const [isPaused, setIsPaused] = React.useState(false);
+
+	// Fetch hierarchy on mount (needed for small screens where tree is hidden)
+	React.useEffect(() => {
+		if (!hierarchyRaw && !loading && !error) {
+			dispatch(fetchExplorerHierarchy());
+		}
+	}, [hierarchyRaw, loading, error, dispatch]);
 
 	// Fetch status on mount
 	React.useEffect(() => {
@@ -145,7 +160,7 @@ const ExplorerPage = () => {
 	);
 
 	return (
-		<SplitScreen initialLeftPct={35}>
+		<SplitScreen initialLeftPct={35} smallScreenHeader={<ExplorerSearch />}>
 			<Left>
 				<Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
 					<Box sx={{ flex: 1, minHeight: 0, overflow: "auto" }}>

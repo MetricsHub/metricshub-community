@@ -136,7 +136,19 @@ const AgentData = ({ agent, totalResources, status }) => {
 			</EntityHeader>
 
 			{status && (
-				<Stack direction="row" spacing={2} sx={{ mt: 1 }}>
+				<Stack
+					direction="row"
+					spacing={2}
+					sx={{
+						mt: 1,
+						flexWrap: "wrap",
+						gap: 2,
+						"& > *": {
+							minWidth: { xs: "100%", sm: 150 },
+							flex: { xs: "1 1 100%", sm: "1 1 auto" },
+						},
+					}}
+				>
 					{typeof numberOfMonitors === "number" && (
 						<StatBox label="Monitors" value={numberOfMonitors} bgcolor="#1976d2" />
 					)}
