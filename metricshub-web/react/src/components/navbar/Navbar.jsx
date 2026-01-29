@@ -269,6 +269,9 @@ const NavBar = ({ onToggleTheme }) => {
 						)}
 						{/* Theme toggle - Desktop only */}
 						{!isSmallScreen && <ToggleTheme onClick={handleToggleTheme} />}
+						{/* Profile menu - Desktop only */}
+						{!isSmallScreen && <ProfileMenu username={user?.username} onSignOut={handleSignOut} />}
+
 						{/* Mobile menu with all options */}
 						{isSmallScreen && (
 							<>
