@@ -43,85 +43,86 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping(value = "/api/log-files")
 public class LogFilesController {
 
-    /** Service handling log file operations. */
-    private LogFilesService logFilesService;
+	/** Service handling log file operations. */
+	private LogFilesService logFilesService;
 
-    /**
-     * Constructor for LogFilesController.
-     *
-     * @param logFilesService the LogFilesService to handle log file requests.
-     */
-    public LogFilesController(final LogFilesService logFilesService) {
-        this.logFilesService = logFilesService;
-    }
+	/**
+	 * Constructor for LogFilesController.
+	 *
+	 * @param logFilesService the LogFilesService to handle log file requests.
+	 */
+	public LogFilesController(final LogFilesService logFilesService) {
+		this.logFilesService = logFilesService;
+	}
 
-    /**
-     * Endpoint to list all log files with their metadata.
-     *
-     * @return A list of LogFile representing all log files.
-     * @throws LogFilesException if an IO error occurs when listing files
-     */
-    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<LogFile> listLogFiles() throws LogFilesException {
-        return logFilesService.getAllLogFiles();
-    }
+	/**
+	 * Endpoint to list all log files with their metadata.
+	 *
+	 * @return A list of LogFile representing all log files.
+	 * @throws LogFilesException if an IO error occurs when listing files
+	 */
+	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+	public List<LogFile> listLogFiles() throws LogFilesException {
+		return logFilesService.getAllLogFiles();
+	}
 
-    /**
-     * Endpoint to get the tail (last N bytes) of a specific log file.
-     *
-     * @param fileName the name of the log file to retrieve.
-     * @param maxBytes the maximum number of bytes to read from the end of the file.
-     *                 Defaults to 1 MB.
-     * @return the tail content of the log file as plain text.
-     * @throws LogFilesException if the file is not found or cannot be read
-     */
-    @GetMapping(value = "/{fileName}/tail", produces = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity<String> getLogFileTail(
-            @PathVariable("fileName") String fileName,
-            @RequestParam(name = "maxBytes", defaultValue = "1048576") long maxBytes) throws LogFilesException {
-        final String content = logFilesService.getFileTail(fileName, maxBytes);
-        return ResponseEntity.ok(content);
-    }
+	/**
+	 * Endpoint to get the tail (last N bytes) of a specific log file.
+	 *
+	 * @param fileName the name of the log file to retrieve.
+	 * @param maxBytes the maximum number of bytes to read from the end of the file.
+	 *                 Defaults to 1 MB.
+	 * @return the tail content of the log file as plain text.
+	 * @throws LogFilesException if the file is not found or cannot be read
+	 */
+	@GetMapping(value = "/{fileName}/tail", produces = MediaType.TEXT_PLAIN_VALUE)
+	public ResponseEntity<String> getLogFileTail(
+		@PathVariable("fileName") String fileName,
+		@RequestParam(name = "maxBytes", defaultValue = "1048576") long maxBytes
+	) throws LogFilesException {
+		final String content = logFilesService.getFileTail(fileName, maxBytes);
+		return ResponseEntity.ok(content);
+	}
 
-    /**
-     * Endpoint to download a log file.
-     *
-     * @param fileName the name of the log file to download.
-     * @return the file content as an octet-stream for download.
-     * @throws LogFilesException if the file is not found or cannot be read
-     */
-    @GetMapping(value = "/{fileName}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<byte[]> downloadLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
-        final byte[] content = logFilesService.getFileForDownload(fileName);
+	/**
+	 * Endpoint to download a log file.
+	 *
+	 * @param fileName the name of the log file to download.
+	 * @return the file content as an octet-stream for download.
+	 * @throws LogFilesException if the file is not found or cannot be read
+	 */
+	@GetMapping(value = "/{fileName}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public ResponseEntity<byte[]> downloadLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
+		final byte[] content = logFilesService.getFileForDownload(fileName);
 
-        final HttpHeaders headers = new HttpHeaders();
-        headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
+		final HttpHeaders headers = new HttpHeaders();
+		headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
 
-        return ResponseEntity.ok().headers(headers).body(content);
-    }
+		return ResponseEntity.ok().headers(headers).body(content);
+	}
 
-    /**
-     * Endpoint to delete a specific log file.
-     *
-     * @param fileName the name of the log file to delete.
-     * @return a ResponseEntity with no content.
-     * @throws LogFilesException if the file is not found or cannot be deleted
-     */
-    @DeleteMapping("/{fileName}")
-    public ResponseEntity<Void> deleteLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
-        logFilesService.deleteFile(fileName);
-        return ResponseEntity.noContent().build();
-    }
+	/**
+	 * Endpoint to delete a specific log file.
+	 *
+	 * @param fileName the name of the log file to delete.
+	 * @return a ResponseEntity with no content.
+	 * @throws LogFilesException if the file is not found or cannot be deleted
+	 */
+	@DeleteMapping("/{fileName}")
+	public ResponseEntity<Void> deleteLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
+		logFilesService.deleteFile(fileName);
+		return ResponseEntity.noContent().build();
+	}
 
-    /**
-     * Endpoint to delete all log files.
-     *
-     * @return the number of files deleted.
-     * @throws LogFilesException if an IO error occurs during deletion
-     */
-    @DeleteMapping
-    public ResponseEntity<Integer> deleteAllLogFiles() throws LogFilesException {
-        final int deletedCount = logFilesService.deleteAllFiles();
-        return ResponseEntity.ok(deletedCount);
-    }
+	/**
+	 * Endpoint to delete all log files.
+	 *
+	 * @return the number of files deleted.
+	 * @throws LogFilesException if an IO error occurs during deletion
+	 */
+	@DeleteMapping
+	public ResponseEntity<Integer> deleteAllLogFiles() throws LogFilesException {
+		final int deletedCount = logFilesService.deleteAllFiles();
+		return ResponseEntity.ok(deletedCount);
+	}
 }
