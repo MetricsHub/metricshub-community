@@ -1,13 +1,5 @@
 import * as React from "react";
-import {
-	Box,
-	Stack,
-	Typography,
-	Alert,
-	Collapse,
-	IconButton,
-	Divider,
-} from "@mui/material";
+import { Box, Stack, Typography, Alert, Collapse, IconButton, Divider } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
@@ -18,6 +10,7 @@ import AgentHeader from "../components/agent/AgentHeader";
 import AgentMetrics from "../components/agent/AgentMetrics";
 import KeyValueTable from "../components/agent/KeyValueTable";
 import AgentOpenTelemetry from "../components/agent/AgentOpenTelemetry";
+import LogFilesViewer from "../components/agent/LogFilesViewer";
 import { objectToRows, EXCLUDED_STATUS_KEYS } from "../components/agent/utils";
 
 /**
@@ -169,6 +162,11 @@ function AgentPage() {
 
 				{/* OpenTelemetry Configuration */}
 				<AgentOpenTelemetry />
+
+				<Divider />
+
+				{/* Log Files Viewer */}
+				<LogFilesViewer />
 
 				{/* Last updated */}
 				{lastUpdatedAt && (

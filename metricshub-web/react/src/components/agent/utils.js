@@ -1,12 +1,12 @@
 /** Keys to exclude from status details table (already displayed elsewhere) */
 export const EXCLUDED_STATUS_KEYS = [
-    "status",
-    "agentInfo",
-    "numberOfMonitors",
-    "numberOfConfiguredResources",
-    "memoryUsageBytes",
-    "memoryUsagePercent",
-    "cpuUsage",
+	"status",
+	"agentInfo",
+	"numberOfMonitors",
+	"numberOfConfiguredResources",
+	"memoryUsageBytes",
+	"memoryUsagePercent",
+	"cpuUsage",
 ];
 
 /**
@@ -15,10 +15,10 @@ export const EXCLUDED_STATUS_KEYS = [
  * @returns {string} Hex color code
  */
 export const getUsageColor = (percentage) => {
-    if (typeof percentage !== "number") return "#1976d2";
-    if (percentage < 50) return "#2e7d32";
-    if (percentage < 80) return "#ed6c02";
-    return "#d32f2f";
+	if (typeof percentage !== "number") return "#1976d2";
+	if (percentage < 50) return "#2e7d32";
+	if (percentage < 80) return "#ed6c02";
+	return "#d32f2f";
 };
 
 /**
@@ -27,9 +27,9 @@ export const getUsageColor = (percentage) => {
  * @returns {string} Formatted string representation
  */
 export const formatTableValue = (value) => {
-    if (value === null || value === undefined) return "—";
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
+	if (value === null || value === undefined) return "—";
+	if (typeof value === "object") return JSON.stringify(value);
+	return String(value);
 };
 
 /**
@@ -39,10 +39,10 @@ export const formatTableValue = (value) => {
  * @returns {Array<{id: string, property: string, value: string}>} DataGrid rows
  */
 export const objectToRows = (obj, excludeKeys = []) =>
-    Object.entries(obj)
-        .filter(([key]) => !excludeKeys.includes(key))
-        .map(([key, value]) => ({
-            id: key,
-            property: key,
-            value: formatTableValue(value),
-        }));
+	Object.entries(obj)
+		.filter(([key]) => !excludeKeys.includes(key))
+		.map(([key, value]) => ({
+			id: key,
+			property: key,
+			value: formatTableValue(value),
+		}));
