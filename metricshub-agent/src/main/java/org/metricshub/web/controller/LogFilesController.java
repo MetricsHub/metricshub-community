@@ -29,6 +29,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -97,5 +98,30 @@ public class LogFilesController {
         headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
 
         return ResponseEntity.ok().headers(headers).body(content);
+    }
+
+    /**
+     * Endpoint to delete a specific log file.
+     *
+     * @param fileName the name of the log file to delete.
+     * @return a ResponseEntity with no content.
+     * @throws LogFilesException if the file is not found or cannot be deleted
+     */
+    @DeleteMapping("/{fileName}")
+    public ResponseEntity<Void> deleteLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
+        logFilesService.deleteFile(fileName);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Endpoint to delete all log files.
+     *
+     * @return the number of files deleted.
+     * @throws LogFilesException if an IO error occurs during deletion
+     */
+    @DeleteMapping
+    public ResponseEntity<Integer> deleteAllLogFiles() throws LogFilesException {
+        final int deletedCount = logFilesService.deleteAllFiles();
+        return ResponseEntity.ok(deletedCount);
     }
 }

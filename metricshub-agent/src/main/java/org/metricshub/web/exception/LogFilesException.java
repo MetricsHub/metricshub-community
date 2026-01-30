@@ -26,63 +26,63 @@ package org.metricshub.web.exception;
  */
 public class LogFilesException extends Exception {
 
-    /**
-     * Serial version UID for serialization.
-     */
-    private static final long serialVersionUID = 1L;
+	/**
+	 * Serial version UID for serialization.
+	 */
+	private static final long serialVersionUID = 1L;
 
-    /**
-     * Enumeration of error codes for log file operations.
-     */
-    public enum Code {
-        LOGS_DIR_UNAVAILABLE,
-        FILE_NOT_FOUND,
-        INVALID_FILE_NAME,
-        INVALID_PATH,
-        IO_FAILURE
-    }
+	/**
+	 * Enumeration of error codes for log file operations.
+	 */
+	public enum Code {
+		LOGS_DIR_UNAVAILABLE,
+		FILE_NOT_FOUND,
+		INVALID_FILE_NAME,
+		INVALID_PATH,
+		IO_FAILURE
+	}
 
-    private final Code code;
+	private final Code code;
 
-    /**
-     * Constructor for LogFilesException.
-     *
-     * @param code the error code representing the type of error.
-     */
-    public LogFilesException(Code code) {
-        super(code.name());
-        this.code = code;
-    }
+	/**
+	 * Constructor for LogFilesException.
+	 *
+	 * @param code the error code representing the type of error.
+	 */
+	public LogFilesException(Code code) {
+		super(code.name());
+		this.code = code;
+	}
 
-    /**
-     * Constructor for LogFilesException with a custom message.
-     *
-     * @param code    the error code representing the type of error.
-     * @param message the custom error message.
-     */
-    public LogFilesException(Code code, String message) {
-        super(message);
-        this.code = code;
-    }
+	/**
+	 * Constructor for LogFilesException with a custom message.
+	 *
+	 * @param code    the error code representing the type of error.
+	 * @param message the custom error message.
+	 */
+	public LogFilesException(Code code, String message) {
+		super(message);
+		this.code = code;
+	}
 
-    /**
-     * Constructor for LogFilesException with a cause.
-     *
-     * @param code    the error code representing the type of error.
-     * @param message the custom error message.
-     * @param cause   the underlying cause of the exception.
-     */
-    public LogFilesException(Code code, String message, Throwable cause) {
-        super(message, cause);
-        this.code = code;
-    }
+	/**
+	 * Constructor for LogFilesException with a cause.
+	 *
+	 * @param code    the error code representing the type of error.
+	 * @param message the custom error message.
+	 * @param cause   the underlying cause of the exception.
+	 */
+	public LogFilesException(Code code, String message, Throwable cause) {
+		super(message, cause);
+		this.code = code;
+	}
 
-    /**
-     * Gets the error code associated with this exception.
-     *
-     * @return the error code.
-     */
-    public Code getCode() {
-        return code;
-    }
+	/**
+	 * Gets the error code associated with this exception.
+	 *
+	 * @return the error code.
+	 */
+	public Code getCode() {
+		return code;
+	}
 }

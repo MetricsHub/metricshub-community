@@ -35,7 +35,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class LogFile {
 
-    private String name;
-    private long size;
-    private String lastModificationTime;
+	private String name;
+	private long size;
+	private String lastModificationTime;
 }

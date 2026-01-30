@@ -1,5 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchLogFiles, fetchLogContent } from "../thunks/log-files-thunks";
+import {
+	fetchLogFiles,
+	fetchLogContent,
+	deleteLogFile,
+	deleteAllLogFiles,
+} from "../thunks/log-files-thunks";
 
 /**
  * Initial state for log files slice
@@ -13,6 +18,8 @@ const initialState = {
 	contentLoading: false,
 	contentError: null,
 	lastUpdatedAt: null,
+	deleting: false,
+	deleteError: null,
 };
 
 /**
@@ -63,6 +70,39 @@ const logFilesSlice = createSlice({
 			.addCase(fetchLogContent.rejected, (state, action) => {
 				state.contentLoading = false;
 				state.contentError = action.payload || "Unable to fetch log content";
+			})
+			// Delete single log file
+			.addCase(deleteLogFile.pending, (state) => {
+				state.deleting = true;
+				state.deleteError = null;
+			})
+			.addCase(deleteLogFile.fulfilled, (state, action) => {
+				state.deleting = false;
+				state.list = state.list.filter((f) => f.name !== action.payload.fileName);
+				// Clear content if the deleted file was being viewed
+				if (state.currentFileName === action.payload.fileName) {
+					state.content = "";
+					state.currentFileName = null;
+				}
+			})
+			.addCase(deleteLogFile.rejected, (state, action) => {
+				state.deleting = false;
+				state.deleteError = action.payload || "Unable to delete log file";
+			})
+			// Delete all log files
+			.addCase(deleteAllLogFiles.pending, (state) => {
+				state.deleting = true;
+				state.deleteError = null;
+			})
+			.addCase(deleteAllLogFiles.fulfilled, (state) => {
+				state.deleting = false;
+				state.list = [];
+				state.content = "";
+				state.currentFileName = null;
+			})
+			.addCase(deleteAllLogFiles.rejected, (state, action) => {
+				state.deleting = false;
+				state.deleteError = action.payload || "Unable to delete log files";
 			});
 	},
 });

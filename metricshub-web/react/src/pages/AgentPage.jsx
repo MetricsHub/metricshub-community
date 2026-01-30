@@ -166,7 +166,7 @@ function AgentPage() {
 				<Divider />
 
 				{/* Log Files Viewer */}
-				<LogFilesViewer />
+				<LogFilesViewer isReadOnly={isReadOnly} />
 
 				{/* Last updated */}
 				{lastUpdatedAt && (

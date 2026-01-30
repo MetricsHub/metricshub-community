@@ -30,3 +30,33 @@ export const fetchLogContent = createAsyncThunk(
 		}
 	},
 );
+
+/**
+ * Thunk to delete a specific log file
+ */
+export const deleteLogFile = createAsyncThunk(
+	"logFiles/deleteLogFile",
+	async ({ fileName }, { rejectWithValue }) => {
+		try {
+			await logFilesApi.deleteFile(fileName);
+			return { fileName };
+		} catch (err) {
+			return rejectWithValue(err?.message || "Failed to delete log file");
+		}
+	},
+);
+
+/**
+ * Thunk to delete all log files
+ */
+export const deleteAllLogFiles = createAsyncThunk(
+	"logFiles/deleteAllLogFiles",
+	async (_, { rejectWithValue }) => {
+		try {
+			const count = await logFilesApi.deleteAllFiles();
+			return { count };
+		} catch (err) {
+			return rejectWithValue(err?.message || "Failed to delete log files");
+		}
+	},
+);

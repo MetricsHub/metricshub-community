@@ -144,6 +144,60 @@ public class LogFilesService {
     }
 
     /**
+     * Deletes a log file.
+     *
+     * @param fileName the log file name (e.g. metricshub.log)
+     * @throws LogFilesException if the file cannot be deleted
+     */
+    public void deleteFile(final String fileName) throws LogFilesException {
+        final Path dir = getLogsDir();
+        final Path file = resolveSafeLogFile(dir, fileName);
+        log.info("Deleting log file: {}", file.toAbsolutePath());
+
+        try {
+            if (!Files.deleteIfExists(file)) {
+                throw new LogFilesException(LogFilesException.Code.FILE_NOT_FOUND, "Log file not found.");
+            }
+        } catch (IOException e) {
+            log.error("Failed to delete log file: '{}'. Error: {}", file, e.getMessage());
+            log.debug("Failed to delete log file: '{}'. Exception:", file, e);
+            throw new LogFilesException(LogFilesException.Code.IO_FAILURE, "Failed to delete log file.", e);
+        }
+    }
+
+    /**
+     * Deletes all log files in the logs directory.
+     *
+     * @return the number of files deleted
+     * @throws LogFilesException if an IO error occurs during deletion
+     */
+    public int deleteAllFiles() throws LogFilesException {
+        final Path logsDirectory = getLogsDir();
+        log.info("Deleting all log files in: {}", logsDirectory.toAbsolutePath());
+
+        int deletedCount = 0;
+        try (Stream<Path> files = Files.list(logsDirectory)) {
+            final List<Path> logFiles = files.filter(Files::isRegularFile).filter(LogFilesService::hasLogExtension)
+                    .toList();
+
+            for (Path file : logFiles) {
+                try {
+                    Files.deleteIfExists(file);
+                    deletedCount++;
+                } catch (IOException e) {
+                    log.warn("Failed to delete log file: '{}'. Error: {}", file, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to list logs directory for deletion: '{}'. Error: {}", logsDirectory, e.getMessage());
+            log.debug("Failed to list logs directory for deletion: '{}'. Exception:", logsDirectory, e);
+            throw new LogFilesException(LogFilesException.Code.IO_FAILURE, "Failed to delete log files.", e);
+        }
+
+        return deletedCount;
+    }
+
+    /**
      * Builds a {@link LogFile} from the given file path.
      *
      * @param path the path to the log file
