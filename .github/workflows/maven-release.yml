@@ -301,7 +301,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: ${{ github.repository_owner == 'MetricsHub' }}
-      uses: aws-actions/configure-aws-credentials@v5.0.0
+      uses: aws-actions/configure-aws-credentials@v6.0.0
       with:
         role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
         role-session-name: ci
