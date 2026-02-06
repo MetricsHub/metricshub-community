@@ -603,7 +603,7 @@ public class ConfigHelper {
 		mergeAttributes(resourceConfig.getAttributes(), attributes);
 		resourceConfig.setAttributes(attributes);
 
-		resourceConfig.setEnrichments(mergeEnrichments(agentConfig.getEnrichments(), resourceConfig.getEnrichments()));
+		resourceConfig.setEnrichments(resolveEnrichments(agentConfig.getEnrichments(), resourceConfig.getEnrichments()));
 
 		// Create an identity for the configured connector
 		normalizeConfiguredConnector(
@@ -699,7 +699,7 @@ public class ConfigHelper {
 		resourceConfig.setAttributes(attributes);
 
 		resourceConfig.setEnrichments(
-			mergeEnrichments(resourceGroupConfig.getEnrichments(), resourceConfig.getEnrichments())
+			resolveEnrichments(resourceGroupConfig.getEnrichments(), resourceConfig.getEnrichments())
 		);
 
 		// Create an identity for the configured connector
@@ -792,7 +792,7 @@ public class ConfigHelper {
 		resourceGroupConfig.setAttributes(attributes);
 
 		resourceGroupConfig.setEnrichments(
-			mergeEnrichments(agentConfig.getEnrichments(), resourceGroupConfig.getEnrichments())
+			resolveEnrichments(agentConfig.getEnrichments(), resourceGroupConfig.getEnrichments())
 		);
 	}
 
@@ -816,7 +816,7 @@ public class ConfigHelper {
 	 * @param childEnrichments enrichments defined at a lower level
 	 * @return child enrichments when set, otherwise parent enrichments
 	 */
-	public static List<String> mergeEnrichments(
+	public static List<String> resolveEnrichments(
 		final List<String> parentEnrichments,
 		final List<String> childEnrichments
 	) {
