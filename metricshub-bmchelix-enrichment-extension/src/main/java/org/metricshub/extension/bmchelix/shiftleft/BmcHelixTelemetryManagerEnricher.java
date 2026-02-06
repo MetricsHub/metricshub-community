@@ -75,8 +75,8 @@ public class BmcHelixTelemetryManagerEnricher {
 	 * @param monitor monitor to enrich
 	 */
 	private void enrichMonitor(final Monitor monitor) {
-		final String entityName = monitor.getId();
-		final String entityTypeId = monitor.getType();
+		final String entityName = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getId());
+		final String entityTypeId = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getType());
 		final String instanceName = resolveInstanceName(monitor, entityName);
 
 		monitor.addAttribute(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY, entityName);

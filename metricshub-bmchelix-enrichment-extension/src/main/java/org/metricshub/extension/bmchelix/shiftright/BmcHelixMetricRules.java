@@ -24,6 +24,7 @@ package org.metricshub.extension.bmchelix.shiftright;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.UnaryOperator;
 import java.util.regex.Pattern;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
@@ -52,17 +53,22 @@ public class BmcHelixMetricRules {
 				resourceAttributes,
 				BmcHelixEnrichmentExtension.ENTITY_NAME_KEY,
 				resourceAttributes,
-				rule.getEntityNameFrom()
+				rule.getEntityNameFrom(),
+				BmcHelixEnrichmentExtension::normalizeIdentityValue
 			);
 			setFromResource(
 				resourceAttributes,
 				BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY,
 				resourceAttributes,
-				rule.getInstanceNameFrom()
+				rule.getInstanceNameFrom(),
+				UnaryOperator.identity()
 			);
 
 			if (rule.getEntityTypeId() != null) {
-				resourceAttributes.put(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY, rule.getEntityTypeId());
+				resourceAttributes.put(
+					BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY,
+					BmcHelixEnrichmentExtension.normalizeIdentityValue(rule.getEntityTypeId())
+				);
 			}
 		}
 	}
@@ -103,16 +109,19 @@ public class BmcHelixMetricRules {
 	 * @param targetKey the target attribute key
 	 * @param resourceAttributes the resource-level attributes
 	 * @param primaryKey the primary resource attribute key
+	 * @param normalizer the value normalization function
 	 */
 	private void setFromResource(
 		final Map<String, String> target,
 		final String targetKey,
 		final Map<String, String> resourceAttributes,
-		final String primaryKey
+		final String primaryKey,
+		final UnaryOperator<String> normalizer
 	) {
 		final String primaryValue = primaryKey != null ? resourceAttributes.get(primaryKey) : null;
 		if (StringHelper.nonNullNonBlank(primaryValue)) {
-			target.put(targetKey, primaryValue);
+			final String normalizedValue = normalizer.apply(primaryValue);
+			target.put(targetKey, normalizedValue);
 		}
 	}
 
