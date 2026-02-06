@@ -698,7 +698,9 @@ public class ConfigHelper {
 		mergeAttributes(resourceConfig.getAttributes(), attributes);
 		resourceConfig.setAttributes(attributes);
 
-		resourceConfig.setEnrichments(mergeEnrichments(resourceGroupConfig.getEnrichments(), resourceConfig.getEnrichments()));
+		resourceConfig.setEnrichments(
+			mergeEnrichments(resourceGroupConfig.getEnrichments(), resourceConfig.getEnrichments())
+		);
 
 		// Create an identity for the configured connector
 		normalizeConfiguredConnector(
@@ -789,7 +791,9 @@ public class ConfigHelper {
 		mergeAttributes(resourceGroupConfig.getAttributes(), attributes);
 		resourceGroupConfig.setAttributes(attributes);
 
-		resourceGroupConfig.setEnrichments(mergeEnrichments(agentConfig.getEnrichments(), resourceGroupConfig.getEnrichments()));
+		resourceGroupConfig.setEnrichments(
+			mergeEnrichments(agentConfig.getEnrichments(), resourceGroupConfig.getEnrichments())
+		);
 	}
 
 	/**

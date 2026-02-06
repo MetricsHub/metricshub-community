@@ -85,9 +85,8 @@ public class MonitoringTask implements Runnable {
 		final ResourceConfig resourceConfig = monitoringTaskInfo.getResourceConfig();
 		final int discoveryCycle = resourceConfig.getDiscoveryCycle();
 		final ExtensionManager extensionManager = monitoringTaskInfo.getExtensionManager();
-		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions = extensionManager.resolveMetricEnrichmentExtensions(
-			resourceConfig.getEnrichments()
-		);
+		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions =
+			extensionManager.resolveMetricEnrichmentExtensions(resourceConfig.getEnrichments());
 
 		final String hostId = telemetryManager.getHostConfiguration().getHostId();
 

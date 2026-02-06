@@ -120,7 +120,9 @@ public class SelfScheduling extends AbstractScheduling {
 		ConfigHelper.mergeAttributes(agentConfig.getAttributes(), resourceAttributes);
 
 		// Resolve metric enrichment extensions based on the configured enrichments for the agent
-		final var metricEnrichmentExtensions = extensionManager.resolveMetricEnrichmentExtensions(agentConfig.getEnrichments());
+		final var metricEnrichmentExtensions = extensionManager.resolveMetricEnrichmentExtensions(
+			agentConfig.getEnrichments()
+		);
 
 		// Create a new meter provider with the metrics exporter
 		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter, metricEnrichmentExtensions);

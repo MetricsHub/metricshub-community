@@ -67,7 +67,10 @@ final class BmcHelixMetricTransformer {
 	 * @param resourceAttributes the resource-level attributes map
 	 * @param resourceMetrics the resource metrics containing metric names
 	 */
-	private void applyRulesToResource(final Map<String, String> resourceAttributes, final ResourceMetrics resourceMetrics) {
+	private void applyRulesToResource(
+		final Map<String, String> resourceAttributes,
+		final ResourceMetrics resourceMetrics
+	) {
 		for (ScopeMetrics scopeMetrics : resourceMetrics.getScopeMetricsList()) {
 			for (Metric metric : scopeMetrics.getMetricsList()) {
 				rules.enrichAttributes(metric.getName(), resourceAttributes);

@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
-
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 
@@ -127,5 +126,4 @@ final class BmcHelixMetricRules {
 	private boolean matches(final Pattern pattern, final String value) {
 		return value != null && pattern.matcher(value).matches();
 	}
-
 }
