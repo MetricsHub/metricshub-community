@@ -603,6 +603,8 @@ public class ConfigHelper {
 		mergeAttributes(resourceConfig.getAttributes(), attributes);
 		resourceConfig.setAttributes(attributes);
 
+		resourceConfig.setEnrichments(mergeEnrichments(agentConfig.getEnrichments(), resourceConfig.getEnrichments()));
+
 		// Create an identity for the configured connector
 		normalizeConfiguredConnector(
 			TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY,
@@ -696,6 +698,8 @@ public class ConfigHelper {
 		mergeAttributes(resourceConfig.getAttributes(), attributes);
 		resourceConfig.setAttributes(attributes);
 
+		resourceConfig.setEnrichments(mergeEnrichments(resourceGroupConfig.getEnrichments(), resourceConfig.getEnrichments()));
+
 		// Create an identity for the configured connector
 		normalizeConfiguredConnector(
 			resourceGroupConfigEntry.getKey(),
@@ -784,6 +788,8 @@ public class ConfigHelper {
 		mergeAttributes(agentConfig.getAttributes(), attributes);
 		mergeAttributes(resourceGroupConfig.getAttributes(), attributes);
 		resourceGroupConfig.setAttributes(attributes);
+
+		resourceGroupConfig.setEnrichments(mergeEnrichments(agentConfig.getEnrichments(), resourceGroupConfig.getEnrichments()));
 	}
 
 	/**
@@ -797,6 +803,23 @@ public class ConfigHelper {
 		final Map<String, String> destinationAttributes
 	) {
 		destinationAttributes.putAll(attributes);
+	}
+
+	/**
+	 * Resolve enrichment identifiers using override semantics.
+	 *
+	 * @param parentEnrichments enrichments defined at a higher level
+	 * @param childEnrichments enrichments defined at a lower level
+	 * @return child enrichments when set, otherwise parent enrichments
+	 */
+	public static List<String> mergeEnrichments(
+		final List<String> parentEnrichments,
+		final List<String> childEnrichments
+	) {
+		if (childEnrichments != null && !childEnrichments.isEmpty()) {
+			return new ArrayList<>(childEnrichments);
+		}
+		return parentEnrichments != null ? new ArrayList<>(parentEnrichments) : new ArrayList<>();
 	}
 
 	/**

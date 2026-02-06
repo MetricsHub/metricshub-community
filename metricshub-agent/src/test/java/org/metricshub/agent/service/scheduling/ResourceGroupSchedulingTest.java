@@ -34,6 +34,7 @@ import org.metricshub.agent.helper.TestConstants;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.helpers.MapHelper;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.springframework.scheduling.Trigger;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -66,6 +67,7 @@ class ResourceGroupSchedulingTest {
 		final ResourceGroupScheduling resourceGroupScheduling = ResourceGroupScheduling
 			.builder()
 			.withAgentConfig(agentConfig)
+			.withExtensionManager(ExtensionManager.empty())
 			.withMetricsExporter(metricsExporter)
 			.withResourceGroupConfig(resourceGroupConfig)
 			.withResourceGroupKey(PARIS_RESOURCE_GROUP_KEY)

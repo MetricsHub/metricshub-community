@@ -26,10 +26,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.extension.IMetricEnrichmentExtension;
 
 /**
  * ResourceMeterProvider class used to provide {@link ResourceMeter} instances and export metrics.
  */
+@Slf4j
 public class ResourceMeterProvider {
 
 	@Getter
@@ -38,13 +41,21 @@ public class ResourceMeterProvider {
 	@Getter
 	private List<ResourceMeter> meters = new ArrayList<>();
 
+	@Getter
+	private List<IMetricEnrichmentExtension> metricEnrichmentExtensions;
+
 	/**
 	 * Constructs a new ResourceMeterProvider instance.
 	 *
 	 * @param exporter the metrics exporter to use.
+	 * @param metricEnrichmentExtensions the metric enrichment extensions to use.
 	 */
-	public ResourceMeterProvider(final MetricsExporter exporter) {
+	public ResourceMeterProvider(
+		final MetricsExporter exporter,
+		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions
+	) {
 		this.metricsExporter = exporter;
+		this.metricEnrichmentExtensions = metricEnrichmentExtensions != null ? metricEnrichmentExtensions : List.of();
 	}
 
 	/**
@@ -55,6 +66,20 @@ public class ResourceMeterProvider {
 	 * @param logContextSetter The log context setter to use for asynchronous logging.
 	 */
 	public void exportMetrics(final LogContextSetter logContextSetter) {
+		final List<ResourceMetrics> recordedMetrics = prepareMetrics();
+		final List<ResourceMetrics> enrichedMetrics = enrichMetrics(recordedMetrics);
+
+		// Export the already-recorded metrics asynchronously
+		// Since the data is in recordedMetrics (not in recorders), clearing recorders doesn't affect export
+		metricsExporter.export(enrichedMetrics, logContextSetter);
+	}
+
+	/**
+	 * Records metrics and clears recorders after successful recording.
+	 *
+	 * @return the recorded metrics
+	 */
+	public List<ResourceMetrics> prepareMetrics() {
 		// First, record all metrics into protobuf ResourceMetrics objects
 		// This extracts all data from the recorders into immutable protobuf structures
 		final List<ResourceMetrics> recordedMetrics = meters.stream().map(ResourceMeter::recordSafe).toList();
@@ -63,9 +88,40 @@ public class ResourceMeterProvider {
 		// This prevents memory leaks without risking data loss, even though export is async
 		meters.forEach(ResourceMeter::clearRecorders);
 
-		// Export the already-recorded metrics asynchronously
-		// Since the data is in recordedMetrics (not in recorders), clearing recorders doesn't affect export
-		metricsExporter.export(recordedMetrics, logContextSetter);
+		return recordedMetrics;
+	}
+
+	/**
+	 * Enrich metrics using registered enrichment extensions.
+	 *
+	 * @param recordedMetrics the metrics recorded during the collection phase
+	 * @return the enriched metrics
+	 */
+	public List<ResourceMetrics> enrichMetrics(final List<ResourceMetrics> recordedMetrics) {
+		if (recordedMetrics == null || recordedMetrics.isEmpty()) {
+			return recordedMetrics;
+		}
+
+		final List<IMetricEnrichmentExtension> enrichers = metricEnrichmentExtensions;
+		if (enrichers.isEmpty()) {
+			return recordedMetrics;
+		}
+
+		List<ResourceMetrics> enrichedMetrics = recordedMetrics;
+		for (IMetricEnrichmentExtension enricher : enrichers) {
+			try {
+				enrichedMetrics = enricher.enrichShiftRight(enrichedMetrics);
+			} catch (Exception e) {
+				log.error(
+					"Failed to enrich metrics with {}. Error: {}",
+					enricher != null ? enricher.getClass().getSimpleName() : "<null>",
+					e.getMessage()
+				);
+				log.debug("Failed to enrich metrics. Stack trace:", e);
+			}
+		}
+
+		return enrichedMetrics;
 	}
 
 	/**

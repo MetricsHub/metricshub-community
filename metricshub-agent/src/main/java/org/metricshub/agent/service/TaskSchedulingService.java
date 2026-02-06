@@ -82,10 +82,12 @@ public class TaskSchedulingService {
 	 * which triggers a periodic task to flush metrics
 	 */
 	void scheduleSelfRecorder() {
+		final ExtensionManager safeExtensionManager = getExtensionManagerOrEmpty();
 		SelfScheduling
 			.builder()
 			.withAgentConfig(agentConfig)
 			.withAgentInfo(agentInfo)
+			.withExtensionManager(safeExtensionManager)
 			.withMetricsExporter(metricsExporter)
 			.withSchedules(schedules)
 			.withTaskScheduler(taskScheduler)
@@ -133,9 +135,11 @@ public class TaskSchedulingService {
 	 * @param resourceGroupConfig {@link ResourceGroupConfig} instance configured by the user.
 	 */
 	void scheduleResourceGroup(final String resourceGroupKey, final ResourceGroupConfig resourceGroupConfig) {
+		final ExtensionManager safeExtensionManager = getExtensionManagerOrEmpty();
 		ResourceGroupScheduling
 			.builder()
 			.withAgentConfig(agentConfig)
+			.withExtensionManager(safeExtensionManager)
 			.withMetricsExporter(metricsExporter)
 			.withSchedules(schedules)
 			.withTaskScheduler(taskScheduler)
@@ -169,6 +173,7 @@ public class TaskSchedulingService {
 	 * @param resourceConfig   The {@link ResourceConfig} instance configured by the user.
 	 */
 	void scheduleResource(final String resourceGroupKey, final String resourceKey, final ResourceConfig resourceConfig) {
+		final ExtensionManager safeExtensionManager = getExtensionManagerOrEmpty();
 		// Get the TelemetryManager instance
 		final Map<String, TelemetryManager> perGroupTelemetryManagers = telemetryManagers.get(resourceGroupKey);
 		if (perGroupTelemetryManagers == null) {
@@ -195,9 +200,18 @@ public class TaskSchedulingService {
 			.withResourceConfig(resourceConfig)
 			.withTelemetryManager(telemetryManager)
 			.withHostMetricDefinitions(hostMetricDefinitions)
-			.withExtensionManager(extensionManager)
+			.withExtensionManager(safeExtensionManager)
 			.build()
 			.schedule();
+	}
+
+	/**
+	 * Resolve the extension manager or provide an empty fallback.
+	 *
+	 * @return extension manager instance
+	 */
+	private ExtensionManager getExtensionManagerOrEmpty() {
+		return extensionManager != null ? extensionManager : ExtensionManager.empty();
 	}
 
 	/**

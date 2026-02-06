@@ -7,6 +7,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.service.TestHelper;
+import java.util.List;
 
 class ResourceMeterProviderTest {
 
@@ -16,7 +17,7 @@ class ResourceMeterProviderTest {
 	@BeforeEach
 	void setUp() {
 		client = new TestHelper.TestOtelClient();
-		provider = new ResourceMeterProvider(MetricsExporter.builder().withClient(client).build());
+		provider = new ResourceMeterProvider(MetricsExporter.builder().withClient(client).build(), List.of());
 	}
 
 	@Test
@@ -42,7 +43,8 @@ class ResourceMeterProviderTest {
 	void exportMetrics_shouldExportAllRegisteredMeters_withResourceAttributes() {
 		provider =
 			new ResourceMeterProvider(
-				MetricsExporter.builder().withClient(client).withIsAppendResourceAttributes(true).build()
+				MetricsExporter.builder().withClient(client).withIsAppendResourceAttributes(true).build(),
+				List.of()
 			);
 		provider.newResourceMeter("test.instrumentation1", Map.of("key1", "value1"));
 		provider.newResourceMeter("test.instrumentation2", Map.of("key2", "value2"));

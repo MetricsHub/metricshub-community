@@ -23,6 +23,7 @@ package org.metricshub.engine.extension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -78,6 +79,9 @@ public class ExtensionManager {
 
 	@Default
 	private List<IConfigurationProvider> configurationProviderExtensions = new ArrayList<>();
+
+	@Default
+	private List<IMetricEnrichmentExtension> metricEnrichmentExtensions = new ArrayList<>();
 
 	/**
 	 * Create a new empty instance of the Extension Manager.
@@ -178,6 +182,49 @@ public class ExtensionManager {
 	 */
 	public Optional<IProtocolExtension> findExtensionByType(final String type) {
 		return findExtensionByType(protocolExtensions, type);
+	}
+
+	/**
+	 * Find a metric enrichment extension by its unique identifier.
+	 *
+	 * @param extensionId unique extension identifier
+	 * @return matching metric enrichment extension if present
+	 */
+	public Optional<IMetricEnrichmentExtension> findMetricEnrichmentExtensionById(final String extensionId) {
+		if (extensionId == null || extensionId.isBlank()) {
+			return Optional.empty();
+		}
+		return metricEnrichmentExtensions
+			.stream()
+			.filter(extension -> extensionId.equalsIgnoreCase(extension.getId()))
+			.findFirst();
+	}
+
+	/**
+	 * Resolve metric enrichment extensions by their identifiers.
+	 *
+	 * @param enrichmentIds enrichment identifiers to resolve
+	 * @return ordered list of resolved metric enrichment extensions
+	 */
+	public List<IMetricEnrichmentExtension> resolveMetricEnrichmentExtensions(final List<String> enrichmentIds) {
+		if (enrichmentIds == null || enrichmentIds.isEmpty()) {
+			return List.of();
+		}
+
+		final List<IMetricEnrichmentExtension> resolved = new ArrayList<>();
+		final Set<String> seen = new HashSet<>();
+		for (String enrichmentId : enrichmentIds) {
+			if (enrichmentId == null || enrichmentId.isBlank()) {
+				continue;
+			}
+			final String normalizedId = enrichmentId.trim().toLowerCase();
+			if (!seen.add(normalizedId)) {
+				continue;
+			}
+			findMetricEnrichmentExtensionById(enrichmentId).ifPresent(resolved::add);
+		}
+
+		return resolved;
 	}
 
 	/**
