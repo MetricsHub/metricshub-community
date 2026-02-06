@@ -21,8 +21,10 @@ package org.metricshub.agent.opentelemetry;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.opentelemetry.proto.metrics.v1.Metric;
 import io.opentelemetry.proto.metrics.v1.ResourceMetrics;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.Getter;
@@ -132,10 +134,12 @@ public class ResourceMeterProvider {
 	 * @return a new {@link ResourceMeter} instance.
 	 */
 	public ResourceMeter newResourceMeter(final String instrumentation, final Map<String, String> attributes) {
+		final Map<String, Metric> metricsCache = new LinkedHashMap<>();
 		final ResourceMeter meter = ResourceMeter
 			.builder()
 			.withInstrumentation(instrumentation)
 			.withAttributes(attributes)
+			.withMetricsCache(metricsCache)
 			.withIsAppendResourceAttributes(metricsExporter.isAppendResourceAttributes())
 			.build();
 		meters.add(meter);

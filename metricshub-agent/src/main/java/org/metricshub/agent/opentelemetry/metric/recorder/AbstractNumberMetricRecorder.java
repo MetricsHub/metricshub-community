@@ -41,14 +41,16 @@ public abstract class AbstractNumberMetricRecorder extends AbstractMetricRecorde
 	 * @param unit               the unit of the metric.
 	 * @param description        the description of the metric.
 	 * @param resourceAttributes the resource attributes associated with the metric.
+	 * @param metricsCache       the metric cache to group data points.
 	 */
 	protected AbstractNumberMetricRecorder(
 		final NumberMetric metric,
 		final String unit,
 		final String description,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		super(metric, unit, description, resourceAttributes);
+		super(metric, unit, description, resourceAttributes, metricsCache);
 	}
 
 	/**
@@ -58,7 +60,7 @@ public abstract class AbstractNumberMetricRecorder extends AbstractMetricRecorde
 	@Override
 	public Optional<Metric> doRecord() {
 		try {
-			return this.<Double>getMetricValue().map(this::buildMetric);
+			return this.<Double>getMetricValue().map(this::buildMetric).flatMap(this::storeMetric);
 		} catch (Exception e) {
 			log.error("Failed to record metric: {}. Message: {}", metric.getName(), e.getMessage());
 			log.debug("Failed to record metric: {}", metric.getName(), e);
