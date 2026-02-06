@@ -145,6 +145,7 @@ public class TaskSchedulingService {
 			.withTaskScheduler(taskScheduler)
 			.withResourceGroupKey(resourceGroupKey)
 			.withResourceGroupConfig(resourceGroupConfig)
+			.withAgentInfo(agentInfo)
 			.build()
 			.schedule();
 	}

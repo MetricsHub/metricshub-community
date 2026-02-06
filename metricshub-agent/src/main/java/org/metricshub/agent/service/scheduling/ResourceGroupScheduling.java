@@ -32,6 +32,7 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.opentelemetry.ResourceMeter;
@@ -98,6 +99,9 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 	@NonNull
 	private ExtensionManager extensionManager;
 
+	@NonNull
+	private AgentInfo agentInfo;
+
 	/**
 	 * Constructs a new instance of {@code ResourceGroupScheduling}.
 	 *
@@ -116,13 +120,15 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 		@NonNull final String resourceGroupKey,
 		@NonNull final ResourceGroupConfig resourceGroupConfig,
 		@NonNull final AgentConfig agentConfig,
-		@NonNull final ExtensionManager extensionManager
+		@NonNull final ExtensionManager extensionManager,
+		@NonNull final AgentInfo agentInfo
 	) {
 		super(taskScheduler, schedules, metricsExporter);
 		this.resourceGroupConfig = resourceGroupConfig;
 		this.resourceGroupKey = resourceGroupKey;
 		this.agentConfig = agentConfig;
 		this.extensionManager = extensionManager;
+		this.agentInfo = agentInfo;
 	}
 
 	@Override
@@ -153,6 +159,10 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter, metricEnrichmentExtensions);
 
 		final Map<String, String> resourceAttributes = new HashMap<>();
+		// Add our attributes
+		ConfigHelper.mergeAttributes(agentInfo.getAttributes(), resourceAttributes);
+
+		// Override with the user's attributes
 		ConfigHelper.mergeAttributes(agentConfig.getAttributes(), resourceAttributes);
 		ConfigHelper.mergeAttributes(resourceGroupConfig.getAttributes(), resourceAttributes);
 

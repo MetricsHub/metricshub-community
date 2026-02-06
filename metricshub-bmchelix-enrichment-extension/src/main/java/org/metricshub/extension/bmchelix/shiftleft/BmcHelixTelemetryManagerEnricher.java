@@ -38,6 +38,7 @@ public class BmcHelixTelemetryManagerEnricher {
 	 */
 	private static final List<String> INSTANCE_NAME_CANDIDATE_KEYS = List.of(
 		"name",
+		"hw.network.name",
 		"system.device",
 		"network.interface.name",
 		"process.name",
@@ -71,17 +72,28 @@ public class BmcHelixTelemetryManagerEnricher {
 
 	/**
 	 * Enrich a single monitor with BMC Helix identity attributes.
+	 * If the attribute is not present, it will be added.
 	 *
 	 * @param monitor monitor to enrich
 	 */
 	private void enrichMonitor(final Monitor monitor) {
-		final String entityName = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getId());
-		final String entityTypeId = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getType());
-		final String instanceName = resolveInstanceName(monitor, entityName);
+		final String currentEntityName = monitor.getAttribute(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY);
+		final String currentEntityTypeId = monitor.getAttribute(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY);
+		final String currentInstanceName = monitor.getAttribute(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY);
 
-		monitor.addAttribute(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY, entityName);
-		monitor.addAttribute(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY, entityTypeId);
-		monitor.addAttribute(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY, instanceName);
+		if (!StringHelper.nonNullNonBlank(currentEntityName)) {
+			final String entityName = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getId());
+			monitor.addAttribute(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY, entityName);
+		}
+		if (!StringHelper.nonNullNonBlank(currentEntityTypeId)) {
+			final String entityTypeId = BmcHelixEnrichmentExtension.normalizeIdentityValue(monitor.getType());
+			monitor.addAttribute(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY, entityTypeId);
+		}
+		if (!StringHelper.nonNullNonBlank(currentInstanceName)) {
+			final String fallbackEntityName = monitor.getAttribute(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY);
+			final String instanceName = resolveInstanceName(monitor, fallbackEntityName);
+			monitor.addAttribute(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY, instanceName);
+		}
 	}
 
 	/**
