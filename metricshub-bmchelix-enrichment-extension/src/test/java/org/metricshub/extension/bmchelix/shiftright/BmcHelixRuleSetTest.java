@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 class BmcHelixRuleSetTest {
 
 	@Test
-	void identityRules_shouldBeInitialized() {
+	void testIdentityRulesIsInitialized() {
 		final BmcHelixRuleSet ruleSet = new BmcHelixRuleSet();
 
 		assertNotNull(ruleSet.getIdentityRules(), "Identity rules map should be initialized");
@@ -16,7 +16,7 @@ class BmcHelixRuleSetTest {
 	}
 
 	@Test
-	void identityRule_shouldStoreValues() {
+	void testIdentityRuleStoresValues() {
 		final BmcHelixRuleSet ruleSet = new BmcHelixRuleSet();
 		final BmcHelixRuleSet.IdentityRule rule = new BmcHelixRuleSet.IdentityRule();
 		rule.setEntityNameFrom("host.name");

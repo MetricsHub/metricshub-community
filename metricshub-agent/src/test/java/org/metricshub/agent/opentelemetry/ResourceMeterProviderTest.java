@@ -32,7 +32,7 @@ class ResourceMeterProviderTest {
 	}
 
 	@Test
-	void newResourceMeter_shouldCreateAndRegisterResourceMeter() {
+	void testNewResourceMeterCreatesAndRegistersResourceMeter() {
 		final ResourceMeter meter = provider.newResourceMeter("test.instrumentation", Map.of("key", "value"));
 
 		assertNotNull(meter, "ResourceMeter should not be null");
@@ -41,7 +41,7 @@ class ResourceMeterProviderTest {
 	}
 
 	@Test
-	void exportMetrics_shouldExportAllRegisteredMeters() {
+	void testExportMetricsExportsAllRegisteredMeters() {
 		provider.newResourceMeter("test.instrumentation1", Map.of("key1", "value1"));
 		provider.newResourceMeter("test.instrumentation2", Map.of("key2", "value2"));
 
@@ -51,7 +51,7 @@ class ResourceMeterProviderTest {
 	}
 
 	@Test
-	void exportMetrics_shouldExportAllRegisteredMeters_withResourceAttributes() {
+	void testExportMetricsExportsAllRegisteredMetersWithResourceAttributes() {
 		provider =
 			new ResourceMeterProvider(
 				MetricsExporter.builder().withClient(client).withIsAppendResourceAttributes(true).build(),
@@ -66,7 +66,7 @@ class ResourceMeterProviderTest {
 	}
 
 	@Test
-	void enrichMetrics_shouldApplyBmchelixEnrichment() {
+	void testEnrichMetricsAppliesBmchelixEnrichment() {
 		final ResourceMetrics resourceMetrics = buildResourceMetrics(
 			Map.of("host.name", "host-a", "service.name", "svc-a"),
 			"metricshub.agent.uptime"
@@ -79,9 +79,8 @@ class ResourceMeterProviderTest {
 		final List<ResourceMetrics> enriched = localProvider.enrichMetrics(List.of(resourceMetrics));
 
 		assertEquals(1, enriched.size(), "Should return a single ResourceMetrics");
-		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper().toMap(
-			enriched.get(0).getResource().getAttributesList()
-		);
+		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper()
+			.toMap(enriched.get(0).getResource().getAttributesList());
 		assertEquals("host-a", attributes.get(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY));
 		assertEquals("svc-a", attributes.get(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY));
 		assertEquals("agent", attributes.get(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY));

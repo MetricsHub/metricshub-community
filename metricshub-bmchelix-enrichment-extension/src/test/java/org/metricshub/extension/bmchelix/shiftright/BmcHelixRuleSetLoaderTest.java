@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class BmcHelixRuleSetLoaderTest {
 
 	@Test
-	void getRuleSet_shouldLoadRulesFromYaml() {
+	void testGetRuleSetLoadsRulesFromYaml() {
 		final BmcHelixRuleSet ruleSet = BmcHelixRuleSetLoader.getRuleSet();
 
 		assertNotNull(ruleSet, "Rule set should be loaded");

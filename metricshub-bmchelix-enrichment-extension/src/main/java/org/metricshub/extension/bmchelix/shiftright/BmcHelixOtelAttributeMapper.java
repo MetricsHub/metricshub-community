@@ -30,7 +30,7 @@ import java.util.Map;
 /**
  * Helper class to map OpenTelemetry attributes to/from string maps.
  */
-final class BmcHelixOtelAttributeMapper {
+public class BmcHelixOtelAttributeMapper {
 
 	/**
 	 * Convert OpenTelemetry attributes to a string map.
@@ -38,7 +38,7 @@ final class BmcHelixOtelAttributeMapper {
 	 * @param attributes the OpenTelemetry attributes
 	 * @return string attribute map
 	 */
-	Map<String, String> toMap(final List<KeyValue> attributes) {
+	public Map<String, String> toMap(final List<KeyValue> attributes) {
 		final Map<String, String> mappedAttributes = new HashMap<>();
 		if (attributes == null) {
 			return mappedAttributes;

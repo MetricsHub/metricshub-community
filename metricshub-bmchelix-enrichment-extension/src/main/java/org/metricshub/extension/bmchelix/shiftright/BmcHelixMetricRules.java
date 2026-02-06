@@ -31,7 +31,7 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 /**
  * Helix enrichment rules equivalent to the OTTL transforms.
  */
-final class BmcHelixMetricRules {
+public class BmcHelixMetricRules {
 
 	private final BmcHelixRuleSet ruleSet = BmcHelixRuleSetLoader.getRuleSet();
 	private final Map<String, Pattern> patternCache = new ConcurrentHashMap<>();

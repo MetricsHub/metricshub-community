@@ -16,7 +16,7 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 class BmcHelixMetricsEnricherTest {
 
 	@Test
-	void enrich_shouldTransformEachResourceMetrics() {
+	void testEnrichTransformsEachResourceMetrics() {
 		final ResourceMetrics resourceMetrics = buildResourceMetrics(Map.of("site", "site-a"), "hw.site.pue");
 
 		final List<ResourceMetrics> enriched = new BmcHelixMetricsEnricher().enrich(List.of(resourceMetrics));

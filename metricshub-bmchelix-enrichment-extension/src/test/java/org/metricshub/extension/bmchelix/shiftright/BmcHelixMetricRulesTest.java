@@ -11,7 +11,7 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 class BmcHelixMetricRulesTest {
 
 	@Test
-	void enrichAttributes_shouldApplyAgentRule() {
+	void testEnrichAttributesAppliesAgentRule() {
 		final Map<String, String> resourceAttributes = new HashMap<>();
 		resourceAttributes.put("host.name", "host-1");
 		resourceAttributes.put("service.name", "svc-1");
@@ -25,7 +25,7 @@ class BmcHelixMetricRulesTest {
 	}
 
 	@Test
-	void enrichAttributes_shouldApplySiteRule() {
+	void testEnrichAttributesAppliesSiteRule() {
 		final Map<String, String> resourceAttributes = new HashMap<>();
 		resourceAttributes.put("site", "site-1");
 
@@ -38,7 +38,7 @@ class BmcHelixMetricRulesTest {
 	}
 
 	@Test
-	void enrichAttributes_shouldIgnoreNonMatchingMetrics() {
+	void testEnrichAttributesIgnoresNonMatchingMetrics() {
 		final Map<String, String> resourceAttributes = new HashMap<>();
 		resourceAttributes.put("host.name", "host-1");
 

@@ -12,7 +12,7 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 class BmcHelixTelemetryManagerEnricherTest {
 
 	@Test
-	void enrich_shouldApplyCandidateInstanceName() {
+	void testEnrichAppliesCandidateInstanceName() {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Monitor monitor = new Monitor();
 		monitor.setId("resource-1");
@@ -34,7 +34,7 @@ class BmcHelixTelemetryManagerEnricherTest {
 	}
 
 	@Test
-	void enrich_shouldFallbackToEntityNameWhenNoCandidate() {
+	void testEnrichFallsBackToEntityNameWhenNoCandidate() {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Monitor monitor = new Monitor();
 		monitor.setId("resource-2");

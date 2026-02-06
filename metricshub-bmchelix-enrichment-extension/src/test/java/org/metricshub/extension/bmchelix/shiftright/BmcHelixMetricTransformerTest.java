@@ -16,7 +16,7 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
 class BmcHelixMetricTransformerTest {
 
 	@Test
-	void transform_shouldEnrichResourceAttributesAndKeepMetrics() {
+	void testTransformEnrichesResourceAttributesAndKeepsMetrics() {
 		final ResourceMetrics input = buildResourceMetrics(
 			Map.of("host.name", "host-a", "service.name", "svc-a", "keep", "value"),
 			"metricshub.agent.uptime"

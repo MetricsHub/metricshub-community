@@ -22,14 +22,14 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 class BmcHelixEnrichmentExtensionTest {
 
 	@Test
-	void getId_shouldReturnBmcHelix() {
+	void testGetIdReturnsBmcHelix() {
 		final BmcHelixEnrichmentExtension extension = new BmcHelixEnrichmentExtension();
 
 		assertEquals("bmchelix", extension.getId(), "Extension id should be bmchelix");
 	}
 
 	@Test
-	void enrichShiftLeft_shouldPopulateMonitorAttributes() {
+	void testEnrichShiftLeftPopulatesMonitorAttributes() {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Monitor monitor = new Monitor();
 		monitor.setId("host-1");
@@ -51,7 +51,7 @@ class BmcHelixEnrichmentExtensionTest {
 	}
 
 	@Test
-	void enrichShiftRight_shouldUpdateResourceAttributes() {
+	void testEnrichShiftRightUpdatesResourceAttributes() {
 		final ResourceMetrics resourceMetrics = buildResourceMetrics(
 			Map.of("host.name", "host-a", "service.name", "svc-a"),
 			"metricshub.agent.uptime"

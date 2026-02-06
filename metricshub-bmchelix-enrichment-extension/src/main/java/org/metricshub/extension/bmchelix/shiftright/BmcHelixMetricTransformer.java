@@ -30,7 +30,7 @@ import java.util.Map;
 /**
  * Transforms metrics with Helix-specific attribute and naming rules.
  */
-final class BmcHelixMetricTransformer {
+public class BmcHelixMetricTransformer {
 
 	private final BmcHelixMetricRules rules = new BmcHelixMetricRules();
 	private final BmcHelixOtelAttributeMapper attributeMapper = new BmcHelixOtelAttributeMapper();

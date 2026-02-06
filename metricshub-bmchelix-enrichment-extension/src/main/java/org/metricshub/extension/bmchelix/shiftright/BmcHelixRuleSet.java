@@ -33,7 +33,7 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-final class BmcHelixRuleSet {
+public class BmcHelixRuleSet {
 
 	/**
 	 * Identity rules keyed by rule name, preserving declaration order.

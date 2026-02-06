@@ -33,16 +33,18 @@ import org.metricshub.extension.bmchelix.BmcHelixEnrichmentExtension;
  */
 public class BmcHelixTelemetryManagerEnricher {
 
-	private static final String NAME_ATTRIBUTE_KEY = "name";
+	/**
+	 * Ordered list of attribute keys to attempt for resolving instance name, with fallback to id.
+	 */
 	private static final List<String> INSTANCE_NAME_CANDIDATE_KEYS = List.of(
-		"id",
+		"name",
 		"system.device",
 		"network.interface.name",
 		"process.name",
 		"system.service.name",
 		"service.name",
 		"host.name",
-		NAME_ATTRIBUTE_KEY
+		"id"
 	);
 
 	/**

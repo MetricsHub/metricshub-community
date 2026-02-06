@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class BmcHelixOtelAttributeMapperTest {
 
 	@Test
-	void toMap_shouldConvertAttributesToStringValues() {
+	void testToMapConvertsAttributesToStringValues() {
 		final List<KeyValue> attributes = List.of(
 			KeyValue.newBuilder().setKey("stringKey").setValue(AnyValue.newBuilder().setStringValue("value").build()).build(),
 			KeyValue.newBuilder().setKey("intKey").setValue(AnyValue.newBuilder().setIntValue(42L).build()).build(),
@@ -27,7 +27,7 @@ class BmcHelixOtelAttributeMapperTest {
 	}
 
 	@Test
-	void toKeyValues_shouldConvertMapToKeyValues() {
+	void testToKeyValuesConvertsMapToKeyValues() {
 		final List<KeyValue> result = new BmcHelixOtelAttributeMapper()
 			.toKeyValues(Map.of("key1", "value1", "key2", "value2"));
 

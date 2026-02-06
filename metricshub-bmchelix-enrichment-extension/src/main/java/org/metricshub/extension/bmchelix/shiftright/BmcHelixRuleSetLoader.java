@@ -30,7 +30,7 @@ import java.io.InputStream;
 /**
  * Loader responsible for parsing the Helix rules from YAML resources.
  */
-final class BmcHelixRuleSetLoader {
+public class BmcHelixRuleSetLoader {
 
 	private static final String RULES_RESOURCE = "/bmchelix-rules.yaml";
 	private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
