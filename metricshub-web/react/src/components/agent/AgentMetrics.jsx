@@ -31,52 +31,60 @@ const AgentMetrics = memo(
 					}}
 				>
 					{typeof numberOfMonitors === "number" && (
-						<MetricCard
-							label="Monitors"
-							value={numberOfMonitors.toLocaleString()}
-							gradient={gradients.primary}
-							icon={<MonitorIcon />}
-							tooltip="Number of active monitors"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="Monitors"
+								value={numberOfMonitors.toLocaleString()}
+								gradient={gradients.primary}
+								icon={<MonitorIcon />}
+								tooltip="Number of active monitors"
+							/>
+						</Box>
 					)}
 					{typeof numberOfConfiguredResources === "number" && (
-						<MetricCard
-							label="Resources"
-							value={numberOfConfiguredResources.toLocaleString()}
-							gradient={gradients.purple}
-							icon={<ResourcesIcon />}
-							tooltip="Number of configured resources"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="Resources"
+								value={numberOfConfiguredResources.toLocaleString()}
+								gradient={gradients.purple}
+								icon={<ResourcesIcon />}
+								tooltip="Number of configured resources"
+							/>
+						</Box>
 					)}
 					{typeof memoryUsageBytes === "number" && (
-						<MetricCard
-							label="Memory Usage"
-							value={
-								<Box>
-									<Box component="span">{formatBytes(memoryUsageBytes)}</Box>
-									{typeof memoryUsagePercent === "number" && (
-										<Box
-											component="span"
-											sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
-										>
-											({memoryUsagePercent.toFixed(1)}%)
-										</Box>
-									)}
-								</Box>
-							}
-							gradient={getUsageColorScheme(memoryUsagePercent).gradient}
-							icon={<MemoryIcon />}
-							tooltip="Current memory consumption"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="Memory Usage"
+								value={
+									<Box>
+										<Box component="span">{formatBytes(memoryUsageBytes)}</Box>
+										{typeof memoryUsagePercent === "number" && (
+											<Box
+												component="span"
+												sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
+											>
+												({memoryUsagePercent.toFixed(1)}%)
+											</Box>
+										)}
+									</Box>
+								}
+								gradient={getUsageColorScheme(memoryUsagePercent).gradient}
+								icon={<MemoryIcon />}
+								tooltip="Current memory consumption"
+							/>
+						</Box>
 					)}
 					{typeof cpuUsage === "number" && (
-						<MetricCard
-							label="CPU Usage"
-							value={`${cpuUsage.toFixed(1)}%`}
-							gradient={getUsageColorScheme(cpuUsage).gradient}
-							icon={<CpuIcon />}
-							tooltip="Current CPU utilization"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="CPU Usage"
+								value={`${cpuUsage.toFixed(1)}%`}
+								gradient={getUsageColorScheme(cpuUsage).gradient}
+								icon={<CpuIcon />}
+								tooltip="Current CPU utilization"
+							/>
+						</Box>
 					)}
 				</Stack>
 			</>

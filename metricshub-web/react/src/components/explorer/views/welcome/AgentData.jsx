@@ -135,37 +135,43 @@ const AgentData = ({ agent, totalResources, status }) => {
 						flexWrap: "wrap",
 						gap: 2,
 						"& > *": {
-							flex: { sm: "1 1 auto" },
-							minWidth: { sm: 150 },
+							flex: { sm: "1 1 calc(50% - 8px)", md: "1 1 calc(33.333% - 11px)" },
+							minWidth: { sm: 200 },
 						},
 					}}
 				>
 					{typeof numberOfMonitors === "number" && (
-						<MetricCard
-							label="Monitors"
-							value={numberOfMonitors}
-							gradient={gradients.primary}
-							icon={<MonitorIcon />}
-							tooltip="Number of active monitors"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="Monitors"
+								value={numberOfMonitors}
+								gradient={gradients.primary}
+								icon={<MonitorIcon />}
+								tooltip="Number of active monitors"
+							/>
+						</Box>
 					)}
 					{memoryUsageValue && (
-						<MetricCard
-							label="Memory Usage"
-							value={memoryUsageValue}
-							gradient={getUsageColorScheme(memoryUsagePercent).gradient}
-							icon={<MemoryIcon />}
-							tooltip="Current memory consumption"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="Memory Usage"
+								value={memoryUsageValue}
+								gradient={getUsageColorScheme(memoryUsagePercent).gradient}
+								icon={<MemoryIcon />}
+								tooltip="Current memory consumption"
+							/>
+						</Box>
 					)}
 					{typeof cpuUsage === "number" && (
-						<MetricCard
-							label="CPU Usage"
-							value={`${cpuUsage.toFixed(1)}%`}
-							gradient={getUsageColorScheme(cpuUsage).gradient}
-							icon={<CpuIcon />}
-							tooltip="Current CPU utilization"
-						/>
+						<Box sx={{ display: "flex" }}>
+							<MetricCard
+								label="CPU Usage"
+								value={`${cpuUsage.toFixed(1)}%`}
+								gradient={getUsageColorScheme(cpuUsage).gradient}
+								icon={<CpuIcon />}
+								tooltip="Current CPU utilization"
+							/>
+						</Box>
 					)}
 				</Stack>
 			)}
