@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -112,7 +113,8 @@ class LogFilesControllerTest {
 	@Test
 	void testShouldDownloadFile() throws Exception {
 		final byte[] fileContent = "Full log file content\nLine 2\nLine 3".getBytes(StandardCharsets.UTF_8);
-		when(logFilesService.getFileForDownload(METRICSHUB_LOG_FILE_NAME)).thenReturn(fileContent);
+		when(logFilesService.getFileForDownload(METRICSHUB_LOG_FILE_NAME))
+			.thenReturn(new ByteArrayInputStream(fileContent));
 
 		mockMvc
 			.perform(get("/api/log-files/metricshub.log/download"))

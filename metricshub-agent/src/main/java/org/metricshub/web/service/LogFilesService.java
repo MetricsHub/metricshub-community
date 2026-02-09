@@ -22,6 +22,7 @@ package org.metricshub.web.service;
  */
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -119,13 +120,13 @@ public class LogFilesService {
 	}
 
 	/**
-	 * Returns the full content of a log file as a byte array for download.
+	 * Returns an input stream for downloading a log file.
 	 *
 	 * @param fileName the log file name (e.g. metricshub.log)
-	 * @return the file content as byte array
+	 * @return an InputStream for the log file content
 	 * @throws LogFilesException if the file is not found or cannot be read
 	 */
-	public byte[] getFileForDownload(final String fileName) throws LogFilesException {
+	public InputStream getFileForDownload(final String fileName) throws LogFilesException {
 		final Path dir = getLogsDir();
 		final Path file = resolveSafeLogFile(dir, fileName);
 		log.info("Preparing log file for download: {}", file.toAbsolutePath());
@@ -135,7 +136,7 @@ public class LogFilesService {
 		}
 
 		try {
-			return Files.readAllBytes(file);
+			return Files.newInputStream(file);
 		} catch (IOException e) {
 			log.error("Failed to read log file for download: '{}'. Error: {}", file, e.getMessage());
 			log.debug("Failed to read log file for download: '{}'. Exception:", file, e);

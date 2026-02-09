@@ -21,10 +21,12 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.io.InputStream;
 import java.util.List;
 import org.metricshub.web.dto.LogFile;
 import org.metricshub.web.exception.LogFilesException;
 import org.metricshub.web.service.LogFilesService;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -92,13 +94,15 @@ public class LogFilesController {
 	 * @throws LogFilesException if the file is not found or cannot be read
 	 */
 	@GetMapping(value = "/{fileName}/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-	public ResponseEntity<byte[]> downloadLogFile(@PathVariable("fileName") String fileName) throws LogFilesException {
-		final byte[] content = logFilesService.getFileForDownload(fileName);
+	public ResponseEntity<InputStreamResource> downloadLogFile(@PathVariable("fileName") String fileName)
+		throws LogFilesException {
+		final InputStream inputStream = logFilesService.getFileForDownload(fileName);
+		final InputStreamResource resource = new InputStreamResource(inputStream);
 
 		final HttpHeaders headers = new HttpHeaders();
 		headers.setContentDisposition(ContentDisposition.attachment().filename(fileName).build());
 
-		return ResponseEntity.ok().headers(headers).body(content);
+		return ResponseEntity.ok().headers(headers).body(resource);
 	}
 
 	/**

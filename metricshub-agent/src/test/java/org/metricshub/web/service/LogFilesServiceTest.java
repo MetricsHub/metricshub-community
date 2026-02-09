@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +44,7 @@ class LogFilesServiceTest {
 			}
 
 			@Override
-			public byte[] getFileForDownload(final String fileName) throws LogFilesException {
+			public InputStream getFileForDownload(final String fileName) throws LogFilesException {
 				return getFileForDownloadWithMockedDir(dir, fileName);
 			}
 		};
@@ -72,7 +73,7 @@ class LogFilesServiceTest {
 	/**
 	 * Helper method to get file for download using a mocked directory.
 	 */
-	private byte[] getFileForDownloadWithMockedDir(Path dir, String fileName) throws LogFilesException {
+	private InputStream getFileForDownloadWithMockedDir(Path dir, String fileName) throws LogFilesException {
 		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
 			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(dir);
 			return new LogFilesService().getFileForDownload(fileName);
@@ -178,8 +179,10 @@ class LogFilesServiceTest {
 		final byte[] expectedContent = "Full log content".getBytes(StandardCharsets.UTF_8);
 		Files.write(file, expectedContent);
 
-		byte[] content = service.getFileForDownload("download.log");
-		assertArrayEquals(expectedContent, content, "File content should match");
+		try (InputStream inputStream = service.getFileForDownload("download.log")) {
+			byte[] content = inputStream.readAllBytes();
+			assertArrayEquals(expectedContent, content, "File content should match");
+		}
 	}
 
 	@Test
