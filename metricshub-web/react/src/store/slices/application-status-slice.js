@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchApplicationStatus } from "../thunks/application-status-thunks";
+import { fetchApplicationStatus, restartAgent } from "../thunks/application-status-thunks";
 
 /**
  * Initial state for application status slice
@@ -9,6 +9,8 @@ const initialState = {
 	loading: false,
 	error: null,
 	lastUpdatedAt: null,
+	restarting: false,
+	restartError: null,
 };
 
 /**
@@ -23,6 +25,9 @@ const applicationStatusSlice = createSlice({
 			state.error = null;
 			state.loading = false;
 			state.lastUpdatedAt = null;
+		},
+		clearRestartError(state) {
+			state.restartError = null;
 		},
 	},
 	extraReducers: (builder) => {
@@ -39,9 +44,20 @@ const applicationStatusSlice = createSlice({
 			.addCase(fetchApplicationStatus.rejected, (state, action) => {
 				state.loading = false;
 				state.error = action.payload || "Unable to fetch application status";
+			})
+			.addCase(restartAgent.pending, (state) => {
+				state.restarting = true;
+				state.restartError = null;
+			})
+			.addCase(restartAgent.fulfilled, (state) => {
+				state.restarting = false;
+			})
+			.addCase(restartAgent.rejected, (state, action) => {
+				state.restarting = false;
+				state.restartError = action.payload || "Failed to restart agent";
 			});
 	},
 });
 
-export const { clearStatus } = applicationStatusSlice.actions;
+export const { clearStatus, clearRestartError } = applicationStatusSlice.actions;
 export const applicationStatusReducer = applicationStatusSlice.reducer;

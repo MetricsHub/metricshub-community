@@ -45,12 +45,19 @@ export const getMetricLabel = (key) => {
 };
 
 /**
- * Checks if a metric is a utilization metric (unit === "1").
+ * Checks if a metric should be displayed as a utilization bar.
+ * Returns true if unit === "1" and the metric name does not contain ".limit".
+ * Metrics with ".limit" in their name are threshold values, not utilization percentages.
  *
- * @param {string} unit
+ * @param {string} unit - The unit of the metric
+ * @param {string} [metricName] - The name of the metric (optional)
  * @returns {boolean}
  */
-export const isUtilizationUnit = (unit) => unit === "1";
+export const isUtilizationUnit = (unit, metricName) => {
+	if (unit !== "1") return false;
+	if (metricName && metricName.includes(".limit")) return false;
+	return true;
+};
 
 /**
  * Helper to get the value of a metric, handling both primitive values and objects with a 'value' property.
