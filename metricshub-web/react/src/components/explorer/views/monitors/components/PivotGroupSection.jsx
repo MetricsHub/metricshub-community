@@ -76,7 +76,7 @@ const PivotGroupSection = ({
 		if (metaMetrics) {
 			return group.metricKeys.some((key) => {
 				const meta = getMetricMetadata(key, metaMetrics);
-				return isUtilizationUnit(meta?.unit);
+				return isUtilizationUnit(meta?.unit, key);
 			});
 		}
 		return false;
