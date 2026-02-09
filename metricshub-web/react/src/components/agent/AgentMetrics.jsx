@@ -1,12 +1,9 @@
 import React, { memo } from "react";
 import PropTypes from "prop-types";
 import { Box, Typography, Stack } from "@mui/material";
-import MemoryIcon from "@mui/icons-material/Memory";
-import SpeedIcon from "@mui/icons-material/Speed";
-import MonitorHeartIcon from "@mui/icons-material/MonitorHeart";
-import DevicesIcon from "@mui/icons-material/Devices";
-import StatCard from "./StatCard";
-import { getUsageColor } from "./utils";
+import MetricCard from "../common/MetricCard";
+import { MonitorIcon, MemoryIcon, CpuIcon, ResourcesIcon } from "../common/MetricIcons";
+import { gradients, getUsageColorScheme } from "../../theme/colors";
 import { formatBytes } from "../../utils/formatters";
 
 const AgentMetrics = memo(
@@ -18,61 +15,71 @@ const AgentMetrics = memo(
 		cpuUsage,
 	}) => {
 		return (
-			<Box>
+			<>
 				<Typography variant="h6" sx={{ mb: 2 }}>
 					Metrics
 				</Typography>
 				<Stack
-					direction="row"
-					spacing={2}
+					direction={{ xs: "column", sm: "row" }}
 					sx={{
 						flexWrap: "wrap",
 						gap: 2,
 						"& > *": {
-							flex: { xs: "1 1 100%", sm: "1 1 calc(50% - 8px)", md: "1 1 calc(25% - 12px)" },
-							minWidth: { xs: "100%", sm: 200 },
+							flex: { sm: "1 1 calc(50% - 8px)", md: "1 1 calc(25% - 12px)" },
+							minWidth: { sm: 200 },
 						},
 					}}
 				>
 					{typeof numberOfMonitors === "number" && (
-						<StatCard
-							icon={<MonitorHeartIcon />}
+						<MetricCard
 							label="Monitors"
 							value={numberOfMonitors.toLocaleString()}
-							bgcolor="#1976d2"
+							gradient={gradients.primary}
+							icon={<MonitorIcon />}
+							tooltip="Number of active monitors"
 						/>
 					)}
 					{typeof numberOfConfiguredResources === "number" && (
-						<StatCard
-							icon={<DevicesIcon />}
+						<MetricCard
 							label="Resources"
 							value={numberOfConfiguredResources.toLocaleString()}
-							bgcolor="#7b1fa2"
+							gradient={gradients.purple}
+							icon={<ResourcesIcon />}
+							tooltip="Number of configured resources"
 						/>
 					)}
 					{typeof memoryUsageBytes === "number" && (
-						<StatCard
-							icon={<MemoryIcon />}
+						<MetricCard
 							label="Memory Usage"
-							value={formatBytes(memoryUsageBytes)}
-							subValue={
-								typeof memoryUsagePercent === "number"
-									? `${memoryUsagePercent.toFixed(1)}% of available`
-									: undefined
+							value={
+								<Box>
+									<Box component="span">{formatBytes(memoryUsageBytes)}</Box>
+									{typeof memoryUsagePercent === "number" && (
+										<Box
+											component="span"
+											sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
+										>
+											({memoryUsagePercent.toFixed(1)}%)
+										</Box>
+									)}
+								</Box>
 							}
-							bgcolor={getUsageColor(memoryUsagePercent)}
+							gradient={getUsageColorScheme(memoryUsagePercent).gradient}
+							icon={<MemoryIcon />}
+							tooltip="Current memory consumption"
 						/>
 					)}
 					{typeof cpuUsage === "number" && (
-						<StatCard
-							icon={<SpeedIcon />}
+						<MetricCard
 							label="CPU Usage"
 							value={`${cpuUsage.toFixed(1)}%`}
-							bgcolor={getUsageColor(cpuUsage)}
+							gradient={getUsageColorScheme(cpuUsage).gradient}
+							icon={<CpuIcon />}
+							tooltip="Current CPU utilization"
 						/>
 					)}
 				</Stack>
-			</Box>
+			</>
 		);
 	},
 );

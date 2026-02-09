@@ -1,44 +1,12 @@
 import * as React from "react";
-import { Typography, Box, Paper, Stack, Alert, Collapse, IconButton } from "@mui/material";
+import { Typography, Box, Stack, Alert, Collapse, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import EntityHeader from "../common/EntityHeader";
 import MetricsAccordion from "../common/MetricsAccordion";
+import MetricCard from "../../../common/MetricCard";
+import { MonitorIcon, MemoryIcon, CpuIcon } from "../../../common/MetricIcons";
 import { formatBytes } from "../../../../utils/formatters";
-
-const getUsageColor = (percentage) => {
-	if (typeof percentage !== "number") return "#1976d2";
-	if (percentage < 50) return "#2e7d32";
-	if (percentage < 80) return "#ed6c02";
-	return "#d32f2f";
-};
-
-const StatBox = ({ label, value, bgcolor }) => (
-	<Paper
-		elevation={0}
-		sx={{
-			bgcolor: bgcolor,
-			p: 2,
-			borderRadius: 2,
-			color: "white",
-			display: "flex",
-			flexDirection: "column",
-			alignItems: "center",
-			flex: 1,
-			textAlign: "center",
-			minWidth: 150,
-		}}
-	>
-		<Typography
-			variant="subtitle2"
-			sx={{ opacity: 0.9, mb: 0.5, textTransform: "uppercase", letterSpacing: 0.5 }}
-		>
-			{label}
-		</Typography>
-		<Typography variant="h5" sx={{ fontWeight: "bold" }}>
-			{value}
-		</Typography>
-	</Paper>
-);
+import { gradients, getUsageColorScheme } from "../../../../theme/colors";
 
 /**
  * Agent header, attributes and metrics section for the welcome page.
@@ -82,6 +50,32 @@ const AgentData = ({ agent, totalResources, status }) => {
 		return null;
 	}, [licenseDaysRemaining]);
 
+	const displayedResources = numberOfConfiguredResources ?? totalResources;
+
+	// Format memory usage value with proper display
+	const memoryUsageValue = React.useMemo(() => {
+		if (typeof memoryUsageBytes !== "number") return null;
+
+		const used = formatBytes(memoryUsageBytes);
+		const hasPercent = typeof memoryUsagePercent === "number" && memoryUsagePercent > 0;
+
+		if (!hasPercent) return used;
+
+		const total = formatBytes((memoryUsageBytes * 100) / memoryUsagePercent);
+		const percent = memoryUsagePercent.toFixed(0);
+
+		return (
+			<Box>
+				<Box component="span">
+					{used} / {total}
+				</Box>
+				<Box component="span" sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}>
+					({percent}%)
+				</Box>
+			</Box>
+		);
+	}, [memoryUsageBytes, memoryUsagePercent]);
+
 	if (!agent) {
 		return null;
 	}
@@ -103,8 +97,6 @@ const AgentData = ({ agent, totalResources, status }) => {
 			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 60, height: 60 }} />;
 		}
 	}
-
-	const displayedResources = numberOfConfiguredResources ?? totalResources;
 
 	return (
 		<Box display="flex" flexDirection="column" gap={2}>
@@ -137,50 +129,42 @@ const AgentData = ({ agent, totalResources, status }) => {
 
 			{status && (
 				<Stack
-					direction="row"
-					spacing={2}
+					direction={{ xs: "column", sm: "row" }}
 					sx={{
 						mt: 1,
 						flexWrap: "wrap",
 						gap: 2,
 						"& > *": {
-							minWidth: { xs: "100%", sm: 150 },
-							flex: { xs: "1 1 100%", sm: "1 1 auto" },
+							flex: { sm: "1 1 auto" },
+							minWidth: { sm: 150 },
 						},
 					}}
 				>
 					{typeof numberOfMonitors === "number" && (
-						<StatBox label="Monitors" value={numberOfMonitors} bgcolor="#1976d2" />
+						<MetricCard
+							label="Monitors"
+							value={numberOfMonitors}
+							gradient={gradients.primary}
+							icon={<MonitorIcon />}
+							tooltip="Number of active monitors"
+						/>
 					)}
-					{typeof memoryUsageBytes === "number" && (
-						<StatBox
+					{memoryUsageValue && (
+						<MetricCard
 							label="Memory Usage"
-							value={
-								<Box>
-									<Box component="span">
-										{formatBytes(memoryUsageBytes)}
-										{typeof memoryUsagePercent === "number" && memoryUsagePercent > 0 && (
-											<> / {formatBytes((memoryUsageBytes * 100) / memoryUsagePercent)}</>
-										)}
-									</Box>
-									{typeof memoryUsagePercent === "number" && (
-										<Box
-											component="span"
-											sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
-										>
-											({memoryUsagePercent.toFixed(0)}%)
-										</Box>
-									)}
-								</Box>
-							}
-							bgcolor={getUsageColor(memoryUsagePercent)}
+							value={memoryUsageValue}
+							gradient={getUsageColorScheme(memoryUsagePercent).gradient}
+							icon={<MemoryIcon />}
+							tooltip="Current memory consumption"
 						/>
 					)}
 					{typeof cpuUsage === "number" && (
-						<StatBox
+						<MetricCard
 							label="CPU Usage"
 							value={`${cpuUsage.toFixed(1)}%`}
-							bgcolor={getUsageColor(cpuUsage)}
+							gradient={getUsageColorScheme(cpuUsage).gradient}
+							icon={<CpuIcon />}
+							tooltip="Current CPU utilization"
 						/>
 					)}
 				</Stack>

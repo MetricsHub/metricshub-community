@@ -99,8 +99,6 @@ function AgentPage() {
 	return (
 		<Box
 			sx={{
-				height: "calc(100vh - 64px)",
-				overflow: "auto",
 				p: { xs: 2, sm: 3 },
 			}}
 		>

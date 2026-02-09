@@ -10,18 +10,6 @@ export const EXCLUDED_STATUS_KEYS = [
 ];
 
 /**
- * Returns a color based on usage percentage thresholds.
- * @param {number | undefined} percentage - The usage percentage
- * @returns {string} Hex color code
- */
-export const getUsageColor = (percentage) => {
-	if (typeof percentage !== "number") return "#1976d2";
-	if (percentage < 50) return "#2e7d32";
-	if (percentage < 80) return "#ed6c02";
-	return "#d32f2f";
-};
-
-/**
  * Converts a value to a display string for the table.
  * @param {unknown} value - The value to format
  * @returns {string} Formatted string representation
