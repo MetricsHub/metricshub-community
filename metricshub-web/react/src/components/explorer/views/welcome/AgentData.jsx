@@ -34,7 +34,7 @@ const AgentData = ({ agent, totalResources, status }) => {
 		numberOfConfiguredResources,
 		numberOfMonitors,
 		memoryUsageBytes,
-		memoryUsagePercent,
+		memoryTotalBytes,
 		cpuUsage,
 		licenseDaysRemaining,
 	} = status || {};
@@ -57,24 +57,37 @@ const AgentData = ({ agent, totalResources, status }) => {
 		if (typeof memoryUsageBytes !== "number") return null;
 
 		const used = formatBytes(memoryUsageBytes);
-		const hasPercent = typeof memoryUsagePercent === "number" && memoryUsagePercent > 0;
+		const hasTotal = typeof memoryTotalBytes === "number" && memoryTotalBytes > 0;
 
-		if (!hasPercent) return used;
+		if (!hasTotal) return used;
 
-		const total = formatBytes((memoryUsageBytes * 100) / memoryUsagePercent);
-		const percent = memoryUsagePercent.toFixed(0);
+		// Ceil total memory to upper GB
+		const totalGB = Math.ceil(memoryTotalBytes / (1024 * 1024 * 1024));
+		const percent = ((memoryUsageBytes / memoryTotalBytes) * 100).toFixed(0);
 
 		return (
 			<Box>
 				<Box component="span">
-					{used} / {total}
+					{used} / {totalGB}&nbsp;GB
 				</Box>
 				<Box component="span" sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}>
 					({percent}%)
 				</Box>
 			</Box>
 		);
-	}, [memoryUsageBytes, memoryUsagePercent]);
+	}, [memoryUsageBytes, memoryTotalBytes]);
+
+	// Compute memory usage percentage for gradient
+	const memoryUsagePercent = React.useMemo(() => {
+		if (
+			typeof memoryUsageBytes === "number" &&
+			typeof memoryTotalBytes === "number" &&
+			memoryTotalBytes > 0
+		) {
+			return (memoryUsageBytes / memoryTotalBytes) * 100;
+		}
+		return 0;
+	}, [memoryUsageBytes, memoryTotalBytes]);
 
 	if (!agent) {
 		return null;

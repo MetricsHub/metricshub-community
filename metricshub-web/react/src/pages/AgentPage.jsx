@@ -36,7 +36,7 @@ function AgentPage() {
 		numberOfConfiguredResources,
 		numberOfMonitors,
 		memoryUsageBytes,
-		memoryUsagePercent,
+		memoryTotalBytes,
 		cpuUsage,
 		licenseDaysRemaining,
 		agentInfo,
@@ -144,7 +144,7 @@ function AgentPage() {
 					numberOfMonitors={numberOfMonitors}
 					numberOfConfiguredResources={numberOfConfiguredResources}
 					memoryUsageBytes={memoryUsageBytes}
-					memoryUsagePercent={memoryUsagePercent}
+					memoryTotalBytes={memoryTotalBytes}
 					cpuUsage={cpuUsage}
 				/>
 

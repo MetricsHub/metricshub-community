@@ -74,7 +74,7 @@ public class ApplicationStatusService {
 			.numberOfMonitors(determineNumberOfMonitors(agentContext))
 			.numberOfJobs(determineNumberOfJobs(agentContext))
 			.memoryUsageBytes(determineMemoryUsageBytes())
-			.memoryUsagePercent(determineMemoryUsagePercent())
+			.memoryTotalBytes(determineMemoryTotalBytes())
 			.cpuUsage(determineCpuUsage())
 			.licenseDaysRemaining(determineLicenseDaysRemaining(agentContext))
 			.licenseType(determineLicenseType(agentContext))
@@ -225,21 +225,16 @@ public class ApplicationStatusService {
 	}
 
 	/**
-	 * Determines the memory usage percentage (Agent Used / Machine Total).
+	 * Determines the total memory available on the machine.
 	 *
-	 * @return the memory usage percentage, or 0.0 if total memory cannot be
-	 *         determined.
+	 * @return the total memory in bytes, or 0 if it cannot be determined.
 	 */
-	private static double determineMemoryUsagePercent() {
-		final var usedBytes = determineMemoryUsageBytes();
+	private static long determineMemoryTotalBytes() {
 		final java.lang.management.OperatingSystemMXBean displayOSBean = ManagementFactory.getOperatingSystemMXBean();
 		if (displayOSBean instanceof OperatingSystemMXBean osBean) {
-			final long totalBytes = osBean.getTotalMemorySize();
-			if (totalBytes > 0) {
-				return ((double) usedBytes / totalBytes) * 100.0;
-			}
+			return osBean.getTotalMemorySize();
 		}
-		return 0.0;
+		return 0;
 	}
 
 	/**

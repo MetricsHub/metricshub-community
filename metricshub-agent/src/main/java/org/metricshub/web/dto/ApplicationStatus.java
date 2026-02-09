@@ -44,7 +44,7 @@ public class ApplicationStatus {
 	private long numberOfMonitors;
 	private long numberOfJobs;
 	private long memoryUsageBytes;
-	private double memoryUsagePercent;
+	private long memoryTotalBytes;
 	private double cpuUsage;
 	private Long licenseDaysRemaining;
 	private String licenseType;

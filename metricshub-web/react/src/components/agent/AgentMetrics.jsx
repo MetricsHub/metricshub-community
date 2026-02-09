@@ -11,9 +11,49 @@ const AgentMetrics = memo(
 		numberOfMonitors,
 		numberOfConfiguredResources,
 		memoryUsageBytes,
-		memoryUsagePercent,
+		memoryTotalBytes,
 		cpuUsage,
 	}) => {
+		// Compute memory usage percentage on the fly
+		const memoryUsagePercent = React.useMemo(() => {
+			if (
+				typeof memoryUsageBytes === "number" &&
+				typeof memoryTotalBytes === "number" &&
+				memoryTotalBytes > 0
+			) {
+				return (memoryUsageBytes / memoryTotalBytes) * 100;
+			}
+			return 0;
+		}, [memoryUsageBytes, memoryTotalBytes]);
+
+		// Format memory usage value with proper display
+		const memoryUsageValue = React.useMemo(() => {
+			if (typeof memoryUsageBytes !== "number") return null;
+
+			const used = formatBytes(memoryUsageBytes);
+			const hasTotal = typeof memoryTotalBytes === "number" && memoryTotalBytes > 0;
+
+			if (!hasTotal) return used;
+
+			// Ceil total memory to upper GB
+			const totalGB = Math.ceil(memoryTotalBytes / (1024 * 1024 * 1024));
+			const percent = memoryUsagePercent.toFixed(0);
+
+			return (
+				<Box>
+					<Box component="span">
+						{used} / {totalGB}&nbsp;GB
+					</Box>
+					<Box
+						component="span"
+						sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
+					>
+						({percent}%)
+					</Box>
+				</Box>
+			);
+		}, [memoryUsageBytes, memoryTotalBytes, memoryUsagePercent]);
+
 		return (
 			<>
 				<Typography variant="h6" sx={{ mb: 2 }}>
@@ -52,23 +92,11 @@ const AgentMetrics = memo(
 							/>
 						</Box>
 					)}
-					{typeof memoryUsageBytes === "number" && (
+					{memoryUsageValue && (
 						<Box sx={{ display: "flex" }}>
 							<MetricCard
 								label="Memory Usage"
-								value={
-									<Box>
-										<Box component="span">{formatBytes(memoryUsageBytes)}</Box>
-										{typeof memoryUsagePercent === "number" && (
-											<Box
-												component="span"
-												sx={{ fontSize: "0.8em", ml: 1, opacity: 0.9, fontWeight: "normal" }}
-											>
-												({memoryUsagePercent.toFixed(1)}%)
-											</Box>
-										)}
-									</Box>
-								}
+								value={memoryUsageValue}
 								gradient={getUsageColorScheme(memoryUsagePercent).gradient}
 								icon={<MemoryIcon />}
 								tooltip="Current memory consumption"
@@ -98,7 +126,7 @@ AgentMetrics.propTypes = {
 	numberOfMonitors: PropTypes.number,
 	numberOfConfiguredResources: PropTypes.number,
 	memoryUsageBytes: PropTypes.number,
-	memoryUsagePercent: PropTypes.number,
+	memoryTotalBytes: PropTypes.number,
 	cpuUsage: PropTypes.number,
 };
 
