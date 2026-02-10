@@ -122,7 +122,8 @@ public class OsCommandExtension implements IProtocolExtension {
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
-			sshResult = remoteSshTest(hostname, sshResult, sshConfiguration);
+			sshResult =
+				remoteSshTest(hostname, sshResult, sshConfiguration, telemetryManager.getHostConfiguration().getHostType());
 		}
 
 		return Optional.of(UP.equals(sshResult));
@@ -244,7 +245,12 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * @param sshConfiguration   The SSH configuration retrieved from the telemetryManager
 	 * @return The updated SSH status after performing the remote SSH test or the previous SSH status if the SSH test succeeds.
 	 */
-	private Double remoteSshTest(String hostname, Double previousSshStatus, SshConfiguration sshConfiguration) {
+	private Double remoteSshTest(
+		final String hostname,
+		final Double previousSshStatus,
+		final SshConfiguration sshConfiguration,
+		final DeviceKind hostType
+	) {
 		// CHECKSTYLE:OFF
 		try {
 			if (
@@ -254,7 +260,8 @@ public class OsCommandExtension implements IProtocolExtension {
 					sshConfiguration,
 					OsCommandConfiguration.DEFAULT_TIMEOUT,
 					null,
-					null
+					null,
+					hostType
 				) ==
 				null
 			) {
@@ -308,7 +315,8 @@ public class OsCommandExtension implements IProtocolExtension {
 			sshConfiguration,
 			sshConfiguration.getTimeout(),
 			null,
-			commandLine
+			commandLine,
+			null
 		);
 	}
 }

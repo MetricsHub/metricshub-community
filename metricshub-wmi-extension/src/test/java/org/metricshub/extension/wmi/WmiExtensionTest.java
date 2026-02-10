@@ -43,6 +43,7 @@ import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
@@ -63,6 +64,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class WmiExtensionTest {
 
+	private static final String WMI = "wmi";
 	private static final String HOST_NAME = "test-host" + UUID.randomUUID().toString();
 	private static final List<List<String>> WQL_SUCCESS_RESPONSE = List.of(List.of("success"));
 	private static final String CONNECTOR_ID = "connector_id";
@@ -238,7 +240,10 @@ class WmiExtensionTest {
 
 	@Test
 	void testGetSupportedSources() {
-		assertEquals(Set.of(CommandLineSource.class, WmiSource.class), wmiExtension.getSupportedSources());
+		assertEquals(
+			Set.of(CommandLineSource.class, WmiSource.class, EventLogSource.class),
+			wmiExtension.getSupportedSources()
+		);
 	}
 
 	@Test
@@ -252,7 +257,7 @@ class WmiExtensionTest {
 	@Test
 	void testGetConfigurationToSourceMapping() {
 		assertEquals(
-			Map.of(WmiConfiguration.class, Set.of(WmiSource.class)),
+			Map.of(WmiConfiguration.class, Set.of(WmiSource.class, EventLogSource.class)),
 			wmiExtension.getConfigurationToSourceMapping()
 		);
 	}
@@ -354,7 +359,7 @@ class WmiExtensionTest {
 
 	@Test
 	void testIsSupportedConfigurationType() {
-		assertTrue(wmiExtension.isSupportedConfigurationType("wmi"));
+		assertTrue(wmiExtension.isSupportedConfigurationType(WMI));
 		assertFalse(wmiExtension.isSupportedConfigurationType("wbem"));
 	}
 
@@ -445,15 +450,15 @@ class WmiExtensionTest {
 
 		assertEquals(
 			WmiConfiguration.builder().username(USERNAME).password(PASSWORD).namespace(namespace).timeout(120L).build(),
-			wmiExtension.buildConfiguration("wmi", configuration, value -> value)
+			wmiExtension.buildConfiguration(WMI, configuration, value -> value)
 		);
 		assertEquals(
 			WmiConfiguration.builder().username(USERNAME).password(PASSWORD).namespace(namespace).timeout(120L).build(),
-			wmiExtension.buildConfiguration("wmi", configuration, null)
+			wmiExtension.buildConfiguration(WMI, configuration, null)
 		);
 		configuration.set("namespace", new TextNode(null));
 		final WmiConfiguration wmiConfiguration = (WmiConfiguration) wmiExtension.buildConfiguration(
-			"wmi",
+			WMI,
 			configuration,
 			null
 		);
@@ -464,11 +469,11 @@ class WmiExtensionTest {
 	void testGetIdentifier() {
 		String identifier = wmiExtension.getIdentifier();
 
-		assertEquals("wmi", identifier);
+		assertEquals(WMI, identifier);
 	}
 
 	@Test
-	void tesExecuteQuery() throws Exception {
+	void testExecuteQuery() throws Exception {
 		initWmi();
 
 		doReturn(EXECUTE_WMI_RESULT)
@@ -477,6 +482,7 @@ class WmiExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode(WMI));
 		WmiConfiguration configuration = WmiConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -494,7 +500,7 @@ class WmiExtensionTest {
 	}
 
 	@Test
-	void tesExecuteQueryThrow() throws Exception {
+	void testExecuteQueryReturnsNull() throws Exception {
 		initWmi();
 
 		doThrow(ClientException.class)
@@ -503,6 +509,7 @@ class WmiExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode("wmi"));
 		WmiConfiguration configuration = WmiConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -511,6 +518,6 @@ class WmiExtensionTest {
 			.timeout(120L)
 			.namespace(WMI_TEST_NAMESPACE)
 			.build();
-		assertThrows(ClientException.class, () -> wmiExtension.executeQuery(configuration, queryNode));
+		assertNull(wmiExtension.executeQuery(configuration, queryNode), "Expected null response");
 	}
 }

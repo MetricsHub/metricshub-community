@@ -51,7 +51,6 @@ import org.metricshub.engine.strategy.source.SourceTable;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-@Builder
 public class JawkSource extends Source {
 
 	private static final long serialVersionUID = 1L;

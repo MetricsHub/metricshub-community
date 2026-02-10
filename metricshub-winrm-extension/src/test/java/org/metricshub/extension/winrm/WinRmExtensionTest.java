@@ -47,6 +47,7 @@ import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
@@ -229,7 +230,10 @@ class WinRmExtensionTest {
 
 	@Test
 	void testGetSupportedSources() {
-		assertEquals(Set.of(CommandLineSource.class, WmiSource.class), winRmExtension.getSupportedSources());
+		assertEquals(
+			Set.of(CommandLineSource.class, WmiSource.class, EventLogSource.class),
+			winRmExtension.getSupportedSources()
+		);
 	}
 
 	@Test
@@ -243,7 +247,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetConfigurationToSourceMapping() {
 		assertEquals(
-			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class)),
+			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class)),
 			winRmExtension.getConfigurationToSourceMapping()
 		);
 	}
@@ -469,7 +473,7 @@ class WinRmExtensionTest {
 	}
 
 	@Test
-	void tesExecuteQuery() throws Exception {
+	void testExecuteQuery() throws Exception {
 		initWinRm();
 
 		doReturn(WQL_SUCCESS_RESPONSE)
@@ -478,6 +482,7 @@ class WinRmExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode("wmi"));
 		WinRmConfiguration configuration = WinRmConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -495,7 +500,7 @@ class WinRmExtensionTest {
 	}
 
 	@Test
-	void tesExecuteQueryThrow() throws Exception {
+	void testExecuteQueryThrow() throws Exception {
 		initWinRm();
 
 		doThrow(ClientException.class)
@@ -504,6 +509,7 @@ class WinRmExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
+		queryNode.set("queryType", new TextNode("wmi"));
 		WinRmConfiguration configuration = WinRmConfiguration
 			.builder()
 			.hostname(HOST_NAME)
@@ -512,6 +518,6 @@ class WinRmExtensionTest {
 			.timeout(120L)
 			.namespace(WINRM_TEST_NAMESPACE)
 			.build();
-		assertThrows(ClientException.class, () -> winRmExtension.executeQuery(configuration, queryNode));
+		assertNull(winRmExtension.executeQuery(configuration, queryNode), "Expected null response");
 	}
 }

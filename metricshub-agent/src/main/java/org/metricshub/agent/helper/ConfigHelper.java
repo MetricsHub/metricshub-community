@@ -123,9 +123,11 @@ public class ConfigHelper {
 	 * @return {@link Path} instance
 	 */
 	public static Path getDefaultOutputDirectory() {
-		var subDirectory = getSubDirectory(LOG_DIRECTORY_NAME, true);
 		if (LocalOsHandler.isWindows()) {
 			try {
+				final var subDirectory = getSubDirectory(LOG_DIRECTORY_NAME, true);
+				// This should be always writable after directory creation
+				// but let's double check in case of ACL changes after MetricsHub restart
 				if (Files.isWritable(subDirectory)) {
 					return subDirectory;
 				}
@@ -139,7 +141,7 @@ public class ConfigHelper {
 			}
 		}
 
-		return subDirectory;
+		return getSubDirectory(LOG_DIRECTORY_NAME, true);
 	}
 
 	/**

@@ -76,6 +76,49 @@ export const error = withAlphas({
 
 // Divider colors for light and dark themes
 export const divider = {
-	light: "#DEE2E6",
+	light: neutral[400],
 	dark: "#2D3748",
+};
+
+// Gradient presets for metric cards and visual elements
+export const gradients = {
+	primary: `linear-gradient(135deg, ${blue.main} 0%, ${blue.light} 100%)`,
+	success: `linear-gradient(135deg, ${success.dark} 0%, ${success.main} 100%)`,
+	warning: `linear-gradient(135deg, ${warning.dark} 0%, ${warning.main} 100%)`,
+	error: `linear-gradient(135deg, ${error.dark} 0%, ${error.main} 100%)`,
+	info: `linear-gradient(135deg, ${info.dark} 0%, ${info.main} 100%)`,
+	purple: "linear-gradient(135deg, #7b1fa2 0%, #9c27b0 100%)",
+};
+
+/**
+ * Get appropriate color scheme based on usage percentage thresholds
+ * @param {number} percentage - Usage percentage (0-100)
+ * @returns {object} Color object with main and gradient properties
+ */
+export const getUsageColorScheme = (percentage) => {
+	if (typeof percentage !== "number") {
+		return {
+			main: blue.main,
+			gradient: gradients.primary,
+		};
+	}
+
+	if (percentage < 75) {
+		return {
+			main: success.main,
+			gradient: gradients.success,
+		};
+	}
+
+	if (percentage < 90) {
+		return {
+			main: warning.main,
+			gradient: gradients.warning,
+		};
+	}
+
+	return {
+		main: error.main,
+		gradient: gradients.error,
+	};
 };

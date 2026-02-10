@@ -93,7 +93,7 @@ export const Right = ({ children, disableScroll = false, ...rest }) => (
 	</Box>
 );
 
-export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
+export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, ...rest }) => {
 	const isSmall = useMediaQuery("(max-width:900px)");
 
 	const leftChild = React.Children.toArray(children).find(
@@ -163,12 +163,16 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 				sx={{
 					display: "flex",
 					flexDirection: "column",
-					gap: 2,
+					gap: 1,
 					minHeight: 0,
+					height: "calc(100vh - 64px)",
+					overflow: "hidden",
+					pt: 1,
 					...rest.sx,
 				}}
 			>
-				<Box sx={{ minHeight: 0 }}>{rightChild}</Box>
+				{smallScreenHeader && <Box sx={{ flexShrink: 0, px: 1 }}>{smallScreenHeader}</Box>}
+				<Box sx={{ flex: 1, minHeight: 0, overflow: "auto", px: 1 }}>{rightChild}</Box>
 			</Box>
 		);
 	}
@@ -189,6 +193,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 				border: 1,
 				borderColor: "divider",
 				overflow: "hidden",
+				transition: "border-color 0.4s ease",
 				...rest.sx,
 			}}
 		>
@@ -214,6 +219,7 @@ export const SplitScreen = ({ children, initialLeftPct = 40, ...rest }) => {
 						width: "2px",
 						bgcolor: "grey.500",
 						opacity: 0.5,
+						transition: "background-color 0.4s ease",
 					},
 				}}
 			/>

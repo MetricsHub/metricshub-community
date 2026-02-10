@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>1.0.15-SNAPSHOT</version>
+		<version>3.9.01-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-jdbc-extension</artifactId>   
@@ -75,6 +75,11 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<version>42.7.7</version>
+		</dependency>
+		<dependency>
+			<groupId>org.mariadb.jdbc</groupId>
+			<artifactId>mariadb-java-client</artifactId>
+			<version>3.5.7</version>
 		</dependency>
 	</dependencies>
 
@@ -171,6 +176,7 @@
 									<include>com.mysql:mysql-connector-j</include>
 									<include>org.postgresql:postgresql</include>
 									<include>com.h2database:*</include>
+									<include>org.mariadb.jdbc:mariadb-java-client</include>
 								</includes>
 							</artifactSet>
 							<filters>

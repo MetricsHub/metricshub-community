@@ -79,10 +79,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Download Assets
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
@@ -130,7 +130,7 @@ jobs:
 
         # MetricsHub Docker Image Name
         if [ "${{ inputs.deployDockerHub }}" = "true" ] ; then
-          imageName=metricshub/metricshub-community:${dockerVersion}
+          imageName=metricshub/metricshub-community:${projectVersion}
         else
           imageName=ghcr.io/${repository}:${currentBranch}
         fi
@@ -270,7 +270,7 @@ jobs:
         REPO_NAME: ${{ inputs.rpmRepository }}
 
     - name: Upload Linux Packages
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: linux-packages
         path: packages/*
@@ -302,11 +302,11 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up JDK ${{ inputs.jdkVersion }}
       id: jdk
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: ${{ inputs.jdkVersion }}
         distribution: temurin
@@ -318,12 +318,26 @@ jobs:
         curl -sLo ${{ github.workspace }}/jsign.jar https://github.com/ebourg/jsign/releases/download/7.3/jsign-7.3.jar
         java -jar ${{ github.workspace }}/jsign.jar --help
 
+    - name: GitHub Context Information
+      run: |
+        echo "Repository Owner: ${{ github.repository_owner }}"
+        echo "Event Name: ${{ github.event_name }}"
+        echo "Repository: ${{ github.repository }}"
+        echo "PR Head Repo: ${{ github.event.pull_request.head.repo.full_name }}"
+        echo "Is Fork PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}"
+
     - name: Login to Azure
+      if: >-
+        github.repository_owner == 'MetricsHub' &&
+        (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       uses: azure/login@v2
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     - name: Get Access to Azure Key Vault (Access Token)
+      if: >-
+        github.repository_owner == 'MetricsHub' &&
+        (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       shell: bash
       id: get_access_token
       run: |
@@ -331,7 +345,7 @@ jobs:
         echo "token=${token}" >> $GITHUB_OUTPUT
 
     - name: Download Assets
-      uses: actions/download-artifact@v6
+      uses: actions/download-artifact@v7
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
@@ -352,10 +366,13 @@ jobs:
     - name: Create JRE for Windows
       run: |
         $jlinkModules=(Get-Content .\packaging-assets\jre-modules.txt) -join ','
-        curl -sLo ${{ github.workspace }}/packaging-assets/jdk-windows.zip https://api.adoptium.net/v3/binary/version/jdk-${{ steps.jre_version.outputs.jre_version }}/windows/x64/jdk/hotspot/normal/eclipse?project=jdk
-        Expand-Archive -Path ${{ github.workspace }}/packaging-assets/jdk-windows.zip -DestinationPath ${{ github.workspace }}/packaging-assets/jdk-windows -Force
-        cd ${{ github.workspace }}/packaging-assets/jdk-windows/jdk-*/bin
-        jlink --strip-debug --no-header-files --no-man-pages --add-modules $jlinkModules --output "${{ github.workspace }}\jre-windows"
+        $zipPath = "${{ github.workspace }}\packaging-assets\jdk-windows.zip"
+        $extractPath = "${{ github.workspace }}\packaging-assets\jdk-windows"
+        curl -sLo $zipPath https://api.adoptium.net/v3/binary/version/jdk-${{ steps.jre_version.outputs.jre_version }}/windows/x64/jdk/hotspot/normal/eclipse?project=jdk
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        $jdkFolder = Get-ChildItem -Path $extractPath | Where-Object { $_.PsIsContainer -and $_.Name -like "jdk-*" } | Select-Object -First 1
+        $JLINK = Join-Path $jdkFolder.FullName "bin\jlink.exe"
+        & $JLINK --strip-debug --no-header-files --no-man-pages --add-modules $jlinkModules --output "${{ github.workspace }}\jre-windows"
 
     - name: Display WiX Toolset Version
       run: |
@@ -380,6 +397,9 @@ jobs:
         Get-ChildItem packages
 
     - name: Sign Installer
+      if: >-
+        github.repository_owner == 'MetricsHub' &&
+        (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       shell: cmd
       run: |
         java -jar ${{ github.workspace }}\jsign.jar ^
@@ -388,11 +408,25 @@ jobs:
           --storepass ${{ steps.get_access_token.outputs.token }} ^
           --alias ${{ secrets.AZURE_VAULT_ALIAS }} packages/*.msi
 
+    - name: Create Windows ZIP Archive
+      shell: pwsh
+      run: |
+        $zipPath = Join-Path -Path "packages" -ChildPath "metricshub-community-windows-${{ inputs.version }}.zip"
+        if (Test-Path "packages\MetricsHub") {
+          Push-Location "packages"
+          Compress-Archive -Path "MetricsHub" -DestinationPath "metricshub-community-windows-${{ inputs.version }}.zip" -Force
+          Pop-Location
+          Write-Host "Created ZIP archive: $zipPath"
+          Get-Item $zipPath
+        } else {
+          Write-Warning "packages\MetricsHub directory not found"
+        }
+
     - name: Upload Windows Packages
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: windows-packages
-        path: packages/*.msi
+        path: packages/metricshub-community-*
 
     outputs:
       windowsPackage: windows-packages

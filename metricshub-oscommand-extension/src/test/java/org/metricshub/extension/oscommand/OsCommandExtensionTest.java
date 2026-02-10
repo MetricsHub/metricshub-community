@@ -337,7 +337,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(SUCCESS_RESPONSE);
 
@@ -351,7 +359,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(null);
 
@@ -377,7 +393,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(SUCCESS_RESPONSE);
 
@@ -396,7 +420,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(SUCCESS_RESPONSE);
 
@@ -414,7 +446,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(null);
 
@@ -433,7 +473,15 @@ class OsCommandExtensionTest {
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
 				.when(() ->
-					OsCommandService.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any())
+					OsCommandService.runSshCommand(
+						anyString(),
+						anyString(),
+						any(SshConfiguration.class),
+						anyLong(),
+						any(),
+						any(),
+						any()
+					)
 				)
 				.thenReturn(null);
 
@@ -947,6 +995,7 @@ class OsCommandExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
+		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
@@ -957,7 +1006,8 @@ class OsCommandExtensionTest {
 						any(SshConfiguration.class), // sshConfiguration
 						anyLong(), // timeout
 						any(), // local files
-						anyString() // no password command
+						anyString(), // no password command
+						any() // host type
 					)
 				)
 				.thenReturn(SUCCESS_RESPONSE);
@@ -976,6 +1026,7 @@ class OsCommandExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
+		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
 		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
 			staticOsCommandHelper
@@ -986,7 +1037,8 @@ class OsCommandExtensionTest {
 						any(SshConfiguration.class), // sshConfiguration
 						anyLong(), // timeout
 						any(), // local files
-						anyString() // no password command
+						anyString(), // no password command
+						any() // host type
 					)
 				)
 				.thenThrow(ClientException.class);
