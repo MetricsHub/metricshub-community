@@ -35,6 +35,7 @@ import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
