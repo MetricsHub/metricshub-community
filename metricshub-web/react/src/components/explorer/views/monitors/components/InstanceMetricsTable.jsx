@@ -65,7 +65,7 @@ const InstanceMetricsTable = ({
 
 		for (const [name, value] of sortedEntries) {
 			const meta = getMetricMetadata(name, metaMetrics);
-			const isUtilization = isUtilizationUnit(meta?.unit);
+			const isUtilization = isUtilizationUnit(meta?.unit, name);
 
 			if (isUtilization) {
 				const baseName = getBaseMetricKey(name);
@@ -189,7 +189,7 @@ const InstanceMetricsTable = ({
 					if (group.type === "single") {
 						const meta = getMetricMetadata(group.key, metaMetrics);
 						const { unit } = meta;
-						if (isUtilizationUnit(unit)) {
+						if (isUtilizationUnit(unit, group.key)) {
 							const parts = buildUtilizationParts([{ key: group.key, value: group.value }]);
 							return <UtilizationStack parts={parts} />;
 						}
