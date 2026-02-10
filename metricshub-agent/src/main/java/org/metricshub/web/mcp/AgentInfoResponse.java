@@ -82,19 +82,19 @@ public class AgentInfoResponse {
 	/**
 	 * The build number of the agent.
 	 */
-	@JsonProperty("build_number")
+	@JsonProperty("build.number")
 	private String buildNumber;
 
 	/**
 	 * The build date of the agent.
 	 */
-	@JsonProperty("build_date")
+	@JsonProperty("build.date")
 	private String buildDate;
 
 	/**
 	 * Community Connector Library version.
 	 */
-	@JsonProperty("cc_version")
+	@JsonProperty("cc.version")
 	private String ccVersion;
 
 	// Additional Runtime Information
