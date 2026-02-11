@@ -22,6 +22,7 @@ const LoginPage = React.lazy(() => import("./pages/LoginPage")); // already wrap
 const Explorer = React.lazy(() => import("./pages/ExplorerPage"));
 const Configuration = React.lazy(() => import("./pages/ConfigurationPage"));
 const Chat = React.lazy(() => import("./pages/ChatPage"));
+const AgentPage = React.lazy(() => import("./pages/AgentPage"));
 const NavBar = React.lazy(() => import("./components/navbar/Navbar"));
 
 /**
@@ -171,6 +172,7 @@ const AppContent = ({ onToggleTheme }) => {
 						/>
 						<Route path={paths.configuration} element={<Configuration />} />
 						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
+						<Route path={paths.agent} element={<AgentPage />} />
 						<Route path={paths.chat} element={<Chat />} />
 						{/* Catch-all */}
 						<Route path="*" element={<Navigate to={paths.explorer} replace />} />

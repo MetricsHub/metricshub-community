@@ -90,7 +90,7 @@
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
 		<jdkBuildVersion>21</jdkBuildVersion>
 		<debianTagName>trixie</debianTagName>
-		<fedoraTagName>44</fedoraTagName>
+		<fedoraTagName>43</fedoraTagName>
 
 	</properties>
 
