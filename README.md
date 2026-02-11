@@ -57,7 +57,6 @@ This is a multi-module project:
 * **metricshub-assets**: Generates the assets required to package MetricsHub Community for Windows, Debian, RedHat, and Docker platforms.
 
 > [!TIP]
-> Looking for documentation? Check the [MetricsHub Documentation](https://github.com/MetricsHub/metricshub-doc) repository.
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
 
 ## How to build the Project
