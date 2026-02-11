@@ -34,9 +34,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.OtelHelper;
 import org.metricshub.agent.opentelemetry.metric.MetricContext;
@@ -58,12 +60,22 @@ public class ResourceMeter {
 	@Default
 	private Map<String, String> attributes = new HashMap<>();
 
+	@Getter(AccessLevel.NONE)
 	private final List<AbstractMetricRecorder> metricRecorders = new ArrayList<>();
 
 	@Default
 	private Map<String, Metric> metricsCache = new LinkedHashMap<>();
 
 	private boolean isAppendResourceAttributes;
+
+	/**
+	 * Returns an unmodifiable view of the metric recorders list.
+	 *
+	 * @return an unmodifiable list of metric recorders
+	 */
+	public List<AbstractMetricRecorder> getMetricRecorders() {
+		return Collections.unmodifiableList(metricRecorders);
+	}
 
 	/**
 	 * Builds ResourceMetrics by invoking all metric recorders safely.

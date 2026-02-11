@@ -35,8 +35,15 @@ class ResourceMeterTest {
 	}
 
 	@Test
-	void testRecordSafeReturnsDefaultInstanceWhenExceptionOccurs() {
-		resourceMeter.getMetricRecorders().add(new ThrowingRecorder());
+	void testRecordSafeReturnsDefaultInstanceWhenExceptionOccurs() throws Exception {
+		// Use reflection to add a throwing recorder for testing error handling
+		final java.lang.reflect.Field field = ResourceMeter.class.getDeclaredField("metricRecorders");
+		field.setAccessible(true);
+		@SuppressWarnings("unchecked")
+		final java.util.List<AbstractMetricRecorder> recorders = (java.util.List<AbstractMetricRecorder>) field.get(
+			resourceMeter
+		);
+		recorders.add(new ThrowingRecorder());
 
 		final ResourceMetrics result = resourceMeter.recordSafe();
 
