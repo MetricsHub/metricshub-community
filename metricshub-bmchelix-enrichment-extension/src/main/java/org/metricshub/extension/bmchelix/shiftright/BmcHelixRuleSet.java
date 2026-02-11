@@ -22,6 +22,7 @@ package org.metricshub.extension.bmchelix.shiftright;
  */
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,6 @@ import lombok.NoArgsConstructor;
 /**
  * Container for all Helix enrichment rules loaded from YAML.
  */
-@Data
 @NoArgsConstructor
 public class BmcHelixRuleSet {
 
@@ -41,9 +41,26 @@ public class BmcHelixRuleSet {
 	private Map<String, IdentityRule> identityRules = new LinkedHashMap<>();
 
 	/**
+	 * Returns an unmodifiable view of the identity rules map.
+	 *
+	 * @return unmodifiable map of identity rules
+	 */
+	public Map<String, IdentityRule> getIdentityRules() {
+		return Collections.unmodifiableMap(identityRules);
+	}
+
+	/**
+	 * Sets the identity rules map. Used by YAML deserialization.
+	 *
+	 * @param identityRules the identity rules map
+	 */
+	public void setIdentityRules(final Map<String, IdentityRule> identityRules) {
+		this.identityRules = identityRules;
+	}
+
+	/**
 	 * Rule describing how to enrich entity identity attributes.
 	 */
-	@Data
 	@NoArgsConstructor
 	public static final class IdentityRule {
 
@@ -66,5 +83,77 @@ public class BmcHelixRuleSet {
 		 * Constant entityTypeId assigned by this rule.
 		 */
 		private String entityTypeId;
+
+		/**
+		 * Returns an unmodifiable view of the metric patterns list.
+		 *
+		 * @return unmodifiable list of metric patterns
+		 */
+		public List<String> getMetricPatterns() {
+			return Collections.unmodifiableList(metricPatterns);
+		}
+
+		/**
+		 * Sets the metric patterns list. Used by YAML deserialization.
+		 *
+		 * @param metricPatterns the metric patterns list
+		 */
+		public void setMetricPatterns(final List<String> metricPatterns) {
+			this.metricPatterns = metricPatterns;
+		}
+
+		/**
+		 * Returns the resource attribute key used to populate entityName.
+		 *
+		 * @return the entityNameFrom value
+		 */
+		public String getEntityNameFrom() {
+			return entityNameFrom;
+		}
+
+		/**
+		 * Sets the resource attribute key used to populate entityName.
+		 *
+		 * @param entityNameFrom the entityNameFrom value
+		 */
+		public void setEntityNameFrom(final String entityNameFrom) {
+			this.entityNameFrom = entityNameFrom;
+		}
+
+		/**
+		 * Returns the resource attribute key used to populate instanceName.
+		 *
+		 * @return the instanceNameFrom value
+		 */
+		public String getInstanceNameFrom() {
+			return instanceNameFrom;
+		}
+
+		/**
+		 * Sets the resource attribute key used to populate instanceName.
+		 *
+		 * @param instanceNameFrom the instanceNameFrom value
+		 */
+		public void setInstanceNameFrom(final String instanceNameFrom) {
+			this.instanceNameFrom = instanceNameFrom;
+		}
+
+		/**
+		 * Returns the constant entityTypeId assigned by this rule.
+		 *
+		 * @return the entityTypeId value
+		 */
+		public String getEntityTypeId() {
+			return entityTypeId;
+		}
+
+		/**
+		 * Sets the constant entityTypeId assigned by this rule.
+		 *
+		 * @param entityTypeId the entityTypeId value
+		 */
+		public void setEntityTypeId(final String entityTypeId) {
+			this.entityTypeId = entityTypeId;
+		}
 	}
 }
