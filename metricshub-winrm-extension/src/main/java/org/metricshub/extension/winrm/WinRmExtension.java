@@ -42,12 +42,10 @@ import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -57,13 +55,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
 import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
-import org.metricshub.extension.win.detection.WinIpmiCriterionProcessor;
 import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiDetectionService;
 import org.metricshub.extension.win.source.EventLogSourceProcessor;
 import org.metricshub.extension.win.source.WinCommandLineSourceProcessor;
-import org.metricshub.extension.win.source.WinIpmiSourceProcessor;
 import org.metricshub.extension.win.source.WmiSourceProcessor;
 
 /**
@@ -108,7 +104,7 @@ public class WinRmExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(WmiSource.class, CommandLineSource.class, IpmiSource.class, EventLogSource.class);
+		return Set.of(WmiSource.class, CommandLineSource.class, EventLogSource.class);
 	}
 
 	@Override
@@ -118,7 +114,7 @@ public class WinRmExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		return Set.of(WmiCriterion.class, ServiceCriterion.class, CommandLineCriterion.class, IpmiCriterion.class);
+		return Set.of(WmiCriterion.class, ServiceCriterion.class, CommandLineCriterion.class);
 	}
 
 	@Override
@@ -183,9 +179,6 @@ public class WinRmExtension implements IProtocolExtension {
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId)
 				.process(commandLineCriterion, telemetryManager);
-		} else if (criterion instanceof IpmiCriterion ipmiCriterion) {
-			return new WinIpmiCriterionProcessor(wmiDetectionService, configurationRetriever)
-				.process(ipmiCriterion, telemetryManager);
 		}
 
 		throw new IllegalArgumentException(
@@ -205,9 +198,6 @@ public class WinRmExtension implements IProtocolExtension {
 		if (source instanceof WmiSource wmiSource) {
 			return new WmiSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
 				.process(wmiSource, telemetryManager);
-		} else if (source instanceof IpmiSource ipmiSource) {
-			return new WinIpmiSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
-				.process(ipmiSource, telemetryManager);
 		} else if (source instanceof CommandLineSource commandLineSource) {
 			return new WinCommandLineSourceProcessor(winCommandService, configurationRetriever, connectorId)
 				.process(commandLineSource, telemetryManager);
