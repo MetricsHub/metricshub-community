@@ -51,11 +51,12 @@ public class BmcHelixRuleSet {
 
 	/**
 	 * Sets the identity rules map. Used by YAML deserialization.
+	 * Creates a defensive copy of the provided map.
 	 *
 	 * @param identityRules the identity rules map
 	 */
 	public void setIdentityRules(final Map<String, IdentityRule> identityRules) {
-		this.identityRules = identityRules;
+		this.identityRules = identityRules != null ? new LinkedHashMap<>(identityRules) : new LinkedHashMap<>();
 	}
 
 	/**
@@ -95,11 +96,12 @@ public class BmcHelixRuleSet {
 
 		/**
 		 * Sets the metric patterns list. Used by YAML deserialization.
+		 * Creates a defensive copy of the provided list.
 		 *
 		 * @param metricPatterns the metric patterns list
 		 */
 		public void setMetricPatterns(final List<String> metricPatterns) {
-			this.metricPatterns = metricPatterns;
+			this.metricPatterns = metricPatterns != null ? new ArrayList<>(metricPatterns) : new ArrayList<>();
 		}
 
 		/**
