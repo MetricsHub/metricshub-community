@@ -173,4 +173,53 @@ public class AgentInfoResponse {
 	 */
 	@JsonProperty("cpu.usage.percent")
 	private Double cpuUsagePercent;
+
+	// Application Status Information
+
+	/**
+	 * The current status of the agent (UP or DOWN).
+	 */
+	private String status;
+
+	/**
+	 * The status of the OpenTelemetry Collector (running, disabled, errored, not-installed).
+	 */
+	@JsonProperty("otel.collector.status")
+	private String otelCollectorStatus;
+
+	/**
+	 * The number of resources currently being observed by the agent.
+	 */
+	@JsonProperty("observed.resources.count")
+	private Long numberOfObservedResources;
+
+	/**
+	 * The number of resources configured in the agent.
+	 */
+	@JsonProperty("configured.resources.count")
+	private Long numberOfConfiguredResources;
+
+	/**
+	 * The number of monitors currently active.
+	 */
+	@JsonProperty("monitors.count")
+	private Long numberOfMonitors;
+
+	/**
+	 * The number of scheduled jobs.
+	 */
+	@JsonProperty("jobs.count")
+	private Long numberOfJobs;
+
+	/**
+	 * The number of days remaining on the license (null for Community Edition).
+	 */
+	@JsonProperty("license.days.remaining")
+	private Long licenseDaysRemaining;
+
+	/**
+	 * The type of license (Community or Enterprise).
+	 */
+	@JsonProperty("license.type")
+	private String licenseType;
 }

@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.ApplicationStatus;
+import org.metricshub.web.service.ApplicationStatusService;
 
 class AgentInfoServiceTest {
 
@@ -30,6 +32,7 @@ class AgentInfoServiceTest {
 		final AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		final AgentContext agentContext = mock(AgentContext.class);
 		final AgentInfo agentInfo = mock(AgentInfo.class);
+		final ApplicationStatusService applicationStatusService = mock(ApplicationStatusService.class);
 
 		// Mock agent attributes
 		final Map<String, String> mockAttributes = Map.of(
@@ -55,14 +58,28 @@ class AgentInfoServiceTest {
 			"2.0.0"
 		);
 
+		// Mock application status
+		final ApplicationStatus mockApplicationStatus = ApplicationStatus
+			.builder()
+			.status(ApplicationStatus.Status.UP)
+			.otelCollectorStatus("running")
+			.numberOfObservedResources(5L)
+			.numberOfConfiguredResources(10L)
+			.numberOfMonitors(15L)
+			.numberOfJobs(3L)
+			.licenseDaysRemaining(null)
+			.licenseType("Community")
+			.build();
+
 		// Setup mock behavior
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 		when(agentContext.getAgentInfo()).thenReturn(agentInfo);
 		when(agentContext.getPid()).thenReturn("12345");
 		when(agentInfo.getAttributes()).thenReturn(mockAttributes);
+		when(applicationStatusService.reportApplicationStatus()).thenReturn(mockApplicationStatus);
 
 		// Create service and call method
-		final AgentInfoService agentInfoService = new AgentInfoService(agentContextHolder);
+		final AgentInfoService agentInfoService = new AgentInfoService(agentContextHolder, applicationStatusService);
 		final AgentInfoResponse response = agentInfoService.getAgentInfo();
 
 		// Verify metadata from metricshub.agent.info attributes
@@ -98,6 +115,15 @@ class AgentInfoServiceTest {
 
 		// Verify CPU information
 		assertNotNull(response.getCpuUsagePercent(), "CPU usage percent should not be null");
+
+		// Verify application status information
+		assertEquals("UP", response.getStatus(), "Status should be UP");
+		assertEquals("running", response.getOtelCollectorStatus(), "OTel collector status should be running");
+		assertEquals(5L, response.getNumberOfObservedResources(), "Number of observed resources should match");
+		assertEquals(10L, response.getNumberOfConfiguredResources(), "Number of configured resources should match");
+		assertEquals(15L, response.getNumberOfMonitors(), "Number of monitors should match");
+		assertEquals(3L, response.getNumberOfJobs(), "Number of jobs should match");
+		assertEquals("Community", response.getLicenseType(), "License type should be Community");
 	}
 
 	@Test
@@ -106,6 +132,7 @@ class AgentInfoServiceTest {
 		final AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		final AgentContext agentContext = mock(AgentContext.class);
 		final AgentInfo agentInfo = mock(AgentInfo.class);
+		final ApplicationStatusService applicationStatusService = mock(ApplicationStatusService.class);
 
 		final Map<String, String> mockAttributes = Map.of(
 			AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY,
@@ -130,12 +157,24 @@ class AgentInfoServiceTest {
 			"2.0.0"
 		);
 
+		final ApplicationStatus mockApplicationStatus = ApplicationStatus
+			.builder()
+			.status(ApplicationStatus.Status.UP)
+			.otelCollectorStatus("running")
+			.numberOfObservedResources(0L)
+			.numberOfConfiguredResources(0L)
+			.numberOfMonitors(0L)
+			.numberOfJobs(0L)
+			.licenseType("Community")
+			.build();
+
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 		when(agentContext.getAgentInfo()).thenReturn(agentInfo);
 		when(agentContext.getPid()).thenReturn("67890");
 		when(agentInfo.getAttributes()).thenReturn(mockAttributes);
+		when(applicationStatusService.reportApplicationStatus()).thenReturn(mockApplicationStatus);
 
-		final AgentInfoService agentInfoService = new AgentInfoService(agentContextHolder);
+		final AgentInfoService agentInfoService = new AgentInfoService(agentContextHolder, applicationStatusService);
 		final AgentInfoResponse response = agentInfoService.getAgentInfo();
 
 		// Verify memory calculations are consistent

@@ -39,6 +39,8 @@ import java.lang.management.MemoryUsage;
 import java.util.Map;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.ApplicationStatus;
+import org.metricshub.web.service.ApplicationStatusService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -54,15 +56,21 @@ public class AgentInfoService implements IMCPToolService {
 	private static final double PERCENTAGE_MULTIPLIER = 100.0;
 
 	private final AgentContextHolder agentContextHolder;
+	private final ApplicationStatusService applicationStatusService;
 
 	/**
 	 * Constructor for AgentInfoService.
 	 *
 	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
+	 * @param applicationStatusService the {@link ApplicationStatusService} to retrieve application status details
 	 */
 	@Autowired
-	public AgentInfoService(final AgentContextHolder agentContextHolder) {
+	public AgentInfoService(
+		final AgentContextHolder agentContextHolder,
+		final ApplicationStatusService applicationStatusService
+	) {
 		this.agentContextHolder = agentContextHolder;
+		this.applicationStatusService = applicationStatusService;
 	}
 
 	/**
@@ -74,6 +82,8 @@ public class AgentInfoService implements IMCPToolService {
 	 *   <li>Runtime details (Java version, PID, working directory)</li>
 	 *   <li>Memory usage (total, used, free, max, percentage)</li>
 	 *   <li>CPU usage percentage</li>
+	 *   <li>Application status (UP/DOWN, OTel collector status, resource/monitor/job counts)</li>
+	 *   <li>License information (type, days remaining)</li>
 	 * </ul>
 	 *
 	 * @return an {@link AgentInfoResponse} containing all agent metadata and runtime information
@@ -84,8 +94,10 @@ public class AgentInfoService implements IMCPToolService {
 		Returns agent metadata including name, version, build number, build date,
 		Community Connector Library version, host information (hostname, OS type,
 		architecture), runtime details (Java version, PID, working directory),
-		and current resource usage (memory total/used/free/max, memory usage percentage,
-		CPU usage percentage).
+		current resource usage (memory total/used/free/max, memory usage percentage,
+		CPU usage percentage), application status (UP/DOWN, OTel collector status,
+		number of observed/configured resources, monitors, and jobs), and license
+		information (type and days remaining).
 		""",
 		name = "GetAgentInfo"
 	)
@@ -107,6 +119,9 @@ public class AgentInfoService implements IMCPToolService {
 
 		// Get CPU usage
 		final double cpuUsagePercent = getCpuUsagePercent();
+
+		// Get application status information
+		final ApplicationStatus applicationStatus = applicationStatusService.reportApplicationStatus();
 
 		return AgentInfoResponse
 			.builder()
@@ -136,6 +151,15 @@ public class AgentInfoService implements IMCPToolService {
 			.memoryUsagePercent(Math.round(memoryUsagePercent * PERCENTAGE_MULTIPLIER) / PERCENTAGE_MULTIPLIER)
 			// CPU information
 			.cpuUsagePercent(Math.round(cpuUsagePercent * PERCENTAGE_MULTIPLIER) / PERCENTAGE_MULTIPLIER)
+			// Application status information
+			.status(applicationStatus.getStatus() != null ? applicationStatus.getStatus().name() : null)
+			.otelCollectorStatus(applicationStatus.getOtelCollectorStatus())
+			.numberOfObservedResources(applicationStatus.getNumberOfObservedResources())
+			.numberOfConfiguredResources(applicationStatus.getNumberOfConfiguredResources())
+			.numberOfMonitors(applicationStatus.getNumberOfMonitors())
+			.numberOfJobs(applicationStatus.getNumberOfJobs())
+			.licenseDaysRemaining(applicationStatus.getLicenseDaysRemaining())
+			.licenseType(applicationStatus.getLicenseType())
 			.build();
 	}
 
