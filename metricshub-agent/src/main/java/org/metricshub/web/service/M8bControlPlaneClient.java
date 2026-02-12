@@ -27,6 +27,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.websocket.ContainerProvider;
+import jakarta.websocket.WebSocketContainer;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLDecoder;
@@ -175,7 +177,13 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 		connecting.set(true);
 
 		try {
-			final var client = new StandardWebSocketClient();
+			// Configure WebSocket container with larger buffer sizes for large payloads
+			final WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+			// 10 MB max message size (for /api/hierarchy and similar large responses)
+			container.setDefaultMaxTextMessageBufferSize(10 * 1024 * 1024);
+			container.setDefaultMaxBinaryMessageBufferSize(10 * 1024 * 1024);
+
+			final var client = new StandardWebSocketClient(container);
 
 			// Build WebSocket URI with API key
 			final var wsUri = URI.create(config.getUrl() + "?apiKey=" + config.getApiKey());
@@ -306,6 +314,8 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 			final String protocol = "https";
 			final String localUrl = protocol + "://localhost:" + serverPort + decodedPath;
 
+			log.debug("Executing proxy request to: {}", localUrl);
+
 			// Build WebClient request
 			WebClient.RequestBodySpec requestSpec = webClient
 				.method(HttpMethod.valueOf(request.getMethod()))
@@ -325,44 +335,65 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 			}
 
 			// Add body if present
-			WebClient.ResponseSpec responseSpec;
+			WebClient.RequestHeadersSpec<?> finalSpec;
 			if (request.getBody() != null) {
-				responseSpec = requestSpec.contentType(MediaType.APPLICATION_JSON).bodyValue(request.getBody()).retrieve();
+				finalSpec = requestSpec.contentType(MediaType.APPLICATION_JSON).bodyValue(request.getBody());
 			} else {
-				responseSpec = requestSpec.retrieve();
+				finalSpec = requestSpec;
 			}
 
-			// Execute and handle response
-			responseSpec
-				.toEntity(Object.class)
-				.subscribe(
-					entity -> {
-						final var response = new M8bWebSocketMessage.Response();
-						response.setRequestId(request.getRequestId());
-						response.setStatus(entity.getStatusCode().value());
+			// Execute using exchangeToMono for full control over response handling
+			finalSpec
+				.exchangeToMono(clientResponse -> {
+					final int statusCode = clientResponse.statusCode().value();
+					log.debug("Received response with status {} for request {}", statusCode, request.getRequestId());
 
-						// Convert headers
-						final Map<String, String> headers = new HashMap<>();
-						entity
-							.getHeaders()
-							.forEach((key, values) -> {
-								if (!values.isEmpty()) {
-									headers.put(key, values.get(0));
+					// Convert headers
+					final Map<String, String> headers = new HashMap<>();
+					clientResponse
+						.headers()
+						.asHttpHeaders()
+						.forEach((key, values) -> {
+							if (!values.isEmpty()) {
+								headers.put(key, values.get(0));
+							}
+						});
+
+					// Read body as String to avoid deserialization issues
+					return clientResponse
+						.bodyToMono(String.class)
+						.defaultIfEmpty("")
+						.map(bodyString -> {
+							final var response = new M8bWebSocketMessage.Response();
+							response.setRequestId(request.getRequestId());
+							response.setStatus(statusCode);
+							response.setHeaders(headers);
+
+							// Try to parse body as JSON, otherwise use raw string
+							if (bodyString != null && !bodyString.isEmpty()) {
+								try {
+									response.setBody(objectMapper.readValue(bodyString, Object.class));
+								} catch (Exception e) {
+									// Not JSON, use raw string
+									response.setBody(bodyString);
 								}
-							});
-						response.setHeaders(headers);
-						response.setBody(entity.getBody());
+							}
 
+							return response;
+						});
+				})
+				.subscribe(
+					response -> {
 						sendMessage(response);
-						log.debug("Sent proxy response for request {}: {}", request.getRequestId(), entity.getStatusCode());
+						log.info("Sent proxy response for request {}: status {}", request.getRequestId(), response.getStatus());
 					},
 					error -> {
-						log.error("Proxy request failed: {}", error.getMessage());
+						log.error("Proxy request failed for {}: {}", request.getRequestId(), error.getMessage(), error);
 						sendProxyError(request.getRequestId(), error);
 					}
 				);
 		} catch (Exception e) {
-			log.error("Failed to execute proxy request: {}", e.getMessage());
+			log.error("Failed to execute proxy request: {}", e.getMessage(), e);
 			sendProxyError(request.getRequestId(), e);
 		}
 	}

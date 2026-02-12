@@ -34,6 +34,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
@@ -60,9 +61,10 @@ import reactor.netty.http.client.HttpClient;
 public class M8bConfiguration {
 
 	/**
-	 * Creates a WebClient configured to trust all SSL certificates.
+	 * Creates a WebClient configured to trust all SSL certificates and handle large payloads.
 	 * <p>
 	 * This is necessary for proxy requests to localhost which uses a self-signed certificate.
+	 * Buffer sizes are increased to handle large responses like /api/hierarchy.
 	 * </p>
 	 *
 	 * @return the configured WebClient
@@ -74,7 +76,18 @@ public class M8bConfiguration {
 
 		final var httpClient = HttpClient.create().secure(spec -> spec.sslContext(sslContext));
 
-		return WebClient.builder().clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+		// Configure larger buffer sizes for large payloads (default is 256KB)
+		final int maxBufferSize = 10 * 1024 * 1024; // 10 MB
+		final ExchangeStrategies strategies = ExchangeStrategies
+			.builder()
+			.codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(maxBufferSize))
+			.build();
+
+		return WebClient
+			.builder()
+			.clientConnector(new ReactorClientHttpConnector(httpClient))
+			.exchangeStrategies(strategies)
+			.build();
 	}
 
 	/**
