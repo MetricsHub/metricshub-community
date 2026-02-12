@@ -26,10 +26,12 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.security.ApiKeyAuthFilter;
+import org.metricshub.web.security.EphemeralApiKeyFilter;
 import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.jwt.JwtAuthFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
+import org.metricshub.web.service.EphemeralApiKeyService;
 import org.metricshub.web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -57,6 +59,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
 	private ApiKeyAuthFilter apiKeyAuthFilter;
+	private EphemeralApiKeyService ephemeralApiKeyService;
 	private ReadOnlyAccessFilter readOnlyAccessFilter;
 	private JwtComponent jwtComponent;
 	private UserService userService;
@@ -66,6 +69,7 @@ public class SecurityConfig {
 	 * Constructor for SecurityConfig.
 	 *
 	 * @param apiKeyAuthFilter           the API key authentication filter
+	 * @param ephemeralApiKeyService     the ephemeral API key service for M8B proxy
 	 * @param jwtComponent               the JWT component for handling JWT tokens
 	 * @param userService                the user service for user-related operations
 	 * @param tlsConfigurationProperties the TLS configuration properties
@@ -74,12 +78,14 @@ public class SecurityConfig {
 	@Autowired
 	public SecurityConfig(
 		ApiKeyAuthFilter apiKeyAuthFilter,
+		EphemeralApiKeyService ephemeralApiKeyService,
 		ReadOnlyAccessFilter readOnlyAccessFilter,
 		JwtComponent jwtComponent,
 		UserService userService,
 		TlsConfigurationProperties tlsConfigurationProperties
 	) {
 		this.apiKeyAuthFilter = apiKeyAuthFilter;
+		this.ephemeralApiKeyService = ephemeralApiKeyService;
 		this.readOnlyAccessFilter = readOnlyAccessFilter;
 		this.jwtComponent = jwtComponent;
 		this.userService = userService;
@@ -101,7 +107,8 @@ public class SecurityConfig {
 			.csrf(csrf -> csrf.disable())
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
-			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), ApiKeyAuthFilter.class)
+			.addFilterAfter(new EphemeralApiKeyFilter(ephemeralApiKeyService), ApiKeyAuthFilter.class)
+			.addFilterAfter(new JwtAuthFilter(jwtComponent, userService), EphemeralApiKeyFilter.class)
 			.addFilterAfter(readOnlyAccessFilter, JwtAuthFilter.class)
 			.authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
 			.exceptionHandling(ex ->

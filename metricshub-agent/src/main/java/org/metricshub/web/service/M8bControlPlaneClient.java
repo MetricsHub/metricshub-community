@@ -29,6 +29,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -41,6 +43,10 @@ import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.config.M8bConfigurationProperties;
 import org.metricshub.web.dto.m8b.M8bWebSocketMessage;
+import org.metricshub.web.security.EphemeralApiKeyFilter;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
@@ -66,6 +72,9 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 	private final M8bConfigurationProperties config;
 	private final AgentContextHolder agentContextHolder;
 	private final ObjectMapper objectMapper;
+	private final EphemeralApiKeyService ephemeralApiKeyService;
+	private final WebClient webClient;
+	private final int serverPort;
 
 	private WebSocketSession session;
 	private ScheduledExecutorService scheduler;
@@ -77,18 +86,27 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 	/**
 	 * Creates a new M8B Control Plane client.
 	 *
-	 * @param config             the M8B configuration properties
-	 * @param agentContextHolder the agent context holder for accessing agent info
-	 * @param objectMapper       the JSON object mapper
+	 * @param config                 the M8B configuration properties
+	 * @param agentContextHolder     the agent context holder for accessing agent info
+	 * @param objectMapper           the JSON object mapper
+	 * @param ephemeralApiKeyService the ephemeral API key service for proxy authentication
+	 * @param webClient              the WebClient for executing proxy requests
+	 * @param serverPort             the local server port
 	 */
 	public M8bControlPlaneClient(
 		M8bConfigurationProperties config,
 		AgentContextHolder agentContextHolder,
-		ObjectMapper objectMapper
+		ObjectMapper objectMapper,
+		EphemeralApiKeyService ephemeralApiKeyService,
+		WebClient webClient,
+		int serverPort
 	) {
 		this.config = config;
 		this.agentContextHolder = agentContextHolder;
 		this.objectMapper = objectMapper;
+		this.ephemeralApiKeyService = ephemeralApiKeyService;
+		this.webClient = webClient;
+		this.serverPort = serverPort;
 	}
 
 	/**
@@ -269,7 +287,7 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 	/**
 	 * Handles proxy requests by executing them against the local REST API.
 	 * <p>
-	 * TODO: Implement actual HTTP request execution against local API
+	 * Uses WebClient with an ephemeral token for authentication.
 	 * </p>
 	 *
 	 * @param request the proxy request
@@ -277,14 +295,90 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 	private void handleProxyRequest(M8bWebSocketMessage.Request request) {
 		log.info("Received proxy request: {} {}", request.getMethod(), request.getPath());
 
-		// TODO: Execute HTTP request against local REST API and send response
-		// For now, send a placeholder response
-		final var response = new M8bWebSocketMessage.Response();
-		response.setRequestId(request.getRequestId());
-		response.setStatus(501);
-		response.setHeaders(Map.of("Content-Type", "application/json"));
-		response.setBody(Map.of("error", "Proxy not yet implemented"));
+		try {
+			// Generate ephemeral token for this request
+			final String ephemeralToken = ephemeralApiKeyService.generateToken();
 
+			// Decode path to avoid double-encoding
+			final String decodedPath = URLDecoder.decode(request.getPath(), StandardCharsets.UTF_8);
+
+			// Build local URL (use https if TLS is enabled)
+			final String protocol = "https";
+			final String localUrl = protocol + "://localhost:" + serverPort + decodedPath;
+
+			// Build WebClient request
+			WebClient.RequestBodySpec requestSpec = webClient
+				.method(HttpMethod.valueOf(request.getMethod()))
+				.uri(localUrl)
+				.header(EphemeralApiKeyFilter.EPHEMERAL_TOKEN_HEADER, ephemeralToken);
+
+			// Add headers from request
+			if (request.getHeaders() != null) {
+				request
+					.getHeaders()
+					.forEach((key, value) -> {
+						// Skip host header to avoid issues
+						if (!"host".equalsIgnoreCase(key)) {
+							requestSpec.header(key, value);
+						}
+					});
+			}
+
+			// Add body if present
+			WebClient.ResponseSpec responseSpec;
+			if (request.getBody() != null) {
+				responseSpec = requestSpec.contentType(MediaType.APPLICATION_JSON).bodyValue(request.getBody()).retrieve();
+			} else {
+				responseSpec = requestSpec.retrieve();
+			}
+
+			// Execute and handle response
+			responseSpec
+				.toEntity(Object.class)
+				.subscribe(
+					entity -> {
+						final var response = new M8bWebSocketMessage.Response();
+						response.setRequestId(request.getRequestId());
+						response.setStatus(entity.getStatusCode().value());
+
+						// Convert headers
+						final Map<String, String> headers = new HashMap<>();
+						entity
+							.getHeaders()
+							.forEach((key, values) -> {
+								if (!values.isEmpty()) {
+									headers.put(key, values.get(0));
+								}
+							});
+						response.setHeaders(headers);
+						response.setBody(entity.getBody());
+
+						sendMessage(response);
+						log.debug("Sent proxy response for request {}: {}", request.getRequestId(), entity.getStatusCode());
+					},
+					error -> {
+						log.error("Proxy request failed: {}", error.getMessage());
+						sendProxyError(request.getRequestId(), error);
+					}
+				);
+		} catch (Exception e) {
+			log.error("Failed to execute proxy request: {}", e.getMessage());
+			sendProxyError(request.getRequestId(), e);
+		}
+	}
+
+	/**
+	 * Sends an error response for a failed proxy request.
+	 *
+	 * @param requestId the request ID
+	 * @param error     the error that occurred
+	 */
+	private void sendProxyError(String requestId, Throwable error) {
+		final var response = new M8bWebSocketMessage.Response();
+		response.setRequestId(requestId);
+		response.setStatus(500);
+		response.setHeaders(Map.of("Content-Type", "application/json"));
+		response.setBody(Map.of("error", error.getMessage() != null ? error.getMessage() : "Internal server error"));
 		sendMessage(response);
 	}
 

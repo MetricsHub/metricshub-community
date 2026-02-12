@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.web.security.ApiKeyAuthFilter;
 import org.metricshub.web.security.ReadOnlyAccessFilter;
 import org.metricshub.web.security.jwt.JwtComponent;
+import org.metricshub.web.service.EphemeralApiKeyService;
 import org.metricshub.web.service.UserService;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
 
@@ -25,6 +26,7 @@ class SecurityConfigTest {
 	private SecurityConfig securityConfigWith(TlsConfigurationProperties props) {
 		return new SecurityConfig(
 			mock(ApiKeyAuthFilter.class),
+			mock(EphemeralApiKeyService.class),
 			mock(ReadOnlyAccessFilter.class),
 			mock(JwtComponent.class),
 			mock(UserService.class),
