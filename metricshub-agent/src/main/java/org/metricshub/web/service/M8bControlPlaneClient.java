@@ -322,22 +322,42 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 				.uri(localUrl)
 				.header(EphemeralApiKeyFilter.EPHEMERAL_TOKEN_HEADER, ephemeralToken);
 
-			// Add headers from request
+			// Add headers from request, capture Content-Type for body handling
+			String contentType = null;
 			if (request.getHeaders() != null) {
-				request
-					.getHeaders()
-					.forEach((key, value) -> {
-						// Skip host header to avoid issues
-						if (!"host".equalsIgnoreCase(key)) {
-							requestSpec.header(key, value);
+				for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
+					final String key = entry.getKey();
+					final String value = entry.getValue();
+					// Skip host header to avoid issues
+					if (!"host".equalsIgnoreCase(key)) {
+						requestSpec.header(key, value);
+						if ("content-type".equalsIgnoreCase(key)) {
+							contentType = value;
 						}
-					});
+					}
+				}
 			}
 
-			// Add body if present
+			// Add body if present, using original Content-Type if specified
 			WebClient.RequestHeadersSpec<?> finalSpec;
 			if (request.getBody() != null) {
-				finalSpec = requestSpec.contentType(MediaType.APPLICATION_JSON).bodyValue(request.getBody());
+				// Determine the media type to use
+				final MediaType mediaType;
+				if (contentType != null && contentType.toLowerCase().contains("text/plain")) {
+					mediaType = MediaType.TEXT_PLAIN;
+				} else if (contentType != null) {
+					mediaType = MediaType.parseMediaType(contentType.split(";")[0].trim());
+				} else {
+					mediaType = MediaType.APPLICATION_JSON;
+				}
+
+				// Convert body to appropriate format
+				Object bodyValue = request.getBody();
+				if (mediaType.equals(MediaType.TEXT_PLAIN) && !(bodyValue instanceof String)) {
+					bodyValue = String.valueOf(bodyValue);
+				}
+
+				finalSpec = requestSpec.contentType(mediaType).bodyValue(bodyValue);
 			} else {
 				finalSpec = requestSpec;
 			}
