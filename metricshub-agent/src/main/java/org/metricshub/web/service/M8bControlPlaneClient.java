@@ -54,6 +54,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 /**
@@ -70,6 +71,16 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
  */
 @Slf4j
 public class M8bControlPlaneClient extends TextWebSocketHandler {
+
+	/**
+	 * Send timeout in milliseconds - how long to wait for a send to complete.
+	 */
+	private static final int SEND_TIME_LIMIT_MS = 20_000;
+
+	/**
+	 * Buffer size limit in bytes - max queued message size before dropping.
+	 */
+	private static final int BUFFER_SIZE_LIMIT = 512 * 1024; // 512KB
 
 	private final M8bConfigurationProperties config;
 	private final AgentContextHolder agentContextHolder;
@@ -239,7 +250,8 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 
 	@Override
 	public void afterConnectionEstablished(WebSocketSession session) {
-		this.session = session;
+		// Wrap with ConcurrentWebSocketSessionDecorator for thread-safe, non-blocking writes
+		this.session = new ConcurrentWebSocketSessionDecorator(session, SEND_TIME_LIMIT_MS, BUFFER_SIZE_LIMIT);
 		this.connected.set(true);
 		this.connecting.set(false);
 		this.reconnectAttempts.set(0);
@@ -481,6 +493,8 @@ public class M8bControlPlaneClient extends TextWebSocketHandler {
 
 	/**
 	 * Sends a WebSocket message to the M8B server.
+	 * Thread-safe - uses ConcurrentWebSocketSessionDecorator which queues messages
+	 * and writes them serially, allowing callers to return immediately.
 	 *
 	 * @param message the message to send
 	 */
