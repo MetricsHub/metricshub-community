@@ -204,7 +204,7 @@ jobs:
     # Extract default x86 architecture last, to avoid erase by other archs
     - name: Extract AMD64 Packages from Docker Image
       run: |
-        containerId=$(docker create ${{ steps.version.outputs.buildImage }})
+        containerId=$(docker create --platform linux/amd64 ${{ steps.version.outputs.buildImage }})
         mkdir -p packages
         docker cp ${containerId}:/tmp/packages/. ./packages/
         docker rm ${containerId}
