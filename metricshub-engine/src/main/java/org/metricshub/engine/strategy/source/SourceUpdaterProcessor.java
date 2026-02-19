@@ -51,6 +51,7 @@ import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -116,6 +117,11 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(EventLogSource eventLogSource) {
 		return processSource(eventLogSource.copy());
+	}
+
+	@Override
+	public SourceTable process(FileSource fileSource) {
+		return processSource(fileSource.copy());
 	}
 
 	@Override

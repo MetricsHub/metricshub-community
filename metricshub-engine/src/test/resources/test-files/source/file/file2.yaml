@@ -1,0 +1,10 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  testFileSource:
+    type: file
+    paths: C:\\temp\\*.log
+    maxSizePerPoll: -1
+    mode: flat

@@ -37,98 +37,112 @@ import java.util.function.UnaryOperator;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import org.metricshub.engine.connector.deserializer.custom.EventLogLevelSetDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.FileSourceModeDeserializer;
 import org.metricshub.engine.connector.deserializer.custom.LinkedHashSetDeserializer;
+import org.metricshub.engine.connector.deserializer.custom.SizeDeserializer;
 import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * Represents a source that retrieves data from Windows Event Logs.
+ * A file source that reads content from local or remote files.
+ * Supports incremental reading in LOG mode (using cursors to track position) or full-file reading in FLAT mode.
+ * Paths may include wildcards (e.g. {@code C:\logs\*.log} or {@code /var/log/*.log}).
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class EventLogSource extends Source {
+public class FileSource extends Source {
 
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Default max events per poll value
+	 * Default max size per poll value in bytes (5 MB).
 	 */
-	private static final int DEFAULT_MAX_EVENTS_PER_POLL = 50;
+	private static final long DEFAULT_MAX_SIZE_PER_POLL = 5 * 1024 * 1024;
 
 	/**
-	 * Unlimited events per poll
+	 * Value for unlimited size per poll: no cap on bytes read per cycle.
 	 */
-	public static final int UNLIMITED_EVENTS_PER_POLL = -1;
+	public static final long UNLIMITED_SIZE_PER_POLL = -1;
 
+	/**
+	 * Maximum number of bytes to read per polling cycle across all files (LOG mode).
+	 * Use {@link #UNLIMITED_SIZE_PER_POLL} for no limit. Default is 5 MB.
+	 * When set via YAML, uses {@link SizeDeserializer}: value is converted to bytes once (e.g. {@code 5Mb} → 5×1024×1024); no conversion elsewhere.
+	 */
 	@JsonSetter(nulls = SKIP)
-	private String logName;
+	@JsonDeserialize(using = SizeDeserializer.class)
+	private long maxSizePerPoll = DEFAULT_MAX_SIZE_PER_POLL;
 
+	/**
+	 * File path patterns to read (e.g. {@code C:\logs\*.log}, {@code /var/log/app/*.log}).
+	 * Supports comma-separated strings or YAML arrays.
+	 */
 	@JsonSetter(nulls = SKIP)
 	@JsonDeserialize(using = LinkedHashSetDeserializer.class)
-	private Set<String> eventIds = new LinkedHashSet<>();
+	private Set<String> paths = new LinkedHashSet<>();
 
+	/**
+	 * Processing mode: {@link FileSourceProcessingMode#LOG} for incremental reading with cursors,
+	 * or {@link FileSourceProcessingMode#FLAT} for full-file read on each poll. Default is LOG.
+	 */
 	@JsonSetter(nulls = SKIP)
-	@JsonDeserialize(using = LinkedHashSetDeserializer.class)
-	private Set<String> sources = new LinkedHashSet<>();
+	@JsonDeserialize(using = FileSourceModeDeserializer.class)
+	private FileSourceProcessingMode mode;
 
-	@JsonSetter(nulls = SKIP)
-	@JsonDeserialize(using = EventLogLevelSetDeserializer.class)
-	private Set<EventLogLevel> levels = new LinkedHashSet<>();
-
-	@JsonSetter(nulls = SKIP)
-	private int maxEventsPerPoll = DEFAULT_MAX_EVENTS_PER_POLL;
-
+	/**
+	 * Creates a file source.
+	 *
+	 * @param type                   the source type (e.g. {@code "file"})
+	 * @param computes               optional compute steps
+	 * @param forceSerialization     whether to force serialization
+	 * @param paths                  file path patterns; may be null (defaults to empty set)
+	 * @param maxSizePerPoll         max size per poll in bytes; null or 0 use default, negative uses unlimited
+	 * @param mode                   LOG (incremental) or FLAT (full-file); null defaults to LOG
+	 * @param key                    the source key
+	 * @param executeForEachEntryOf  optional iteration configuration
+	 */
 	@Builder
-	public EventLogSource(
+	public FileSource(
 		@JsonProperty("type") String type,
 		@JsonProperty("computes") List<Compute> computes,
 		@JsonProperty("forceSerialization") boolean forceSerialization,
-		@JsonProperty("logName") String logName,
-		@JsonProperty("eventIds") Set<String> eventIds,
-		@JsonProperty("sources") Set<String> sources,
-		@JsonProperty("levels") Set<EventLogLevel> levels,
-		@JsonProperty("maxEventsPerPoll") int maxEventsPerPoll,
+		@JsonProperty("paths") Set<String> paths,
+		@JsonProperty("maxSizePerPoll") Long maxSizePerPoll,
+		@JsonProperty("mode") FileSourceProcessingMode mode,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {
 		super(type, computes, forceSerialization, key, executeForEachEntryOf);
-		this.logName = logName;
-		this.eventIds = (eventIds != null) ? eventIds : new LinkedHashSet<>();
-		this.sources = (sources != null) ? sources : new LinkedHashSet<>();
-		this.levels = (levels != null) ? levels : new LinkedHashSet<>();
+		this.paths = (paths != null) ? paths : new LinkedHashSet<>();
+		this.mode = mode != null ? mode : FileSourceProcessingMode.LOG;
 
-		if (maxEventsPerPoll == 0) {
-			this.maxEventsPerPoll = DEFAULT_MAX_EVENTS_PER_POLL;
+		if (maxSizePerPoll == null || maxSizePerPoll == 0) {
+			this.maxSizePerPoll = DEFAULT_MAX_SIZE_PER_POLL;
 		} else {
-			this.maxEventsPerPoll = maxEventsPerPoll > 0 ? maxEventsPerPoll : UNLIMITED_EVENTS_PER_POLL;
+			this.maxSizePerPoll = maxSizePerPoll > 0 ? maxSizePerPoll : UNLIMITED_SIZE_PER_POLL;
 		}
 	}
 
 	@Override
 	public Source copy() {
-		return EventLogSource
+		return FileSource
 			.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)
 			.computes(getComputes() != null ? new ArrayList<>(getComputes()) : null)
 			.executeForEachEntryOf(executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null)
-			.logName(logName)
-			.eventIds(eventIds != null ? eventIds : new LinkedHashSet<>())
-			.sources(sources != null ? sources : new LinkedHashSet<>())
-			.levels(levels != null ? new LinkedHashSet<>(levels) : new LinkedHashSet<>())
-			.maxEventsPerPoll(maxEventsPerPoll)
+			.paths(paths != null ? new LinkedHashSet<>(paths) : new LinkedHashSet<>())
+			.maxSizePerPoll(maxSizePerPoll)
+			.mode(mode)
 			.build();
 	}
 
 	@Override
 	public void update(UnaryOperator<String> updater) {
-		logName = updater.apply(logName);
-		eventIds = eventIds.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
-		sources = sources.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+		paths = paths.stream().map(updater).collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
 	}
 
 	@Override
@@ -137,11 +151,9 @@ public class EventLogSource extends Source {
 
 		stringJoiner.add(super.toString());
 
-		addNonNull(stringJoiner, "- logName=", logName);
-		addNonNull(stringJoiner, "- eventIds=", eventIds);
-		addNonNull(stringJoiner, "- sources=", sources);
-		addNonNull(stringJoiner, "- levels=", levels);
-		addNonNull(stringJoiner, "- maxEventsPerPoll=", maxEventsPerPoll);
+		addNonNull(stringJoiner, "- paths=", paths);
+		addNonNull(stringJoiner, "- maxSizePerPoll=", maxSizePerPoll);
+		addNonNull(stringJoiner, "- mode=", mode);
 
 		return stringJoiner.toString();
 	}

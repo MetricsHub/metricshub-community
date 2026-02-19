@@ -24,27 +24,66 @@ package org.metricshub.engine.common.helpers;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.CONNECTORS;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.common.DeviceKind;
 
 /**
  * Utility class for common file-related operations.
  */
+@Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class FileHelper {
+
+	// Empty string constant used for default return values.
+	public static final String EMPTY = "";
+
+	// Path delimiter used in Linux/Unix file systems.
+	public static final String SLASH = "/";
+
+	// Path delimiter used in Windows file systems.
+	public static final String BACKSLASH = "\\";
+
+	/**
+	 * Regex to split command output by line; accepts both {@code \n} and {@code \r\n}.
+	 */
+	private static final String LINE_SPLIT_REGEX = "\\r?\\n";
+
+	/**
+	 * Valid absolute Windows path: drive letter ({@code C:\...}) or UNC ({@code \\server\share\...}).
+	 */
+	private static final Pattern ABSOLUTE_WINDOWS_PATH = Pattern.compile("^(?:[A-Za-z]:\\\\" + ".+" + "|\\\\\\\\.+)$");
+
+	/**
+	 * Valid absolute Linux/Unix path: starts with {@code /}.
+	 */
+	private static final Pattern ABSOLUTE_LINUX_PATH = Pattern.compile("^/.*");
+
+	/**
+	 * Escape string for new lines.
+	 */
+	private static final String NEW_LINE_ESCAPE_STRING = "@{newLine}@";
 
 	/**
 	 * Returns the time of last modification of the specified Path in milliseconds since EPOCH.
@@ -68,7 +107,7 @@ public class FileHelper {
 	 */
 	public static Path findConnectorsDirectory(final URI zipUri) {
 		final String strPath = zipUri.toString();
-		final int connectorsIndex = strPath.lastIndexOf("/" + CONNECTORS + "/");
+		final int connectorsIndex = strPath.lastIndexOf(SLASH + CONNECTORS + SLASH);
 		if (connectorsIndex == -1) {
 			return null;
 		}
@@ -175,5 +214,184 @@ public class FileHelper {
 
 		// Return the whole filename if no valid '.' found
 		return filename;
+	}
+
+	/**
+	 * Extracts the base directory path from an absolute file path.
+	 * Removes the filename portion, leaving only the directory path.
+	 *
+	 * @param absolutePath The absolute file path
+	 * @param hostType The device kind to determine the path delimiter
+	 * @return The base directory path, or empty string if path is invalid
+	 */
+	public static String extractBasePath(final String absolutePath, final DeviceKind hostType) {
+		if (absolutePath == null || absolutePath.isBlank()) {
+			return EMPTY;
+		}
+
+		// Set the path delimiter depending on the host type
+		final String pathDelimiter = hostType.equals(DeviceKind.WINDOWS) ? BACKSLASH : SLASH;
+
+		// If path doesn't contain the delimiter, it's not a valid absolute path
+		if (!absolutePath.contains(pathDelimiter)) {
+			return EMPTY;
+		}
+
+		return absolutePath.substring(0, absolutePath.lastIndexOf(pathDelimiter));
+	}
+
+	/**
+	 * Extracts the filename from an absolute file path.
+	 * Returns the last component of the path after the path delimiter.
+	 *
+	 * @param absolutePath The absolute file path
+	 * @param hostType The device kind to determine the path delimiter
+	 * @return The filename, or empty string if path is invalid
+	 */
+	public static String extractFilename(final String absolutePath, final DeviceKind hostType) {
+		if (absolutePath == null || absolutePath.isBlank()) {
+			return EMPTY;
+		}
+
+		final String pathDelimiter = hostType.equals(DeviceKind.WINDOWS) ? BACKSLASH : SLASH;
+
+		if (!absolutePath.contains(pathDelimiter)) {
+			return EMPTY;
+		}
+
+		return absolutePath.substring(absolutePath.lastIndexOf(pathDelimiter) + 1, absolutePath.length());
+	}
+
+	/**
+	 * Parses remote command output into a set of validated absolute file paths.
+	 * Splits on {@code \n} or {@code \r\n}, trims and skips empty lines, and keeps only lines
+	 * matching the expected format for the given device kind. Non-matching lines are logged and skipped.
+	 *
+	 * @param result      raw command output
+	 * @param deviceKind  Windows or Linux to select the path validation pattern
+	 * @param hostname    hostname for logging (may be null)
+	 * @param pathPattern path pattern for logging (may be null)
+	 * @return set of validated absolute paths (possibly empty)
+	 */
+	public static Set<String> parseResolvedPathsFromCommandResult(
+		final String result,
+		final DeviceKind deviceKind,
+		final String hostname,
+		final String pathPattern
+	) {
+		final Set<String> resolved = new HashSet<>();
+		if (result == null || result.isEmpty()) {
+			return resolved;
+		}
+		final Pattern pathPatternMatcher = deviceKind.equals(DeviceKind.WINDOWS)
+			? ABSOLUTE_WINDOWS_PATH
+			: ABSOLUTE_LINUX_PATH;
+
+		for (final String raw : result.split(LINE_SPLIT_REGEX, -1)) {
+			final String line = raw.trim();
+			if (line.isEmpty()) {
+				continue;
+			}
+			if (pathPatternMatcher.matcher(line).matches()) {
+				resolved.add(line);
+			} else {
+				log.debug("Hostname {} - Skipping non-path output when resolving path {}: {}", hostname, pathPattern, line);
+			}
+		}
+		return resolved;
+	}
+
+	/**
+	 * Reads the entire content of a file as a string using UTF-8 encoding.
+	 *
+	 * @param path The absolute path to the file
+	 * @return The entire file content as a string
+	 * @throws IOException If an I/O error occurs while reading the file
+	 */
+	public static String readFileContent(final String path) throws IOException {
+		return Files.readString(Path.of(path), StandardCharsets.UTF_8);
+	}
+
+	public static String readOffset(final String path, final long offset, final int length)
+		throws FileNotFoundException, IOException {
+		try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
+			// Set the file pointer to the cursor offset position
+			file.seek(offset);
+
+			// Create a byte array to read the requested length
+			byte[] buffer = new byte[length];
+
+			// Read bytes from the file into the buffer
+			int bytesRead = file.read(buffer);
+
+			// If EOF is reached, return empty string
+			if (bytesRead == -1) {
+				return "";
+			}
+			// Convert bytes to string using UTF-8 encoding
+			return new String(buffer, 0, bytesRead, StandardCharsets.UTF_8);
+		}
+	}
+
+	public static Long getFileSize(final String path) throws IOException {
+		return Files.size(Path.of(path));
+	}
+
+	/**
+	 * Resolves file paths locally by matching filename patterns in the specified directories.
+	 * Uses native Java file system APIs to find matching files.
+	 *
+	 * @param hostname   The hostname for logging purposes
+	 * @param paths      The set containing path patterns to resolve
+	 * @param deviceKind The device kind (Windows/Linux) to determine path delimiters
+	 * @return A set of resolved absolute file paths matching the patterns
+	 */
+	public static Set<String> findFilesByPattern(
+		final String hostname,
+		final Set<String> paths,
+		final DeviceKind deviceKind
+	) {
+		final Set<String> resolvedPaths = new HashSet<>();
+
+		if (paths == null) {
+			return resolvedPaths;
+		}
+
+		for (final String stringPath : paths) {
+			// Extract the base directory path from the pattern
+			final String basePath = FileHelper.extractBasePath(stringPath, deviceKind);
+			// Extract the filename pattern (may contain wildcards)
+			final String filename = FileHelper.extractFilename(stringPath, deviceKind);
+
+			// Use directory stream to find all files matching the filename pattern
+			try (DirectoryStream<Path> stream = Files.newDirectoryStream(Path.of(basePath), filename)) {
+				stream.forEach(resolvedPath -> resolvedPaths.add(resolvedPath.toString()));
+			} catch (IOException e) {
+				log.info("Hostname {} - Unable to resolve path: {}. Message: {}", hostname, stringPath, e.getMessage());
+				log.debug("Hostname {} - Exception occurred when resolving path {}: {}", hostname, stringPath, e);
+			}
+		}
+
+		return resolvedPaths;
+	}
+
+	/**
+	 * Escapes newline characters in a string by replacing them with a placeholder.
+	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
+	 *
+	 * @param value the string to escape
+	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or empty string if input is null
+	 */
+	public static String escapeNewLines(final String value) {
+		if (value == null) {
+			return null;
+		}
+
+		// Replace \r\n first (Windows line endings), then handle any remaining \r or \n
+		// Use replace() for literal replacements to avoid regex interpretation of $ in replacement string
+		return value
+			.replace("\r\n", NEW_LINE_ESCAPE_STRING)
+			.replace("\n", NEW_LINE_ESCAPE_STRING)
+			.replace("\r", NEW_LINE_ESCAPE_STRING);
 	}
 }

@@ -1,0 +1,10 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  testFileSource:
+    type: file
+    paths: /var/log/*.log
+    maxSizePerPoll: "1mb"
+    mode: log
