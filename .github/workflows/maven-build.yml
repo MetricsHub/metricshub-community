@@ -153,12 +153,6 @@ jobs:
         include-hidden-files: true
         path: packaging-assets/
 
-    - name: Upload Site Artifact v${{ steps.version.outputs.version }}
-      uses: actions/upload-artifact@v6
-      with:
-        name: metricshub-site-${{ steps.version.outputs.version }}
-        path: ./metricshub-doc/target/metricshub-doc-${{ steps.version.outputs.version }}-site.jar
-
     - name: Upload Checkstyle reports to GitHub
       uses: jwgmeligmeyling/checkstyle-github-action@v1.2
       with:

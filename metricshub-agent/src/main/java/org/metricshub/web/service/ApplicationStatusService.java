@@ -23,6 +23,7 @@ package org.metricshub.web.service;
 
 import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
@@ -105,32 +106,28 @@ public class ApplicationStatusService {
 	 * @return the number of days remaining. Returns null for Community Edition.
 	 */
 	private static Long determineLicenseDaysRemaining(final AgentContext agentContext) {
-		if ("Community".equals(determineLicenseType(agentContext))) {
+		final String licenseType = determineLicenseType(agentContext);
+		if ("Community".equals(licenseType)) {
 			return null;
 		}
 
-		final var agentInfo = agentContext.getAgentInfo();
-		if (agentInfo == null || agentInfo.getAttributes() == null) {
+		final JsonNode configNode = agentContext.getConfigNode();
+		if (configNode == null) {
 			return null;
 		}
 
-		// Try parsing expiration date
-		final var expirationDateString = agentInfo.getAttributes().get("license.expiration_date");
-		if (expirationDateString != null) {
+		final JsonNode licenseNode = configNode.get("license");
+		if (licenseNode == null || licenseNode.isNull()) {
+			return null;
+		}
+
+		// Try parsing expiration date from "expiresOn" field
+		final JsonNode expiresOnNode = licenseNode.get("expiresOn");
+		if (expiresOnNode != null && !expiresOnNode.isNull()) {
 			try {
-				final var expirationDate = LocalDate.parse(expirationDateString);
+				final LocalDate expirationDate = LocalDate.parse(expiresOnNode.asText());
 				return ChronoUnit.DAYS.between(LocalDate.now(), expirationDate);
 			} catch (Exception e) {
-				// Ignore parsing errors
-			}
-		}
-
-		// Try parsing days remaining directly
-		final var daysRemainingString = agentInfo.getAttributes().get("license.days_remaining");
-		if (daysRemainingString != null) {
-			try {
-				return Long.parseLong(daysRemainingString);
-			} catch (NumberFormatException e) {
 				// Ignore parsing errors
 			}
 		}

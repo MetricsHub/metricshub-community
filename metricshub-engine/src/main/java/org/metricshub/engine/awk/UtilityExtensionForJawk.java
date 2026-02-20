@@ -22,13 +22,17 @@ package org.metricshub.engine.awk;
  */
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import org.metricshub.jawk.ext.AbstractExtension;
 import org.metricshub.jawk.ext.JawkExtension;
+import org.metricshub.jawk.ext.annotations.JawkAssocArray;
 import org.metricshub.jawk.ext.annotations.JawkFunction;
+import org.metricshub.jawk.jrt.AssocArray;
 import org.metricshub.jawk.jrt.JRT;
 
 /**
@@ -171,5 +175,39 @@ public class UtilityExtensionForJawk extends AbstractExtension {
 			return "";
 		}
 		return Base64.getEncoder().encodeToString(input.getBytes(StandardCharsets.UTF_8));
+	}
+
+	/**
+	 * Sorts the indices (keys) of the given associative array and stores them into another array.
+	 *
+	 * @param src  source associative array
+	 * @param dest destination array that will receive sorted keys in {@code dest[1..n]}
+	 * @return number of keys sorted (n)
+	 */
+	@JawkFunction("asorti")
+	public int asorti(@JawkAssocArray AssocArray src, @JawkAssocArray AssocArray dest) {
+		if (dest == null || src == null || src.isEmpty()) {
+			if (dest != null) {
+				dest.clear();
+			}
+			return 0;
+		}
+
+		dest.clear();
+
+		final List<String> keys = new ArrayList<>(src.keySet().size());
+		for (Object k : src.keySet()) {
+			if (k != null) {
+				keys.add(k.toString());
+			}
+		}
+
+		keys.sort(String::compareTo);
+
+		for (int i = 0; i < keys.size(); i++) {
+			dest.put(Integer.toString(i + 1), keys.get(i));
+		}
+
+		return keys.size();
 	}
 }
