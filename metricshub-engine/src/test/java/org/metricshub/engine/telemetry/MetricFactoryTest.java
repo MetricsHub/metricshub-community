@@ -4,8 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.util.HashMap;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
@@ -20,69 +18,97 @@ class MetricFactoryTest {
 
 	@Test
 	void testFormatMetricTypeNameGauge() {
-		assertEquals("Gauge", MetricFactory.formatMetricTypeName(MetricType.GAUGE));
+		assertEquals("Gauge", MetricFactory.formatMetricTypeName(MetricType.GAUGE), "GAUGE should format to 'Gauge'");
 	}
 
 	@Test
 	void testFormatMetricTypeNameCounter() {
-		assertEquals("Counter", MetricFactory.formatMetricTypeName(MetricType.COUNTER));
+		assertEquals(
+			"Counter",
+			MetricFactory.formatMetricTypeName(MetricType.COUNTER),
+			"COUNTER should format to 'Counter'"
+		);
 	}
 
 	@Test
 	void testFormatMetricTypeNameUpDownCounter() {
-		assertEquals("UpDownCounter", MetricFactory.formatMetricTypeName(MetricType.UP_DOWN_COUNTER));
+		assertEquals(
+			"UpDownCounter",
+			MetricFactory.formatMetricTypeName(MetricType.UP_DOWN_COUNTER),
+			"UP_DOWN_COUNTER should format to 'UpDownCounter'"
+		);
 	}
 
 	@Test
 	void testFormatMetricTypeNameNull() {
-		assertNull(MetricFactory.formatMetricTypeName(null));
+		assertNull(MetricFactory.formatMetricTypeName(null), "null MetricType should return null");
 	}
 
 	@Test
 	void testResolveMetricTypeFromNameKnownMetric() {
 		// hw.host.energy is defined as Counter in metricshub-host-metrics.yaml
-		assertEquals("Counter", MetricFactory.resolveMetricTypeFromName("hw.host.energy"));
+		assertEquals(
+			"Counter",
+			MetricFactory.resolveMetricTypeFromName("hw.host.energy"),
+			"hw.host.energy should resolve to Counter"
+		);
 	}
 
 	@Test
 	void testResolveMetricTypeFromNameGaugeMetric() {
 		// hw.host.power is defined as Gauge in metricshub-host-metrics.yaml
-		assertEquals("Gauge", MetricFactory.resolveMetricTypeFromName("hw.host.power"));
+		assertEquals(
+			"Gauge",
+			MetricFactory.resolveMetricTypeFromName("hw.host.power"),
+			"hw.host.power should resolve to Gauge"
+		);
 	}
 
 	@Test
 	void testResolveMetricTypeFromNameUpDownCounterMetric() {
 		// metricshub.host.configured is defined as UpDownCounter
-		assertEquals("UpDownCounter", MetricFactory.resolveMetricTypeFromName("metricshub.host.configured"));
+		assertEquals(
+			"UpDownCounter",
+			MetricFactory.resolveMetricTypeFromName("metricshub.host.configured"),
+			"metricshub.host.configured should resolve to UpDownCounter"
+		);
 	}
 
 	@Test
 	void testResolveMetricTypeFromNameUnknownMetric() {
 		// Unknown metric should fallback to null
-		assertNull(MetricFactory.resolveMetricTypeFromName("unknown.metric.name"));
+		assertNull(MetricFactory.resolveMetricTypeFromName("unknown.metric.name"), "Unknown metric should resolve to null");
 	}
 
 	@Test
 	void testResolveMetricTypeFromNameWithAttributes() {
 		// Should strip attributes before lookup
-		assertEquals("Gauge", MetricFactory.resolveMetricTypeFromName("hw.host.power{hw.type=\"enclosure\"}"));
+		assertEquals(
+			"Gauge",
+			MetricFactory.resolveMetricTypeFromName("hw.host.power{hw.type=\"enclosure\"}"),
+			"Metric name with attributes should resolve after stripping attributes"
+		);
 	}
 
 	@Test
 	void testResolveMetricTypeNullDefinition() {
-		assertNull(MetricFactory.resolveMetricType(null));
+		assertNull(MetricFactory.resolveMetricType(null), "null MetricDefinition should resolve to null");
 	}
 
 	@Test
 	void testResolveMetricTypeGaugeDefinition() {
 		final MetricDefinition def = MetricDefinition.builder().type(MetricType.GAUGE).build();
-		assertEquals("Gauge", MetricFactory.resolveMetricType(def));
+		assertEquals("Gauge", MetricFactory.resolveMetricType(def), "Gauge MetricDefinition should resolve to 'Gauge'");
 	}
 
 	@Test
 	void testResolveMetricTypeCounterDefinition() {
 		final MetricDefinition def = MetricDefinition.builder().type(MetricType.COUNTER).build();
-		assertEquals("Counter", MetricFactory.resolveMetricType(def));
+		assertEquals(
+			"Counter",
+			MetricFactory.resolveMetricType(def),
+			"Counter MetricDefinition should resolve to 'Counter'"
+		);
 	}
 
 	@Test
@@ -90,7 +116,11 @@ class MetricFactoryTest {
 		final StateSet stateSet = new StateSet();
 		stateSet.setOutput(MetricType.UP_DOWN_COUNTER);
 		final MetricDefinition def = MetricDefinition.builder().type(stateSet).build();
-		assertEquals("UpDownCounter", MetricFactory.resolveMetricType(def));
+		assertEquals(
+			"UpDownCounter",
+			MetricFactory.resolveMetricType(def),
+			"StateSet with UpDownCounter output should resolve to 'UpDownCounter'"
+		);
 	}
 
 	@Test
@@ -100,10 +130,10 @@ class MetricFactoryTest {
 
 		final NumberMetric metric = metricFactory.collectNumberMetric(monitor, "hw.host.power", 100.0, 1000L);
 
-		assertNotNull(metric);
-		assertEquals(100.0, metric.getValue());
-		assertEquals("Gauge", metric.getMetricType());
-		assertNull(metric.getRate());
+		assertNotNull(metric, "Collected metric should not be null");
+		assertEquals(100.0, metric.getValue(), "Metric value should be 100.0");
+		assertEquals("Gauge", metric.getMetricType(), "hw.host.power should be resolved as Gauge");
+		assertNull(metric.getRate(), "Rate should be null for a new Gauge metric");
 	}
 
 	@Test
@@ -113,8 +143,8 @@ class MetricFactoryTest {
 
 		// First collect
 		final NumberMetric firstCollect = metricFactory.collectNumberMetric(monitor, "hw.host.energy", 5000.0, 1000L);
-		assertNotNull(firstCollect);
-		assertEquals("Counter", firstCollect.getMetricType());
+		assertNotNull(firstCollect, "First collected metric should not be null");
+		assertEquals("Counter", firstCollect.getMetricType(), "hw.host.energy should be resolved as Counter");
 		assertNull(firstCollect.getRate(), "Rate should be null on first collect (new metric)");
 
 		// Save to set previous values
@@ -123,11 +153,11 @@ class MetricFactoryTest {
 		// Second collect - 60 seconds later
 		final NumberMetric secondCollect = metricFactory.collectNumberMetric(monitor, "hw.host.energy", 8000.0, 61000L);
 
-		assertNotNull(secondCollect);
-		assertEquals("Counter", secondCollect.getMetricType());
+		assertNotNull(secondCollect, "Second collected metric should not be null");
+		assertEquals("Counter", secondCollect.getMetricType(), "hw.host.energy should remain Counter on second collect");
 		assertNotNull(secondCollect.getRate(), "Rate should be computed for Counter metric");
 		// rate = (8000 - 5000) / ((61000 - 1000) / 1000.0) = 3000 / 60 = 50.0
-		assertEquals(50.0, secondCollect.getRate(), 0.001);
+		assertEquals(50.0, secondCollect.getRate(), 0.001, "Rate should be 50.0 = 3000 / 60");
 	}
 
 	@Test
@@ -137,7 +167,7 @@ class MetricFactoryTest {
 
 		// First collect - no previous values available
 		final NumberMetric firstCollect = metricFactory.collectNumberMetric(monitor, "hw.host.energy", 5000.0, 1000L);
-		assertNotNull(firstCollect);
+		assertNotNull(firstCollect, "First collected Counter metric should not be null");
 		assertNull(firstCollect.getRate(), "Rate should be null on first collect");
 	}
 
@@ -184,9 +214,9 @@ class MetricFactoryTest {
 			1000L
 		);
 
-		assertNotNull(metric);
-		assertEquals("ok", metric.getValue());
-		assertEquals("UpDownCounter", metric.getMetricType());
+		assertNotNull(metric, "Collected StateSet metric should not be null");
+		assertEquals("ok", metric.getValue(), "StateSet metric value should be 'ok'");
+		assertEquals("UpDownCounter", metric.getMetricType(), "hw.status should be resolved as UpDownCounter");
 	}
 
 	@Test
@@ -212,8 +242,8 @@ class MetricFactoryTest {
 			2000L
 		);
 
-		assertNotNull(metric);
-		assertEquals("degraded", metric.getValue());
-		assertEquals("UpDownCounter", metric.getMetricType());
+		assertNotNull(metric, "Updated StateSet metric should not be null");
+		assertEquals("degraded", metric.getValue(), "StateSet metric value should be updated to 'degraded'");
+		assertEquals("UpDownCounter", metric.getMetricType(), "hw.status should remain UpDownCounter after update");
 	}
 }

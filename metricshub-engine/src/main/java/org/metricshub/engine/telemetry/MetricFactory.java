@@ -70,7 +70,7 @@ public class MetricFactory {
 
 	/**
 	 * Collects a stateSet metric in the monitor, auto-resolving the metric type
-	 * from the connector store, host-metrics definitions, or falling back to "Gauge".
+	 * from the connector store, host-metrics definitions, or returning null if unknown.
 	 *
 	 * @param monitor    a given monitor
 	 * @param metricName the metric's name
@@ -173,7 +173,7 @@ public class MetricFactory {
 
 	/**
 	 * Collects a number metric in the monitor, auto-resolving the metric type
-	 * from the connector store, host-metrics definitions, or falling back to "Gauge".
+	 * from the connector store, host-metrics definitions, or returning null if unknown.
 	 *
 	 * @param monitor     a given monitor
 	 * @param name        the metric's name
@@ -254,7 +254,7 @@ public class MetricFactory {
 
 	/**
 	 * Collects a number metric in the monitor from a string value,
-	 * auto-resolving the metric type from the connector store, host-metrics definitions, or falling back to "Gauge".
+	 * auto-resolving the metric type from the connector store, host-metrics definitions, or returning null if unknown.
 	 *
 	 * @param monitor     a given monitor
 	 * @param name        the metric's name
@@ -503,7 +503,7 @@ public class MetricFactory {
 	 * Resolves the metricType string from a {@link MetricDefinition}.
 	 *
 	 * @param metricDefinition the metric definition (may be null)
-	 * @return the resolved metricType string ("Counter", "UpDownCounter", or "Gauge")
+	 * @return the resolved metricType string ("Counter", "UpDownCounter", "Gauge"), or null if unknown
 	 */
 	public static String resolveMetricType(final MetricDefinition metricDefinition) {
 		if (metricDefinition != null && metricDefinition.getType() != null) {
@@ -518,10 +518,10 @@ public class MetricFactory {
 
 	/**
 	 * Resolves the metricType string for a given metric name by looking up the
-	 * host-metrics definitions. Falls back to "Gauge" if the metric is not found.
+	 * host-metrics definitions. Returns null if the metric is not found.
 	 *
 	 * @param metricName the metric name (may include attributes in curly braces)
-	 * @return the resolved metricType string
+	 * @return the resolved metricType string, or null if unknown
 	 */
 	public static String resolveMetricTypeFromName(final String metricName) {
 		final String extractedName = extractName(metricName);
@@ -537,7 +537,7 @@ public class MetricFactory {
 	 * <ol>
 	 *   <li>Connector metrics (from ConnectorStore using connectorId)</li>
 	 *   <li>Host-metrics YAML definitions</li>
-	 *   <li>Fallback to "Gauge"</li>
+	 *   <li>Fallback to null (unknown)</li>
 	 * </ol>
 	 *
 	 * @param connectorStore the connector store (may be null)
@@ -576,7 +576,7 @@ public class MetricFactory {
 			}
 		}
 
-		// 2. Fall back to host-metrics definitions, then "Gauge"
+		// 2. Fall back to host-metrics definitions, then null
 		return resolveMetricTypeFromName(metricName);
 	}
 
