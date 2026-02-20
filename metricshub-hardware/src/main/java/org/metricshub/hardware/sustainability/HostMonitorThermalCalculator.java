@@ -150,7 +150,10 @@ public class HostMonitorThermalCalculator {
 		// Find the host monitor
 		final Monitor hostMonitor = telemetryManager.getEndpointHostMonitor();
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Sets the host ambient temperature as the minimum of all temperature sensors
 		if (ambientTemperature < 35) {
@@ -224,7 +227,10 @@ public class HostMonitorThermalCalculator {
 		final double cpuWarningThresholdAverage
 	) {
 		// Get the average CPU temperature computed at the discovery level
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final double ambientToWarningDifference = cpuWarningThresholdAverage - ambientTemperature;
 
 		// Avoid the arithmetic exception

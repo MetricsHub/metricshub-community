@@ -199,7 +199,10 @@ class MonitoringTaskTest {
 		final Monitor host = hostFactory.createOrUpdateMonitor(HOSTNAME);
 		host.setIsEndpoint(true);
 
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			host,
 			AbstractStrategy.HOST_CONFIGURED_METRIC_NAME,

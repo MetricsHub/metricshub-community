@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -68,7 +69,7 @@ class TapeDriveMetricNormalizerTest {
 				)
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithBothMetrics);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				2.0,
 				monitorWithBothMetrics
@@ -121,7 +122,7 @@ class TapeDriveMetricNormalizerTest {
 				)
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithBothMetrics);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithBothMetrics);
 			assertEquals(
 				3.0,
 				monitorWithBothMetrics
@@ -148,7 +149,7 @@ class TapeDriveMetricNormalizerTest {
 				.metrics(new HashMap<>(Map.of("hw.errors", hwErrorsMetric)))
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithoutBothMetrics);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithoutBothMetrics);
 			assertEquals(
 				1.0,
 				monitorWithoutBothMetrics
@@ -186,7 +187,7 @@ class TapeDriveMetricNormalizerTest {
 				)
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithDegradedMetric);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithDegradedMetric);
 			assertNull(
 				monitorWithDegradedMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 			);
@@ -227,7 +228,7 @@ class TapeDriveMetricNormalizerTest {
 				)
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithCriticalMetric);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithCriticalMetric);
 			assertEquals(
 				1.0,
 				monitorWithCriticalMetric
@@ -251,7 +252,7 @@ class TapeDriveMetricNormalizerTest {
 				.metrics(new HashMap<>())
 				.build();
 
-			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithoutMetrics);
+			new TapeDriveMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithoutMetrics);
 			assertNull(
 				monitorWithoutMetrics.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE, NumberMetric.class)
 			);

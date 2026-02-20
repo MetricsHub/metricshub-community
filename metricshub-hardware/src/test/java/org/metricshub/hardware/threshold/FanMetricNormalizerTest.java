@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -59,7 +60,8 @@ class FanMetricNormalizerTest {
 				)
 				.build();
 
-			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwFanSpeedLimitMetric);
+			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwFanSpeedLimitMetric);
 			assertEquals(
 				1.0,
 				monitorWithHwFanSpeedLimitMetric
@@ -113,7 +115,8 @@ class FanMetricNormalizerTest {
 				)
 				.build();
 
-			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwFanSpeedLimitMetric);
+			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwFanSpeedLimitMetric);
 			assertEquals(
 				1.0,
 				monitorWithHwFanSpeedLimitMetric
@@ -141,7 +144,7 @@ class FanMetricNormalizerTest {
 				.metrics(new HashMap<>(Map.of("hw.fan.speed", hwFanSpeedMetric)))
 				.build();
 
-			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithoutHwFanSpeedLimit);
+			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithoutHwFanSpeedLimit);
 
 			assertEquals(
 				0.0,
@@ -186,7 +189,8 @@ class FanMetricNormalizerTest {
 				.build();
 			hwFanSpeedLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwFanSpeedLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwFanSpeedLimitMetric);
+			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwFanSpeedLimitMetric);
 			assertEquals(
 				2.2,
 				monitorWithHwFanSpeedLimitMetric
@@ -223,7 +227,8 @@ class FanMetricNormalizerTest {
 					)
 				)
 				.build();
-			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwFanSpeedLimitMetric);
+			new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwFanSpeedLimitMetric);
 			assertEquals(
 				1.8,
 				monitorWithHwFanSpeedLimitMetric
