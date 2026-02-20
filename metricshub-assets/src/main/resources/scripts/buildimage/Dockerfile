@@ -49,7 +49,9 @@ RUN bash package.sh /opt/jre /tmp/metricshub &&\
     mkdir -p /tmp/packages &&\
     mv /tmp/metricshub/*.deb /tmp/packages &&\
     cd /tmp/metricshub/ && \
-    tar cvzf /tmp/packages/metricshub-community-linux.tar.gz metricshub/ &&\
+    arch_name=$(uname -m) &&\
+    tar cvzf /tmp/packages/metricshub-community-linux-@project.version.noSnapshot@-${arch_name}.tar.gz metricshub/ &&\
+    if [ "$arch_name" = "x86_64" ]; then cp /tmp/packages/metricshub-community-linux-@project.version.noSnapshot@-${arch_name}.tar.gz /tmp/packages/metricshub-community-linux.tar.gz; fi &&\
     ls -al /tmp/packages
 
 #********************
@@ -72,6 +74,6 @@ RUN bash package.sh /opt/jre /tmp/packages &&\
 FROM debian:@debianTagName@
 
 COPY --from=debianbuilder /tmp/packages/*.deb /tmp/packages/
-COPY --from=debianbuilder /tmp/packages/metricshub-community-linux.tar.gz /tmp/packages/
+COPY --from=debianbuilder /tmp/packages/metricshub-community-linux*.tar.gz /tmp/packages/
 COPY --from=debianbuilder /tmp/metricshub/metricshub /opt/metricshub
 COPY --from=rhelbuilder /tmp/packages/*.rpm /tmp/packages/
