@@ -25,6 +25,7 @@ import static org.metricshub.hardware.util.HwCollectHelper.findMetricByNamePrefi
 
 import java.util.Map;
 import java.util.Optional;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -38,11 +39,12 @@ public class LunMetricNormalizer extends AbstractMetricNormalizer {
 	/**
 	 * Constructs a new instance of LunMetricNormalizer with the specified strategy time and hostname.
 	 *
-	 * @param strategyTime The strategy time in milliseconds.
-	 * @param hostname     The hostname of the monitor.
+	 * @param strategyTime   The strategy time in milliseconds.
+	 * @param hostname       The hostname of the monitor.
+	 * @param connectorStore The connector store.
 	 */
-	public LunMetricNormalizer(long strategyTime, String hostname) {
-		super(strategyTime, hostname);
+	public LunMetricNormalizer(long strategyTime, String hostname, ConnectorStore connectorStore) {
+		super(strategyTime, hostname, connectorStore);
 	}
 
 	/**

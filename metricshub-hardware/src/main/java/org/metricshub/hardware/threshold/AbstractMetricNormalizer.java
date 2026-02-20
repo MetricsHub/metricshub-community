@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
@@ -45,6 +46,7 @@ public abstract class AbstractMetricNormalizer {
 
 	protected long strategyTime;
 	protected String hostname;
+	protected ConnectorStore connectorStore;
 	private static final Pattern LIMIT_TYPE_PATTERN = Pattern.compile("limit_type\s*=\s*\"([^\"]+)\"");
 
 	/**
@@ -89,7 +91,7 @@ public abstract class AbstractMetricNormalizer {
 
 		// If both the degraded and critical metrics are not available, create a critical metric with the value 1
 		if (maybeDegradedMetric.isEmpty() && maybeCriticalMetric.isEmpty()) {
-			final MetricFactory metricFactory = new MetricFactory(hostname);
+			final MetricFactory metricFactory = new MetricFactory(hostname, connectorStore);
 			metricFactory.collectNumberMetric(
 				monitor,
 				String.format("hw.errors.limit{limit_type=\"critical\", hw.type=\"%s\"}", monitor.getType()),
@@ -128,7 +130,7 @@ public abstract class AbstractMetricNormalizer {
 	 * @param value The value of the metric
 	 */
 	protected void collectMetric(final Monitor monitor, final String metricName, final Double value) {
-		final MetricFactory metricFactory = new MetricFactory(hostname);
+		final MetricFactory metricFactory = new MetricFactory(hostname, connectorStore);
 		metricFactory.collectNumberMetric(monitor, metricName, value, strategyTime);
 	}
 

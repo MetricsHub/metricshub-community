@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -28,7 +29,7 @@ class GpuMetricNormalizerTest {
 
 	@Test
 	void testNormalizeGpuMemoryUtilizationLimitMetric() {
-		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME);
+		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore());
 
 		// Scenario 1: Both degraded and critical metrics are present and critical < degraded
 		NumberMetric criticalMetric = NumberMetric
@@ -150,7 +151,7 @@ class GpuMetricNormalizerTest {
 
 	@Test
 	void testNormalizeGpuUtilizationLimitMetric() {
-		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME);
+		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore());
 
 		// Scenario 1: Both degraded and critical metrics are present and critical < degraded
 		NumberMetric criticalMetric = NumberMetric
@@ -290,7 +291,11 @@ class GpuMetricNormalizerTest {
 				degradedGpuUtilizationMetric
 			)
 		);
-		final GpuMetricNormalizer gpuMetricNormalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME);
+		final GpuMetricNormalizer gpuMetricNormalizer = new GpuMetricNormalizer(
+			STRATEGY_TIME,
+			HOSTNAME,
+			new ConnectorStore()
+		);
 		setCollectTimes(criticalGpuUtilizationMetric);
 		setCollectTimes(degradedGpuUtilizationMetric);
 		gpuMetricNormalizer.normalize(monitor);

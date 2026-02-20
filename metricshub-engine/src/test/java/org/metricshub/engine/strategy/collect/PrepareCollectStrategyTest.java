@@ -65,7 +65,10 @@ class PrepareCollectStrategyTest {
 
 		final Monitor monitor = monitorFactory.createOrUpdateMonitor();
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		metricFactory.collectMonitorMetrics(
 			ENCLOSURE,

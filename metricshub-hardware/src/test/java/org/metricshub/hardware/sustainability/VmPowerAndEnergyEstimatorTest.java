@@ -42,7 +42,10 @@ class VmPowerAndEnergyEstimatorTest {
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(HOST).build())
 			.build();
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Prepare the monitors and their metrics
 
@@ -146,7 +149,10 @@ class VmPowerAndEnergyEstimatorTest {
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(HOST).build())
 			.build();
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Create the host monitor and set its power metric
 
@@ -207,7 +213,10 @@ class VmPowerAndEnergyEstimatorTest {
 		vm1Online.addAttribute(POWER_SOURCE_ID_ATTRIBUTE, host.getId());
 
 		// Set the power share metric of the vm monitor
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(vm1Online, HW_VM_POWER_SHARE_METRIC, 10.0, telemetryManager.getStrategyTime());
 
 		// Add the monitors to the telemetry manager

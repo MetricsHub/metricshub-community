@@ -78,7 +78,10 @@ public class PowerAndEnergyCollectHelper {
 		}
 
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(monitor, powerMetricName, estimatedPower, telemetryManager.getStrategyTime());
 
 		// Compute the estimated energy consumption
@@ -117,7 +120,10 @@ public class PowerAndEnergyCollectHelper {
 		);
 
 		// Create metricFactory to collect metrics
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Compute power and energy consumption
 		final Double computedPower;

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -25,7 +26,7 @@ class LunMetricNormalizerTest {
 		final Monitor monitor = Monitor.builder().id("monitorOne").type("lun").metrics(new HashMap<>()).build();
 
 		// Create and run the normalizer
-		new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+		new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 		// Validate the normalized metrics
 		assertNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -55,7 +56,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -83,7 +84,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertNotNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -114,7 +115,7 @@ class LunMetricNormalizerTest {
 			.build();
 
 		// Create and run the normalizer
-		new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+		new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 		// Validate the normalized metrics
 		assertNotNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -176,7 +177,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertNotNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -235,7 +236,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertNotNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
@@ -306,7 +307,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -349,7 +350,7 @@ class LunMetricNormalizerTest {
 				.build();
 
 			// Create and run the normalizer
-			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitor);
+			new LunMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitor);
 
 			// Validate the normalized metrics
 			assertNotNull(monitor.getMetric(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, NumberMetric.class));
