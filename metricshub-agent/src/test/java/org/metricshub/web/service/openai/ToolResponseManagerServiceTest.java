@@ -228,20 +228,20 @@ class ToolResponseManagerServiceTest {
 	void testTroubleshootOverLimitReturnsTruncatedManifest() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
 		properties.setMaxToolOutputBytes(600);
-		properties.setSafetyDeltaBytes(100); // authorized = 500 chars
+		properties.setSafetyDeltaBytes(100); // authorized = 500 bytes
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
 
-		// Build a response with sufficient monitors to guarantee exceeding 500 chars
-		// Each monitor adds ~50 chars, so 15 monitors ensures we exceed 500 chars
+		// Build a response with sufficient monitors to guarantee exceeding 500 bytes
+		// Each monitor adds ~50 bytes, so 15 monitors ensures we exceed 500 bytes
 		final var response = buildTroubleshootResponse("server1", Map.of("disk", 15));
 		final String toolResultJson = objectMapper.writeValueAsString(response);
 
 		// Assert that we've constructed input that exceeds the limit (deterministic)
 		assertTrue(
 			toolResultJson.length() > 500,
-			"Test setup error: JSON length (" + toolResultJson.length() + ") should exceed 500 chars"
+			"Test setup error: JSON length (" + toolResultJson.length() + ") should exceed 500 bytes"
 		);
 
 		final Path tempFile = setupMocks(toolName, toolResultJson, "file-ts-truncated");
