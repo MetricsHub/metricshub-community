@@ -110,7 +110,7 @@ class ChatControllerTest {
 		final List<Tool> tools = List.of();
 		final ToolResponseManagerService toolResponseManagerService = mock(ToolResponseManagerService.class);
 		final ObjectMapper objectMapper = new ObjectMapper();
-		when(toolResponseManagerService.adaptToolOutputOrManifest(any(), any())).thenAnswer(inv -> inv.getArgument(1));
+		when(toolResponseManagerService.adaptToolOutput(any(), any())).thenAnswer(inv -> inv.getArgument(1));
 		final ChatController controller = new ChatController(
 			Optional.of(client),
 			chatConfig,
