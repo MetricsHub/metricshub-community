@@ -447,10 +447,7 @@ public class ChatController {
 				throw new IllegalStateException("Tool " + toolName + " execution failed: " + ex.getMessage(), ex);
 			}
 
-			final String adaptedToolResultJson = toolResponseManagerService.adaptToolOutputOrManifest(
-				toolName,
-				toolResultJson
-			);
+			final String adaptedToolResultJson = toolResponseManagerService.adaptToolOutput(toolName, toolResultJson);
 
 			// Collect uploaded file IDs from the adapted tool result JSON
 			collectUploadedFile(adaptedToolResultJson).ifPresent(fileIds::add);

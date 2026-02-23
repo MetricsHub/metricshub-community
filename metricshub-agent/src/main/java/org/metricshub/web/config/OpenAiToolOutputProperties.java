@@ -35,9 +35,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @NoArgsConstructor
 public class OpenAiToolOutputProperties {
 
-	private long maxToolOutputBytes = 10_485_760;
+	/**
+	 * 1048576 bytes = 1 MiB
+	 * Which is a reasonable default limit for tool outputs before
+	 * we consider them for truncation or file storage.
+	 */
+	private long maxToolOutputBytes = 1048576;
 
-	private long safetyDeltaBytes = 2_097_152;
+	/**
+	 * 262144 bytes = 256 KiB
+	 * Additional safety buffer to account for JSON encoding overhead and ensure we stay within OpenAI's limits.
+	 */
+	private long safetyDeltaBytes = 262144;
 
 	private String baseTempDir = System.getProperty("java.io.tmpdir") + "/metricshub/ai";
 }
