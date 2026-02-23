@@ -142,6 +142,26 @@ const chatSlice = createSlice({
 			}
 		},
 		/**
+		 * Set the reasoning duration for a message
+		 * @param {ChatState} state
+		 * @param {Object} action
+		 * @param {number|string} action.payload.messageId - ID of the message to update
+		 * @param {number} action.payload.durationMs - Reasoning duration in milliseconds
+		 */
+		setReasoningDuration(state, action) {
+			const { messageId, durationMs } = action.payload;
+			const conversationId = state.currentConversationId;
+			if (!conversationId || !state.conversations[conversationId]) return;
+
+			const conversation = state.conversations[conversationId];
+			const messageIndex = conversation.messages.findIndex((msg) => {
+				return msg.id !== undefined && msg.id !== null && msg.id === messageId;
+			});
+			if (messageIndex !== -1) {
+				conversation.messages[messageIndex].reasoningDurationMs = durationMs;
+			}
+		},
+		/**
 		 * Set the current conversation
 		 * @param {ChatState} state
 		 * @param {Object} action
@@ -210,6 +230,7 @@ export const {
 	updateMessage,
 	appendToMessage,
 	appendReasoningToMessage,
+	setReasoningDuration,
 	setCurrentConversation,
 	deleteConversation,
 	clearAllConversations,
