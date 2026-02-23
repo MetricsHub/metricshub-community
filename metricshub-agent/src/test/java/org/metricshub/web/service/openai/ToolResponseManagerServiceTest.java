@@ -1,6 +1,7 @@
 package org.metricshub.web.service.openai;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -354,6 +355,6 @@ class ToolResponseManagerServiceTest {
 		assertTrue(description.contains("Some summary"));
 		assertTrue(description.contains("payload field"));
 		// Should NOT contain "Truncated entries:" when list is empty
-		assertTrue(!description.contains("Truncated entries:"));
+		assertFalse(description.contains("Truncated entries:"));
 	}
 }
