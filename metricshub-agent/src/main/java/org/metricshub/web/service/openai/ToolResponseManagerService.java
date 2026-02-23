@@ -65,6 +65,13 @@ public class ToolResponseManagerService {
 	private final ToolOutputFileUploadService uploadService;
 
 	/**
+	 * Maximum number of attempts to iteratively truncate and rebuild the manifest
+	 * to fit within the authorized size limit. Each attempt adjusts the payload budget
+	 * to account for the overhead of the manifest wrapper (description, file fields, JSON structure).
+	 */
+	private static final int MAX_TRUNCATION_ATTEMPTS = 3;
+
+	/**
 	 * Adapts tool output for OpenAI consumption.
 	 *
 	 * @param toolName       the name of the tool that produced the output
@@ -119,8 +126,15 @@ public class ToolResponseManagerService {
 	 * The full payload has already been uploaded. This method:
 	 * <ol>
 	 *   <li>Parses as MultiHostToolResponse&lt;TelemetryResult&gt;</li>
-	 *   <li>Truncates monitors (progressive halving, largest entry first) until the payload fits</li>
-	 *   <li>Returns a manifest with truncated data in payload + per-type summary in description + upload info</li>
+	 *   <li>Iteratively truncates monitors (progressive halving, largest entry first),
+	 *       builds the full manifest, and verifies the serialized manifest fits within
+	 *       {@code maxOutputSize}. After each oversize attempt the payload budget is
+	 *       reduced by the measured manifest overhead (description, file fields, JSON
+	 *       structure) so the next pass targets a tighter limit.</li>
+	 *   <li>If the manifest fits within the limit after truncation, returns it.</li>
+	 *   <li>If truncation cannot bring the manifest within the limit (e.g., no truncatable
+	 *       entries, or the overhead alone exceeds the budget), falls back to a generic
+	 *       manifest (upload info only, no payload).</li>
 	 * </ol>
 	 *
 	 * @param toolName       the tool name
@@ -128,7 +142,7 @@ public class ToolResponseManagerService {
 	 * @param fileId         the OpenAI file ID from the already-uploaded full payload
 	 * @param fileName       the file name for the manifest
 	 * @param maxOutputSize  the maximum allowed serialized size in UTF-8 bytes
-	 * @return the manifest JSON with truncated summary
+	 * @return the manifest JSON with truncated summary, or a generic manifest as fallback
 	 */
 	private String handleTroubleshootToolOutput(
 		final String toolName,
@@ -144,32 +158,81 @@ public class ToolResponseManagerService {
 				new TypeReference<MultiHostToolResponse<TelemetryResult>>() {}
 			);
 
-			// Truncate monitors (progressive halving, largest entry first) until we fit
-			final TelemetryResultTruncator.TruncationResult truncationResult = TelemetryResultTruncator.truncate(
-				fullResponse,
-				maxOutputSize,
-				objectMapper
+			// Iteratively truncate and verify the full manifest fits within maxOutputSize.
+			// The first pass targets the payload at maxOutputSize; subsequent passes reduce the
+			// budget to account for the manifest wrapper (description, file fields, JSON structure).
+			int payloadBudget = maxOutputSize;
+
+			for (int attempt = 0; attempt < MAX_TRUNCATION_ATTEMPTS; attempt++) {
+				// Truncate monitors (progressive halving, largest entry first) until payload fits
+				final TelemetryResultTruncator.TruncationResult truncationResult = TelemetryResultTruncator.truncate(
+					fullResponse,
+					payloadBudget,
+					objectMapper
+				);
+
+				// Build description with summary
+				final String description = buildTroubleshootDescription(
+					truncationResult.summary(),
+					truncationResult.truncatedEntries()
+				);
+
+				// Convert truncated response to JsonNode for the manifest payload
+				final JsonNode truncatedPayload = objectMapper.valueToTree(truncationResult.truncatedResponse());
+
+				// Build the full manifest
+				final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
+					.builder()
+					.openaiFileId(fileId)
+					.fileName(fileName)
+					.description(description)
+					.payload(truncatedPayload)
+					.build();
+
+				final String manifestJson = objectMapper.writeValueAsString(manifest);
+				final int manifestSizeBytes = manifestJson.getBytes(StandardCharsets.UTF_8).length;
+
+				// If the full manifest fits within the limit, return it
+				if (manifestSizeBytes <= maxOutputSize) {
+					return manifestJson;
+				}
+
+				// Compute the overhead added by the manifest wrapper (everything except the payload value)
+				final int payloadSizeBytes = objectMapper
+					.writeValueAsString(truncatedPayload)
+					.getBytes(StandardCharsets.UTF_8)
+					.length;
+				final int manifestOverhead = manifestSizeBytes - payloadSizeBytes;
+				final int newPayloadBudget = maxOutputSize - manifestOverhead;
+
+				// If we cannot reduce the budget further, stop iterating
+				if (newPayloadBudget <= 0 || newPayloadBudget >= payloadBudget) {
+					log.debug(
+						"Cannot reduce payload budget further (attempt={}, payloadBudget={}, newPayloadBudget={})",
+						attempt + 1,
+						payloadBudget,
+						newPayloadBudget
+					);
+					break;
+				}
+
+				payloadBudget = newPayloadBudget;
+				log.debug(
+					"Manifest exceeded limit (attempt={}, manifestSize={}, limit={}); retrying with payloadBudget={}",
+					attempt + 1,
+					manifestSizeBytes,
+					maxOutputSize,
+					payloadBudget
+				);
+			}
+
+			// Truncation could not bring the full manifest within the limit — fall back to generic manifest
+			log.warn(
+				"Troubleshooting manifest for tool '{}' still exceeds limit after truncation retries; " +
+				"falling back to generic manifest",
+				toolName
 			);
-
-			// Build description with summary
-			final String description = buildTroubleshootDescription(
-				truncationResult.summary(),
-				truncationResult.truncatedEntries()
-			);
-
-			// Convert truncated response to JsonNode for the manifest payload
-			final JsonNode truncatedPayload = objectMapper.valueToTree(truncationResult.truncatedResponse());
-
-			// Build and return manifest with truncated JsonNode in payload
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
-				.openaiFileId(fileId)
-				.fileName(fileName)
-				.description(description)
-				.payload(truncatedPayload)
-				.build();
-
-			return objectMapper.writeValueAsString(manifest);
+			return buildGenericManifest(fileName, fileId);
 		} catch (Exception e) {
 			log.warn(
 				"Failed to truncate troubleshoot response for tool '{}', falling back to generic manifest: {}",

@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -222,31 +223,36 @@ class ToolResponseManagerServiceTest {
 		}
 	}
 
-	// ---- Troubleshooting over limit: truncated manifest ----
+	// ---- Troubleshooting over limit: truncated manifest (with manifest size enforcement) ----
 
 	@Test
 	void testTroubleshootOverLimitReturnsTruncatedManifest() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(600);
-		properties.setSafetyDeltaBytes(100); // authorized = 500 chars
+		properties.setMaxToolOutputBytes(4500);
+		properties.setSafetyDeltaBytes(500); // authorized = 4000 bytes
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
 
-		// Build a response with sufficient monitors to guarantee exceeding 500 chars
-		// Each monitor adds ~50 chars, so 15 monitors ensures we exceed 500 chars
-		final var response = buildTroubleshootResponse("server1", Map.of("disk", 15));
+		// Build a response with 100 monitors to guarantee exceeding the 4000-byte limit.
+		// Each monitor adds ~55 bytes, so 100 monitors produces ~6000 bytes of payload.
+		final var response = buildTroubleshootResponse("server1", Map.of("disk", 100));
 		final String toolResultJson = objectMapper.writeValueAsString(response);
 
 		// Assert that we've constructed input that exceeds the limit (deterministic)
-		assertTrue(
-			toolResultJson.length() > 500,
-			"Test setup error: JSON length (" + toolResultJson.length() + ") should exceed 500 chars"
-		);
+		final int rawSizeBytes = toolResultJson.getBytes(StandardCharsets.UTF_8).length;
+		assertTrue(rawSizeBytes > 4000, "Test setup error: JSON byte size (" + rawSizeBytes + ") should exceed 4000 bytes");
 
 		final Path tempFile = setupMocks(toolName, toolResultJson, "file-ts-truncated");
 		try {
 			final String adapted = service.adaptToolOutput(toolName, toolResultJson);
+
+			// The returned manifest must fit within the authorized limit
+			final int adaptedSizeBytes = adapted.getBytes(StandardCharsets.UTF_8).length;
+			assertTrue(
+				adaptedSizeBytes <= 4000,
+				"Manifest size (" + adaptedSizeBytes + " bytes) should fit within authorized limit (4000 bytes)"
+			);
 
 			final JsonNode manifestNode = objectMapper.readTree(adapted);
 			assertEquals("tool_output_manifest", manifestNode.get("type").asText());
@@ -298,6 +304,95 @@ class ToolResponseManagerServiceTest {
 
 			verify(persistService).persist(toolName, toolResultJson);
 			verify(uploadService).uploadToOpenAi(any(Path.class));
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+	}
+
+	// ---- Troubleshooting over limit: no truncatable entries falls back to generic ----
+
+	@Test
+	void testTroubleshootOverLimitNoTruncatableEntriesFallsBackToGeneric() throws Exception {
+		final var properties = new OpenAiToolOutputProperties();
+		properties.setMaxToolOutputBytes(200);
+		properties.setSafetyDeltaBytes(50); // authorized = 150 bytes
+
+		final var service = newService(properties);
+		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
+
+		// Build a valid troubleshoot response with no monitors — only a long error message
+		final MultiHostToolResponse<TelemetryResult> response = MultiHostToolResponse
+			.<TelemetryResult>builder()
+			.hosts(
+				List.of(
+					HostToolResponse
+						.<TelemetryResult>builder()
+						.hostname("server1")
+						.response(TelemetryResult.builder().errorMessage("x".repeat(300)).build())
+						.build()
+				)
+			)
+			.build();
+		final String toolResultJson = objectMapper.writeValueAsString(response);
+
+		// Verify it exceeds the authorized limit
+		assertTrue(
+			toolResultJson.getBytes(StandardCharsets.UTF_8).length > 150,
+			"Test setup error: JSON should exceed 150 bytes"
+		);
+
+		final Path tempFile = setupMocks(toolName, toolResultJson, "file-no-truncatable");
+		try {
+			final String adapted = service.adaptToolOutput(toolName, toolResultJson);
+
+			// Should fall back to generic manifest since there is nothing to truncate
+			final JsonNode manifestNode = objectMapper.readTree(adapted);
+			assertEquals("tool_output_manifest", manifestNode.get("type").asText());
+			assertEquals("file-no-truncatable", manifestNode.get("openai_file_id").asText());
+			assertTrue(
+				manifestNode.get("payload") == null || manifestNode.get("payload").isNull(),
+				"Should fall back to generic manifest (no payload) when nothing is truncatable"
+			);
+		} finally {
+			Files.deleteIfExists(tempFile);
+		}
+	}
+
+	// ---- Troubleshooting over limit: manifest overhead accounted for via iterative truncation ----
+
+	@Test
+	void testTroubleshootManifestOverheadAccountedForIteratively() throws Exception {
+		final var properties = new OpenAiToolOutputProperties();
+		// Set a limit where the payload alone fits but the full manifest does not,
+		// forcing iterative truncation passes that account for manifest overhead.
+		properties.setMaxToolOutputBytes(3500);
+		properties.setSafetyDeltaBytes(300); // authorized = 3200 bytes
+
+		final var service = newService(properties);
+		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
+
+		// 60 monitors → ~3500-4000 bytes raw JSON, exceeds 3200-byte limit
+		final var response = buildTroubleshootResponse("server1", Map.of("disk", 60));
+		final String toolResultJson = objectMapper.writeValueAsString(response);
+
+		assertTrue(
+			toolResultJson.getBytes(StandardCharsets.UTF_8).length > 3200,
+			"Test setup error: raw JSON should exceed 3200 bytes"
+		);
+
+		final Path tempFile = setupMocks(toolName, toolResultJson, "file-ts-overhead");
+		try {
+			final String adapted = service.adaptToolOutput(toolName, toolResultJson);
+
+			final int adaptedSizeBytes = adapted.getBytes(StandardCharsets.UTF_8).length;
+			// The final manifest must fit within the authorized limit
+			assertTrue(
+				adaptedSizeBytes <= 3200,
+				"Manifest (" + adaptedSizeBytes + " bytes) should fit within authorized limit (3200 bytes)"
+			);
+
+			final JsonNode manifestNode = objectMapper.readTree(adapted);
+			assertEquals("tool_output_manifest", manifestNode.get("type").asText());
 		} finally {
 			Files.deleteIfExists(tempFile);
 		}
