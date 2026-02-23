@@ -323,12 +323,14 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Creates file operations implementation for remote file access using SSH.
-	 * Establishes SSH connection and authenticates before returning the operations instance.
+	 * Creates a {@link FileOperations} implementation for remote file access on Windows
+	 * using WMI or WinRM. Uses the configured {@link IWinRequestExecutor} to run
+	 * PowerShell commands for file size, content, and offset-based reads.
 	 *
-	 * @param hostname The hostname for SSH connection
-	 * @param telemetryManager The telemetry manager providing SSH configuration
-	 * @return A FileOperations implementation for remote file access, or null if SSH setup fails
+	 * @param hostname the hostname (for logging and context)
+	 * @param telemetryManager the telemetry manager providing Win (WMI/WinRM) configuration
+	 * @return a FileOperations implementation for remote Windows file access, or null if
+	 *         no WMI/WinRM configuration is available for this host
 	 */
 	private FileOperations createRemoteFileOperations(final String hostname, final TelemetryManager telemetryManager) {
 		// Find the configured protocol (WinRM or WMI)
