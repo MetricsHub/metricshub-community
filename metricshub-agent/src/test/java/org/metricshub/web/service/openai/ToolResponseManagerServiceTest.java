@@ -194,7 +194,7 @@ class ToolResponseManagerServiceTest {
 	void testNonTroubleshootOverLimitReturnsGenericManifest() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
 		properties.setMaxToolOutputBytes(100);
-		properties.setSafetyDeltaBytes(10); // authorized = 90 chars
+		properties.setSafetyDeltaBytes(10); // authorized = 90 bytes
 
 		final var service = newService(properties);
 		final String toolName = "RegularTool";
@@ -275,7 +275,7 @@ class ToolResponseManagerServiceTest {
 	void testTroubleshootFallbackOnParseError() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
 		properties.setMaxToolOutputBytes(100);
-		properties.setSafetyDeltaBytes(10); // authorized = 90 chars
+		properties.setSafetyDeltaBytes(10); // authorized = 90 bytes
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
