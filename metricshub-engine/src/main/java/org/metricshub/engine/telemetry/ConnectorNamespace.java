@@ -95,7 +95,7 @@ public class ConnectorNamespace {
 	 * Sets the event log cursor (RecordNumber) for the specified source.
 	 *
 	 * @param sourceKey the source key identifying the event log source
-	 * @param cursor the cursor value to set, or null to clear
+	 * @param cursor the cursor value to set.
 	 */
 	public void setEventLogCursor(@NonNull String sourceKey, @NonNull Integer cursor) {
 		eventLogSourceCursors.put(sourceKey, cursor);

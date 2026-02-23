@@ -374,7 +374,7 @@ public class FileSourceProcessor {
 					);
 
 					// Decode base64 result (trim in case PowerShell or transport added trailing newline/CR)
-					return new String(Base64.getDecoder().decode(result.trim()));
+					return new String(Base64.getDecoder().decode(result.trim()), StandardCharsets.UTF_8);
 				} catch (Exception e) {
 					log.info("Hostname {} - Unable to read file from offset: {}. Message: {}", hostname, path, e.getMessage());
 					log.debug("Hostname {} - Unable to read file from offset: {}. Exception: {}", hostname, path, e);
@@ -443,7 +443,7 @@ public class FileSourceProcessor {
 					);
 
 					// Decode base64 result (trim in case PowerShell or transport added trailing newline/CR)
-					return new String(Base64.getDecoder().decode(result.trim()));
+					return new String(Base64.getDecoder().decode(result.trim()), StandardCharsets.UTF_8);
 				} catch (Exception e) {
 					log.info("Hostname {} - Unable to get {} file content: {}", hostname, path, e.getMessage());
 					log.debug("Hostname {} - An error has occurred when reading the content of {}: {}", hostname, path, e);

@@ -136,8 +136,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor().process(commandLineSource, connectorId, telemetryManager);
-		} else if (source instanceof FileSource logSource) {
-			return new FileSourceProcessor().process(logSource, connectorId, telemetryManager);
+		} else if (source instanceof FileSource fileSource) {
+			return new FileSourceProcessor().process(fileSource, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

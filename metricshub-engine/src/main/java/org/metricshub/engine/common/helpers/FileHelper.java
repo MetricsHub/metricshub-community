@@ -380,7 +380,7 @@ public class FileHelper {
 	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
 	 *
 	 * @param value the string to escape
-	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or empty string if input is null
+	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or null if input is null
 	 */
 	public static String escapeNewLines(final String value) {
 		if (value == null) {

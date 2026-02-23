@@ -170,7 +170,14 @@ public class SizeDeserializer extends JsonDeserializer<Long> {
 			case "gigabytes":
 				return GIB;
 			default:
-				return MIB;
+				throw new IllegalArgumentException(
+					"Unsupported size unit: '" +
+					unit +
+					"'. Supported units include: b/byte/bytes, " +
+					"k/kb/ko/kib/kilo/kilobyte/kilobytes, " +
+					"m/mb/mo/mib/mega/megabyte/megabytes, " +
+					"g/gb/go/gib/gbyte/gbytes/giga/gigabyte/gigabytes."
+				);
 		}
 	}
 }
