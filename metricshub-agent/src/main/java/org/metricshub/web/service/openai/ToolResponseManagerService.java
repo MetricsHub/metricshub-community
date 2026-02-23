@@ -127,7 +127,7 @@ public class ToolResponseManagerService {
 	 * @param toolResultJson the full JSON output
 	 * @param fileId         the OpenAI file ID from the already-uploaded full payload
 	 * @param fileName       the file name for the manifest
-	 * @param maxOutputSize  the maximum allowed serialized size in characters
+	 * @param maxOutputSize  the maximum allowed serialized size in UTF-8 bytes
 	 * @return the manifest JSON with truncated summary
 	 */
 	private String handleTroubleshootToolOutput(
