@@ -232,15 +232,16 @@ class ToolResponseManagerServiceTest {
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
 
-		// Build a response with many monitors that will exceed 500 chars
-		final var response = buildTroubleshootResponse("server1", Map.of("disk", 30));
+		// Build a response with sufficient monitors to guarantee exceeding 500 chars
+		// Each monitor adds ~50 chars, so 15 monitors ensures we exceed 500 chars
+		final var response = buildTroubleshootResponse("server1", Map.of("disk", 15));
 		final String toolResultJson = objectMapper.writeValueAsString(response);
 
-		// Only proceed if the test data is actually over the limit
-		if (toolResultJson.length() <= 500) {
-			// Skip: test data too small for this limit; this shouldn't happen with 30 monitors
-			return;
-		}
+		// Assert that we've constructed input that exceeds the limit (deterministic)
+		assertTrue(
+			toolResultJson.length() > 500,
+			"Test setup error: JSON length (" + toolResultJson.length() + ") should exceed 500 chars"
+		);
 
 		final Path tempFile = setupMocks(toolName, toolResultJson, "file-ts-truncated");
 		try {
