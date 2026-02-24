@@ -25,7 +25,10 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
+import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.service.ConfigurationFilesService;
+import org.metricshub.web.service.VelocityTemplateService;
+import org.metricshub.web.service.VelocityTemplateService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,14 +40,19 @@ class ConfigurationFilesControllerTest {
 	private static final String METRICSHUB_YAML_FILE_NAME = "metricshub.yaml";
 	private MockMvc mockMvc;
 	private ConfigurationFilesService configurationFilesService;
+	private VelocityTemplateService velocityTemplateService;
 
 	private final ObjectMapper mapper = new ObjectMapper();
 
 	@BeforeEach
 	void setup() {
 		configurationFilesService = Mockito.mock(ConfigurationFilesService.class);
-		final ConfigurationFilesController controller = new ConfigurationFilesController(configurationFilesService);
-		mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+		velocityTemplateService = Mockito.mock(VelocityTemplateService.class);
+		final ConfigurationFilesController controller = new ConfigurationFilesController(
+			configurationFilesService,
+			velocityTemplateService
+		);
+		mockMvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(new RestExceptionHandler()).build();
 	}
 
 	@Test
@@ -220,6 +228,190 @@ class ConfigurationFilesControllerTest {
 
 		mockMvc
 			.perform(patch("/api/config-files/old.yaml").contentType(MediaType.APPLICATION_JSON).content(body))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void testShouldSaveVmFileWithTwoStepValidation() throws Exception {
+		final String vmContent = "#set($x = 1)\nresourceGroups: {}";
+		final String generatedYaml = "resourceGroups: {}";
+		final String vmFileName = "config.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
+		when(configurationFilesService.validate(generatedYaml, vmFileName))
+			.thenReturn(ConfigurationFilesService.Validation.ok(vmFileName));
+
+		final ConfigurationFile savedFile = ConfigurationFile
+			.builder()
+			.name(vmFileName)
+			.size(100L)
+			.lastModificationTime("2025-09-01T10:00:00Z")
+			.build();
+		doReturn(savedFile).when(configurationFilesService).saveOrUpdateFile(vmFileName, vmContent);
+
+		mockMvc
+			.perform(
+				put("/api/config-files/config.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent.getBytes(StandardCharsets.UTF_8))
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value(vmFileName));
+
+		verify(velocityTemplateService, times(1)).evaluate(vmFileName, vmContent);
+		verify(configurationFilesService, times(1)).validate(generatedYaml, vmFileName);
+		verify(configurationFilesService, times(1)).saveOrUpdateFile(vmFileName, vmContent);
+	}
+
+	@Test
+	void testShouldRejectVmFileWithVelocitySyntaxError() throws Exception {
+		final String vmContent = "#set($x = )";
+		final String vmFileName = "bad-syntax.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent))
+			.thenThrow(
+				new ConfigFilesException(
+					ConfigFilesException.Code.VALIDATION_FAILED,
+					"Velocity template evaluation failed: Encountered unexpected token"
+				)
+			);
+
+		mockMvc
+			.perform(
+				put("/api/config-files/bad-syntax.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent.getBytes(StandardCharsets.UTF_8))
+			)
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void testShouldRejectVmFileWithInvalidGeneratedYaml() throws Exception {
+		final String vmContent = "#set($x = 1)\nbad-yaml: [";
+		final String generatedYaml = "bad-yaml: [";
+		final String vmFileName = "bad-output.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
+		final DeserializationFailure failure = new DeserializationFailure();
+		failure.addError("Invalid YAML structure");
+		when(configurationFilesService.validate(generatedYaml, vmFileName))
+			.thenReturn(ConfigurationFilesService.Validation.fail(vmFileName, failure));
+
+		mockMvc
+			.perform(
+				put("/api/config-files/bad-output.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent.getBytes(StandardCharsets.UTF_8))
+			)
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void testShouldValidateVmFileWithTwoStepPipeline() throws Exception {
+		final String vmContent = "#set($x = 1)\nresourceGroups: {}";
+		final String generatedYaml = "resourceGroups: {}";
+		final String vmFileName = "config.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
+		when(configurationFilesService.validate(generatedYaml, vmFileName))
+			.thenReturn(ConfigurationFilesService.Validation.ok(vmFileName));
+
+		mockMvc
+			.perform(
+				post("/api/config-files/config.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent)
+					.accept(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.fileName").value(vmFileName))
+			.andExpect(jsonPath("$.valid").value(true));
+	}
+
+	@Test
+	void testShouldReturnValidationFailureWhenVmTemplateExecutionFails() throws Exception {
+		final String vmContent = "#set($x = )";
+		final String vmFileName = "bad-template.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent))
+			.thenThrow(
+				new ConfigFilesException(
+					ConfigFilesException.Code.VALIDATION_FAILED,
+					"Velocity template evaluation failed: syntax error"
+				)
+			);
+
+		mockMvc
+			.perform(
+				post("/api/config-files/bad-template.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent)
+					.accept(MediaType.APPLICATION_JSON)
+			)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.fileName").value(vmFileName))
+			.andExpect(jsonPath("$.valid").value(false))
+			.andExpect(jsonPath("$.errors[0].message").value("Velocity template evaluation failed: syntax error"));
+	}
+
+	@Test
+	void testShouldTestVelocityTemplateWithBodyContent() throws Exception {
+		final String vmContent = "#set($x = 1)\nresourceGroups: {}";
+		final String generatedYaml = "resourceGroups: {}";
+		final String vmFileName = "config.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
+
+		mockMvc
+			.perform(
+				post("/api/config-files/test/config.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent)
+					.accept(MediaType.TEXT_PLAIN)
+			)
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+			.andExpect(content().string(generatedYaml));
+
+		verify(velocityTemplateService, times(1)).evaluate(vmFileName, vmContent);
+	}
+
+	@Test
+	void testShouldTestVelocityTemplateWithoutBody() throws Exception {
+		final String generatedYaml = "resourceGroups: {}";
+		final String vmFileName = "config.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, null)).thenReturn(generatedYaml);
+
+		mockMvc
+			.perform(post("/api/config-files/test/config.vm").contentType(MediaType.TEXT_PLAIN).accept(MediaType.TEXT_PLAIN))
+			.andExpect(status().isOk())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+			.andExpect(content().string(generatedYaml));
+	}
+
+	@Test
+	void testShouldRejectTestForNonVmFile() throws Exception {
+		mockMvc
+			.perform(post("/api/config-files/test/config.yaml").contentType(MediaType.TEXT_PLAIN).content("a: 1"))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void testShouldReturnErrorWhenVelocityTestFails() throws Exception {
+		final String vmContent = "#set($x = )";
+		final String vmFileName = "bad.vm";
+
+		when(velocityTemplateService.evaluate(vmFileName, vmContent))
+			.thenThrow(
+				new ConfigFilesException(
+					ConfigFilesException.Code.VALIDATION_FAILED,
+					"Velocity template evaluation failed: Encountered unexpected token"
+				)
+			);
+
+		mockMvc
+			.perform(post("/api/config-files/test/bad.vm").contentType(MediaType.TEXT_PLAIN).content(vmContent))
 			.andExpect(status().isBadRequest());
 	}
 }

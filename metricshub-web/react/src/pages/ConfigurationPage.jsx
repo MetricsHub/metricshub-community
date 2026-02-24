@@ -6,6 +6,8 @@ import {
 	Button,
 	Chip,
 	CircularProgress,
+	Menu,
+	MenuItem,
 	Stack,
 	Drawer,
 	IconButton,
@@ -26,6 +28,7 @@ import {
 	deleteConfig,
 	renameConfig,
 	saveDraftConfig,
+	testVelocityTemplate,
 } from "../store/thunks/config-thunks";
 import {
 	select as selectFile,
@@ -34,9 +37,11 @@ import {
 	renameLocalFile,
 	deleteLocalFile,
 	clearError,
+	clearVelocityTestResult,
 } from "../store/slices/config-slice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
+import VelocityTestResultPanel from "../components/config/editor/VelocityTestResultPanel";
 import ConfigTree from "../components/config/tree/ConfigTree";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import QuestionDialog from "../components/common/QuestionDialog";
@@ -44,6 +49,7 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import { paths } from "../paths";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
+import { isVmFile } from "../utils/file-type-utils";
 import { useAuth } from "../hooks/use-auth";
 
 /**
@@ -61,6 +67,7 @@ function ConfigurationPage() {
 	const { name: routeName } = useParams();
 	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
 		useAppSelector((s) => s.config);
+	const velocityTestResult = useAppSelector((s) => s.config.velocityTestResult);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
 	const [deleteTarget, setDeleteTarget] = React.useState(null);
@@ -218,23 +225,64 @@ function ConfigurationPage() {
 		setDeleteOpen(false);
 	}, [dispatch, deleteTarget, list, selected, navigate]);
 
-	const handleCreate = React.useCallback(() => {
-		const base = "new-config.yaml.draft";
-		let name = base;
-		let i = 1;
-		while (list.some((f) => f.name === name)) {
-			name = `new-config-${i}.yaml.draft`;
-			i++;
-		}
+	const handleCreate = React.useCallback(
+		(type = "yaml") => {
+			const ext = type === "vm" ? "vm" : "yaml";
+			const base = `new-config.${ext}.draft`;
+			let name = base;
+			let i = 1;
+			while (list.some((f) => f.name === name)) {
+				name = `new-config-${i}.${ext}.draft`;
+				i++;
+			}
 
-		const content = "# MetricsHub Configuration\n\n";
-		dispatch(addLocalFile({ name, content }));
-		dispatch(saveDraftConfig({ name, content, skipValidation: true }));
+			const content =
+				type === "vm"
+					? "## MetricsHub Velocity Configuration Template\n" +
+						"## Available tools: $env, $file, $http, $sql, $json, $xml, $date, $math, $esc, $stringUtils\n" +
+						"## See https://metricshub.com/docs/programmable-configuration for documentation\n\n"
+					: "# MetricsHub Configuration\n\n";
+			dispatch(addLocalFile({ name, content }));
+			dispatch(saveDraftConfig({ name, content, skipValidation: true }));
 
-		navigate(paths.configurationFile(name), { replace: false });
-	}, [dispatch, list, navigate]);
+			navigate(paths.configurationFile(name), { replace: false });
+		},
+		[dispatch, list, navigate],
+	);
+
+	// Create menu state
+	const [createMenuAnchor, setCreateMenuAnchor] = React.useState(null);
+	const openCreateMenu = React.useCallback((e) => {
+		setCreateMenuAnchor(e.currentTarget);
+	}, []);
+	const closeCreateMenu = React.useCallback(() => setCreateMenuAnchor(null), []);
 
 	const editorRef = React.useRef(null);
+
+	/**
+	 * Test the current Velocity template by dispatching the test thunk.
+	 */
+	const handleTest = React.useCallback(() => {
+		if (!selected || !isVmFile(selected)) return;
+		const currentContent = filesByName[selected]?.content ?? "";
+		dispatch(testVelocityTemplate({ name: selected, content: currentContent }));
+	}, [dispatch, selected, filesByName]);
+
+	/**
+	 * Close the Velocity test result panel.
+	 */
+	const handleCloseTestResult = React.useCallback(() => {
+		dispatch(clearVelocityTestResult());
+	}, [dispatch]);
+
+	/**
+	 * Auto-close the test result panel when the user switches to a different file.
+	 */
+	React.useEffect(() => {
+		if (velocityTestResult && velocityTestResult.name !== selected) {
+			dispatch(clearVelocityTestResult());
+		}
+	}, [selected, velocityTestResult, dispatch]);
 
 	const handleMakeDraft = React.useCallback(
 		(fileName) => {
@@ -270,11 +318,37 @@ function ConfigurationPage() {
 					variant="outlined"
 					color="inherit"
 					startIcon={<AddIcon />}
-					onClick={handleCreate}
+					onClick={openCreateMenu}
 					disabled={isReadOnly}
 				>
 					Create
 				</Button>
+				<Menu
+					anchorEl={createMenuAnchor}
+					open={Boolean(createMenuAnchor)}
+					onClose={closeCreateMenu}
+					disableRestoreFocus
+					disableAutoFocusItem
+					anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+					transformOrigin={{ vertical: "top", horizontal: "left" }}
+				>
+					<MenuItem
+						onClick={() => {
+							closeCreateMenu();
+							handleCreate("yaml");
+						}}
+					>
+						New YAML config
+					</MenuItem>
+					<MenuItem
+						onClick={() => {
+							closeCreateMenu();
+							handleCreate("vm");
+						}}
+					>
+						New Velocity template
+					</MenuItem>
+				</Menu>
 
 				<Button
 					size="small"
@@ -287,7 +361,7 @@ function ConfigurationPage() {
 					Import
 					<input
 						type="file"
-						accept=".yaml,.yml"
+						accept=".yaml,.yml,.vm"
 						hidden
 						disabled={isReadOnly}
 						onChange={(e) => {
@@ -415,13 +489,36 @@ function ConfigurationPage() {
 								saving={saving}
 								onSave={() => editorRef.current?.save?.()}
 								onApply={() => editorRef.current?.apply?.()}
+								onTest={handleTest}
+								testLoading={!!velocityTestResult?.loading}
 								isReadOnly={isReadOnly}
 							/>
 						</Box>
 
 						{/* Let the editor take the remaining space without vh hacks */}
-						<Box sx={{ flex: 1, minHeight: 0 }}>
-							<ConfigEditorContainer ref={editorRef} />
+						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
+							{/* Editor - takes half or full width depending on test result */}
+							<Box sx={{ flex: 1, minWidth: 0 }}>
+								<ConfigEditorContainer ref={editorRef} />
+							</Box>
+							{/* Test result panel - shown alongside editor */}
+							{velocityTestResult && (
+								<Box
+									sx={{
+										flex: 1,
+										minWidth: 0,
+										borderLeft: 1,
+										borderColor: "divider",
+									}}
+								>
+									<VelocityTestResultPanel
+										result={velocityTestResult.result}
+										error={velocityTestResult.error}
+										loading={velocityTestResult.loading}
+										onClose={handleCloseTestResult}
+									/>
+								</Box>
+							)}
 						</Box>
 						{loadingContent && (
 							<Stack

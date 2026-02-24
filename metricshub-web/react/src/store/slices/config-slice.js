@@ -8,6 +8,7 @@ import {
 	validateConfig,
 	deleteConfig,
 	renameConfig,
+	testVelocityTemplate,
 } from "../thunks/config-thunks";
 
 const initialState = {
@@ -26,6 +27,7 @@ const initialState = {
 		order: [],
 		setsById: {},
 	},
+	velocityTestResult: null,
 };
 
 const slice = createSlice({
@@ -124,6 +126,9 @@ const slice = createSlice({
 		clearBackups(state) {
 			state.backups.order = [];
 			state.backups.setsById = {};
+		},
+		clearVelocityTestResult(state) {
+			state.velocityTestResult = null;
 		},
 	},
 	extraReducers: (b) => {
@@ -289,6 +294,61 @@ const slice = createSlice({
 				}
 
 				if (s.selected === oldName) s.selected = newName;
+			})
+
+			.addCase(testVelocityTemplate.pending, (s, a) => {
+				s.velocityTestResult = {
+					name: a.meta.arg.name,
+					result: null,
+					error: null,
+					loading: true,
+				};
+			})
+			.addCase(testVelocityTemplate.fulfilled, (s, a) => {
+				const name = a.payload.name;
+				s.velocityTestResult = {
+					name,
+					result: a.payload.result,
+					error: null,
+					loading: false,
+				};
+				// Clear per-file validation errors on successful test
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					s.filesByName[name] = { ...prev, validation: { valid: true, errors: [] } };
+				}
+			})
+			.addCase(testVelocityTemplate.rejected, (s, a) => {
+				const name = a.meta?.arg?.name;
+				const errorMsg = a.payload || a.error?.message;
+				s.velocityTestResult = {
+					name,
+					result: null,
+					error: errorMsg,
+					loading: false,
+				};
+				// Parse line/column from Velocity error messages such as:
+				// 'Encountered "#end" at file.vm[line 23, column 1]'
+				let line = null;
+				let column = null;
+				if (typeof errorMsg === "string") {
+					const m = errorMsg.match(/\[line\s+(\d+),\s*column\s+(\d+)\]/);
+					if (m) {
+						line = Number(m[1]);
+						column = Number(m[2]);
+					}
+				}
+				// Store error as per-file validation so the header shows the error
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					s.filesByName[name] = {
+						...prev,
+						validation: {
+							valid: false,
+							errors: [{ message: errorMsg, line, column }],
+						},
+					};
+				}
 			});
 	},
 });
@@ -302,5 +362,6 @@ export const {
 	deleteLocalFile,
 	deleteBackupSet,
 	clearBackups,
+	clearVelocityTestResult,
 } = slice.actions;
 export const configReducer = slice.reducer;

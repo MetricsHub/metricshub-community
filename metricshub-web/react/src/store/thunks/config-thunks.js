@@ -203,3 +203,20 @@ export const restoreConfigFromBackup = createAsyncThunk(
 		}
 	},
 );
+
+/**
+ * Test a Velocity template and return the generated YAML.
+ * @param {{name:string,content:string}} param0
+ * @returns {Promise<{name:string,result:string}>}
+ */
+export const testVelocityTemplate = createAsyncThunk(
+	"config/testVelocity",
+	async ({ name, content }, { rejectWithValue }) => {
+		try {
+			const result = await configApi.testVelocityTemplate(name, content);
+			return { name, result };
+		} catch (e) {
+			return rejectWithValue(e.message);
+		}
+	},
+);

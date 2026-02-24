@@ -50,34 +50,45 @@ public class VelocityConfigurationLoader {
 	 */
 	public String generateYaml() {
 		try {
-			// Initialize VelocityEngine
-			final var velocityEngine = new VelocityEngine();
-			var props = new Properties();
-			props.setProperty("resource.loaders", "file");
-			props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
-			props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
-			props.setProperty("resource.loader.file.cache", "false");
-			velocityEngine.init(props);
-
-			// Load template
-			var templateName = vmPath.getFileName().toString();
-			var template = velocityEngine.getTemplate(templateName, StandardCharsets.UTF_8.name());
-
-			// Prepare context
-			var context = new VelocityContext();
-
-			// Add tools to context
-			tools.forEach(context::put);
-
-			// Render template
-			var writer = new StringWriter();
-			template.merge(context, writer);
-
-			return writer.toString();
+			return generateYamlDangerous();
 		} catch (Exception e) {
 			log.error("Failed to evaluate Velocity template: '{}'. Error: {}", vmPath, e.getMessage());
 			log.debug("Velocity template evaluation exception:", e);
 			return null;
 		}
+	}
+
+	/**
+	 * Generates a YAML configuration from the Velocity template file,
+	 * propagating any exception instead of returning {@code null}.
+	 *
+	 * @return The generated YAML configuration as a String.
+	 * @throws Exception if the Velocity template evaluation fails
+	 */
+	public String generateYamlDangerous() throws Exception {
+		// Initialize VelocityEngine
+		final var velocityEngine = new VelocityEngine();
+		var props = new Properties();
+		props.setProperty("resource.loaders", "file");
+		props.setProperty("resource.loader.file.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader");
+		props.setProperty("resource.loader.file.path", vmPath.getParent().toString());
+		props.setProperty("resource.loader.file.cache", "false");
+		velocityEngine.init(props);
+
+		// Load template
+		var templateName = vmPath.getFileName().toString();
+		var template = velocityEngine.getTemplate(templateName, StandardCharsets.UTF_8.name());
+
+		// Prepare context
+		var context = new VelocityContext();
+
+		// Add tools to context
+		tools.forEach(context::put);
+
+		// Render template
+		var writer = new StringWriter();
+		template.merge(context, writer);
+
+		return writer.toString();
 	}
 }

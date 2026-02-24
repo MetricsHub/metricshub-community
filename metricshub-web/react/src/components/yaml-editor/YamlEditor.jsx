@@ -10,6 +10,8 @@ import { RangeSetBuilder } from "@codemirror/state";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
+import { velocity } from "../../utils/codemirror-velocity";
+import { isVmFile } from "../../utils/file-type-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
 const SAVE_DEBOUNCE_MS = 400; // reduce localStorage IO (align with validation debounce)
@@ -44,10 +46,11 @@ function buildSelectionWhitespaceDecorations(view) {
 }
 
 /**
- * YAML Editor component.
+ * Code editor component supporting YAML and Velocity Template Language.
+ * Automatically selects the appropriate language mode based on the file name.
  *
  * @param {{value?:string,onChange?:(val:string)=>void,onSave?:(val:string)=>void,height?:string,readOnly?:boolean}} props The component props.
- * @returns {JSX.Element} The YAML editor component.
+ * @returns {JSX.Element} The editor component.
  */
 export default function YamlEditor({
 	value,
@@ -156,8 +159,11 @@ export default function YamlEditor({
 			}
 		});
 
+		// Select language mode based on file type
+		const langExtension = isVmFile(fileName) ? velocity() : cmYaml();
+
 		return [
-			cmYaml(),
+			langExtension,
 			indentationMarkers({
 				// Make indent guides clearer in dark mode and a bit darker in light mode
 				colors: {
@@ -173,7 +179,7 @@ export default function YamlEditor({
 			followSelection,
 			...validationExtension,
 		];
-	}, [onSave, canSave, validationExtension]);
+	}, [onSave, canSave, validationExtension, fileName]);
 
 	/**
 	 * Handle document changes.
