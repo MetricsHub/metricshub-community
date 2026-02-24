@@ -47,7 +47,7 @@ public abstract class AbstractMetricNormalizer {
 	protected long strategyTime;
 	protected String hostname;
 	protected ConnectorStore connectorStore;
-	private static final Pattern LIMIT_TYPE_PATTERN = Pattern.compile("limit_type\s*=\s*\"([^\"]+)\"");
+	private static final Pattern LIMIT_TYPE_PATTERN = Pattern.compile("limit_type\\s*=\\s*\"([^\"]+)\"");
 
 	/**
 	 * Adjusts the corresponding monitor's metric as follows:
