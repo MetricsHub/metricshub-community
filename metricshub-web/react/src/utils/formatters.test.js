@@ -31,22 +31,18 @@ describe("formatReasoningDuration", () => {
 	});
 
 	it("handles edge cases near minute boundaries", () => {
-		// 59.4s rounds to 59s
+		// Under 60s: displayed with one decimal
 		expect(formatReasoningDuration(59400)).toBe("59.4s");
-
-		// 59.5s rounds to 60s (1m)
 		expect(formatReasoningDuration(59500)).toBe("59.5s");
-
-		// 59.6s should be displayed as seconds, not minutes
 		expect(formatReasoningDuration(59600)).toBe("59.6s");
 
-		// 60.4s rounds to 60s (1m)
+		// 60.4s: rounds to 60s total, displayed as 1m
 		expect(formatReasoningDuration(60400)).toBe("1m");
 
-		// 119.4s rounds to 119s (1m 59s)
+		// 119.4s: rounds to 119s total, displayed as 1m 59s
 		expect(formatReasoningDuration(119400)).toBe("1m 59s");
 
-		// 119.5s rounds to 120s (2m)
+		// 119.5s: rounds to 120s total, displayed as 2m
 		expect(formatReasoningDuration(119500)).toBe("2m");
 	});
 
