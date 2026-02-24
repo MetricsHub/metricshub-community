@@ -386,6 +386,9 @@ function ChatPage() {
 		return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
 	};
 
+	/**
+	 * Render the reasoning panel
+	 */
 	const renderReasoningPanel = () => {
 		const reasoningContent = selectedReasoningMessage?.reasoning?.trim() || "";
 		const reasoningDurationMs = selectedReasoningMessage?.reasoningDurationMs;
