@@ -60,7 +60,6 @@ export default function FileTreeItem({
 	const treeItemId = itemId ?? file.name;
 	const isDraft = file.name.endsWith(".draft");
 	const displayName = labelName ?? (isDraft ? file.name.replace(/\.draft$/, "") : file.name);
-	const isVm = isVmFile(file.name);
 	const fileType = getFileType(file.name);
 
 	// detect backup files: flat name using backupNames utils
