@@ -205,6 +205,9 @@ public class ToolResponseManagerService {
 				final long manifestOverhead = manifestSizeBytes - payloadSizeBytes;
 
 				// Validate manifestOverhead is non-negative (manifestSizeBytes should always be >= payloadSizeBytes)
+				// In theory, this should never happen as the manifest contains the payload plus additional fields.
+				// However, we handle this defensively: if it occurs, we stop truncation and fall back to the
+				// generic manifest (instead of throwing an exception) to ensure the tool can still return a result.
 				if (manifestOverhead < 0) {
 					log.warn(
 						"Unexpected negative manifest overhead (manifestSize={}, payloadSize={}); stopping truncation",
