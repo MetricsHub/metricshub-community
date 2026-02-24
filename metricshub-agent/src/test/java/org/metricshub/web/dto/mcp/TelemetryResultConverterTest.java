@@ -401,4 +401,55 @@ class TelemetryResultConverterTest {
 		assertNotNull(deserialized);
 		assertEquals(result.getMonitors().size(), deserialized.getMonitors().size());
 	}
+
+	@Test
+	void testMonitorsSortedByIdForStableOutput() {
+		// Use HashMap to simulate nondeterministic insertion order
+		final Map<String, Monitor> diskMonitors = new HashMap<>();
+
+		// Add monitors in a specific order (z-3, a-1, m-2)
+		final Monitor disk3 = Monitor.builder().build();
+		disk3.setType("disk");
+		disk3.getAttributes().put("device", "/dev/sdc");
+		disk3.addMetric("disk.utilization", NumberMetric.builder().name("disk.utilization").value(30.0).build());
+		diskMonitors.put("disk-z-3", disk3);
+
+		final Monitor disk1 = Monitor.builder().build();
+		disk1.setType("disk");
+		disk1.getAttributes().put("device", "/dev/sda");
+		disk1.addMetric("disk.utilization", NumberMetric.builder().name("disk.utilization").value(10.0).build());
+		diskMonitors.put("disk-a-1", disk1);
+
+		final Monitor disk2 = Monitor.builder().build();
+		disk2.setType("disk");
+		disk2.getAttributes().put("device", "/dev/sdb");
+		disk2.addMetric("disk.utilization", NumberMetric.builder().name("disk.utilization").value(20.0).build());
+		diskMonitors.put("disk-m-2", disk2);
+
+		final TelemetryManager tm = TelemetryManager.builder().build();
+		tm.getMonitors().put("disk", diskMonitors);
+
+		final MonitorsVo result = TelemetryResultConverter.toMonitorsVo(tm);
+		final List<MonitorTypeItem> diskItems = result.getMonitors().get("disk");
+
+		// Verify monitors appear in sorted order by ID: a-1, m-2, z-3
+		assertEquals(4, diskItems.size()); // 3 monitors + 1 summary
+
+		final MonitorVo firstMonitor = (MonitorVo) diskItems.get(0);
+		final MonitorVo secondMonitor = (MonitorVo) diskItems.get(1);
+		final MonitorVo thirdMonitor = (MonitorVo) diskItems.get(2);
+
+		// Monitors should be sorted by their map keys (IDs)
+		assertEquals("/dev/sda", firstMonitor.getAttributes().get("device")); // disk-a-1
+		assertEquals(10.0, (Double) firstMonitor.getMetrics().get("disk.utilization"), TOLERANCE);
+
+		assertEquals("/dev/sdb", secondMonitor.getAttributes().get("device")); // disk-m-2
+		assertEquals(20.0, (Double) secondMonitor.getMetrics().get("disk.utilization"), TOLERANCE);
+
+		assertEquals("/dev/sdc", thirdMonitor.getAttributes().get("device")); // disk-z-3
+		assertEquals(30.0, (Double) thirdMonitor.getMetrics().get("disk.utilization"), TOLERANCE);
+
+		// Last item should be the summary
+		assertTrue(diskItems.get(3) instanceof MonitorTypeSummaryVo);
+	}
 }

@@ -373,9 +373,6 @@ function ChatPage() {
 	);
 
 	/**
-	 * Render the reasoning panel
-	 */
-	/**
 	 * Format reasoning duration to a human-readable string.
 	 * @param {number} ms - Duration in milliseconds
 	 * @returns {string} Formatted duration (e.g. "2.3s", "1m 15s")
@@ -389,6 +386,9 @@ function ChatPage() {
 		return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
 	};
 
+	/**
+	 * Render the reasoning panel
+	 */
 	const renderReasoningPanel = () => {
 		const reasoningContent = selectedReasoningMessage?.reasoning?.trim() || "";
 		const reasoningDurationMs = selectedReasoningMessage?.reasoningDurationMs;

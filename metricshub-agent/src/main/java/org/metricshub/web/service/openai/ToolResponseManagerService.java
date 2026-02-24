@@ -348,7 +348,8 @@ public class ToolResponseManagerService {
 	 * @return the OpenAI file ID
 	 */
 	private String uploadToOpenAiFiles(final String toolName, final String toolResultJson) {
-		log.info("Uploading tool output to OpenAI Files API (tool={}, sizeChars={})", toolName, toolResultJson.length());
+		final int sizeBytes = toolResultJson.getBytes(StandardCharsets.UTF_8).length;
+		log.info("Uploading tool output to OpenAI Files API (tool={}, sizeBytes={})", toolName, sizeBytes);
 		final PersistedToolOutputFile persisted = persistService.persist(toolName, toolResultJson);
 		try {
 			final UploadedToolOutputManifest uploaded = uploadService.uploadToOpenAi(Path.of(persisted.getAbsolutePath()));
