@@ -373,9 +373,6 @@ function ChatPage() {
 	);
 
 	/**
-	 * Render the reasoning panel
-	 */
-	/**
 	 * Format reasoning duration to a human-readable string.
 	 * @param {number} ms - Duration in milliseconds
 	 * @returns {string} Formatted duration (e.g. "2.3s", "1m 15s")
