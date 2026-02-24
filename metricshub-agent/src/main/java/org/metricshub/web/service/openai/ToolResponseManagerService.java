@@ -107,7 +107,7 @@ public class ToolResponseManagerService {
 				sizeBytes,
 				authorizedLimitBytes
 			);
-			return handleTroubleshootToolOutput(toolName, toolResultJson, fileId, fileName, (int) authorizedLimitBytes);
+			return handleTroubleshootToolOutput(toolName, toolResultJson, fileId, fileName, authorizedLimitBytes);
 		}
 
 		log.info(
@@ -149,7 +149,7 @@ public class ToolResponseManagerService {
 		final String toolResultJson,
 		final String fileId,
 		final String fileName,
-		final int maxOutputSize
+		final long maxOutputSize
 	) {
 		try {
 			// Parse the full response
@@ -161,7 +161,7 @@ public class ToolResponseManagerService {
 			// Iteratively truncate and verify the full manifest fits within maxOutputSize.
 			// The first pass targets the payload at maxOutputSize; subsequent passes reduce the
 			// budget to account for the manifest wrapper (description, file fields, JSON structure).
-			int payloadBudget = maxOutputSize;
+			long payloadBudget = maxOutputSize;
 
 			for (int attempt = 0; attempt < MAX_TRUNCATION_ATTEMPTS; attempt++) {
 				// Truncate monitors (progressive halving, largest entry first) until payload fits
@@ -190,7 +190,7 @@ public class ToolResponseManagerService {
 					.build();
 
 				final String manifestJson = objectMapper.writeValueAsString(manifest);
-				final int manifestSizeBytes = manifestJson.getBytes(StandardCharsets.UTF_8).length;
+				final long manifestSizeBytes = manifestJson.getBytes(StandardCharsets.UTF_8).length;
 
 				// If the full manifest fits within the limit, return it
 				if (manifestSizeBytes <= maxOutputSize) {
@@ -198,14 +198,30 @@ public class ToolResponseManagerService {
 				}
 
 				// Compute the overhead added by the manifest wrapper (everything except the payload value)
-				final int payloadSizeBytes = objectMapper
+				final long payloadSizeBytes = objectMapper
 					.writeValueAsString(truncatedPayload)
 					.getBytes(StandardCharsets.UTF_8)
 					.length;
-				final int manifestOverhead = manifestSizeBytes - payloadSizeBytes;
-				final int newPayloadBudget = maxOutputSize - manifestOverhead;
+				final long manifestOverhead = manifestSizeBytes - payloadSizeBytes;
+
+				// Validate manifestOverhead is non-negative (manifestSizeBytes should always be >= payloadSizeBytes)
+				// In theory, this should never happen as the manifest contains the payload plus additional fields.
+				// However, we handle this defensively: if it occurs, we stop truncation and fall back to the
+				// generic manifest (instead of throwing an exception) to ensure the tool can still return a result.
+				if (manifestOverhead < 0) {
+					log.warn(
+						"Unexpected negative manifest overhead (manifestSize={}, payloadSize={}); stopping truncation",
+						manifestSizeBytes,
+						payloadSizeBytes
+					);
+					break;
+				}
+
+				final long newPayloadBudget = maxOutputSize - manifestOverhead;
 
 				// If we cannot reduce the budget further, stop iterating
+				// This happens when: 1) newPayloadBudget is non-positive (no room for payload)
+				// or 2) newPayloadBudget >= payloadBudget (no progress made, likely due to large overhead)
 				if (newPayloadBudget <= 0 || newPayloadBudget >= payloadBudget) {
 					log.debug(
 						"Cannot reduce payload budget further (attempt={}, payloadBudget={}, newPayloadBudget={})",
