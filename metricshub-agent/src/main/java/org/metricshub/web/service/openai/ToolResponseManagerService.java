@@ -203,6 +203,17 @@ public class ToolResponseManagerService {
 					.getBytes(StandardCharsets.UTF_8)
 					.length;
 				final long manifestOverhead = manifestSizeBytes - payloadSizeBytes;
+
+				// Validate manifestOverhead is positive (manifestSizeBytes should always be larger than payloadSizeBytes)
+				if (manifestOverhead <= 0) {
+					log.warn(
+						"Unexpected manifest overhead calculation (manifestSize={}, payloadSize={}); stopping truncation",
+						manifestSizeBytes,
+						payloadSizeBytes
+					);
+					break;
+				}
+
 				final long newPayloadBudget = maxOutputSize - manifestOverhead;
 
 				// If we cannot reduce the budget further, stop iterating
