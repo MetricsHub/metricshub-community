@@ -94,7 +94,7 @@ public class TelemetryResultTruncator {
 	 */
 	public static TruncationResult truncate(
 		final MultiHostToolResponse<TelemetryResult> response,
-		final int maxOutputSize,
+		final long maxOutputSize,
 		final ObjectMapper objectMapper
 	) {
 		// 1. If null/empty, return immediately with an empty summary
@@ -366,7 +366,7 @@ public class TelemetryResultTruncator {
 	 * @param s the string to measure
 	 * @return byte length in UTF-8 encoding
 	 */
-	private static int sizeInBytes(final String s) {
+	private static long sizeInBytes(final String s) {
 		return s.getBytes(StandardCharsets.UTF_8).length;
 	}
 }
