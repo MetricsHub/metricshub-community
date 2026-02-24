@@ -75,9 +75,11 @@ public class TelemetryResultConverter {
 				}
 
 				monitorsMap
-					.values()
-					.forEach(monitor -> {
-						final MonitorVo monitorVo = convertMonitor(monitor);
+					.entrySet()
+					.stream()
+					.sorted(Map.Entry.comparingByKey())
+					.forEach(entry -> {
+						final MonitorVo monitorVo = convertMonitor(entry.getValue());
 						monitorsByType.computeIfAbsent(monitorType, k -> new ArrayList<>()).add(monitorVo);
 					});
 			});
