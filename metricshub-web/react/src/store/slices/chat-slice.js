@@ -159,6 +159,7 @@ const chatSlice = createSlice({
 			});
 			if (messageIndex !== -1) {
 				conversation.messages[messageIndex].reasoningDurationMs = durationMs;
+				conversation.updatedAt = Date.now();
 			}
 		},
 		/**
