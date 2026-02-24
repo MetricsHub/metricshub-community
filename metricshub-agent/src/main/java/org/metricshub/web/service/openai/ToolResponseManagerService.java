@@ -204,10 +204,10 @@ public class ToolResponseManagerService {
 					.length;
 				final long manifestOverhead = manifestSizeBytes - payloadSizeBytes;
 
-				// Validate manifestOverhead is positive (manifestSizeBytes should always be larger than payloadSizeBytes)
-				if (manifestOverhead <= 0) {
+				// Validate manifestOverhead is non-negative (manifestSizeBytes should always be >= payloadSizeBytes)
+				if (manifestOverhead < 0) {
 					log.warn(
-						"Unexpected manifest overhead calculation (manifestSize={}, payloadSize={}); stopping truncation",
+						"Unexpected negative manifest overhead (manifestSize={}, payloadSize={}); stopping truncation",
 						manifestSizeBytes,
 						payloadSizeBytes
 					);
@@ -217,6 +217,8 @@ public class ToolResponseManagerService {
 				final long newPayloadBudget = maxOutputSize - manifestOverhead;
 
 				// If we cannot reduce the budget further, stop iterating
+				// This happens when: 1) newPayloadBudget is non-positive (no room for payload)
+				// or 2) newPayloadBudget >= payloadBudget (no progress made, likely due to large overhead)
 				if (newPayloadBudget <= 0 || newPayloadBudget >= payloadBudget) {
 					log.debug(
 						"Cannot reduce payload budget further (attempt={}, payloadBudget={}, newPayloadBudget={})",
