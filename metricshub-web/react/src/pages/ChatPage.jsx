@@ -36,6 +36,7 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatReasoningDuration } from "../utils/formatters";
 
 /**
  * Chat page component with professional system design
@@ -371,20 +372,6 @@ function ChatPage() {
 			)}
 		</Box>
 	);
-
-	/**
-	 * Format reasoning duration to a human-readable string.
-	 * @param {number} ms - Duration in milliseconds
-	 * @returns {string} Formatted duration (e.g. "2.3s", "1m 15s")
-	 */
-	const formatReasoningDuration = (ms) => {
-		if (ms < 1000) return `${ms}ms`;
-		const totalSeconds = Math.round(ms / 100) / 10; // one decimal
-		if (totalSeconds < 60) return `${totalSeconds}s`;
-		const minutes = Math.floor(totalSeconds / 60);
-		const seconds = Math.round(totalSeconds % 60);
-		return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
-	};
 
 	/**
 	 * Render the reasoning panel
