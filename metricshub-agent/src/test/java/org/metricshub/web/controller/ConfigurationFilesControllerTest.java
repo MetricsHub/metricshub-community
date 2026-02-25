@@ -28,7 +28,6 @@ import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.metricshub.web.service.VelocityTemplateService;
-import org.metricshub.web.service.VelocityTemplateService;
 import org.mockito.Mockito;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
