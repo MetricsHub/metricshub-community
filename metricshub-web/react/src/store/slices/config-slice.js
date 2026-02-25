@@ -293,7 +293,13 @@ const slice = createSlice({
 					delete s.originalsByName[oldName];
 				}
 
-				if (s.selected === oldName) s.selected = newName;
+				// Do NOT update s.selected here.
+				// Callers navigate after rename; the URL-sync effect
+				// will update selected from the new route.
+				// Updating selected here causes a race: Redux triggers a
+				// synchronous re-render before navigate() runs, so the
+				// URL-sync effect sees stale routeName ≠ new selected
+				// and fires a spurious fetch for the old (deleted) file.
 			})
 
 			.addCase(testVelocityTemplate.pending, (s, a) => {

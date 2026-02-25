@@ -25,9 +25,11 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
+import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.service.ConfigurationFilesService;
 import org.metricshub.web.service.VelocityTemplateService;
 import org.springframework.http.HttpStatus;
@@ -205,7 +207,7 @@ public class ConfigurationFilesController {
 				return ResponseEntity.ok(configurationFilesService.validate(generatedYaml, fileName));
 			} catch (ConfigFilesException e) {
 				// Template execution failed — wrap as validation failure with line/column
-				final var failure = new org.metricshub.agent.deserialization.DeserializationFailure();
+				final var failure = new DeserializationFailure();
 				addVelocityError(failure, e.getMessage());
 				return ResponseEntity.ok(ConfigurationFilesService.Validation.fail(fileName, failure, e));
 			}
@@ -309,18 +311,21 @@ public class ConfigurationFilesController {
 	 * @param fileName the .vm file name
 	 * @param content  optional template content from the editor
 	 * @return the generated YAML as plain text
-	 * @throws ConfigFilesException if evaluation fails
 	 */
 	@PostMapping(value = "/test/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> testVelocityTemplate(
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content
-	) throws ConfigFilesException {
+	) {
 		if (!ConfigurationFilesService.isVmFile(fileName)) {
-			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_EXTENSION, "Only .vm files can be tested.");
+			throw new TextPlainException(HttpStatus.BAD_REQUEST, "Only .vm files can be tested.");
 		}
-		final String result = velocityTemplateService.evaluate(fileName, content);
-		return ResponseEntity.ok(result);
+		try {
+			final String result = velocityTemplateService.evaluate(fileName, content);
+			return ResponseEntity.ok(result);
+		} catch (ConfigFilesException e) {
+			throw new TextPlainException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+		}
 	}
 
 	/**
@@ -333,10 +338,7 @@ public class ConfigurationFilesController {
 	 * @param failure the failure container to add the error to
 	 * @param message the error message to parse
 	 */
-	private static void addVelocityError(
-		final org.metricshub.agent.deserialization.DeserializationFailure failure,
-		final String message
-	) {
+	private static void addVelocityError(final DeserializationFailure failure, final String message) {
 		if (message == null) {
 			failure.addError("Velocity template evaluation failed.");
 			return;

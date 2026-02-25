@@ -108,8 +108,14 @@ export default function EditorHeader({
 							startIcon={<DoneAllIcon />}
 							onClick={onApply}
 							disabled={!selected || saving || isReadOnly}
-							variant="text"
-							color="secondary"
+							variant="contained"
+							sx={{
+								background: "linear-gradient(135deg, #7b1fa2 0%, #ce93d8 100%)",
+								color: "#fff",
+								"&:hover": {
+									background: "linear-gradient(135deg, #6a1b9a 0%, #ab47bc 100%)",
+								},
+							}}
 						>
 							{saving ? "Applying..." : "Apply"}
 						</Button>
@@ -138,6 +144,15 @@ export default function EditorHeader({
 						onClick={onSave}
 						disabled={!selected || isBackup || !isDirty || saving || isReadOnly}
 						variant="contained"
+						sx={{
+							"&:not(.Mui-disabled)": {
+								background: "linear-gradient(135deg, #0A58CA 0%, #267DF4 100%)",
+								color: "#fff",
+							},
+							"&:hover:not(.Mui-disabled)": {
+								background: "linear-gradient(135deg, #084298 0%, #0A58CA 100%)",
+							},
+						}}
 					>
 						{saving ? "Saving..." : "Save"}
 					</Button>

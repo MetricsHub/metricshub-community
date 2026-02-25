@@ -392,8 +392,15 @@ class ConfigurationFilesControllerTest {
 	@Test
 	void testShouldRejectTestForNonVmFile() throws Exception {
 		mockMvc
-			.perform(post("/api/config-files/test/config.yaml").contentType(MediaType.TEXT_PLAIN).content("a: 1"))
-			.andExpect(status().isBadRequest());
+			.perform(
+				post("/api/config-files/test/config.yaml")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content("a: 1")
+					.accept(MediaType.TEXT_PLAIN)
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+			.andExpect(content().string("Only .vm files can be tested."));
 	}
 
 	@Test
@@ -410,7 +417,14 @@ class ConfigurationFilesControllerTest {
 			);
 
 		mockMvc
-			.perform(post("/api/config-files/test/bad.vm").contentType(MediaType.TEXT_PLAIN).content(vmContent))
-			.andExpect(status().isBadRequest());
+			.perform(
+				post("/api/config-files/test/bad.vm")
+					.contentType(MediaType.TEXT_PLAIN)
+					.content(vmContent)
+					.accept(MediaType.TEXT_PLAIN)
+			)
+			.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_PLAIN))
+			.andExpect(content().string("Velocity template evaluation failed: Encountered unexpected token"));
 	}
 }

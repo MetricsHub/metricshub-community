@@ -152,12 +152,12 @@ function ConfigurationPage() {
 	 * Decides between local rename and backend rename based on file metadata.
 	 */
 	const handleInlineRename = React.useCallback(
-		(oldName, newName) => {
+		async (oldName, newName) => {
 			const meta = list.find((f) => f.name === oldName);
 			if (meta?.localOnly) {
 				dispatch(renameLocalFile({ oldName, newName }));
 			} else {
-				dispatch(renameConfig({ oldName, newName }));
+				await dispatch(renameConfig({ oldName, newName })).unwrap();
 			}
 			if (routeName && decodeURIComponent(routeName) === oldName) {
 				navigate(paths.configurationFile(newName), { replace: true });
@@ -240,7 +240,8 @@ function ConfigurationPage() {
 				type === "vm"
 					? "## MetricsHub Velocity Configuration Template\n" +
 						"## Available tools: $env, $file, $http, $sql, $json, $xml, $date, $math, $esc, $stringUtils\n" +
-						"## See https://metricshub.com/docs/programmable-configuration for documentation\n\n"
+						"## See https://metricshub.com/docs/programmable-configuration for documentation\n" +
+						"resources:\n\n"
 					: "# MetricsHub Configuration\n\n";
 			dispatch(addLocalFile({ name, content }));
 			dispatch(saveDraftConfig({ name, content, skipValidation: true }));
@@ -285,12 +286,12 @@ function ConfigurationPage() {
 	}, [selected, velocityTestResult, dispatch]);
 
 	const handleMakeDraft = React.useCallback(
-		(fileName) => {
+		async (fileName) => {
 			const newName = fileName + ".draft";
 			if (list.some((f) => f.name === fileName && f.localOnly)) {
 				dispatch(renameLocalFile({ oldName: fileName, newName }));
 			} else {
-				dispatch(renameConfig({ oldName: fileName, newName }));
+				await dispatch(renameConfig({ oldName: fileName, newName })).unwrap();
 			}
 			if (selected === fileName) {
 				navigate(paths.configurationFile(newName), { replace: true });
