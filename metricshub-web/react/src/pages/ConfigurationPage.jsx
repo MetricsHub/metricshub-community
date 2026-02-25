@@ -240,7 +240,7 @@ function ConfigurationPage() {
 				type === "vm"
 					? "## MetricsHub Velocity Configuration Template\n" +
 						"## Available tools: $env, $file, $http, $sql, $json, $xml, $date, $math, $esc, $stringUtils\n" +
-						"## See https://metricshub.com/docs/programmable-configuration for documentation\n" +
+						"## See https://metricshub.com/docs/latest/configuration/programmable-configuration for documentation\n" +
 						"resources:\n\n"
 					: "# MetricsHub Configuration\n\n";
 			dispatch(addLocalFile({ name, content }));

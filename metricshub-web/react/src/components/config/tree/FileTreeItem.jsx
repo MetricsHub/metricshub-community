@@ -41,6 +41,7 @@ export default function FileTreeItem({
 	labelName, // optional display name
 	onSelect, // optional, used to navigate after restore
 	isReadOnly = false,
+	isSelected = false,
 }) {
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -265,7 +266,7 @@ export default function FileTreeItem({
 								noWrap
 								title={displayName}
 								sx={{
-									fontWeight: isDirty ? 510 : 500,
+									fontWeight: isSelected ? "bold" : isDirty ? 510 : 500,
 									overflow: "hidden",
 									textOverflow: "ellipsis",
 								}}
