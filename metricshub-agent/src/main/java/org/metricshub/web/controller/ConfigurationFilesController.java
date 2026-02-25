@@ -315,16 +315,12 @@ public class ConfigurationFilesController {
 	public ResponseEntity<String> testVelocityTemplate(
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content
-	) {
+	) throws ConfigFilesException {
 		if (!ConfigurationFilesService.isVmFile(fileName)) {
-			return ResponseEntity.badRequest().body("Only .vm files can be tested.");
+			throw new ConfigFilesException(ConfigFilesException.Code.INVALID_EXTENSION, "Only .vm files can be tested.");
 		}
-		try {
-			final String result = velocityTemplateService.evaluate(fileName, content);
-			return ResponseEntity.ok(result);
-		} catch (ConfigFilesException e) {
-			return ResponseEntity.badRequest().body(e.getMessage());
-		}
+		final String result = velocityTemplateService.evaluate(fileName, content);
+		return ResponseEntity.ok(result);
 	}
 
 	/**
