@@ -110,10 +110,10 @@ export default function EditorHeader({
 							disabled={!selected || saving || isReadOnly}
 							variant="contained"
 							sx={{
-								background: "linear-gradient(135deg, #7b1fa2 0%, #ce93d8 100%)",
+								background: "linear-gradient(135deg, #167c4cff 0%, #45ce52 100%)",
 								color: "#fff",
 								"&:hover": {
-									background: "linear-gradient(135deg, #6a1b9a 0%, #ab47bc 100%)",
+									background: "linear-gradient(135deg, #115e3a 0%, #36a843 100%)",
 								},
 							}}
 						>
@@ -123,17 +123,11 @@ export default function EditorHeader({
 					{isVm && onTest && (
 						<Button
 							size="small"
+							variant="outlined"
+							color="inherit"
 							startIcon={<PlayArrowIcon />}
 							onClick={onTest}
 							disabled={!selected || saving || testLoading}
-							variant="contained"
-							sx={{
-								background: "linear-gradient(135deg, #167c4cff 0%, #45ce52 100%)",
-								color: "#fff",
-								"&:hover": {
-									background: "linear-gradient(135deg, #115e3a 0%, #36a843 100%)",
-								},
-							}}
 						>
 							{testLoading ? "Testing..." : "Test"}
 						</Button>
