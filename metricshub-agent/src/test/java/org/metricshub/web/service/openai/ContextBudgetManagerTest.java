@@ -190,7 +190,7 @@ class ContextBudgetManagerTest {
 		// When: allocating and then refunding
 		manager.allocate(35000); // ~10000 tokens
 		final int afterAllocation = manager.getRemainingTokens();
-		manager.refund(5000); // Refund half
+		manager.refund(5000); // Refund 5000 tokens
 		final int afterRefund = manager.getRemainingTokens();
 
 		// Then: remaining should increase after refund

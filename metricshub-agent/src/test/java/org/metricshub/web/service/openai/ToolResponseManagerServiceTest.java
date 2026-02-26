@@ -473,7 +473,7 @@ class ToolResponseManagerServiceTest {
 
 			// Then: budget should be refunded since generic manifest is much smaller than allocated
 			final int actualManifestSize = adapted.length();
-			final int expectedTokensUsed = (int) Math.ceil(actualManifestSize / 3.5);
+			final int expectedTokensUsed = (int) Math.ceil(actualManifestSize / ContextBudgetManager.CHARS_PER_TOKEN);
 
 			// The actual tokens consumed should be close to the manifest size, not the allocated size
 			final int actualTokensConsumed = tokensBeforeAllocation - tokensAfterAllocation;
