@@ -129,8 +129,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testUnderLimitReturnsManifestWithFullPayload() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(10_000);
-		properties.setSafetyDeltaBytes(1_000);
+		properties.setMaxToolOutputBytes(9_000);
 
 		final var service = newService(properties);
 		final String toolName = "RegularTool";
@@ -165,8 +164,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testTroubleshootingToolUnderLimitReturnsManifestWithFullPayload() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(100_000);
-		properties.setSafetyDeltaBytes(10_000);
+		properties.setMaxToolOutputBytes(90_000);
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
@@ -194,8 +192,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testNonTroubleshootOverLimitReturnsGenericManifest() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(100);
-		properties.setSafetyDeltaBytes(10); // authorized = 90 bytes
+		properties.setMaxToolOutputBytes(90); // 90 bytes limit
 
 		final var service = newService(properties);
 		final String toolName = "RegularTool";
@@ -228,8 +225,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testTroubleshootOverLimitReturnsTruncatedManifest() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(4500);
-		properties.setSafetyDeltaBytes(500); // authorized = 4000 bytes
+		properties.setMaxToolOutputBytes(4000); // 4000 bytes limit
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
@@ -280,8 +276,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testTroubleshootFallbackOnParseError() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(100);
-		properties.setSafetyDeltaBytes(10); // authorized = 90 bytes
+		properties.setMaxToolOutputBytes(90); // 90 bytes limit
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
@@ -314,8 +309,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testTroubleshootOverLimitNoTruncatableEntriesFallsBackToGeneric() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(200);
-		properties.setSafetyDeltaBytes(50); // authorized = 150 bytes
+		properties.setMaxToolOutputBytes(150); // 150 bytes limit
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
@@ -365,8 +359,7 @@ class ToolResponseManagerServiceTest {
 		final var properties = new OpenAiToolOutputProperties();
 		// Set a limit where the payload alone fits but the full manifest does not,
 		// forcing iterative truncation passes that account for manifest overhead.
-		properties.setMaxToolOutputBytes(3500);
-		properties.setSafetyDeltaBytes(300); // authorized = 3200 bytes
+		properties.setMaxToolOutputBytes(3200); // 3200 bytes limit
 
 		final var service = newService(properties);
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
@@ -403,8 +396,7 @@ class ToolResponseManagerServiceTest {
 	@Test
 	void testUploadAlwaysCalledRegardlessOfSize() throws Exception {
 		final var properties = new OpenAiToolOutputProperties();
-		properties.setMaxToolOutputBytes(100_000);
-		properties.setSafetyDeltaBytes(1_000);
+		properties.setMaxToolOutputBytes(99_000);
 
 		final var service = newService(properties);
 		final String toolName = "SomeTool";

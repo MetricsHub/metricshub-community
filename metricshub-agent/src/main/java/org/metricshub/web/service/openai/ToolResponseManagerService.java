@@ -73,6 +73,8 @@ public class ToolResponseManagerService {
 
 	/**
 	 * Adapts tool output for OpenAI consumption.
+	 * Automatically uses the context budget manager from {@link ContextBudgetHolder}
+	 * if one is set for the current request.
 	 *
 	 * @param toolName       the name of the tool that produced the output
 	 * @param toolResultJson the raw JSON output from the tool
@@ -87,11 +89,80 @@ public class ToolResponseManagerService {
 		final String fileId = uploadToOpenAiFiles(toolName, toolResultJson);
 		final String fileName = toolName + "_output.json";
 
-		// Compute authorized byte limit (safetyDelta provides margin for manifest wrapper)
-		final long authorizedLimitBytes = Math.max(
-			0,
-			properties.getMaxToolOutputBytes() - properties.getSafetyDeltaBytes()
-		);
+		// Check for a budget manager set by the controller
+		final ContextBudgetManager budgetManager = ContextBudgetHolder.get();
+		if (budgetManager != null) {
+			return adaptToolOutputWithBudget(toolName, toolResultJson, fileId, fileName, budgetManager);
+		}
+
+		// No budget manager - use existing per-tool truncation logic
+		return adaptToolOutputNoBudget(toolName, toolResultJson, fileId, fileName);
+	}
+
+	/**
+	 * Adapts tool output using the global context budget manager.
+	 * Uses tiered allocation to progressively degrade output quality as budget is consumed.
+	 *
+	 * @param toolName       the tool name
+	 * @param toolResultJson the raw JSON output
+	 * @param fileId         the OpenAI file ID
+	 * @param fileName       the file name
+	 * @param budgetManager  the context budget manager
+	 * @return the manifest JSON
+	 */
+	private String adaptToolOutputWithBudget(
+		final String toolName,
+		final String toolResultJson,
+		final String fileId,
+		final String fileName,
+		final ContextBudgetManager budgetManager
+	) {
+		// Request budget allocation
+		final ContextBudgetManager.AllocationResult allocation = budgetManager.allocate(toolResultJson.length());
+
+		return switch (allocation.tier()) {
+			case FULL -> buildManifestWithPayload(fileName, fileId, toolResultJson);
+			case TRUNCATED -> {
+				if (isTroubleshootingTool(toolName)) {
+					yield handleTroubleshootToolOutputWithBudget(
+						toolName,
+						toolResultJson,
+						fileId,
+						fileName,
+						allocation.availableChars()
+					);
+				}
+				// Non-troubleshooting: can't smart-truncate, fall back to file reference
+				yield buildGenericManifest(fileName, fileId);
+			}
+			case SUMMARY_ONLY -> {
+				if (isTroubleshootingTool(toolName)) {
+					yield handleTroubleshootSummaryOnly(toolName, toolResultJson, fileId, fileName);
+				}
+				yield buildGenericManifest(fileName, fileId);
+			}
+			case FILE_REFERENCE_ONLY -> buildFileReferenceOnlyManifest(fileName, fileId);
+		};
+	}
+
+	/**
+	 * Original behavior when no budget manager is set.
+	 * Uses per-tool truncation based on maxToolOutputBytes.
+	 *
+	 * @param toolName       the tool name
+	 * @param toolResultJson the raw JSON output
+	 * @param fileId         the OpenAI file ID
+	 * @param fileName       the file name
+	 * @return the manifest JSON
+	 */
+	private String adaptToolOutputNoBudget(
+		final String toolName,
+		final String toolResultJson,
+		final String fileId,
+		final String fileName
+	) {
+		// Get the configured byte limit for tool outputs
+		final long authorizedLimitBytes = properties.getMaxToolOutputBytes();
 		final int sizeBytes = toolResultJson.getBytes(StandardCharsets.UTF_8).length;
 
 		// If under the size limit → return manifest with full JSON in payload field + file reference
@@ -257,6 +328,141 @@ public class ToolResponseManagerService {
 			);
 			log.debug("Exception details:", e);
 			return buildGenericManifest(fileName, fileId);
+		}
+	}
+
+	/**
+	 * Handles troubleshooting tool output with a specific character budget from the global context budget manager.
+	 * Uses the TelemetryResultTruncator with the budget as the max size.
+	 *
+	 * @param toolName       the tool name
+	 * @param toolResultJson the full JSON output
+	 * @param fileId         the OpenAI file ID
+	 * @param fileName       the file name
+	 * @param budgetChars    the allocated character budget
+	 * @return the manifest JSON with truncated payload
+	 */
+	private String handleTroubleshootToolOutputWithBudget(
+		final String toolName,
+		final String toolResultJson,
+		final String fileId,
+		final String fileName,
+		final int budgetChars
+	) {
+		try {
+			final MultiHostToolResponse<TelemetryResult> fullResponse = objectMapper.readValue(
+				toolResultJson,
+				new TypeReference<MultiHostToolResponse<TelemetryResult>>() {}
+			);
+
+			// Use the allocated budget as the max size for truncation
+			final TelemetryResultTruncator.TruncationResult truncationResult = TelemetryResultTruncator.truncate(
+				fullResponse,
+				budgetChars,
+				objectMapper
+			);
+
+			final String description = buildTroubleshootDescription(
+				truncationResult.summary(),
+				truncationResult.truncatedEntries()
+			);
+
+			final JsonNode truncatedPayload = objectMapper.valueToTree(truncationResult.truncatedResponse());
+
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
+				.builder()
+				.openaiFileId(fileId)
+				.fileName(fileName)
+				.description(description)
+				.payload(truncatedPayload)
+				.build();
+
+			return objectMapper.writeValueAsString(manifest);
+		} catch (Exception e) {
+			log.warn(
+				"Failed to truncate troubleshoot response for tool '{}' with budget, falling back to generic manifest: {}",
+				toolName,
+				e.getMessage()
+			);
+			log.debug("Exception details:", e);
+			return buildGenericManifest(fileName, fileId);
+		}
+	}
+
+	/**
+	 * Handles troubleshooting tool output when only summary text is allowed (no payload).
+	 * Parses the response, builds the summary string, and returns a manifest with
+	 * summary in description but NO payload field.
+	 *
+	 * @param toolName       the tool name
+	 * @param toolResultJson the full JSON output
+	 * @param fileId         the OpenAI file ID
+	 * @param fileName       the file name
+	 * @return the manifest JSON with summary only
+	 */
+	private String handleTroubleshootSummaryOnly(
+		final String toolName,
+		final String toolResultJson,
+		final String fileId,
+		final String fileName
+	) {
+		try {
+			final MultiHostToolResponse<TelemetryResult> fullResponse = objectMapper.readValue(
+				toolResultJson,
+				new TypeReference<MultiHostToolResponse<TelemetryResult>>() {}
+			);
+
+			// Truncate to 0 monitors (summary only) to get stats
+			final TelemetryResultTruncator.TruncationResult truncationResult = TelemetryResultTruncator.truncate(
+				fullResponse,
+				0,
+				objectMapper
+			);
+
+			final String description =
+				truncationResult.summary() +
+				"\n\nPayload omitted due to context budget constraints." +
+				"\nFor the complete dataset, use Code Interpreter to read " +
+				"the uploaded file using the openai_file_id.";
+
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
+				.builder()
+				.openaiFileId(fileId)
+				.fileName(fileName)
+				.description(description)
+				.build();
+
+			return objectMapper.writeValueAsString(manifest);
+		} catch (Exception e) {
+			log.warn("Failed to build summary for tool '{}': {}", toolName, e.getMessage());
+			log.debug("Exception details:", e);
+			return buildFileReferenceOnlyManifest(fileName, fileId);
+		}
+	}
+
+	/**
+	 * Builds a minimal manifest with only the file reference.
+	 * Used when the context budget is completely exhausted.
+	 *
+	 * @param fileName the file name
+	 * @param fileId   the OpenAI file ID
+	 * @return the manifest JSON with file reference only
+	 */
+	private String buildFileReferenceOnlyManifest(final String fileName, final String fileId) {
+		try {
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
+				.builder()
+				.openaiFileId(fileId)
+				.fileName(fileName)
+				.description(
+					"Tool output uploaded to file. Context budget exhausted — no inline data available. " +
+					"Use Code Interpreter to read the file using the openai_file_id."
+				)
+				.build();
+			return objectMapper.writeValueAsString(manifest);
+		} catch (Exception e) {
+			log.error("Failed to build file reference manifest", e);
+			return "{\"openai_file_id\":\"" + fileId + "\",\"description\":\"See uploaded file.\"}";
 		}
 	}
 

@@ -77,6 +77,8 @@ public class TelemetryResultTruncator {
 	 * <ol>
 	 *   <li>Serialize the full response. If it fits, return as-is.</li>
 	 *   <li>Build a priority list of (host, monitorType, currentCount) entries, sorted by count descending.</li>
+	 *   <li><strong>Fast path:</strong> If maxOutputSize == 0, skip halving and immediately truncate all
+	 *       entries to summaries only (0 individual monitors).</li>
 	 *   <li>Pick the entry with the largest currentCount. Halve it: newCount = currentCount / 2.</li>
 	 *   <li>Truncate that specific host+type list to newCount monitors (+ keep summary as last element).</li>
 	 *   <li>Re-serialize and check. If it fits, stop. Otherwise, re-sort and pick the new largest entry.</li>
@@ -88,7 +90,7 @@ public class TelemetryResultTruncator {
 	 * all individual monitors are truncated. This ensures the AI always has aggregated stats.
 	 *
 	 * @param response       the original multi-host response
-	 * @param maxOutputSize  maximum allowed serialized size in bytes (UTF-8)
+	 * @param maxOutputSize  maximum allowed serialized size in bytes (UTF-8); if 0, keeps summaries only
 	 * @param objectMapper   the ObjectMapper for serialization size checks
 	 * @return a TruncationResult with the (possibly truncated) response, summary, and stats
 	 */
@@ -134,36 +136,44 @@ public class TelemetryResultTruncator {
 			return new TruncationResult(response, "Failed to deep copy response", List.of(), false);
 		}
 
-		// 5. Progressive halving loop
-		while (true) {
-			// Re-sort entries by currentCount descending
-			entries.sort((a, b) -> Integer.compare(b.currentCount, a.currentCount));
-
-			// Pick entry with largest currentCount
-			final TruncationEntry largest = entries.get(0);
-			if (largest.currentCount == 0) {
-				break; // All entries at summary-only → return best effort
+		// 5. Fast path: if maxOutputSize == 0, skip halving and keep summaries only
+		if (maxOutputSize == 0) {
+			for (final TruncationEntry entry : entries) {
+				truncateEntryInResponse(workingCopy, entry.hostname, entry.monitorType, 0);
+				entry.currentCount = 0;
 			}
+		} else {
+			// 6. Progressive halving loop
+			while (true) {
+				// Re-sort entries by currentCount descending
+				entries.sort((a, b) -> Integer.compare(b.currentCount, a.currentCount));
 
-			// Halve: newCount = currentCount / 2
-			final int newCount = largest.currentCount / 2;
+				// Pick entry with largest currentCount
+				final TruncationEntry largest = entries.get(0);
+				if (largest.currentCount == 0) {
+					break; // All entries at summary-only → return best effort
+				}
 
-			// Truncate that host+type list in the working copy
-			truncateEntryInResponse(workingCopy, largest.hostname, largest.monitorType, newCount);
-			largest.currentCount = newCount;
+				// Halve: newCount = currentCount / 2
+				final int newCount = largest.currentCount / 2;
 
-			// Re-serialize and check
-			try {
-				final String serialized = objectMapper.writeValueAsString(workingCopy);
-				if (sizeInBytes(serialized) <= maxOutputSize) {
+				// Truncate that host+type list in the working copy
+				truncateEntryInResponse(workingCopy, largest.hostname, largest.monitorType, newCount);
+				largest.currentCount = newCount;
+
+				// Re-serialize and check
+				try {
+					final String serialized = objectMapper.writeValueAsString(workingCopy);
+					if (sizeInBytes(serialized) <= maxOutputSize) {
+						break;
+					}
+				} catch (JsonProcessingException e) {
 					break;
 				}
-			} catch (JsonProcessingException e) {
-				break;
 			}
 		}
 
-		// 6. Build summary string and return TruncationResult
+		// 7. Build summary string and return TruncationResult
 		final List<MonitorEntry> truncatedEntries = entries
 			.stream()
 			.filter(e -> e.currentCount < e.originalCount)
