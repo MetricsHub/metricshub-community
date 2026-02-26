@@ -101,7 +101,8 @@ public class ToolResponseManagerService {
 
 	/**
 	 * Adapts tool output using the global context budget manager.
-	 * Uses tiered allocation to progressively degrade output quality as budget is consumed.
+	 * Uses tiered allocation with two-phase commit: tentatively allocates budget for the full size,
+	 * builds the manifest, measures actual size, and refunds unused budget.
 	 *
 	 * @param toolName       the tool name
 	 * @param toolResultJson the raw JSON output
@@ -117,9 +118,35 @@ public class ToolResponseManagerService {
 		final String fileName,
 		final ContextBudgetManager budgetManager
 	) {
-		// Request budget allocation
+		// Phase 1: Request tentative budget allocation based on full input size
 		final ContextBudgetManager.AllocationResult allocation = budgetManager.allocate(toolResultJson.length());
 
+		// Build the manifest based on the allocation tier
+		final String manifestJson = buildManifestWithBudget(toolName, toolResultJson, fileId, fileName, allocation);
+
+		// Phase 2: Measure actual manifest size and refund unused budget
+		refundUnusedBudget(budgetManager, allocation, manifestJson);
+
+		return manifestJson;
+	}
+
+	/**
+	 * Builds the manifest based on the allocation tier.
+	 *
+	 * @param toolName       the tool name
+	 * @param toolResultJson the raw JSON output
+	 * @param fileId         the OpenAI file ID
+	 * @param fileName       the file name
+	 * @param allocation     the allocation result from the budget manager
+	 * @return the manifest JSON
+	 */
+	private String buildManifestWithBudget(
+		final String toolName,
+		final String toolResultJson,
+		final String fileId,
+		final String fileName,
+		final ContextBudgetManager.AllocationResult allocation
+	) {
 		return switch (allocation.tier()) {
 			case FULL -> buildManifestWithPayload(fileName, fileId, toolResultJson);
 			case TRUNCATED -> {
@@ -143,6 +170,36 @@ public class ToolResponseManagerService {
 			}
 			case FILE_REFERENCE_ONLY -> buildFileReferenceOnlyManifest(fileName, fileId);
 		};
+	}
+
+	/**
+	 * Calculates the actual size of the manifest and refunds any unused budget
+	 * that was tentatively allocated but not consumed.
+	 *
+	 * @param budgetManager the context budget manager
+	 * @param allocation    the original allocation result
+	 * @param manifestJson  the actual manifest that was built
+	 */
+	private void refundUnusedBudget(
+		final ContextBudgetManager budgetManager,
+		final ContextBudgetManager.AllocationResult allocation,
+		final String manifestJson
+	) {
+		// Calculate actual size in tokens (based on character count, not bytes)
+		final int actualSizeChars = manifestJson.length();
+		final int actualTokens = (int) Math.ceil(actualSizeChars / 3.5); // Same CHARS_PER_TOKEN as ContextBudgetManager
+
+		// Refund the difference between what was allocated and what was actually used
+		final int tokensToRefund = allocation.availableTokens() - actualTokens;
+		if (tokensToRefund > 0) {
+			budgetManager.refund(tokensToRefund);
+			log.debug(
+				"Refunded unused budget: allocated={}t, actual={}t, refunded={}t",
+				allocation.availableTokens(),
+				actualTokens,
+				tokensToRefund
+			);
+		}
 	}
 
 	/**

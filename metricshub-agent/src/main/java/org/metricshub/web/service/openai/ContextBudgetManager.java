@@ -165,6 +165,26 @@ public class ContextBudgetManager {
 	}
 
 	/**
+	 * Refunds tokens back to the budget.
+	 * Use this when actual consumption was less than allocated.
+	 *
+	 * @param tokensToRefund the number of tokens to refund
+	 */
+	public void refund(final int tokensToRefund) {
+		if (tokensToRefund <= 0) {
+			return;
+		}
+		final int beforeRefund = consumedTokens.get();
+		final int afterRefund = consumedTokens.addAndGet(-tokensToRefund);
+		log.debug(
+			"Budget refunded: tokensRefunded={}t, consumedBefore={}t, consumedAfter={}t",
+			tokensToRefund,
+			beforeRefund,
+			afterRefund
+		);
+	}
+
+	/**
 	 * Returns the remaining budget in tokens.
 	 *
 	 * @return remaining tokens available for tool outputs
