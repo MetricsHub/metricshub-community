@@ -1,6 +1,7 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { configApi } from "../../api/config";
 import { isBackupFileName } from "../../utils/backup-names";
+import { isVmFile } from "../../utils/file-type-utils";
 import { createBackupSet, restoreBackupFile } from "../../services/backup-service";
 
 /**
@@ -87,6 +88,7 @@ export const saveDraftConfig = createAsyncThunk(
 
 /**
  * Validate a configuration file's content.
+ * For .vm files: validates script syntax first, then if valid, generates YAML and validates that too.
  * @param {{name:string,content:string}} param0 The configuration file data.
  * @returns {Promise<{name:string,result:{valid: boolean, errors: string[]}}>} The validation result.
  */
@@ -94,7 +96,37 @@ export const validateConfig = createAsyncThunk(
 	"config/validate",
 	async ({ name, content }, { rejectWithValue }) => {
 		try {
-			return { name, result: await configApi.validate(name, content) };
+			// First, validate the script/YAML syntax
+			const scriptResult = await configApi.validate(name, content);
+
+			// For .vm files: if script is valid, also validate the generated YAML
+			if (isVmFile(name) && scriptResult.valid) {
+				try {
+					// Generate YAML from the template
+					const generatedYaml = await configApi.testVelocityTemplate(name, content);
+					// Validate the generated YAML (use synthetic .yaml name to trigger YAML validation)
+					const yamlResult = await configApi.validate("generated.yaml", generatedYaml);
+					if (!yamlResult.valid) {
+						// Generated YAML is invalid - return as validation failure
+						// but without line numbers (errors are in generated YAML, not script)
+						return {
+							name,
+							result: {
+								valid: false,
+								errors: (yamlResult.errors || []).map((e) => ({
+									message: e.message || e.msg || String(e),
+									// No line/column - errors are in generated YAML, not script
+								})),
+							},
+						};
+					}
+				} catch {
+					// If test fails silently, just return the script validation result
+					// (test button will show the actual error when clicked)
+				}
+			}
+
+			return { name, result: scriptResult };
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}
