@@ -202,6 +202,21 @@ class MetricFactoryTest {
 	}
 
 	@Test
+	void testCollectNumberMetricCounterNullCollectTime() {
+		final MetricFactory metricFactory = new MetricFactory(HOSTNAME, new ConnectorStore());
+		final Monitor monitor = Monitor.builder().id("monitor1").type("host").build();
+
+		// First collect with valid collectTime
+		final NumberMetric firstCollect = metricFactory.collectNumberMetric(monitor, "hw.host.energy", 5000.0, 1000L);
+		firstCollect.save();
+
+		// Second collect with null collectTime
+		final NumberMetric secondCollect = metricFactory.collectNumberMetric(monitor, "hw.host.energy", 8000.0, null);
+
+		assertNull(secondCollect.getRate(), "Rate should be null when collectTime is null");
+	}
+
+	@Test
 	void testCollectStateSetMetricSetsMetricType() {
 		final MetricFactory metricFactory = new MetricFactory(HOSTNAME, new ConnectorStore());
 		final Monitor monitor = Monitor.builder().id("monitor1").type("host").build();
