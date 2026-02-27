@@ -25,6 +25,7 @@ import static org.metricshub.agent.helper.ConfigHelper.getLoggerLevel;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -45,6 +46,7 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.engine.extension.IMetricEnrichmentExtension;
 import org.metricshub.engine.strategy.collect.CollectStrategy;
 import org.metricshub.engine.strategy.collect.PrepareCollectStrategy;
 import org.metricshub.engine.strategy.collect.ProtocolHealthCheckStrategy;
@@ -83,6 +85,8 @@ public class MonitoringTask implements Runnable {
 		final ResourceConfig resourceConfig = monitoringTaskInfo.getResourceConfig();
 		final int discoveryCycle = resourceConfig.getDiscoveryCycle();
 		final ExtensionManager extensionManager = monitoringTaskInfo.getExtensionManager();
+		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions =
+			extensionManager.resolveMetricEnrichmentExtensions(resourceConfig.getEnrichments());
 
 		final String hostId = telemetryManager.getHostConfiguration().getHostId();
 
@@ -105,6 +109,8 @@ public class MonitoringTask implements Runnable {
 				new HardwareMonitorNameGenerationStrategy(telemetryManager, discoveryTime, clientsExecutor, extensionManager)
 			);
 
+			applyShiftLeftEnrichments(telemetryManager, metricEnrichmentExtensions);
+
 			/*
 			 * Metrics are recorded and exported after each collection and are only refreshed when they are explicitly updated.
 			 * During the collection cycle, the discovery-related metrics may expire due to the "collect time".
@@ -116,7 +122,8 @@ public class MonitoringTask implements Runnable {
 			initHostAttributes(telemetryManager, resourceConfig);
 
 			// Record metrics and export them all
-			registerTelemetryManagerRecorders(telemetryManager).exportMetrics(() -> configureLoggerContext(hostId));
+			registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions)
+				.exportMetrics(() -> configureLoggerContext(hostId));
 		}
 
 		log.info("Calling the engine to collect resource: {}.", hostId);
@@ -136,8 +143,11 @@ public class MonitoringTask implements Runnable {
 		// Run the hardware strategy
 		telemetryManager.run(new HardwareStrategy(telemetryManager, collectTime));
 
+		applyShiftLeftEnrichments(telemetryManager, metricEnrichmentExtensions);
+
 		// Record metrics and export them all
-		registerTelemetryManagerRecorders(telemetryManager).exportMetrics(() -> configureLoggerContext(hostId));
+		registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions)
+			.exportMetrics(() -> configureLoggerContext(hostId));
 
 		// Increment the number of collects
 		numberOfCollects++;
@@ -152,14 +162,20 @@ public class MonitoringTask implements Runnable {
 	 * Register all telemetry manager recorders.
 	 *
 	 * @param telemetryManager Wraps monitors and metrics
+	 * @param metricEnrichmentExtensions metric enrichment extensions for export
 	 * @return The {@link ResourceMeterProvider} instance
 	 */
-	ResourceMeterProvider registerTelemetryManagerRecorders(final TelemetryManager telemetryManager) {
+	ResourceMeterProvider registerTelemetryManagerRecorders(
+		final TelemetryManager telemetryManager,
+		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions
+	) {
 		// Retrieve the connector store that has been prepared within the global context
 		final ConnectorStore connectorStore = telemetryManager.getConnectorStore();
-
 		// Create a new ResourceMeterProvider instance with the metrics exporter
-		final ResourceMeterProvider provider = new ResourceMeterProvider(monitoringTaskInfo.getMetricsExporter());
+		final ResourceMeterProvider provider = new ResourceMeterProvider(
+			monitoringTaskInfo.getMetricsExporter(),
+			metricEnrichmentExtensions
+		);
 
 		telemetryManager
 			.getMonitors()
@@ -281,6 +297,33 @@ public class MonitoringTask implements Runnable {
 			.orElseGet(() ->
 				MetricDefinition.builder().description(String.format(GENERIC_METRIC_DESCRIPTION_FORMAT, metricName)).build()
 			);
+	}
+
+	/**
+	 * Apply shift-left enrichment using the configured extensions.
+	 *
+	 * @param telemetryManager telemetry manager to enrich
+	 * @param enrichers configured metric enrichment extensions
+	 */
+	private void applyShiftLeftEnrichments(
+		final TelemetryManager telemetryManager,
+		final List<IMetricEnrichmentExtension> enrichers
+	) {
+		if (enrichers == null || enrichers.isEmpty()) {
+			return;
+		}
+		for (IMetricEnrichmentExtension enricher : enrichers) {
+			try {
+				enricher.enrichShiftLeft(telemetryManager);
+			} catch (Exception e) {
+				log.error(
+					"Failed to apply shift-left enrichment with {}. Error: {}",
+					enricher != null ? enricher.getClass().getSimpleName() : "<null>",
+					e.getMessage()
+				);
+				log.debug("Failed to apply shift-left enrichment. Stack trace:", e);
+			}
+		}
 	}
 
 	/**

@@ -38,15 +38,17 @@ public class GaugeMetricRecorder extends AbstractNumberMetricRecorder {
 	 * @param unit               The unit of the metric.
 	 * @param description        The description of the metric.
 	 * @param resourceAttributes The resource attributes associated with the metric.
+	 * @param metricsCache       The metric cache to group data points.
 	 */
 	@Builder(setterPrefix = "with")
 	public GaugeMetricRecorder(
 		final NumberMetric metric,
 		final String unit,
 		final String description,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		super(metric, unit, description, resourceAttributes);
+		super(metric, unit, description, resourceAttributes, metricsCache);
 	}
 
 	/**

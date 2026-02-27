@@ -101,6 +101,7 @@
 		<module>metricshub-engine</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>
+		<module>metricshub-bmchelix-enrichment-extension</module>
 		<module>metricshub-internaldb-extension</module>
 		<module>metricshub-ipmi-extension</module>
 		<module>metricshub-it-common</module>
