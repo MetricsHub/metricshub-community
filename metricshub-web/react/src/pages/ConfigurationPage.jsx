@@ -15,9 +15,9 @@ import {
 	useMediaQuery,
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Autorenew";
-import AddIcon from "@mui/icons-material/Add";
 import FolderIcon from "@mui/icons-material/Folder";
 import CloseIcon from "@mui/icons-material/Close";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
 
@@ -318,7 +318,7 @@ function ConfigurationPage() {
 					size="small"
 					variant="outlined"
 					color="inherit"
-					startIcon={<AddIcon />}
+					endIcon={<KeyboardArrowDownIcon />}
 					onClick={openCreateMenu}
 					disabled={isReadOnly}
 				>
@@ -516,6 +516,7 @@ function ConfigurationPage() {
 										result={velocityTestResult.result}
 										error={velocityTestResult.error}
 										loading={velocityTestResult.loading}
+										yamlValidation={velocityTestResult.yamlValidation}
 										onClose={handleCloseTestResult}
 									/>
 								</Box>

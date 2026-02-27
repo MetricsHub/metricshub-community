@@ -308,6 +308,7 @@ const slice = createSlice({
 					result: null,
 					error: null,
 					loading: true,
+					yamlValidation: null,
 				};
 			})
 			.addCase(testVelocityTemplate.fulfilled, (s, a) => {
@@ -317,6 +318,7 @@ const slice = createSlice({
 					result: a.payload.result,
 					error: null,
 					loading: false,
+					yamlValidation: a.payload.yamlValidation || { valid: true },
 				};
 				// Clear per-file validation errors on successful test
 				if (name) {

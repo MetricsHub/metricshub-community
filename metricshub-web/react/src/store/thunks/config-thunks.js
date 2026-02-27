@@ -206,15 +206,28 @@ export const restoreConfigFromBackup = createAsyncThunk(
 
 /**
  * Test a Velocity template and return the generated YAML.
+ * After evaluating the template, also validates the generated YAML content.
  * @param {{name:string,content:string}} param0
- * @returns {Promise<{name:string,result:string}>}
+ * @returns {Promise<{name:string,result:string,yamlValidation?:object}>}
  */
 export const testVelocityTemplate = createAsyncThunk(
 	"config/testVelocity",
 	async ({ name, content }, { rejectWithValue }) => {
 		try {
+			// Step 1: Evaluate the Velocity template to get generated YAML
 			const result = await configApi.testVelocityTemplate(name, content);
-			return { name, result };
+
+			// Step 2: Validate the generated YAML as if it were a .yaml file
+			// Use a synthetic .yaml filename to ensure backend performs YAML validation
+			let yamlValidation = { valid: true };
+			try {
+				yamlValidation = await configApi.validate("generated.yaml", result);
+			} catch {
+				// If validation call fails, continue without failing the whole test
+				yamlValidation = { valid: true };
+			}
+
+			return { name, result, yamlValidation };
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}

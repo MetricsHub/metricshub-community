@@ -201,10 +201,14 @@ public class ConfigurationFilesController {
 		@RequestBody(required = false) String content
 	) throws ConfigFilesException {
 		if (ConfigurationFilesService.isVmFile(fileName)) {
-			// Two-step validation for .vm files
+			// For .vm files: only validate that the Velocity script executes successfully.
+			// The generated YAML is NOT validated here — that validation happens in the
+			// Test panel when the frontend passes the generated YAML to this endpoint
+			// as a YAML file.
 			try {
-				final String generatedYaml = velocityTemplateService.evaluate(fileName, content);
-				return ResponseEntity.ok(configurationFilesService.validate(generatedYaml, fileName));
+				velocityTemplateService.evaluate(fileName, content);
+				// Script executed successfully — return valid
+				return ResponseEntity.ok(ConfigurationFilesService.Validation.ok(fileName));
 			} catch (ConfigFilesException e) {
 				// Template execution failed — wrap as validation failure with line/column
 				final var failure = new DeserializationFailure();

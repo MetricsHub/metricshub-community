@@ -4,7 +4,7 @@ import { Box } from "@mui/material";
 import FolderOutlinedIcon from "@mui/icons-material/FolderOutlined";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import ArchiveOutlinedIcon from "@mui/icons-material/ArchiveOutlined";
-import ApacheIcon from "./ApacheIcon";
+import CodeIcon from "@mui/icons-material/Code";
 
 /**
  * Icon component for file types in the config tree.
@@ -14,7 +14,7 @@ import ApacheIcon from "./ApacheIcon";
 const ICONS = {
 	folder: FolderOutlinedIcon,
 	file: InsertDriveFileOutlinedIcon,
-	vm: ApacheIcon,
+	vm: CodeIcon,
 	backup: ArchiveOutlinedIcon,
 };
 
