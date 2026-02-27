@@ -44,6 +44,14 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<!-- MetricsHub Programmable Configuration Extension (Velocity template evaluation) -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-programmable-configuration-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
 		<!-- MetricsHub Community Connectors -->
 		<dependency>
 			<groupId>org.metricshub</groupId>

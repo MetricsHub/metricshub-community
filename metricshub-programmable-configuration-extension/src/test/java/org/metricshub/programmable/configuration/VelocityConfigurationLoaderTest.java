@@ -2,12 +2,14 @@ package org.metricshub.programmable.configuration;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class VelocityConfigurationLoaderTest {
 
@@ -57,5 +59,15 @@ class VelocityConfigurationLoaderTest {
 			yaml.replaceAll("\r\n", "\n"),
 			"Generated YAML should match expected output"
 		);
+	}
+
+	@Test
+	void testGenerateYamlReturnsNullOnError(@TempDir final Path tempDir) {
+		// Point to a non-existent template file – VelocityEngine will fail
+		final Path badPath = tempDir.resolve("does-not-exist.vm");
+		final VelocityConfigurationLoader loader = new VelocityConfigurationLoader(badPath, Map.of());
+		final String yaml = loader.generateYaml();
+
+		assertNull(yaml, "generateYaml should return null when the template cannot be evaluated");
 	}
 }

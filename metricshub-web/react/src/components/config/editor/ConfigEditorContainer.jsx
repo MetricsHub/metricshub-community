@@ -12,6 +12,7 @@ import {
 import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { isBackupFileName } from "../../../utils/backup-names";
+import { isVmFile } from "../../../utils/file-type-utils";
 import { Typography } from "@mui/material";
 import { useAuth } from "../../../hooks/use-auth";
 
@@ -74,12 +75,43 @@ function ConfigEditorContainer(props) {
 
 	const isDraft = selected?.endsWith(".draft");
 
-	// 1. Save (Draft mode): Save as draft, skip validation
-	//    Only active if isDraft = true
+	// Helper to show validation error dialog
+	const handleValidationError = React.useCallback((result) => {
+		if (Array.isArray(result.errors) && result.errors.length > 0) {
+			const first = result.errors[0];
+			setDialog({
+				open: true,
+				message: String(first?.message || first?.msg || "Validation failed"),
+			});
+		} else if (result.error) {
+			setDialog({ open: true, message: String(result.error) });
+		} else {
+			setDialog({ open: true, message: "Validation failed" });
+		}
+	}, []);
+
+	// 1. Save (Draft mode): Save as draft, skip validation for YAML.
+	//    For .vm files we always validate (compile check) before saving.
 	const handleDraftSave = React.useCallback(async () => {
 		if (!selected || !isDraft || isReadOnly) return;
+
+		// For .vm templates, validate (compile check) even when saving as draft
+		if (isVmFile(selected)) {
+			try {
+				const res = await dispatch(validateConfig({ name: selected, content: local })).unwrap();
+				const result = res?.result ?? { valid: true };
+				if (!result.valid) {
+					handleValidationError(result);
+					return;
+				}
+			} catch (e) {
+				setDialog({ open: true, message: e?.message || "Template compilation failed" });
+				return;
+			}
+		}
+
 		await dispatch(saveDraftConfig({ name: selected, content: local, skipValidation: true }));
-	}, [dispatch, selected, isDraft, local, isReadOnly]);
+	}, [dispatch, selected, isDraft, local, isReadOnly, handleValidationError]);
 
 	// 2. Save and Apply (Draft mode): Validate, Save as Normal, Delete Draft
 	const handleApply = React.useCallback(() => {
@@ -113,7 +145,7 @@ function ConfigEditorContainer(props) {
 			.catch((e) => {
 				setDialog({ open: true, message: e?.message || "Validation failed" });
 			});
-	}, [dispatch, selected, isDraft, local, navigate, isReadOnly]);
+	}, [dispatch, selected, isDraft, local, navigate, isReadOnly, handleValidationError]);
 
 	// 3. Normal Save (Normal mode): Validate, Save. If error -> Dialog "Save as Draft"
 	const handleNormalSave = React.useCallback(async () => {
@@ -130,22 +162,7 @@ function ConfigEditorContainer(props) {
 		} catch (e) {
 			setDialog({ open: true, message: e?.message || "Validation failed" });
 		}
-	}, [canSave, dispatch, selected, local, isReadOnly]);
-
-	// Helper to show validation error dialog
-	const handleValidationError = (result) => {
-		if (Array.isArray(result.errors) && result.errors.length > 0) {
-			const first = result.errors[0];
-			setDialog({
-				open: true,
-				message: String(first?.message || first?.msg || "Validation failed"),
-			});
-		} else if (result.error) {
-			setDialog({ open: true, message: String(result.error) });
-		} else {
-			setDialog({ open: true, message: "Validation failed" });
-		}
-	};
+	}, [canSave, dispatch, selected, local, isReadOnly, handleValidationError]);
 
 	// "Save and convert to draft" - triggered from Dialog on Normal Save error
 	const forceSaveAsDraft = React.useCallback(() => {

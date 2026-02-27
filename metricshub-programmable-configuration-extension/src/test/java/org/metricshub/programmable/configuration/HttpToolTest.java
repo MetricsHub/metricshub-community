@@ -134,4 +134,51 @@ class HttpToolTest {
 			"Expected invalid header format exception not thrown"
 		);
 	}
+
+	@Test
+	void testExecuteWithCustomTimeoutAndCredentialsAndHeaders() throws Exception {
+		final HttpResponse mockResponse = new HttpResponse();
+		mockResponse.setStatusCode(200);
+		mockResponse.appendBody("ok");
+
+		try (MockedStatic<HttpClient> mock = mockStatic(HttpClient.class)) {
+			mock
+				.when(() ->
+					HttpClient.sendRequest(
+						"https://example.com/api",
+						"GET",
+						null,
+						"admin",
+						"secret".toCharArray(),
+						null,
+						0,
+						null,
+						null,
+						null,
+						Map.of("Accept", "application/json", "X-Custom", "value"),
+						null,
+						30,
+						null
+					)
+				)
+				.thenReturn(mockResponse);
+
+			final HttpResponse response = httpTool.execute(
+				Map.of(
+					"url",
+					"https://example.com/api",
+					"username",
+					"admin",
+					"password",
+					"secret",
+					"timeout",
+					"30",
+					"headers",
+					"Accept: application/json\nX-Custom: value"
+				)
+			);
+
+			assertEquals(mockResponse, response, "Expected response not returned");
+		}
+	}
 }
