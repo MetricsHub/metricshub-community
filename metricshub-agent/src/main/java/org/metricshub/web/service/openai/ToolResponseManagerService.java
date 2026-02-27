@@ -187,7 +187,7 @@ public class ToolResponseManagerService {
 	) {
 		// Calculate actual size in tokens (based on character count, not bytes)
 		final int actualSizeChars = manifestJson.length();
-		final int actualTokens = (int) Math.ceil(actualSizeChars / ContextBudgetManager.CHARS_PER_TOKEN);
+		final int actualTokens = ContextBudgetManager.charsToTokens(actualSizeChars);
 
 		// Refund the difference between what was allocated and what was actually used
 		final int tokensToRefund = allocation.availableTokens() - actualTokens;

@@ -473,7 +473,7 @@ class ToolResponseManagerServiceTest {
 
 			// Then: budget should be refunded since generic manifest is much smaller than allocated
 			final int actualManifestSize = adapted.length();
-			final int expectedTokensUsed = (int) Math.ceil(actualManifestSize / ContextBudgetManager.CHARS_PER_TOKEN);
+			final int expectedTokensUsed = ContextBudgetManager.charsToTokens(actualManifestSize);
 
 			// The actual tokens consumed should be close to the manifest size, not the allocated size
 			final int actualTokensConsumed = tokensBeforeAllocation - tokensAfterAllocation;
@@ -528,7 +528,6 @@ class ToolResponseManagerServiceTest {
 
 			final int remainingBefore = budgetManager.getRemainingTokens();
 			final String adapted = service.adaptToolOutput("Tool2", smallOutput);
-			final int remainingAfter = budgetManager.getRemainingTokens();
 
 			// Then: second tool should get FULL allocation thanks to refund from first tool
 			final JsonNode manifestNode = objectMapper.readTree(adapted);

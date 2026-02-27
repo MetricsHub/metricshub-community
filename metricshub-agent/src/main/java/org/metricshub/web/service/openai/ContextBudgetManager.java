@@ -43,9 +43,8 @@ public class ContextBudgetManager {
 	 * Approximate characters per token for JSON/English text.
 	 * OpenAI tokenizers average ~4 chars per token for English.
 	 * JSON with metric names tends to be slightly higher, so we use 3.5 to be conservative.
-	 * This constant is package-private to allow reuse by ToolResponseManagerService.
 	 */
-	static final double CHARS_PER_TOKEN = 3.5;
+	private static final double CHARS_PER_TOKEN = 3.5;
 
 	/**
 	 * The total budget for tool outputs in tokens.
@@ -205,11 +204,12 @@ public class ContextBudgetManager {
 
 	/**
 	 * Converts characters to approximate token count.
+	 * This method is package-private to allow reuse by ToolResponseManagerService.
 	 *
 	 * @param chars character count
 	 * @return approximate token count
 	 */
-	private static int charsToTokens(final int chars) {
+	static int charsToTokens(final int chars) {
 		return (int) Math.ceil(chars / CHARS_PER_TOKEN);
 	}
 

@@ -237,7 +237,8 @@ class ContextBudgetManagerTest {
 		final AllocationResult firstAlloc = manager.allocate(70000); // ~20000 tokens - should get FULL
 		assertEquals(AllocationTier.FULL, firstAlloc.tier());
 
-		final AllocationResult secondAlloc = manager.allocate(70000); // ~20000 tokens - might be TRUNCATED
+		manager.allocate(70000); // ~20000 tokens - might be TRUNCATED
+
 		// Refund most of the second allocation
 		manager.refund(15000);
 
