@@ -91,7 +91,6 @@ public class EventLogSource extends Source {
 		@JsonProperty("sources") Set<String> sources,
 		@JsonProperty("levels") Set<EventLogLevel> levels,
 		@JsonProperty("maxEventsPerPoll") int maxEventsPerPoll,
-		@JsonProperty("selectionRegex") String selectionRegex,
 		@JsonProperty("key") String key,
 		@JsonProperty("executeForEachEntryOf") ExecuteForEachEntryOf executeForEachEntryOf
 	) {

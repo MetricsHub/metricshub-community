@@ -14,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -77,7 +78,7 @@ class HostMonitorThermalCalculatorTest {
 		assertNull(host.getMetric(HW_HOST_AMBIENT_TEMPERATURE, NumberMetric.class));
 		assertNull(host.getMetric(HW_HOST_AVERAGE_CPU_TEMPERATURE, NumberMetric.class));
 
-		final MetricFactory metricFactory = new MetricFactory(HOST_ID);
+		final MetricFactory metricFactory = new MetricFactory(HOST_ID, new ConnectorStore());
 		metricFactory.collectNumberMetric(temperatureMonitor, TEMPERATURE_METRIC, 10.0, telemetryManager.getStrategyTime());
 		hostMonitorThermalCalculator.computeHostTemperatureMetrics();
 

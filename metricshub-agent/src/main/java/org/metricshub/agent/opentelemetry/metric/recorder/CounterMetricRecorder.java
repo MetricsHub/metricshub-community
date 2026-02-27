@@ -38,15 +38,17 @@ public class CounterMetricRecorder extends AbstractNumberMetricRecorder {
 	 * @param unit               the unit of the metric.
 	 * @param description        the description of the metric
 	 * @param resourceAttributes the resource attributes associated with the metric.
+	 * @param metricsCache       the metric cache to group data points.
 	 */
 	@Builder(setterPrefix = "with")
 	public CounterMetricRecorder(
 		final NumberMetric metric,
 		final String unit,
 		final String description,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		super(metric, unit, description, resourceAttributes);
+		super(metric, unit, description, resourceAttributes, metricsCache);
 	}
 
 	/**

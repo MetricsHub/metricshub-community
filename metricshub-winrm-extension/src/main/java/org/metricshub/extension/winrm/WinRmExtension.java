@@ -46,6 +46,7 @@ import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.IProtocolExtension;
@@ -59,6 +60,7 @@ import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiDetectionService;
 import org.metricshub.extension.win.source.EventLogSourceProcessor;
+import org.metricshub.extension.win.source.FileSourceProcessor;
 import org.metricshub.extension.win.source.WinCommandLineSourceProcessor;
 import org.metricshub.extension.win.source.WmiSourceProcessor;
 
@@ -104,12 +106,12 @@ public class WinRmExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(WmiSource.class, CommandLineSource.class, EventLogSource.class);
+		return Set.of(WmiSource.class, CommandLineSource.class, EventLogSource.class, FileSource.class);
 	}
 
 	@Override
 	public Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> getConfigurationToSourceMapping() {
-		return Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class));
+		return Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class, FileSource.class));
 	}
 
 	@Override
@@ -204,6 +206,9 @@ public class WinRmExtension implements IProtocolExtension {
 		} else if (source instanceof EventLogSource eventLogSource) {
 			return new EventLogSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
 				.process(eventLogSource, telemetryManager);
+		} else if (source instanceof FileSource fileSource) {
+			return new FileSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
+				.process(fileSource, telemetryManager);
 		}
 
 		throw new IllegalArgumentException(

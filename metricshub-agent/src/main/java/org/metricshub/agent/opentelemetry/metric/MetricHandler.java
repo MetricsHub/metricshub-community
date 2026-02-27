@@ -21,6 +21,7 @@ package org.metricshub.agent.opentelemetry.metric;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.opentelemetry.proto.metrics.v1.Metric;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,9 +71,12 @@ public class MetricHandler {
 	public static List<AbstractMetricRecorder> handle(
 		final MetricContext context,
 		final AbstractMetric metric,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		return HANDLERS.get(context.getType()).apply(new ResourceMetricContext(context, resourceAttributes), metric);
+		return HANDLERS
+			.get(context.getType())
+			.apply(new ResourceMetricContext(context, resourceAttributes, metricsCache), metric);
 	}
 
 	/**
@@ -88,37 +92,38 @@ public class MetricHandler {
 	) {
 		final MetricContext context = resourceMetricContext.context;
 		final Map<String, String> resourceAttributes = resourceMetricContext.resourceAttributes;
+		final Map<String, Metric> metricsCache = resourceMetricContext.metricsCache;
 
 		if (metric instanceof NumberMetric numberMetric) {
 			return List.of(
-				GaugeMetricRecorder
-					.builder()
-					.withMetric(numberMetric)
-					.withDescription(context.getDescription())
-					.withUnit(context.getUnit())
-					.withResourceAttributes(resourceAttributes)
-					.build()
+				new GaugeMetricRecorder(
+					numberMetric,
+					context.getUnit(),
+					context.getDescription(),
+					resourceAttributes,
+					metricsCache
+				)
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
 				? state ->
-					GaugeSuppressZerosStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build()
+					new GaugeSuppressZerosStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					)
 				: state ->
-					GaugeStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build();
+					new GaugeStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}
@@ -139,36 +144,37 @@ public class MetricHandler {
 	) {
 		final MetricContext context = resourceMetricContext.context;
 		final Map<String, String> resourceAttributes = resourceMetricContext.resourceAttributes;
+		final Map<String, Metric> metricsCache = resourceMetricContext.metricsCache;
 		if (metric instanceof NumberMetric numberMetric) {
 			return List.of(
-				CounterMetricRecorder
-					.builder()
-					.withMetric(numberMetric)
-					.withDescription(context.getDescription())
-					.withUnit(context.getUnit())
-					.withResourceAttributes(resourceAttributes)
-					.build()
+				new CounterMetricRecorder(
+					numberMetric,
+					context.getUnit(),
+					context.getDescription(),
+					resourceAttributes,
+					metricsCache
+				)
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
 				? state ->
-					CounterSuppressZerosStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build()
+					new CounterSuppressZerosStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					)
 				: state ->
-					CounterStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build();
+					new CounterStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}
@@ -189,36 +195,37 @@ public class MetricHandler {
 	) {
 		final MetricContext context = resourceMetricContext.context;
 		final Map<String, String> resourceAttributes = resourceMetricContext.resourceAttributes;
+		final Map<String, Metric> metricsCache = resourceMetricContext.metricsCache;
 		if (metric instanceof NumberMetric numberMetric) {
 			return List.of(
-				UpDownCounterMetricRecorder
-					.builder()
-					.withMetric(numberMetric)
-					.withDescription(context.getDescription())
-					.withUnit(context.getUnit())
-					.withResourceAttributes(resourceAttributes)
-					.build()
+				new UpDownCounterMetricRecorder(
+					numberMetric,
+					context.getUnit(),
+					context.getDescription(),
+					resourceAttributes,
+					metricsCache
+				)
 			);
 		} else if (metric instanceof StateSetMetric stateSetMetric) {
 			final Function<String, AbstractMetricRecorder> creator = context.isSuppressZerosCompression()
 				? state ->
-					UpDownCounterSuppressZerosStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build()
+					new UpDownCounterSuppressZerosStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					)
 				: state ->
-					UpDownCounterStateMetricRecorder
-						.builder()
-						.withMetric(stateSetMetric)
-						.withDescription(context.getDescription())
-						.withUnit(context.getUnit())
-						.withStateValue(state)
-						.withResourceAttributes(resourceAttributes)
-						.build();
+					new UpDownCounterStateMetricRecorder(
+						stateSetMetric,
+						context.getUnit(),
+						context.getDescription(),
+						state,
+						resourceAttributes,
+						metricsCache
+					);
 
 			return Stream.of(stateSetMetric.getStateSet()).map(creator).toList();
 		}
@@ -229,5 +236,9 @@ public class MetricHandler {
 	/**
 	 * ResourceMetricContext class used to hold the metric context and the resource attributes.
 	 */
-	private static record ResourceMetricContext(MetricContext context, Map<String, String> resourceAttributes) {}
+	private static record ResourceMetricContext(
+		MetricContext context,
+		Map<String, String> resourceAttributes,
+		Map<String, Metric> metricsCache
+	) {}
 }

@@ -24,16 +24,19 @@ import io.opentelemetry.proto.resource.v1.Resource;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.helper.TestConstants;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.service.TestHelper;
 import org.metricshub.engine.common.helpers.MapHelper;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.springframework.scheduling.Trigger;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -66,11 +69,13 @@ class ResourceGroupSchedulingTest {
 		final ResourceGroupScheduling resourceGroupScheduling = ResourceGroupScheduling
 			.builder()
 			.withAgentConfig(agentConfig)
+			.withExtensionManager(ExtensionManager.empty())
 			.withMetricsExporter(metricsExporter)
 			.withResourceGroupConfig(resourceGroupConfig)
 			.withResourceGroupKey(PARIS_RESOURCE_GROUP_KEY)
 			.withSchedules(new HashMap<>())
 			.withTaskScheduler(taskSchedulerMock)
+			.withAgentInfo(new AgentInfo())
 			.build();
 		resourceGroupScheduling.schedule();
 		resourceGroupScheduling.recordAndExport();
@@ -87,10 +92,16 @@ class ResourceGroupSchedulingTest {
 			.getAttributesList()
 			.stream()
 			.collect(Collectors.toMap(KeyValue::getKey, keyValue -> keyValue.getValue().getStringValue()));
+		final Map<String, String> trusted = resourceAttributes
+			.entrySet()
+			.stream()
+			.filter(e -> Set.of(COMPANY_ATTRIBUTE_KEY, SITE_ATTRIBUTE_KEY).contains(e.getKey()))
+			.collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue));
+
 		assertTrue(
 			MapHelper.areEqual(
 				Map.of(COMPANY_ATTRIBUTE_KEY, COMPANY_ATTRIBUTE_VALUE, SITE_ATTRIBUTE_KEY, TestConstants.PARIS_SITE_VALUE),
-				resourceAttributes
+				trusted
 			)
 		);
 		final List<ScopeMetrics> scopeMetricsList = resourceMetrics.getScopeMetricsList();

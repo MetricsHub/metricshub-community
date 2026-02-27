@@ -445,7 +445,7 @@ public class CollectStrategy extends AbstractStrategy {
 
 					metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
 
-					final MetricFactory metricFactory = new MetricFactory(hostname);
+					final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
 					metricFactory.collectMonitorMetrics(
 						monitorType,

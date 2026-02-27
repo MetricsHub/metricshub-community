@@ -114,7 +114,10 @@ class NetworkPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = networkPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			NETWORK_POWER_METRIC,

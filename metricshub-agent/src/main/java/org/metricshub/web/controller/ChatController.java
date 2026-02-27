@@ -66,6 +66,8 @@ import org.metricshub.web.config.ChatOpenAiConfigurationProperties;
 import org.metricshub.web.dto.chat.ChatErrorResponse;
 import org.metricshub.web.dto.chat.ChatMessage;
 import org.metricshub.web.dto.chat.ChatRequest;
+import org.metricshub.web.service.openai.ContextBudgetHolder;
+import org.metricshub.web.service.openai.ContextBudgetManager;
 import org.metricshub.web.service.openai.ToolResponseManagerService;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
@@ -311,6 +313,7 @@ public class ChatController {
 			final List<ToolCallData> toolCalls = new ArrayList<>();
 			final AtomicReference<String> currentResponseId = new AtomicReference<>();
 			final AtomicReference<String> completedResponseId = new AtomicReference<>();
+			final AtomicReference<Long> inputTokensUsed = new AtomicReference<>();
 
 			try (
 				StreamResponse<ResponseStreamEvent> stream = openAIClient
@@ -330,6 +333,7 @@ public class ChatController {
 							toolCalls,
 							currentResponseId,
 							completedResponseId,
+							inputTokensUsed,
 							event
 						)
 					);
@@ -358,12 +362,18 @@ public class ChatController {
 				return;
 			}
 
+			// Set up context budget manager before tool execution
+			setupContextBudget(inputTokensUsed.get(), toolCalls.size());
+
 			final FunctionCallResponse functionCallResponse;
 			try {
 				functionCallResponse = callFunctions(emitter, terminated, toolCalls);
 			} catch (Exception ex) {
 				log.error("Error during tool function calls", ex);
 				return;
+			} finally {
+				// Always clear the context budget holder to prevent thread-local leaks
+				ContextBudgetHolder.clear();
 			}
 
 			final ResponseCreateParams.Builder builder = ResponseCreateParams
@@ -447,10 +457,7 @@ public class ChatController {
 				throw new IllegalStateException("Tool " + toolName + " execution failed: " + ex.getMessage(), ex);
 			}
 
-			final String adaptedToolResultJson = toolResponseManagerService.adaptToolOutputOrManifest(
-				toolName,
-				toolResultJson
-			);
+			final String adaptedToolResultJson = toolResponseManagerService.adaptToolOutput(toolName, toolResultJson);
 
 			// Collect uploaded file IDs from the adapted tool result JSON
 			collectUploadedFile(adaptedToolResultJson).ifPresent(fileIds::add);
@@ -504,6 +511,7 @@ public class ChatController {
 	 * @param toolCalls           List to store tool call data.
 	 * @param currentResponseId   AtomicReference to store the current response ID.
 	 * @param completedResponseId AtomicReference to store the completed response ID.
+	 * @param inputTokensUsed     AtomicReference to store the input tokens used from response usage.
 	 * @param event               The ResponseStreamEvent to handle.
 	 */
 	private void handleStreamEvent(
@@ -513,6 +521,7 @@ public class ChatController {
 		final List<ToolCallData> toolCalls,
 		final AtomicReference<String> currentResponseId,
 		final AtomicReference<String> completedResponseId,
+		final AtomicReference<Long> inputTokensUsed,
 		final ResponseStreamEvent event
 	) {
 		if (terminated.get()) {
@@ -573,10 +582,14 @@ public class ChatController {
 				sendEventSafely(emitter, terminated, REASONING_SUMMARY_EVENT_CODE, deltaEvent.delta())
 			);
 
-		// Handle completed event to store completed response ID
+		// Handle completed event to store completed response ID and capture token usage
 		event
 			.completed()
-			.ifPresent((ResponseCompletedEvent done) -> storeResponseId(completedResponseId, () -> done.response().id()));
+			.ifPresent((ResponseCompletedEvent done) -> {
+				storeResponseId(completedResponseId, () -> done.response().id());
+				// Capture input tokens from usage for budget calculation
+				extractInputTokens(done, inputTokensUsed);
+			});
 	}
 
 	/**
@@ -665,6 +678,69 @@ public class ChatController {
 		} catch (Exception ignored) {
 			log.debug("Failed to get response ID from in-progress event");
 		}
+	}
+
+	/**
+	 * Extracts the input tokens from the ResponseCompletedEvent's usage data.
+	 *
+	 * @param completedEvent  the completed event containing usage information
+	 * @param inputTokensUsed the atomic reference to store the input tokens
+	 */
+	private void extractInputTokens(
+		final ResponseCompletedEvent completedEvent,
+		final AtomicReference<Long> inputTokensUsed
+	) {
+		try {
+			final var response = completedEvent.response();
+			if (response != null && response.usage().isPresent()) {
+				final var usage = response.usage().get();
+				inputTokensUsed.set(usage.inputTokens());
+				log.debug(
+					"Captured token usage: inputTokens={}, outputTokens={}, totalTokens={}",
+					usage.inputTokens(),
+					usage.outputTokens(),
+					usage.totalTokens()
+				);
+			}
+		} catch (Exception e) {
+			log.debug("Failed to extract input tokens from completed event: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Sets up the context budget manager for tool execution.
+	 * Creates a budget manager based on actual token usage from the OpenAI response
+	 * and stores it in the ContextBudgetHolder for use by ToolResponseManagerService.
+	 *
+	 * @param inputTokensUsed the number of input tokens used (from response.usage), or null if unavailable
+	 * @param toolCallCount   the number of tool calls to execute
+	 */
+	private void setupContextBudget(final Long inputTokensUsed, final int toolCallCount) {
+		if (inputTokensUsed == null) {
+			log.debug("Input tokens not available; skipping context budget setup");
+			return;
+		}
+
+		final int contextWindow = chatConfig.getEffectiveContextWindowTokens();
+		final int reservedResponse = chatConfig.getEffectiveReservedResponseTokens();
+
+		final ContextBudgetManager budgetManager = new ContextBudgetManager(
+			contextWindow,
+			inputTokensUsed.intValue(),
+			reservedResponse
+		);
+
+		ContextBudgetHolder.set(budgetManager);
+
+		log.info(
+			"Context budget initialized: contextWindow={}t, promptUsed={}t, reserved={}t, " +
+			"availableBudget={}t for {} tool call(s)",
+			contextWindow,
+			inputTokensUsed,
+			reservedResponse,
+			budgetManager.getTotalBudgetTokens(),
+			toolCallCount
+		);
 	}
 
 	/**

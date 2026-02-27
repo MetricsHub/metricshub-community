@@ -264,7 +264,7 @@ public class OsCommandRequestExecutor {
 	 * @param privateKey The private key file
 	 * @throws ClientException If an error occurred.
 	 */
-	static void authenticateSsh(
+	public static void authenticateSsh(
 		final SshClient sshClient,
 		final String hostname,
 		final String username,

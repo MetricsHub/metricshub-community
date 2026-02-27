@@ -31,9 +31,9 @@ import io.opentelemetry.proto.resource.v1.Resource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
@@ -59,6 +59,9 @@ public class ResourceMeter {
 	private Map<String, String> attributes = new HashMap<>();
 
 	private final List<AbstractMetricRecorder> metricRecorders = new ArrayList<>();
+
+	@Default
+	private Map<String, Metric> metricsCache = new LinkedHashMap<>();
 
 	private boolean isAppendResourceAttributes;
 
@@ -106,12 +109,8 @@ public class ResourceMeter {
 			)
 			.build();
 
-		final List<Metric> metrics = metricRecorders
-			.stream()
-			.map(AbstractMetricRecorder::doRecord)
-			.filter(Optional::isPresent)
-			.map(Optional::get)
-			.toList();
+		metricRecorders.forEach(AbstractMetricRecorder::doRecord);
+		final List<Metric> metrics = new ArrayList<>(metricsCache.values());
 
 		final ScopeMetrics scopeMetrics = ScopeMetrics
 			.newBuilder()
@@ -131,7 +130,12 @@ public class ResourceMeter {
 	public void registerRecorder(final MetricContext context, final AbstractMetric metric) {
 		// Handle the metric and add the metric recorders to the list.
 		metricRecorders.addAll(
-			MetricHandler.handle(context, metric, isAppendResourceAttributes ? attributes : Collections.emptyMap())
+			MetricHandler.handle(
+				context,
+				metric,
+				isAppendResourceAttributes ? attributes : Collections.emptyMap(),
+				metricsCache
+			)
 		);
 	}
 
@@ -141,5 +145,6 @@ public class ResourceMeter {
 	 */
 	public void clearRecorders() {
 		metricRecorders.clear();
+		metricsCache.clear();
 	}
 }

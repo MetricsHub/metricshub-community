@@ -24,6 +24,7 @@ package org.metricshub.web.config;
 import com.openai.models.Reasoning;
 import com.openai.models.ReasoningEffort;
 import java.util.Locale;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -41,6 +42,51 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class ChatOpenAiConfigurationProperties {
 
 	/**
+	 * Known context window sizes for OpenAI models (in tokens).
+	 * Must be maintained manually as OpenAI does not expose them via API.
+	 * Source: https://developers.openai.com/api/docs/models
+	 */
+	private static final Map<String, Integer> MODEL_CONTEXT_WINDOWS = Map.ofEntries(
+		Map.entry("gpt-4o", 128000),
+		Map.entry("gpt-4o-mini", 128000),
+		Map.entry("gpt-4-turbo", 128000),
+		Map.entry("gpt-4", 8192),
+		Map.entry("gpt-3.5-turbo", 16385),
+		Map.entry("gpt-5.1", 400000),
+		Map.entry("gpt-5.2", 400000),
+		Map.entry("o1", 200000),
+		Map.entry("o1-mini", 128000),
+		Map.entry("o3-mini", 200000)
+	);
+
+	/**
+	 * Known max output tokens for OpenAI models.
+	 * Source: https://developers.openai.com/api/docs/models
+	 */
+	private static final Map<String, Integer> MODEL_MAX_OUTPUT_TOKENS = Map.ofEntries(
+		Map.entry("gpt-4o", 16384),
+		Map.entry("gpt-4o-mini", 16384),
+		Map.entry("gpt-4-turbo", 4096),
+		Map.entry("gpt-4", 8192),
+		Map.entry("gpt-3.5-turbo", 4096),
+		Map.entry("gpt-5.1", 128000),
+		Map.entry("gpt-5.2", 128000),
+		Map.entry("o1", 100000),
+		Map.entry("o1-mini", 65536),
+		Map.entry("o3-mini", 100000)
+	);
+
+	/**
+	 * Default context window size if model is not in the known list.
+	 */
+	private static final int DEFAULT_CONTEXT_WINDOW = 128000;
+
+	/**
+	 * Default max output tokens if model is not in the known list.
+	 */
+	private static final int DEFAULT_MAX_OUTPUT_TOKENS = 4096;
+
+	/**
 	 * OpenAI API key. Required for chat functionality.
 	 */
 	private String apiKey;
@@ -51,9 +97,59 @@ public class ChatOpenAiConfigurationProperties {
 	private String model = "gpt-5.2";
 
 	/**
+	 * Optional override for context window tokens.
+	 * If set, this takes precedence over the built-in model lookup.
+	 */
+	private Integer contextWindowTokens;
+
+	/**
+	 * Optional override for reserved response tokens.
+	 * If set, this takes precedence over the built-in model lookup.
+	 */
+	private Integer reservedResponseTokens;
+
+	/**
 	 * Reasoning configuration for OpenAI requests.
 	 */
 	private ReasoningProperties reasoning = new ReasoningProperties();
+
+	/**
+	 * Returns the context window size for the configured model.
+	 *
+	 * @return context window in tokens
+	 */
+	public int getEffectiveContextWindowTokens() {
+		if (contextWindowTokens != null) {
+			return contextWindowTokens;
+		}
+		return MODEL_CONTEXT_WINDOWS.getOrDefault(normalizeModelName(model), DEFAULT_CONTEXT_WINDOW);
+	}
+
+	/**
+	 * Returns the max output tokens (reserved for response) for the configured model.
+	 *
+	 * @return max output tokens
+	 */
+	public int getEffectiveReservedResponseTokens() {
+		if (reservedResponseTokens != null) {
+			return reservedResponseTokens;
+		}
+		return MODEL_MAX_OUTPUT_TOKENS.getOrDefault(normalizeModelName(model), DEFAULT_MAX_OUTPUT_TOKENS);
+	}
+
+	/**
+	 * Normalizes a model name by removing date suffixes (e.g., "gpt-4o-2024-08-06" -&gt; "gpt-4o").
+	 *
+	 * @param modelName the full model name
+	 * @return normalized model name
+	 */
+	private String normalizeModelName(final String modelName) {
+		if (modelName == null) {
+			return null;
+		}
+		// Remove date suffixes like "-2024-08-06"
+		return modelName.replaceAll("-\\d{4}-\\d{2}-\\d{2}$", "");
+	}
 
 	@Data
 	public static class ReasoningProperties {

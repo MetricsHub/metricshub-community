@@ -36,6 +36,7 @@ import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.service.TestHelper;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.springframework.scheduling.Trigger;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -61,6 +62,7 @@ class SelfSchedulingTest {
 			.builder()
 			.withAgentConfig(agentConfig)
 			.withAgentInfo(agentInfo)
+			.withExtensionManager(ExtensionManager.empty())
 			.withMetricsExporter(metricsExporter)
 			.withSchedules(new HashMap<>())
 			.withTaskScheduler(taskSchedulerMock)

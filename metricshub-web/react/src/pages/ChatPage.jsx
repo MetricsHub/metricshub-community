@@ -28,6 +28,7 @@ import {
 	selectCurrentConversationId,
 	createConversation,
 	appendReasoningToMessage,
+	setReasoningDuration,
 } from "../store/slices/chat-slice";
 import ChatMessage from "../components/chat/ChatMessage";
 import CloseIcon from "@mui/icons-material/Close";
@@ -35,6 +36,7 @@ import ArrowForwardIosIcon from "@mui/icons-material/ArrowForwardIos";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { formatReasoningDuration } from "../utils/formatters";
 
 /**
  * Chat page component with professional system design
@@ -63,6 +65,8 @@ function ChatPage() {
 		[reasoningPanelWidth],
 	);
 	const streamingPreviewRef = React.useRef(null);
+	const reasoningStartRef = React.useRef(null);
+	const reasoningDoneRef = React.useRef(false);
 	const STREAMING_PREVIEW_MAX_HEIGHT = 120;
 	const assistantMessages = React.useMemo(
 		() => messages.filter((m) => m.role === "assistant"),
@@ -157,11 +161,25 @@ function ChatPage() {
 		);
 		dispatch(setLoading({ isLoading: true }));
 
+		// Reset reasoning timing refs
+		reasoningStartRef.current = null;
+		reasoningDoneRef.current = false;
+
 		// Stream chat response
 		const controller = chatApi.streamChat(
 			{ message: userMessage, history },
 			{
 				onChunk: (chunk) => {
+					// First content chunk marks the end of reasoning
+					if (!reasoningDoneRef.current && reasoningStartRef.current) {
+						reasoningDoneRef.current = true;
+						dispatch(
+							setReasoningDuration({
+								messageId: assistantMessageId,
+								durationMs: Date.now() - reasoningStartRef.current,
+							}),
+						);
+					}
 					// Append chunk to message in Redux store
 					dispatch(
 						appendToMessage({
@@ -171,6 +189,10 @@ function ChatPage() {
 					);
 				},
 				onReasoning: (chunk) => {
+					// Record start time on the very first reasoning chunk
+					if (!reasoningStartRef.current) {
+						reasoningStartRef.current = Date.now();
+					}
 					dispatch(
 						appendReasoningToMessage({
 							messageId: assistantMessageId,
@@ -179,6 +201,16 @@ function ChatPage() {
 					);
 				},
 				onDone: () => {
+					// Finalize reasoning duration if not already done (e.g. no content chunks)
+					if (!reasoningDoneRef.current && reasoningStartRef.current) {
+						reasoningDoneRef.current = true;
+						dispatch(
+							setReasoningDuration({
+								messageId: assistantMessageId,
+								durationMs: Date.now() - reasoningStartRef.current,
+							}),
+						);
+					}
 					dispatch(setLoading({ isLoading: false }));
 					setAbortController(null);
 				},
@@ -346,6 +378,7 @@ function ChatPage() {
 	 */
 	const renderReasoningPanel = () => {
 		const reasoningContent = selectedReasoningMessage?.reasoning?.trim() || "";
+		const reasoningDurationMs = selectedReasoningMessage?.reasoningDurationMs;
 
 		return (
 			<Box
@@ -373,9 +406,22 @@ function ChatPage() {
 						}`,
 					}}
 				>
-					<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-						Thoughts
-					</Typography>
+					<Box sx={{ display: "flex", alignItems: "baseline", gap: 1 }}>
+						<Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+							Thoughts
+						</Typography>
+						{reasoningDurationMs != null && (
+							<Typography
+								variant="caption"
+								sx={{
+									color: theme.palette.text.secondary,
+									fontWeight: 400,
+								}}
+							>
+								{formatReasoningDuration(reasoningDurationMs)}
+							</Typography>
+						)}
+					</Box>
 					<IconButton size="small" onClick={() => setIsReasoningPanelOpen(false)}>
 						<CloseIcon fontSize="small" />
 					</IconButton>

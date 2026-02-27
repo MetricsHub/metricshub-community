@@ -1,0 +1,8 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  testFileSource:
+    type: file
+    paths: /var/log/*.log

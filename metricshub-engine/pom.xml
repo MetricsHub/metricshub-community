@@ -99,6 +99,10 @@
 			<groupId>io.opentelemetry.instrumentation</groupId>
 			<artifactId>opentelemetry-instrumentation-annotations</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>io.opentelemetry.proto</groupId>
+			<artifactId>opentelemetry-proto</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

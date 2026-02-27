@@ -1,0 +1,14 @@
+identityRules:
+  agent:
+    metricPatterns:
+    - ".*\\.agent\\..*"
+    - "metricshub\\.license\\..*"
+    entityNameFrom: host.name
+    instanceNameFrom: service.name
+    entityTypeId: agent
+  site:
+    metricPatterns:
+    - "hw\\.site\\..*"
+    entityNameFrom: site
+    instanceNameFrom: site
+    entityTypeId: site

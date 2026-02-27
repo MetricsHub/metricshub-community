@@ -45,15 +45,17 @@ public abstract class AbstractStateMetricRecorder extends AbstractMetricRecorder
 	 * @param description        the description of the metric.
 	 * @param stateValue         the state value.
 	 * @param resourceAttributes the resource attributes associated with the metric.
+	 * @param metricsCache       the metric cache to group data points.
 	 */
 	protected AbstractStateMetricRecorder(
 		final StateSetMetric metric,
 		final String unit,
 		final String description,
 		final String stateValue,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		super(metric, unit, description, resourceAttributes);
+		super(metric, unit, description, resourceAttributes, metricsCache);
 		this.stateValue = stateValue;
 	}
 
@@ -65,7 +67,7 @@ public abstract class AbstractStateMetricRecorder extends AbstractMetricRecorder
 	@Override
 	public Optional<Metric> doRecord() {
 		try {
-			return this.<String>getMetricValue().flatMap(this::buildMetric);
+			return this.<String>getMetricValue().flatMap(this::buildMetric).flatMap(this::storeMetric);
 		} catch (Exception e) {
 			log.error("Failed to record state metric: {}. Message: {}", metric.getName(), e.getMessage());
 			log.debug("Failed to record state metric: {}", metric.getName(), e);

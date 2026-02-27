@@ -22,6 +22,7 @@ package org.metricshub.web.dto.openai;
  */
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -48,6 +49,14 @@ public class UploadedToolOutputManifest {
 
 	@Default
 	private String description =
-		"Tool output was too large to include directly. The full tool output JSON was uploaded to OpenAI Files API. " +
+		"Tool output was too large to include directly and has been omitted from the payload. " +
+		"The full data was uploaded to OpenAI Files API. " +
 		"Use Code Interpreter to analyze the file using openai_file_id. Do not request raw JSON chunks.";
+
+	/**
+	 * The tool output payload: full JSON tree when under the size limit,
+	 * truncated JSON tree for troubleshooting tools that exceed the limit,
+	 * or {@code null} for non-troubleshooting tools that exceed the limit.
+	 */
+	private JsonNode payload;
 }

@@ -28,6 +28,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOST_TYPE
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.UNDERSCORE;
 
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -198,15 +199,17 @@ public class MonitorFactory {
 			deviceKind.getDisplayName().toLowerCase()
 		);
 
-		final Map<String, String> monitorAttributes = Map.of(
-			HOST_NAME,
-			hostConfiguration.isResolveHostnameToFqdn() ? NetworkHelper.getFqdn(hostname) : hostname,
-			"host.type",
-			hostType,
-			"os.type",
-			osType,
-			"agent.host.name",
-			StringHelper.getValue(() -> InetAddress.getLocalHost().getCanonicalHostName(), "unknown")
+		final Map<String, String> monitorAttributes = new HashMap<>(
+			Map.of(
+				HOST_NAME,
+				hostConfiguration.isResolveHostnameToFqdn() ? NetworkHelper.getFqdn(hostname) : hostname,
+				"host.type",
+				hostType,
+				"os.type",
+				osType,
+				"agent.host.name",
+				StringHelper.getValue(() -> InetAddress.getLocalHost().getCanonicalHostName(), "unknown")
+			)
 		);
 
 		// Create the monitor using createOrUpdateMonitor

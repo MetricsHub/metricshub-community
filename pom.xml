@@ -79,7 +79,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.18</community-connectors.version>
+		<community-connectors.version>1.0.19-SNAPSHOT</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 
 		<project.build.outputTimestamp>2026-01-22T14:52:13Z</project.build.outputTimestamp>
@@ -101,6 +101,7 @@
 		<module>metricshub-engine</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>
+		<module>metricshub-bmchelix-enrichment-extension</module>
 		<module>metricshub-internaldb-extension</module>
 		<module>metricshub-ipmi-extension</module>
 		<module>metricshub-it-common</module>
@@ -302,7 +303,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>ssh-java</artifactId>
-				<version>1.0.03</version>
+				<version>1.0.04</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -63,7 +64,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				15.0,
 				monitorWithHwVoltageLimitMetric
@@ -117,7 +119,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				15.0,
 				monitorWithHwVoltageLimitMetric
@@ -161,7 +164,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				10.0,
 				monitorWithHwVoltageLimitMetric
@@ -205,7 +209,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				-10.0,
 				monitorWithHwVoltageLimitMetric
@@ -249,7 +254,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				11.0,
 				monitorWithHwVoltageLimitMetric
@@ -293,7 +299,8 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwVoltageLimitMetric);
 			assertEquals(
 				-9.0,
 				monitorWithHwVoltageLimitMetric
