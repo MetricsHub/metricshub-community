@@ -180,4 +180,70 @@ class ContextBudgetManagerTest {
 		assertEquals(AllocationTier.FULL, result.tier());
 		assertEquals(1000, result.availableChars());
 	}
+
+	@Test
+	void testRefundRestoresBudget() {
+		// Given: budget manager with allocation
+		final ContextBudgetManager manager = new ContextBudgetManager(128000, 10000, 16384);
+		final int initialRemaining = manager.getRemainingTokens();
+
+		// When: allocating and then refunding
+		manager.allocate(35000); // ~10000 tokens
+		final int afterAllocation = manager.getRemainingTokens();
+		manager.refund(5000); // Refund 5000 tokens
+		final int afterRefund = manager.getRemainingTokens();
+
+		// Then: remaining should increase after refund
+		assertTrue(afterAllocation < initialRemaining, "Budget should decrease after allocation");
+		assertTrue(afterRefund > afterAllocation, "Budget should increase after refund");
+		assertTrue(afterRefund < initialRemaining, "Budget after refund should still be less than initial");
+	}
+
+	@Test
+	void testRefundWithZeroTokensDoesNothing() {
+		// Given: budget manager
+		final ContextBudgetManager manager = new ContextBudgetManager(128000, 10000, 16384);
+		manager.allocate(35000);
+		final int remainingBefore = manager.getRemainingTokens();
+
+		// When: refunding zero tokens
+		manager.refund(0);
+
+		// Then: remaining should be unchanged
+		assertEquals(remainingBefore, manager.getRemainingTokens());
+	}
+
+	@Test
+	void testRefundWithNegativeTokensDoesNothing() {
+		// Given: budget manager
+		final ContextBudgetManager manager = new ContextBudgetManager(128000, 10000, 16384);
+		manager.allocate(35000);
+		final int remainingBefore = manager.getRemainingTokens();
+
+		// When: refunding negative tokens (invalid input)
+		manager.refund(-100);
+
+		// Then: remaining should be unchanged (defensive handling)
+		assertEquals(remainingBefore, manager.getRemainingTokens());
+	}
+
+	@Test
+	void testRefundAllowsSubsequentFullAllocation() {
+		// Given: limited budget
+		final ContextBudgetManager manager = new ContextBudgetManager(50000, 10000, 4000);
+		// Available: 36000 tokens (~126K chars)
+
+		// When: allocating, refunding, then allocating again
+		final AllocationResult firstAlloc = manager.allocate(70000); // ~20000 tokens - should get FULL
+		assertEquals(AllocationTier.FULL, firstAlloc.tier());
+
+		manager.allocate(70000); // ~20000 tokens - might be TRUNCATED
+
+		// Refund most of the second allocation
+		manager.refund(15000);
+
+		// Third allocation should now succeed as FULL since we refunded
+		final AllocationResult thirdAlloc = manager.allocate(50000); // ~14286 tokens
+		assertEquals(AllocationTier.FULL, thirdAlloc.tier(), "After refund, budget should support another FULL allocation");
+	}
 }

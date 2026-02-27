@@ -444,4 +444,106 @@ class ToolResponseManagerServiceTest {
 		// Should NOT contain "Truncated entries:" when list is empty
 		assertFalse(description.contains("Truncated entries:"));
 	}
+
+	// ---- Budget refund for non-troubleshooting tools ----
+
+	@Test
+	void testBudgetRefundForNonTroubleshootingToolInTruncatedTier() throws Exception {
+		// Given: a budget manager with limited room to trigger TRUNCATED tier
+		// 50K context, 30K prompt used, 4K reserved → 16K tokens available (~56K chars)
+		final ContextBudgetManager budgetManager = new ContextBudgetManager(50000, 30000, 4000);
+		ContextBudgetHolder.set(budgetManager);
+
+		try {
+			final var properties = new OpenAiToolOutputProperties();
+			properties.setMaxToolOutputBytes(99_000);
+			final var service = newService(properties);
+
+			// Build a large non-troubleshooting output (200K chars) that will trigger TRUNCATED tier
+			// since we only have ~56K chars available
+			final String largeOutput = "{\"data\":\"" + "x".repeat(200000) + "\"}";
+			final Path tempFile = setupMocks("NonTroubleshootTool", largeOutput, "file-refund-test");
+
+			final int tokensBeforeAllocation = budgetManager.getRemainingTokens();
+
+			// When: adapting the output (should allocate remaining budget, but only use generic manifest)
+			final String adapted = service.adaptToolOutput("NonTroubleshootTool", largeOutput);
+
+			final int tokensAfterAllocation = budgetManager.getRemainingTokens();
+
+			// Then: budget should be refunded since generic manifest is much smaller than allocated
+			final int actualManifestSize = adapted.length();
+			final int expectedTokensUsed = ContextBudgetManager.charsToTokens(actualManifestSize);
+
+			// The actual tokens consumed should be close to the manifest size, not the allocated size
+			final int actualTokensConsumed = tokensBeforeAllocation - tokensAfterAllocation;
+			assertTrue(
+				actualTokensConsumed < largeOutput.length() / 10,
+				"Budget consumed should be much less than allocated size due to refund. " +
+				"Consumed: " +
+				actualTokensConsumed +
+				" tokens, allocated would be ~" +
+				tokensBeforeAllocation +
+				" tokens, manifest size is ~" +
+				expectedTokensUsed +
+				" tokens"
+			);
+
+			// Verify the manifest is indeed a generic one (no payload)
+			final JsonNode manifestNode = objectMapper.readTree(adapted);
+			assertTrue(
+				manifestNode.get("payload") == null || manifestNode.get("payload").isNull(),
+				"Non-troubleshooting tool should return generic manifest without payload"
+			);
+
+			Files.deleteIfExists(tempFile);
+		} finally {
+			ContextBudgetHolder.clear();
+		}
+	}
+
+	@Test
+	void testBudgetRefundAllowsSubsequentToolToGetFullAllocation() throws Exception {
+		// Given: limited budget - 60K context, 30K prompt used, 4K reserved → 26K tokens available (~91K chars)
+		final ContextBudgetManager budgetManager = new ContextBudgetManager(60000, 30000, 4000);
+		ContextBudgetHolder.set(budgetManager);
+
+		try {
+			final var properties = new OpenAiToolOutputProperties();
+			properties.setMaxToolOutputBytes(99_000);
+			final var service = newService(properties);
+
+			// First tool: large non-troubleshooting output that exceeds available budget
+			// 150K chars (~42,857 tokens) > 26K available → gets TRUNCATED tier, allocates 26K, returns generic manifest
+			final String largeOutput = "{\"data\":\"" + "x".repeat(150000) + "\"}";
+			final Path tempFile1 = setupMocks("Tool1", largeOutput, "file-1");
+
+			// When: first tool allocates 26K but refunds most due to tiny generic manifest (~100 chars = ~29 tokens)
+			service.adaptToolOutput("Tool1", largeOutput);
+
+			// After refund: should have ~26K tokens available again
+			// Second tool: small output (30K chars = ~8,571 tokens) that should fit in FULL tier
+			final String smallOutput = "{\"result\":\"" + "y".repeat(30000) + "\"}";
+			final Path tempFile2 = setupMocks("Tool2", smallOutput, "file-2");
+
+			final int remainingBefore = budgetManager.getRemainingTokens();
+			final String adapted = service.adaptToolOutput("Tool2", smallOutput);
+
+			// Then: second tool should get FULL allocation thanks to refund from first tool
+			final JsonNode manifestNode = objectMapper.readTree(adapted);
+			assertNotNull(
+				manifestNode.get("payload"),
+				"Second tool should get FULL allocation with payload due to budget refund from first tool. " +
+				"Remaining before: " +
+				remainingBefore +
+				" tokens"
+			);
+			assertFalse(manifestNode.get("payload").isNull(), "Payload should not be null for FULL allocation");
+
+			Files.deleteIfExists(tempFile1);
+			Files.deleteIfExists(tempFile2);
+		} finally {
+			ContextBudgetHolder.clear();
+		}
+	}
 }
