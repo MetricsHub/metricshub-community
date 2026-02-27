@@ -24,6 +24,7 @@ package org.metricshub.engine.strategy.source;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -169,4 +170,12 @@ public interface ISourceProcessor {
 	 * @return The SourceTable result.
 	 */
 	SourceTable process(EventLogSource eventLogSource);
+
+	/**
+	 * Processes a FileSource and returns a SourceTable.
+	 *
+	 * @param fileSource The FileSource to process.
+	 * @return The SourceTable result.
+	 */
+	SourceTable process(FileSource fileSource);
 }

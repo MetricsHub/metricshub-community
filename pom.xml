@@ -302,7 +302,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>ssh-java</artifactId>
-				<version>1.0.03</version>
+				<version>1.0.04</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>
