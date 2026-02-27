@@ -1,0 +1,47 @@
+metrics:
+
+  hw.host.ambient_temperature:
+    description: Host's current ambient temperature in degrees Celsius (°C). This metric is only reported if the value is between 5°C and 35°C.
+    type: Gauge
+    unit: Cel
+
+  hw.host.energy:
+    description: Energy consumed by the host since the start of the MetricsHub Agent.
+    type: Counter
+    unit: J
+
+  hw.host.heating_margin:
+    description: Number of degrees Celsius (°C) remaining before the temperature reaches the closest warning threshold.
+    type: Gauge
+    unit: Cel
+
+  hw.host.power:
+    description: Instantaneous power consumed by the host, in Watts (hw.host.energy is preferred).
+    type: Gauge
+    unit: W
+
+  metricshub.host.configured:
+    description: Whether the host is configured or not.
+    type: UpDownCounter
+
+  metricshub.host.up:
+    description: Whether the configured protocol (http, ipmi, snmp, ssh, wbem, winrm and wmi) is up (1) or not (0).	
+    type: UpDownCounter
+
+  hw.status:
+    description: 'Operational status: 1 (true) or 0 (false) for each of the possible states.'
+    type:
+      stateSet:
+      - degraded
+      - failed
+      - ok
+
+  metricshub.host.response_time:
+    description: Response time for protocol check.
+    type: Gauge
+    unit: s
+
+  metricshub.job.duration:
+    description: Reports the time taken to complete a monitor job in MetricsHub.
+    type: Gauge
+    unit: s

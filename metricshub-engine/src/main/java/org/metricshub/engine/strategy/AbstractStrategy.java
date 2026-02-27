@@ -535,7 +535,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Monitor monitor
 	) {
 		// Initialize the metric factory to collect metrics
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Get the connector's namespace containing related settings
 		final ConnectorNamespace connectorNamespace = telemetryManager
@@ -683,7 +686,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	private void collectJobDurationMetric(final String jobDurationMetricKey, final long startTime, final long endTime) {
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			endpointHostMonitor,
 			jobDurationMetricKey,
@@ -699,7 +705,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	protected void collectHostConfigured(final String hostname) {
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_CONFIGURED_METRIC_NAME, 1.0, strategyTime);
 	}
 }

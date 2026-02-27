@@ -47,21 +47,34 @@ public class NumberMetric extends AbstractMetric {
 	private Double previousValue;
 
 	/**
+	 * The computed rate for Counter metrics.
+	 * rate = (value - previousValue) / ((collectTime - previousCollectTime) / 1000.0)
+	 * Null when:
+	 * - The metric type is not "Counter"
+	 * - This is the first collect (no previousValue or previousCollectTime)
+	 * - previousValue or previousCollectTime is null
+	 * - The time delta is zero or negative
+	 */
+	private Double rate;
+
+	/**
 	 * Creates a new instance of NumberMetric using the provided parameters.
 	 *
 	 * @param name         The name of the metric.
 	 * @param collectTime  The timestamp when the metric was collected.
 	 * @param attributes   Additional attributes associated with the metric.
 	 * @param value        The numeric value of the metric.
+	 * @param metricType   The OpenTelemetry instrument type of this metric.
 	 */
 	@Builder
 	public NumberMetric(
 		final String name,
 		final Long collectTime,
 		final Map<String, String> attributes,
-		final Double value
+		final Double value,
+		final String metricType
 	) {
-		super(name, collectTime, attributes);
+		super(name, collectTime, attributes, metricType);
 		this.value = value;
 	}
 

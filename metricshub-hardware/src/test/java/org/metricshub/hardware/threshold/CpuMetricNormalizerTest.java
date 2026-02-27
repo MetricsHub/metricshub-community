@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -57,7 +58,7 @@ class CpuMetricNormalizerTest {
 			)
 			.build();
 
-		new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwErrorsMetric);
+		new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(monitorWithHwErrorsMetric);
 		assertEquals(
 			2.0,
 			monitorWithHwErrorsMetric

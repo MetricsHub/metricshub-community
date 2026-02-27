@@ -10,6 +10,7 @@ import static org.metricshub.hardware.util.HwCollectHelper.containsAllEntries;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -56,7 +57,8 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithoutHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsMetric);
 			assertNull(
 				monitorWithoutHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -76,7 +78,8 @@ class AbstractMetricNormalizerTest {
 				.type("cpu")
 				.metrics(new HashMap<>(Map.of("hw.errors{hw.type=\"cpu\"}", hwErrorsMetric)))
 				.build();
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
 			assertNull(
 				monitorWithoutHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -97,7 +100,7 @@ class AbstractMetricNormalizerTest {
 				.metrics(new HashMap<>(Map.of("hw.errors{hw.type=\"cpu\"}", hwErrorsMetric)))
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(diskMonitor);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(diskMonitor);
 			assertNull(diskMonitor.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class));
 		}
 
@@ -113,7 +116,8 @@ class AbstractMetricNormalizerTest {
 				.metrics(new HashMap<>(Map.of("hw.errors", hwErrorsMetric)))
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
 			assertNotNull(
 				monitorWithoutHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -140,7 +144,8 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
 			assertNotNull(
 				monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -172,7 +177,8 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
 			assertNull(
 				monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -219,7 +225,8 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
 			assertEquals(
 				2.0,
 				monitorWithHwErrorsLimitMetric
@@ -272,7 +279,8 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
 			assertEquals(
 				2.0,
 				monitorWithHwErrorsLimitMetric
@@ -294,7 +302,8 @@ class AbstractMetricNormalizerTest {
 		final String metricName = "hw.fan.speed.limit{limit_type=\"low.oldLimitType\", low=\"some_state\"}";
 		final String newLimitType = "limit_type=\"high.newLimitType\"";
 		final String expected = "hw.fan.speed.limit{limit_type=\"high.newLimitType\", low=\"some_state\"}";
-		final String result = new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME).replaceLimitType(metricName, newLimitType);
+		final String result = new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+			.replaceLimitType(metricName, newLimitType);
 		assertEquals(expected, result);
 	}
 }

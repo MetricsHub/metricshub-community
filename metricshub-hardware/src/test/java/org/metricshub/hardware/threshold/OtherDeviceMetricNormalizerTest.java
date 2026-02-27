@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -63,7 +64,8 @@ class OtherDeviceMetricNormalizerTest {
 				)
 				.build();
 
-			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwOtherDeviceUsesLimitMetric);
+			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwOtherDeviceUsesLimitMetric);
 			assertEquals(
 				1.0,
 				monitorWithHwOtherDeviceUsesLimitMetric
@@ -121,7 +123,8 @@ class OtherDeviceMetricNormalizerTest {
 				)
 				.build();
 
-			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwOtherDeviceUsesLimitMetric);
+			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwOtherDeviceUsesLimitMetric);
 			assertEquals(
 				1.0,
 				monitorWithHwOtherDeviceUsesLimitMetric
@@ -169,7 +172,8 @@ class OtherDeviceMetricNormalizerTest {
 				)
 				.build();
 
-			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwOtherDeviceUsesLimitMetric);
+			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwOtherDeviceUsesLimitMetric);
 			assertEquals(
 				1.8,
 				monitorWithHwOtherDeviceUsesLimitMetric
@@ -210,7 +214,8 @@ class OtherDeviceMetricNormalizerTest {
 					)
 				)
 				.build();
-			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwOtherDeviceUsesLimitMetric);
+			new OtherDeviceMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwOtherDeviceUsesLimitMetric);
 			assertEquals(
 				2.2,
 				monitorWithHwOtherDeviceUsesLimitMetric

@@ -54,6 +54,7 @@ public class StateSetMetric extends AbstractMetric {
 	 * @param attributes   Additional attributes associated with the metric.
 	 * @param value        The current value of the state.
 	 * @param stateSet     The set of possible states for the metric.
+	 * @param metricType   The OpenTelemetry instrument type of this metric.
 	 */
 	@Builder
 	public StateSetMetric(
@@ -61,9 +62,10 @@ public class StateSetMetric extends AbstractMetric {
 		final Long collectTime,
 		final Map<String, String> attributes,
 		final String value,
-		final String[] stateSet
+		final String[] stateSet,
+		final String metricType
 	) {
-		super(name, collectTime, attributes);
+		super(name, collectTime, attributes, metricType);
 		this.value = value;
 		this.stateSet = stateSet;
 	}

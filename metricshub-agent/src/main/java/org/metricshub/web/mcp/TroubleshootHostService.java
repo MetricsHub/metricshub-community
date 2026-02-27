@@ -36,7 +36,8 @@ import org.metricshub.hardware.strategy.HardwareMonitorNameGenerationStrategy;
 import org.metricshub.hardware.strategy.HardwarePostCollectStrategy;
 import org.metricshub.hardware.strategy.HardwarePostDiscoveryStrategy;
 import org.metricshub.web.AgentContextHolder;
-import org.metricshub.web.dto.TelemetryResult;
+import org.metricshub.web.dto.mcp.TelemetryResult;
+import org.metricshub.web.dto.mcp.TelemetryResultConverter;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -307,7 +308,7 @@ public class TroubleshootHostService implements IMCPToolService {
 			new HardwareMonitorNameGenerationStrategy(newTelemetryManager, collectTime, clientsExecutor, extensionManager)
 		);
 
-		return new TelemetryResult(newTelemetryManager.getVo());
+		return new TelemetryResult(TelemetryResultConverter.toMonitorsVo(newTelemetryManager));
 	}
 
 	/**
@@ -317,7 +318,7 @@ public class TroubleshootHostService implements IMCPToolService {
 	 * @return a {@link TelemetryResult} populated with the cached value
 	 */
 	private TelemetryResult getMetricsFromCacheForHostInternal(final TelemetryManager telemetryManager) {
-		return new TelemetryResult(telemetryManager.getVo());
+		return new TelemetryResult(TelemetryResultConverter.toMonitorsVo(telemetryManager));
 	}
 
 	/**
@@ -345,7 +346,7 @@ public class TroubleshootHostService implements IMCPToolService {
 			new HardwareMonitorNameGenerationStrategy(newTelemetryManager, detectionTime, clientsExecutor, extensionManager)
 		);
 
-		return new TelemetryResult(newTelemetryManager.getVo());
+		return new TelemetryResult(TelemetryResultConverter.toMonitorsVo(newTelemetryManager));
 	}
 
 	/**

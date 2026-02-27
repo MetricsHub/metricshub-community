@@ -26,6 +26,7 @@ import static org.metricshub.hardware.util.HwCollectHelper.isMetricCollected;
 
 import java.util.Map;
 import java.util.Optional;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -38,11 +39,12 @@ public class TemperatureMetricNormalizer extends AbstractMetricNormalizer {
 
 	/**
 	 * Constructs new instance of TemperatureMetricNormalizer with the specified strategy time.
-	 * @param strategyTime The strategy time in milliseconds
-	 * @param hostname     The hostname of the monitor
+	 * @param strategyTime   The strategy time in milliseconds
+	 * @param hostname       The hostname of the monitor
+	 * @param connectorStore The connector store
 	 */
-	public TemperatureMetricNormalizer(long strategyTime, String hostname) {
-		super(strategyTime, hostname);
+	public TemperatureMetricNormalizer(long strategyTime, String hostname, ConnectorStore connectorStore) {
+		super(strategyTime, hostname, connectorStore);
 	}
 
 	/**
