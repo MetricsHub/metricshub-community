@@ -234,7 +234,7 @@ public class MetricFactory {
 
 			// Compute rate for Counter metrics
 			if ("Counter".equalsIgnoreCase(metricType)) {
-				if (metric.getPreviousValue() != null && metric.getPreviousCollectTime() != null) {
+				if (collectTime != null && metric.getPreviousValue() != null && metric.getPreviousCollectTime() != null) {
 					final long timeDeltaMs = collectTime - metric.getPreviousCollectTime();
 					if (timeDeltaMs > 0) {
 						metric.setRate((value - metric.getPreviousValue()) / (timeDeltaMs / 1000.0));
