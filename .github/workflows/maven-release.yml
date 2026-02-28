@@ -174,7 +174,7 @@ jobs:
         ls -l packaging-assets/
 
     - name: Upload Community Package Artifacts
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: package-artifacts
         include-hidden-files: true
