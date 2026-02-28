@@ -85,7 +85,7 @@
 		<project.build.outputTimestamp>2026-01-22T14:52:13Z</project.build.outputTimestamp>
 
 		<!-- Packaging Properties -->
-		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
+		<metricshub-jre.version>17.0.18_8</metricshub-jre.version>
 		<nssm.version>2.24</nssm.version>
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
 		<jdkBuildVersion>21</jdkBuildVersion>
