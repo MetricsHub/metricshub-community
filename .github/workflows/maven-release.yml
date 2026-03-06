@@ -201,12 +201,19 @@ jobs:
 
   # Finalize job
   finalize:
+
     name: Finalize release
+
     runs-on: ubuntu-latest
+
     needs:
     - prepare
     - release
     - package-community
+
+    permissions:
+      id-token: write
+
     steps:
 
     - uses: actions/checkout@v6
@@ -277,3 +284,4 @@ jobs:
         aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ inputs.releaseVersion }}/ --recursive
       env:
         AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}
+
