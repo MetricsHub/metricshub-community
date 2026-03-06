@@ -29,6 +29,7 @@ permissions:
   contents: write
   pull-requests: write
   packages: write
+  id-token: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these releases and deployments to complete.
@@ -211,9 +212,6 @@ jobs:
     - release
     - package-community
 
-    permissions:
-      id-token: write
-
     steps:
 
     - uses: actions/checkout@v6
@@ -284,4 +282,5 @@ jobs:
         aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ inputs.releaseVersion }}/ --recursive
       env:
         AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}
+
 
