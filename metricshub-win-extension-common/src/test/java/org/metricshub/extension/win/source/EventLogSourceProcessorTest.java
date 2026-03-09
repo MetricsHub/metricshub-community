@@ -711,40 +711,6 @@ class EventLogSourceProcessorTest {
 	}
 
 	@Test
-	void testEscapeNewLines_handlesAllNewlineVariants() {
-		assertEquals(
-			"Line1@{newLine}@Line2",
-			EventLogSourceProcessor.escapeNewLines("Line1\r\nLine2"),
-			"escapeNewLines() must replace Windows line endings (\\r\\n) with @{newLine}@."
-		);
-
-		assertEquals(
-			"Line1@{newLine}@Line2",
-			EventLogSourceProcessor.escapeNewLines("Line1\rLine2"),
-			"escapeNewLines() must replace Mac line endings (\\r) with @{newLine}@."
-		);
-
-		assertEquals(
-			"Line1@{newLine}@@{newLine}@Line2",
-			EventLogSourceProcessor.escapeNewLines("Line1\r\n\r\nLine2"),
-			"escapeNewLines() must replace multiple Windows line endings."
-		);
-
-		assertEquals(
-			"Line1@{newLine}@Line2@{newLine}@Line3",
-			EventLogSourceProcessor.escapeNewLines("Line1\nLine2\r\nLine3"),
-			"escapeNewLines() must handle mixed line endings."
-		);
-
-		assertEquals("", EventLogSourceProcessor.escapeNewLines(null), "escapeNewLines(null) must return empty string.");
-		assertEquals(
-			"No newlines",
-			EventLogSourceProcessor.escapeNewLines("No newlines"),
-			"escapeNewLines() must preserve strings without newlines."
-		);
-	}
-
-	@Test
 	void testPostProcessEventLogs_firstPollReturnsEmptyResultsButInitializesCursor() {
 		final EventLogSource source = EventLogSource.builder().maxEventsPerPoll(3).build();
 

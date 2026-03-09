@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>3.9.01-SNAPSHOT</version>
+	<version>3.9.02-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -79,10 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.18</community-connectors.version>
+		<community-connectors.version>1.0.19</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<project.build.outputTimestamp>2026-01-22T14:52:13Z</project.build.outputTimestamp>
+		<project.build.outputTimestamp>2026-03-06T15:35:56Z</project.build.outputTimestamp>
 
 		<!-- Packaging Properties -->
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
@@ -90,7 +90,7 @@
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
 		<jdkBuildVersion>21</jdkBuildVersion>
 		<debianTagName>trixie</debianTagName>
-		<fedoraTagName>44</fedoraTagName>
+		<fedoraTagName>43</fedoraTagName>
 
 	</properties>
 
@@ -98,10 +98,10 @@
 		<module>metricshub-agent</module>
 		<module>metricshub-assets</module>
 		<module>metricshub-classloader-agent</module>
-		<module>metricshub-doc</module>
 		<module>metricshub-engine</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>
+		<module>metricshub-bmchelix-enrichment-extension</module>
 		<module>metricshub-internaldb-extension</module>
 		<module>metricshub-ipmi-extension</module>
 		<module>metricshub-it-common</module>
@@ -303,7 +303,7 @@
 			<dependency>
 				<groupId>org.metricshub</groupId>
 				<artifactId>ssh-java</artifactId>
-				<version>1.0.03</version>
+				<version>1.0.04</version>
 			</dependency>
 			<dependency>
 				<groupId>org.metricshub</groupId>

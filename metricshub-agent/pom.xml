@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.01-SNAPSHOT</version>
+		<version>3.9.02-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -42,6 +42,14 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-hardware</artifactId>
 			<version>${project.version}</version>
+		</dependency>
+
+		<!-- MetricsHub Programmable Configuration Extension (Velocity template evaluation) -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-programmable-configuration-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<!-- MetricsHub Community Connectors -->
@@ -270,6 +278,12 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>metricshub-yaml-configuration-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-bmchelix-enrichment-extension</artifactId>
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>

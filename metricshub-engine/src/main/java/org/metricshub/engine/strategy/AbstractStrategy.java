@@ -42,7 +42,6 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
-import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -91,6 +90,11 @@ public abstract class AbstractStrategy implements IStrategy {
 
 	private static final String COMPUTE = "compute";
 	private static final String SOURCE = "source";
+
+	/**
+	 * Default proxy for formatting source table logs. For FileSource only the header is displayed.
+	 */
+	private static final SourceTableLoggingProxy SOURCE_TABLE_LOGGING_PROXY = new CustomSourceTableLoggingProxy();
 
 	/**
 	 * Format for string value like: <em>connector_connector-id</em>
@@ -365,44 +369,15 @@ public abstract class AbstractStrategy implements IStrategy {
 		if (!log.isInfoEnabled()) {
 			return;
 		}
-
-		// Is there any raw data to log?
-		if (sourceTable.getRawData() != null && (sourceTable.getTable() == null || sourceTable.getTable().isEmpty())) {
-			log.info(
-				"Hostname {} - End of {} [{} {}] for connector [{}].\nRaw result:\n{}\n",
-				hostname,
-				operationTag,
-				executionClassName,
-				executionKey,
-				connectorId,
-				sourceTable.getRawData()
-			);
-			return;
-		}
-
-		if (sourceTable.getRawData() == null) {
-			log.info(
-				"Hostname {} - End of {} [{} {}] for connector [{}].\nTable result:\n{}\n",
-				hostname,
-				operationTag,
-				executionClassName,
-				executionKey,
-				connectorId,
-				TextTableHelper.generateTextTable(sourceTable.getTable())
-			);
-			return;
-		}
-
-		log.info(
-			"Hostname {} - End of {} [{} {}] for connector [{}].\nRaw result:\n{}\nTable result:\n{}\n",
-			hostname,
+		final String message = SOURCE_TABLE_LOGGING_PROXY.formatForLog(
 			operationTag,
 			executionClassName,
 			executionKey,
 			connectorId,
-			sourceTable.getRawData(),
-			TextTableHelper.generateTextTable(sourceTable.getTable())
+			sourceTable,
+			hostname
 		);
+		log.info("{}", message);
 	}
 
 	@Override
@@ -535,7 +510,10 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Monitor monitor
 	) {
 		// Initialize the metric factory to collect metrics
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Get the connector's namespace containing related settings
 		final ConnectorNamespace connectorNamespace = telemetryManager
@@ -683,7 +661,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	private void collectJobDurationMetric(final String jobDurationMetricKey, final long startTime, final long endTime) {
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			endpointHostMonitor,
 			jobDurationMetricKey,
@@ -699,7 +680,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	protected void collectHostConfigured(final String hostname) {
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_CONFIGURED_METRIC_NAME, 1.0, strategyTime);
 	}
 }

@@ -170,7 +170,10 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		// Set Fan monitor as missing
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			fanMonitor,
 			String.format(PRESENT_STATUS, fanMonitor.getType()),
@@ -439,7 +442,10 @@ class HardwareEnergyPostExecutionServiceTest {
 		telemetryManager.addNewMonitor(temperatureMonitor, KnownMonitorType.TEMPERATURE.getKey(), "monitor1");
 
 		// Check the computed and collected metrics
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(temperatureMonitor, TEMPERATURE_METRIC, 10.0, telemetryManager.getStrategyTime());
 
 		// Call run method in HardwareEnergyPostExecutionService
@@ -463,7 +469,10 @@ class HardwareEnergyPostExecutionServiceTest {
 		host.setAsEndpoint();
 
 		// Set a previous collected host power value
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric previousPowerValue = metricFactory.collectNumberMetric(
 			host,
 			HW_HOST_ESTIMATED_POWER,
@@ -581,7 +590,10 @@ class HardwareEnergyPostExecutionServiceTest {
 		host.setAsEndpoint();
 
 		// Set a previous collected host power value
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric previousPowerValue = metricFactory.collectNumberMetric(
 			host,
 			HW_HOST_ESTIMATED_POWER,
@@ -670,7 +682,10 @@ class HardwareEnergyPostExecutionServiceTest {
 	void testRunWithVmMonitor() {
 		// Create the metric factory to collect metrics
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Prepare the monitors and their metrics
 
@@ -793,7 +808,10 @@ class HardwareEnergyPostExecutionServiceTest {
 	void testRunWithVmWithMissingMonitors() {
 		// Create the metric factory to collect metrics
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		// Prepare the monitors and their metrics
 
@@ -913,7 +931,10 @@ class HardwareEnergyPostExecutionServiceTest {
 		final Monitor cpuMonitor = buildMonitor(KnownMonitorType.CPU.getKey(), KnownMonitorType.CPU.getKey());
 
 		// Default is 0.25 * (2500000000 / 1000000000) * 19 = 1187.5
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			cpuMonitor,
 			CPU_POWER_METRIC,

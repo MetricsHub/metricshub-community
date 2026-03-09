@@ -19,6 +19,8 @@ describe("applicationStatusSlice", () => {
 		loading: false,
 		error: null,
 		lastUpdatedAt: null,
+		restarting: false,
+		restartError: null,
 	};
 
 	it("should return initial state", () => {

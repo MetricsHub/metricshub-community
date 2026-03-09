@@ -1,5 +1,6 @@
 import * as React from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { DataGrid } from "@mui/x-data-grid";
 import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
 import { sectionTitleSx, dataGridSx } from "./table-styles";
@@ -62,20 +63,60 @@ const EntityHeader = ({ title, iconType, icon, attributes, children, action }) =
 			</Box>
 
 			{hasAttributes && (
-				<Box>
-					<Typography variant="h6" sx={{ ...attributesTitleSx, transition: "color 0.4s ease" }}>
-						Attributes
-					</Typography>
-					<DataGrid
-						rows={rows}
-						columns={ATTRIBUTE_COLUMNS}
-						disableRowSelectionOnClick
-						hideFooter
-						autoHeight
-						density="compact"
-						sx={dataGridSx}
-					/>
-				</Box>
+				<Accordion
+					defaultExpanded={false}
+					disableGutters
+					elevation={0}
+					square
+					sx={{
+						bgcolor: "transparent",
+						border: 1,
+						borderColor: "divider",
+						borderRadius: 1,
+						"&:before": { display: "none" },
+						"& .MuiAccordionSummary-root": {
+							minHeight: 48,
+							bgcolor: "action.hover",
+							borderRadius: 1,
+							"&:hover": {
+								bgcolor: "action.selected",
+							},
+						},
+						"& .MuiAccordionSummary-root.Mui-expanded": {
+							borderBottomLeftRadius: 0,
+							borderBottomRightRadius: 0,
+						},
+						"& .MuiAccordionDetails-root": {
+							p: 0,
+						},
+					}}
+				>
+					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+						<Typography variant="h6" sx={{ ...attributesTitleSx, mb: 0 }}>
+							Attributes
+						</Typography>
+					</AccordionSummary>
+					<AccordionDetails>
+						<DataGrid
+							rows={rows}
+							columns={ATTRIBUTE_COLUMNS}
+							disableRowSelectionOnClick
+							hideFooter
+							autoHeight
+							density="compact"
+							sx={{
+								...dataGridSx,
+								border: 0,
+								borderRadius: 0,
+								"& .MuiDataGrid-columnHeaders": {
+									...dataGridSx["& .MuiDataGrid-columnHeaders"],
+									borderTop: 1,
+									borderColor: "divider",
+								},
+							}}
+						/>
+					</AccordionDetails>
+				</Accordion>
 			)}
 		</Box>
 	);

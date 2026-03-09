@@ -38,16 +38,14 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.extension.oscommand.ipmi.UnixIpmiCriterionProcessor;
-import org.metricshub.extension.oscommand.ipmi.UnixIpmiSourceProcessor;
+import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
 /**
  * Provides an extension to handle SSH and OS command-based protocols for device monitoring. This extension
@@ -83,7 +81,7 @@ public class OsCommandExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(CommandLineSource.class, IpmiSource.class);
+		return Set.of(CommandLineSource.class, FileSource.class);
 	}
 
 	@Override
@@ -96,7 +94,7 @@ public class OsCommandExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		return Set.of(CommandLineCriterion.class, IpmiCriterion.class);
+		return Set.of(CommandLineCriterion.class);
 	}
 
 	@Override
@@ -138,8 +136,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor().process(commandLineSource, connectorId, telemetryManager);
-		} else if (source instanceof IpmiSource) {
-			return new UnixIpmiSourceProcessor().processUnixIpmiSource(connectorId, connectorId, telemetryManager);
+		} else if (source instanceof FileSource fileSource) {
+			return new FileSourceProcessor().process(fileSource, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -158,9 +156,6 @@ public class OsCommandExtension implements IProtocolExtension {
 	) {
 		if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new CommandLineCriterionProcessor(connectorId).process(commandLineCriterion, telemetryManager);
-		} else if (criterion instanceof IpmiCriterion) {
-			final DeviceKind hostType = telemetryManager.getHostConfiguration().getHostType();
-			return new UnixIpmiCriterionProcessor().processUnixIpmiDetection(hostType, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

@@ -321,7 +321,7 @@ public class HardwareEnergyPostExecutionService implements IPostExecutionService
 				? receivedByteRate / linkSpeed
 				: null;
 
-			final MetricFactory metricFactory = new MetricFactory(hostname);
+			final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
 			if (bandwidthUtilizationTransmitted != null) {
 				metricFactory.collectNumberMetric(

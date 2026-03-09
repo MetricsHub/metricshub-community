@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -72,7 +73,8 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwNetworkErrorRatioMetric);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -139,7 +141,8 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwNetworkErrorRatioMetric);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -195,7 +198,8 @@ class NetworkMetricNormalizerTest {
 					.build();
 
 				// Normalize the metrics using NetworkMetricNormalizer
-				new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwNetworkErrorRatioMetric);
+				new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+					.normalize(monitorWithHwNetworkErrorRatioMetric);
 
 				// Validate the normalized metrics
 
@@ -246,7 +250,8 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwNetworkErrorRatioMetric);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -276,7 +281,8 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithoutHwNetworkErrorRatioMetrics);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithoutHwNetworkErrorRatioMetrics);
 
 			// Validate the default normalized metrics
 			assertEquals(
@@ -303,7 +309,8 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithoutHwNetworkErrorRatioMetrics);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithoutHwNetworkErrorRatioMetrics);
 
 			// Validate the default normalized metrics
 			assertNull(

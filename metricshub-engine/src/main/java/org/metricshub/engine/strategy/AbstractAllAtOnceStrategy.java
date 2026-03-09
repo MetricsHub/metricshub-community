@@ -415,7 +415,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 			metrics.putAll(mappingProcessor.interpretContextMappingMetrics(monitor));
 
-			final MetricFactory metricFactory = new MetricFactory(hostname);
+			final MetricFactory metricFactory = new MetricFactory(hostname, telemetryManager.getConnectorStore());
 
 			metricFactory.collectMonitorMetrics(monitorType, connector, monitor, connectorId, metrics, strategyTime, true);
 

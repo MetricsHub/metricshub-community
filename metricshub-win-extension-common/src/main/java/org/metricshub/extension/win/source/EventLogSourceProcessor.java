@@ -15,7 +15,6 @@ package org.metricshub.extension.win.source;
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
@@ -36,6 +35,7 @@ import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.engine.common.helpers.FileHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogLevel;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
@@ -87,11 +87,6 @@ public class EventLogSourceProcessor {
 	 * Column index for {@code Message} in the WMI result rows.
 	 */
 	private static final int MESSAGE_COLUMN = 8;
-
-	/**
-	 * Escape string for new lines.
-	 */
-	private static final String NEW_LINE_ESCAPE_STRING = "@{newLine}@";
 
 	/**
 	 * Returns whether this is the first poll for a given host/source.
@@ -272,13 +267,13 @@ public class EventLogSourceProcessor {
 				// Escape the new line \r\n character by a special character to avoid any problem using AWK scripts.
 				final String insertionStrings = line.get(INSERTION_STRINGS_COLUMN);
 				if (insertionStrings != null && !insertionStrings.isBlank()) {
-					line.set(INSERTION_STRINGS_COLUMN, escapeNewLines(insertionStrings));
+					line.set(INSERTION_STRINGS_COLUMN, FileHelper.escapeNewLines(insertionStrings));
 				}
 
 				// Escape the new line \r\n character by a special character to avoid any problem using AWK scripts.
 				final String message = line.get(MESSAGE_COLUMN);
 				if (message != null && !message.isBlank()) {
-					line.set(MESSAGE_COLUMN, escapeNewLines(message));
+					line.set(MESSAGE_COLUMN, FileHelper.escapeNewLines(message));
 				}
 			});
 		}
@@ -450,25 +445,5 @@ public class EventLogSourceProcessor {
 		}
 		// Escape single quotes by doubling them
 		return value.replace("'", "''");
-	}
-
-	/**
-	 * Escapes newline characters in a string by replacing them with a placeholder.
-	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
-	 *
-	 * @param value the string to escape
-	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or empty string if input is null
-	 */
-	static String escapeNewLines(final String value) {
-		if (value == null) {
-			return "";
-		}
-
-		// Replace \r\n first (Windows line endings), then handle any remaining \r or \n
-		// Use replace() for literal replacements to avoid regex interpretation of $ in replacement string
-		return value
-			.replace("\r\n", NEW_LINE_ESCAPE_STRING)
-			.replace("\n", NEW_LINE_ESCAPE_STRING)
-			.replace("\r", NEW_LINE_ESCAPE_STRING);
 	}
 }

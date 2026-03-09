@@ -43,6 +43,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.CopySource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.InternalDbQuerySource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -601,5 +602,17 @@ public class SourceProcessor implements ISourceProcessor {
 	@Override
 	public SourceTable process(@SpanAttribute("source.definition") EventLogSource eventLogSource) {
 		return processSourceThroughExtension(eventLogSource);
+	}
+
+	/**
+	 * This method processes {@link FileSource} source
+	 *
+	 * @param fileSource {@link FileSource} source instance
+	 * @return {@link SourceTable} instance
+	 */
+	@WithSpan("Source FileSource Exec")
+	@Override
+	public SourceTable process(@SpanAttribute("source.definition") FileSource fileSource) {
+		return processSourceThroughExtension(fileSource);
 	}
 }

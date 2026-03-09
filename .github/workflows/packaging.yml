@@ -192,15 +192,6 @@ jobs:
       env:
         SOURCE_DATE_EPOCH: 0
 
-    - name: Extract AMD64 Packages from Docker Image
-      run: |
-        containerId=$(docker create ${{ steps.version.outputs.buildImage }})
-        mkdir -p packages
-        docker cp ${containerId}:/tmp/packages/. ./packages/
-        docker rm ${containerId}
-        ls -l packages
-      if: contains(inputs.platforms, 'linux/amd64')
-
     - name: Extract ARM64 Packages from Docker Image
       run: |
         containerId=$(docker create --platform linux/arm64 ${{ steps.version.outputs.buildImage }})
@@ -210,15 +201,15 @@ jobs:
         ls -l packages
       if: contains(inputs.platforms, 'linux/arm64')
 
-    - name: Add version to Linux archive
+    # Extract default x86 architecture last, to avoid erase by other archs
+    - name: Extract AMD64 Packages from Docker Image
       run: |
-        find packages -type f -name 'metricshub-community-linux.tar.gz' | while read file; do
-          echo "---"
-          fileDir=$(dirname "$file")
-          newFile=$(basename "$file" | sed "s/\.tar\.gz/-${{ inputs.version }}.tar.gz/")
-          echo "Renaming $file to $fileDir/$newFile"
-          mv "$file" "${fileDir}/${newFile}"
-        done
+        containerId=$(docker create --platform linux/amd64 ${{ steps.version.outputs.buildImage }})
+        mkdir -p packages
+        docker cp ${containerId}:/tmp/packages/. ./packages/
+        docker rm ${containerId}
+        ls -l packages
+      if: contains(inputs.platforms, 'linux/amd64')
 
     - name: Rename Packages to Include "community"
       run: |
@@ -411,17 +402,18 @@ jobs:
     - name: Create Windows ZIP Archive
       shell: pwsh
       run: |
-        $zipPath = Join-Path -Path "packages" -ChildPath "metricshub-community-windows-${{ inputs.version }}.zip"
-        if (Test-Path "packages\MetricsHub") {
-          Push-Location "packages"
-          Compress-Archive -Path "MetricsHub" -DestinationPath "metricshub-community-windows-${{ inputs.version }}.zip" -Force
-          Pop-Location
-          Write-Host "Created ZIP archive: $zipPath"
-          Get-Item $zipPath
-        } else {
-          Write-Warning "packages\MetricsHub directory not found"
-        }
-
+          $arch = $env:PROCESSOR_ARCHITECTURE
+          $archiveName = "metricshub-community-windows-${{ inputs.version }}-$arch.zip"
+          $zipPath = Join-Path -Path "packages" -ChildPath $archiveName
+          if (Test-Path "packages\MetricsHub") {
+            Push-Location "packages"
+            Compress-Archive -Path "MetricsHub" -DestinationPath $archiveName -Force
+            Pop-Location
+            Write-Host "Created ZIP archive: $zipPath"
+            Get-Item $zipPath
+          } else {
+            Write-Warning "packages\MetricsHub directory not found"
+          }
     - name: Upload Windows Packages
       uses: actions/upload-artifact@v6
       with:

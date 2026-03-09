@@ -32,12 +32,14 @@ import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
+import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.opentelemetry.ResourceMeter;
 import org.metricshub.agent.opentelemetry.ResourceMeterProvider;
 import org.metricshub.agent.opentelemetry.metric.MetricContext;
 import org.metricshub.engine.connector.model.metric.MetricType;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.springframework.scheduling.TaskScheduler;
@@ -94,6 +96,12 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 	@NonNull
 	private AgentConfig agentConfig;
 
+	@NonNull
+	private ExtensionManager extensionManager;
+
+	@NonNull
+	private AgentInfo agentInfo;
+
 	/**
 	 * Constructs a new instance of {@code ResourceGroupScheduling}.
 	 *
@@ -111,12 +119,16 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 		@NonNull final MetricsExporter metricsExporter,
 		@NonNull final String resourceGroupKey,
 		@NonNull final ResourceGroupConfig resourceGroupConfig,
-		@NonNull final AgentConfig agentConfig
+		@NonNull final AgentConfig agentConfig,
+		@NonNull final ExtensionManager extensionManager,
+		@NonNull final AgentInfo agentInfo
 	) {
 		super(taskScheduler, schedules, metricsExporter);
 		this.resourceGroupConfig = resourceGroupConfig;
 		this.resourceGroupKey = resourceGroupKey;
 		this.agentConfig = agentConfig;
+		this.extensionManager = extensionManager;
+		this.agentInfo = agentInfo;
 	}
 
 	@Override
@@ -139,10 +151,18 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 	 * Records and pushes resource group metrics.
 	 */
 	void recordAndExport() {
+		final var metricEnrichmentExtensions = extensionManager.resolveMetricEnrichmentExtensions(
+			resourceGroupConfig.getEnrichments()
+		);
+
 		// Create a new meter provider with the metrics exporter
-		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter);
+		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter, metricEnrichmentExtensions);
 
 		final Map<String, String> resourceAttributes = new HashMap<>();
+		// Add our attributes
+		ConfigHelper.mergeAttributes(agentInfo.getAttributes(), resourceAttributes);
+
+		// Override with the user's attributes
 		ConfigHelper.mergeAttributes(agentConfig.getAttributes(), resourceAttributes);
 		ConfigHelper.mergeAttributes(resourceGroupConfig.getAttributes(), resourceAttributes);
 

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.metricshub.jawk.jrt.AssocArray;
 import org.metricshub.jawk.util.AwkSettings;
 
 class UtilityExtensionForJawkTest {
@@ -114,5 +115,20 @@ class UtilityExtensionForJawkTest {
 		assertEquals("SGVsbG8gV29ybGQh", UNDER_TEST.base64Encode("Hello World!"), "Standard Base64 encoding");
 		assertEquals("", UNDER_TEST.base64Encode(""), "Empty string should return empty string");
 		assertEquals("", UNDER_TEST.base64Encode(null), "Null input should return empty string");
+	}
+
+	@Test
+	void testAsorti() {
+		AssocArray src = new AssocArray(false);
+		src.put("z", 1);
+		src.put("b", 1);
+		src.put("a", 1);
+
+		AssocArray dest = new AssocArray(false);
+		final int n = UNDER_TEST.asorti(src, dest);
+		assertEquals(3, n, "Should return the number of keys");
+		assertEquals("a", dest.get("1"), "First key should be 'a'");
+		assertEquals("b", dest.get("2"), "Second key should be 'b'");
+		assertEquals("z", dest.get("3"), "Third key should be 'z'");
 	}
 }

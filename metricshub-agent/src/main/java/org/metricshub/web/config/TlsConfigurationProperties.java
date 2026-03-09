@@ -29,8 +29,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * TLS configuration for the embedded web server.
  * <p>
- * By default TLS is enabled and uses the bundled {@code m8b-keystore.p12} on the classpath
- * with password {@code NOPWD}. Users can override by providing {@code tls.keystore.path}
+ * By default TLS is enabled and uses the bundled {@code m8b-keystore.p12} on
+ * the classpath
+ * with password {@code NOPWD}. Users can override by providing
+ * {@code tls.keystore.path}
  * and {@code tls.keystore.password}.
  * </p>
  */
@@ -41,12 +43,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class TlsConfigurationProperties {
 
 	/**
-	 * Enable or disable TLS for the embedded web server. When disabled, HTTP is used.
+	 * Enable or disable TLS for the embedded web server. When disabled, HTTP is
+	 * used.
 	 */
 	private boolean enabled = true;
 
 	/**
-	 * Keystore location and password. When empty, the default classpath keystore is used.
+	 * Keystore location and password. When empty, the default classpath keystore is
+	 * used.
 	 */
 	private TlsKeystore keystore = new TlsKeystore();
 
@@ -59,13 +63,15 @@ public class TlsConfigurationProperties {
 	public static class TlsKeystore {
 
 		/**
-		 * Path to the keystore. Supports {@code classpath:} URLs. Defaults to the bundled
+		 * Path to the keystore. Supports {@code classpath:} URLs. Defaults to the
+		 * bundled
 		 * {@code m8b-keystore.p12} when not set.
 		 */
 		private String path = "classpath:m8b-keystore.p12";
 
 		/**
-		 * Keystore password; reused as key password. Defaults to {@code NOPWD} when not set.
+		 * Keystore password; reused as key password. Defaults to {@code NOPWD} when not
+		 * set.
 		 */
 		private String password = "NOPWD";
 
@@ -76,7 +82,8 @@ public class TlsConfigurationProperties {
 
 		/**
 		 * Optional Key alias to load from the keystore.
-		 * If not provided we load the keystore and the first suitable private-key entry is used.
+		 * If not provided we load the keystore and the first suitable private-key entry
+		 * is used.
 		 */
 		private String keyAlias;
 	}

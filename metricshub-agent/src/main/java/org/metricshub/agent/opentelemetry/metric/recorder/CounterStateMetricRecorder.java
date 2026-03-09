@@ -39,6 +39,7 @@ public class CounterStateMetricRecorder extends AbstractNotCompressedStateMetric
 	 * @param description        the description of the metric.
 	 * @param stateValue         the state value.
 	 * @param resourceAttributes the resource attributes associated with the metric.
+	 * @param metricsCache       the metric cache to group data points.
 	 */
 	@Builder(setterPrefix = "with")
 	public CounterStateMetricRecorder(
@@ -46,9 +47,10 @@ public class CounterStateMetricRecorder extends AbstractNotCompressedStateMetric
 		final String unit,
 		final String description,
 		final String stateValue,
-		final Map<String, String> resourceAttributes
+		final Map<String, String> resourceAttributes,
+		final Map<String, Metric> metricsCache
 	) {
-		super(metric, unit, description, stateValue, resourceAttributes);
+		super(metric, unit, description, stateValue, resourceAttributes, metricsCache);
 	}
 
 	/**

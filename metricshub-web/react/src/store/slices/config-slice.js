@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { isBackupFileName } from "../../utils/backup-names";
+import { isVmFile } from "../../utils/file-type-utils";
 import {
 	fetchConfigList,
 	fetchConfigContent,
@@ -8,6 +9,7 @@ import {
 	validateConfig,
 	deleteConfig,
 	renameConfig,
+	testVelocityTemplate,
 } from "../thunks/config-thunks";
 
 const initialState = {
@@ -26,6 +28,7 @@ const initialState = {
 		order: [],
 		setsById: {},
 	},
+	velocityTestResult: null,
 };
 
 const slice = createSlice({
@@ -42,10 +45,25 @@ const slice = createSlice({
 			const name = state.selected;
 			if (name) {
 				const prev = state.filesByName[name] || {};
-				state.filesByName[name] = { ...prev, content: next };
+				const isVm = isVmFile(name);
+				// For .vm files, clear validation when content changes
+				// (error was from generated YAML, user may have fixed it)
+				state.filesByName[name] = {
+					...prev,
+					content: next,
+					...(isVm ? { validation: null } : {}),
+				};
 				// Do not mark backups as dirty; they are read-only in the editor
 				if (!isBackupFileName(name)) {
 					state.dirtyByName[name] = next !== (state.originalsByName[name] ?? "");
+				}
+				// Also clear velocityTestResult for .vm files
+				if (isVm) {
+					if (state.velocityTestResult?.name === name) {
+						state.velocityTestResult = null;
+					}
+					// Also clear global validation for .vm files
+					state.validation = null;
 				}
 			}
 		},
@@ -124,6 +142,9 @@ const slice = createSlice({
 		clearBackups(state) {
 			state.backups.order = [];
 			state.backups.setsById = {};
+		},
+		clearVelocityTestResult(state) {
+			state.velocityTestResult = null;
 		},
 	},
 	extraReducers: (b) => {
@@ -225,20 +246,34 @@ const slice = createSlice({
 			.addCase(validateConfig.fulfilled, (s, a) => {
 				// global selected validation
 				const result = a.payload?.result ?? null;
-				s.validation = result;
-				// also store per-file validation so file list/tree can show errors per file
 				const name = a.payload?.name;
-				if (name) {
+				// Don't store validation for synthetic file names like "generated.yaml"
+				// which are used only for validating generated content from .vm templates
+				const isSynthetic = name === "generated.yaml";
+				if (!isSynthetic) {
+					s.validation = result;
+				}
+				// also store per-file validation so file list/tree can show errors per file
+				if (name && !isSynthetic) {
 					const prev = s.filesByName[name] || {};
 					s.filesByName[name] = { ...prev, validation: result };
+				}
+				// For .vm files: if validation passes, clear velocityTestResult
+				// This ensures the navbar red dot is cleared when user fixes errors
+				if (name && isVmFile(name) && result?.valid) {
+					s.velocityTestResult = null;
 				}
 			})
 			.addCase(validateConfig.rejected, (s, a) => {
 				const val = { valid: false, error: a.payload || a.error?.message };
-				s.validation = val;
 				// store per-file if name available in meta args
 				const name = a?.meta?.arg?.name;
-				if (name) {
+				// Don't store validation for synthetic file names like "generated.yaml"
+				const isSynthetic = name === "generated.yaml";
+				if (!isSynthetic) {
+					s.validation = val;
+				}
+				if (name && !isSynthetic) {
 					const prev = s.filesByName[name] || {};
 					s.filesByName[name] = { ...prev, validation: val };
 				}
@@ -288,7 +323,84 @@ const slice = createSlice({
 					delete s.originalsByName[oldName];
 				}
 
-				if (s.selected === oldName) s.selected = newName;
+				// Do NOT update s.selected here.
+				// Callers navigate after rename; the URL-sync effect
+				// will update selected from the new route.
+				// Updating selected here causes a race: Redux triggers a
+				// synchronous re-render before navigate() runs, so the
+				// URL-sync effect sees stale routeName ≠ new selected
+				// and fires a spurious fetch for the old (deleted) file.
+			})
+
+			.addCase(testVelocityTemplate.pending, (s, a) => {
+				s.velocityTestResult = {
+					name: a.meta.arg.name,
+					result: null,
+					error: null,
+					loading: true,
+					yamlValidation: null,
+				};
+			})
+			.addCase(testVelocityTemplate.fulfilled, (s, a) => {
+				const name = a.payload.name;
+				const yamlValidation = a.payload.yamlValidation || { valid: true };
+				s.velocityTestResult = {
+					name,
+					result: a.payload.result,
+					error: null,
+					loading: false,
+					yamlValidation,
+				};
+				// Update per-file validation based on generated YAML validation.
+				// If script executed but generated YAML is invalid, mark file as invalid
+				// (shows red dot) but WITHOUT line numbers (errors are in generated YAML, not script).
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					if (yamlValidation.valid) {
+						s.filesByName[name] = { ...prev, validation: { valid: true, errors: [] } };
+					} else {
+						// Generated YAML has errors - mark file as invalid but no line info
+						s.filesByName[name] = {
+							...prev,
+							validation: {
+								valid: false,
+								errors: [], // No line numbers since error is in generated YAML
+							},
+						};
+					}
+				}
+			})
+			.addCase(testVelocityTemplate.rejected, (s, a) => {
+				const name = a.meta?.arg?.name;
+				const errorMsg = a.payload || a.error?.message;
+				s.velocityTestResult = {
+					name,
+					result: null,
+					error: errorMsg,
+					loading: false,
+				};
+				// Parse line/column from Velocity error messages such as:
+				// 'Encountered "#end" at file.vm[line 23, column 1]'
+				let line = null;
+				let column = null;
+				if (typeof errorMsg === "string") {
+					const m = errorMsg.match(/\[line\s+(\d+),\s*column\s+(\d+)\]/);
+					if (m) {
+						line = Number(m[1]);
+						column = Number(m[2]);
+					}
+				}
+				// Store error as per-file validation so the header shows the error
+				if (name) {
+					const prev = s.filesByName[name] || {};
+					s.filesByName[name] = {
+						...prev,
+						validation: {
+							valid: false,
+							errors: [{ message: errorMsg, line, column }],
+						},
+					};
+				}
 			});
 	},
 });
@@ -302,5 +414,6 @@ export const {
 	deleteLocalFile,
 	deleteBackupSet,
 	clearBackups,
+	clearVelocityTestResult,
 } = slice.actions;
 export const configReducer = slice.reducer;

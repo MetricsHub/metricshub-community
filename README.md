@@ -11,9 +11,9 @@
 
 <a href="https://metricshub.com" target="_blank">
 	<picture>
-	<source media="(prefers-color-scheme: dark)" srcset="metricshub-doc/src/site/resources/images/logo-dark.svg">
-	<source media="(prefers-color-scheme: light)" srcset="metricshub-doc/src/site/resources/images/logo-light.svg">
-	<img alt="MetricsHub" src="metricshub-doc/src/site/resources/images/logo-light.svg" width="250">
+	<source media="(prefers-color-scheme: dark)" srcset=".github/images/logo-dark.svg">
+	<source media="(prefers-color-scheme: light)" srcset=".github/images/logo-light.svg">
+	<img alt="MetricsHub" src=".github/images/logo-light.svg" width="250">
 	</picture>
 </a>
 <h4>MetricsHub®, is an open-source metrics collection tool that leverages OpenTelemetry for vendor-neutral observability.</h4>
@@ -55,7 +55,6 @@ This is a multi-module project:
 * **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
 * **metricshub-it-common**: Contains common code and utilities used by integration tests across various modules.
 * **metricshub-assets**: Generates the assets required to package MetricsHub Community for Windows, Debian, RedHat, and Docker platforms.
-* **metricshub-doc**: Houses the documentation for MetricsHub.
 
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
@@ -163,21 +162,21 @@ To build the MetricsHub package, from `./metricshub`:
 $ mvn clean package
 ```
 
-#### Building Windows Packages (.msi, .zip)
+#### Building Windows Packages (.msi)
 
 * **Host:** Windows
 * **Prerequisites:** [WiX Toolset 3.11](https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm) configured in the `PATH`
 * Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
 * Execute the `metricshub-assets\target\assets-local\build-windows.cmd` command. The command will create a `packages` sub-directory containing the unsigned `.msi` file and the `MetricsHub` application folder.
 
-#### Building Linux Packages (.deb, .rpm, .tar.gz)
+#### Building Linux Packages (.deb, .rpm)
 
 ##### Building all Linux packages with Docker (recommended)
 
 * **Host:** Windows
 * **Prerequisites:** Docker Desktop with QEMU enabled for multi-arch builds
 * Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
-* Execute the `metricshub-assets\target\assets-local\build-docker-linux.cmd` command. The command will create a `packages` sub-directory containing the _x86_ and _arm64_ `.deb` and `.rpm` files and the `metricshub-community-linux.tar.gz` archive.
+* Execute the `metricshub-assets\target\assets-local\build-docker-linux.cmd` command. The command will create a `packages` sub-directory containing the _x86_ and _arm64_ `.deb` and `.rpm` files and the `metricshub` application folder.
 
 ##### Building Linux package for your platform
 
@@ -185,7 +184,7 @@ $ mvn clean package
 * **Debian Prerequisites:** The following packages must be installed `fakeroot` and `gcc-multilib` (for _x86_)
 * **RedHat Prerequisites:** The following package must be installed `rpm-build`
 * Execute the `mvn package` command within the MetricsHub root directory (`metricshub`).
-* Execute the `metricshub-assets/target/assets-local/build-linux.sh` command. The command will create a `packages` sub-directory containing the `.deb` **or** `.rpm` file and the `metricshub-community-linux.tar.gz` archive for your Linux distribution and CPU architecture.
+* Execute the `metricshub-assets/target/assets-local/build-linux.sh` command. The command will create a `packages` sub-directory containing the `.deb` **or** `.rpm` file and the `metricshub` application folder for your Linux distribution and CPU architecture.
 
 ## Checkstyle
 

@@ -28,7 +28,7 @@
 		"@reduxjs/toolkit": "^2.9.0",
 		"@uiw/react-codemirror": "^4.25.2",
 		"@replit/codemirror-indentation-markers": "^6.5.3",
-		"axios": "^1.11.0",
+		"axios": "^1.13.5",
 		"date-fns": "^4.1.0",
 		"dayjs": "^1.11.18",
 		"file-saver": "^2.0.5",

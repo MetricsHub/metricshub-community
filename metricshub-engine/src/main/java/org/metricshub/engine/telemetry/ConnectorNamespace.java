@@ -49,7 +49,14 @@ public class ConnectorNamespace {
 	private boolean isStatusOk;
 
 	@Default
-	private Map<String, Integer> eventLogCursors = new HashMap<>();
+	private Map<String, Integer> eventLogSourceCursors = new HashMap<>();
+
+	/**
+	 * A map of log file sources. Each key represents the source, and the value
+	 * is a map of cursors, where keys are the filenames, and the values are cursors.
+	 */
+	@Default
+	private Map<String, Map<String, Long>> fileSourceCursors = new HashMap<>();
 
 	@Default
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
@@ -81,16 +88,28 @@ public class ConnectorNamespace {
 	 * @return the cursor value, or null if not set
 	 */
 	public Integer getEventLogCursor(@NonNull String sourceKey) {
-		return eventLogCursors.get(sourceKey);
+		return eventLogSourceCursors.get(sourceKey);
 	}
 
 	/**
 	 * Sets the event log cursor (RecordNumber) for the specified source.
 	 *
 	 * @param sourceKey the source key identifying the event log source
-	 * @param cursor the cursor value to set, or null to clear
+	 * @param cursor the cursor value to set.
 	 */
 	public void setEventLogCursor(@NonNull String sourceKey, @NonNull Integer cursor) {
-		eventLogCursors.put(sourceKey, cursor);
+		eventLogSourceCursors.put(sourceKey, cursor);
+	}
+
+	/**
+	 * Gets the file source cursors (byte offsets) for the specified source.
+	 * The returned map associates each file path with its last-read position.
+	 * The map is created on first access and mutations persist across polls.
+	 *
+	 * @param sourceKey the source key identifying the file source
+	 * @return a mutable map of file path to cursor (byte offset); never null
+	 */
+	public Map<String, Long> getFileSourceCursors(@NonNull String sourceKey) {
+		return fileSourceCursors.computeIfAbsent(sourceKey, k -> new HashMap<>());
 	}
 }

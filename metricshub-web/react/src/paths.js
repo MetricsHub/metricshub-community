@@ -1,4 +1,5 @@
 export const paths = {
+	agent: "/agent",
 	explorer: "/explorer",
 	explorerWelcome: "/explorer/welcome",
 	explorerResourceGroup: (name) => `/explorer/resource-groups/${encodeURIComponent(name)}`,

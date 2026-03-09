@@ -112,7 +112,10 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 			estimatedPower = NumberHelper.round(powerSourcePowerConsumption * powerShareRatio, 2, RoundingMode.HALF_UP);
 		}
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			monitor,
 			"hw.vm.power_ratio",

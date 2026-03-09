@@ -43,13 +43,12 @@ import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
-import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.EventLogSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
@@ -233,7 +232,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetSupportedSources() {
 		assertEquals(
-			Set.of(IpmiSource.class, CommandLineSource.class, WmiSource.class, EventLogSource.class),
+			Set.of(CommandLineSource.class, WmiSource.class, EventLogSource.class, FileSource.class),
 			winRmExtension.getSupportedSources()
 		);
 	}
@@ -241,7 +240,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetSupportedCriteria() {
 		assertEquals(
-			Set.of(IpmiCriterion.class, CommandLineCriterion.class, WmiCriterion.class, ServiceCriterion.class),
+			Set.of(CommandLineCriterion.class, WmiCriterion.class, ServiceCriterion.class),
 			winRmExtension.getSupportedCriteria()
 		);
 	}
@@ -249,7 +248,7 @@ class WinRmExtensionTest {
 	@Test
 	void testGetConfigurationToSourceMapping() {
 		assertEquals(
-			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class)),
+			Map.of(WinRmConfiguration.class, Set.of(WmiSource.class, EventLogSource.class, FileSource.class)),
 			winRmExtension.getConfigurationToSourceMapping()
 		);
 	}
@@ -325,16 +324,6 @@ class WinRmExtensionTest {
 				.when(winCommandServiceMock)
 				.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, winRmConfiguration, Map.of());
 			assertTrue(winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
-		}
-		{
-			final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().forceSerialization(true).build();
-
-			// Mock performDetectionTest
-			doReturn(CriterionTestResult.success(ipmiCriterion, "success"))
-				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any());
-
-			assertTrue(winRmExtension.processCriterion(ipmiCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
 		}
 		{
 			try (final MockedStatic<LocalOsHandler> mockedLocalOSHandler = mockStatic(LocalOsHandler.class)) {
@@ -416,44 +405,6 @@ class WinRmExtensionTest {
 				SourceTable.builder().table(expected).rawData("16384 MB\n8192 MB").build(),
 				winRmExtension.processSource(commandLineSource, CONNECTOR_ID, telemetryManager)
 			);
-		}
-		{
-			final List<List<String>> wmiResult1 = Arrays.asList(Arrays.asList("IdentifyingNumber", "Name", "Vendor"));
-			doReturn(wmiResult1)
-				.when(winRmRequestExecutorMock)
-				.executeWmi(
-					HOST_NAME,
-					winRmConfiguration,
-					"SELECT IdentifyingNumber,Name,Vendor FROM Win32_ComputerSystemProduct",
-					"root/cimv2"
-				);
-
-			final List<List<String>> wmiResult2 = Arrays.asList(
-				Arrays.asList("2", "20", "sensorName(sensorId):description for deviceId", "10", "15", "2", "0", "30", "25")
-			);
-			doReturn(wmiResult2)
-				.when(winRmRequestExecutorMock)
-				.executeWmi(
-					HOST_NAME,
-					winRmConfiguration,
-					"SELECT BaseUnits,CurrentReading,Description,LowerThresholdCritical,LowerThresholdNonCritical,SensorType,UnitModifier,UpperThresholdCritical,UpperThresholdNonCritical FROM NumericSensor",
-					"root/hardware"
-				);
-
-			final List<List<String>> wmiResult3 = Arrays.asList(
-				Arrays.asList("state", "sensorName(sensorId):description for deviceType deviceId")
-			);
-			doReturn(wmiResult3)
-				.when(winRmRequestExecutorMock)
-				.executeWmi(HOST_NAME, winRmConfiguration, "SELECT CurrentState,Description FROM Sensor", "root/hardware");
-
-			final List<List<String>> expected = Arrays.asList(
-				Arrays.asList("FRU", "Vendor", "Name", "IdentifyingNumber"),
-				Arrays.asList("Temperature", "sensorId", "sensorName", "deviceId", "20.0", "25.0", "30.0"),
-				Arrays.asList("deviceType", "deviceId", "deviceType deviceId", "", "", "", "sensorName=state")
-			);
-			final SourceTable result = winRmExtension.processSource(new IpmiSource(), CONNECTOR_ID, telemetryManager);
-			assertEquals(SourceTable.builder().table(expected).build(), result);
 		}
 		{
 			final List<List<String>> expected = Arrays.asList(

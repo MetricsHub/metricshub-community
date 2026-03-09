@@ -100,7 +100,10 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 		telemetryManager.setHostProperties(hostProperties);
 
 		// Add the power metric to enclosure
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(enclosure, HW_ENCLOSURE_POWER, 120.0, telemetryManager.getStrategyTime());
 
 		// Add the previously created monitors to the telemetry manager
@@ -134,7 +137,10 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 		// Initialize the host and other monitors
 		final Monitor host = buildHostMonitor();
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		final Monitor enclosure = Monitor
 			.builder()
@@ -219,7 +225,10 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 		final Monitor host = buildHostMonitor();
 
 		// Set a previous collected host power value
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric previousPowerValue = metricFactory.collectNumberMetric(
 			host,
 			HW_HOST_ESTIMATED_POWER,
@@ -309,7 +318,10 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 
 		metricFactory.collectNumberMetric(host, HW_HOST_MEASURED_ENERGY, 3520255.0, telemetryManager.getStrategyTime());
 

@@ -26,25 +26,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.common.exception.ClientRuntimeException;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
-import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
-import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
@@ -63,8 +58,6 @@ class OsCommandExtensionTest {
 	private static final String HOSTNAME = "hostname";
 	public static final String LOCALHOST = "localhost";
 	public static final String MY_CONNECTOR_1_NAME = "myConnector1";
-	public static final String UNIX_IPMI_FAIL_MESSAGE =
-		"Hostname %s - " + "No OS command configuration for this host. Returning an empty result";
 	public static final String TEST_COMMAND_LINE = "echo test";
 
 	@InjectMocks
@@ -115,15 +108,13 @@ class OsCommandExtensionTest {
 	@Test
 	void testGetSupportedSources() {
 		assertFalse(osCommandExtension.getSupportedSources().isEmpty());
-		assertTrue(osCommandExtension.getSupportedSources().containsAll(Set.of(CommandLineSource.class, IpmiSource.class)));
+		assertTrue(osCommandExtension.getSupportedSources().contains(CommandLineSource.class));
 	}
 
 	@Test
 	void testGetSupportedCriteria() {
 		assertFalse(osCommandExtension.getSupportedCriteria().isEmpty());
-		assertTrue(
-			osCommandExtension.getSupportedCriteria().containsAll(Set.of(CommandLineCriterion.class, IpmiCriterion.class))
-		);
+		assertTrue(osCommandExtension.getSupportedCriteria().contains(CommandLineCriterion.class));
 	}
 
 	@Test
@@ -660,423 +651,6 @@ class OsCommandExtensionTest {
 				.build();
 			assertEquals(expected, osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager));
 		}
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionWrongCommand() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(
-					OsCommandConfiguration.class,
-					OsCommandConfiguration.builder().build(),
-					SshConfiguration.class,
-					sshConfiguration
-				)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(true)
-			.ipmitoolCommand("ipmiCommand")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("WRONG Command", false);
-
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
-			.success(false)
-			.message("ipmiCommand bmc info")
-			.result("")
-			.build();
-
-		assertEquals(expected, osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager));
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionNoOsCommandConfig() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(true)
-			.ipmitoolCommand("ipmiCommand")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("WRONG Command", false);
-
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
-			.success(false)
-			.message(String.format(UNIX_IPMI_FAIL_MESSAGE, telemetryManager.getHostname()))
-			.result("")
-			.build();
-
-		assertEquals(expected, osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager));
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionException() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(
-					OsCommandConfiguration.class,
-					OsCommandConfiguration.builder().build(),
-					SshConfiguration.class,
-					sshConfiguration
-				)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(true)
-			.ipmitoolCommand("ipmiCommand")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("WRONG Command", false);
-
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
-			.success(false)
-			.message("fail")
-			.result("")
-			.build();
-
-		assertEquals(
-			expected.getResult(),
-			osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager).getResult()
-		);
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionLocal() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(
-					OsCommandConfiguration.class,
-					OsCommandConfiguration.builder().build(),
-					SshConfiguration.class,
-					sshConfiguration
-				)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(true)
-			.ipmitoolCommand("PATH= command")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("ipmi", false);
-
-		// Mock OsCommandHelper.runLocalCommand if local
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), eq(null))).thenReturn("IPMI Version");
-
-			final CriterionTestResult expected = CriterionTestResult
-				.builder()
-				.success(true)
-				.result("IPMI Version")
-				.message("Successfully connected to the IPMI BMC chip with the in-band driver interface.")
-				.build();
-
-			assertEquals(expected, osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager));
-		}
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionRemote() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(
-					OsCommandConfiguration.class,
-					OsCommandConfiguration.builder().build(),
-					SshConfiguration.class,
-					sshConfiguration
-				)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(false)
-			.ipmitoolCommand("PATH= command")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("ipmi", false);
-
-		// Mock OsCommandHelper.runLocalCommand if local
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd
-				.when(() ->
-					OsCommandService.runSshCommand(eq("PATH= command bmc info"), any(), any(), anyLong(), any(), any(), any())
-				)
-				.thenReturn("IPMI Version");
-
-			final CriterionTestResult expected = CriterionTestResult
-				.builder()
-				.success(true)
-				.result("IPMI Version")
-				.message("Successfully connected to the IPMI BMC chip with the in-band driver interface.")
-				.build();
-
-			assertEquals(expected, osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager));
-		}
-	}
-
-	@Test
-	void testProcessUnixIpmiCriterionRemoteFail() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(
-					OsCommandConfiguration.class,
-					OsCommandConfiguration.builder().build(),
-					SshConfiguration.class,
-					sshConfiguration
-				)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(false)
-			.ipmitoolCommand("PATH= command")
-			.build();
-
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		IpmiCriterion ipmiCriterion = new IpmiCriterion("ipmi", false);
-
-		// Mock OsCommandHelper.runLocalCommand if local
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd
-				.when(() ->
-					OsCommandService.runSshCommand(eq("PATH= command bmc info"), any(), any(), anyLong(), any(), any(), any())
-				)
-				.thenThrow(ClientRuntimeException.class);
-
-			final CriterionTestResult expected = CriterionTestResult
-				.builder()
-				.success(false)
-				.result(null)
-				.message("Hostname localhost - Cannot execute the IPMI tool command PATH= command bmc info. Exception: null.")
-				.build();
-
-			assertEquals(expected, osCommandExtension.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager));
-		}
-	}
-
-	@Test
-	void testProcessUnixIpmiSource() {
-		// classic case
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
-			.username("root")
-			.password("nationale".toCharArray())
-			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
-			.hostname("localhost")
-			.hostId("localhost")
-			.hostType(DeviceKind.LINUX)
-			.configurations(
-				Map.of(IConfiguration.class, OsCommandConfiguration.builder().build(), SshConfiguration.class, sshConfiguration)
-			)
-			.build();
-
-		final HostProperties hostProperties = HostProperties
-			.builder()
-			.isLocalhost(true)
-			.ipmitoolCommand("ipmiCommand")
-			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
-			.hostConfiguration(hostConfiguration)
-			.hostProperties(hostProperties)
-			.build();
-
-		// local
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd
-				.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand fru"), anyLong(), eq(null)))
-				.thenReturn("ipmiResultFru");
-			oscmd
-				.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand -v sdr elist all"), anyLong(), eq(null)))
-				.thenReturn("ipmiResultSdr");
-			final SourceTable ipmiResult = osCommandExtension.processSource(
-				new IpmiSource(),
-				MY_CONNECTOR_1_NAME,
-				telemetryManager
-			);
-			assertEquals(SourceTable.empty(), ipmiResult);
-		}
-
-		String fru = "/data/IpmiFruBabbage";
-		String sensor = "/data/IpmiSensorBabbage";
-		String expected = "/data/ipmiProcessingResult";
-		String fruResult = ResourceHelper.getResourceAsString(fru, this.getClass());
-		String sensorResult = ResourceHelper.getResourceAsString(sensor, this.getClass());
-
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand fru"), anyLong(), any())).thenReturn(fruResult);
-			oscmd
-				.when(() -> OsCommandService.runLocalCommand(eq("ipmiCommand -v sdr elist all"), anyLong(), any()))
-				.thenReturn(sensorResult);
-			final SourceTable ipmiResult = osCommandExtension.processSource(
-				new IpmiSource(),
-				MY_CONNECTOR_1_NAME,
-				telemetryManager
-			);
-			String expectedResult = ResourceHelper.getResourceAsString(expected, this.getClass());
-			List<List<String>> result = new ArrayList<>();
-			Stream.of(expectedResult.split("\n")).forEach(line -> result.add(Arrays.asList(line.split(";"))));
-			assertEquals(result, ipmiResult.getTable());
-		}
-
-		// remote
-		hostProperties.setLocalhost(false);
-
-		try (MockedStatic<OsCommandService> oscmd = mockStatic(OsCommandService.class)) {
-			oscmd
-				.when(() -> OsCommandService.runSshCommand(eq("ipmiCommand fru"), any(), any(), anyLong(), any(), any(), any()))
-				.thenReturn("ipmiResultFru");
-			oscmd
-				.when(() ->
-					OsCommandService.runSshCommand(
-						eq("ipmiCommand -v sdr elist all"),
-						any(),
-						any(),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn("ipmiResultSdr");
-			final SourceTable ipmiResult = osCommandExtension.processSource(
-				new IpmiSource(),
-				MY_CONNECTOR_1_NAME,
-				telemetryManager
-			);
-			assertEquals(SourceTable.empty(), ipmiResult);
-		}
-
-		// ipmiToolCommand is empty
-		hostProperties.setIpmitoolCommand("");
-		SourceTable ipmiResultEmpty = osCommandExtension.processSource(
-			new IpmiSource(),
-			MY_CONNECTOR_1_NAME,
-			telemetryManager
-		);
-		assertEquals(SourceTable.empty(), ipmiResultEmpty);
-
-		// ipmiToolCommand is null
-		hostProperties.setIpmitoolCommand(null);
-		ipmiResultEmpty = osCommandExtension.processSource(new IpmiSource(), MY_CONNECTOR_1_NAME, telemetryManager);
-		assertEquals(SourceTable.empty(), ipmiResultEmpty);
-
-		// osCommandConfig is null
-		hostProperties.setLocalhost(true);
-		hostProperties.setIpmitoolCommand("ipmiCommand");
-		ipmiResultEmpty = osCommandExtension.processSource(new IpmiSource(), MY_CONNECTOR_1_NAME, telemetryManager);
-		assertEquals(SourceTable.empty(), ipmiResultEmpty);
 	}
 
 	@Test

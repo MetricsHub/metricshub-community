@@ -21,6 +21,14 @@ package org.metricshub.web.service;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.agent.helper.AgentConstants.AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.management.OperatingSystemMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.context.AgentContext;
@@ -41,7 +49,9 @@ public class ApplicationStatusService {
 
 	/**
 	 * Constructor for ApplicationStatusService.
-	 * @param agentContextHolder the AgentContextHolder to retrieve the current agent context.
+	 *
+	 * @param agentContextHolder the AgentContextHolder to retrieve the current
+	 *                           agent context.
 	 */
 	@Autowired
 	public ApplicationStatusService(final AgentContextHolder agentContextHolder) {
@@ -62,7 +72,67 @@ public class ApplicationStatusService {
 			.otelCollectorStatus(determineOtelCollectorStatus(agentContext))
 			.numberOfObservedResources(determineNumberOfObservedResources(agentContext))
 			.numberOfConfiguredResources(determineNumberOfConfiguredResources(agentContext))
+			.numberOfMonitors(determineNumberOfMonitors(agentContext))
+			.numberOfJobs(determineNumberOfJobs(agentContext))
+			.memoryUsageBytes(determineMemoryUsageBytes())
+			.memoryTotalBytes(determineMemoryTotalBytes())
+			.cpuUsage(determineCpuUsage())
+			.licenseDaysRemaining(determineLicenseDaysRemaining(agentContext))
+			.licenseType(determineLicenseType(agentContext))
 			.build();
+	}
+
+	/**
+	 * Determines the license type.
+	 *
+	 * @param agentContext The agent context containing configuration details.
+	 * @return the license type.
+	 */
+	private static String determineLicenseType(final AgentContext agentContext) {
+		final var agentInfo = agentContext.getAgentInfo();
+		if (agentInfo != null) {
+			final var attributes = agentInfo.getAttributes();
+			if (attributes != null && "MetricsHub Agent".equals(attributes.get(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY))) {
+				return "Community";
+			}
+		}
+		return "Enterprise";
+	}
+
+	/**
+	 * Determines the validity time remaining of the license key in days.
+	 *
+	 * @param agentContext The agent context containing configuration details.
+	 * @return the number of days remaining. Returns null for Community Edition.
+	 */
+	private static Long determineLicenseDaysRemaining(final AgentContext agentContext) {
+		final String licenseType = determineLicenseType(agentContext);
+		if ("Community".equals(licenseType)) {
+			return null;
+		}
+
+		final JsonNode configNode = agentContext.getConfigNode();
+		if (configNode == null) {
+			return null;
+		}
+
+		final JsonNode licenseNode = configNode.get("license");
+		if (licenseNode == null || licenseNode.isNull()) {
+			return null;
+		}
+
+		// Try parsing expiration date from "expiresOn" field
+		final JsonNode expiresOnNode = licenseNode.get("expiresOn");
+		if (expiresOnNode != null && !expiresOnNode.isNull()) {
+			try {
+				final LocalDate expirationDate = LocalDate.parse(expiresOnNode.asText());
+				return ChronoUnit.DAYS.between(LocalDate.now(), expirationDate);
+			} catch (Exception e) {
+				// Ignore parsing errors
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -109,10 +179,84 @@ public class ApplicationStatusService {
 	}
 
 	/**
+	 * Determines the number of monitors currently configured in the agent.
+	 *
+	 * @param agentContext the AgentContext containing telemetry managers.
+	 * @return the number of monitors.
+	 */
+	private static long determineNumberOfMonitors(final AgentContext agentContext) {
+		final var telemetryManagers = agentContext.getTelemetryManagers();
+		if (telemetryManagers == null) {
+			return 0;
+		}
+		return telemetryManagers
+			.values()
+			.stream()
+			.flatMap((Map<String, TelemetryManager> telemetryManagerGroup) -> telemetryManagerGroup.values().stream())
+			.mapToLong(telemetryManager -> telemetryManager.getMonitors().values().stream().mapToLong(Map::size).sum())
+			.sum();
+	}
+
+	/**
+	 * Determines the number of jobs (scheduled tasks).
+	 *
+	 * @param agentContext the AgentContext containing the task scheduling service.
+	 * @return the number of jobs.
+	 */
+	private static long determineNumberOfJobs(final AgentContext agentContext) {
+		final var taskSchedulingService = agentContext.getTaskSchedulingService();
+		if (taskSchedulingService != null && taskSchedulingService.getSchedules() != null) {
+			return taskSchedulingService.getSchedules().size();
+		}
+		return 0;
+	}
+
+	/**
+	 * Determines the memory usage in bytes.
+	 *
+	 * @return the memory usage.
+	 */
+	private static long determineMemoryUsageBytes() {
+		final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
+		return memoryMXBean.getHeapMemoryUsage().getUsed() + memoryMXBean.getNonHeapMemoryUsage().getUsed();
+	}
+
+	/**
+	 * Determines the total memory available on the machine.
+	 *
+	 * @return the total memory in bytes, or 0 if it cannot be determined.
+	 */
+	private static long determineMemoryTotalBytes() {
+		final java.lang.management.OperatingSystemMXBean displayOSBean = ManagementFactory.getOperatingSystemMXBean();
+		if (displayOSBean instanceof OperatingSystemMXBean osBean) {
+			return osBean.getTotalMemorySize();
+		}
+		return 0;
+	}
+
+	/**
+	 * Determines the CPU usage as a percentage.
+	 *
+	 * @return the CPU usage percentage (0.0 to 100.0).
+	 */
+	private static double determineCpuUsage() {
+		final java.lang.management.OperatingSystemMXBean displayOSBean = ManagementFactory.getOperatingSystemMXBean();
+		if (displayOSBean instanceof OperatingSystemMXBean osBean) { // Use pattern matching for instanceof
+			final var processCpuLoad = osBean.getProcessCpuLoad();
+			if (processCpuLoad >= 0) {
+				return processCpuLoad * 100.0;
+			}
+		}
+		return 0.0;
+	}
+
+	/**
 	 * Determines the OpenTelemetry Collector status.
 	 *
-	 * @param agentContext the AgentContext containing the OpenTelemetry Collector process service.
-	 * @return the OpenTelemetry Collector status: running, disabled, errored, not-installed
+	 * @param agentContext the AgentContext containing the OpenTelemetry Collector
+	 *                     process service.
+	 * @return the OpenTelemetry Collector status: running, disabled, errored,
+	 *         not-installed
 	 */
 	private static String determineOtelCollectorStatus(final AgentContext agentContext) {
 		if (agentContext.getAgentConfig().getOtelCollector().isDisabled()) {
@@ -136,7 +280,8 @@ public class ApplicationStatusService {
 	 *
 	 * @param agentContext the AgentContext containing agent information.
 	 *
-	 * @return a map containing agent attributes, or an empty map if no agent info is available.
+	 * @return a map containing agent attributes, or an empty map if no agent info
+	 *         is available.
 	 */
 	private static Map<String, String> readAgentInfo(final AgentContext agentContext) {
 		final var agentInfo = agentContext.getAgentInfo();
@@ -147,7 +292,8 @@ public class ApplicationStatusService {
 	}
 
 	/**
-	 * Determines the current status of the application based on the task scheduling service.
+	 * Determines the current status of the application based on the task scheduling
+	 * service.
 	 *
 	 * @param agentContext the AgentContext containing the task scheduling service.
 	 * @return the status of the application, either UP or DOWN.
