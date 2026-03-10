@@ -14,11 +14,6 @@ on:
         description: "Repository tag"
         required: true
         default: latest
-      platforms:
-        type: string
-        description: "Platforms to tag"
-        required: true
-        default: linux/amd64,linux/arm64
 
 jobs:
 
@@ -54,8 +49,11 @@ jobs:
         echo "imageReleaseName=${imageReleaseName}" >> $GITHUB_OUTPUT
         echo "imageTagName=${imageTagName}" >> $GITHUB_OUTPUT
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Retag and Push Release Image
       run: |
-        docker pull --platform ${{ inputs.platforms }} ${{ steps.vars.outputs.imageReleaseName }}
-        docker tag ${{ steps.vars.outputs.imageReleaseName }} ${{ steps.vars.outputs.imageTagName }}
-        docker push ${{ steps.vars.outputs.imageTagName }}
+        docker buildx imagetools create \
+          --tag ${{ steps.vars.outputs.imageTagName }} \
+          ${{ steps.vars.outputs.imageReleaseName }}
