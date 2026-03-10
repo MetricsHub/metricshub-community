@@ -223,6 +223,7 @@
 									<include>org.metricshub:ssh-java</include>
 									<include>org.metricshub:metricshub-oscommand-extension</include>
 									<include>org.connectbot:sshlib</include>
+									<include>com.google.crypto.tink:tink</include>
 								</includes>
 							</artifactSet>
 							<minimizeJar>false</minimizeJar>
