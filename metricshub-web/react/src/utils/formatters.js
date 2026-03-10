@@ -81,3 +81,19 @@ export const formatRelativeTime = (isoString) => {
 	if (diff >= 0 && diff < 5000) return "now";
 	return d.fromNow();
 };
+
+/**
+ * Format reasoning duration to a human-readable string.
+ * @param {number} ms - Duration in milliseconds
+ * @returns {string} Formatted duration (e.g. "2.3s", "1m 15s")
+ */
+export const formatReasoningDuration = (ms) => {
+	if (ms < 1000) return `${ms}ms`;
+	const totalSeconds = Math.round(ms / 100) / 10; // one decimal
+	if (totalSeconds < 60) return `${totalSeconds}s`;
+	// Round to integer seconds first to avoid invalid combinations like "1m 60s"
+	const totalSecondsInt = Math.round(totalSeconds);
+	const minutes = Math.floor(totalSecondsInt / 60);
+	const seconds = totalSecondsInt % 60;
+	return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+};

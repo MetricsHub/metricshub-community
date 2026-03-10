@@ -53,7 +53,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = physicalDiskPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			PHYSICAL_DISK_POWER_METRIC,
@@ -122,7 +125,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = physicalDiskPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			PHYSICAL_DISK_POWER_METRIC,
@@ -191,7 +197,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = physicalDiskPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			PHYSICAL_DISK_POWER_METRIC,
@@ -260,7 +269,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = physicalDiskPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			PHYSICAL_DISK_POWER_METRIC,
@@ -388,7 +400,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = physicalDiskPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			PHYSICAL_DISK_POWER_METRIC,

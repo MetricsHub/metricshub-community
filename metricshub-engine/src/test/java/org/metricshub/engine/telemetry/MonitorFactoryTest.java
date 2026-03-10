@@ -118,7 +118,13 @@ class MonitorFactoryTest {
 		assertEquals(monitorAttributes, createdMonitor.getAttributes());
 
 		// Call method collectNumberMetric in MonitorFactory
-		metricFactoryMock.collectNumberMetric(createdMonitor, CONNECTOR_STATUS_METRIC_KEY, 1.0, DEFAULT_JOB_TIMEOUT);
+		metricFactoryMock.collectNumberMetric(
+			createdMonitor,
+			CONNECTOR_STATUS_METRIC_KEY,
+			1.0,
+			DEFAULT_JOB_TIMEOUT,
+			"Gauge"
+		);
 
 		// Retrieve the resulting number metric
 		final NumberMetric numberMetric = createdMonitor.getMetric(CONNECTOR_STATUS_METRIC_KEY, NumberMetric.class);
@@ -153,7 +159,13 @@ class MonitorFactoryTest {
 		assertEquals(monitorAttributes, createdMonitor.getAttributes());
 
 		// Call method collectNumberMetric in MonitorFactory
-		metricFactoryMock.collectNumberMetric(createdMonitor, CONNECTOR_STATUS_METRIC_KEY, 1.0, DEFAULT_JOB_TIMEOUT);
+		metricFactoryMock.collectNumberMetric(
+			createdMonitor,
+			CONNECTOR_STATUS_METRIC_KEY,
+			1.0,
+			DEFAULT_JOB_TIMEOUT,
+			"Gauge"
+		);
 
 		// Retrieve the resulting number metric
 		final NumberMetric numberMetric = createdMonitor.getMetric(CONNECTOR_STATUS_METRIC_KEY, NumberMetric.class);
@@ -188,7 +200,8 @@ class MonitorFactoryTest {
 			CONNECTOR_STATUS_METRIC_KEY,
 			STATE_SET_METRIC_OK,
 			STATE_SET,
-			DEFAULT_JOB_TIMEOUT
+			DEFAULT_JOB_TIMEOUT,
+			"UpDownCounter"
 		);
 
 		// Retrieve the resulting stateSet metric
@@ -229,7 +242,8 @@ class MonitorFactoryTest {
 			CONNECTOR_STATUS_METRIC_KEY,
 			STATE_SET_METRIC_OK,
 			STATE_SET,
-			DEFAULT_JOB_TIMEOUT
+			DEFAULT_JOB_TIMEOUT,
+			"UpDownCounter"
 		);
 
 		// Retrieve the resulting stateSet metric

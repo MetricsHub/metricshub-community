@@ -206,7 +206,7 @@ const ExplorerTree = ({ selectedNodeId, onResourceGroupFocus, onAgentFocus, onRe
 					[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 				}}
 			>
-				<ExplorerTreeItem node={treeRoot} />
+				<ExplorerTreeItem node={treeRoot} selectedNodeId={selectedNodeId} />
 			</SimpleTreeView>
 		);
 	};

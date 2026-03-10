@@ -1,0 +1,10 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  testFileSource:
+    type: file
+    paths: C:\\Program Files\\MetricsHub\\logs\\*.log, /var/log/app/*.log
+    maxSizePerPoll: 100
+    mode: log

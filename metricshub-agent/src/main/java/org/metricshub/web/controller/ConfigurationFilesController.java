@@ -23,10 +23,15 @@ package org.metricshub.web.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
+import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.service.ConfigurationFilesService;
+import org.metricshub.web.service.VelocityTemplateService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -49,18 +54,30 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping(value = "/api/config-files")
 public class ConfigurationFilesController {
 
+	/** Pattern to extract line and column from Velocity error messages. */
+	private static final Pattern VELOCITY_LINE_COL_PATTERN = Pattern.compile("\\[line\\s+(\\d+),\\s*column\\s+(\\d+)\\]");
+
 	/** Service handling configuration file operations. */
 	private ConfigurationFilesService configurationFilesService;
+
+	/** Service for evaluating Velocity templates. */
+	private VelocityTemplateService velocityTemplateService;
 
 	/**
 	 * Constructor for ConfigurationFilesController.
 	 *
 	 * @param configurationFilesService the ConfigurationFilesService to handle
 	 *                                  configuration file requests.
+	 * @param velocityTemplateService   the VelocityTemplateService to evaluate
+	 *                                  Velocity templates.
 	 */
 
-	public ConfigurationFilesController(final ConfigurationFilesService configurationFilesService) {
+	public ConfigurationFilesController(
+		final ConfigurationFilesService configurationFilesService,
+		final VelocityTemplateService velocityTemplateService
+	) {
 		this.configurationFilesService = configurationFilesService;
+		this.velocityTemplateService = velocityTemplateService;
 	}
 
 	/**
@@ -105,9 +122,20 @@ public class ConfigurationFilesController {
 		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
-			var v = configurationFilesService.validate(content, fileName);
-			if (!v.isValid()) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+			if (ConfigurationFilesService.isVmFile(fileName)) {
+				// Two-step .vm validation:
+				// 1) Execute the Velocity template → throws on syntax/runtime error
+				final String generatedYaml = velocityTemplateService.evaluate(fileName, content);
+				// 2) Validate the generated YAML with the standard AgentConfig validator
+				var v = configurationFilesService.validate(generatedYaml, fileName);
+				if (!v.isValid()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+				}
+			} else {
+				var v = configurationFilesService.validate(content, fileName);
+				if (!v.isValid()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+				}
 			}
 		}
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateFile(fileName, content));
@@ -134,9 +162,18 @@ public class ConfigurationFilesController {
 		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
-			var v = configurationFilesService.validate(content, fileName);
-			if (!v.isValid()) {
-				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+			if (ConfigurationFilesService.isVmFile(fileName)) {
+				// Two-step .vm validation:
+				final String generatedYaml = velocityTemplateService.evaluate(fileName, content);
+				var v = configurationFilesService.validate(generatedYaml, fileName);
+				if (!v.isValid()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+				}
+			} else {
+				var v = configurationFilesService.validate(content, fileName);
+				if (!v.isValid()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, v.getFirst());
+				}
 			}
 		}
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateDraftFile(fileName, content));
@@ -163,6 +200,22 @@ public class ConfigurationFilesController {
 		@PathVariable("fileName") String fileName,
 		@RequestBody(required = false) String content
 	) throws ConfigFilesException {
+		if (ConfigurationFilesService.isVmFile(fileName)) {
+			// For .vm files: only validate that the Velocity script executes successfully.
+			// The generated YAML is NOT validated here — that validation happens in the
+			// Test panel when the frontend passes the generated YAML to this endpoint
+			// as a YAML file.
+			try {
+				velocityTemplateService.evaluate(fileName, content);
+				// Script executed successfully — return valid
+				return ResponseEntity.ok(ConfigurationFilesService.Validation.ok(fileName));
+			} catch (ConfigFilesException e) {
+				// Template execution failed — wrap as validation failure with line/column
+				final var failure = new DeserializationFailure();
+				addVelocityError(failure, e.getMessage());
+				return ResponseEntity.ok(ConfigurationFilesService.Validation.fail(fileName, failure, e));
+			}
+		}
 		if (content == null) {
 			content = configurationFilesService.getFileContent(fileName);
 		}
@@ -247,5 +300,60 @@ public class ConfigurationFilesController {
 	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName) throws ConfigFilesException {
 		configurationFilesService.deleteBackupFile(fileName);
 		return ResponseEntity.noContent().build();
+	}
+
+	/**
+	 * Endpoint to evaluate a Velocity template (.vm) and return the generated YAML.
+	 * <p>
+	 * If a request body is provided, it is used as the template content
+	 * (for testing unsaved editor content). Otherwise, the on-disk file is evaluated.
+	 * <p>
+	 * Unlike save-time validation, this endpoint does NOT validate the generated YAML
+	 * against the AgentConfig schema — it returns the raw Velocity output so the user
+	 * can inspect it.
+	 *
+	 * @param fileName the .vm file name
+	 * @param content  optional template content from the editor
+	 * @return the generated YAML as plain text
+	 */
+	@PostMapping(value = "/test/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
+	public ResponseEntity<String> testVelocityTemplate(
+		@PathVariable("fileName") String fileName,
+		@RequestBody(required = false) String content
+	) {
+		if (!ConfigurationFilesService.isVmFile(fileName)) {
+			throw new TextPlainException(HttpStatus.BAD_REQUEST, "Only .vm files can be tested.");
+		}
+		try {
+			final String result = velocityTemplateService.evaluate(fileName, content);
+			return ResponseEntity.ok(result);
+		} catch (ConfigFilesException e) {
+			throw new TextPlainException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Parses a Velocity error message for line/column information and registers
+	 * the error in the given {@link org.metricshub.agent.deserialization.DeserializationFailure}.
+	 * <p>
+	 * Velocity parse errors follow the format:
+	 * {@code Encountered "..." at file.vm[line 23, column 1]}.
+	 *
+	 * @param failure the failure container to add the error to
+	 * @param message the error message to parse
+	 */
+	private static void addVelocityError(final DeserializationFailure failure, final String message) {
+		if (message == null) {
+			failure.addError("Velocity template evaluation failed.");
+			return;
+		}
+		final Matcher matcher = VELOCITY_LINE_COL_PATTERN.matcher(message);
+		if (matcher.find()) {
+			final int line = Integer.parseInt(matcher.group(1));
+			final int column = Integer.parseInt(matcher.group(2));
+			failure.addError(message, line, column);
+		} else {
+			failure.addError(message);
+		}
 	}
 }

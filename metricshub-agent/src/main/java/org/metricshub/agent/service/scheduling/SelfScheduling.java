@@ -37,6 +37,7 @@ import org.metricshub.agent.opentelemetry.ResourceMeter;
 import org.metricshub.agent.opentelemetry.ResourceMeterProvider;
 import org.metricshub.agent.opentelemetry.metric.MetricContext;
 import org.metricshub.engine.connector.model.metric.MetricType;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.support.PeriodicTrigger;
@@ -63,6 +64,9 @@ public class SelfScheduling extends AbstractScheduling {
 	@NonNull
 	private AgentConfig agentConfig;
 
+	@NonNull
+	private ExtensionManager extensionManager;
+
 	/**
 	 * Constructs a new instance of {@code SelfScheduling}.
 	 *
@@ -78,11 +82,13 @@ public class SelfScheduling extends AbstractScheduling {
 		@NonNull final Map<String, ScheduledFuture<?>> schedules,
 		@NonNull final MetricsExporter metricsExporter,
 		@NonNull final AgentInfo agentInfo,
-		@NonNull final AgentConfig agentConfig
+		@NonNull final AgentConfig agentConfig,
+		@NonNull final ExtensionManager extensionManager
 	) {
 		super(taskScheduler, schedules, metricsExporter);
 		this.agentConfig = agentConfig;
 		this.agentInfo = agentInfo;
+		this.extensionManager = extensionManager;
 	}
 
 	@Override
@@ -113,8 +119,13 @@ public class SelfScheduling extends AbstractScheduling {
 		// Override with the user's attributes
 		ConfigHelper.mergeAttributes(agentConfig.getAttributes(), resourceAttributes);
 
+		// Resolve metric enrichment extensions based on the configured enrichments for the agent
+		final var metricEnrichmentExtensions = extensionManager.resolveMetricEnrichmentExtensions(
+			agentConfig.getEnrichments()
+		);
+
 		// Create a new meter provider with the metrics exporter
-		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter);
+		final ResourceMeterProvider meterProvider = new ResourceMeterProvider(metricsExporter, metricEnrichmentExtensions);
 
 		// Create a new resource meter
 		final ResourceMeter meter = meterProvider.newResourceMeter("org.metricshub.agent", resourceAttributes);

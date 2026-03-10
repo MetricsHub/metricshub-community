@@ -174,6 +174,7 @@ export default function ConfigTree({
 							onDelete={onDelete}
 							onMakeDraft={onMakeDraft}
 							isReadOnly={isReadOnly}
+							isSelected={selectedName === f.name}
 						/>
 					))}
 				</TreeItem>
@@ -196,6 +197,7 @@ export default function ConfigTree({
 								onRename={onRename}
 								onDelete={onDelete}
 								isReadOnly={isReadOnly}
+								selectedName={selectedName}
 							/>
 						))}
 				</TreeItem>

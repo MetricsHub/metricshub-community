@@ -21,6 +21,7 @@ package org.metricshub.hardware.threshold;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 
 /**
@@ -32,11 +33,12 @@ public class MemoryMetricNormalizer extends AbstractMetricNormalizer {
 
 	/**
 	 * Constructs a new instance of MemoryMetricNormalizer with the specified strategy time.
-	 * @param strategyTime The strategy time in milliseconds
-	 * @param hostname     The hostname of the monitor
+	 * @param strategyTime   The strategy time in milliseconds
+	 * @param hostname       The hostname of the monitor
+	 * @param connectorStore The connector store
 	 */
-	public MemoryMetricNormalizer(long strategyTime, String hostname) {
-		super(strategyTime, hostname);
+	public MemoryMetricNormalizer(long strategyTime, String hostname, ConnectorStore connectorStore) {
+		super(strategyTime, hostname, connectorStore);
 	}
 
 	/**

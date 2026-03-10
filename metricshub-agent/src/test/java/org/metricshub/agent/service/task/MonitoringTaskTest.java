@@ -199,7 +199,10 @@ class MonitoringTaskTest {
 		final Monitor host = hostFactory.createOrUpdateMonitor(HOSTNAME);
 		host.setIsEndpoint(true);
 
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		metricFactory.collectNumberMetric(
 			host,
 			AbstractStrategy.HOST_CONFIGURED_METRIC_NAME,
@@ -240,7 +243,7 @@ class MonitoringTaskTest {
 		final ResourceConfig resourceConfig = ResourceConfig.builder().attributes(hostAttributes).build();
 		monitoringTask.initHostAttributes(telemetryManager, resourceConfig);
 
-		monitoringTask.registerTelemetryManagerRecorders(telemetryManager).exportMetrics(() -> {});
+		monitoringTask.registerTelemetryManagerRecorders(telemetryManager, List.of()).exportMetrics(() -> {});
 
 		final ExportMetricsServiceRequest request = otelClient.getRequest();
 		assertNotNull(request);

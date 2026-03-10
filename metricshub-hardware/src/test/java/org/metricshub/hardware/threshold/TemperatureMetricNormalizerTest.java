@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
 
@@ -59,7 +60,8 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwTemperatureLimitMetric);
 			assertEquals(
 				2.0,
 				monitorWithHwTemperatureLimitMetric
@@ -113,7 +115,8 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwTemperatureLimitMetric);
 			assertEquals(
 				2.0,
 				monitorWithHwTemperatureLimitMetric
@@ -157,7 +160,8 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwTemperatureLimitMetric);
 			assertEquals(
 				1.8,
 				monitorWithHwTemperatureLimitMetric
@@ -194,7 +198,8 @@ class TemperatureMetricNormalizerTest {
 					)
 				)
 				.build();
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME).normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
+				.normalize(monitorWithHwTemperatureLimitMetric);
 			assertEquals(
 				2.2,
 				monitorWithHwTemperatureLimitMetric

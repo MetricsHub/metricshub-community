@@ -39,11 +39,13 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.oscommand.file.FileSourceProcessor;
 
 /**
  * Provides an extension to handle SSH and OS command-based protocols for device monitoring. This extension
@@ -79,7 +81,7 @@ public class OsCommandExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(CommandLineSource.class);
+		return Set.of(CommandLineSource.class, FileSource.class);
 	}
 
 	@Override
@@ -134,6 +136,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor().process(commandLineSource, connectorId, telemetryManager);
+		} else if (source instanceof FileSource fileSource) {
+			return new FileSourceProcessor().process(fileSource, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

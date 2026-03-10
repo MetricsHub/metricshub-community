@@ -26,10 +26,12 @@ import java.util.Map;
 import org.metricshub.web.dto.ErrorResponse;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.LogFilesException;
+import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
@@ -157,5 +159,19 @@ public class RestExceptionHandler {
 			)
 			.collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
 		return ResponseEntity.badRequest().body(errors);
+	}
+
+	/**
+	 * Handle {@link TextPlainException} exceptions.
+	 * <p>
+	 * Returns the error message as {@code text/plain} so that endpoints
+	 * producing plain text get a consistent content type even on errors.
+	 *
+	 * @param ex the exception to handle
+	 * @return a ResponseEntity containing the plain-text error message
+	 */
+	@ExceptionHandler(TextPlainException.class)
+	public ResponseEntity<String> handleTextPlainException(final TextPlainException ex) {
+		return ResponseEntity.status(ex.getStatus()).contentType(MediaType.TEXT_PLAIN).body(ex.getMessage());
 	}
 }

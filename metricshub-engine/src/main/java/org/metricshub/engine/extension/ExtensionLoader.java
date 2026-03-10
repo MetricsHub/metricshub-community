@@ -142,6 +142,15 @@ public class ExtensionLoader {
 			log.info("Loaded configuration provider extension {}.", extension.getClass().getSimpleName())
 		);
 
+		// Load Metric enrichment extensions
+		final ServiceLoader<IMetricEnrichmentExtension> metricEnrichmentExtensions = ServiceLoader.load(
+			IMetricEnrichmentExtension.class,
+			classLoader
+		);
+		metricEnrichmentExtensions.forEach(extension ->
+			log.info("Loaded metric enrichment extension {}.", extension.getClass().getSimpleName())
+		);
+
 		// Build the extension manager
 		extensionManager =
 			ExtensionManager
@@ -152,6 +161,7 @@ public class ExtensionLoader {
 				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
 				.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
 				.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
+				.withMetricEnrichmentExtensions(convertProviderStreamToList(metricEnrichmentExtensions.stream()))
 				.build();
 
 		return extensionManager;

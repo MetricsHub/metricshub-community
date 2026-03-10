@@ -35,9 +35,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @NoArgsConstructor
 public class OpenAiToolOutputProperties {
 
-	private long maxToolOutputBytes = 10_485_760;
-
-	private long safetyDeltaBytes = 2_097_152;
+	/**
+	 * 524_288 bytes = 512 KiB (default).
+	 * Maximum allowed size for tool output payloads before truncation or file-only storage.
+	 * This is the direct limit used for truncation decisions.
+	 */
+	private long maxToolOutputBytes = 524_288;
 
 	private String baseTempDir = System.getProperty("java.io.tmpdir") + "/metricshub/ai";
 }

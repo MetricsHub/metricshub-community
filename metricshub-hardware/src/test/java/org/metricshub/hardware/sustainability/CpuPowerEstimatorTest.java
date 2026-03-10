@@ -31,7 +31,10 @@ class CpuPowerEstimatorTest {
 		assertEquals(11.875, estimatedPower);
 		assertNull(cpuPowerEstimator.estimateEnergy());
 
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			CPU_POWER_METRIC,
