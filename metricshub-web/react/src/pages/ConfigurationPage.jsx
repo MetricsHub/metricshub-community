@@ -1,10 +1,9 @@
 // src/pages/ConfigurationPage.jsx
 import * as React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
 	Box,
 	Button,
-	Chip,
 	CircularProgress,
 	Menu,
 	MenuItem,
@@ -18,10 +17,17 @@ import RefreshIcon from "@mui/icons-material/Autorenew";
 import FolderIcon from "@mui/icons-material/Folder";
 import CloseIcon from "@mui/icons-material/Close";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import DeleteIcon from "@mui/icons-material/Delete";
 
 import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
-
+import {
+	ResizableVerticalSplit,
+	Top as SplitTop,
+	Bottom as SplitBottom,
+} from "../components/split-screen/ResizableVerticalSplit";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
+import { useOtelCollectorLogs } from "../hooks/use-otel-collector-logs";
 import {
 	fetchConfigList,
 	fetchConfigContent,
@@ -31,276 +37,371 @@ import {
 	testVelocityTemplate,
 } from "../store/thunks/config-thunks";
 import {
-	select as selectFile,
+	fetchOtelConfigList,
+	fetchOtelConfigContent,
+	deleteOtelConfig,
+	renameOtelConfig,
+	saveDraftOtelConfig,
+} from "../store/thunks/otel-config-thunks";
+import {
+	select as selectConfigFile,
 	addLocalFile,
-	setContent,
+	setContent as setConfigContent,
 	renameLocalFile,
 	deleteLocalFile,
-	clearError,
+	clearError as clearConfigError,
 	clearVelocityTestResult,
 } from "../store/slices/config-slice";
+import {
+	select as selectOtelFile,
+	setContent as setOtelContent,
+	addLocalFile as addOtelLocalFile,
+	renameLocalFile as renameOtelLocalFile,
+	deleteLocalFile as deleteOtelLocalFile,
+	clearError as clearOtelError,
+} from "../store/slices/otel-config-slice";
 import EditorHeader from "../components/config/EditorHeader";
 import ConfigEditorContainer from "../components/config/editor/ConfigEditorContainer";
 import VelocityTestResultPanel from "../components/config/editor/VelocityTestResultPanel";
-import ConfigTree from "../components/config/tree/ConfigTree";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
+import OtelEditorHeader from "../components/otel/OtelEditorHeader";
+import OtelConfigEditorContainer from "../components/otel/editor/OtelConfigEditorContainer";
+import OtelCollectorToolbar from "../components/otel/OtelCollectorToolbar";
+import OtelCollectorLogPanel from "../components/otel/OtelCollectorLogPanel";
+import UnifiedConfigTree from "../components/config/tree/UnifiedConfigTree";
 import QuestionDialog from "../components/common/QuestionDialog";
-import DeleteIcon from "@mui/icons-material/Delete";
 import { paths } from "../paths";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
 import { isVmFile } from "../utils/file-type-utils";
 import { useAuth } from "../hooks/use-auth";
 
+function parseConfigurationPath(pathname) {
+	if (!pathname || !pathname.startsWith("/configuration")) return { repo: null, name: null };
+	if (pathname === "/configuration") return { repo: null, name: null };
+	const configPrefix = "/configuration/config/";
+	const otelPrefix = "/configuration/otel/";
+	if (pathname.startsWith(configPrefix)) {
+		const name = decodeURIComponent(pathname.slice(configPrefix.length));
+		return { repo: "config", name: name || null };
+	}
+	if (pathname.startsWith(otelPrefix)) {
+		const name = decodeURIComponent(pathname.slice(otelPrefix.length));
+		return { repo: "otel", name: name || null };
+	}
+	return { repo: null, name: null };
+}
+
 /**
- * Configuration page component.
- * URL is the source of truth for selection: /configuration/:name
+ * Single configuration page: tree on the left (roots "config" and "otel"), editor on the right.
+ * URL is the source of truth: /configuration, /configuration/config/:name, /configuration/otel/:name.
  */
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const snackbar = useSnackbar();
 	const { user } = useAuth();
 	const isReadOnly = user?.role === "ro";
 	const isSmallScreen = useMediaQuery("(max-width:900px)");
 	const [drawerOpen, setDrawerOpen] = React.useState(false);
-	const { name: routeName } = useParams();
-	const { list, filesByName, selected, loadingList, loadingContent, saving, error } =
-		useAppSelector((s) => s.config);
+	const [otelLogsOpen, setOtelLogsOpen] = React.useState(false);
+	const otelLogs = useOtelCollectorLogs();
+
+	const { repo: routeRepo, name: routeName } = parseConfigurationPath(location.pathname);
+
+	const configState = useAppSelector((s) => s.config);
+	const otelState = useAppSelector((s) => s.otelConfig);
+	const {
+		list: configList,
+		filesByName: configFilesByName,
+		selected: configSelected,
+		loadingList: configLoadingList,
+		loadingContent: configLoadingContent,
+		saving: configSaving,
+		error: configError,
+	} = configState;
+	const {
+		list: otelList,
+		filesByName: otelFilesByName,
+		selected: otelSelected,
+		loadingList: otelLoadingList,
+		loadingContent: otelLoadingContent,
+		saving: otelSaving,
+		error: otelError,
+	} = otelState;
 	const velocityTestResult = useAppSelector((s) => s.config.velocityTestResult);
 
 	const [deleteOpen, setDeleteOpen] = React.useState(false);
-	const [deleteTarget, setDeleteTarget] = React.useState(null);
+	const [deleteTarget, setDeleteTarget] = React.useState(null); // { repo, name }
 
 	React.useEffect(() => {
-		if (error) {
-			snackbar.show(error, { severity: "error" });
-			dispatch(clearError());
+		if (configError) {
+			snackbar.show(configError, { severity: "error" });
+			dispatch(clearConfigError());
 		}
-	}, [error, snackbar, dispatch]);
+	}, [configError, snackbar, dispatch]);
+	React.useEffect(() => {
+		if (otelError) {
+			snackbar.show(otelError, { severity: "error" });
+			dispatch(clearOtelError());
+		}
+	}, [otelError, snackbar, dispatch]);
 
-	/**
-	 * Fetch the configuration file list on component mount.
-	 * @type {React.EffectCallback}
-	 */
 	React.useEffect(() => {
 		dispatch(fetchConfigList());
+		dispatch(fetchOtelConfigList());
 	}, [dispatch]);
 
-	/**
-	 * Sync selected file with URL parameter.
-	 * Fetch content if not already cached.
-	 * @type {React.EffectCallback}
-	 */
+	// Sync URL (routeRepo, routeName) to the appropriate slice and fetch content
 	React.useEffect(() => {
-		const target = routeName ? decodeURIComponent(routeName) : null;
-
-		if (!target) {
-			if (selected) dispatch(selectFile(null));
-			return;
-		}
-
-		if (target !== selected) {
-			const cached = filesByName?.[target];
-			const isLocalOnly = list.some((f) => f.name === target && f.localOnly);
-			const hasCachedContent = typeof cached?.content === "string";
-
-			dispatch(selectFile(target));
-			if (isLocalOnly) {
-				dispatch(setContent(cached?.content ?? ""));
+		if (routeRepo === "config") {
+			const target = routeName;
+			if (!target) {
+				if (configSelected) dispatch(selectConfigFile(null));
 				return;
 			}
-			// for normal files, prefer backend unless we truly have content in cache
-			if (hasCachedContent) {
-				dispatch(setContent(cached.content));
-			} else {
-				dispatch(fetchConfigContent(target));
+			if (target !== configSelected) {
+				const cached = configFilesByName?.[target];
+				const isLocalOnly = configList.some((f) => f.name === target && f.localOnly);
+				const hasCached = typeof cached?.content === "string";
+				dispatch(selectConfigFile(target));
+				if (isLocalOnly) {
+					dispatch(setConfigContent(cached?.content ?? ""));
+					return;
+				}
+				if (hasCached) dispatch(setConfigContent(cached.content));
+				else dispatch(fetchConfigContent(target));
 			}
+			return;
 		}
-	}, [routeName, selected, filesByName, list, dispatch]);
+		if (routeRepo === "otel") {
+			const target = routeName;
+			if (!target) {
+				if (otelSelected) dispatch(selectOtelFile(null));
+				return;
+			}
+			if (target !== otelSelected) {
+				const cached = otelFilesByName?.[target];
+				const isLocalOnly = otelList.some((f) => f.name === target && f.localOnly);
+				const hasCached = typeof cached?.content === "string";
+				dispatch(selectOtelFile(target));
+				if (isLocalOnly) {
+					dispatch(setOtelContent(cached?.content ?? ""));
+					return;
+				}
+				if (hasCached) dispatch(setOtelContent(cached.content));
+				else dispatch(fetchOtelConfigContent(target));
+			}
+			return;
+		}
+		if (!routeRepo && (configSelected || otelSelected)) {
+			dispatch(selectConfigFile(null));
+			dispatch(selectOtelFile(null));
+		}
+	}, [
+		routeRepo,
+		routeName,
+		configSelected,
+		otelSelected,
+		configList,
+		otelList,
+		configFilesByName,
+		otelFilesByName,
+		dispatch,
+	]);
 
-	/**
-	 * Auto-navigate to first file if none is selected and files are available.
-	 */
+	// Auto-navigate to first file when on /configuration with no selection
 	React.useEffect(() => {
-		if (!routeName && list?.length > 0) {
-			navigate(paths.configurationFile(list[0].name), { replace: true });
+		if (routeRepo || routeName) return;
+		const configFiles = (configList || []).filter((f) => !isBackupFileName(f.name));
+		const otelFiles = (otelList || []).filter((f) => !isBackupFileName(f.name));
+		if (configFiles.length > 0) {
+			navigate(paths.configurationFile(configFiles[0].name), { replace: true });
+		} else if (otelFiles.length > 0) {
+			navigate(paths.configurationOtelFile(otelFiles[0].name), { replace: true });
 		}
-	}, [routeName, list, navigate]);
+	}, [routeRepo, routeName, configList, otelList, navigate]);
 
-	/**
-	 * Handle selection of a configuration file from the tree.
-	 * Fetches content if not already cached.
-	 */
 	const onSelect = React.useCallback(
-		(name) => {
-			if (!name) return;
-			const url = paths.configurationFile(name);
-			if (url !== window.location.pathname) {
-				navigate(url, { replace: false });
-			}
-			// Close drawer on small screens after selection
-			if (isSmallScreen) {
-				setDrawerOpen(false);
-			}
+		(selectedRepo, selectedName) => {
+			if (!selectedRepo || !selectedName) return;
+			const url =
+				selectedRepo === "config"
+					? paths.configurationFile(selectedName)
+					: paths.configurationOtelFile(selectedName);
+			if (url !== location.pathname) navigate(url, { replace: false });
+			if (isSmallScreen) setDrawerOpen(false);
 		},
-		[navigate, isSmallScreen],
+		[navigate, isSmallScreen, location.pathname],
 	);
 
-	/**
-	 * Handle inline renaming of a configuration file.
-	 * Decides between local rename and backend rename based on file metadata.
-	 */
-	const handleInlineRename = React.useCallback(
+	const handleRenameConfig = React.useCallback(
 		async (oldName, newName) => {
-			const meta = list.find((f) => f.name === oldName);
+			const meta = configList.find((f) => f.name === oldName);
 			if (meta?.localOnly) {
 				dispatch(renameLocalFile({ oldName, newName }));
 			} else {
 				await dispatch(renameConfig({ oldName, newName })).unwrap();
 			}
-			if (routeName && decodeURIComponent(routeName) === oldName) {
+			if (routeRepo === "config" && routeName === oldName) {
 				navigate(paths.configurationFile(newName), { replace: true });
 			}
 		},
-		[dispatch, list, routeName, navigate],
+		[dispatch, configList, routeRepo, routeName, navigate],
 	);
 
-	// Auto-select is handled via routeName: when no route is set and list is available,
-	// we navigate to the first file in the dedicated effect above.
+	const handleRenameOtel = React.useCallback(
+		async (oldName, newName) => {
+			const meta = otelList.find((f) => f.name === oldName);
+			if (meta?.localOnly) {
+				dispatch(renameOtelLocalFile({ oldName, newName }));
+			} else {
+				await dispatch(renameOtelConfig({ oldName, newName })).unwrap();
+			}
+			if (routeRepo === "otel" && routeName === oldName) {
+				navigate(paths.configurationOtelFile(newName), { replace: true });
+			}
+		},
+		[dispatch, otelList, routeRepo, routeName, navigate],
+	);
 
-	// Validation is handled elsewhere; header no longer triggers validation directly.
-
-	/**
-	 * Open the delete confirmation dialog for a given file.
-	 */
-	const openDelete = React.useCallback((fileName) => {
-		setDeleteTarget(fileName);
+	const openDelete = React.useCallback((targetRepo, fileName) => {
+		setDeleteTarget({ repo: targetRepo, name: fileName });
 		setDeleteOpen(true);
 	}, []);
 
-	/**
-	 * Submit the delete action after confirmation.
-	 */
-	const submitDelete = React.useCallback(async () => {
+	const submitDelete = React.useCallback(() => {
 		if (!deleteTarget) {
 			setDeleteOpen(false);
 			return;
 		}
-		const meta = list.find((f) => f.name === deleteTarget);
-
-		// Determine next file to select if we are deleting the current one
-		let nextSelected = null;
-		if (selected === deleteTarget) {
-			const visibleFiles = list
-				.filter((f) => !isBackupFileName(f.name))
-				.sort((a, b) => a.name.localeCompare(b.name));
-
-			const idx = visibleFiles.findIndex((f) => f.name === deleteTarget);
-			if (idx >= 0 && visibleFiles.length > 1) {
-				// Pick next, or previous if at the end
-				const nextIdx = idx + 1 < visibleFiles.length ? idx + 1 : idx - 1;
-				nextSelected = visibleFiles[nextIdx]?.name;
-			}
+		const { repo, name } = deleteTarget;
+		const list = repo === "config" ? configList : otelList;
+		const visibleFiles = list
+			.filter((f) => !isBackupFileName(f.name))
+			.sort((a, b) => a.name.localeCompare(b.name));
+		const currentSelected = repo === "config" ? configSelected : otelSelected;
+		let nextName = null;
+		const idx = visibleFiles.findIndex((f) => f.name === name);
+		if (idx >= 0 && visibleFiles.length > 1) {
+			const nextIdx = idx + 1 < visibleFiles.length ? idx + 1 : idx - 1;
+			nextName = visibleFiles[nextIdx]?.name;
 		}
-
-		if (selected === deleteTarget) {
-			if (nextSelected) {
-				navigate(paths.configurationFile(nextSelected), { replace: true });
+		if (currentSelected === name) {
+			if (nextName) {
+				navigate(
+					repo === "config"
+						? paths.configurationFile(nextName)
+						: paths.configurationOtelFile(nextName),
+					{ replace: true },
+				);
 			} else {
 				navigate(paths.configuration, { replace: true });
 			}
 		}
-
-		// Wait slightly for navigation to start before deleting, to avoid "File not found"
-		// error when the editor tries to re-fetch or validate the deleting file.
 		setTimeout(() => {
-			if (meta?.localOnly) {
-				dispatch(deleteLocalFile(deleteTarget));
+			const meta = list.find((f) => f.name === name);
+			if (repo === "config") {
+				if (meta?.localOnly) dispatch(deleteLocalFile(name));
+				else dispatch(deleteConfig(name));
 			} else {
-				dispatch(deleteConfig(deleteTarget));
+				if (meta?.localOnly) dispatch(deleteOtelLocalFile(name));
+				else dispatch(deleteOtelConfig(name));
 			}
 		}, 50);
-
 		setDeleteOpen(false);
-	}, [dispatch, deleteTarget, list, selected, navigate]);
+		setDeleteTarget(null);
+	}, [deleteTarget, configList, otelList, configSelected, otelSelected, navigate, dispatch]);
 
-	const handleCreate = React.useCallback(
+	const handleCreateConfig = React.useCallback(
 		(type = "yaml") => {
 			const ext = type === "vm" ? "vm" : "yaml";
-			const base = `new-config.${ext}.draft`;
-			let name = base;
+			let name = `new-config.${ext}.draft`;
 			let i = 1;
-			while (list.some((f) => f.name === name)) {
+			while (configList.some((f) => f.name === name)) {
 				name = `new-config-${i}.${ext}.draft`;
 				i++;
 			}
-
 			const content =
 				type === "vm"
-					? "## MetricsHub Velocity Configuration Template\n" +
-						"## Available tools: $env, $file, $http, $sql, $json, $xml, $date, $math, $esc, $stringUtils\n" +
-						"## See https://metricshub.com/docs/latest/configuration/programmable-configuration for documentation\n" +
-						"resources:\n\n"
+					? "## MetricsHub Velocity Configuration Template\nresources:\n\n"
 					: "# MetricsHub Configuration\n\n";
 			dispatch(addLocalFile({ name, content }));
 			dispatch(saveDraftConfig({ name, content, skipValidation: true }));
-
 			navigate(paths.configurationFile(name), { replace: false });
 		},
-		[dispatch, list, navigate],
+		[dispatch, configList, navigate],
 	);
 
-	// Create menu state
+	const handleCreateOtel = React.useCallback(() => {
+		let name = "new-otel-config.yaml.draft";
+		let i = 1;
+		while (otelList.some((f) => f.name === name)) {
+			name = `new-otel-config-${i}.yaml.draft`;
+			i++;
+		}
+		const content = "# OpenTelemetry Collector Configuration\n\n";
+		dispatch(addOtelLocalFile({ name, content }));
+		dispatch(saveDraftOtelConfig({ name, content, skipValidation: true }));
+		navigate(paths.configurationOtelFile(name), { replace: false });
+	}, [dispatch, otelList, navigate]);
+
 	const [createMenuAnchor, setCreateMenuAnchor] = React.useState(null);
-	const openCreateMenu = React.useCallback((e) => {
-		setCreateMenuAnchor(e.currentTarget);
-	}, []);
-	const closeCreateMenu = React.useCallback(() => setCreateMenuAnchor(null), []);
+	const configEditorRef = React.useRef(null);
+	const otelEditorRef = React.useRef(null);
 
-	const editorRef = React.useRef(null);
-
-	/**
-	 * Test the current Velocity template by dispatching the test thunk.
-	 */
 	const handleTest = React.useCallback(() => {
-		if (!selected || !isVmFile(selected)) return;
-		const currentContent = filesByName[selected]?.content ?? "";
-		dispatch(testVelocityTemplate({ name: selected, content: currentContent }));
-	}, [dispatch, selected, filesByName]);
+		if (routeRepo !== "config" || !routeName || !isVmFile(routeName)) return;
+		const content = configFilesByName[routeName]?.content ?? "";
+		dispatch(testVelocityTemplate({ name: routeName, content }));
+	}, [dispatch, routeRepo, routeName, configFilesByName]);
 
-	/**
-	 * Close the Velocity test result panel.
-	 */
 	const handleCloseTestResult = React.useCallback(() => {
 		dispatch(clearVelocityTestResult());
 	}, [dispatch]);
 
-	/**
-	 * Auto-close the test result panel when the user switches to a different file.
-	 */
 	React.useEffect(() => {
-		if (velocityTestResult && velocityTestResult.name !== selected) {
+		if (velocityTestResult && velocityTestResult.name !== configSelected) {
 			dispatch(clearVelocityTestResult());
 		}
-	}, [selected, velocityTestResult, dispatch]);
+	}, [configSelected, velocityTestResult, dispatch]);
 
-	const handleMakeDraft = React.useCallback(
+	const handleMakeDraftConfig = React.useCallback(
 		async (fileName) => {
 			const newName = fileName + ".draft";
-			if (list.some((f) => f.name === fileName && f.localOnly)) {
+			if (configList.some((f) => f.name === fileName && f.localOnly)) {
 				dispatch(renameLocalFile({ oldName: fileName, newName }));
 			} else {
 				await dispatch(renameConfig({ oldName: fileName, newName })).unwrap();
 			}
-			if (selected === fileName) {
+			if (routeRepo === "config" && routeName === fileName) {
 				navigate(paths.configurationFile(newName), { replace: true });
 			}
 		},
-		[dispatch, list, selected, navigate],
+		[dispatch, configList, routeRepo, routeName, navigate],
 	);
 
-	// Tree content used in both Left pane (desktop) and Drawer (mobile)
+	const handleMakeDraftOtel = React.useCallback(
+		async (fileName) => {
+			const newName = fileName + ".draft";
+			if (otelList.some((f) => f.name === fileName && f.localOnly)) {
+				dispatch(renameOtelLocalFile({ oldName: fileName, newName }));
+			} else {
+				await dispatch(renameOtelConfig({ oldName: fileName, newName })).unwrap();
+			}
+			if (routeRepo === "otel" && routeName === fileName) {
+				navigate(paths.configurationOtelFile(newName), { replace: true });
+			}
+		},
+		[dispatch, otelList, routeRepo, routeName, navigate],
+	);
+
+	const displayName =
+		routeRepo === "config" ? configSelected : routeRepo === "otel" ? otelSelected : null;
+	const loadingContent =
+		(routeRepo === "config" && configLoadingContent) ||
+		(routeRepo === "otel" && otelLoadingContent);
+
 	const treeContent = (
 		<Stack spacing={1.5} sx={{ p: 1.5 }}>
 			<Stack direction="row" spacing={1} alignItems="center">
@@ -309,17 +410,19 @@ function ConfigurationPage() {
 					variant="outlined"
 					color="inherit"
 					startIcon={<RefreshIcon />}
-					onClick={() => dispatch(fetchConfigList())}
+					onClick={() => {
+						dispatch(fetchConfigList());
+						dispatch(fetchOtelConfigList());
+					}}
 				>
 					Refresh
 				</Button>
-
 				<Button
 					size="small"
 					variant="outlined"
 					color="inherit"
 					endIcon={<KeyboardArrowDownIcon />}
-					onClick={openCreateMenu}
+					onClick={(e) => setCreateMenuAnchor(e.currentTarget)}
 					disabled={isReadOnly}
 				>
 					Create
@@ -327,34 +430,39 @@ function ConfigurationPage() {
 				<Menu
 					anchorEl={createMenuAnchor}
 					open={Boolean(createMenuAnchor)}
-					onClose={closeCreateMenu}
-					disableRestoreFocus
-					disableAutoFocusItem
+					onClose={() => setCreateMenuAnchor(null)}
 					anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
 					transformOrigin={{ vertical: "top", horizontal: "left" }}
 				>
 					<MenuItem
 						onClick={() => {
-							closeCreateMenu();
-							handleCreate("yaml");
+							setCreateMenuAnchor(null);
+							handleCreateConfig("yaml");
 						}}
 					>
 						New YAML config
 					</MenuItem>
 					<MenuItem
 						onClick={() => {
-							closeCreateMenu();
-							handleCreate("vm");
+							setCreateMenuAnchor(null);
+							handleCreateConfig("vm");
 						}}
 					>
 						New Velocity template
 					</MenuItem>
+					<MenuItem
+						onClick={() => {
+							setCreateMenuAnchor(null);
+							handleCreateOtel();
+						}}
+					>
+						New OTEL config
+					</MenuItem>
 				</Menu>
-
 				<Button
 					size="small"
-					color="inherit"
 					variant="outlined"
+					color="inherit"
 					component="label"
 					startIcon={<UploadFileIcon />}
 					disabled={isReadOnly}
@@ -372,30 +480,29 @@ function ConfigurationPage() {
 							reader.onload = (evt) => {
 								const content = evt.target.result;
 								dispatch(addLocalFile({ name: file.name, content }));
-								// Navigate to new local file so URL reflects selection
 								navigate(paths.configurationFile(file.name), { replace: false });
 							};
 							reader.readAsText(file);
 						}}
 					/>
 				</Button>
-
-				{loadingList && <CircularProgress size={18} />}
+				{(configLoadingList || otelLoadingList) && <CircularProgress size={18} />}
 			</Stack>
-
-			<ConfigTree
-				files={list}
-				selectedName={selected}
+			<UnifiedConfigTree
+				selectedRepo={routeRepo}
+				selectedName={routeName}
 				onSelect={onSelect}
-				onRename={handleInlineRename}
-				onDelete={openDelete}
-				onMakeDraft={handleMakeDraft}
+				onRenameConfig={handleRenameConfig}
+				onDeleteConfig={(name) => openDelete("config", name)}
+				onMakeDraftConfig={handleMakeDraftConfig}
+				onRenameOtel={handleRenameOtel}
+				onDeleteOtel={(name) => openDelete("otel", name)}
+				onMakeDraftOtel={handleMakeDraftOtel}
 			/>
-
 			<QuestionDialog
 				open={deleteOpen}
 				title="Delete file"
-				question={`Are you sure you want to delete "${deleteTarget ?? ""}"? This action cannot be undone.`}
+				question={`Are you sure you want to delete "${deleteTarget?.name ?? ""}"? This action cannot be undone.`}
 				onClose={() => setDeleteOpen(false)}
 				actionButtons={[
 					{ btnTitle: "Cancel", callback: () => setDeleteOpen(false), autoFocus: true },
@@ -411,7 +518,6 @@ function ConfigurationPage() {
 		</Stack>
 	);
 
-	// Header for small screens with button to open file drawer
 	const smallScreenHeader = (
 		<Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1.5, py: 1 }}>
 			<IconButton
@@ -422,21 +528,18 @@ function ConfigurationPage() {
 				<FolderIcon fontSize="small" />
 			</IconButton>
 			<Typography variant="body2" noWrap sx={{ flex: 1 }}>
-				{selected || "Files"}
+				{displayName ?? "Configuration"}
 			</Typography>
 		</Stack>
 	);
 
 	return (
 		<>
-			{/* Drawer for mobile tree view */}
 			<Drawer
 				anchor="left"
 				open={drawerOpen}
 				onClose={() => setDrawerOpen(false)}
-				PaperProps={{
-					sx: { width: "85%", maxWidth: 360 },
-				}}
+				PaperProps={{ sx: { width: "85%", maxWidth: 360 } }}
 			>
 				<Stack
 					direction="row"
@@ -444,91 +547,135 @@ function ConfigurationPage() {
 					justifyContent="space-between"
 					sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: "divider" }}
 				>
-					<Typography variant="h6">Files</Typography>
+					<Typography variant="h6">Configuration</Typography>
 					<IconButton size="small" onClick={() => setDrawerOpen(false)}>
 						<CloseIcon />
 					</IconButton>
 				</Stack>
 				{treeContent}
 			</Drawer>
-
 			<SplitScreen initialLeftPct={35} smallScreenHeader={smallScreenHeader}>
 				<Left>{treeContent}</Left>
-
 				<Right disableScroll>
 					<Stack
-						sx={{
-							px: 1.5,
-							pt: 0,
-							pb: 1.5,
-							gap: 1,
-							height: "100%",
-							// Allow right pane to scroll for non-editor content (e.g., messages),
-							// while we also keep the editor itself fully height-constrained so
-							// CodeMirror remains the primary scroll area for the document.
-							overflow: "auto",
-							minHeight: 0,
-							transition: "background-color 0.4s ease, color 0.4s ease",
-						}}
+						sx={{ px: 1.5, pt: 0, pb: 1.5, gap: 1, height: "100%", overflow: "auto", minHeight: 0 }}
 					>
-						<Box
-							sx={{
-								position: "sticky",
-								top: 0,
-								zIndex: (t) => t.zIndex.appBar,
-								mx: -1.5,
-								px: 1.5,
-								py: 1,
-								bgcolor: "background.default",
-								borderBottom: 1,
-								borderColor: "divider",
-								transition: "background-color 0.4s ease, border-color 0.4s ease",
-							}}
-						>
-							<EditorHeader
-								selected={selected}
-								saving={saving}
-								onSave={() => editorRef.current?.save?.()}
-								onApply={() => editorRef.current?.apply?.()}
-								onTest={handleTest}
-								testLoading={!!velocityTestResult?.loading}
-								isReadOnly={isReadOnly}
-							/>
-						</Box>
-
-						{/* Let the editor take the remaining space without vh hacks */}
-						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
-							{/* Editor - takes half or full width depending on test result */}
-							<Box sx={{ flex: 1, minWidth: 0 }}>
-								<ConfigEditorContainer ref={editorRef} />
+						{routeRepo === "config" && (
+							<Box
+								sx={{
+									position: "sticky",
+									top: 0,
+									zIndex: (t) => t.zIndex.appBar,
+									mx: -1.5,
+									px: 1.5,
+									py: 1,
+									bgcolor: "background.default",
+									borderBottom: 1,
+									borderColor: "divider",
+								}}
+							>
+								<EditorHeader
+									selected={configSelected}
+									saving={configSaving}
+									onSave={() => configEditorRef.current?.save?.()}
+									onApply={() => configEditorRef.current?.apply?.()}
+									onTest={handleTest}
+									testLoading={!!velocityTestResult?.loading}
+									isReadOnly={isReadOnly}
+								/>
 							</Box>
-							{/* Test result panel - shown alongside editor */}
-							{velocityTestResult && (
+						)}
+						{routeRepo === "otel" && (
+							<Box
+								sx={{
+									position: "sticky",
+									top: 0,
+									zIndex: (t) => t.zIndex.appBar,
+									mx: -1.5,
+									px: 1.5,
+									py: 1,
+									bgcolor: "background.default",
+									borderBottom: 1,
+									borderColor: "divider",
+								}}
+							>
+								<Stack spacing={1}>
+									<OtelEditorHeader
+										selected={otelSelected}
+										saving={otelSaving}
+										onSave={() => otelEditorRef.current?.save?.()}
+										onApply={() => otelEditorRef.current?.apply?.()}
+										isReadOnly={isReadOnly}
+									/>
+									<OtelCollectorToolbar
+										isReadOnly={isReadOnly}
+										logsOpen={otelLogsOpen}
+										onToggleLogs={() => setOtelLogsOpen((prev) => !prev)}
+										onOpenLogs={otelLogs.fetchLogs}
+									/>
+								</Stack>
+							</Box>
+						)}
+						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>
+							{routeRepo === "config" && (
+								<>
+									<Box sx={{ flex: 1, minWidth: 0 }}>
+										<ConfigEditorContainer ref={configEditorRef} />
+									</Box>
+									{velocityTestResult && (
+										<Box sx={{ flex: 1, minWidth: 0, borderLeft: 1, borderColor: "divider" }}>
+											<VelocityTestResultPanel
+												result={velocityTestResult.result}
+												error={velocityTestResult.error}
+												loading={velocityTestResult.loading}
+												yamlValidation={velocityTestResult.yamlValidation}
+												onClose={handleCloseTestResult}
+											/>
+										</Box>
+									)}
+								</>
+							)}
+							{routeRepo === "otel" && (
+								<ResizableVerticalSplit
+									initialTopPct={60}
+									bottomVisible={otelLogsOpen}
+									sx={{ flex: 1, minWidth: 0, minHeight: 0 }}
+								>
+									<SplitTop>
+										<OtelConfigEditorContainer ref={otelEditorRef} />
+									</SplitTop>
+									<SplitBottom disableScroll>
+										{otelLogsOpen && (
+											<OtelCollectorLogPanel
+												logs={otelLogs.logs}
+												logsLoading={otelLogs.logsLoading}
+												logsError={otelLogs.logsError}
+												tailLines={otelLogs.tailLines}
+												onTailLinesChange={otelLogs.setTailLines}
+												onRefresh={otelLogs.fetchLogs}
+											/>
+										)}
+									</SplitBottom>
+								</ResizableVerticalSplit>
+							)}
+							{!routeRepo && (
 								<Box
 									sx={{
 										flex: 1,
-										minWidth: 0,
-										borderLeft: 1,
-										borderColor: "divider",
+										display: "flex",
+										alignItems: "center",
+										justifyContent: "center",
+										color: "text.secondary",
 									}}
 								>
-									<VelocityTestResultPanel
-										result={velocityTestResult.result}
-										error={velocityTestResult.error}
-										loading={velocityTestResult.loading}
-										yamlValidation={velocityTestResult.yamlValidation}
-										onClose={handleCloseTestResult}
-									/>
+									<Typography variant="body2">
+										Select a file from the tree (config or otel).
+									</Typography>
 								</Box>
 							)}
 						</Box>
 						{loadingContent && (
-							<Stack
-								direction="row"
-								alignItems="center"
-								spacing={1}
-								sx={{ transition: "color 0.4s ease" }}
-							>
+							<Stack direction="row" alignItems="center" spacing={1}>
 								<CircularProgress size={18} />
 								Loading content…
 							</Stack>

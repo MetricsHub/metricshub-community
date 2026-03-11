@@ -26,6 +26,7 @@ import java.util.Map;
 import org.metricshub.web.dto.ErrorResponse;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.metricshub.web.exception.LogFilesException;
+import org.metricshub.web.exception.OtelCollectorException;
 import org.metricshub.web.exception.TextPlainException;
 import org.metricshub.web.exception.UnauthorizedException;
 import org.springframework.core.Ordered;
@@ -129,6 +130,37 @@ public class RestExceptionHandler {
 			case INVALID_FILE_NAME, INVALID_PATH:
 				status = HttpStatus.BAD_REQUEST;
 				break;
+			case IO_FAILURE:
+			default:
+				status = HttpStatus.INTERNAL_SERVER_ERROR;
+				break;
+		}
+
+		final String message = (ex.getMessage() != null && !ex.getMessage().isEmpty())
+			? ex.getMessage()
+			: ex.getCode().name();
+
+		return new ResponseEntity<>(ErrorResponse.builder().httpStatus(status).message(message).build(), status);
+	}
+
+	/**
+	 * Handle OtelCollectorException exceptions.
+	 *
+	 * @param ex the exception to handle
+	 * @return a ResponseEntity containing the error response
+	 */
+	@ExceptionHandler(OtelCollectorException.class)
+	protected ResponseEntity<Object> handleOtelCollectorException(final OtelCollectorException ex) {
+		HttpStatus status;
+		switch (ex.getCode()) {
+			case CONTEXT_UNAVAILABLE:
+			case OUTPUT_DIR_NOT_CONFIGURED:
+				status = HttpStatus.SERVICE_UNAVAILABLE;
+				break;
+			case LOG_FILE_NOT_FOUND:
+				status = HttpStatus.NOT_FOUND;
+				break;
+			case RESTART_FAILED:
 			case IO_FAILURE:
 			default:
 				status = HttpStatus.INTERNAL_SERVER_ERROR;

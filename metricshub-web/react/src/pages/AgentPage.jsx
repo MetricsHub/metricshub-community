@@ -9,7 +9,6 @@ import { useAuth } from "../hooks/use-auth";
 import AgentHeader from "../components/agent/AgentHeader";
 import AgentMetrics from "../components/agent/AgentMetrics";
 import KeyValueTable from "../components/agent/KeyValueTable";
-import AgentOpenTelemetry from "../components/agent/AgentOpenTelemetry";
 import LogFilesViewer from "../components/agent/LogFilesViewer";
 import { objectToRows, EXCLUDED_STATUS_KEYS } from "../components/agent/utils";
 
@@ -157,9 +156,6 @@ function AgentPage() {
 
 				{/* Status Details Table */}
 				<KeyValueTable title="Status Details" rows={statusDetailsRows} />
-
-				{/* OpenTelemetry Configuration */}
-				<AgentOpenTelemetry />
 
 				<Divider />
 

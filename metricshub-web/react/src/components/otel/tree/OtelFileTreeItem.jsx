@@ -1,0 +1,384 @@
+import * as React from "react";
+import { TreeItem } from "@mui/x-tree-view";
+import { Box, IconButton, Menu, MenuItem, TextField, Stack, Typography, Chip } from "@mui/material";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import DriveFileRenameOutlineIcon from "@mui/icons-material/DriveFileRenameOutline";
+import DeleteIcon from "@mui/icons-material/Delete";
+import BackupIcon from "@mui/icons-material/Backup";
+import RestoreIcon from "@mui/icons-material/Restore";
+import DownloadIcon from "@mui/icons-material/Download";
+import PushPinIcon from "@mui/icons-material/PushPin";
+import FileTypeIcon from "../../config/tree/icons/FileTypeIcons";
+import FileMeta from "../../config/tree/FileMeta";
+import ClickAwayListener from "@mui/material/ClickAwayListener";
+import { useAppDispatch } from "../../../hooks/store";
+import { useSnackbar } from "../../../hooks/use-snackbar";
+import { useAuth } from "../../../hooks/use-auth";
+import {
+	createOtelConfigBackup,
+	restoreOtelConfigFromBackup,
+	deleteOtelBackupFile,
+	fetchOtelConfigList,
+} from "../../../store/thunks/otel-config-thunks";
+import QuestionDialog from "../../common/QuestionDialog";
+import { downloadOtelConfigFile } from "../../../services/download-service";
+import { parseBackupFileName } from "../../../utils/backup-names";
+import { getFileType } from "../../../utils/file-type-utils";
+
+export default function OtelFileTreeItem({
+	file,
+	onRename,
+	onDelete,
+	onMakeDraft,
+	isDirty = false,
+	validation = null,
+	itemId,
+	labelName,
+	onSelect,
+	isReadOnly = false,
+	isSelected = false,
+}) {
+	const dispatch = useAppDispatch();
+	const { user } = useAuth();
+	const effectiveReadOnly = isReadOnly || user?.role === "ro";
+	const [editing, setEditing] = React.useState(false);
+	const [draft, setDraft] = React.useState(file.name);
+	const inputRef = React.useRef(null);
+	const rowRef = React.useRef(null);
+	const [menuAnchor, setMenuAnchor] = React.useState(null);
+	const [restoreOpen, setRestoreOpen] = React.useState(false);
+	const { show: showSnackbar } = useSnackbar();
+
+	const treeItemId = itemId ?? file.name;
+	const isDraft = file.name.endsWith(".draft");
+	const displayName = labelName ?? (isDraft ? file.name.replace(/\.draft$/, "") : file.name);
+	const fileType = getFileType(file.name);
+	const parsed = parseBackupFileName(file.name);
+	const isBackupFile = !!parsed;
+	const backupId = parsed?.id ?? null;
+	const backupOriginal = parsed?.originalName ?? null;
+
+	React.useEffect(() => {
+		if (!editing) setDraft(file.name);
+	}, [file.name, editing]);
+
+	const openMenu = React.useCallback(
+		(e) => {
+			if (effectiveReadOnly) return;
+			e.stopPropagation();
+			setMenuAnchor(e.currentTarget);
+		},
+		[effectiveReadOnly],
+	);
+	const closeMenu = React.useCallback(() => setMenuAnchor(null), []);
+
+	const startRename = React.useCallback(() => {
+		if (effectiveReadOnly) return;
+		closeMenu();
+		rowRef.current?.blur?.();
+		setEditing(true);
+		requestAnimationFrame(() => inputRef.current?.select());
+	}, [closeMenu, effectiveReadOnly]);
+
+	const cancelRename = React.useCallback(() => {
+		setDraft(file.name);
+		setEditing(false);
+		rowRef.current?.blur?.();
+	}, [file.name]);
+
+	const submitRename = React.useCallback(() => {
+		const next = draft.trim();
+		if (!next || next === file.name) {
+			setEditing(false);
+			return;
+		}
+		if (!/\.(yaml|yml)$/i.test(next)) {
+			showSnackbar("OTEL config files must have .yaml or .yml extension.", { severity: "error" });
+			setDraft(file.name);
+			setEditing(false);
+			return;
+		}
+		onRename?.(file.name, next);
+		setEditing(false);
+	}, [draft, file.name, onRename, showSnackbar]);
+
+	const backupThisFile = React.useCallback(async () => {
+		if (effectiveReadOnly) return;
+		document.activeElement?.blur?.();
+		closeMenu();
+		try {
+			await dispatch(createOtelConfigBackup({ kind: "file", name: file.name })).unwrap();
+			showSnackbar(`Backup created for ${file.name}`, { severity: "success" });
+		} catch (e) {
+			console.error("Backup failed:", e);
+			showSnackbar("Backup failed", { severity: "error" });
+		}
+	}, [dispatch, file.name, showSnackbar, closeMenu, effectiveReadOnly]);
+
+	const askRestore = React.useCallback(() => {
+		if (effectiveReadOnly) return;
+		document.activeElement?.blur?.();
+		closeMenu();
+		setRestoreOpen(true);
+	}, [closeMenu, effectiveReadOnly]);
+
+	const doRestore = React.useCallback(
+		async (overwrite) => {
+			if (effectiveReadOnly) return;
+			setRestoreOpen(false);
+			try {
+				const res = await dispatch(
+					restoreOtelConfigFromBackup({ backupName: file.name, overwrite }),
+				).unwrap();
+				if (onSelect && res?.restoredName) onSelect(res.restoredName);
+				else if (onSelect && res?.originalName) onSelect(res.originalName);
+				const targetName = res?.restoredName || res?.originalName || file.name;
+				if (overwrite) {
+					showSnackbar(`Restored and overwrote ${targetName}`, { severity: "success" });
+				} else {
+					showSnackbar(`Restored as copy ${targetName}`, { severity: "success" });
+				}
+			} catch (e) {
+				console.error("Restore failed:", e);
+				showSnackbar("Restore failed", { severity: "error" });
+			}
+		},
+		[dispatch, file.name, onSelect, showSnackbar, effectiveReadOnly],
+	);
+
+	const downloadThisFile = React.useCallback(async () => {
+		document.activeElement?.blur?.();
+		closeMenu();
+		const suggestedName = backupOriginal ?? labelName ?? file.name;
+		try {
+			await downloadOtelConfigFile({ name: file.name, suggestedName });
+		} catch (e) {
+			console.error("Download failed:", e);
+			showSnackbar("Download failed", { severity: "error" });
+		}
+	}, [file.name, labelName, backupOriginal, showSnackbar, closeMenu]);
+
+	const handleDeleteClick = React.useCallback(async () => {
+		if (effectiveReadOnly) return;
+		closeMenu();
+		if (isBackupFile) {
+			try {
+				await dispatch(deleteOtelBackupFile(file.name)).unwrap();
+				await dispatch(fetchOtelConfigList());
+				showSnackbar("Backup deleted", { severity: "success" });
+			} catch (e) {
+				console.error("Delete backup failed:", e);
+				showSnackbar("Failed to delete backup file", { severity: "error" });
+			}
+		} else {
+			onDelete(file.name);
+		}
+	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete, effectiveReadOnly]);
+
+	const preventMouseDownDefault = React.useCallback((e) => e.preventDefault(), []);
+
+	const label = (
+		<Stack
+			direction="row"
+			alignItems="center"
+			justifyContent="space-between"
+			sx={{ width: "100%", pr: 1, userSelect: editing ? "text" : "none" }}
+		>
+			<Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+				{editing ? (
+					<ClickAwayListener
+						onClickAway={submitRename}
+						mouseEvent="onClick"
+						touchEvent={false}
+						disableReactTree
+					>
+						<Box onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+							<Box sx={{ display: "flex", alignItems: "center" }}>
+								<FileTypeIcon type={fileType} />
+								<TextField
+									inputRef={inputRef}
+									value={draft}
+									onChange={(e) => setDraft(e.target.value)}
+									variant="standard"
+									size="small"
+									fullWidth
+									autoFocus
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											e.preventDefault();
+											e.stopPropagation();
+											submitRename();
+											return;
+										}
+										if (e.key === "Escape") {
+											e.preventDefault();
+											e.stopPropagation();
+											cancelRename();
+											return;
+										}
+										e.stopPropagation();
+									}}
+									slotProps={{ htmlInput: { "aria-label": "Rename file" } }}
+									sx={{ "& .MuiInputBase-input": { fontWeight: 500 } }}
+								/>
+							</Box>
+							<FileMeta file={file} sx={{ mt: 0.5 }} />
+						</Box>
+					</ClickAwayListener>
+				) : (
+					<>
+						<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
+							<FileTypeIcon type={fileType} />
+							<Typography
+								component="span"
+								noWrap
+								title={displayName}
+								sx={{
+									fontWeight: isSelected ? "bold" : isDirty ? 510 : 500,
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+								}}
+							>
+								{displayName}
+							</Typography>
+							{isDraft && (
+								<Chip
+									label="Draft"
+									size="small"
+									color="secondary"
+									icon={<PushPinIcon style={{ fontSize: 14 }} />}
+									sx={{
+										height: 20,
+										ml: 1,
+										"& .MuiChip-label": { px: 0.5, fontSize: "0.7rem" },
+										"& .MuiChip-icon": { ml: 0.5 },
+									}}
+								/>
+							)}
+							{isDirty && (
+								<Box
+									component="span"
+									title={
+										validation && validation.valid === false
+											? "Validation errors"
+											: "Unsaved changes"
+									}
+									aria-label="Unsaved changes"
+									sx={{
+										ml: 0.75,
+										width: 8,
+										height: 8,
+										borderRadius: "50%",
+										bgcolor: (t) =>
+											validation && validation.valid === false
+												? t.palette.error.main
+												: t.palette.warning.main,
+										flexShrink: 0,
+									}}
+								/>
+							)}
+						</Box>
+						<FileMeta file={file} />
+					</>
+				)}
+			</Box>
+
+			{!editing && (
+				<IconButton
+					size="small"
+					aria-label="More actions"
+					onClick={openMenu}
+					onMouseDown={preventMouseDownDefault}
+					disabled={effectiveReadOnly}
+				>
+					<MoreVertIcon fontSize="small" />
+				</IconButton>
+			)}
+		</Stack>
+	);
+
+	return (
+		<>
+			<TreeItem
+				itemId={treeItemId ?? file.name}
+				label={label}
+				slotProps={{
+					content: {
+						ref: rowRef,
+						sx: { width: "100%", "&.Mui-focusVisible": { backgroundColor: "transparent" } },
+					},
+				}}
+			/>
+			<Menu
+				anchorEl={menuAnchor}
+				open={Boolean(menuAnchor)}
+				onClose={closeMenu}
+				disableRestoreFocus
+				disableAutoFocusItem
+				anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+				transformOrigin={{ vertical: "top", horizontal: "right" }}
+			>
+				{!isBackupFile && (
+					<MenuItem onClick={startRename} disabled={effectiveReadOnly}>
+						<DriveFileRenameOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+						Rename
+					</MenuItem>
+				)}
+				<MenuItem onClick={downloadThisFile}>
+					<DownloadIcon fontSize="small" sx={{ mr: 1 }} />
+					Download
+				</MenuItem>
+				{!isBackupFile ? (
+					<MenuItem onClick={backupThisFile} disabled={effectiveReadOnly}>
+						<BackupIcon fontSize="small" sx={{ mr: 1 }} />
+						Backup
+					</MenuItem>
+				) : (
+					<MenuItem onClick={askRestore} disabled={effectiveReadOnly}>
+						<RestoreIcon fontSize="small" sx={{ mr: 1 }} />
+						Restore{backupId ? ` (${backupId})` : ""}
+					</MenuItem>
+				)}
+				{!isBackupFile && !isDraft && onMakeDraft && (
+					<MenuItem
+						onClick={() => {
+							closeMenu();
+							onMakeDraft(file.name);
+						}}
+						disabled={effectiveReadOnly}
+					>
+						<PushPinIcon fontSize="small" sx={{ mr: 1 }} />
+						Make draft
+					</MenuItem>
+				)}
+				<MenuItem onClick={handleDeleteClick} disabled={effectiveReadOnly}>
+					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
+					Delete
+				</MenuItem>
+			</Menu>
+
+			<QuestionDialog
+				open={restoreOpen}
+				title="Restore from backup"
+				question="Do you want to overwrite the original file?\n\n"
+				onClose={() => setRestoreOpen(false)}
+				actionButtons={[
+					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
+					{
+						btnTitle: "Restore as copy",
+						btnVariant: "contained",
+						callback: () => doRestore(false),
+						disabled: effectiveReadOnly,
+					},
+					{
+						btnTitle: "Overwrite",
+						btnColor: "error",
+						btnVariant: "contained",
+						callback: () => doRestore(true),
+						disabled: effectiveReadOnly,
+					},
+				]}
+			/>
+		</>
+	);
+}
