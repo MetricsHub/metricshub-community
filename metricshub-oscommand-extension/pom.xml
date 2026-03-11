@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.01-SNAPSHOT</version>
+		<version>3.9.03-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-oscommand-extension</artifactId>
@@ -223,6 +223,7 @@
 									<include>org.metricshub:ssh-java</include>
 									<include>org.metricshub:metricshub-oscommand-extension</include>
 									<include>org.connectbot:sshlib</include>
+									<include>com.google.crypto.tink:tink</include>
 								</includes>
 							</artifactSet>
 							<minimizeJar>false</minimizeJar>
