@@ -159,7 +159,10 @@ public class OtelCollectorService {
 				.orElse(null);
 
 			if (latestLog == null) {
-				return "No OpenTelemetry Collector log file found in " + outputDir + " (expected " + prefix + "*.log).";
+				throw new OtelCollectorException(
+					OtelCollectorException.Code.LOG_FILE_NOT_FOUND,
+					"No OpenTelemetry Collector log file found in " + outputDir + " (expected " + prefix + "*.log)."
+				);
 			}
 
 			final long fileSize = Files.size(latestLog);

@@ -179,12 +179,13 @@ public class OtelConfigurationFilesService {
 	public ConfigurationFile saveOrUpdateFile(final String fileName, final String content) throws ConfigFilesException {
 		final Path dir = getConfigDir();
 		final Path target = resolveSafeAllowed(dir, fileName);
+		final String safeContent = Objects.toString(content, "");
 
 		try {
 			Files.createDirectories(dir);
 			// Write to a temp file, then move atomically
 			final Path tmp = Files.createTempFile(dir, fileName + ".", ".tmp");
-			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+			Files.writeString(tmp, safeContent, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 
 			try {
 				// Write atomically via temp file + move (ensures no partial writes, even if
@@ -223,12 +224,13 @@ public class OtelConfigurationFilesService {
 			draftFileName += DRAFT_EXTENSION;
 		}
 		final Path target = resolveSafeDraft(dir, draftFileName);
+		final String safeContent = Objects.toString(content, "");
 
 		try {
 			Files.createDirectories(dir);
 			// Write to a temp file, then move atomically
 			final Path tmp = Files.createTempFile(dir, draftFileName + ".", ".tmp");
-			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+			Files.writeString(tmp, safeContent, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 
 			try {
 				// Write atomically via temp file + move (ensures no partial writes, even if
@@ -589,10 +591,11 @@ public class OtelConfigurationFilesService {
 		throws ConfigFilesException {
 		final Path dir = getBackupDir();
 		final Path target = resolveBackupFile(fileName);
+		final String safeContent = Objects.toString(content, "");
 		try {
 			Files.createDirectories(dir);
 			final Path tmp = Files.createTempFile(dir, fileName + ".", ".tmp");
-			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+			Files.writeString(tmp, safeContent, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 			try {
 				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
 			} catch (AtomicMoveNotSupportedException amnse) {

@@ -122,6 +122,19 @@ export default function FileTreeItem({
 			setEditing(false);
 			return;
 		}
+
+		// Restrict target extension to allowed families:
+		// - Velocity templates: .vm (optionally .draft)
+		// - YAML configs: .yaml/.yml (optionally .draft)
+		const isYamlLike = /\.(yaml|yml)(\.draft)?$/i.test(next);
+		if (!targetIsVm && !isYamlLike) {
+			showSnackbar("Configuration files must be .vm, .yaml or .yml (optionally .draft).", {
+				severity: "error",
+			});
+			setDraft(file.name);
+			setEditing(false);
+			return;
+		}
 		onRename?.(file.name, next);
 		setEditing(false);
 	}, [draft, file.name, onRename, showSnackbar]);

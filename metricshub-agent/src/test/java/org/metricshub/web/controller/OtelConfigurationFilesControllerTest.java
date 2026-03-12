@@ -16,10 +16,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.metricshub.agent.deserialization.DeserializationFailure;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.service.OtelConfigurationFilesService;
