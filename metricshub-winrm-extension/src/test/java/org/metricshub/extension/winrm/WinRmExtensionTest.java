@@ -324,7 +324,9 @@ class WinRmExtensionTest {
 			doReturn(new OsCommandResult("result", COMMAND_LINE))
 				.when(winCommandServiceMock)
 				.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, winRmConfiguration, Map.of());
-			assertTrue(winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
+			assertTrue(
+				winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess()
+			);
 		}
 		{
 			try (final MockedStatic<LocalOsHandler> mockedLocalOSHandler = mockStatic(LocalOsHandler.class)) {

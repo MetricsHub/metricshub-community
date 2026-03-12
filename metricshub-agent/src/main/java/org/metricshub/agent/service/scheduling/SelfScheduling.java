@@ -69,7 +69,8 @@ public class SelfScheduling extends AbstractScheduling {
 
 	// Request executor metric descriptions
 	static final String REQUEST_COMPLETED_DESCRIPTION = "Number of requests that completed successfully.";
-	static final String REQUEST_TIMEOUT_DESCRIPTION = "Number of requests that exceeded their timeout and were cancelled.";
+	static final String REQUEST_TIMEOUT_DESCRIPTION =
+		"Number of requests that exceeded their timeout and were cancelled.";
 	static final String REQUEST_REJECTED_DESCRIPTION =
 		"Number of requests rejected because the shared request executor was saturated.";
 	static final String REQUEST_ACTIVE_DESCRIPTION =
@@ -167,7 +168,12 @@ public class SelfScheduling extends AbstractScheduling {
 		// Counters
 		meter.registerRecorder(
 			MetricContext.builder().withDescription(REQUEST_COMPLETED_DESCRIPTION).withType(MetricType.COUNTER).build(),
-			NumberMetric.builder().value((double) stats.getCompleted()).name(REQUEST_COMPLETED_METRIC).collectTime(now).build()
+			NumberMetric
+				.builder()
+				.value((double) stats.getCompleted())
+				.name(REQUEST_COMPLETED_METRIC)
+				.collectTime(now)
+				.build()
 		);
 		meter.registerRecorder(
 			MetricContext.builder().withDescription(REQUEST_TIMEOUT_DESCRIPTION).withType(MetricType.COUNTER).build(),

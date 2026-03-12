@@ -143,7 +143,13 @@ public class WmiCriterionProcessor {
 			cachedNamespaceCriterion.setNamespace(cachedNamespace);
 
 			// Run the test
-			return wmiDetectionService.performDetectionTest(hostname, winConfiguration, cachedNamespaceCriterion, connectorId, logMode);
+			return wmiDetectionService.performDetectionTest(
+				hostname,
+				winConfiguration,
+				cachedNamespaceCriterion,
+				connectorId,
+				logMode
+			);
 		}
 
 		// Run the test

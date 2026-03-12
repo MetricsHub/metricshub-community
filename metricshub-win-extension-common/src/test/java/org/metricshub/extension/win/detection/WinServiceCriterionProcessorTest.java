@@ -87,7 +87,10 @@ class WinServiceCriterionProcessorTest {
 	void testProcessServiceCheckServiceNull() {
 		final ServiceCriterion serviceCriterion = null;
 		assertTrue(
-			winServiceCriterionProcessor.process(serviceCriterion, null, CONNECTOR_ID, true).getMessage().contains("Malformed Service criterion.")
+			winServiceCriterionProcessor
+				.process(serviceCriterion, null, CONNECTOR_ID, true)
+				.getMessage()
+				.contains("Malformed Service criterion.")
 		);
 	}
 

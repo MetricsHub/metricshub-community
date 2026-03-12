@@ -354,7 +354,13 @@ class WmiExtensionTest {
 
 			doReturn(CriterionTestResult.success(processCriterion, "success"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(eq(MetricsHubConstants.LOCALHOST), any(IWinConfiguration.class), any(WmiCriterion.class), anyString(), anyBoolean());
+				.performDetectionTest(
+					eq(MetricsHubConstants.LOCALHOST),
+					any(IWinConfiguration.class),
+					any(WmiCriterion.class),
+					anyString(),
+					anyBoolean()
+				);
 			assertTrue(wmiExtension.processCriterion(processCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
 	}

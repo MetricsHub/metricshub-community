@@ -158,7 +158,8 @@ public class HttpExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof HttpCriterion httpCriterion) {
-			return new HttpCriterionProcessor(httpRequestExecutor, logMode).process(httpCriterion, connectorId, telemetryManager);
+			return new HttpCriterionProcessor(httpRequestExecutor, logMode)
+				.process(httpCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

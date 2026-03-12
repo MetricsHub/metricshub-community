@@ -167,7 +167,8 @@ public class WbemExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof WbemCriterion wbemCriterion) {
-			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId, logMode).process(wbemCriterion, telemetryManager);
+			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId, logMode)
+				.process(wbemCriterion, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

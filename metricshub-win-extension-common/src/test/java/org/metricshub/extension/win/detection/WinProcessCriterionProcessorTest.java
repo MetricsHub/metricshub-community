@@ -33,10 +33,18 @@ class WinProcessCriterionProcessorTest {
 
 		doReturn(CriterionTestResult.success(processCriterion, "success"))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(eq(MetricsHubConstants.LOCALHOST), any(IWinConfiguration.class), any(WmiCriterion.class), any(String.class), eq(true));
+			.performDetectionTest(
+				eq(MetricsHubConstants.LOCALHOST),
+				any(IWinConfiguration.class),
+				any(WmiCriterion.class),
+				any(String.class),
+				eq(true)
+			);
 
 		assertTrue(
-			winProcessCriterionProcessor.process(processCriterion, WmiTestConfiguration.builder().build(), "testConnector", true).isSuccess()
+			winProcessCriterionProcessor
+				.process(processCriterion, WmiTestConfiguration.builder().build(), "testConnector", true)
+				.isSuccess()
 		);
 	}
 }

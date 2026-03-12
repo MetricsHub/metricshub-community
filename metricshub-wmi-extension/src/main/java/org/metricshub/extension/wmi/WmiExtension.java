@@ -184,7 +184,12 @@ public class WmiExtension implements IProtocolExtension {
 				.process(commandLineCriterion, telemetryManager);
 		} else if (criterion instanceof ProcessCriterion processCriterion) {
 			return new WinProcessCriterionProcessor(wmiDetectionService)
-				.process(processCriterion, WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),  connectorId, logMode);
+				.process(
+					processCriterion,
+					WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
+					connectorId,
+					logMode
+				);
 		}
 
 		throw new IllegalArgumentException(

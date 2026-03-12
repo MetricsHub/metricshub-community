@@ -131,7 +131,8 @@ public class JmxExtension implements IProtocolExtension {
 		final boolean logMode
 	) {
 		if (criterion instanceof JmxCriterion jmxCriterion) {
-			return new JmxCriterionProcessor(jmxRequestExecutor, logMode).process(jmxCriterion, connectorId, telemetryManager);
+			return new JmxCriterionProcessor(jmxRequestExecutor, logMode)
+				.process(jmxCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

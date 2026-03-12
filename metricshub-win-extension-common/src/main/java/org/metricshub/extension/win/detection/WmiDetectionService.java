@@ -30,7 +30,6 @@ import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -62,14 +61,16 @@ public class WmiDetectionService {
 	 * @param winConfiguration Win configuration (credentials, timeout)
 	 * @param wmiCriterion     WMI detection properties (WQL, namespace, expected result)
 	 * @param connectorId      Connector ID (used for logging purposes)
-	 * @param logMode          Whether to log or not the error in case of failure (can be set to false when this method is used as part of namespace detection, to avoid polluting logs with expected failures)
+	 * @param logMode          Whether to log or not the error in case of failure
+	 *                          (can be set to false when this method is used as part of namespace
+	 *                          detection, to avoid polluting logs with expected failures)
 	 * @return {@link CriterionTestResult} which indicates if the check has succeeded or not.
 	 */
 	public CriterionTestResult performDetectionTest(
 		final String hostname,
 		@NonNull final IWinConfiguration winConfiguration,
 		@NonNull final WmiCriterion wmiCriterion,
-		@NonNull String connectorId, 
+		@NonNull String connectorId,
 		final boolean logMode
 	) {
 		// Make the WBEM query

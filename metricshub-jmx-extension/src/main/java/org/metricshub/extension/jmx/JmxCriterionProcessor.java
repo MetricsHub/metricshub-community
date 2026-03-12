@@ -91,8 +91,18 @@ public class JmxCriterionProcessor {
 			return checkJmxResult(jmxConfiguration.getHostname(), result, jmxCriterion.getExpectedResult());
 		} catch (Exception e) {
 			if (logMode) {
-				log.error("Hostname {} - Error executing JMX criterion: {}. Connector ID: {}", telemetryManager.getHostname(), e.getMessage(), connectorId);
-				log.debug("Hostname {} - An exception occurred while executing JMX criterion. Connector ID: {}", telemetryManager.getHostname(), connectorId, e);
+				log.error(
+					"Hostname {} - Error executing JMX criterion: {}. Connector ID: {}",
+					telemetryManager.getHostname(),
+					e.getMessage(),
+					connectorId
+				);
+				log.debug(
+					"Hostname {} - An exception occurred while executing JMX criterion. Connector ID: {}",
+					telemetryManager.getHostname(),
+					connectorId,
+					e
+				);
 			}
 			return CriterionTestResult.error(jmxCriterion, e);
 		}

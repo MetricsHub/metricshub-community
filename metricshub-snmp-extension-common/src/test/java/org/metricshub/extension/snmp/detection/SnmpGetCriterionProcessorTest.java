@@ -142,12 +142,12 @@ public class SnmpGetCriterionProcessorTest {
 		String result = null;
 		String expectedResult = "expectedResult";
 
-		CriterionTestResult criterionTestResult = new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true).checkSNMPGetNextExpectedValue(
-			hostname,
-			oid,
-			expectedResult,
-			result
-		);
+		CriterionTestResult criterionTestResult = new SnmpGetNextCriterionProcessor(
+			snmpRequestExecutor,
+			configurationRetriever,
+			true
+		)
+			.checkSNMPGetNextExpectedValue(hostname, oid, expectedResult, result);
 
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(

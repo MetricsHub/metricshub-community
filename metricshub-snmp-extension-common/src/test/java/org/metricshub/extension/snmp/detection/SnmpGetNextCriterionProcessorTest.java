@@ -36,7 +36,8 @@ public class SnmpGetNextCriterionProcessorTest {
 
 	@BeforeEach
 	public void setUp() {
-		snmpGetNextCriterionProcessor = new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true);
+		snmpGetNextCriterionProcessor =
+			new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true);
 	}
 
 	/**

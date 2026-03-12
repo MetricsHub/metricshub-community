@@ -821,7 +821,9 @@ class CriterionProcessorTest {
 			.success(true)
 			.build();
 
-		doReturn(result).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
+		doReturn(result)
+			.when(protocolExtensionMock)
+			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
@@ -862,7 +864,9 @@ class CriterionProcessorTest {
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().build();
 
-		doReturn(null).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
+		doReturn(null)
+			.when(protocolExtensionMock)
+			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,

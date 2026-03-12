@@ -103,7 +103,10 @@ class WmiDetectionServiceTest {
 	void testPerformDetectionTest() throws Exception {
 		// Invalid parameters
 
-		assertThrows(IllegalArgumentException.class, () -> wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true));
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true)
+		);
 
 		// ClientException
 
@@ -112,7 +115,13 @@ class WmiDetectionServiceTest {
 			.when(winRequestExecutorMock)
 			.executeWmi(any(), eq(wmiConfiguration), any(), any());
 		WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).build();
-		CriterionTestResult result = wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true);
+		CriterionTestResult result = wmiDetectionService.performDetectionTest(
+			HOST_NAME,
+			wmiConfiguration,
+			wmiCriterion,
+			CONNECTOR_ID,
+			true
+		);
 		assertFalse(result.isSuccess());
 		assertNotNull(result.getException());
 		assertTrue(result.getException() instanceof TimeoutException);
