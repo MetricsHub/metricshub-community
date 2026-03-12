@@ -8,38 +8,33 @@ import BackupIcon from "@mui/icons-material/Backup";
 import RestoreIcon from "@mui/icons-material/Restore";
 import DownloadIcon from "@mui/icons-material/Download";
 import PushPinIcon from "@mui/icons-material/PushPin";
-import FileTypeIcon from "./icons/FileTypeIcons";
-import FileMeta from "./FileMeta";
+import FileTypeIcon from "../../config/tree/icons/FileTypeIcons";
+import FileMeta from "../../config/tree/FileMeta";
 import ClickAwayListener from "@mui/material/ClickAwayListener";
 import { useAppDispatch } from "../../../hooks/store";
 import { useSnackbar } from "../../../hooks/use-snackbar";
 import { useAuth } from "../../../hooks/use-auth";
 import {
-	createConfigBackup,
-	restoreConfigFromBackup,
-	deleteBackupFile,
-	fetchConfigList,
-} from "../../../store/thunks/config-thunks";
+	createOtelConfigBackup,
+	restoreOtelConfigFromBackup,
+	deleteOtelBackupFile,
+	fetchOtelConfigList,
+} from "../../../store/thunks/otel-config-thunks";
 import QuestionDialog from "../../common/QuestionDialog";
-import { downloadConfigFile } from "../../../services/download-service";
+import { downloadOtelConfigFile } from "../../../services/download-service";
 import { parseBackupFileName } from "../../../utils/backup-names";
-import { isVmFile, getFileType } from "../../../utils/file-type-utils";
+import { getFileType } from "../../../utils/file-type-utils";
 
-/**
- * File tree item component.
- * @param {{file:{name:string,size:number,lastModificationTime:string,localOnly?:boolean},onRename:(oldName:string,newName:string)=>void,onDelete:(name:string)=>void,onMakeDraft?:(name:string)=>void,isReadOnly?:boolean}} props The component props.
- * @returns {JSX.Element} The file tree item component.
- */
-export default function FileTreeItem({
+export default function OtelFileTreeItem({
 	file,
 	onRename,
 	onDelete,
 	onMakeDraft,
 	isDirty = false,
 	validation = null,
-	itemId, // optional selection id
-	labelName, // optional display name
-	onSelect, // optional, used to navigate after restore
+	itemId,
+	labelName,
+	onSelect,
 	isReadOnly = false,
 	isSelected = false,
 }) {
@@ -50,20 +45,14 @@ export default function FileTreeItem({
 	const [draft, setDraft] = React.useState(file.name);
 	const inputRef = React.useRef(null);
 	const rowRef = React.useRef(null);
-	const containerRef = React.useRef(null);
-	const cancelledRef = React.useRef(false);
 	const [menuAnchor, setMenuAnchor] = React.useState(null);
-	const { show: showSnackbar } = useSnackbar();
-
-	// restore dialog
 	const [restoreOpen, setRestoreOpen] = React.useState(false);
+	const { show: showSnackbar } = useSnackbar();
 
 	const treeItemId = itemId ?? file.name;
 	const isDraft = file.name.endsWith(".draft");
 	const displayName = labelName ?? (isDraft ? file.name.replace(/\.draft$/, "") : file.name);
 	const fileType = getFileType(file.name);
-
-	// detect backup files: flat name using backupNames utils
 	const parsed = parseBackupFileName(file.name);
 	const isBackupFile = !!parsed;
 	const backupId = parsed?.id ?? null;
@@ -81,7 +70,6 @@ export default function FileTreeItem({
 		},
 		[effectiveReadOnly],
 	);
-
 	const closeMenu = React.useCallback(() => setMenuAnchor(null), []);
 
 	const startRename = React.useCallback(() => {
@@ -93,42 +81,19 @@ export default function FileTreeItem({
 	}, [closeMenu, effectiveReadOnly]);
 
 	const cancelRename = React.useCallback(() => {
-		cancelledRef.current = true;
 		setDraft(file.name);
 		setEditing(false);
 		rowRef.current?.blur?.();
 	}, [file.name]);
 
 	const submitRename = React.useCallback(() => {
-		if (cancelledRef.current) {
-			cancelledRef.current = false;
-			setEditing(false);
-			return;
-		}
 		const next = draft.trim();
 		if (!next || next === file.name) {
 			setEditing(false);
 			return;
 		}
-		// Prevent cross-family renames (.vm <-> .yaml/.yml)
-		const sourceIsVm = isVmFile(file.name);
-		const targetIsVm = isVmFile(next);
-		if (sourceIsVm !== targetIsVm) {
-			showSnackbar(
-				"Cannot change file type during rename. Keep the same extension family (.vm or .yaml/.yml).",
-				{ severity: "error" },
-			);
-			setDraft(file.name);
-			setEditing(false);
-			return;
-		}
-
-		// Restrict target extension to allowed families:
-		// - Velocity templates: .vm (optionally .draft)
-		// - YAML configs: .yaml/.yml (optionally .draft)
-		const isYamlLike = /\.(yaml|yml)(\.draft)?$/i.test(next);
-		if (!targetIsVm && !isYamlLike) {
-			showSnackbar("Configuration files must be .vm, .yaml or .yml (optionally .draft).", {
+		if (!/\.(yaml|yml)(\.draft)?$/i.test(next)) {
+			showSnackbar("OTEL config files must have .yaml or .yml extension (optionally .draft).", {
 				severity: "error",
 			});
 			setDraft(file.name);
@@ -143,15 +108,13 @@ export default function FileTreeItem({
 		if (effectiveReadOnly) return;
 		document.activeElement?.blur?.();
 		closeMenu();
-		setTimeout(async () => {
-			try {
-				await dispatch(createConfigBackup({ kind: "file", name: file.name })).unwrap();
-				showSnackbar(`Backup created for ${file.name}`, { severity: "success" });
-			} catch (e) {
-				console.error("Backup failed:", e);
-				showSnackbar("Backup failed", { severity: "error" });
-			}
-		}, 0);
+		try {
+			await dispatch(createOtelConfigBackup({ kind: "file", name: file.name })).unwrap();
+			showSnackbar(`Backup created for ${file.name}`, { severity: "success" });
+		} catch (e) {
+			console.error("Backup failed:", e);
+			showSnackbar("Backup failed", { severity: "error" });
+		}
 	}, [dispatch, file.name, showSnackbar, closeMenu, effectiveReadOnly]);
 
 	const askRestore = React.useCallback(() => {
@@ -165,24 +128,22 @@ export default function FileTreeItem({
 		async (overwrite) => {
 			if (effectiveReadOnly) return;
 			setRestoreOpen(false);
-			setTimeout(async () => {
-				try {
-					const res = await dispatch(
-						restoreConfigFromBackup({ backupName: file.name, overwrite }),
-					).unwrap();
-					if (onSelect && res?.restoredName) onSelect(res.restoredName);
-					else if (onSelect && res?.originalName) onSelect(res.originalName);
-					const targetName = res?.restoredName || res?.originalName || file.name;
-					if (overwrite) {
-						showSnackbar(`Restored and overwrote ${targetName}`, { severity: "success" });
-					} else {
-						showSnackbar(`Restored as copy ${targetName}`, { severity: "success" });
-					}
-				} catch (e) {
-					console.error("Restore failed:", e);
-					showSnackbar("Restore failed", { severity: "error" });
+			try {
+				const res = await dispatch(
+					restoreOtelConfigFromBackup({ backupName: file.name, overwrite }),
+				).unwrap();
+				if (onSelect && res?.restoredName) onSelect(res.restoredName);
+				else if (onSelect && res?.originalName) onSelect(res.originalName);
+				const targetName = res?.restoredName || res?.originalName || file.name;
+				if (overwrite) {
+					showSnackbar(`Restored and overwrote ${targetName}`, { severity: "success" });
+				} else {
+					showSnackbar(`Restored as copy ${targetName}`, { severity: "success" });
 				}
-			}, 0);
+			} catch (e) {
+				console.error("Restore failed:", e);
+				showSnackbar("Restore failed", { severity: "error" });
+			}
 		},
 		[dispatch, file.name, onSelect, showSnackbar, effectiveReadOnly],
 	);
@@ -190,24 +151,22 @@ export default function FileTreeItem({
 	const downloadThisFile = React.useCallback(async () => {
 		document.activeElement?.blur?.();
 		closeMenu();
-		// For backups: save as the displayed filename (original name). For normal files: save as-is.
 		const suggestedName = backupOriginal ?? labelName ?? file.name;
 		try {
-			await downloadConfigFile({ name: file.name, suggestedName });
+			await downloadOtelConfigFile({ name: file.name, suggestedName });
 		} catch (e) {
 			console.error("Download failed:", e);
 			showSnackbar("Download failed", { severity: "error" });
 		}
 	}, [file.name, labelName, backupOriginal, showSnackbar, closeMenu]);
 
-	// Stable handler for Delete menu action
 	const handleDeleteClick = React.useCallback(async () => {
 		if (effectiveReadOnly) return;
 		closeMenu();
 		if (isBackupFile) {
 			try {
-				await dispatch(deleteBackupFile(file.name)).unwrap();
-				await dispatch(fetchConfigList());
+				await dispatch(deleteOtelBackupFile(file.name)).unwrap();
+				await dispatch(fetchOtelConfigList());
 				showSnackbar("Backup deleted", { severity: "success" });
 			} catch (e) {
 				console.error("Delete backup failed:", e);
@@ -218,12 +177,10 @@ export default function FileTreeItem({
 		}
 	}, [closeMenu, isBackupFile, dispatch, file.name, showSnackbar, onDelete, effectiveReadOnly]);
 
-	// Prevent default on mousedown for the menu button
 	const preventMouseDownDefault = React.useCallback((e) => e.preventDefault(), []);
 
 	const label = (
 		<Stack
-			ref={containerRef}
 			direction="row"
 			alignItems="center"
 			justifyContent="space-between"
@@ -369,13 +326,10 @@ export default function FileTreeItem({
 						Rename
 					</MenuItem>
 				)}
-
-				{/* Download available for both normal and backup files */}
 				<MenuItem onClick={downloadThisFile}>
 					<DownloadIcon fontSize="small" sx={{ mr: 1 }} />
 					Download
 				</MenuItem>
-
 				{!isBackupFile ? (
 					<MenuItem onClick={backupThisFile} disabled={effectiveReadOnly}>
 						<BackupIcon fontSize="small" sx={{ mr: 1 }} />
@@ -387,7 +341,6 @@ export default function FileTreeItem({
 						Restore{backupId ? ` (${backupId})` : ""}
 					</MenuItem>
 				)}
-
 				{!isBackupFile && !isDraft && onMakeDraft && (
 					<MenuItem
 						onClick={() => {
@@ -400,18 +353,16 @@ export default function FileTreeItem({
 						Make draft
 					</MenuItem>
 				)}
-
 				<MenuItem onClick={handleDeleteClick} disabled={effectiveReadOnly}>
 					<DeleteIcon fontSize="small" sx={{ mr: 1 }} />
 					Delete
 				</MenuItem>
 			</Menu>
 
-			{/* Restore confirmation dialog */}
 			<QuestionDialog
 				open={restoreOpen}
 				title="Restore from backup"
-				question={"Do you want to overwrite the original file?\n\n"}
+				question="Do you want to overwrite the original file?\n\n"
 				onClose={() => setRestoreOpen(false)}
 				actionButtons={[
 					{ btnTitle: "Cancel", callback: () => setRestoreOpen(false), autoFocus: true },
