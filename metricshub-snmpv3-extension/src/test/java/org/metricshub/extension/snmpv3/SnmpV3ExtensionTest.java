@@ -128,12 +128,13 @@ class SnmpV3ExtensionTest {
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 " +
-					"was unsuccessful due to an exception. " +
+					"timed out. " +
 					"Message: SNMPGetNext timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
 				)
 			)
+			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}
@@ -489,13 +490,14 @@ class SnmpV3ExtensionTest {
 			.builder()
 			.message(
 				String.format(
-					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful " +
-					"due to an exception. " +
+					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 " +
+					"timed out. " +
 					"Message: SNMPGet timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
 				)
 			)
+			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}

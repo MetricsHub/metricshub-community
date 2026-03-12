@@ -22,6 +22,7 @@ package org.metricshub.extension.snmp.detection;
  */
 
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -116,6 +117,16 @@ public class SnmpGetNextCriterionProcessor {
 			criterionTestResult.setResult(result);
 
 			return criterionTestResult;
+		} catch (final TimeoutException e) {
+			final String message = String.format(
+				"Hostname %s - SNMP test failed - SNMP GetNext of %s timed out. Message: %s. Connector ID: %s.",
+				hostname,
+				snmpGetNextCriterion.getOid(),
+				e.getMessage(),
+				connectorId
+			);
+			log.warn(message, e);
+			return CriterionTestResult.builder().message(message).transientFailure(true).build();
 		} catch (final Exception e) { // NOSONAR on interruption
 			final String message = String.format(
 				"Hostname %s - SNMP test failed - SNMP GetNext of %s was unsuccessful due to an exception. Message: %s. Connector ID: %s.",

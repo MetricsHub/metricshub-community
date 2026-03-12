@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
 
@@ -421,7 +422,12 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Validates the connector's detection criteria
+	 * Validates the connector's detection criteria.
+	 * <p>
+	 * Uses a consecutive failure threshold to avoid stopping a connector's job
+	 * due to a single transient failure (e.g. SNMP timeout). The connector is only
+	 * considered to no longer match the host after {@code MAX_CONSECUTIVE_DETECTION_FAILURES}
+	 * consecutive failures. The counter is reset on each successful validation.
 	 *
 	 * @param currentConnector	Connector instance
 	 * @param hostname			Hostname
@@ -470,8 +476,50 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Map<String, String> legacyTextParameters = monitor.getLegacyTextParameters();
 		legacyTextParameters.put("StatusInformation", statusInformation);
 
-		collectConnectorStatus(connectorTestResult.isSuccess(), connectorId, monitor);
-		return connectorTestResult.isSuccess();
+		final boolean detectionSuccess = connectorTestResult.isSuccess();
+
+		// Get the connector's namespace to track consecutive detection failures
+		final ConnectorNamespace connectorNamespace = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(connectorId);
+
+		if (detectionSuccess) {
+			// Detection passed: reset the consecutive failure counter
+			connectorNamespace.resetDetectionFailures();
+			collectConnectorStatus(true, connectorId, monitor);
+			return true;
+		}
+
+		// Detection failed: increment the counter and check against the threshold
+		final int failureCount = connectorNamespace.incrementDetectionFailures();
+
+		if (failureCount < MAX_CONSECUTIVE_DETECTION_FAILURES) {
+			// Transient failure: log a warning but do NOT stop the connector's job
+			log.warn(
+				"Hostname {} - Detection re-validation failed for connector {} (failure {}/{}). " +
+				"Treating as transient; the connector's {} job will continue.",
+				hostname,
+				connectorId,
+				failureCount,
+				MAX_CONSECUTIVE_DETECTION_FAILURES,
+				jobName
+			);
+			// Report the status as OK since we're tolerating the transient failure
+			collectConnectorStatus(true, connectorId, monitor);
+			return true;
+		}
+
+		// Threshold exceeded: this is a persistent failure
+		log.error(
+			"Hostname {} - Detection re-validation failed {} consecutive times for connector {}. " +
+			"The connector no longer matches the host. Stopping the connector's {} job.",
+			hostname,
+			failureCount,
+			connectorId,
+			jobName
+		);
+		collectConnectorStatus(false, connectorId, monitor);
+		return false;
 	}
 
 	/**

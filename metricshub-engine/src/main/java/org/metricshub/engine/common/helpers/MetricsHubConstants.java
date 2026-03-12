@@ -157,6 +157,13 @@ public class MetricsHubConstants {
 	 */
 	public static final long THREAD_TIMEOUT = 2 * 60L; // 2 minutes
 
+	/**
+	 * Maximum number of consecutive detection re-validation failures allowed
+	 * before a connector is considered to no longer match the host.
+	 * This prevents a single transient SNMP timeout from immediately stopping collection.
+	 */
+	public static final int MAX_CONSECUTIVE_DETECTION_FAILURES = 3;
+
 	// MetricsHub / OpenTelemetry mappings
 
 	/**

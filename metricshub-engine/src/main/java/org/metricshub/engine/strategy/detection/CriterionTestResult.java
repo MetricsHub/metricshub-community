@@ -40,6 +40,13 @@ public class CriterionTestResult {
 
 	private boolean success;
 
+	/**
+	 * Indicates whether this failure is transient (e.g. a timeout or temporary network issue)
+	 * as opposed to a permanent mismatch (e.g. OID not found, unexpected value).
+	 * Transient failures are treated more leniently by the detection retry logic.
+	 */
+	private boolean transientFailure;
+
 	private String message;
 
 	private Throwable exception;

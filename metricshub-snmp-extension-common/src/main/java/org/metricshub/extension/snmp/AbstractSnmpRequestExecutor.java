@@ -232,39 +232,59 @@ public abstract class AbstractSnmpRequestExecutor {
 		final boolean logMode,
 		final String emulationInputDirectory
 	) throws InterruptedException, ExecutionException, TimeoutException {
-		return (T) ThreadHelper.execute(
-			() -> {
-				final ISnmpClient snmpClient = createSnmpClient(protocol, hostname, emulationInputDirectory);
+		// Create the SNMP client outside the callable so we can guarantee cleanup
+		// even if the task thread is interrupted due to a timeout.
+		final ISnmpClient[] clientHolder = new ISnmpClient[1];
+		try {
+			return (T) ThreadHelper.execute(
+				() -> {
+					final ISnmpClient snmpClient = createSnmpClient(protocol, hostname, emulationInputDirectory);
+					clientHolder[0] = snmpClient;
+					try {
+						switch (request) {
+							case GET:
+								return snmpClient.get(oid);
+							case GETNEXT:
+								return snmpClient.getNext(oid);
+							case TABLE:
+								return snmpClient.table(oid, selectColumnArray);
+							case WALK:
+								return snmpClient.walk(oid);
+							default:
+								throw new IllegalArgumentException("Not implemented.");
+						}
+					} catch (Exception e) {
+						if (logMode) {
+							log.warn(
+								"Hostname {} - Error detected when running SNMP {} Query OID: {}. Error message: {}.",
+								hostname,
+								request,
+								oid,
+								e.getMessage()
+							);
+						}
+						return null;
+					}
+				},
+				protocol.getTimeout()
+			);
+		} finally {
+			// Guarantee resource cleanup regardless of timeout, interruption, or success
+			final ISnmpClient snmpClient = clientHolder[0];
+			if (snmpClient != null) {
 				try {
-					switch (request) {
-						case GET:
-							return snmpClient.get(oid);
-						case GETNEXT:
-							return snmpClient.getNext(oid);
-						case TABLE:
-							return snmpClient.table(oid, selectColumnArray);
-						case WALK:
-							return snmpClient.walk(oid);
-						default:
-							throw new IllegalArgumentException("Not implemented.");
-					}
-				} catch (Exception e) {
-					if (logMode) {
-						log.warn(
-							"Hostname {} - Error detected when running SNMP {} Query OID: {}. Error message: {}.",
-							hostname,
-							request,
-							oid,
-							e.getMessage()
-						);
-					}
-					return null;
-				} finally {
 					snmpClient.freeResources();
+				} catch (Exception e) {
+					log.debug(
+						"Hostname {} - Error while freeing SNMP client resources for {} query OID: {}. Error: {}.",
+						hostname,
+						request,
+						oid,
+						e.getMessage()
+					);
 				}
-			},
-			protocol.getTimeout()
-		);
+			}
+		}
 	}
 
 	/**

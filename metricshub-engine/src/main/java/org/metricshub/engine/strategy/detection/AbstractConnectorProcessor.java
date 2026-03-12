@@ -150,13 +150,21 @@ public abstract class AbstractConnectorProcessor {
 			)
 		);
 
-		// Order the shutdown
+		// Two-phase shutdown: first graceful, then forced
 		threadsPool.shutdown();
 
 		try {
 			// Blocks until all tasks have completed execution after a shutdown request
-			threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS);
+			if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+				log.warn(
+					"Hostname {} - Detection thread pool did not terminate within {} seconds. Forcing shutdown.",
+					hostname,
+					THREAD_TIMEOUT
+				);
+				threadsPool.shutdownNow();
+			}
 		} catch (Exception e) {
+			threadsPool.shutdownNow();
 			if (e instanceof InterruptedException) {
 				Thread.currentThread().interrupt();
 			}
@@ -431,12 +439,21 @@ public abstract class AbstractConnectorProcessor {
 			} else {
 				criterionTestResult = processCriterion(criterion, connector);
 				if (!criterionTestResult.isSuccess()) {
-					log.debug(
-						"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
-						hostname,
-						connector.getConnectorIdentity().getCompiledFilename(),
-						criterionTestResult.getMessage()
-					);
+					if (criterionTestResult.isTransientFailure()) {
+						log.warn(
+							"Hostname {} - Transient failure for criterion in connector {} (e.g. timeout). Message: {}.",
+							hostname,
+							connector.getConnectorIdentity().getCompiledFilename(),
+							criterionTestResult.getMessage()
+						);
+					} else {
+						log.debug(
+							"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
+							hostname,
+							connector.getConnectorIdentity().getCompiledFilename(),
+							criterionTestResult.getMessage()
+						);
+					}
 				}
 				if (
 					StringHelper.nonNullNonBlank(recordOutputDirectory) &&

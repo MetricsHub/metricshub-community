@@ -10,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -238,5 +239,60 @@ public class SnmpGetCriterionProcessorTest {
 			"Hostname hostname - SNMP test failed - SNMP Get of 1.3.6.1.2.1.1.1.0 was unsuccessful due to an empty result.",
 			criterionTestResult.getMessage()
 		);
+	}
+
+	// Test case when the requestExecutor throws a TimeoutException - should be marked as transient.
+	@Test
+	public void testProcessSnmpTimeoutException() throws Exception {
+		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
+
+		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
+		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
+
+		when(
+			snmpRequestExecutor.executeSNMPGet(
+				any(String.class),
+				any(ISnmpConfiguration.class),
+				any(String.class),
+				any(Boolean.class),
+				isNull()
+			)
+		)
+			.thenThrow(new TimeoutException("SNMP request timed out"));
+
+		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
+
+		CriterionTestResult result = snmpGetCriterionProcessor.process(snmpGetCriterion, "connectorId", telemetryManager);
+
+		assertFalse(result.isSuccess());
+		assertTrue(result.isTransientFailure());
+		assertTrue(result.getMessage().contains("timed out"));
+	}
+
+	// Test case when the requestExecutor throws a regular exception - should NOT be marked as transient.
+	@Test
+	public void testProcessSnmpNonTransientException() throws Exception {
+		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
+
+		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
+		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
+
+		when(
+			snmpRequestExecutor.executeSNMPGet(
+				any(String.class),
+				any(ISnmpConfiguration.class),
+				any(String.class),
+				any(Boolean.class),
+				isNull()
+			)
+		)
+			.thenThrow(new RuntimeException("SNMP agent not available"));
+
+		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
+
+		CriterionTestResult result = snmpGetCriterionProcessor.process(snmpGetCriterion, "connectorId", telemetryManager);
+
+		assertFalse(result.isSuccess());
+		assertFalse(result.isTransientFailure());
 	}
 }

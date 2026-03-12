@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
@@ -105,9 +106,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		}
 		if (!validateConnectorDetectionCriteria(currentConnector, hostname, getJobName())) {
 			log.error(
-				"Hostname {} - The connector {} no longer matches the host. Stopping the connector's {} job.",
+				"Hostname {} - The connector {} no longer matches the host after {} consecutive detection failures." +
+				" Stopping the connector's {} job.",
 				hostname,
 				currentConnector.getCompiledFilename(),
+				MAX_CONSECUTIVE_DETECTION_FAILURES,
 				getJobName()
 			);
 			return;
@@ -183,13 +186,21 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				.entrySet()
 				.forEach(entry -> threadsPool.execute(() -> processMonitorJob(currentConnector, hostname, entry)));
 
-			// Order the shutdown
+			// Two-phase shutdown: first graceful, then forced
 			threadsPool.shutdown();
 
 			try {
 				// Blocks until all tasks have completed execution after a shutdown request
-				threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS);
+				if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+					log.warn(
+						"Hostname {} - Thread pool did not terminate within {} seconds. Forcing shutdown.",
+						hostname,
+						THREAD_TIMEOUT
+					);
+					threadsPool.shutdownNow();
+				}
 			} catch (Exception e) {
+				threadsPool.shutdownNow();
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
 				}

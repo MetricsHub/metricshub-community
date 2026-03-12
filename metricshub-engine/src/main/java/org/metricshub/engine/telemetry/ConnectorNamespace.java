@@ -62,6 +62,31 @@ public class ConnectorNamespace {
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
 
 	/**
+	 * Tracks the number of consecutive detection re-validation failures.
+	 * When this counter reaches the configured threshold, the connector is considered
+	 * to no longer match the host and its collect/discovery job is stopped.
+	 * The counter is reset to zero on each successful detection re-validation.
+	 */
+	@Default
+	private int consecutiveDetectionFailures = 0;
+
+	/**
+	 * Increments the consecutive detection failure counter and returns the new value.
+	 *
+	 * @return the incremented failure count
+	 */
+	public int incrementDetectionFailures() {
+		return ++consecutiveDetectionFailures;
+	}
+
+	/**
+	 * Resets the consecutive detection failure counter to zero.
+	 */
+	public void resetDetectionFailures() {
+		consecutiveDetectionFailures = 0;
+	}
+
+	/**
 	 * Add a source in the current sourceTables map
 	 *
 	 * @param key sourceTable key

@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,21 +32,30 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Executor for executing a strategy in a separate thread with timeout handling.
+ * Uses a two-phase shutdown to ensure threads are properly cleaned up.
  */
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Slf4j
 public class ContextExecutor {
+
+	/**
+	 * Grace period in seconds to wait for tasks to complete after shutdownNow.
+	 */
+	private static final long SHUTDOWN_GRACE_PERIOD_SECONDS = 10L;
 
 	private IStrategy strategy;
 
 	/**
 	 * This method prepares the strategy, runs the run method it in a separate thread.
-	 * Upon thread completion, it calls the post method of the IStrategy instance and ensures proper termination of the task
+	 * Upon thread completion, it calls the post method of the IStrategy instance and ensures proper termination of the task.
+	 * Uses a two-phase shutdown: first attempts graceful shutdown, then forces termination if needed.
 	 *
 	 * @throws InterruptedException if the thread is interrupted while waiting
 	 * @throws TimeoutException     if the wait timed out
@@ -58,7 +68,17 @@ public class ContextExecutor {
 
 			handler.get(strategy.getStrategyTimeout(), TimeUnit.SECONDS);
 		} finally {
-			executorService.shutdownNow();
+			// Two-phase shutdown: first shutdownNow, then await termination
+			final List<Runnable> pendingTasks = executorService.shutdownNow();
+			if (!pendingTasks.isEmpty()) {
+				log.warn("ContextExecutor - {} pending tasks were cancelled during shutdown.", pendingTasks.size());
+			}
+			if (!executorService.awaitTermination(SHUTDOWN_GRACE_PERIOD_SECONDS, TimeUnit.SECONDS)) {
+				log.warn(
+					"ContextExecutor - Executor did not terminate within {} seconds after shutdownNow. Some threads may still be running.",
+					SHUTDOWN_GRACE_PERIOD_SECONDS
+				);
+			}
 		}
 	}
 }
