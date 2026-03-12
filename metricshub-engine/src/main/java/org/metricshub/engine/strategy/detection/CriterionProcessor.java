@@ -84,23 +84,29 @@ public class CriterionProcessor {
 
 	private String connectorId;
 
+	private boolean logMode;
+
 	/**
 	 * Constructor for the CriterionProcessor class.
 	 *
-	 * @param clientsExecutor The ClientsExecutor instance.
-	 * @param telemetryManager      The TelemetryManager instance.
-	 * @param connectorId           The connector ID.
+	 * @param clientsExecutor  The ClientsExecutor instance.
+	 * @param telemetryManager The TelemetryManager instance.
+	 * @param connectorId      The connector ID.
+	 * @param extensionManager The ExtensionManager instance.
+	 * @param logMode          Whether logs should be emitted during criterion processing.
 	 */
 	public CriterionProcessor(
 		final ClientsExecutor clientsExecutor,
 		final TelemetryManager telemetryManager,
 		final String connectorId,
-		final ExtensionManager extensionManager
+		final ExtensionManager extensionManager,
+		final boolean logMode
 	) {
 		this.clientsExecutor = clientsExecutor;
 		this.telemetryManager = telemetryManager;
 		this.connectorId = connectorId;
 		this.extensionManager = extensionManager;
+		this.logMode = logMode;
 	}
 
 	/**
@@ -277,7 +283,8 @@ public class CriterionProcessor {
 		final CriterionProcessVisitor localOSVisitor = new CriterionProcessVisitor(
 			extensionManager,
 			processCriterion,
-			hostname
+			hostname,
+			logMode
 		);
 
 		maybeLocalOS.get().accept(localOSVisitor);
@@ -365,7 +372,7 @@ public class CriterionProcessor {
 		);
 		return maybeExtension
 			.map(extension -> {
-				CriterionTestResult result = extension.processCriterion(criterion, connectorId, telemetryManager);
+				CriterionTestResult result = extension.processCriterion(criterion, connectorId, telemetryManager, logMode);
 				if (result != null) {
 					result.setCriterion(criterion);
 				}

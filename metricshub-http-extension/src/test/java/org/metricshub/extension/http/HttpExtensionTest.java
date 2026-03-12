@@ -234,7 +234,7 @@ class HttpExtensionTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager)
+			() -> httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -257,7 +257,7 @@ class HttpExtensionTest {
 
 		assertEquals(
 			CriterionTestResult.empty(),
-			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager)
+			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -280,7 +280,7 @@ class HttpExtensionTest {
 
 		assertEquals(
 			CriterionTestResult.empty(),
-			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager)
+			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -328,7 +328,8 @@ class HttpExtensionTest {
 		final CriterionTestResult criterionTestResult = httpExtension.processCriterion(
 			httpCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals(result, criterionTestResult.getResult());
@@ -374,7 +375,8 @@ class HttpExtensionTest {
 			final CriterionTestResult criterionTestResult = httpExtension.processCriterion(
 				httpCriterion,
 				CONNECTOR_ID,
-				telemetryManager
+				telemetryManager,
+				true
 			);
 
 			assertEquals(RESULT, criterionTestResult.getResult());
@@ -416,7 +418,8 @@ class HttpExtensionTest {
 			final CriterionTestResult criterionTestResult = httpExtension.processCriterion(
 				httpCriterion,
 				CONNECTOR_ID,
-				telemetryManager
+				telemetryManager,
+				true
 			);
 
 			assertEquals(RESULT, criterionTestResult.getResult());
@@ -459,7 +462,8 @@ class HttpExtensionTest {
 		final CriterionTestResult criterionTestResult = httpExtension.processCriterion(
 			httpCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertFalse(criterionTestResult.isSuccess());

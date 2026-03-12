@@ -59,7 +59,7 @@ public class WinServiceCriterionProcessor {
 	 * @param telemetryManager The telemetry manager providing access to host configuration and WMI/WinRM credentials.
 	 * @return A {@link CriterionTestResult} representing the outcome of the criterion evaluation.
 	 */
-	public CriterionTestResult process(final ServiceCriterion serviceCriterion, final TelemetryManager telemetryManager) {
+	public CriterionTestResult process(final ServiceCriterion serviceCriterion, final TelemetryManager telemetryManager, final String connectorId, final boolean logMode) {
 		// Sanity checks
 		if (serviceCriterion == null) {
 			return CriterionTestResult.error(serviceCriterion, "Malformed Service criterion.");
@@ -105,7 +105,9 @@ public class WinServiceCriterionProcessor {
 		final CriterionTestResult wmiTestResult = wmiDetectionService.performDetectionTest(
 			hostname,
 			winConfiguration,
-			serviceWmiCriterion
+			serviceWmiCriterion,
+			connectorId,
+			logMode
 		);
 		if (!wmiTestResult.isSuccess()) {
 			return wmiTestResult;

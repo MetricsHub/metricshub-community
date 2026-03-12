@@ -9,6 +9,7 @@ import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.IS_ENDPOINT;
 import static org.metricshub.engine.constants.Constants.STATUS_INFORMATION;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -126,7 +127,7 @@ class SimpleStrategyTest {
 			.build();
 		doReturn(CriterionTestResult.success(snmpGetNextCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
 		final SnmpTableSource enclosureSource = SnmpTableSource
@@ -235,7 +236,7 @@ class SimpleStrategyTest {
 		// Mock detection criteria result to switch to a failing criterion processing case
 		doReturn(CriterionTestResult.failure(snmpGetNextCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Call DiscoveryStrategy to discover the monitors
 		simpleStrategy.run();

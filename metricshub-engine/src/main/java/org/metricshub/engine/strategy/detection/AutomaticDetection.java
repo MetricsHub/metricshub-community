@@ -74,7 +74,7 @@ public class AutomaticDetection extends AbstractConnectorProcessor {
 		@NonNull final Set<String> connectorIds,
 		@NonNull final ExtensionManager extensionManager
 	) {
-		super(telemetryManager, clientsExecutor, connectorIds, extensionManager);
+		super(telemetryManager, clientsExecutor, connectorIds, extensionManager, false);
 	}
 
 	@Override

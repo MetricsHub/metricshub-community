@@ -17,6 +17,7 @@ import static org.metricshub.engine.constants.Constants.MONITOR_ID_ATTRIBUTE_VAL
 import static org.metricshub.engine.constants.Constants.STATUS_INFORMATION;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -185,7 +186,7 @@ class BeforeAllStrategyTest {
 			.build();
 		doReturn(CriterionTestResult.success(snmpGetNextCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
 		final SnmpTableSource enclosureSource = SnmpTableSource
@@ -331,7 +332,7 @@ class BeforeAllStrategyTest {
 			.build();
 		doReturn(CriterionTestResult.success(snmpGetNextCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
 		final SnmpTableSource enclosureSource = SnmpTableSource

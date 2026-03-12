@@ -34,6 +34,7 @@ import static org.metricshub.engine.constants.Constants.TEST_BODY;
 import static org.metricshub.engine.constants.Constants.WBEM_QUERY;
 import static org.metricshub.engine.constants.Constants.WEBM_CRITERION_SUCCESS_EXPECTED_RESULT;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mockStatic;
@@ -181,13 +182,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(snmpGetCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(snmpGetCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(snmpGetCriterion));
 	}
@@ -219,13 +221,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(wmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(wmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(wmiCriterion));
 	}
@@ -257,13 +260,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(wbemCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(wbemCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(wbemCriterion));
 	}
@@ -291,13 +295,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(serviceCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(serviceCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(serviceCriterion));
 	}
@@ -325,13 +330,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(ipmiCriterion));
 	}
@@ -359,13 +365,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(commandLineCriterion));
 	}
@@ -391,13 +398,14 @@ class CriterionProcessorTest {
 
 			final CriterionTestResult expected = CriterionTestResult.builder().success(true).message("success").build();
 
-			doReturn(expected).when(protocolExtensionMock).processCriterion(processCriterion, null, null);
+			doReturn(expected).when(protocolExtensionMock).processCriterion(processCriterion, null, null, true);
 
 			final CriterionProcessor criterionProcessor = new CriterionProcessor(
 				clientsExecutorMock,
 				telemetryManagerMock,
 				MY_CONNECTOR_1_NAME,
-				extensionManager
+				extensionManager,
+				true
 			);
 			assertEquals(expected, criterionProcessor.process(processCriterion));
 		}
@@ -428,13 +436,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(snmpGetNextCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+			.processCriterion(snmpGetNextCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(expected, criterionProcessor.process(snmpGetNextCriterion));
 	}
@@ -756,13 +765,14 @@ class CriterionProcessorTest {
 
 		doReturn(expected)
 			.when(protocolExtensionMock)
-			.processCriterion(any(HttpCriterion.class), anyString(), any(TelemetryManager.class));
+			.processCriterion(any(HttpCriterion.class), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 
 		final CriterionTestResult criterionTestResult = criterionProcessor.process(httpCriterion);
@@ -811,13 +821,14 @@ class CriterionProcessorTest {
 			.success(true)
 			.build();
 
-		doReturn(result).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+		doReturn(result).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 
 		assertEquals(
@@ -851,13 +862,14 @@ class CriterionProcessorTest {
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().build();
 
-		doReturn(null).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager);
+		doReturn(null).when(protocolExtensionMock).processCriterion(ipmiCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true);
 
 		final CriterionProcessor criterionProcessor = new CriterionProcessor(
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 		assertEquals(CriterionTestResult.empty(), criterionProcessor.process(new IpmiCriterion()));
 	}
@@ -879,7 +891,8 @@ class CriterionProcessorTest {
 			clientsExecutorMock,
 			telemetryManager,
 			MY_CONNECTOR_1_NAME,
-			extensionManager
+			extensionManager,
+			true
 		);
 
 		final CriterionTestResult criterionTestResult = criterionProcessor.process(commandLineCriterion);

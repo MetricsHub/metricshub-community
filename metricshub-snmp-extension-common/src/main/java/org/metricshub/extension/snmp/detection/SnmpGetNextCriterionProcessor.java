@@ -51,6 +51,8 @@ public class SnmpGetNextCriterionProcessor {
 	@NonNull
 	private Function<TelemetryManager, ISnmpConfiguration> configurationRetriever;
 
+	private boolean logMode;
+
 	/**
 	 * Pattern used to verify the SNMP GetNext value
 	 */
@@ -86,12 +88,14 @@ public class SnmpGetNextCriterionProcessor {
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP GetNext criterion {}. Connector ID: {}.",
-				telemetryManager.getHostname(),
-				snmpGetNextCriterion,
-				connectorId
-			);
+			if (logMode) {
+				log.debug(
+					"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP GetNext criterion {}. Connector ID: {}.",
+					telemetryManager.getHostname(),
+					snmpGetNextCriterion,
+					connectorId
+				);
+			}
 			return CriterionTestResult.empty();
 		}
 
@@ -125,7 +129,10 @@ public class SnmpGetNextCriterionProcessor {
 				e.getMessage(),
 				connectorId
 			);
-			log.warn(message, e);
+			if (logMode) {
+				log.error(message);
+				log.debug(message, e);
+			}
 			return CriterionTestResult.builder().message(message).transientFailure(true).build();
 		} catch (final Exception e) { // NOSONAR on interruption
 			final String message = String.format(
@@ -135,7 +142,10 @@ public class SnmpGetNextCriterionProcessor {
 				e.getMessage(),
 				connectorId
 			);
-			log.debug(message, e);
+			if (logMode) {
+				log.error(message);
+				log.debug(message, e);
+			}
 			return CriterionTestResult.builder().message(message).build();
 		}
 	}
@@ -149,7 +159,7 @@ public class SnmpGetNextCriterionProcessor {
 	 * @param result   The result of the SNMP GetNext operation.
 	 * @return {@link CriterionTestResult} wrapping the message and the success status.
 	 */
-	static CriterionTestResult checkSNMPGetNextValue(final String hostname, final String oid, final String result) {
+	CriterionTestResult checkSNMPGetNextValue(final String hostname, final String oid, final String result) {
 		String message;
 		boolean success = false;
 		if (result == null) {
@@ -181,7 +191,9 @@ public class SnmpGetNextCriterionProcessor {
 			success = true;
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().message(message).success(success).build();
 	}
@@ -195,7 +207,7 @@ public class SnmpGetNextCriterionProcessor {
 	 * @param result    The result of the SNMP GetNext operation.
 	 * @return {@link CriterionTestResult} wrapping the message and the success status.
 	 */
-	static CriterionTestResult checkSNMPGetNextExpectedValue(
+	CriterionTestResult checkSNMPGetNextExpectedValue(
 		final String hostname,
 		final String oid,
 		final String expected,
@@ -245,7 +257,9 @@ public class SnmpGetNextCriterionProcessor {
 			}
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().message(message).success(success).build();
 	}
@@ -261,7 +275,7 @@ public class SnmpGetNextCriterionProcessor {
 	 * @param result   The result of the SNMP GetNext operation.
 	 * @return {@link CriterionTestResult} wrapping the success status and the message
 	 */
-	static CriterionTestResult checkSNMPGetNextResult(
+	CriterionTestResult checkSNMPGetNextResult(
 		final String hostname,
 		final String oid,
 		final String expected,

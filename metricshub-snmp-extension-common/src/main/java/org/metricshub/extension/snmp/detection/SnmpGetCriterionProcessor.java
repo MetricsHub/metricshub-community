@@ -50,6 +50,8 @@ public class SnmpGetCriterionProcessor {
 	@NonNull
 	private Function<TelemetryManager, ISnmpConfiguration> configurationRetriever;
 
+	private boolean logMode;
+
 	/**
 	 * Processes an SNMP Get criterion by executing an SNMP Get request and evaluating the result.
 	 * The method retrieves SNMP configuration, executes the SNMP Get request for the specified OID,
@@ -80,12 +82,14 @@ public class SnmpGetCriterionProcessor {
 		final ISnmpConfiguration snmpConfiguration = configurationRetriever.apply(telemetryManager);
 
 		if (snmpConfiguration == null) {
-			log.debug(
-				"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP Get criterion {}. Connector ID: {}.",
-				telemetryManager.getHostname(),
-				snmpGetCriterion,
-				connectorId
-			);
+			if (logMode) {
+				log.debug(
+					"Hostname {} - The SNMP credentials are not configured. Cannot process SNMP Get criterion {}. Connector ID: {}.",
+					telemetryManager.getHostname(),
+					snmpGetCriterion,
+					connectorId
+				);
+			}
 			return CriterionTestResult.empty();
 		}
 
@@ -119,7 +123,10 @@ public class SnmpGetCriterionProcessor {
 				e.getMessage(),
 				connectorId
 			);
-			log.warn(message, e);
+			if (logMode) {
+				log.error(message);
+				log.debug(message, e);
+			}
 			return CriterionTestResult.builder().message(message).transientFailure(true).build();
 		} catch (final Exception e) { // NOSONAR on interruption
 			final String message = String.format(
@@ -129,7 +136,10 @@ public class SnmpGetCriterionProcessor {
 				e.getMessage(),
 				connectorId
 			);
-			log.debug(message, e);
+			if (logMode) {
+				log.error(message);
+				log.debug(message, e);
+			}
 			return CriterionTestResult.builder().message(message).build();
 		}
 	}
@@ -143,7 +153,7 @@ public class SnmpGetCriterionProcessor {
 	 * @param result   The result of the SNMP Get operation.
 	 * @return {@link CriterionTestResult} wrapping the message and the success status.
 	 */
-	static CriterionTestResult checkSNMPGetValue(final String hostname, final String oid, final String result) {
+	CriterionTestResult checkSNMPGetValue(final String hostname, final String oid, final String result) {
 		String message;
 		boolean success = false;
 		if (result == null) {
@@ -165,7 +175,9 @@ public class SnmpGetCriterionProcessor {
 			success = true;
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().message(message).success(success).build();
 	}
@@ -181,7 +193,7 @@ public class SnmpGetCriterionProcessor {
 	 * @param result   The result of the SNMP Get operation.
 	 * @return {@link CriterionTestResult} wrapping the success status and the message.
 	 */
-	static CriterionTestResult checkSNMPGetResult(
+	CriterionTestResult checkSNMPGetResult(
 		final String hostname,
 		final String oid,
 		final String expected,
@@ -202,7 +214,7 @@ public class SnmpGetCriterionProcessor {
 	 * @param result   The result of the SNMP Get operation.
 	 * @return {@link CriterionTestResult} wrapping the message and the success status.
 	 */
-	static CriterionTestResult checkSNMPGetExpectedValue(
+	CriterionTestResult checkSNMPGetExpectedValue(
 		final String hostname,
 		final String oid,
 		final String expected,
@@ -229,7 +241,9 @@ public class SnmpGetCriterionProcessor {
 			success = true;
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().message(message).success(success).build();
 	}

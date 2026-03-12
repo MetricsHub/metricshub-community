@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy.detection;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOSTNAME_EXCEPTION_MESSAGE;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
 import java.util.ArrayList;
@@ -85,6 +84,8 @@ public abstract class AbstractConnectorProcessor {
 	@NonNull
 	protected ExtensionManager extensionManager;
 
+	protected boolean logMode;
+
 	/**
 	 * Run the Detection job and returns the detected {@link ConnectorTestResult}
 	 *
@@ -143,9 +144,10 @@ public abstract class AbstractConnectorProcessor {
 			connectorTestResults
 		);
 
-		final ExecutorService threadsPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
+		final List<Connector> connectorList = connectors.collect(Collectors.toList());
+		final ExecutorService threadsPool = Executors.newFixedThreadPool(Math.max(1, connectorList.size()));
 
-		connectors.forEach(connector ->
+		connectorList.forEach(connector ->
 			threadsPool.execute(() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
 			)
 		);
@@ -334,7 +336,8 @@ public abstract class AbstractConnectorProcessor {
 			clientsExecutor,
 			telemetryManager,
 			connector.getConnectorIdentity().getCompiledFilename(),
-			extensionManager
+			extensionManager,
+			logMode
 		);
 
 		final Supplier<CriterionTestResult> executable;

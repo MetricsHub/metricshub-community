@@ -157,16 +157,17 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager ->
 			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
-			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever)
+			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
 				.process(snmpGetCriterion, connectorId, telemetryManager);
 		} else if (criterion instanceof SnmpGetNextCriterion snmpGetNextCriterion) {
-			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever)
+			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
 				.process(snmpGetNextCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(

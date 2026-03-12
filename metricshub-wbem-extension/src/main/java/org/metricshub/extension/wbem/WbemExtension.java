@@ -163,10 +163,11 @@ public class WbemExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		if (criterion instanceof WbemCriterion wbemCriterion) {
-			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId).process(wbemCriterion, telemetryManager);
+			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId, logMode).process(wbemCriterion, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

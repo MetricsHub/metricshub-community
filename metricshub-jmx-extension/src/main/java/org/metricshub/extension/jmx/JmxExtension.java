@@ -127,10 +127,11 @@ public class JmxExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		final Criterion criterion,
 		final String connectorId,
-		final TelemetryManager telemetryManager
+		final TelemetryManager telemetryManager,
+		final boolean logMode
 	) {
 		if (criterion instanceof JmxCriterion jmxCriterion) {
-			return new JmxCriterionProcessor(jmxRequestExecutor).process(jmxCriterion, connectorId, telemetryManager);
+			return new JmxCriterionProcessor(jmxRequestExecutor, logMode).process(jmxCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(

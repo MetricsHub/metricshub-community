@@ -449,7 +449,8 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager,
 			clientsExecutor,
 			Collections.emptySet(),
-			extensionManager
+			extensionManager,
+			true
 		)
 			.runConnectorDetectionCriteria(currentConnector, hostname);
 

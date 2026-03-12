@@ -27,7 +27,7 @@ class JmxCriterionProcessorTest {
 	@BeforeEach
 	void setup() {
 		jmxRequestExecutor = mock(JmxRequestExecutor.class);
-		processor = new JmxCriterionProcessor(jmxRequestExecutor);
+		processor = new JmxCriterionProcessor(jmxRequestExecutor, true);
 		telemetryManager = mock(TelemetryManager.class);
 	}
 

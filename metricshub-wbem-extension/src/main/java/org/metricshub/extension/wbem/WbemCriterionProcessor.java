@@ -71,6 +71,8 @@ public class WbemCriterionProcessor {
 	@NonNull
 	private String connectorId;
 
+	private final boolean logMode;
+
 	/**
 	 * Find the namespace to use for the execution of the given {@link WbemCriterion}.
 	 *
@@ -177,13 +179,16 @@ public class WbemCriterionProcessor {
 				if (e != null && !wbemRequestExecutor.isAcceptableException(e)) {
 					// This error indicates that the CIM server will probably never respond to anything
 					// (timeout, or bad credentials), so there's no point in pursuing our efforts here.
-					log.debug(
-						"Hostname {} - Does not respond to {} requests. {}: {}\nCancelling namespace detection.",
-						hostname,
-						criterion.getClass().getSimpleName(),
-						e.getClass().getSimpleName(),
-						e.getMessage()
-					);
+					if (logMode) {
+						log.debug(
+							"Hostname {} - Does not respond to {} requests. {}: {}\nCancelling namespace detection. Connector ID: {}.",
+							hostname,
+							criterion.getClass().getSimpleName(),
+							e.getClass().getSimpleName(),
+							e.getMessage(),
+							connectorId
+						);
+					}
 
 					return NamespaceResult.builder().result(testResult).build();
 				}
@@ -280,7 +285,9 @@ public class WbemCriterionProcessor {
 						cause != null ? cause.getMessage() : e.getMessage()
 					);
 
-					log.debug(message);
+					if (logMode) {
+						log.debug(message);
+					}
 
 					return PossibleNamespacesResult.builder().errorMessage(message).success(false).build();
 				}
@@ -329,6 +336,22 @@ public class WbemCriterionProcessor {
 					telemetryManager
 				);
 		} catch (ClientException e) {
+			if (logMode) {
+				log.error(
+					"Hostname {} - Error executing WBEM criterion: {}. Exception message {}. Connector ID: {}.",
+					hostname,
+					criterion.getQuery(),
+					e.getMessage(),
+					connectorId
+				);
+				log.debug(
+					"Hostname {} - An exception occurred while executing WBEM criterion: {}. Connector ID: {}.",
+					hostname,
+					criterion.getQuery(),
+					connectorId,
+					e
+				);
+			}
 			return CriterionTestResult.error(criterion, e);
 		}
 

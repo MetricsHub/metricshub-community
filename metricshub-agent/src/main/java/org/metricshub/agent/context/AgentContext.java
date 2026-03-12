@@ -52,6 +52,7 @@ import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.parser.EnvironmentProcessor;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -131,6 +132,16 @@ public class AgentContext {
 
 		// Read the agent configuration file (Default: metricshub.yaml)
 		agentConfig = loadConfiguration(configNode);
+
+		// Configure the shared request executor from YAML settings
+		final var requestsThreadPool = agentConfig.getRequestsThreadPool();
+		ThreadHelper.configure(
+			ThreadHelper.Config
+				.builder()
+				.poolSize(requestsThreadPool.getPoolSize())
+				.queueSize(requestsThreadPool.getQueueSize())
+				.build()
+		);
 
 		logProductInformation();
 

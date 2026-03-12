@@ -148,6 +148,10 @@ public class AgentConfig {
 	@JsonSetter(nulls = SKIP)
 	private String stateSetCompression = StateSetMetricCompression.SUPPRESS_ZEROS;
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private RequestsThreadPoolConfig requestsThreadPool = RequestsThreadPoolConfig.builder().build();
+
 	@JsonSetter(nulls = SKIP)
 	private String patchDirectory;
 

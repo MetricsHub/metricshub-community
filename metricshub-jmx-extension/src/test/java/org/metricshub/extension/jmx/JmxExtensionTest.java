@@ -170,7 +170,7 @@ class JmxExtensionTest {
 		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList()))
 			.thenReturn(List.of(List.of("12345")));
 
-		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager);
+		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager, true);
 
 		assertNotNull(result, "CriterionTestResult should not be null");
 		assertTrue(result.isSuccess(), "Criterion processing should succeed with valid data");
@@ -183,7 +183,7 @@ class JmxExtensionTest {
 
 		final Exception exception = assertThrows(
 			IllegalArgumentException.class,
-			() -> jmxExtension.processCriterion(invalidCriterion, "conn", telemetryManager),
+			() -> jmxExtension.processCriterion(invalidCriterion, "conn", telemetryManager, true),
 			"Should throw for unsupported criterion type"
 		);
 		assertTrue(

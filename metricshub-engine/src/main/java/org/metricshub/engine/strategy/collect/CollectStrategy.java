@@ -22,7 +22,6 @@ package org.metricshub.engine.strategy.collect;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.OTHER_MONITOR_JOB_TYPES;
@@ -193,7 +192,7 @@ public class CollectStrategy extends AbstractStrategy {
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads
-			final ExecutorService threadsPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
+			final ExecutorService threadsPool = Executors.newFixedThreadPool(Math.max(1, otherMonitorJobs.size()));
 
 			otherMonitorJobs
 				.entrySet()

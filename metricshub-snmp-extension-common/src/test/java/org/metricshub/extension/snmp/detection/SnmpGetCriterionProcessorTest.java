@@ -37,7 +37,7 @@ public class SnmpGetCriterionProcessorTest {
 
 	@BeforeEach
 	public void setUp() {
-		snmpGetCriterionProcessor = new SnmpGetCriterionProcessor(snmpRequestExecutor, configurationRetriever);
+		snmpGetCriterionProcessor = new SnmpGetCriterionProcessor(snmpRequestExecutor, configurationRetriever, true);
 	}
 
 	/**
@@ -142,7 +142,7 @@ public class SnmpGetCriterionProcessorTest {
 		String result = null;
 		String expectedResult = "expectedResult";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextExpectedValue(
+		CriterionTestResult criterionTestResult = new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true).checkSNMPGetNextExpectedValue(
 			hostname,
 			oid,
 			expectedResult,
@@ -166,7 +166,7 @@ public class SnmpGetCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "ValidResult";
 
-		CriterionTestResult criterionTestResult = SnmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
+		CriterionTestResult criterionTestResult = snmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
 
 		assertTrue(criterionTestResult.isSuccess());
 		assertEquals(
@@ -181,7 +181,7 @@ public class SnmpGetCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "ValidResult";
 
-		CriterionTestResult criterionTestResult = SnmpGetCriterionProcessor.checkSNMPGetResult(hostname, oid, null, result);
+		CriterionTestResult criterionTestResult = snmpGetCriterionProcessor.checkSNMPGetResult(hostname, oid, null, result);
 
 		assertTrue(criterionTestResult.isSuccess());
 		assertEquals(
@@ -197,7 +197,7 @@ public class SnmpGetCriterionProcessorTest {
 		String expected = "ExpectedValue";
 		String result = "ActualValue";
 
-		CriterionTestResult criterionTestResult = SnmpGetCriterionProcessor.checkSNMPGetResult(
+		CriterionTestResult criterionTestResult = snmpGetCriterionProcessor.checkSNMPGetResult(
 			hostname,
 			oid,
 			expected,
@@ -217,7 +217,7 @@ public class SnmpGetCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = null;
 
-		CriterionTestResult criterionTestResult = SnmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
+		CriterionTestResult criterionTestResult = snmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
 
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
@@ -232,7 +232,7 @@ public class SnmpGetCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "";
 
-		CriterionTestResult criterionTestResult = SnmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
+		CriterionTestResult criterionTestResult = snmpGetCriterionProcessor.checkSNMPGetValue(hostname, oid, result);
 
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(

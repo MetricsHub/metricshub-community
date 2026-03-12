@@ -99,6 +99,8 @@ public class WmiCriterionProcessor {
 	@NonNull
 	private String connectorId;
 
+	private final boolean logMode;
+
 	/**
 	 * Processes a WMI criterion by executing a WMI request and evaluating the result.
 	 * The method retrieves Win configuration, executes the WMI request,
@@ -141,11 +143,11 @@ public class WmiCriterionProcessor {
 			cachedNamespaceCriterion.setNamespace(cachedNamespace);
 
 			// Run the test
-			return wmiDetectionService.performDetectionTest(hostname, winConfiguration, cachedNamespaceCriterion);
+			return wmiDetectionService.performDetectionTest(hostname, winConfiguration, cachedNamespaceCriterion, connectorId, logMode);
 		}
 
 		// Run the test
-		return wmiDetectionService.performDetectionTest(hostname, winConfiguration, wmiCriterion);
+		return wmiDetectionService.performDetectionTest(hostname, winConfiguration, wmiCriterion, connectorId, logMode);
 	}
 
 	/**
@@ -180,7 +182,9 @@ public class WmiCriterionProcessor {
 			final CriterionTestResult testResult = wmiDetectionService.performDetectionTest(
 				hostname,
 				configuration,
-				tentativeCriterion
+				tentativeCriterion,
+				connectorId,
+				logMode
 			);
 
 			// If the result matched then the namespace is selected
@@ -192,13 +196,16 @@ public class WmiCriterionProcessor {
 				if (e != null && !wmiDetectionService.getWinRequestExecutor().isAcceptableException(e)) {
 					// This error indicates that the CIM server will probably never respond to anything
 					// (timeout, or bad credentials), so there's no point in pursuing our efforts here.
-					log.debug(
-						"Hostname {} - Does not respond to {} requests. {}: {}\nCancelling namespace detection.",
-						hostname,
-						wmiCriterion.getClass().getSimpleName(),
-						e.getClass().getSimpleName(),
-						e.getMessage()
-					);
+					if (logMode) {
+						log.debug(
+							"Hostname {} - Does not respond to {} requests. {}: {}\nCancelling namespace detection. Connector ID: {}.",
+							hostname,
+							wmiCriterion.getClass().getSimpleName(),
+							e.getClass().getSimpleName(),
+							e.getMessage(),
+							connectorId
+						);
+					}
 
 					return NamespaceResult.builder().result(testResult).build();
 				}
@@ -350,7 +357,9 @@ public class WmiCriterionProcessor {
 				cause != null ? cause.getMessage() : e.getMessage()
 			);
 
-			log.debug(message);
+			if (logMode) {
+				log.debug(message);
+			}
 
 			return PossibleNamespacesResult.builder().errorMessage(message).success(false).build();
 		}

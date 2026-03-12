@@ -21,32 +21,37 @@ package org.metricshub.engine.common.helpers;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.AccessLevel;
+import lombok.Builder;
+import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Provides utility methods for thread management, including executing tasks
- * with a specified timeout. This class is part of the MetricsHub Engine's
- * common helper utilities.
+ * Global shared request execution controller.
  * <p>
- * Uses a shared thread pool to avoid creating a new executor per request,
- * which prevents thread accumulation under load. The pool is shared across
- * all hosts and all protocol requests. A {@link SynchronousQueue} ensures
- * that each submission either hands off to an idle thread or creates a new
- * one (up to {@link #MAX_POOL_SIZE}). When all threads are busy, the
- * {@link ThreadPoolExecutor.CallerRunsPolicy} runs the task on the calling
- * thread, providing natural back-pressure instead of rejection.
+ * Manages all blocking request executions across the JVM using a shared
+ * {@link ThreadPoolExecutor} with a bounded {@link ArrayBlockingQueue} and
+ * {@link ThreadPoolExecutor.AbortPolicy}. When both the pool and queue are
+ * full, new submissions are rejected and the rejection is recorded.
+ * </p>
+ * <p>
+ * The executor is configurable at runtime through {@link #configure(Config)},
+ * which replaces the current executor atomically and shuts down the previous one.
  * </p>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -54,33 +59,73 @@ import lombok.extern.slf4j.Slf4j;
 public class ThreadHelper {
 
 	/**
-	 * Maximum number of threads in the shared pool.
-	 */
-	private static final int MAX_POOL_SIZE = 50;
-
-	/**
 	 * Time in seconds to keep idle threads alive before termination.
 	 */
 	private static final long KEEP_ALIVE_SECONDS = 60L;
 
 	/**
-	 * Shared thread pool executor. Core pool is 0 so threads are only created
-	 * on demand. {@link SynchronousQueue} forces a direct handoff: if no idle
-	 * thread is available a new one is created, up to {@link #MAX_POOL_SIZE}.
-	 * When the maximum is reached, {@link ThreadPoolExecutor.CallerRunsPolicy}
-	 * executes the task on the caller's thread, throttling submission rather
-	 * than rejecting it. Idle threads are terminated after
-	 * {@link #KEEP_ALIVE_SECONDS}.
+	 * Counter: number of requests that completed successfully.
 	 */
-	private static final ExecutorService SHARED_EXECUTOR = new ThreadPoolExecutor(
-		0,
-		MAX_POOL_SIZE,
-		KEEP_ALIVE_SECONDS,
-		TimeUnit.SECONDS,
-		new SynchronousQueue<>(),
-		new MetricsHubThreadFactory(),
-		new ThreadPoolExecutor.CallerRunsPolicy()
+	private static final AtomicLong COMPLETED_COUNT = new AtomicLong(0);
+
+	/**
+	 * Counter: number of requests that exceeded their timeout and were cancelled.
+	 */
+	private static final AtomicLong TIMEOUT_COUNT = new AtomicLong(0);
+
+	/**
+	 * Counter: number of requests rejected because the executor was saturated.
+	 */
+	private static final AtomicLong REJECTED_COUNT = new AtomicLong(0);
+
+	/**
+	 * Shared executor reference. Can be replaced at runtime via {@link #configure(Config)}.
+	 */
+	private static final AtomicReference<ThreadPoolExecutor> SHARED_EXECUTOR = new AtomicReference<>(
+		buildExecutor(Config.builder().build())
 	);
+
+	/**
+	 * Configuration for the shared request executor.
+	 */
+	@Data
+	@Builder
+	@NoArgsConstructor
+	@lombok.AllArgsConstructor
+	public static class Config {
+
+		/**
+		 * Default pool size.
+		 */
+		public static final int DEFAULT_POOL_SIZE = 100;
+
+		/**
+		 * Default queue size.
+		 */
+		public static final int DEFAULT_QUEUE_SIZE = 50;
+
+		@Builder.Default
+		private int poolSize = DEFAULT_POOL_SIZE;
+
+		@Builder.Default
+		private int queueSize = DEFAULT_QUEUE_SIZE;
+	}
+
+	/**
+	 * Live statistics of the shared request executor.
+	 */
+	@Getter
+	@Builder
+	@lombok.AllArgsConstructor
+	public static class Stats {
+
+		private final long completed;
+		private final long timeout;
+		private final long rejected;
+		private final int active;
+		private final int queueSize;
+		private final int remainingCapacity;
+	}
 
 	/**
 	 * Custom thread factory that names threads for easier debugging and diagnostics.
@@ -98,10 +143,48 @@ public class ThreadHelper {
 	}
 
 	/**
+	 * Builds a new {@link ThreadPoolExecutor} from the given configuration.
+	 *
+	 * @param config the executor configuration
+	 * @return a new {@link ThreadPoolExecutor}
+	 */
+	private static ThreadPoolExecutor buildExecutor(final Config config) {
+		return new ThreadPoolExecutor(
+			config.getPoolSize(),
+			config.getPoolSize(),
+			KEEP_ALIVE_SECONDS,
+			TimeUnit.SECONDS,
+			new ArrayBlockingQueue<>(config.getQueueSize()),
+			new MetricsHubThreadFactory(),
+			new ThreadPoolExecutor.AbortPolicy()
+		);
+	}
+
+	/**
+	 * Configures (or reconfigures) the shared executor. The previous executor is
+	 * shut down gracefully. This method is safe to call at any time.
+	 *
+	 * @param config the new configuration to apply
+	 */
+	public static void configure(final Config config) {
+		final ThreadPoolExecutor newExecutor = buildExecutor(config);
+		final ThreadPoolExecutor oldExecutor = SHARED_EXECUTOR.getAndSet(newExecutor);
+		if (oldExecutor != null) {
+			oldExecutor.shutdown();
+		}
+		log.info("ThreadHelper reconfigured: poolSize={}, queueSize={}.", config.getPoolSize(), config.getQueueSize());
+	}
+
+	/**
 	 * Executes a {@link Callable} task with a specified timeout using the shared
 	 * thread pool. If the task completes within the given timeout, its result is
 	 * returned. Otherwise, the future is cancelled and a {@link TimeoutException}
 	 * is thrown.
+	 * <p>
+	 * If the executor is saturated (pool and queue full), the submission is rejected
+	 * and the rejection counter is incremented. A {@link TimeoutException} is thrown
+	 * in that case to signal the caller.
+	 * </p>
 	 *
 	 * @param <T>      the type of the result returned by the {@code callable}
 	 * @param callable the task to be executed
@@ -109,16 +192,25 @@ public class ThreadHelper {
 	 * @return the result of the executed task
 	 * @throws InterruptedException if the current thread was interrupted while waiting
 	 * @throws ExecutionException   if the computation threw an exception
-	 * @throws TimeoutException     if the wait timed out
+	 * @throws TimeoutException     if the wait timed out or the task was rejected
 	 */
 	public static <T> T execute(final Callable<T> callable, final long timeout)
 		throws InterruptedException, ExecutionException, TimeoutException {
-		final Future<T> handler = SHARED_EXECUTOR.submit(callable);
+		final Future<T> handler;
 		try {
-			return handler.get(timeout, TimeUnit.SECONDS);
+			handler = SHARED_EXECUTOR.get().submit(callable);
+		} catch (RejectedExecutionException e) {
+			REJECTED_COUNT.incrementAndGet();
+			log.warn("Request rejected: shared executor is saturated.");
+			throw new TimeoutException("Request rejected: shared executor is saturated.");
+		}
+		try {
+			final T result = handler.get(timeout, TimeUnit.SECONDS);
+			COMPLETED_COUNT.incrementAndGet();
+			return result;
 		} catch (TimeoutException e) {
-			// Cancel the task and interrupt the worker thread
 			handler.cancel(true);
+			TIMEOUT_COUNT.incrementAndGet();
 			log.warn("Task timed out after {} seconds and was cancelled.", timeout);
 			throw e;
 		} catch (InterruptedException e) {
@@ -135,6 +227,24 @@ public class ThreadHelper {
 	 * @return the shared {@link ExecutorService}
 	 */
 	public static ExecutorService getSharedExecutor() {
-		return SHARED_EXECUTOR;
+		return SHARED_EXECUTOR.get();
+	}
+
+	/**
+	 * Returns a snapshot of the current executor statistics.
+	 *
+	 * @return a {@link Stats} instance with live counters and executor metrics
+	 */
+	public static Stats getStats() {
+		final ThreadPoolExecutor executor = SHARED_EXECUTOR.get();
+		return Stats
+			.builder()
+			.completed(COMPLETED_COUNT.get())
+			.timeout(TIMEOUT_COUNT.get())
+			.rejected(REJECTED_COUNT.get())
+			.active(executor.getActiveCount())
+			.queueSize(executor.getQueue().size())
+			.remainingCapacity(executor.getQueue().remainingCapacity())
+			.build();
 	}
 }

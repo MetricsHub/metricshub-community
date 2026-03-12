@@ -167,17 +167,18 @@ public class WinRmExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WinRmConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
-			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId)
+			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode)
 				.process(wmiCriterion, telemetryManager);
 		} else if (criterion instanceof ServiceCriterion serviceCriterion) {
 			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever)
-				.process(serviceCriterion, telemetryManager);
+				.process(serviceCriterion, telemetryManager, connectorId, logMode);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId)
 				.process(commandLineCriterion, telemetryManager);

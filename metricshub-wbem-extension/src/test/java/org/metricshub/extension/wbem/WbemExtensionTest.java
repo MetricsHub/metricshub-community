@@ -262,7 +262,7 @@ class WbemExtensionTest {
 			.query(WBEM_TEST_QUERY)
 			.build();
 
-		assertFalse(wbemExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
+		assertFalse(wbemExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 	}
 
 	@Test
@@ -282,7 +282,8 @@ class WbemExtensionTest {
 		final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 			wbemCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals("No result.", criterionTestResult.getResult());
@@ -336,7 +337,8 @@ class WbemExtensionTest {
 		final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 			wbemCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
@@ -391,7 +393,8 @@ class WbemExtensionTest {
 		final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 			wbemCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
@@ -449,7 +452,8 @@ class WbemExtensionTest {
 					final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 						wbemCriterion,
 						CONNECTOR_ID,
-						telemetryManager
+						telemetryManager,
+						true
 					);
 
 					assertTrue(criterionTestResult.getMessage().contains(message));
@@ -463,7 +467,8 @@ class WbemExtensionTest {
 					final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 						wbemCriterion,
 						CONNECTOR_ID,
-						telemetryManager
+						telemetryManager,
+						true
 					);
 
 					assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
@@ -527,7 +532,8 @@ class WbemExtensionTest {
 				final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 					wbemCriterion,
 					CONNECTOR_ID,
-					telemetryManager
+					telemetryManager,
+					true
 				);
 
 				assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());
@@ -546,7 +552,8 @@ class WbemExtensionTest {
 				final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 					wbemCriterion,
 					CONNECTOR_ID,
-					telemetryManager
+					telemetryManager,
+					true
 				);
 
 				assertNull(criterionTestResult.getResult());
@@ -602,7 +609,8 @@ class WbemExtensionTest {
 		final CriterionTestResult criterionTestResult = wbemExtension.processCriterion(
 			wbemCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			false
 		);
 
 		assertEquals(SourceTable.tableToCsv(EXECUTE_WBEM_RESULT, ";", false), criterionTestResult.getResult());

@@ -36,7 +36,7 @@ public class SnmpGetNextCriterionProcessorTest {
 
 	@BeforeEach
 	public void setUp() {
-		snmpGetNextCriterionProcessor = new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever);
+		snmpGetNextCriterionProcessor = new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true);
 	}
 
 	/**
@@ -150,7 +150,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String result = null;
 		String expectedResult = "expectedResult";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextExpectedValue(
+		CriterionTestResult criterionTestResult = snmpGetNextCriterionProcessor.checkSNMPGetNextExpectedValue(
 			hostname,
 			oid,
 			expectedResult,
@@ -174,7 +174,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextValue(
+		CriterionTestResult criterionTestResult = snmpGetNextCriterionProcessor.checkSNMPGetNextValue(
 			hostname,
 			oid,
 			result
@@ -197,7 +197,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "1.4.6.1.0.0.1.2.0 Value";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextValue(
+		CriterionTestResult criterionTestResult = snmpGetNextCriterionProcessor.checkSNMPGetNextValue(
 			hostname,
 			oid,
 			result
@@ -220,7 +220,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String oid = "1.3.6.1.2.1.1.1.0";
 		String result = "1.3.6.1.2.1.1.1.0 Value";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextValue(
+		CriterionTestResult criterionTestResult = snmpGetNextCriterionProcessor.checkSNMPGetNextValue(
 			hostname,
 			oid,
 			result
@@ -239,7 +239,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String expected = null;
 		String result = "1.3.6.1.2.1.1.1.0 Value";
 
-		CriterionTestResult criterionTestResult = SnmpGetNextCriterionProcessor.checkSNMPGetNextResult(
+		CriterionTestResult criterionTestResult = snmpGetNextCriterionProcessor.checkSNMPGetNextResult(
 			hostname,
 			oid,
 			expected,

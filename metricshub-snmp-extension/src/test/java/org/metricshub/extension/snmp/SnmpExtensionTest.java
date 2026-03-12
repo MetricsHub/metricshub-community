@@ -118,7 +118,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -144,7 +145,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -168,7 +170,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -196,7 +199,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -223,7 +227,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -251,7 +256,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -278,7 +284,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -306,7 +313,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -329,7 +337,7 @@ class SnmpExtensionTest {
 
 		assertNull(
 			snmpExtension
-				.processCriterion(SnmpGetNextCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager)
+				.processCriterion(SnmpGetNextCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
 				.getResult()
 		);
 	}
@@ -340,7 +348,7 @@ class SnmpExtensionTest {
 
 		assertNull(
 			snmpExtension
-				.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager)
+				.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
 				.getResult()
 		);
 	}
@@ -355,7 +363,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult("CMC").build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -381,7 +390,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -408,7 +418,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -432,7 +443,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -456,7 +468,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -481,7 +494,8 @@ class SnmpExtensionTest {
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()

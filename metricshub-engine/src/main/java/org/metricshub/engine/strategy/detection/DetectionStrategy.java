@@ -145,7 +145,8 @@ public class DetectionStrategy extends AbstractStrategy {
 					telemetryManager,
 					clientsExecutor,
 					stagedConnectorIdentifiers.getForcedConnectorIds(),
-					extensionManager
+					extensionManager,
+					true
 				)
 					.run()
 			);

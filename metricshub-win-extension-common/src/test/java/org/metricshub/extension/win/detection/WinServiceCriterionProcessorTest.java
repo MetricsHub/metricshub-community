@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mockStatic;
 
@@ -42,6 +43,7 @@ class WinServiceCriterionProcessorTest {
 	private static final String USERNAME = "user";
 	private static final String SERVICE_NAME = "TWGIPC";
 	private static final String HOST_NAME = "test-host" + UUID.randomUUID().toString();
+	private static final String CONNECTOR_ID = "connector_id";
 
 	@Test
 	void testProcessServiceCheckOsNull() {
@@ -70,7 +72,9 @@ class WinServiceCriterionProcessorTest {
 
 		final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 			serviceCriterion,
-			telemetryManager
+			telemetryManager,
+			CONNECTOR_ID,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -83,7 +87,7 @@ class WinServiceCriterionProcessorTest {
 	void testProcessServiceCheckServiceNull() {
 		final ServiceCriterion serviceCriterion = null;
 		assertTrue(
-			winServiceCriterionProcessor.process(serviceCriterion, null).getMessage().contains("Malformed Service criterion.")
+			winServiceCriterionProcessor.process(serviceCriterion, null, CONNECTOR_ID, true).getMessage().contains("Malformed Service criterion.")
 		);
 	}
 
@@ -103,7 +107,7 @@ class WinServiceCriterionProcessorTest {
 
 		assertTrue(
 			winServiceCriterionProcessor
-				.process(serviceCriterion, telemetryManager)
+				.process(serviceCriterion, telemetryManager, CONNECTOR_ID, true)
 				.getMessage()
 				.contains("Neither WMI nor WinRM credentials are configured for this host.")
 		);
@@ -140,7 +144,9 @@ class WinServiceCriterionProcessorTest {
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
@@ -180,7 +186,9 @@ class WinServiceCriterionProcessorTest {
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
@@ -220,11 +228,13 @@ class WinServiceCriterionProcessorTest {
 
 			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";running"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
@@ -264,11 +274,13 @@ class WinServiceCriterionProcessorTest {
 
 			doReturn(CriterionTestResult.success(serviceCriterion, SERVICE_NAME + ";down"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
@@ -308,11 +320,13 @@ class WinServiceCriterionProcessorTest {
 
 			doReturn(CriterionTestResult.success(serviceCriterion, null))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
@@ -352,11 +366,13 @@ class WinServiceCriterionProcessorTest {
 
 			doReturn(CriterionTestResult.error(serviceCriterion, "error"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), any(), any());
+				.performDetectionTest(any(), any(), any(), any(), anyBoolean());
 
 			final CriterionTestResult criterionTestResult = winServiceCriterionProcessor.process(
 				serviceCriterion,
-				telemetryManager
+				telemetryManager,
+				CONNECTOR_ID,
+				true
 			);
 
 			assertNotNull(criterionTestResult);
