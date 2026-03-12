@@ -100,7 +100,8 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	 * @param metricName The collected metric name
 	 */
 	public void setAsMissing(final Monitor monitor, final String hostname, final String metricName) {
-		new MetricFactory(hostname).collectNumberMetric(monitor, metricName, 0.0, strategyTime);
+		new MetricFactory(hostname, telemetryManager.getConnectorStore())
+			.collectNumberMetric(monitor, metricName, 0.0, strategyTime);
 	}
 
 	/**
@@ -110,7 +111,8 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	 * @param metricName The collected metric name
 	 */
 	public void setAsPresent(final Monitor monitor, final String hostname, final String metricName) {
-		new MetricFactory(hostname).collectNumberMetric(monitor, metricName, 1.0, strategyTime);
+		new MetricFactory(hostname, telemetryManager.getConnectorStore())
+			.collectNumberMetric(monitor, metricName, 1.0, strategyTime);
 	}
 
 	/**

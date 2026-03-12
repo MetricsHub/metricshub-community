@@ -50,16 +50,30 @@ public abstract class AbstractMetric {
 	private boolean resetMetricTime;
 
 	/**
-	 * Constructs an AbstractMetric with the given name, collect time, and attributes.
+	 * The OpenTelemetry instrument type of this metric.
+	 * Values: "Counter", "UpDownCounter", "Gauge" (case-insensitive for comparison).
+	 * Null when the type is unknown or not yet resolved.
+	 */
+	private String metricType;
+
+	/**
+	 * Constructs an AbstractMetric with the given name, collect time, attributes, and metricType.
 	 *
 	 * @param name        The name of the metric.
 	 * @param collectTime The timestamp when the metric was collected.
 	 * @param attributes  Additional attributes associated with the metric.
+	 * @param metricType  The OpenTelemetry instrument type of this metric.
 	 */
-	AbstractMetric(final String name, final Long collectTime, final Map<String, String> attributes) {
+	AbstractMetric(
+		final String name,
+		final Long collectTime,
+		final Map<String, String> attributes,
+		final String metricType
+	) {
 		this.name = name;
 		this.collectTime = collectTime;
 		this.attributes = attributes == null ? new HashMap<>() : attributes;
+		this.metricType = metricType;
 	}
 
 	/**

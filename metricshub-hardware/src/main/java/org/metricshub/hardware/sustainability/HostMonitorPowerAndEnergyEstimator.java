@@ -170,7 +170,10 @@ public class HostMonitorPowerAndEnergyEstimator {
 
 			return;
 		}
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		monitorStream.forEach(monitor -> {
 			final String powerMetricName = HwCollectHelper.generatePowerMetricNameForMonitorType(monitor.getType());
 			final String energyMetricName = HwCollectHelper.generateEnergyMetricNameForMonitorType(monitor.getType());

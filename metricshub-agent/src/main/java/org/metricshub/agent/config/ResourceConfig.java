@@ -26,9 +26,11 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -113,6 +115,10 @@ public class ResourceConfig {
 	@JsonIgnore
 	private Connector connector;
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private List<String> enrichments = new ArrayList<>();
+
 	private String stateSetCompression;
 
 	/**
@@ -150,6 +156,7 @@ public class ResourceConfig {
 			.additionalConnectors(additionalConnectors)
 			.connectors(connectors)
 			.connector(connector)
+			.enrichments(enrichments != null ? new ArrayList<>(enrichments) : null)
 			.stateSetCompression(stateSetCompression)
 			.build();
 	}

@@ -28,6 +28,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -89,6 +90,16 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 		TOOLS.put("file", new FileTool());
 		TOOLS.put("stringUtils", new StringUtils());
 		TOOLS.put("env", new EnvTool());
+	}
+
+	/**
+	 * Returns an unmodifiable view of the Velocity tools map available for
+	 * template evaluation.
+	 *
+	 * @return the tools map
+	 */
+	public static Map<String, Object> getTools() {
+		return Collections.unmodifiableMap(TOOLS);
 	}
 
 	@Override

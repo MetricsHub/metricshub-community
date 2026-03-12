@@ -218,6 +218,30 @@ class ConfigApi {
 	}
 
 	/**
+	 * Test a Velocity template: POST /api/config-files/test/{fileName}
+	 * Returns the generated YAML as plain text, or throws with error details.
+	 * @param {string} name    The .vm file name
+	 * @param {string} content The template content from the editor
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<string>} Generated YAML
+	 */
+	testVelocityTemplate(name, content, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/test/${encodeURIComponent(name)}`,
+				method: "POST",
+				signal,
+				data: content ?? "",
+				headers: { "Content-Type": "text/plain", Accept: "text/plain" },
+				responseType: "text",
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e, "Template test failed")));
+		});
+	}
+
+	/**
 	 * Delete a backup file (DELETE /api/config-files/backup/{fileName})
 	 * @param {string} fileName
 	 * @param {{ signal?: AbortSignal }} opts

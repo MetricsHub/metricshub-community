@@ -72,6 +72,7 @@ export default function BackupSetNode({
 	onRename,
 	onDelete,
 	isReadOnly = false,
+	selectedName = null,
 }) {
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -163,6 +164,7 @@ export default function BackupSetNode({
 						onSelect={onSelect}
 						onRename={onRename}
 						onDelete={onDelete}
+						isSelected={selectedName === f.name}
 					/>
 				))}
 			</TreeItem>

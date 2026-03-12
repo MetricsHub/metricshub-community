@@ -62,7 +62,10 @@ class RoboticsPowerAndEnergyEstimatorTest {
 		Double estimatedEnergy = roboticsPowerAndEnergyEstimator.estimateEnergy();
 		assertNull(estimatedEnergy);
 		// Create metricFactory and collect power
-		final MetricFactory metricFactory = new MetricFactory(telemetryManager.getHostname());
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final NumberMetric collectedPowerMetric = metricFactory.collectNumberMetric(
 			monitor,
 			ROBOTICS_POWER_METRIC,

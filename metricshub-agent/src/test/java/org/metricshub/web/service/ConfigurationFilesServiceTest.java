@@ -236,4 +236,128 @@ class ConfigurationFilesServiceTest {
 		);
 		assertEquals(ConfigFilesException.Code.CONFIG_DIR_UNAVAILABLE, ex.getCode(), "Error code should match");
 	}
+
+	@Test
+	void testShouldListVmFilesAlongsideYaml() throws Exception {
+		Files.writeString(tempConfigDir.resolve("a.yml"), "k: v");
+		Files.writeString(tempConfigDir.resolve("template.vm"), "#set($x=1)");
+		Files.writeString(tempConfigDir.resolve("ignore.txt"), "nope");
+
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+
+		final List<ConfigurationFile> files = service.getAllConfigurationFiles();
+
+		assertEquals(2, files.size(), ".yml and .vm files should be listed");
+		assertEquals("a.yml", files.get(0).getName(), "First file should be a.yml (sorted)");
+		assertEquals("template.vm", files.get(1).getName(), "Second file should be template.vm (sorted)");
+	}
+
+	@Test
+	void testGetFileContentVmOk() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		Files.writeString(tempConfigDir.resolve("config.vm"), "#set($x=1)\nresourceGroups: {}", StandardCharsets.UTF_8);
+
+		String content = service.getFileContent("config.vm");
+		assertEquals("#set($x=1)\nresourceGroups: {}", content, "VM file content should match");
+	}
+
+	@Test
+	void testSaveOrUpdateVmFile() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+
+		service.saveOrUpdateFile("config.vm", "#set($x=1)\nresourceGroups: {}");
+		assertTrue(Files.exists(tempConfigDir.resolve("config.vm")), "VM file should be created");
+		assertEquals(
+			"#set($x=1)\nresourceGroups: {}",
+			Files.readString(tempConfigDir.resolve("config.vm"), StandardCharsets.UTF_8),
+			"VM file content should match"
+		);
+	}
+
+	@Test
+	void testDeleteVmFile() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		Files.writeString(tempConfigDir.resolve("config.vm"), "#set($x=1)");
+
+		service.deleteFile("config.vm");
+		assertFalse(Files.exists(tempConfigDir.resolve("config.vm")), "VM file should be deleted");
+	}
+
+	@Test
+	void testRenameVmFileOk() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		Files.writeString(tempConfigDir.resolve("old.vm"), "#set($x=1)");
+
+		service.renameFile("old.vm", "new.vm");
+		assertFalse(Files.exists(tempConfigDir.resolve("old.vm")), "Source file should be gone");
+		assertTrue(Files.exists(tempConfigDir.resolve("new.vm")), "Target file should exist");
+	}
+
+	@Test
+	void testRenameVmToYamlRejected() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		Files.writeString(tempConfigDir.resolve("config.vm"), "#set($x=1)");
+
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.renameFile("config.vm", "config.yaml"),
+			"Cross-family rename should be rejected"
+		);
+		assertEquals(ConfigFilesException.Code.INVALID_EXTENSION, ex.getCode(), "Error code should match");
+	}
+
+	@Test
+	void testRenameYamlToVmRejected() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		Files.writeString(tempConfigDir.resolve("config.yaml"), "key: value");
+
+		ConfigFilesException ex = assertThrows(
+			ConfigFilesException.class,
+			() -> service.renameFile("config.yaml", "config.vm"),
+			"Cross-family rename should be rejected"
+		);
+		assertEquals(ConfigFilesException.Code.INVALID_EXTENSION, ex.getCode(), "Error code should match");
+	}
+
+	@Test
+	void testIsVmFile() {
+		assertTrue(ConfigurationFilesService.isVmFile("config.vm"), ".vm should be detected");
+		assertTrue(ConfigurationFilesService.isVmFile("CONFIG.VM"), ".VM uppercase should be detected");
+		assertTrue(ConfigurationFilesService.isVmFile("config.vm.draft"), ".vm.draft should be detected");
+		assertFalse(ConfigurationFilesService.isVmFile("config.yaml"), ".yaml should not be detected");
+		assertFalse(ConfigurationFilesService.isVmFile("config.yml"), ".yml should not be detected");
+		assertFalse(ConfigurationFilesService.isVmFile("config.yaml.draft"), ".yaml.draft should not be detected");
+	}
+
+	@Test
+	void testSaveOrUpdateDraftVmFile() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+
+		service.saveOrUpdateDraftFile("config.vm", "#set($x=1)");
+		assertTrue(Files.exists(tempConfigDir.resolve("config.vm.draft")), "VM draft file should be created");
+	}
+
+	@Test
+	void testListVmDraftFiles() throws Exception {
+		Files.writeString(tempConfigDir.resolve("config.vm.draft"), "#set($x=1)");
+		Files.writeString(tempConfigDir.resolve("settings.yaml.draft"), "key: value");
+
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		final List<ConfigurationFile> files = service.getAllConfigurationFiles();
+
+		assertEquals(2, files.size(), "Both .vm.draft and .yaml.draft should be listed");
+	}
+
+	@Test
+	void testBackupVmFile() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+
+		service.saveOrUpdateBackupFile("backup-config.vm", "#set($x=1)");
+		final Path backupDir = tempConfigDir.resolve("backup");
+		assertTrue(Files.exists(backupDir.resolve("backup-config.vm")), "VM backup file should be created");
+
+		List<ConfigurationFile> backups = service.listAllBackupFiles();
+		assertEquals(1, backups.size(), "Backup list should contain one entry");
+		assertEquals("backup-config.vm", backups.get(0).getName(), "Backup name should match");
+	}
 }

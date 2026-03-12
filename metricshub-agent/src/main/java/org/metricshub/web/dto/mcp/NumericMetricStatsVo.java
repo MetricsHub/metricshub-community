@@ -1,10 +1,10 @@
-package org.metricshub.web.dto;
+package org.metricshub.web.dto.mcp;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -21,27 +21,34 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import org.metricshub.engine.telemetry.MonitorsVo;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Represents the result of a engine operation, including telemetry data,
+ * Aggregated statistics for a single numeric metric across all monitors of a given type.
  */
-public record TelemetryResult(MonitorsVo telemetry, String errorMessage) {
-	/**
-	 * Constructs a TelemetryResult with telemetry data and no error.
-	 *
-	 * @param telemetry the telemetry data
-	 */
-	public TelemetryResult(MonitorsVo telemetry) {
-		this(telemetry, null);
-	}
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class NumericMetricStatsVo {
 
-	/**
-	 * Constructs a TelemetryResult with an error message and no telemetry data.
-	 *
-	 * @param errorMessage the error message
-	 */
-	public TelemetryResult(String errorMessage) {
-		this(null, errorMessage);
-	}
+	/** Average value across all monitors. */
+	private Double avg;
+
+	/** Minimum value across all monitors. */
+	private Double min;
+
+	/** Maximum value across all monitors. */
+	private Double max;
+
+	/** Sum of values across all monitors. */
+	private Double sum;
+
+	/** Count of monitors that contributed to these stats (for avg calculation). */
+	private Integer count;
 }

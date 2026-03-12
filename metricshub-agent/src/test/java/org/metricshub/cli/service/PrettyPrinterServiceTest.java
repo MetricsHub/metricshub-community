@@ -14,6 +14,7 @@ import org.fusesource.jansi.Ansi;
 import org.junit.jupiter.api.Test;
 import org.metricshub.cli.helper.StringBuilderWriter;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.telemetry.MetricFactory;
 import org.metricshub.engine.telemetry.Monitor;
@@ -74,7 +75,7 @@ class PrettyPrinterServiceTest {
 		telemetryManager.addNewMonitor(host, KnownMonitorType.HOST.getKey(), HOST_ID_VALUE);
 
 		// Collect the host's metrics
-		final MetricFactory metricFactory = new MetricFactory(HOST_ID_VALUE);
+		final MetricFactory metricFactory = new MetricFactory(HOST_ID_VALUE, new ConnectorStore());
 		metricFactory.collectNumberMetric(host, "hw.host.power", 150D, COLLECT_TIME);
 		metricFactory.collectNumberMetric(host, "hw.host.heating_margin", 20D, COLLECT_TIME);
 		metricFactory.collectNumberMetric(host, "hw.host.ambient_temperature", 22D, COLLECT_TIME);

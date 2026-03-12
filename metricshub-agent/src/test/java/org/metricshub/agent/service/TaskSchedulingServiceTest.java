@@ -110,6 +110,7 @@ class TaskSchedulingServiceTest {
 			.withMetricsExporter(MetricsExporter.builder().withClient(new NoopClient()).build())
 			.withSchedules(new HashMap<>())
 			.withTaskScheduler(taskSchedulerMock)
+			.withAgentInfo(new AgentInfo())
 			.build();
 
 		taskSchedulingService.scheduleResourceGroupRecorders();

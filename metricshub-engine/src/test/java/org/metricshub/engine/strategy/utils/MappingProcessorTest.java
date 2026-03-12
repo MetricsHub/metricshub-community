@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.monitor.task.Mapping;
 import org.metricshub.engine.constants.Constants;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -344,7 +345,7 @@ class MappingProcessorTest {
 			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 			.build();
 
-		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME);
+		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
 		metricFactory.collectNumberMetric(monitor, "__hw.enclosure.power.rate_from", 1000.0, 120000L);
 		monitor.getMetric("__hw.enclosure.power.rate_from", NumberMetric.class).save();
 
@@ -414,7 +415,7 @@ class MappingProcessorTest {
 			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 			.build();
 
-		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME);
+		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
 		metricFactory.collectNumberMetric(monitor, "__hw.enclosure.energy.fake_counter_from", 1000.0, 120000L);
 		monitor.getMetric("__hw.enclosure.energy.fake_counter_from", NumberMetric.class).save();
 
@@ -508,7 +509,7 @@ class MappingProcessorTest {
 				.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 				.build();
 
-			final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME);
+			final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
 			metricFactory.collectNumberMetric(monitor, "hw.power_supply.limit", 1000.0, 120000L);
 			monitor.getMetric("hw.power_supply.limit", NumberMetric.class).save();
 
@@ -540,7 +541,7 @@ class MappingProcessorTest {
 				.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 				.build();
 
-			final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME);
+			final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
 			metricFactory.collectNumberMetric(monitor, "hw.power_supply.limit", 1000.0, 120000L);
 			monitor.getMetric("hw.power_supply.limit", NumberMetric.class).save();
 

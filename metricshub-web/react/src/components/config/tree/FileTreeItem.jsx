@@ -23,6 +23,7 @@ import {
 import QuestionDialog from "../../common/QuestionDialog";
 import { downloadConfigFile } from "../../../services/download-service";
 import { parseBackupFileName } from "../../../utils/backup-names";
+import { isVmFile, getFileType } from "../../../utils/file-type-utils";
 
 /**
  * File tree item component.
@@ -40,6 +41,7 @@ export default function FileTreeItem({
 	labelName, // optional display name
 	onSelect, // optional, used to navigate after restore
 	isReadOnly = false,
+	isSelected = false,
 }) {
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -59,6 +61,7 @@ export default function FileTreeItem({
 	const treeItemId = itemId ?? file.name;
 	const isDraft = file.name.endsWith(".draft");
 	const displayName = labelName ?? (isDraft ? file.name.replace(/\.draft$/, "") : file.name);
+	const fileType = getFileType(file.name);
 
 	// detect backup files: flat name using backupNames utils
 	const parsed = parseBackupFileName(file.name);
@@ -107,9 +110,21 @@ export default function FileTreeItem({
 			setEditing(false);
 			return;
 		}
+		// Prevent cross-family renames (.vm <-> .yaml/.yml)
+		const sourceIsVm = isVmFile(file.name);
+		const targetIsVm = isVmFile(next);
+		if (sourceIsVm !== targetIsVm) {
+			showSnackbar(
+				"Cannot change file type during rename. Keep the same extension family (.vm or .yaml/.yml).",
+				{ severity: "error" },
+			);
+			setDraft(file.name);
+			setEditing(false);
+			return;
+		}
 		onRename?.(file.name, next);
 		setEditing(false);
-	}, [draft, file.name, onRename]);
+	}, [draft, file.name, onRename, showSnackbar]);
 
 	const backupThisFile = React.useCallback(async () => {
 		if (effectiveReadOnly) return;
@@ -211,7 +226,7 @@ export default function FileTreeItem({
 					>
 						<Box onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
 							<Box sx={{ display: "flex", alignItems: "center" }}>
-								<FileTypeIcon type={isBackupFile ? "backup" : "file"} />
+								<FileTypeIcon type={fileType} />
 								<TextField
 									inputRef={inputRef}
 									value={draft}
@@ -245,13 +260,13 @@ export default function FileTreeItem({
 				) : (
 					<>
 						<Box sx={{ display: "flex", alignItems: "center", minWidth: 0 }}>
-							<FileTypeIcon type={isBackupFile ? "backup" : "file"} />
+							<FileTypeIcon type={fileType} />
 							<Typography
 								component="span"
 								noWrap
 								title={displayName}
 								sx={{
-									fontWeight: isDirty ? 510 : 500,
+									fontWeight: isSelected ? "bold" : isDirty ? 510 : 500,
 									overflow: "hidden",
 									textOverflow: "ellipsis",
 								}}

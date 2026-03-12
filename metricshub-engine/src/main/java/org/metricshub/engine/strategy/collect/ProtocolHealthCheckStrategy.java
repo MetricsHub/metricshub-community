@@ -106,7 +106,10 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 	 * @param protocolExtension the protocol extension for which to collect emulated metrics
 	 */
 	private void collectEmulationMetrics(final IProtocolExtension protocolExtension) {
-		final MetricFactory metricFactory = new MetricFactory();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
 		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 		final Long strategyTime = telemetryManager.getStrategyTime();
 
@@ -140,7 +143,10 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 				final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
 				final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 				final Long strategyTime = telemetryManager.getStrategyTime();
-				final MetricFactory metricFactory = new MetricFactory();
+				final MetricFactory metricFactory = new MetricFactory(
+					telemetryManager.getHostname(),
+					telemetryManager.getConnectorStore()
+				);
 
 				Double up = DOWN;
 				if (Boolean.TRUE.equals(isUp)) {

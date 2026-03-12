@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.01-SNAPSHOT</version>
+		<version>3.9.03-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-assets</artifactId>
@@ -70,6 +70,11 @@
 		<dependency>
 			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-ping-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>metricshub-bmchelix-enrichment-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
@@ -177,6 +182,11 @@
 									<groupId>org.metricshub</groupId>
 									<artifactId>metricshub-ping-extension</artifactId>
 									<destFileName>metricshub-ping-extension.jar</destFileName>
+								</artifactItem>
+								<artifactItem>
+									<groupId>org.metricshub</groupId>
+									<artifactId>metricshub-bmchelix-enrichment-extension</artifactId>
+									<destFileName>metricshub-bmchelix-enrichment-extension.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>org.metricshub</groupId>

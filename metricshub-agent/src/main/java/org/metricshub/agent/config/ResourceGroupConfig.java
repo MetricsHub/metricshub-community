@@ -25,7 +25,9 @@ import static com.fasterxml.jackson.annotation.Nulls.SKIP;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.AllArgsConstructor;
@@ -81,6 +83,10 @@ public class ResourceGroupConfig {
 	@Default
 	@JsonSetter(nulls = SKIP)
 	private Map<String, ResourceConfig> resources = new HashMap<>();
+
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private List<String> enrichments = new ArrayList<>();
 
 	private String stateSetCompression;
 }

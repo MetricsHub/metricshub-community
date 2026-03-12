@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.01-SNAPSHOT</version>
+		<version>3.9.03-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-jdbc-extension</artifactId>   
