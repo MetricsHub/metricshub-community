@@ -8,6 +8,13 @@ import { filledInputClasses } from "@mui/material";
  */
 export const buildComponents = ({ palette }) => {
 	return {
+		MuiLink: {
+			styleOverrides: {
+				root: {
+					color: palette.primary.dark,
+				},
+			},
+		},
 		MuiIconButton: {
 			styleOverrides: {
 				root: {

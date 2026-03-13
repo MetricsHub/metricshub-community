@@ -1,9 +1,11 @@
 package org.metricshub.web.controller;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -176,5 +178,17 @@ class AuthenticationControllerTest {
 				),
 			"Refresh token cookie not cleared correctly"
 		);
+	}
+
+	@Test
+	void testShouldReturnAgentHostname() throws Exception {
+		MvcResult result = mockMvc
+			.perform(get("/auth/agent-hostname"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.hostname").exists())
+			.andReturn();
+
+		final String hostname = result.getResponse().getContentAsString();
+		assertNotNull(hostname, "Hostname response should not be null");
 	}
 }
