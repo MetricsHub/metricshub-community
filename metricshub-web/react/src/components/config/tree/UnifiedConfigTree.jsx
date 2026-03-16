@@ -14,8 +14,7 @@ import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { useAuth } from "../../../hooks/use-auth";
 import { createConfigBackup } from "../../../store/thunks/config-thunks";
 import { createOtelConfigBackup } from "../../../store/thunks/otel-config-thunks";
-import { downloadAllConfigs } from "../../../services/download-service";
-import { downloadAllOtelConfigs } from "../../../services/download-service";
+import { downloadAllConfigs, downloadAllOtelConfigs } from "../../../services/download-service";
 
 const CONFIG_ROOT = "config";
 const CONFIG_BACKUP_ROOT = "config_backup";
