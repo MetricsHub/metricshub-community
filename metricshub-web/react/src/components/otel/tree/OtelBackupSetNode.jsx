@@ -98,7 +98,7 @@ export default function OtelBackupSetNode({
 			try {
 				await Promise.all(
 					(files || []).map((f) =>
-						dispatch(restoreOtelConfigFromBackup({ backupName: f.name, overwrite })).unwrap(),
+						dispatch(restoreOtelConfigFromBackup({ backupName: f.name, overwrite, skipRefresh: true })).unwrap(),
 					),
 				);
 				await dispatch(fetchOtelConfigList());

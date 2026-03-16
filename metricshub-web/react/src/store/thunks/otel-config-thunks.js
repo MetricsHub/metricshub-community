@@ -132,7 +132,7 @@ export const createOtelConfigBackup = createAsyncThunk(
 
 export const restoreOtelConfigFromBackup = createAsyncThunk(
 	"otelConfig/restoreFromBackup",
-	async ({ backupName, overwrite = false }, { getState, dispatch, rejectWithValue }) => {
+	async ({ backupName, overwrite = false, skipRefresh = false }, { getState, dispatch, rejectWithValue }) => {
 		try {
 			const state = getState();
 			const { originalName, restoreName, content } = await restoreOtelBackupFile(
@@ -141,7 +141,9 @@ export const restoreOtelConfigFromBackup = createAsyncThunk(
 				state,
 			);
 			await dispatch(saveOtelConfig({ name: restoreName, content, skipValidation: true })).unwrap();
-			await dispatch(fetchOtelConfigList());
+			if (!skipRefresh) {
+				await dispatch(fetchOtelConfigList());
+			}
 			return { originalName, restoredName: restoreName };
 		} catch (e) {
 			return rejectWithValue(e.message);
