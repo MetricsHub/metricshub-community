@@ -65,7 +65,9 @@ public class JmxRequestExecutor {
 	) throws Exception {
 		return ThreadHelper.execute(
 			() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-			jmxConfiguration.getTimeout()
+			jmxConfiguration.getTimeout(),
+			jmxConfiguration.getHostname(),
+			"jmx"
 		);
 	}
 
@@ -162,7 +164,12 @@ public class JmxRequestExecutor {
 	 */
 	@WithSpan("JMX Connection Check")
 	public boolean checkConnection(@SpanAttribute("jmx.config") final JmxConfiguration configuration) throws Exception {
-		return ThreadHelper.execute(() -> runConnectionCheck(configuration), configuration.getTimeout());
+		return ThreadHelper.execute(
+			() -> runConnectionCheck(configuration),
+			configuration.getTimeout(),
+			configuration.getHostname(),
+			"jmx"
+		);
 	}
 
 	/**

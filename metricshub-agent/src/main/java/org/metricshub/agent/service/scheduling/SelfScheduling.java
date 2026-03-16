@@ -36,7 +36,6 @@ import org.metricshub.agent.opentelemetry.MetricsExporter;
 import org.metricshub.agent.opentelemetry.ResourceMeter;
 import org.metricshub.agent.opentelemetry.ResourceMeterProvider;
 import org.metricshub.agent.opentelemetry.metric.MetricContext;
-import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.connector.model.metric.MetricType;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.engine.telemetry.metric.NumberMetric;
@@ -58,15 +57,6 @@ public class SelfScheduling extends AbstractScheduling {
 	 * Description for the overall MetricsHub agent information metric.
 	 */
 	static final String METRICS_HUB_AGENT_INFORMATION = "MetricsHub agent information.";
-
-	// Request executor metric names
-	static final String REQUEST_COMPLETED_METRIC = "metricshub.agent.request.completed";
-	static final String REQUEST_TIMEOUT_METRIC = "metricshub.agent.request.timeout";
-
-	// Request executor metric descriptions
-	static final String REQUEST_COMPLETED_DESCRIPTION = "Number of requests that completed successfully.";
-	static final String REQUEST_TIMEOUT_DESCRIPTION =
-		"Number of requests that exceeded their timeout and were cancelled.";
 
 	@NonNull
 	private AgentInfo agentInfo;
@@ -149,25 +139,6 @@ public class SelfScheduling extends AbstractScheduling {
 				.name(AgentInfo.METRICS_HUB_AGENT_METRIC_NAME)
 				.collectTime(System.currentTimeMillis())
 				.build()
-		);
-
-		// Register ThreadHelper request executor metrics
-		final ThreadHelper.Stats stats = ThreadHelper.getStats();
-		final long now = System.currentTimeMillis();
-
-		// Counters
-		meter.registerRecorder(
-			MetricContext.builder().withDescription(REQUEST_COMPLETED_DESCRIPTION).withType(MetricType.COUNTER).build(),
-			NumberMetric
-				.builder()
-				.value((double) stats.getCompleted())
-				.name(REQUEST_COMPLETED_METRIC)
-				.collectTime(now)
-				.build()
-		);
-		meter.registerRecorder(
-			MetricContext.builder().withDescription(REQUEST_TIMEOUT_DESCRIPTION).withType(MetricType.COUNTER).build(),
-			NumberMetric.builder().value((double) stats.getTimeout()).name(REQUEST_TIMEOUT_METRIC).collectTime(now).build()
 		);
 
 		// Export the metric

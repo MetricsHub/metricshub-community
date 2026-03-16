@@ -43,6 +43,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -734,5 +735,45 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager.getConnectorStore()
 		);
 		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_CONFIGURED_METRIC_NAME, 1.0, strategyTime);
+	}
+
+	/**
+	 * Collects per-host request metrics (completed and timeout counts, broken down
+	 * by operation type) on the endpoint host monitor, if self-monitoring is enabled.
+	 *
+	 * @param hostname The resource hostname.
+	 */
+	protected void collectRequestMetrics(final String hostname) {
+		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+			return;
+		}
+		final Map<String, ThreadHelper.Stats> statsByOperation = ThreadHelper.getStats(hostname);
+		if (statsByOperation.isEmpty()) {
+			return;
+		}
+		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+		if (endpointHostMonitor == null) {
+			return;
+		}
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
+		for (final Map.Entry<String, ThreadHelper.Stats> entry : statsByOperation.entrySet()) {
+			final String operationType = entry.getKey();
+			final ThreadHelper.Stats stats = entry.getValue();
+			metricFactory.collectNumberMetric(
+				endpointHostMonitor,
+				String.format("metricshub.host.requests{state=\"completed\", operation_type=\"%s\"}", operationType),
+				(double) stats.getCompleted(),
+				strategyTime
+			);
+			metricFactory.collectNumberMetric(
+				endpointHostMonitor,
+				String.format("metricshub.host.requests{state=\"timeout\", operation_type=\"%s\"}", operationType),
+				(double) stats.getTimeout(),
+				strategyTime
+			);
+		}
 	}
 }

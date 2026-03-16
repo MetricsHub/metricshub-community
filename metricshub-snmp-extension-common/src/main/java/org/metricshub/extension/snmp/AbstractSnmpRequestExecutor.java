@@ -266,7 +266,9 @@ public abstract class AbstractSnmpRequestExecutor {
 						return null;
 					}
 				},
-				protocol.getTimeout()
+				protocol.getTimeout(),
+				hostname,
+				"snmp"
 			);
 		} finally {
 			// Guarantee resource cleanup regardless of timeout, interruption, or success

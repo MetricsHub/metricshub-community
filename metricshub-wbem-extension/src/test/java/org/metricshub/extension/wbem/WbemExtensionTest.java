@@ -460,7 +460,9 @@ class WbemExtensionTest {
 				}
 
 				{
-					threadHelperMock.when(() -> ThreadHelper.execute(any(), anyLong())).thenReturn("ticket");
+					threadHelperMock
+						.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
+						.thenReturn("ticket");
 
 					final String message = "WbemCriterion test succeeded:";
 
@@ -521,7 +523,9 @@ class WbemExtensionTest {
 				.query(WBEM_TEST_QUERY)
 				.build();
 
-			threadHelperMock.when(() -> ThreadHelper.execute(any(), anyLong())).thenReturn("ticket");
+			threadHelperMock
+				.when(() -> ThreadHelper.execute(any(), anyLong(), anyString(), anyString()))
+				.thenReturn("ticket");
 
 			{
 				doReturn(EXECUTE_WBEM_RESULT)

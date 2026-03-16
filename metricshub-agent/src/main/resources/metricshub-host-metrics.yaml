@@ -41,6 +41,10 @@ metrics:
     type: Gauge
     unit: s
 
+  metricshub.host.requests:
+    description: Number of requests executed by the host, broken down by state (completed or timeout) and operation type.
+    type: Counter
+
   metricshub.job.duration:
     description: Reports the time taken to complete a monitor job in MetricsHub.
     type: Gauge

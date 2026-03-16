@@ -176,7 +176,9 @@ public class WbemRequestExecutor {
 		try {
 			String ticket = ThreadHelper.execute(
 				() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-				timeout
+				timeout,
+				hostname,
+				"wbem"
 			);
 			if (ticket == null) {
 				throw new ClientException("Cannot get the ticket through vCenter module");
