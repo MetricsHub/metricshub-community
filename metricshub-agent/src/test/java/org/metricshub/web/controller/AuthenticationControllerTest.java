@@ -1,6 +1,5 @@
 package org.metricshub.web.controller;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -182,13 +181,9 @@ class AuthenticationControllerTest {
 
 	@Test
 	void testShouldReturnAgentHostname() throws Exception {
-		MvcResult result = mockMvc
+		mockMvc
 			.perform(get("/auth/agent-hostname"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.hostname").exists())
-			.andReturn();
-
-		final String hostname = result.getResponse().getContentAsString();
-		assertNotNull(hostname, "Hostname response should not be null");
+			.andExpect(jsonPath("$.hostname").isNotEmpty());
 	}
 }
