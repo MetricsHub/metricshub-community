@@ -62,21 +62,11 @@ public class SelfScheduling extends AbstractScheduling {
 	// Request executor metric names
 	static final String REQUEST_COMPLETED_METRIC = "metricshub.agent.request.completed";
 	static final String REQUEST_TIMEOUT_METRIC = "metricshub.agent.request.timeout";
-	static final String REQUEST_REJECTED_METRIC = "metricshub.agent.request.rejected";
-	static final String REQUEST_ACTIVE_METRIC = "metricshub.agent.request.active";
-	static final String REQUEST_QUEUE_SIZE_METRIC = "metricshub.agent.request.queue.size";
-	static final String REQUEST_QUEUE_REMAINING_CAPACITY_METRIC = "metricshub.agent.request.queue.remaining_capacity";
 
 	// Request executor metric descriptions
 	static final String REQUEST_COMPLETED_DESCRIPTION = "Number of requests that completed successfully.";
 	static final String REQUEST_TIMEOUT_DESCRIPTION =
 		"Number of requests that exceeded their timeout and were cancelled.";
-	static final String REQUEST_REJECTED_DESCRIPTION =
-		"Number of requests rejected because the shared request executor was saturated.";
-	static final String REQUEST_ACTIVE_DESCRIPTION =
-		"Number of request tasks currently executing in the shared request executor.";
-	static final String REQUEST_QUEUE_SIZE_DESCRIPTION = "Number of request tasks waiting in the executor queue.";
-	static final String REQUEST_QUEUE_REMAINING_CAPACITY_DESCRIPTION = "Remaining capacity of the executor queue.";
 
 	@NonNull
 	private AgentInfo agentInfo;
@@ -178,38 +168,6 @@ public class SelfScheduling extends AbstractScheduling {
 		meter.registerRecorder(
 			MetricContext.builder().withDescription(REQUEST_TIMEOUT_DESCRIPTION).withType(MetricType.COUNTER).build(),
 			NumberMetric.builder().value((double) stats.getTimeout()).name(REQUEST_TIMEOUT_METRIC).collectTime(now).build()
-		);
-		meter.registerRecorder(
-			MetricContext.builder().withDescription(REQUEST_REJECTED_DESCRIPTION).withType(MetricType.COUNTER).build(),
-			NumberMetric.builder().value((double) stats.getRejected()).name(REQUEST_REJECTED_METRIC).collectTime(now).build()
-		);
-
-		// Gauges
-		meter.registerRecorder(
-			MetricContext.builder().withDescription(REQUEST_ACTIVE_DESCRIPTION).withType(MetricType.GAUGE).build(),
-			NumberMetric.builder().value((double) stats.getActive()).name(REQUEST_ACTIVE_METRIC).collectTime(now).build()
-		);
-		meter.registerRecorder(
-			MetricContext.builder().withDescription(REQUEST_QUEUE_SIZE_DESCRIPTION).withType(MetricType.GAUGE).build(),
-			NumberMetric
-				.builder()
-				.value((double) stats.getQueueSize())
-				.name(REQUEST_QUEUE_SIZE_METRIC)
-				.collectTime(now)
-				.build()
-		);
-		meter.registerRecorder(
-			MetricContext
-				.builder()
-				.withDescription(REQUEST_QUEUE_REMAINING_CAPACITY_DESCRIPTION)
-				.withType(MetricType.GAUGE)
-				.build(),
-			NumberMetric
-				.builder()
-				.value((double) stats.getRemainingCapacity())
-				.name(REQUEST_QUEUE_REMAINING_CAPACITY_METRIC)
-				.collectTime(now)
-				.build()
 		);
 
 		// Export the metric

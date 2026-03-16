@@ -96,13 +96,13 @@ class SelfSchedulingTest {
 		assertNotNull(resourceAttributes.get(AGENT_INFO_CC_VERSION_NUMBER_ATTRIBUTE_KEY));
 		assertNotNull(resourceAttributes.get(COMPANY_ATTRIBUTE_KEY));
 
-		// Verify the metrics (1 agent info + 6 thread pool stats = 7 total)
+		// Verify the metrics (1 agent info + 2 request counters = 3 total)
 		final List<ScopeMetrics> scopeMetricsList = resourceMetrics.getScopeMetricsList();
 		assertEquals(1, scopeMetricsList.size());
 		final ScopeMetrics scopeMetrics = scopeMetricsList.get(0);
-		assertEquals(7, scopeMetrics.getMetricsCount());
+		assertEquals(3, scopeMetrics.getMetricsCount());
 		final List<Metric> metrics = scopeMetrics.getMetricsList();
-		assertEquals(7, metrics.size());
+		assertEquals(3, metrics.size());
 		final Metric metric = metrics.get(0);
 		assertEquals(AgentInfo.METRICS_HUB_AGENT_METRIC_NAME, metric.getName());
 		assertEquals(SelfScheduling.METRICS_HUB_AGENT_INFORMATION, metric.getDescription());
