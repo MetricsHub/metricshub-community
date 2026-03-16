@@ -82,7 +82,8 @@ public class JmxCriterionProcessor {
 				jmxConfiguration,
 				jmxCriterion.getObjectName(),
 				jmxCriterion.getAttributes(),
-				List.of()
+				List.of(),
+				telemetryManager.getHostname()
 			);
 
 			// Serialize the result as a CSV

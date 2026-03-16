@@ -67,7 +67,9 @@ public class SnmpGetNextCriterionProcessorTest {
 		String expectedResult = "1.3.6.1.2.1.1.1.0 OID_TYPE TestValue";
 		String expectedHostname = "hostname";
 
-		when(snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, null))
+		when(
+			snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, null, "hostname")
+		)
 			.thenReturn(expectedResult);
 
 		SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
@@ -128,7 +130,8 @@ public class SnmpGetNextCriterionProcessorTest {
 				any(ISnmpConfiguration.class),
 				any(String.class),
 				any(Boolean.class),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenThrow((new RuntimeException("Test exception")));

@@ -142,7 +142,8 @@ public class WbemExtension implements IProtocolExtension {
 						wbemConfiguration,
 						WBEM_TEST_QUERY,
 						wbemNamespace,
-						telemetryManager
+						telemetryManager,
+						telemetryManager.getHostname()
 					);
 			} catch (Exception e) {
 				if (wbemRequestExecutor.isAcceptableException(e)) {
@@ -250,7 +251,8 @@ public class WbemExtension implements IProtocolExtension {
 			wbemConfiguration,
 			query,
 			wbemConfiguration.getNamespace(),
-			new TelemetryManager()
+			new TelemetryManager(),
+			null
 		);
 
 		// return a text table containing the WBEM query result.

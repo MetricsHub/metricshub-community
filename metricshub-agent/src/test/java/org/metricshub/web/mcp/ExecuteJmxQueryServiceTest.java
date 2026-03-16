@@ -176,7 +176,8 @@ class ExecuteJmxQueryServiceTest {
 				any(JmxConfiguration.class),
 				eq(OBJECT_NAME),
 				eq(List.of("LiveNodes", "MovingNodes")),
-				eq(List.of("scope", "path"))
+				eq(List.of("scope", "path")),
+				any()
 			)
 		)
 			.thenReturn(List.of(values));
@@ -226,7 +227,8 @@ class ExecuteJmxQueryServiceTest {
 				any(JmxConfiguration.class),
 				eq(OBJECT_NAME),
 				eq(List.of("LiveNodes", "MovingNodes")),
-				eq(List.of("scope", "path"))
+				eq(List.of("scope", "path")),
+				any()
 			)
 		)
 			.thenThrow(new IllegalArgumentException("An error has occurred"));

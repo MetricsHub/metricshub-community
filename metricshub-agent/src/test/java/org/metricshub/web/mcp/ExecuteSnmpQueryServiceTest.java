@@ -141,7 +141,14 @@ class ExecuteSnmpQueryServiceTest {
 
 		// Mocking executeSNMPGet query on SNMP request executor
 		when(
-			snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
+			snmpRequestExecutor.executeSNMPGet(
+				eq(OID),
+				any(ISnmpConfiguration.class),
+				eq(HOSTNAME),
+				anyBoolean(),
+				isNull(),
+				any()
+			)
 		)
 			.thenReturn("Success");
 
@@ -185,7 +192,8 @@ class ExecuteSnmpQueryServiceTest {
 				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
 				anyBoolean(),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenReturn("Success");
@@ -217,7 +225,14 @@ class ExecuteSnmpQueryServiceTest {
 
 		// Mocking executeSNMPWalk query on SNMP request executor
 		when(
-			snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
+			snmpRequestExecutor.executeSNMPWalk(
+				eq(OID),
+				any(ISnmpConfiguration.class),
+				eq(HOSTNAME),
+				anyBoolean(),
+				isNull(),
+				any()
+			)
 		)
 			.thenReturn("Success");
 
@@ -255,7 +270,8 @@ class ExecuteSnmpQueryServiceTest {
 				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
 				anyBoolean(),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
@@ -279,7 +295,8 @@ class ExecuteSnmpQueryServiceTest {
 				any(ISnmpConfiguration.class),
 				eq(HOSTNAME),
 				anyBoolean(),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenReturn(List.of(List.of("Column1", "Column3")));

@@ -108,7 +108,8 @@ public class SnmpGetNextCriterionProcessor {
 				snmpConfiguration,
 				hostname,
 				false,
-				telemetryManager.getEmulationInputDirectory()
+				telemetryManager.getEmulationInputDirectory(),
+				telemetryManager.getHostname()
 			);
 
 			final CriterionTestResult criterionTestResult = checkSNMPGetNextResult(

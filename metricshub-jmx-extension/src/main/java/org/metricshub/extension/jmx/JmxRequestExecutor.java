@@ -53,6 +53,7 @@ public class JmxRequestExecutor {
 	 * @param objectNamePattern the pattern for matching MBean object names
 	 * @param attributes        the list of attributes to fetch from the MBeans
 	 * @param keyProperties     the list of key properties to include in the result set, used for identifying MBeans uniquely
+	 * @param resourceHostname  the HostConfiguration hostname for stats tracking, or {@code null} to skip tracking
 	 * @return a list of lists, where each inner list contains the values of the key attributes followed by the requested attributes
 	 * @throws Exception if an error occurs while connecting to the JMX server or fetching attributes
 	 */
@@ -61,13 +62,20 @@ public class JmxRequestExecutor {
 		@SpanAttribute("jmx.config") final JmxConfiguration jmxConfiguration,
 		@SpanAttribute("jmx.objectName") final String objectNamePattern,
 		@SpanAttribute("jmx.attributes") final Iterable<String> attributes,
-		@SpanAttribute("jmx.keyProperties") final Collection<String> keyProperties
+		@SpanAttribute("jmx.keyProperties") final Collection<String> keyProperties,
+		final String resourceHostname
 	) throws Exception {
+		if (resourceHostname != null) {
+			return ThreadHelper.execute(
+				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+				jmxConfiguration.getTimeout(),
+				resourceHostname,
+				"jmx"
+			);
+		}
 		return ThreadHelper.execute(
 			() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-			jmxConfiguration.getTimeout(),
-			jmxConfiguration.getHostname(),
-			"jmx"
+			jmxConfiguration.getTimeout()
 		);
 	}
 
@@ -158,18 +166,25 @@ public class JmxRequestExecutor {
 	/**
 	 * Checks if a JMX connection can be established with the given configuration.
 	 *
-	 * @param configuration the JMX configuration containing hostname, port, username, and password
+	 * @param configuration    the JMX configuration containing hostname, port, username, and password
+	 * @param resourceHostname the HostConfiguration hostname for stats tracking, or {@code null} to skip tracking
 	 * @return true if the connection is successful, false otherwise
 	 * @throws Exception if an error occurs while connecting to the JMX server or if the connection times out
 	 */
 	@WithSpan("JMX Connection Check")
-	public boolean checkConnection(@SpanAttribute("jmx.config") final JmxConfiguration configuration) throws Exception {
-		return ThreadHelper.execute(
-			() -> runConnectionCheck(configuration),
-			configuration.getTimeout(),
-			configuration.getHostname(),
-			"jmx"
-		);
+	public boolean checkConnection(
+		@SpanAttribute("jmx.config") final JmxConfiguration configuration,
+		final String resourceHostname
+	) throws Exception {
+		if (resourceHostname != null) {
+			return ThreadHelper.execute(
+				() -> runConnectionCheck(configuration),
+				configuration.getTimeout(),
+				resourceHostname,
+				"jmx"
+			);
+		}
+		return ThreadHelper.execute(() -> runConnectionCheck(configuration), configuration.getTimeout());
 	}
 
 	/**

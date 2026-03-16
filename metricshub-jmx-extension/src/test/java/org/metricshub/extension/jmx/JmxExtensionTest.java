@@ -104,7 +104,7 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration().getConfigurations())
 			.thenReturn(Map.of(JmxConfiguration.class, jmxConfiguration));
 
-		when(jmxRequestExecutorMock.checkConnection(jmxConfiguration)).thenReturn(true);
+		when(jmxRequestExecutorMock.checkConnection(any(), any())).thenReturn(true);
 
 		final Optional<Boolean> result = jmxExtension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent(), "Expected Optional<Boolean> with true when config is valid");
@@ -135,7 +135,7 @@ class JmxExtensionTest {
 
 		// Mock behavior: delegate to JmxSourceProcessor, which internally uses our mocked executor
 		final List<List<String>> table = List.of(List.of("value1"));
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList())).thenReturn(table);
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any())).thenReturn(table);
 
 		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("my-host").build();
 		final HostConfiguration hostConfig = mock(HostConfiguration.class);
@@ -167,7 +167,7 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
 
 		// Mock response from fetchBeanInfo
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList()))
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any()))
 			.thenReturn(List.of(List.of("12345")));
 
 		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager, true);
@@ -223,7 +223,7 @@ class JmxExtensionTest {
 		final List<List<String>> rows = List.of(List.of("Key1Val", "Attr1Val", "Attr2Val"));
 
 		// Mock fetchBeanInfo result
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList())).thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any())).thenReturn(rows);
 
 		// Run executeQuery
 		final String table = jmxExtension.executeQuery(config, query);

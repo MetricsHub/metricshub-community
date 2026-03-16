@@ -67,7 +67,7 @@ class SnmpGetSourceProcessorTest {
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
 		doThrow(new InterruptedException("Test exception"))
 			.when(snmpRequestExecutor)
-			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, null);
+			.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, null, "hostname");
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
 		assertEquals(SourceTable.empty(), result);
@@ -80,7 +80,7 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
-		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, null))
+		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, null, "hostname"))
 			.thenReturn("result");
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);

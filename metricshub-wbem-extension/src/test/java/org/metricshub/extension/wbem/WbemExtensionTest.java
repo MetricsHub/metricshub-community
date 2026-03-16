@@ -634,7 +634,7 @@ class WbemExtensionTest {
 
 		doReturn(EXECUTE_WBEM_RESULT)
 			.when(wbemRequestExecutorSpy)
-			.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
+			.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 		final SourceTable actual = wbemExtension.processSource(
 			WbemSource.builder().query(WBEM_TEST_QUERY).namespace(WBEM_TEST_NAMESPACE).build(),
 			CONNECTOR_ID,
@@ -656,7 +656,14 @@ class WbemExtensionTest {
 
 		doThrow(new RuntimeException("exception"))
 			.when(wbemRequestExecutorSpy)
-			.executeWbem(anyString(), eq(configuration), eq(WBEM_TEST_QUERY), eq(WBEM_TEST_NAMESPACE), eq(telemetryManager));
+			.executeWbem(
+				anyString(),
+				eq(configuration),
+				eq(WBEM_TEST_QUERY),
+				eq(WBEM_TEST_NAMESPACE),
+				eq(telemetryManager),
+				any()
+			);
 		final SourceTable actual = wbemExtension.processSource(
 			WbemSource.builder().query(WBEM_TEST_QUERY).build(),
 			CONNECTOR_ID,
@@ -679,7 +686,7 @@ class WbemExtensionTest {
 		{
 			doReturn(null)
 				.when(wbemRequestExecutorSpy)
-				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
+				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 			final SourceTable actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
 				CONNECTOR_ID,
@@ -693,7 +700,7 @@ class WbemExtensionTest {
 		{
 			doReturn(Collections.emptyList())
 				.when(wbemRequestExecutorSpy)
-				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager);
+				.executeWbem(HOST_NAME, configuration, WBEM_TEST_QUERY, WBEM_TEST_NAMESPACE, telemetryManager, HOST_NAME);
 			final SourceTable actual = wbemExtension.processSource(
 				WbemSource.builder().query(WBEM_TEST_QUERY).build(),
 				CONNECTOR_ID,
@@ -727,7 +734,14 @@ class WbemExtensionTest {
 
 		doReturn(EXECUTE_WBEM_RESULT)
 			.when(wbemRequestExecutorSpy)
-			.executeWbem(anyString(), any(WbemConfiguration.class), anyString(), anyString(), any(TelemetryManager.class));
+			.executeWbem(
+				anyString(),
+				any(WbemConfiguration.class),
+				anyString(),
+				anyString(),
+				any(TelemetryManager.class),
+				any()
+			);
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WBEM_TEST_QUERY));
@@ -755,7 +769,14 @@ class WbemExtensionTest {
 
 		doThrow(ClientException.class)
 			.when(wbemRequestExecutorSpy)
-			.executeWbem(anyString(), any(WbemConfiguration.class), anyString(), anyString(), any(TelemetryManager.class));
+			.executeWbem(
+				anyString(),
+				any(WbemConfiguration.class),
+				anyString(),
+				anyString(),
+				any(TelemetryManager.class),
+				any()
+			);
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WBEM_TEST_QUERY));

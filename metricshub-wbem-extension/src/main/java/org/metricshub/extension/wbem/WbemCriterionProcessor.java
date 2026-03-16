@@ -255,7 +255,14 @@ public class WbemCriterionProcessor {
 		for (WqlQuery interopQuery : WBEM_INTEROP_QUERIES) {
 			try {
 				wbemRequestExecutor
-					.executeWbem(hostname, configuration, interopQuery.getWql(), interopQuery.getNamespace(), telemetryManager)
+					.executeWbem(
+						hostname,
+						configuration,
+						interopQuery.getWql(),
+						interopQuery.getNamespace(),
+						telemetryManager,
+						telemetryManager.getHostname()
+					)
 					.stream()
 					.filter(row -> !row.isEmpty())
 					.map(row -> row.get(0))
@@ -333,7 +340,8 @@ public class WbemCriterionProcessor {
 					configuration,
 					criterion.getQuery(),
 					criterion.getNamespace(),
-					telemetryManager
+					telemetryManager,
+					telemetryManager.getHostname()
 				);
 		} catch (ClientException e) {
 			if (logMode) {

@@ -119,7 +119,14 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			result =
 				getRequestExecutor()
-					.executeSNMPGetNext(SNMP_OID, configuration, hostname, true, telemetryManager.getEmulationInputDirectory());
+					.executeSNMPGetNext(
+						SNMP_OID,
+						configuration,
+						hostname,
+						true,
+						telemetryManager.getEmulationInputDirectory(),
+						telemetryManager.getHostname()
+					);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking SNMP protocol status. SNMP exception when performing a SNMP Get Next query on {}: ",
@@ -201,13 +208,13 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			switch (action.toLowerCase()) {
 				case GET:
-					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case GET_NEXT:
-					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case WALK:
-					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case TABLE:
 					final String[] columns = new ObjectMapper().convertValue(queryNode.get("columns"), String[].class);
@@ -217,6 +224,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 						snmpConfiguration,
 						hostname,
 						false,
+						null,
 						null
 					);
 					result = TextTableHelper.generateTextTable(columns, resultList);

@@ -67,7 +67,7 @@ public class SnmpGetCriterionProcessorTest {
 		String expectedResult = "TestValue";
 		String expectedHostname = "hostname";
 
-		when(snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, null))
+		when(snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, null, "hostname"))
 			.thenReturn(expectedResult);
 
 		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion
@@ -123,7 +123,8 @@ public class SnmpGetCriterionProcessorTest {
 				any(ISnmpConfiguration.class),
 				any(String.class),
 				any(Boolean.class),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenThrow(new InterruptedException("Test exception"));
@@ -255,7 +256,8 @@ public class SnmpGetCriterionProcessorTest {
 				any(ISnmpConfiguration.class),
 				any(String.class),
 				any(Boolean.class),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenThrow(new TimeoutException("SNMP request timed out"));
@@ -283,7 +285,8 @@ public class SnmpGetCriterionProcessorTest {
 				any(ISnmpConfiguration.class),
 				any(String.class),
 				any(Boolean.class),
-				isNull()
+				isNull(),
+				any()
 			)
 		)
 			.thenThrow(new RuntimeException("SNMP agent not available"));

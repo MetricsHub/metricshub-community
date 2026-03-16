@@ -67,7 +67,9 @@ public class WbemRequestExecutor {
 	 * @param hostname   Hostname
 	 * @param wbemConfig WBEM Protocol configuration, incl. credentials
 	 * @param query      WQL query to execute
-	 * @param namespace  WBEM namespace
+	 * @param namespace         WBEM namespace
+	 * @param telemetryManager  The telemetry manager providing host properties.
+	 * @param resourceHostname  The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return A table (as a {@link List} of {@link List} of {@link String}s)
 	 * resulting from the execution of the query.
 	 * @throws ClientException when anything goes wrong (details in cause)
@@ -78,11 +80,12 @@ public class WbemRequestExecutor {
 		@NonNull @SpanAttribute("wbem.config") final WbemConfiguration wbemConfig,
 		@NonNull @SpanAttribute("wbem.query") final String query,
 		@NonNull @SpanAttribute("wbem.namespace") final String namespace,
-		@NonNull final TelemetryManager telemetryManager
+		@NonNull final TelemetryManager telemetryManager,
+		final String resourceHostname
 	) throws ClientException {
 		// handle vCenter case
 		if (wbemConfig.getVCenter() != null) {
-			return doVCenterQuery(hostname, wbemConfig, query, namespace, telemetryManager);
+			return doVCenterQuery(hostname, wbemConfig, query, namespace, telemetryManager, resourceHostname);
 		} else {
 			return doWbemQuery(hostname, wbemConfig, query, namespace);
 		}
@@ -92,10 +95,12 @@ public class WbemRequestExecutor {
 	 * Perform a WBEM query using vCenter ticket authentication.
 	 * <br>
 	 *
-	 * @param hostname   Hostname
-	 * @param wbemConfig WBEM Protocol configuration, incl. credentials
-	 * @param query      WQL query to execute
-	 * @param namespace  WBEM namespace
+	 * @param hostname         Hostname
+	 * @param wbemConfig       WBEM Protocol configuration, incl. credentials
+	 * @param query            WQL query to execute
+	 * @param namespace        WBEM namespace
+	 * @param telemetryManager The telemetry manager providing host properties.
+	 * @param resourceHostname The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return A table (as a {@link List} of {@link List} of {@link String}s)
 	 * resulting from the execution of the query.
 	 * @throws ClientException when anything goes wrong (details in cause)
@@ -105,7 +110,8 @@ public class WbemRequestExecutor {
 		@NonNull final WbemConfiguration wbemConfig,
 		@NonNull final String query,
 		@NonNull final String namespace,
-		@NonNull final TelemetryManager telemetryManager
+		@NonNull final TelemetryManager telemetryManager,
+		final String resourceHostname
 	) throws ClientException {
 		String ticket = telemetryManager.getHostProperties().getVCenterTicket();
 
@@ -116,7 +122,8 @@ public class WbemRequestExecutor {
 					wbemConfig.getUsername(),
 					wbemConfig.getPassword(),
 					hostname,
-					wbemConfig.getTimeout()
+					wbemConfig.getTimeout(),
+					resourceHostname
 				);
 		}
 
@@ -140,7 +147,8 @@ public class WbemRequestExecutor {
 						wbemConfig.getUsername(),
 						wbemConfig.getPassword(),
 						hostname,
-						wbemConfig.getTimeout()
+						wbemConfig.getTimeout(),
+						resourceHostname
 					);
 				vCenterWbemConfig.setUsername(ticket);
 				vCenterWbemConfig.setPassword(ticket.toCharArray());
@@ -160,8 +168,9 @@ public class WbemRequestExecutor {
 	 * @param vCenter  vCenter server FQDN or IP
 	 * @param username Username
 	 * @param password Password
-	 * @param hostname Hostname
-	 * @param timeout  Timeout
+	 * @param hostname         Hostname
+	 * @param timeout          Timeout
+	 * @param resourceHostname The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return A ticket String
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -170,16 +179,22 @@ public class WbemRequestExecutor {
 		@NonNull String username,
 		@NonNull char[] password,
 		@NonNull String hostname,
-		@NonNull Long timeout
+		@NonNull Long timeout,
+		final String resourceHostname
 	) throws ClientException {
 		VCenterClient.setDebug(() -> true, log::debug);
 		try {
-			String ticket = ThreadHelper.execute(
-				() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-				timeout,
-				hostname,
-				"wbem"
-			);
+			String ticket = resourceHostname != null
+				? ThreadHelper.execute(
+					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+					timeout,
+					resourceHostname,
+					"wbem"
+				)
+				: ThreadHelper.execute(
+					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+					timeout
+				);
 			if (ticket == null) {
 				throw new ClientException("Cannot get the ticket through vCenter module");
 			}

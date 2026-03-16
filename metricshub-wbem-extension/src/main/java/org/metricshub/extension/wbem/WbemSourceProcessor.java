@@ -108,7 +108,8 @@ public class WbemSourceProcessor {
 				wbemConfiguration,
 				wbemSource.getQuery(),
 				namespace,
-				telemetryManager
+				telemetryManager,
+				telemetryManager.getHostname()
 			);
 
 			return SourceTable.builder().table(table).build();
