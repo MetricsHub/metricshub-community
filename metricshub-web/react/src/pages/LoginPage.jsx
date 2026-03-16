@@ -151,7 +151,9 @@ const LoginPage = () => {
 		authApi
 			.getAgentHostname()
 			.then(setAgentHostname)
-			.catch(() => {});
+			.catch((error) => {
+				console.error("Failed to load agent hostname", error);
+			});
 	}, []);
 
 	const formik = useFormik({
