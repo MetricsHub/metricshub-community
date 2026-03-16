@@ -79,6 +79,12 @@ const backgroundStyles = `
   opacity: 0.5;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  #login-background .signal-path {
+    animation: none;
+  }
+}
+
 #login-background .signal-red { stroke: #E50031; }
 #login-background .signal-yellow { stroke: #E50031; }
 #login-background .signal-green { stroke: #45CE52; }
