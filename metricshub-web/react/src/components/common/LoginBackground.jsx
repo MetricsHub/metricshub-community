@@ -85,11 +85,11 @@ const backgroundStyles = `
   }
 }
 
-#login-background .signal-red { stroke: #E50031; }
-#login-background .signal-yellow { stroke: #E50031; }
+#login-background .signal1-red { stroke: #E50031; }
+#login-background .signal2-red { stroke: #E50031; }
 #login-background .signal-green { stroke: #45CE52; }
-#login-background .signal-blue { stroke: #2684FF; }
-#login-background .signal-white { stroke: #2684FF; }
+#login-background .signal1-blue { stroke: #2684FF; }
+#login-background .signal2-blue { stroke: #2684FF; }
 
 #login-background .runner.d1 { animation-delay: 0s; }
 #login-background .runner.d2 { animation-delay: 4.6s; }
