@@ -11,7 +11,7 @@ export const buildComponents = ({ palette }) => {
 		MuiLink: {
 			styleOverrides: {
 				root: {
-					color: palette.primary.dark,
+					color: palette.primary.main,
 				},
 			},
 		},

@@ -239,8 +239,8 @@ const LoginPage = () => {
 						aria-label="Getting Started (opens in a new tab)"
 						sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, width: "fit-content" }}
 					>
-						<MenuBookOutlinedIcon fontSize="small" sx={{ mb: 0.5 }} />
-						Getting Started
+						<MenuBookOutlinedIcon fontSize="small" sx={{ mb: 0.4 }} />
+						<Typography variant="body1">Getting Started</Typography>
 					</Link>
 				</Stack>
 			</Box>
