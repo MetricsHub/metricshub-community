@@ -103,15 +103,6 @@ public class AgentInfo {
 	private Map<String, String> attributes = new HashMap<>();
 
 	/**
-	 * Returns the hostname of the agent.
-	 *
-	 * @return the agent hostname (FQDN), or "unknown" if it could not be determined
-	 */
-	public static String getAgentHostname() {
-		return AGENT_HOSTNAME;
-	}
-
-	/**
 	 * Creates an instance of AgentInfo, initializing metric and resource attributes
 	 * based on internal application configuration.
 	 */
