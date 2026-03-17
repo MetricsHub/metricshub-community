@@ -58,21 +58,6 @@ class AuthApi {
 				.catch((error) => reject(error));
 		});
 	}
-
-	/**
-	 * Get the hostname of the agent
-	 * @returns {Promise<string>} the agent hostname
-	 */
-	getAgentHostname() {
-		return new Promise((resolve, reject) => {
-			httpRequest({
-				url: "/auth/agent-hostname",
-				method: "GET",
-			})
-				.then(({ data }) => resolve(data.hostname))
-				.catch((error) => reject(error));
-		});
-	}
 }
 
 // Export a singleton instance of AuthApi

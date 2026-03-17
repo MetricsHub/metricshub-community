@@ -22,8 +22,6 @@ package org.metricshub.web.controller;
  */
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Map;
-import org.metricshub.agent.context.AgentInfo;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.web.security.SecurityHelper;
 import org.metricshub.web.security.jwt.JwtAuthToken;
@@ -37,7 +35,6 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -156,15 +153,5 @@ public class AuthenticationController {
 		final JwtAuthToken authentication = userService.refreshSecurity(request);
 
 		return buildAuthResponse(authentication);
-	}
-
-	/**
-	 * Returns the hostname of the agent. This endpoint is public and does not require authentication.
-	 *
-	 * @return a ResponseEntity containing the agent hostname
-	 */
-	@GetMapping("/agent-hostname")
-	public ResponseEntity<Map<String, String>> getAgentHostname() {
-		return ResponseEntity.ok(Map.of("hostname", AgentInfo.getAgentHostname()));
 	}
 }

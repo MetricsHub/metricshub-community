@@ -19,7 +19,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { paths } from "../paths";
 import * as Yup from "yup";
 import { useFormik } from "formik";
-import { authApi } from "../api/auth";
 import LoginBackground from "../components/common/LoginBackground";
 import logoDark from "../assets/logo-dark.svg";
 import logoLight from "../assets/logo-light.svg";
@@ -31,7 +30,7 @@ import logoLight from "../assets/logo-light.svg";
  * @returns {JSX.Element} The AuthLayout component.
  */
 const AuthLayoutComponent = (props) => {
-	const { children, agentHostname } = props;
+	const { children, host } = props;
 	const theme = useTheme();
 	const logo = theme.palette.mode === "dark" ? logoDark : logoLight;
 
@@ -79,11 +78,11 @@ const AuthLayoutComponent = (props) => {
 								<Typography variant="h5" component="h1" fontWeight={600}>
 									Connect to MetricsHub
 								</Typography>
-								{agentHostname && (
+								{host && (
 									<Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
 										On{" "}
 										<Box component="span" sx={{ fontWeight: 600 }}>
-											{agentHostname}
+											{host}
 										</Box>
 									</Typography>
 								)}
@@ -145,16 +144,7 @@ const LoginPage = () => {
 	const { signIn } = useAuth();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
-	const [agentHostname, setAgentHostname] = React.useState("");
-
-	React.useEffect(() => {
-		authApi
-			.getAgentHostname()
-			.then(setAgentHostname)
-			.catch((error) => {
-				console.error("Failed to load agent hostname", error);
-			});
-	}, []);
+	const host = window.location.host;
 
 	const formik = useFormik({
 		initialValues,
@@ -183,7 +173,7 @@ const LoginPage = () => {
 	});
 
 	return (
-		<AuthLayout agentHostname={agentHostname}>
+		<AuthLayout host={host}>
 			<Box
 				component="form"
 				onSubmit={formik.handleSubmit}
