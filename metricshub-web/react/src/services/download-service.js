@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { configApi } from "../api/config";
+import { otelConfigApi } from "../api/config/otel-config-api";
 import { isBackupFileName } from "../utils/backup-names";
 
 /**
@@ -48,4 +49,49 @@ export async function downloadAllConfigs(list = []) {
 	const blob = await zip.generateAsync({ type: "blob" });
 	const now = new Date().toISOString().replace(/[:.]/g, "-");
 	saveAs(blob, `configs-${now}.zip`);
+}
+
+/**
+ * Download an OTEL config file by name.
+ * @param {{name:string, suggestedName?:string, content?:string}} args
+ */
+export async function downloadOtelConfigFile({ name, suggestedName, content }) {
+	let data = content;
+	if (typeof data !== "string") {
+		if (isBackupFileName(name)) {
+			data = await otelConfigApi.getBackupFileContent(name);
+		} else {
+			data = await otelConfigApi.getContent(name);
+		}
+	}
+	const fileName = suggestedName || name || "otel-config.yaml";
+	const blob = new Blob([data ?? ""], { type: "text/yaml;charset=utf-8" });
+	saveAs(blob, fileName);
+}
+
+/**
+ * Download all OTEL config files (excluding backups) as a zip.
+ * @param {Array<{name:string}>} list Redux otelConfig.list
+ */
+export async function downloadAllOtelConfigs(list = []) {
+	const originals = list.filter((f) => !isBackupFileName(f?.name || ""));
+
+	if (originals.length === 0) {
+		alert("No OTEL configuration files to download.");
+		return;
+	}
+
+	const zip = new JSZip();
+	for (const f of originals) {
+		try {
+			const content = await otelConfigApi.getContent(f.name);
+			zip.file(f.name, content ?? "");
+		} catch (e) {
+			console.warn(`Skipping ${f.name}: ${e.message}`);
+		}
+	}
+
+	const blob = await zip.generateAsync({ type: "blob" });
+	const now = new Date().toISOString().replace(/[:.]/g, "-");
+	saveAs(blob, `otel-configs-${now}.zip`);
 }
