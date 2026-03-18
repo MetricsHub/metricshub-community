@@ -65,7 +65,7 @@ import ConfigEditorContainer from "../components/config/editor/ConfigEditorConta
 import VelocityTestResultPanel from "../components/config/editor/VelocityTestResultPanel";
 import OtelEditorHeader from "../components/otel/OtelEditorHeader";
 import OtelConfigEditorContainer from "../components/otel/editor/OtelConfigEditorContainer";
-import OtelCollectorToolbar from "../components/otel/OtelCollectorToolbar";
+
 import OtelCollectorLogPanel from "../components/otel/OtelCollectorLogPanel";
 import UnifiedConfigTree from "../components/config/tree/UnifiedConfigTree";
 import QuestionDialog from "../components/common/QuestionDialog";
@@ -599,21 +599,16 @@ function ConfigurationPage() {
 									borderColor: "divider",
 								}}
 							>
-								<Stack spacing={1}>
-									<OtelEditorHeader
-										selected={otelSelected}
-										saving={otelSaving}
-										onSave={() => otelEditorRef.current?.save?.()}
-										onApply={() => otelEditorRef.current?.apply?.()}
-										isReadOnly={isReadOnly}
-									/>
-									<OtelCollectorToolbar
-										isReadOnly={isReadOnly}
-										logsOpen={otelLogsOpen}
-										onToggleLogs={() => setOtelLogsOpen((prev) => !prev)}
-										onOpenLogs={otelLogs.fetchLogs}
-									/>
-								</Stack>
+								<OtelEditorHeader
+									selected={otelSelected}
+									saving={otelSaving}
+									onSave={() => otelEditorRef.current?.save?.()}
+									onApply={() => otelEditorRef.current?.apply?.()}
+									isReadOnly={isReadOnly}
+									logsOpen={otelLogsOpen}
+									onToggleLogs={() => setOtelLogsOpen((prev) => !prev)}
+									onOpenLogs={otelLogs.fetchLogs}
+								/>
 							</Box>
 						)}
 						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "row" }}>

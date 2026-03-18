@@ -1,14 +1,20 @@
+import * as React from "react";
 import { Stack, Typography, Button, Box, Chip } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import DoneAllIcon from "@mui/icons-material/DoneAll";
+import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backup-names";
 import { getFileType } from "../../utils/file-type-utils";
 import FileTypeIcon from "../config/tree/icons/FileTypeIcons";
+import { otelCollectorApi } from "../../api/config/otel-collector-api";
+import { useSnackbar } from "../../hooks/use-snackbar";
 
 /**
- * Editor header for OTEL configuration: file name, save/apply, no Velocity/Test.
+ * Editor header for OTEL configuration: file name, save/apply, restart collector, toggle logs.
  */
 export default function OtelEditorHeader({
 	selected,
@@ -16,7 +22,12 @@ export default function OtelEditorHeader({
 	onSave,
 	onApply,
 	isReadOnly = false,
+	logsOpen = false,
+	onToggleLogs,
+	onOpenLogs,
 }) {
+	const { show: showSnackbar } = useSnackbar();
+	const [restarting, setRestarting] = React.useState(false);
 	const dirtyByName = useAppSelector((s) => s.otelConfig.dirtyByName) ?? {};
 	const filesByName = useAppSelector((s) => s.otelConfig.filesByName) ?? {};
 	const isDirty = !!dirtyByName?.[selected];
@@ -29,6 +40,24 @@ export default function OtelEditorHeader({
 	const displayName = isDraft
 		? selected.replace(/\.draft$/, "")
 		: (selected ?? "Select a file to edit");
+
+	const handleRestart = React.useCallback(async () => {
+		if (isReadOnly) return;
+		setRestarting(true);
+		try {
+			await otelCollectorApi.restart();
+			showSnackbar("OpenTelemetry Collector restarted successfully", { severity: "success" });
+		} catch (e) {
+			showSnackbar(e?.message || "Restart failed", { severity: "error" });
+		} finally {
+			setRestarting(false);
+		}
+	}, [isReadOnly, showSnackbar]);
+
+	const handleToggleLogs = React.useCallback(() => {
+		if (!logsOpen && onOpenLogs) onOpenLogs();
+		onToggleLogs?.();
+	}, [logsOpen, onToggleLogs, onOpenLogs]);
 
 	const nonPosErrors = !Array.isArray(fileValidation?.errors)
 		? []
@@ -115,6 +144,27 @@ export default function OtelEditorHeader({
 					>
 						{saving ? "Saving..." : "Save"}
 					</Button>
+					<Button
+						size="small"
+						variant="outlined"
+						color="inherit"
+						startIcon={<RestartAltIcon />}
+						onClick={handleRestart}
+						disabled={isReadOnly || restarting}
+					>
+						{restarting ? "Restarting\u2026" : "Restart OTEL Collector"}
+					</Button>
+					{onToggleLogs && (
+						<Button
+							size="small"
+							variant="outlined"
+							color="inherit"
+							startIcon={logsOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+							onClick={handleToggleLogs}
+						>
+							{logsOpen ? "Hide logs" : "View logs"}
+						</Button>
+					)}
 				</Stack>
 			</Stack>
 			{nonPosErrors.length > 0 && (
