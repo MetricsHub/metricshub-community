@@ -456,7 +456,7 @@ function ConfigurationPage() {
 							handleCreateOtel();
 						}}
 					>
-						New OTEL config
+						New Otel config
 					</MenuItem>
 				</Menu>
 				<Button

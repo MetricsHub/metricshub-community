@@ -51,7 +51,7 @@ const FolderLabel = React.memo(function FolderLabel({ name, onMenuClick }) {
 });
 
 /**
- * Unified configuration tree with two roots: "config" (monitoring) and "otel" (OTEL collector).
+ * Unified configuration tree with two roots: "config" (monitoring) and "otel" (Otel collector).
  * Selection uses prefixed ids: "config:fileName" and "otel:fileName".
  */
 export default function UnifiedConfigTree({
@@ -147,7 +147,7 @@ export default function UnifiedConfigTree({
 		try {
 			await dispatch(createOtelConfigBackup({ kind: "all" })).unwrap();
 		} catch (e) {
-			console.error("OTEL backup all failed:", e);
+			console.error("Otel backup all failed:", e);
 		}
 	}, [dispatch, isReadOnly]);
 

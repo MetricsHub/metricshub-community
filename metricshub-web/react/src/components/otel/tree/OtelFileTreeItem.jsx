@@ -93,7 +93,7 @@ export default function OtelFileTreeItem({
 			return;
 		}
 		if (!/\.(yaml|yml)(\.draft)?$/i.test(next)) {
-			showSnackbar("OTEL config files must have .yaml or .yml extension (optionally .draft).", {
+			showSnackbar("Otel config files must have .yaml or .yml extension (optionally .draft).", {
 				severity: "error",
 			});
 			setDraft(file.name);

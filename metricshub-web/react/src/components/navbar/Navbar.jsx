@@ -67,7 +67,7 @@ const NavBar = ({ onToggleTheme }) => {
 	const dispatch = useAppDispatch();
 	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
 
-	// Config + OTEL dirty/error status for navbar dot indicator
+	// Config + Otel dirty/error status for navbar dot indicator
 	const configDirty = useAppSelector((s) => s.config?.dirtyByName) || {};
 	const configFiles = useAppSelector((s) => s.config?.filesByName) || {};
 	const otelDirty = useAppSelector((s) => s.otelConfig?.dirtyByName) || {};
