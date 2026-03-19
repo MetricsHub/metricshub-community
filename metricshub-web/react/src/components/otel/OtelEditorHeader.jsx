@@ -14,7 +14,7 @@ import { otelCollectorApi } from "../../api/config/otel-collector-api";
 import { useSnackbar } from "../../hooks/use-snackbar";
 
 /**
- * Editor header for Otel configuration: file name, save/apply, restart collector, toggle logs.
+ * Editor header for OTel configuration: file name, save/apply, restart collector, toggle logs.
  */
 export default function OtelEditorHeader({
 	selected,
@@ -152,7 +152,7 @@ export default function OtelEditorHeader({
 						onClick={handleRestart}
 						disabled={isReadOnly || restarting}
 					>
-						{restarting ? "Restarting\u2026" : "Restart Otel Collector"}
+						{restarting ? "Restarting\u2026" : "Restart OTel Collector"}
 					</Button>
 					{onToggleLogs && (
 						<Button

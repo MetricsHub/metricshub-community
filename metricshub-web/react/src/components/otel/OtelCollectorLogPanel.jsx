@@ -20,7 +20,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 const TAIL_OPTIONS = [100, 200, 500, 1000];
 
 /**
- * Otel Collector log panel with the same visual format as the Agent page Log Files viewer:
+ * OTel Collector log panel with the same visual format as the Agent page Log Files viewer:
  * Card with header (icon, title, "Last N lines" chip, refresh) and dark monospace log content.
  */
 export default function OtelCollectorLogPanel({
@@ -68,7 +68,7 @@ export default function OtelCollectorLogPanel({
 						<Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
 							<DescriptionIcon fontSize="small" color="action" />
 							<Typography variant="body2" fontWeight="medium">
-								Otel Collector log
+								OTel Collector log
 							</Typography>
 							<Chip
 								label={`Last ${tailLines} lines`}
