@@ -16,7 +16,7 @@ import { Typography } from "@mui/material";
 import { useAuth } from "../../../hooks/use-auth";
 
 /**
- * Container for Otel configuration editor. Uses otelConfig slice and Otel thunks.
+ * Container for OTel configuration editor. Uses otelConfig slice and OTel thunks.
  * No Velocity; exposes ref.save and ref.apply.
  */
 function OtelConfigEditorContainer(props) {
