@@ -27,7 +27,6 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChatIcon from "@mui/icons-material/Chat";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
