@@ -150,7 +150,7 @@ jobs:
         echo "Packaging Image: ${buildImage}"
 
     - name: Prepare Debian Packaging with Docker
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.debian
@@ -164,7 +164,7 @@ jobs:
         SOURCE_DATE_EPOCH: 0
   
     - name: Prepare RHEL Packaging with Docker
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.rhel
@@ -178,7 +178,7 @@ jobs:
         SOURCE_DATE_EPOCH: 0
 
     - name: Create Linux Packages
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.build
@@ -267,7 +267,7 @@ jobs:
         path: packages/*
 
     - name: Create Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile
