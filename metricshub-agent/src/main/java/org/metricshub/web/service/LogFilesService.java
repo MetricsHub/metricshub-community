@@ -304,10 +304,10 @@ public class LogFilesService {
 	 * Returns the logs directory path.
 	 *
 	 * @return the logs directory path
-	 * @throws LogFilesException if the path is invalid or if the logs directory is unavailable
+	 * @throws LogFilesException if the configured path is invalid or if the logs directory is unavailable
 	 */
 	private Path getLogsDir() throws LogFilesException {
-		final var agentContext = agentContextHolder != null ? agentContextHolder.getAgentContext() : null;
+		final var agentContext = agentContextHolder.getAgentContext();
 		final var agentConfig = agentContext != null ? agentContext.getAgentConfig() : null;
 		final String outputDir = agentConfig != null ? agentConfig.getOutputDirectory() : null;
 
@@ -316,21 +316,18 @@ public class LogFilesService {
 			logsDir =
 				outputDir != null && !outputDir.isBlank() ? Path.of(outputDir) : ConfigHelper.getDefaultOutputDirectory();
 		} catch (InvalidPathException e) {
-			throw logsDirUnavailable();
+			LogFilesException ex = new LogFilesException(
+				LogFilesException.Code.LOGS_DIR_UNAVAILABLE,
+				"Configured outputDirectory is invalid."
+			);
+			ex.initCause(e);
+			throw ex;
 		}
 
 		if (logsDir == null || !Files.isDirectory(logsDir)) {
-			throw logsDirUnavailable();
+			throw new LogFilesException(LogFilesException.Code.LOGS_DIR_UNAVAILABLE, "Logs directory is not available.");
 		}
-		return logsDir;
-	}
 
-	/**
-	 * Creates an exception indicating that the logs directory is unavailable.
-	 *
-	 * @return a {@link LogFilesException} with the {@code LOGS_DIR_UNAVAILABLE} code
-	 */
-	private LogFilesException logsDirUnavailable() {
-		return new LogFilesException(LogFilesException.Code.LOGS_DIR_UNAVAILABLE, "Logs directory is not available.");
+		return logsDir;
 	}
 }

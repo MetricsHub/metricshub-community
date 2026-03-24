@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -199,5 +200,42 @@ class LogFilesServiceTest {
 			assertEquals(1, files.size(), "Should use default output directory when custom outputDirectory is null");
 			assertEquals("fallback.log", files.get(0).getName(), "The log file should be read from the default directory");
 		}
+	}
+
+	@Test
+	void testFallbackToDefaultOutputDirWhenBlank() throws Exception {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn("   ");
+
+		final Path file = tempLogsDir.resolve("fallback.log");
+		Files.writeString(file, "fallback log", StandardCharsets.UTF_8);
+
+		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
+			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(tempLogsDir);
+
+			final LogFilesService service = new LogFilesService(holder);
+			final List<LogFile> files = service.getAllLogFiles();
+
+			assertEquals(1, files.size(), "Should use default output directory when custom outputDirectory is blank");
+			assertEquals("fallback.log", files.get(0).getName(), "The log file should be read from the default directory");
+		}
+	}
+
+	@Test
+	void testInvalidOutputDirThrowsLogFilesException() {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn("\0invalid");
+
+		final LogFilesService service = new LogFilesService(holder);
+
+		final LogFilesException exception = assertThrows(
+			LogFilesException.class,
+			service::getAllLogFiles,
+			"Should throw when outputDirectory path is invalid"
+		);
+
+		assertEquals(LogFilesException.Code.LOGS_DIR_UNAVAILABLE, exception.getCode());
+		assertEquals("Configured outputDirectory is invalid.", exception.getMessage());
+		assertTrue(exception.getCause() instanceof InvalidPathException);
 	}
 }
