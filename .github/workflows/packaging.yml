@@ -82,13 +82,13 @@ jobs:
       uses: actions/checkout@v6
 
     - name: Download Assets
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
 
     - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -96,7 +96,7 @@ jobs:
 
     - name: Login to Docker Hub
       if: ${{ inputs.deployDockerHub }}
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: docker.io
         username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -106,7 +106,7 @@ jobs:
       # Add support for more platforms with QEMU (optional)
       # https://github.com/docker/setup-qemu-action
       name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      uses: docker/setup-qemu-action@v4
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -150,7 +150,7 @@ jobs:
         echo "Packaging Image: ${buildImage}"
 
     - name: Prepare Debian Packaging with Docker
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.debian
@@ -164,7 +164,7 @@ jobs:
         SOURCE_DATE_EPOCH: 0
   
     - name: Prepare RHEL Packaging with Docker
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.rhel
@@ -178,7 +178,7 @@ jobs:
         SOURCE_DATE_EPOCH: 0
 
     - name: Create Linux Packages
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile.build
@@ -261,13 +261,13 @@ jobs:
         REPO_NAME: ${{ inputs.rpmRepository }}
 
     - name: Upload Linux Packages
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: linux-packages
         path: packages/*
 
     - name: Create Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v7
       with:
         context: packaging-assets/
         file: packaging-assets/Dockerfile
@@ -336,7 +336,7 @@ jobs:
         echo "token=${token}" >> $GITHUB_OUTPUT
 
     - name: Download Assets
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: ${{ inputs.assetPackage }}
         path: packaging-assets
@@ -415,7 +415,7 @@ jobs:
             Write-Warning "packages\MetricsHub directory not found"
           }
     - name: Upload Windows Packages
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: windows-packages
         path: packages/metricshub-community-*
