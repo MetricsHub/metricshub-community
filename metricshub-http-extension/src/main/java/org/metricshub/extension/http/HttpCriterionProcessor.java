@@ -115,7 +115,7 @@ public class HttpCriterionProcessor {
 					.resultContent(httpCriterion.getResultContent())
 					.authenticationToken(httpCriterion.getAuthenticationToken())
 					.build(),
-				false,
+				logMode,
 				telemetryManager
 			);
 
