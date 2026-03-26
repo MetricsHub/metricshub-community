@@ -146,7 +146,7 @@ public class DetectionStrategy extends AbstractStrategy {
 					clientsExecutor,
 					stagedConnectorIdentifiers.getForcedConnectorIds(),
 					extensionManager,
-					true
+					false
 				)
 					.run()
 			);
