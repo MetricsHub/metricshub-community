@@ -109,7 +109,7 @@ jobs:
       uses: docker/setup-qemu-action@v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
       with:
         install: true
 
@@ -322,7 +322,7 @@ jobs:
         github.repository_owner == 'MetricsHub' &&
         github.actor != 'dependabot[bot]' &&
         (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         creds: ${{ secrets.AZURE_CREDENTIALS }}
 
