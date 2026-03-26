@@ -329,7 +329,7 @@ class HttpExtensionTest {
 			httpCriterion,
 			CONNECTOR_ID,
 			telemetryManager,
-			true
+			false
 		);
 
 		assertEquals(result, criterionTestResult.getResult());
@@ -369,7 +369,7 @@ class HttpExtensionTest {
 				.resultContent(httpCriterion.getResultContent())
 				.authenticationToken(httpCriterion.getAuthenticationToken())
 				.build();
-			doReturn(RESULT).when(httpRequestExecutorMock).executeHttp(httpRequest, false, telemetryManager);
+			doReturn(RESULT).when(httpRequestExecutorMock).executeHttp(httpRequest, true, telemetryManager);
 
 			final String message = String.format("Hostname %s - HTTP test succeeded. Returned result: result.", HOST_NAME);
 			final CriterionTestResult criterionTestResult = httpExtension.processCriterion(
@@ -419,7 +419,7 @@ class HttpExtensionTest {
 				httpCriterion,
 				CONNECTOR_ID,
 				telemetryManager,
-				true
+				false
 			);
 
 			assertEquals(RESULT, criterionTestResult.getResult());
