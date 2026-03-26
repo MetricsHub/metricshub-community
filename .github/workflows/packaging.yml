@@ -320,6 +320,7 @@ jobs:
     - name: Login to Azure
       if: >-
         github.repository_owner == 'MetricsHub' &&
+        github.actor != 'dependabot[bot]' &&
         (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       uses: azure/login@v2
       with:
@@ -328,6 +329,7 @@ jobs:
     - name: Get Access to Azure Key Vault (Access Token)
       if: >-
         github.repository_owner == 'MetricsHub' &&
+        github.actor != 'dependabot[bot]' &&
         (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       shell: bash
       id: get_access_token
@@ -390,6 +392,7 @@ jobs:
     - name: Sign Installer
       if: >-
         github.repository_owner == 'MetricsHub' &&
+        github.actor != 'dependabot[bot]' &&
         (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
       shell: cmd
       run: |
