@@ -9,11 +9,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.LogFile;
 import org.metricshub.web.exception.LogFilesException;
 import org.mockito.MockedStatic;
@@ -25,59 +27,21 @@ class LogFilesServiceTest {
 	Path tempLogsDir;
 
 	/**
-	 * Create a LogFilesService with a mocked ConfigHelper that returns the given
-	 * logs dir.
+	 * Create a LogFilesService with the given logs directory configured in the agent context.
 	 *
-	 * @param dir the logs dir to return from the mocked ConfigHelper
+	 * @param dir the logs directory returned by the mocked agent config
 	 * @return the service instance
 	 */
-	private LogFilesService newServiceWithDir(Path dir) {
-		return new LogFilesService() {
-			@Override
-			public List<LogFile> getAllLogFiles() throws LogFilesException {
-				return getAllLogFilesWithMockedDir(dir);
-			}
-
-			@Override
-			public String getFileTail(final String fileName, final long maxBytes) throws LogFilesException {
-				return getFileTailWithMockedDir(dir, fileName, maxBytes);
-			}
-
-			@Override
-			public InputStream getFileForDownload(final String fileName) throws LogFilesException {
-				return getFileForDownloadWithMockedDir(dir, fileName);
-			}
-		};
+	private LogFilesService newServiceWithDir(final Path dir) {
+		return new LogFilesService(mockAgentContextHolder(dir));
 	}
 
-	/**
-	 * Helper method to get all log files using a mocked directory.
-	 */
-	private List<LogFile> getAllLogFilesWithMockedDir(Path dir) throws LogFilesException {
-		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
-			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(dir);
-			return new LogFilesService().getAllLogFiles();
-		}
-	}
+	private AgentContextHolder mockAgentContextHolder(final Path dir) {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
 
-	/**
-	 * Helper method to get file tail using a mocked directory.
-	 */
-	private String getFileTailWithMockedDir(Path dir, String fileName, long maxBytes) throws LogFilesException {
-		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
-			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(dir);
-			return new LogFilesService().getFileTail(fileName, maxBytes);
-		}
-	}
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn(dir.toString());
 
-	/**
-	 * Helper method to get file for download using a mocked directory.
-	 */
-	private InputStream getFileForDownloadWithMockedDir(Path dir, String fileName) throws LogFilesException {
-		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
-			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(dir);
-			return new LogFilesService().getFileForDownload(fileName);
-		}
+		return holder;
 	}
 
 	@Test
@@ -217,5 +181,61 @@ class LogFilesServiceTest {
 
 		String content = service.getFileTail("empty.log", 1024);
 		assertEquals("", content, "Empty file should return empty string");
+	}
+
+	@Test
+	void testFallbackToDefaultOutputDir() throws Exception {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn(null);
+
+		final Path file = tempLogsDir.resolve("fallback.log");
+		Files.writeString(file, "fallback log", StandardCharsets.UTF_8);
+
+		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
+			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(tempLogsDir);
+
+			final LogFilesService service = new LogFilesService(holder);
+			final List<LogFile> files = service.getAllLogFiles();
+
+			assertEquals(1, files.size(), "Should use default output directory when custom outputDirectory is null");
+			assertEquals("fallback.log", files.get(0).getName(), "The log file should be read from the default directory");
+		}
+	}
+
+	@Test
+	void testFallbackToDefaultOutputDirWhenBlank() throws Exception {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn("   ");
+
+		final Path file = tempLogsDir.resolve("fallback.log");
+		Files.writeString(file, "fallback log", StandardCharsets.UTF_8);
+
+		try (MockedStatic<ConfigHelper> mockedConfigHelper = Mockito.mockStatic(ConfigHelper.class)) {
+			mockedConfigHelper.when(ConfigHelper::getDefaultOutputDirectory).thenReturn(tempLogsDir);
+
+			final LogFilesService service = new LogFilesService(holder);
+			final List<LogFile> files = service.getAllLogFiles();
+
+			assertEquals(1, files.size(), "Should use default output directory when custom outputDirectory is blank");
+			assertEquals("fallback.log", files.get(0).getName(), "The log file should be read from the default directory");
+		}
+	}
+
+	@Test
+	void testInvalidOutputDirThrowsLogFilesException() {
+		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class, Mockito.RETURNS_DEEP_STUBS);
+		Mockito.when(holder.getAgentContext().getAgentConfig().getOutputDirectory()).thenReturn("\0invalid");
+
+		final LogFilesService service = new LogFilesService(holder);
+
+		final LogFilesException exception = assertThrows(
+			LogFilesException.class,
+			service::getAllLogFiles,
+			"Should throw when outputDirectory path is invalid"
+		);
+
+		assertEquals(LogFilesException.Code.LOGS_DIR_UNAVAILABLE, exception.getCode());
+		assertEquals("Configured outputDirectory is invalid.", exception.getMessage());
+		assertTrue(exception.getCause() instanceof InvalidPathException);
 	}
 }

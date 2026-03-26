@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
@@ -35,6 +36,7 @@ import java.util.Set;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.LogFile;
 import org.metricshub.web.exception.LogFilesException;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,12 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 public class LogFilesService {
+
+	private final AgentContextHolder agentContextHolder;
+
+	public LogFilesService(final AgentContextHolder agentContextHolder) {
+		this.agentContextHolder = agentContextHolder;
+	}
 
 	/**
 	 * Default maximum bytes to read from the tail of a log file (1 MB).
@@ -293,16 +301,33 @@ public class LogFilesService {
 	}
 
 	/**
-	 * Ensures the logs directory is available.
+	 * Returns the logs directory path.
 	 *
-	 * @return logs directory path
-	 * @throws LogFilesException if the directory is not available
+	 * @return the logs directory path
+	 * @throws LogFilesException if the configured path is invalid or if the logs directory is unavailable
 	 */
 	private Path getLogsDir() throws LogFilesException {
-		final Path logsDir = ConfigHelper.getDefaultOutputDirectory();
-		if (logsDir == null || !Files.exists(logsDir)) {
+		final var agentContext = agentContextHolder.getAgentContext();
+		final var agentConfig = agentContext != null ? agentContext.getAgentConfig() : null;
+		final String outputDir = agentConfig != null ? agentConfig.getOutputDirectory() : null;
+
+		final Path logsDir;
+		try {
+			logsDir =
+				outputDir != null && !outputDir.isBlank() ? Path.of(outputDir) : ConfigHelper.getDefaultOutputDirectory();
+		} catch (InvalidPathException e) {
+			LogFilesException ex = new LogFilesException(
+				LogFilesException.Code.LOGS_DIR_UNAVAILABLE,
+				"Configured outputDirectory is invalid."
+			);
+			ex.initCause(e);
+			throw ex;
+		}
+
+		if (logsDir == null || !Files.isDirectory(logsDir)) {
 			throw new LogFilesException(LogFilesException.Code.LOGS_DIR_UNAVAILABLE, "Logs directory is not available.");
 		}
+
 		return logsDir;
 	}
 }

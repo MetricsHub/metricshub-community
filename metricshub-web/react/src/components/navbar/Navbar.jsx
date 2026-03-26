@@ -27,7 +27,6 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
 import ChatIcon from "@mui/icons-material/Chat";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
@@ -67,17 +66,21 @@ const NavBar = ({ onToggleTheme }) => {
 	const dispatch = useAppDispatch();
 	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
 
-	// Config dirty/error status for navbar dot indicator
-	const dirtyByName = useAppSelector((s) => s.config?.dirtyByName) || {};
-	const filesByName = useAppSelector((s) => s.config?.filesByName) || {};
-	const hasDirty = Object.entries(dirtyByName).some(
+	// Config + Otel dirty/error status for navbar dot indicator
+	const configDirty = useAppSelector((s) => s.config?.dirtyByName) || {};
+	const configFiles = useAppSelector((s) => s.config?.filesByName) || {};
+	const otelDirty = useAppSelector((s) => s.otelConfig?.dirtyByName) || {};
+	const otelFiles = useAppSelector((s) => s.otelConfig?.filesByName) || {};
+	const hasDirty = [...Object.entries(configDirty), ...Object.entries(otelDirty)].some(
 		([name, isDirty]) => isDirty && !name.endsWith(".draft"),
 	);
-	const hasError = Object.entries(filesByName).some(([name, v]) => {
-		if (name.endsWith(".draft")) return false;
-		const val = v?.validation;
-		return val && val.valid === false;
-	});
+	const hasError = [...Object.entries(configFiles), ...Object.entries(otelFiles)].some(
+		([name, v]) => {
+			if (name.endsWith(".draft")) return false;
+			const val = v?.validation;
+			return val && val.valid === false;
+		},
+	);
 	useEffect(() => {
 		dispatch(fetchApplicationStatus());
 		const id = setInterval(() => dispatch(fetchApplicationStatus()), STATUS_REFRESH_MS);

@@ -19,6 +19,7 @@ export const buildPalette = () => {
 		background: {
 			default: neutral[900],
 			paper: neutral[700],
+			paperDarker: neutral[850],
 		},
 		divider: divider.dark,
 		error,

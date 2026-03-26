@@ -1,0 +1,59 @@
+name: Post Release
+run-name: Post Release Tag MetricsHub v${{ inputs.releaseVersion }} as ${{ inputs.tagName }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      releaseVersion:
+        type: string
+        description: "Released version"
+        required: true
+        default: ""
+      tagName:
+        type: string
+        description: "Repository tag"
+        required: true
+        default: latest
+
+jobs:
+
+  tag-docker-image:
+    name: Tag Docker Released Image
+    runs-on: ubuntu-latest
+
+    steps:
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Set Variables
+      id: vars
+      run: |
+        releaseVersion=$(echo '${{ inputs.releaseVersion }}' | tr '[:upper:]' '[:lower:]')
+        tagName=$(echo '${{ inputs.tagName }}' | tr '[:upper:]' '[:lower:]')
+
+        imageReleaseName=metricshub/metricshub-community:${releaseVersion}
+        imageTagName=metricshub/metricshub-community:${tagName}
+
+        echo "Release Version:       ${releaseVersion}"
+        echo "Tag name:              ${tagName}"
+        echo "Docker Released Image: ${imageReleaseName}"
+        echo "Docker Tag Image:      ${imageTagName}"
+
+        echo "releaseVersion=${releaseVersion}" >> $GITHUB_OUTPUT
+        echo "tagName=${tagName}" >> $GITHUB_OUTPUT
+        echo "imageReleaseName=${imageReleaseName}" >> $GITHUB_OUTPUT
+        echo "imageTagName=${imageTagName}" >> $GITHUB_OUTPUT
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Retag and Push Release Image
+      run: |
+        docker buildx imagetools create \
+          --tag ${{ steps.vars.outputs.imageTagName }} \
+          ${{ steps.vars.outputs.imageReleaseName }}
