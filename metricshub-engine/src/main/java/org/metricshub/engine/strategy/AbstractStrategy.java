@@ -506,8 +506,8 @@ public abstract class AbstractStrategy implements IStrategy {
 				MAX_CONSECUTIVE_DETECTION_FAILURES,
 				jobName
 			);
-			// Report the status as OK since we're tolerating the transient failure
-			collectConnectorStatus(true, connectorId, monitor);
+			// Report the status as FAILED while we tolerate the transient failure and keep the job running
+			collectConnectorStatus(false, connectorId, monitor);
 			return true;
 		}
 
