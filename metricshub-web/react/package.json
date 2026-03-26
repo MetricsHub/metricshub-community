@@ -42,7 +42,7 @@
 		"react-syntax-highlighter": "^16.1.0",
 		"relative-time-format": "^1.1.11",
 		"remark-gfm": "^4.0.1",
-		"yaml": "^2.8.1",
+		"yaml": "^2.8.3",
 		"yup": "^1.7.0"
 	},
 	"devDependencies": {
