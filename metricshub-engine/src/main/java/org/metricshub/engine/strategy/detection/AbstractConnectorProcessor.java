@@ -22,6 +22,7 @@ package org.metricshub.engine.strategy.detection;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.HOSTNAME_EXCEPTION_MESSAGE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.THREAD_TIMEOUT;
 
 import java.util.ArrayList;
@@ -145,7 +146,9 @@ public abstract class AbstractConnectorProcessor {
 		);
 
 		final List<Connector> connectorList = connectors.collect(Collectors.toList());
-		final ExecutorService threadsPool = Executors.newFixedThreadPool(Math.max(1, connectorList.size()));
+		final ExecutorService threadsPool = Executors.newFixedThreadPool(
+			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
+		);
 
 		connectorList.forEach(connector ->
 			threadsPool.execute(() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
