@@ -34,7 +34,7 @@ class SqlCriterionProcessorTest {
 
 	@BeforeEach
 	void setUp() {
-		sqlCriterionProcessor = new SqlCriterionProcessor(sqlRequestExecutor);
+		sqlCriterionProcessor = new SqlCriterionProcessor(sqlRequestExecutor, true);
 	}
 
 	/**

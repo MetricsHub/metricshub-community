@@ -668,7 +668,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -692,7 +693,7 @@ class OsCommandExtensionTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager)
+			() -> osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true)
 		);
 	}
 
@@ -710,7 +711,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -738,7 +740,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -796,7 +799,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -856,7 +860,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -916,7 +921,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);
@@ -977,7 +983,8 @@ class OsCommandExtensionTest {
 		final CriterionTestResult criterionTestResult = osCommandExtension.processCriterion(
 			commandLineCriterion,
 			MY_CONNECTOR_1_NAME,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertNotNull(criterionTestResult);

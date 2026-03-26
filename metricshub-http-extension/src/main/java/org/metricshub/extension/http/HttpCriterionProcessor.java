@@ -45,6 +45,7 @@ import org.metricshub.extension.http.utils.HttpRequest;
 public class HttpCriterionProcessor {
 
 	private HttpRequestExecutor httpRequestExecutor;
+	private boolean logMode;
 
 	private static final String HTTP_TEST_SUCCESS = "Hostname %s - HTTP test succeeded. Returned result: %s.";
 
@@ -64,7 +65,9 @@ public class HttpCriterionProcessor {
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
 
 		if (hostConfiguration == null) {
-			log.debug("There is no host configuration. Cannot process HTTP detection {}.", httpCriterion);
+			if (logMode) {
+				log.debug("There is no host configuration. Cannot process HTTP detection {}.", httpCriterion);
+			}
 			return CriterionTestResult.empty();
 		}
 
@@ -86,11 +89,13 @@ public class HttpCriterionProcessor {
 			.get(HttpConfiguration.class);
 
 		if (httpConfiguration == null) {
-			log.debug(
-				"Hostname {} - The HTTP credentials are not configured for this host. Cannot process HTTP detection {}.",
-				hostname,
-				httpCriterion
-			);
+			if (logMode) {
+				log.debug(
+					"Hostname {} - The HTTP credentials are not configured for this host. Cannot process HTTP detection {}.",
+					hostname,
+					httpCriterion
+				);
+			}
 			return CriterionTestResult.empty();
 		}
 
@@ -110,7 +115,7 @@ public class HttpCriterionProcessor {
 					.resultContent(httpCriterion.getResultContent())
 					.authenticationToken(httpCriterion.getAuthenticationToken())
 					.build(),
-				false,
+				logMode,
 				telemetryManager
 			);
 
@@ -155,7 +160,9 @@ public class HttpCriterionProcessor {
 			}
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().result(result).message(message).success(success).build();
 	}

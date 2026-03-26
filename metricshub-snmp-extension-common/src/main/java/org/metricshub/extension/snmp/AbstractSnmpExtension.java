@@ -119,7 +119,14 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			result =
 				getRequestExecutor()
-					.executeSNMPGetNext(SNMP_OID, configuration, hostname, true, telemetryManager.getEmulationInputDirectory());
+					.executeSNMPGetNext(
+						SNMP_OID,
+						configuration,
+						hostname,
+						true,
+						telemetryManager.getEmulationInputDirectory(),
+						telemetryManager.getHostname()
+					);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking SNMP protocol status. SNMP exception when performing a SNMP Get Next query on {}: ",
@@ -157,16 +164,17 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		final Function<TelemetryManager, ISnmpConfiguration> configurationRetriever = manager ->
 			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
-			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever)
+			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
 				.process(snmpGetCriterion, connectorId, telemetryManager);
 		} else if (criterion instanceof SnmpGetNextCriterion snmpGetNextCriterion) {
-			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever)
+			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
 				.process(snmpGetNextCriterion, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
@@ -200,13 +208,13 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 		try {
 			switch (action.toLowerCase()) {
 				case GET:
-					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPGet(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case GET_NEXT:
-					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPGetNext(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case WALK:
-					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, null);
+					result = executor.executeSNMPWalk(oId, snmpConfiguration, hostname, false, null, null);
 					break;
 				case TABLE:
 					final String[] columns = new ObjectMapper().convertValue(queryNode.get("columns"), String[].class);
@@ -216,6 +224,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 						snmpConfiguration,
 						hostname,
 						false,
+						null,
 						null
 					);
 					result = TextTableHelper.generateTextTable(columns, resultList);

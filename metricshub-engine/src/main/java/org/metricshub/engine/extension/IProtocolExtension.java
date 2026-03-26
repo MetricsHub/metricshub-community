@@ -109,9 +109,16 @@ public interface IProtocolExtension {
 	 * @param criterion        The criterion to execute.
 	 * @param connectorId      The unique identifier of the connector.
 	 * @param telemetryManager The telemetry manager to use for monitoring.
+	 * @param logMode          Whether logs should be emitted during criterion processing.
+	 *                         {@code true} for cycle-phase strategies, {@code false} for detection strategies.
 	 * @return A {@link CriterionTestResult} object representing the result of the criterion execution.
 	 */
-	CriterionTestResult processCriterion(Criterion criterion, String connectorId, TelemetryManager telemetryManager);
+	CriterionTestResult processCriterion(
+		Criterion criterion,
+		String connectorId,
+		TelemetryManager telemetryManager,
+		boolean logMode
+	);
 
 	/**
 	 * Whether the configuration type expressed in the {@code configurationType} argument is supported or not

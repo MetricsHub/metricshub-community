@@ -85,6 +85,8 @@ public abstract class AbstractConnectorProcessor {
 	@NonNull
 	protected ExtensionManager extensionManager;
 
+	protected boolean logMode;
+
 	/**
 	 * Run the Detection job and returns the detected {@link ConnectorTestResult}
 	 *
@@ -143,20 +145,31 @@ public abstract class AbstractConnectorProcessor {
 			connectorTestResults
 		);
 
-		final ExecutorService threadsPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
+		final List<Connector> connectorList = connectors.collect(Collectors.toList());
+		final ExecutorService threadsPool = Executors.newFixedThreadPool(
+			Math.max(1, Math.min(MAX_THREADS_COUNT, connectorList.size()))
+		);
 
-		connectors.forEach(connector ->
+		connectorList.forEach(connector ->
 			threadsPool.execute(() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
 			)
 		);
 
-		// Order the shutdown
+		// Two-phase shutdown: first graceful, then forced
 		threadsPool.shutdown();
 
 		try {
 			// Blocks until all tasks have completed execution after a shutdown request
-			threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS);
+			if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+				log.warn(
+					"Hostname {} - Detection thread pool did not terminate within {} seconds. Forcing shutdown.",
+					hostname,
+					THREAD_TIMEOUT
+				);
+				threadsPool.shutdownNow();
+			}
 		} catch (Exception e) {
+			threadsPool.shutdownNow();
 			if (e instanceof InterruptedException) {
 				Thread.currentThread().interrupt();
 			}
@@ -326,7 +339,8 @@ public abstract class AbstractConnectorProcessor {
 			clientsExecutor,
 			telemetryManager,
 			connector.getConnectorIdentity().getCompiledFilename(),
-			extensionManager
+			extensionManager,
+			logMode
 		);
 
 		final Supplier<CriterionTestResult> executable;

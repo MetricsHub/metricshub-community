@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -43,6 +44,7 @@ import org.metricshub.extension.win.IWinRequestExecutor;
  * which requires {@link WmiCriterion} evaluation.
  */
 @RequiredArgsConstructor
+@Slf4j
 public class WmiDetectionService {
 
 	@NonNull
@@ -58,12 +60,18 @@ public class WmiDetectionService {
 	 * @param hostname         Host name
 	 * @param winConfiguration Win configuration (credentials, timeout)
 	 * @param wmiCriterion     WMI detection properties (WQL, namespace, expected result)
+	 * @param connectorId      Connector ID (used for logging purposes)
+	 * @param logMode          Whether to log or not the error in case of failure
+	 *                          (can be set to false when this method is used as part of namespace
+	 *                          detection, to avoid polluting logs with expected failures)
 	 * @return {@link CriterionTestResult} which indicates if the check has succeeded or not.
 	 */
 	public CriterionTestResult performDetectionTest(
 		final String hostname,
 		@NonNull final IWinConfiguration winConfiguration,
-		@NonNull final WmiCriterion wmiCriterion
+		@NonNull final WmiCriterion wmiCriterion,
+		@NonNull String connectorId,
+		final boolean logMode
 	) {
 		// Make the WBEM query
 		final List<List<String>> queryResult;
@@ -71,6 +79,22 @@ public class WmiDetectionService {
 			queryResult =
 				winRequestExecutor.executeWmi(hostname, winConfiguration, wmiCriterion.getQuery(), wmiCriterion.getNamespace());
 		} catch (Exception e) {
+			if (logMode) {
+				log.error(
+					"Hostname {} - Error executing WMI criterion: {}. Exception message {}. Connector ID: {}.",
+					hostname,
+					wmiCriterion.getQuery(),
+					e.getMessage(),
+					connectorId
+				);
+				log.debug(
+					"Hostname {} - An exception occurred while executing WMI criterion: {}. Connector ID: {}.",
+					hostname,
+					wmiCriterion.getQuery(),
+					connectorId,
+					e
+				);
+			}
 			return CriterionTestResult.error(wmiCriterion, e);
 		}
 

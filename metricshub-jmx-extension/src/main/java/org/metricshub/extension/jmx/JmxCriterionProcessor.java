@@ -46,6 +46,8 @@ public class JmxCriterionProcessor {
 	@NonNull
 	private JmxRequestExecutor jmxRequestExecutor;
 
+	private final boolean logMode;
+
 	/**
 	 * Processes a JMX criterion by executing an JMX query.
 	 *
@@ -80,7 +82,8 @@ public class JmxCriterionProcessor {
 				jmxConfiguration,
 				jmxCriterion.getObjectName(),
 				jmxCriterion.getAttributes(),
-				List.of()
+				List.of(),
+				telemetryManager.getHostname()
 			);
 
 			// Serialize the result as a CSV
@@ -88,6 +91,20 @@ public class JmxCriterionProcessor {
 
 			return checkJmxResult(jmxConfiguration.getHostname(), result, jmxCriterion.getExpectedResult());
 		} catch (Exception e) {
+			if (logMode) {
+				log.error(
+					"Hostname {} - Error executing JMX criterion: {}. Connector ID: {}",
+					telemetryManager.getHostname(),
+					e.getMessage(),
+					connectorId
+				);
+				log.debug(
+					"Hostname {} - An exception occurred while executing JMX criterion. Connector ID: {}",
+					telemetryManager.getHostname(),
+					connectorId,
+					e
+				);
+			}
 			return CriterionTestResult.error(jmxCriterion, e);
 		}
 	}
@@ -129,7 +146,9 @@ public class JmxCriterionProcessor {
 			}
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().result(result).message(message).success(success).build();
 	}

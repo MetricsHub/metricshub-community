@@ -16,6 +16,7 @@ import static org.metricshub.engine.constants.Constants.HOST_NAME;
 import static org.metricshub.engine.constants.Constants.STATUS_INFORMATION;
 import static org.metricshub.engine.strategy.AbstractStrategy.CONNECTOR_ID_FORMAT;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -134,7 +135,7 @@ class DiscoveryStrategyTest {
 		// Mock detection criteria result
 		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
 		final SnmpTableSource diskControllerSource = SnmpTableSource
 			.builder()
@@ -238,7 +239,7 @@ class DiscoveryStrategyTest {
 		// Mock detection criteria result to switch to a failing criterion processing case
 		doReturn(CriterionTestResult.failure(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Call DiscoveryStrategy to discover the monitors
 		discoveryStrategy.run();
@@ -371,7 +372,7 @@ class DiscoveryStrategyTest {
 		// Mock detection criteria result
 		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
 		final SnmpTableSource diskControllerSource = SnmpTableSource
 			.builder()
@@ -465,7 +466,7 @@ class DiscoveryStrategyTest {
 		// Mock detection criteria result
 		doReturn(CriterionTestResult.success(snmpCriterion, "1.3.6.1.4.1.795.10.1.1.3.1.1.0	ASN_OCTET_STR	Test"))
 			.when(protocolExtensionMock)
-			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class));
+			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Physical Disk Source
 		final SnmpTableSource physicalDiskSource = SnmpTableSource
 			.builder()

@@ -187,7 +187,12 @@ class JdbcExtensionTest {
 			.when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
 
-		final CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager);
+		final CriterionTestResult result = jdbcExtension.processCriterion(
+			sqlCriterion,
+			CONNECTOR_ID,
+			telemetryManager,
+			true
+		);
 
 		assertTrue(result.isSuccess());
 	}
@@ -201,7 +206,12 @@ class JdbcExtensionTest {
 			.when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
 
-		final CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager);
+		final CriterionTestResult result = jdbcExtension.processCriterion(
+			sqlCriterion,
+			CONNECTOR_ID,
+			telemetryManager,
+			true
+		);
 
 		assertFalse(result.isSuccess());
 		assertEquals("Hostname hostname - SQL test failed - The SQL test did not return any result.", result.getMessage());
@@ -216,7 +226,12 @@ class JdbcExtensionTest {
 			.when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
 
-		final CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager);
+		final CriterionTestResult result = jdbcExtension.processCriterion(
+			sqlCriterion,
+			CONNECTOR_ID,
+			telemetryManager,
+			true
+		);
 
 		assertFalse(result.isSuccess());
 	}
@@ -230,7 +245,7 @@ class JdbcExtensionTest {
 		final IllegalArgumentException exception = assertThrows(
 			IllegalArgumentException.class,
 			() -> {
-				jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager);
+				jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
 			}
 		);
 
@@ -246,7 +261,7 @@ class JdbcExtensionTest {
 			.when(sqlRequestExecutorMock)
 			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
 
-		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager);
+		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
 
 		assertTrue(result.isSuccess());
 		assertEquals("value1;value2;", result.getResult().trim());
@@ -271,7 +286,7 @@ class JdbcExtensionTest {
 		assertThrows(
 			IllegalArgumentException.class,
 			() -> {
-				jdbcExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager);
+				jdbcExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true);
 			}
 		);
 	}

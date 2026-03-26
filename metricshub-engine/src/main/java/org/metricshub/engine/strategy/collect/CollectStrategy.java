@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy.collect;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_THREADS_COUNT;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.MONITOR_JOBS_PRIORITY;
@@ -119,9 +120,11 @@ public class CollectStrategy extends AbstractStrategy {
 		}
 		if (!validateConnectorDetectionCriteria(currentConnector, hostname, JOB_NAME)) {
 			log.error(
-				"Hostname {} - The connector {} no longer matches the host. Stopping the connector's collect job.",
+				"Hostname {} - The connector {} no longer matches the host after {} consecutive detection failures." +
+				" Stopping the connector's collect job.",
 				hostname,
-				currentConnector.getCompiledFilename()
+				currentConnector.getCompiledFilename(),
+				MAX_CONSECUTIVE_DETECTION_FAILURES
 			);
 
 			return;
@@ -190,19 +193,29 @@ public class CollectStrategy extends AbstractStrategy {
 		} else {
 			// Execute monitor jobs in parallel
 			// Create a thread pool with a fixed number of threads
-			final ExecutorService threadsPool = Executors.newFixedThreadPool(MAX_THREADS_COUNT);
+			final ExecutorService threadsPool = Executors.newFixedThreadPool(
+				Math.max(1, Math.min(MAX_THREADS_COUNT, otherMonitorJobs.size()))
+			);
 
 			otherMonitorJobs
 				.entrySet()
 				.forEach(entry -> threadsPool.execute(() -> processMonitorJob(currentConnector, hostname, entry)));
 
-			// Order the shutdown
+			// Two-phase shutdown: first graceful, then forced
 			threadsPool.shutdown();
 
 			try {
 				// Blocks until all tasks have completed execution after a shutdown request
-				threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS);
+				if (!threadsPool.awaitTermination(THREAD_TIMEOUT, TimeUnit.SECONDS)) {
+					log.warn(
+						"Hostname {} - Collect thread pool did not terminate within {} seconds. Forcing shutdown.",
+						hostname,
+						THREAD_TIMEOUT
+					);
+					threadsPool.shutdownNow();
+				}
 			} catch (Exception e) {
+				threadsPool.shutdownNow();
 				if (e instanceof InterruptedException) {
 					Thread.currentThread().interrupt();
 				}
@@ -573,5 +586,8 @@ public class CollectStrategy extends AbstractStrategy {
 
 		// Collect the metricshub.host.configured metric
 		collectHostConfigured(hostname);
+
+		// Collect per-host request metrics (completed/timeout by operation type)
+		collectRequestMetrics(hostname);
 	}
 }

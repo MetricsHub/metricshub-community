@@ -9,6 +9,7 @@ import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_NAMESPACE;
 import static org.metricshub.extension.winrm.WinRmExtension.WINRM_TEST_QUERY;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -289,7 +290,7 @@ class WinRmExtensionTest {
 			final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM CIM_StorageSystem").build();
 			assertThrows(
 				IllegalArgumentException.class,
-				() -> winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager)
+				() -> winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
 			);
 		}
 		{
@@ -299,8 +300,8 @@ class WinRmExtensionTest {
 			final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL).namespace(namespace).build();
 			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), eq(winRmConfiguration), eq(wmiCriterion));
-			assertTrue(winRmExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
+				.performDetectionTest(any(), eq(winRmConfiguration), eq(wmiCriterion), anyString(), anyBoolean());
+			assertTrue(winRmExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
 		{
 			final CommandLineCriterion commandLineCriterion = new CommandLineCriterion();
@@ -323,7 +324,9 @@ class WinRmExtensionTest {
 			doReturn(new OsCommandResult("result", COMMAND_LINE))
 				.when(winCommandServiceMock)
 				.runOsCommand(commandLineCriterion.getCommandLine(), HOST_NAME, winRmConfiguration, Map.of());
-			assertTrue(winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
+			assertTrue(
+				winRmExtension.processCriterion(commandLineCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess()
+			);
 		}
 		{
 			try (final MockedStatic<LocalOsHandler> mockedLocalOSHandler = mockStatic(LocalOsHandler.class)) {
@@ -334,9 +337,9 @@ class WinRmExtensionTest {
 
 				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running"))
 					.when(wmiDetectionServiceMock)
-					.performDetectionTest(any(), any(), any());
+					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean());
 
-				assertTrue(winRmExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager).isSuccess());
+				assertTrue(winRmExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 			}
 		}
 	}

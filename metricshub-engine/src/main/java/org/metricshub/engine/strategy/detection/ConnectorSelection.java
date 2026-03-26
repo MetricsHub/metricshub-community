@@ -68,7 +68,26 @@ public class ConnectorSelection extends AbstractConnectorProcessor {
 		@NonNull final Set<String> connectorIds,
 		@NonNull final ExtensionManager extensionManager
 	) {
-		super(telemetryManager, clientsExecutor, connectorIds, extensionManager);
+		super(telemetryManager, clientsExecutor, connectorIds, extensionManager, false);
+	}
+
+	/**
+	 * Constructs a new {@code ConnectorSelection} instance with a specific logMode.
+	 *
+	 * @param telemetryManager  The telemetry manager responsible for managing telemetry-related operations.
+	 * @param clientsExecutor   The executor for managing clients used in the strategy.
+	 * @param connectorIds      The set of connector identifiers that represent the connectors involved in the connector selection.
+	 * @param extensionManager  The extension manager where all the required extensions are handled.
+	 * @param logMode           Whether logs should be emitted during criterion processing.
+	 */
+	public ConnectorSelection(
+		@NonNull final TelemetryManager telemetryManager,
+		@NonNull final ClientsExecutor clientsExecutor,
+		@NonNull final Set<String> connectorIds,
+		@NonNull final ExtensionManager extensionManager,
+		final boolean logMode
+	) {
+		super(telemetryManager, clientsExecutor, connectorIds, extensionManager, logMode);
 	}
 
 	@Override
