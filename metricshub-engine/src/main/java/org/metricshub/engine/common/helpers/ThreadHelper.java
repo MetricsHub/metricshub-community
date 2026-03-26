@@ -182,7 +182,7 @@ public class ThreadHelper {
 				if (statsKey != null) {
 					getOrCreateStats(statsKey).timeout.incrementAndGet();
 				}
-				log.warn("Task timed out after {} seconds and was cancelled.", timeout);
+				log.debug("Task timed out after {} seconds and was cancelled.", timeout);
 				throw e;
 			} catch (InterruptedException e) {
 				future.cancel(true);
