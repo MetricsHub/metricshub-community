@@ -216,7 +216,7 @@ public class JmxRequestExecutor {
 	 * @param port     the port on which the JMX server is listening
 	 * @return the formatted JMX RMI URL
 	 */
-	private static String buildJmxRmiUrl(final String hostname, final int port) {
+	String buildJmxRmiUrl(final String hostname, final int port) {
 		return String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", hostname, port);
 	}
 
@@ -230,12 +230,8 @@ public class JmxRequestExecutor {
 	 * @return a JMXConnector instance if the connection is successful
 	 * @throws Exception if an error occurs while connecting to the JMX server
 	 */
-	private static JMXConnector connect(
-		final String hostname,
-		final String url,
-		final String username,
-		final char[] password
-	) throws Exception {
+	JMXConnector connect(final String hostname, final String url, final String username, final char[] password)
+		throws Exception {
 		log.debug("Hostname {} - Connecting to JMX at {}.", hostname, url);
 
 		final Map<String, String[]> env = new HashMap<>();
