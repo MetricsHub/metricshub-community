@@ -267,11 +267,10 @@ public class SnmpGetCriterionProcessorTest {
 		CriterionTestResult result = snmpGetCriterionProcessor.process(snmpGetCriterion, "connectorId", telemetryManager);
 
 		assertFalse(result.isSuccess());
-		assertTrue(result.isTransientFailure());
 		assertTrue(result.getMessage().contains("timed out"));
 	}
 
-	// Test case when the requestExecutor throws a regular exception - should NOT be marked as transient.
+	// Test case when the requestExecutor throws a regular exception.
 	@Test
 	public void testProcessSnmpNonTransientException() throws Exception {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
@@ -296,6 +295,5 @@ public class SnmpGetCriterionProcessorTest {
 		CriterionTestResult result = snmpGetCriterionProcessor.process(snmpGetCriterion, "connectorId", telemetryManager);
 
 		assertFalse(result.isSuccess());
-		assertFalse(result.isTransientFailure());
 	}
 }

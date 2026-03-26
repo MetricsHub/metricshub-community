@@ -135,7 +135,6 @@ class SnmpV3ExtensionTest {
 					CONNECTOR_ID
 				)
 			)
-			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}
@@ -511,7 +510,6 @@ class SnmpV3ExtensionTest {
 					CONNECTOR_ID
 				)
 			)
-			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}

@@ -132,7 +132,6 @@ class SnmpExtensionTest {
 					CONNECTOR_ID
 				)
 			)
-			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}
@@ -508,7 +507,6 @@ class SnmpExtensionTest {
 					CONNECTOR_ID
 				)
 			)
-			.transientFailure(true)
 			.build();
 		assertEquals(expected, actual);
 	}

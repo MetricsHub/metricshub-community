@@ -445,21 +445,12 @@ public abstract class AbstractConnectorProcessor {
 			} else {
 				criterionTestResult = processCriterion(criterion, connector);
 				if (!criterionTestResult.isSuccess()) {
-					if (criterionTestResult.isTransientFailure()) {
-						log.warn(
-							"Hostname {} - Transient failure for criterion in connector {} (e.g. timeout). Message: {}.",
-							hostname,
-							connector.getConnectorIdentity().getCompiledFilename(),
-							criterionTestResult.getMessage()
-						);
-					} else {
-						log.debug(
-							"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
-							hostname,
-							connector.getConnectorIdentity().getCompiledFilename(),
-							criterionTestResult.getMessage()
-						);
-					}
+					log.debug(
+						"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
+						hostname,
+						connector.getConnectorIdentity().getCompiledFilename(),
+						criterionTestResult.getMessage()
+					);
 				}
 				if (
 					StringHelper.nonNullNonBlank(recordOutputDirectory) &&

@@ -134,7 +134,7 @@ public class SnmpGetNextCriterionProcessor {
 				log.error(message);
 				log.debug(message, e);
 			}
-			return CriterionTestResult.builder().message(message).transientFailure(true).build();
+			return CriterionTestResult.builder().message(message).build();
 		} catch (final Exception e) { // NOSONAR on interruption
 			final String message = String.format(
 				"Hostname %s - SNMP test failed - SNMP GetNext of %s was unsuccessful due to an exception. Message: %s. Connector ID: %s.",
