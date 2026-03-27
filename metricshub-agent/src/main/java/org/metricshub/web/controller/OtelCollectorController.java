@@ -21,6 +21,10 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metricshub.web.exception.OtelCollectorException;
 import org.metricshub.web.service.OtelCollectorService;
 import org.springframework.http.MediaType;
@@ -36,6 +40,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api/otel/collector")
+@Tag(name = "OTel Collector", description = "OpenTelemetry Collector control and log viewing")
 public class OtelCollectorController {
 
 	private final OtelCollectorService otelCollectorService;
@@ -55,6 +60,14 @@ public class OtelCollectorController {
 	 * @return JSON with success message
 	 * @throws OtelCollectorException if restart fails
 	 */
+	@Operation(
+		summary = "Restart the OpenTelemetry Collector",
+		description = "Restarts the OpenTelemetry Collector process.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Collector restarted successfully"),
+			@ApiResponse(responseCode = "500", description = "Failed to restart the collector")
+		}
+	)
 	@PostMapping(value = "/restart", produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<String> restartCollector() throws OtelCollectorException {
 		otelCollectorService.restartCollector();
@@ -68,9 +81,21 @@ public class OtelCollectorController {
 	 * @return the log tail as plain text
 	 * @throws OtelCollectorException if logs cannot be read
 	 */
+	@Operation(
+		summary = "Get collector logs",
+		description = "Returns the last N lines of the OpenTelemetry Collector log file.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Log tail retrieved successfully"),
+			@ApiResponse(responseCode = "500", description = "Failed to read collector logs")
+		}
+	)
 	@GetMapping(value = "/logs", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getCollectorLogs(@RequestParam(name = "tailLines", defaultValue = "200") int tailLines)
-		throws OtelCollectorException {
+	public ResponseEntity<String> getCollectorLogs(
+		@Parameter(description = "Maximum number of lines to return") @RequestParam(
+			name = "tailLines",
+			defaultValue = "200"
+		) int tailLines
+	) throws OtelCollectorException {
 		final String tail = otelCollectorService.getCollectorLogTail(tailLines);
 		return ResponseEntity.ok(tail);
 	}

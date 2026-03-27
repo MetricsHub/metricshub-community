@@ -21,6 +21,7 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,12 +31,16 @@ import org.springframework.http.HttpStatus;
 /**
  * DTO to defining REST error responses.
  */
+@Schema(description = "Error response")
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class ErrorResponse {
 
+	@Schema(description = "HTTP status code")
 	private HttpStatus httpStatus;
+
+	@Schema(description = "Error message")
 	private String message;
 }

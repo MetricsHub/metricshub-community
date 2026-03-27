@@ -21,6 +21,7 @@ package org.metricshub.web.dto.chat;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.List;
@@ -28,7 +29,8 @@ import java.util.List;
 /**
  * Request DTO for chat streaming endpoint.
  */
+@Schema(description = "Chat streaming request")
 public record ChatRequest(
-	@NotBlank(message = "Message cannot be blank") String message,
-	@NotNull(message = "History cannot be null") List<ChatMessage> history
+	@Schema(description = "User message") @NotBlank(message = "Message cannot be blank") String message,
+	@Schema(description = "Conversation history") @NotNull(message = "History cannot be null") List<ChatMessage> history
 ) {}

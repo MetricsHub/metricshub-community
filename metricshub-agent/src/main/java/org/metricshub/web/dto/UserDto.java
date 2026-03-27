@@ -21,6 +21,7 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -30,13 +31,17 @@ import org.metricshub.web.security.User;
 /**
  * Data Transfer Object (DTO) for User information.
  */
+@Schema(description = "User information")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 public class UserDto {
 
+	@Schema(description = "Username")
 	private String username;
+
+	@Schema(description = "User role")
 	private String role;
 
 	/**

@@ -21,6 +21,9 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -40,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 @RestController
 @RequestMapping(value = "/api/agent", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "Agent", description = "Agent life-cycle management")
 public class AgentController {
 
 	private final AgentContextHolder agentContextHolder;
@@ -66,6 +70,14 @@ public class AgentController {
 	 *
 	 * @return a ResponseEntity indicating the result of the operation.
 	 */
+	@Operation(
+		summary = "Restart the MetricsHub Agent",
+		description = "Triggers a reload of the agent context, configuration, and extensions.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Agent restarted successfully"),
+			@ApiResponse(responseCode = "500", description = "Failed to restart the agent")
+		}
+	)
 	@PostMapping("/restart")
 	public ResponseEntity<String> restart() {
 		log.info("Received request to restart MetricsHub Agent.");

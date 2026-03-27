@@ -21,6 +21,9 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metricshub.web.dto.ApplicationStatus;
 import org.metricshub.web.service.ApplicationStatusService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "Application Status", description = "Application health and status information")
 public class ApplicationStatusController {
 
 	private ApplicationStatusService applicationStatusService;
@@ -53,6 +57,11 @@ public class ApplicationStatusController {
 	 *
 	 * @return A JSON string indicating the service status.
 	 */
+	@Operation(
+		summary = "Get application status",
+		description = "Returns the current status of the MetricsHub Agent including resource counts and system metrics.",
+		responses = { @ApiResponse(responseCode = "200", description = "Application status retrieved successfully") }
+	)
 	@GetMapping("/status")
 	public ApplicationStatus status() {
 		return applicationStatusService.reportApplicationStatus();

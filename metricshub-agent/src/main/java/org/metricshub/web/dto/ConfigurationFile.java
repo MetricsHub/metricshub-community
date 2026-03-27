@@ -21,6 +21,7 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,13 +30,19 @@ import lombok.NoArgsConstructor;
 /**
  * DTO representing a configuration file with its metadata.
  */
+@Schema(description = "Metadata of a configuration file")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ConfigurationFile {
 
+	@Schema(description = "File name")
 	private String name;
+
+	@Schema(description = "File size in bytes")
 	private long size;
+
+	@Schema(description = "Last modification timestamp")
 	private String lastModificationTime;
 }

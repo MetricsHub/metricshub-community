@@ -22,6 +22,7 @@ package org.metricshub.web.dto.telemetry;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+@Schema(description = "Base telemetry node with name, type, attributes and metrics")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -44,16 +46,21 @@ import lombok.NoArgsConstructor;
 public abstract class AbstractBaseTelemetry {
 
 	/** Human-readable name of the node. */
+	@Schema(description = "Human-readable name of the node")
 	protected String name;
+
 	/**
 	 * Node type discriminator (e.g., agent, resource-group, resource, connector,
 	 * monitor, instance).
 	 */
+	@Schema(description = "Node type discriminator")
 	protected String type;
 
+	@Schema(description = "Key-value attributes")
 	@JsonInclude(JsonInclude.Include.ALWAYS)
 	protected Map<String, String> attributes = new HashMap<>();
 
+	@Schema(description = "Metric values")
 	@JsonInclude(JsonInclude.Include.ALWAYS)
 	protected Map<String, Object> metrics = new HashMap<>();
 }

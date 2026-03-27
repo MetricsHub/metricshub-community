@@ -22,6 +22,7 @@ package org.metricshub.web.dto.telemetry;
  */
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 
+@Schema(description = "Telemetry node representing a connector")
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
