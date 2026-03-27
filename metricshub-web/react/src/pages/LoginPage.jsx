@@ -7,14 +7,21 @@ import {
 	Alert,
 	Container,
 	CssBaseline,
+	Link,
 	Paper,
 	Typography,
 } from "@mui/material";
+import LoginRounded from "@mui/icons-material/LoginRounded";
+import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import { useTheme } from "@mui/material/styles";
 import { useAuth } from "../hooks/use-auth";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { paths } from "../paths";
 import * as Yup from "yup";
 import { useFormik } from "formik";
+import LoginBackground from "../components/common/LoginBackground";
+import logoDark from "../assets/logo-dark.svg";
+import logoLight from "../assets/logo-light.svg";
 
 /**
  * Authentication layout component.
@@ -23,18 +30,22 @@ import { useFormik } from "formik";
  * @returns {JSX.Element} The AuthLayout component.
  */
 const AuthLayoutComponent = (props) => {
-	const { children } = props;
+	const { children, host } = props;
+	const theme = useTheme();
+	const logo = theme.palette.mode === "dark" ? logoDark : logoLight;
 
 	return (
 		<React.Fragment>
 			<CssBaseline />
+			<LoginBackground />
 			<Box
 				sx={{
 					minHeight: "100vh",
 					display: "flex",
 					alignItems: "center",
 					justifyContent: "center",
-					bgcolor: (theme) => theme.palette.background.default,
+					position: "relative",
+					zIndex: 1,
 					px: 2,
 				}}
 			>
@@ -46,15 +57,42 @@ const AuthLayoutComponent = (props) => {
 							borderRadius: 3,
 							display: "flex",
 							flexDirection: "column",
-							alignItems: "center",
 							justifyContent: "center",
-							minHeight: 400, // optional: ensures some vertical space
+							minHeight: 400,
+							backgroundColor:
+								theme.palette.mode === "dark"
+									? theme.palette.background.paperDarker
+									: theme.palette.background.paper,
 						}}
 					>
-						<Box sx={{ mb: 2, textAlign: "center" }}>
-							<Typography variant="h5" component="h1" fontWeight={600}>
-								Connect to MetricsHub
-							</Typography>
+						<Box
+							sx={{
+								display: "flex",
+								justifyContent: "space-between",
+								alignItems: "flex-start",
+								mb: 2,
+								width: "100%",
+							}}
+						>
+							<Box>
+								<Typography variant="h5" component="h1" fontWeight={600}>
+									Connect to MetricsHub
+								</Typography>
+								{host && (
+									<Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+										On{" "}
+										<Box component="span" sx={{ fontWeight: 600 }}>
+											{host}
+										</Box>
+									</Typography>
+								)}
+							</Box>
+							<Box
+								component="img"
+								src={logo}
+								alt="MetricsHub"
+								sx={{ width: 86, height: "auto", mt: -3 }}
+							/>
 						</Box>
 						<Box
 							sx={{
@@ -106,6 +144,7 @@ const LoginPage = () => {
 	const { signIn } = useAuth();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
+	const host = window.location.host;
 
 	const formik = useFormik({
 		initialValues,
@@ -134,7 +173,7 @@ const LoginPage = () => {
 	});
 
 	return (
-		<AuthLayout>
+		<AuthLayout host={host}>
 			<Box
 				component="form"
 				onSubmit={formik.handleSubmit}
@@ -171,9 +210,30 @@ const LoginPage = () => {
 
 					{formik.errors.submit && <Alert severity="error">{formik.errors.submit}</Alert>}
 
-					<Button type="submit" variant="contained" size="large" disabled={formik.isSubmitting}>
+					<Button
+						type="submit"
+						variant="contained"
+						size="large"
+						fullWidth
+						disabled={formik.isSubmitting}
+						startIcon={<LoginRounded />}
+						sx={{ borderRadius: 1 }}
+					>
 						Sign in
 					</Button>
+
+					<Link
+						href="https://metricshub.com/docs/latest/operating-web-ui"
+						target="_blank"
+						rel="noopener noreferrer"
+						underline="always"
+						variant="body2"
+						aria-label="Getting Started (opens in a new tab)"
+						sx={{ display: "inline-flex", alignItems: "center", gap: 0.5, width: "fit-content" }}
+					>
+						<MenuBookOutlinedIcon fontSize="small" sx={{ mb: 0.4 }} />
+						<Typography variant="body1">Getting Started</Typography>
+					</Link>
 				</Stack>
 			</Box>
 		</AuthLayout>

@@ -145,7 +145,8 @@ public class DetectionStrategy extends AbstractStrategy {
 					telemetryManager,
 					clientsExecutor,
 					stagedConnectorIdentifiers.getForcedConnectorIds(),
-					extensionManager
+					extensionManager,
+					true
 				)
 					.run()
 			);
@@ -179,6 +180,9 @@ public class DetectionStrategy extends AbstractStrategy {
 
 		// Create configured connector monitor
 		createConfiguredConnectorMonitor(configuredConnectorId);
+
+		// Collect per-host request metrics (completed/timeout by operation type)
+		collectRequestMetrics(hostname);
 	}
 
 	/**

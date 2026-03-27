@@ -152,7 +152,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new CommandLineCriterionProcessor(connectorId).process(commandLineCriterion, telemetryManager);

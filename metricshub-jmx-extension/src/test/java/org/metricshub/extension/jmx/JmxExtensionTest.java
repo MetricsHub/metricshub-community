@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
@@ -104,7 +105,7 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration().getConfigurations())
 			.thenReturn(Map.of(JmxConfiguration.class, jmxConfiguration));
 
-		when(jmxRequestExecutorMock.checkConnection(jmxConfiguration)).thenReturn(true);
+		when(jmxRequestExecutorMock.checkConnection(any(), any())).thenReturn(true);
 
 		final Optional<Boolean> result = jmxExtension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent(), "Expected Optional<Boolean> with true when config is valid");
@@ -135,7 +136,7 @@ class JmxExtensionTest {
 
 		// Mock behavior: delegate to JmxSourceProcessor, which internally uses our mocked executor
 		final List<List<String>> table = List.of(List.of("value1"));
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList())).thenReturn(table);
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any())).thenReturn(table);
 
 		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("my-host").build();
 		final HostConfiguration hostConfig = mock(HostConfiguration.class);
@@ -167,10 +168,10 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
 
 		// Mock response from fetchBeanInfo
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList()))
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any()))
 			.thenReturn(List.of(List.of("12345")));
 
-		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager);
+		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager, true);
 
 		assertNotNull(result, "CriterionTestResult should not be null");
 		assertTrue(result.isSuccess(), "Criterion processing should succeed with valid data");
@@ -183,7 +184,7 @@ class JmxExtensionTest {
 
 		final Exception exception = assertThrows(
 			IllegalArgumentException.class,
-			() -> jmxExtension.processCriterion(invalidCriterion, "conn", telemetryManager),
+			() -> jmxExtension.processCriterion(invalidCriterion, "conn", telemetryManager, true),
 			"Should throw for unsupported criterion type"
 		);
 		assertTrue(
@@ -223,7 +224,7 @@ class JmxExtensionTest {
 		final List<List<String>> rows = List.of(List.of("Key1Val", "Attr1Val", "Attr2Val"));
 
 		// Mock fetchBeanInfo result
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList())).thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any())).thenReturn(rows);
 
 		// Run executeQuery
 		final String table = jmxExtension.executeQuery(config, query);
@@ -275,5 +276,143 @@ class JmxExtensionTest {
 	void testShouldRejectInvalidConfigurationType() {
 		final IConfiguration invalidConfig = mock(IConfiguration.class);
 		assertFalse(jmxExtension.isValidConfiguration(invalidConfig), "Should reject unsupported configuration types");
+	}
+
+	@Test
+	void testShouldReturnFalseWhenCheckProtocolThrows() throws Exception {
+		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
+		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("failhost").port(1099).build();
+		final HostConfiguration hostConfig = mock(HostConfiguration.class);
+		when(hostConfig.getConfigurations()).thenReturn(Map.of(JmxConfiguration.class, jmxConfiguration));
+		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
+
+		when(jmxRequestExecutorMock.checkConnection(any(), any())).thenThrow(new RuntimeException("Connection failed"));
+
+		final Optional<Boolean> result = jmxExtension.checkProtocol(telemetryManager);
+		assertTrue(result.isPresent(), "Expected Optional<Boolean> with false on exception");
+		assertFalse(result.get(), "Expected false when health check throws");
+	}
+
+	@Test
+	void testShouldThrowForNullSourceType() {
+		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
+
+		final Exception exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.processSource(null, "conn", telemetryManager),
+			"Should throw for null source"
+		);
+		assertTrue(exception.getMessage().contains("<null>"), "Error message should mention null source");
+	}
+
+	@Test
+	void testShouldThrowForNullCriterionType() {
+		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
+
+		final Exception exception = assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.processCriterion(null, "conn", telemetryManager, true),
+			"Should throw for null criterion"
+		);
+		assertTrue(exception.getMessage().contains("<null>"), "Error message should mention null criterion");
+	}
+
+	@Test
+	void testShouldThrowForInvalidConfigurationTypeInExecuteQuery() {
+		final IConfiguration invalidConfig = mock(IConfiguration.class);
+		final JsonNode query = objectMapper.createObjectNode();
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.executeQuery(invalidConfig, query),
+			"Should throw for non-JMX configuration in executeQuery"
+		);
+	}
+
+	@Test
+	void testShouldThrowForBlankObjectNameInExecuteQuery() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
+		final JsonNode query = objectMapper.readTree("{\"objectName\": \"   \"}");
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.executeQuery(config, query),
+			"Should throw for blank objectName"
+		);
+	}
+
+	@Test
+	void testShouldThrowForNullObjectNameValueInExecuteQuery() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
+		final JsonNode query = objectMapper.readTree("{\"objectName\": null}");
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.executeQuery(config, query),
+			"Should throw for null objectName value"
+		);
+	}
+
+	@Test
+	void testShouldThrowForEmptyAttributesAndKeyPropertiesInExecuteQuery() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
+		final JsonNode query = objectMapper.readTree(
+			"{\"objectName\": \"java.lang:type=Runtime\", \"attributes\": [], \"keyProperties\": []}"
+		);
+
+		assertThrows(
+			IllegalArgumentException.class,
+			() -> jmxExtension.executeQuery(config, query),
+			"Should throw when both attributes and keyProperties are empty"
+		);
+	}
+
+	@Test
+	void testShouldBuildConfigurationWithNullDecrypt() throws Exception {
+		final JsonNode jsonNode = objectMapper.readTree("{\"hostname\": \"host\", \"port\": 1099, \"password\": \"pwd\"}");
+
+		final JmxConfiguration config = (JmxConfiguration) jmxExtension.buildConfiguration("jmx", jsonNode, null);
+
+		assertEquals("host", config.getHostname(), "Hostname should be parsed");
+		assertArrayEquals("pwd".toCharArray(), config.getPassword(), "Password should remain unchanged with null decrypt");
+	}
+
+	@Test
+	void testShouldBuildConfigurationWithNullPassword() throws Exception {
+		final JsonNode jsonNode = objectMapper.readTree("{\"hostname\": \"host\", \"port\": 1099}");
+		final UnaryOperator<char[]> decrypt = p -> "decrypted".toCharArray();
+
+		final JmxConfiguration config = (JmxConfiguration) jmxExtension.buildConfiguration("jmx", jsonNode, decrypt);
+
+		assertEquals("host", config.getHostname(), "Hostname should be parsed");
+		assertNull(config.getPassword(), "Password should be null when not set");
+	}
+
+	@Test
+	void testShouldReturnNewObjectMapper() {
+		final var mapper = jmxExtension.newObjectMapper();
+		assertNotNull(mapper, "ObjectMapper should not be null");
+	}
+
+	@Test
+	void testShouldExecuteQueryWithOnlyKeyProperties() throws Exception {
+		final JmxConfiguration config = JmxConfiguration.builder().hostname("testHost").build();
+
+		final JsonNode query = objectMapper.readTree(
+			"""
+			    {
+			      "objectName": "java.lang:type=GarbageCollector,name=*",
+			      "keyProperties": ["name"]
+			    }
+			"""
+		);
+
+		final List<List<String>> rows = List.of(List.of("G1YoungGen"));
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any())).thenReturn(rows);
+
+		final String table = jmxExtension.executeQuery(config, query);
+
+		assertNotNull(table, "Table output should not be null");
+		assertTrue(table.contains("G1YoungGen"), "Output should contain key property value");
 	}
 }

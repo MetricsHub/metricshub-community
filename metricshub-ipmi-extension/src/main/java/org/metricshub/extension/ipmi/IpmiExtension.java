@@ -163,7 +163,8 @@ public class IpmiExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		final IpmiConfiguration configuration = (IpmiConfiguration) telemetryManager
 			.getHostConfiguration()
@@ -171,10 +172,12 @@ public class IpmiExtension implements IProtocolExtension {
 			.get(IpmiConfiguration.class);
 
 		if (configuration == null) {
-			log.debug(
-				"Hostname {} - The IPMI credentials are not configured for this host. Cannot process IPMI-over-LAN detection.",
-				telemetryManager.getHostname()
-			);
+			if (logMode) {
+				log.debug(
+					"Hostname {} - The IPMI credentials are not configured for this host. Cannot process IPMI-over-LAN detection.",
+					telemetryManager.getHostname()
+				);
+			}
 			return CriterionTestResult.empty();
 		}
 
@@ -202,7 +205,10 @@ public class IpmiExtension implements IProtocolExtension {
 				hostname,
 				e.getMessage()
 			);
-			log.debug(message, e);
+			if (logMode) {
+				log.error(message);
+				log.debug(message, e);
+			}
 			return CriterionTestResult.builder().message(message).build();
 		}
 	}

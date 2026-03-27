@@ -96,7 +96,7 @@ class SelfSchedulingTest {
 		assertNotNull(resourceAttributes.get(AGENT_INFO_CC_VERSION_NUMBER_ATTRIBUTE_KEY));
 		assertNotNull(resourceAttributes.get(COMPANY_ATTRIBUTE_KEY));
 
-		// Verify the metrics
+		// Verify the metrics (1 agent info metric)
 		final List<ScopeMetrics> scopeMetricsList = resourceMetrics.getScopeMetricsList();
 		assertEquals(1, scopeMetricsList.size());
 		final ScopeMetrics scopeMetrics = scopeMetricsList.get(0);

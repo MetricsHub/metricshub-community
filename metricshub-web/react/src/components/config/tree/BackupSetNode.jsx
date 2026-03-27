@@ -73,6 +73,8 @@ export default function BackupSetNode({
 	onDelete,
 	isReadOnly = false,
 	selectedName = null,
+	/** When set (e.g. "config"), itemIds are prefixed for use in a unified tree. */
+	idPrefix = null,
 }) {
 	const dispatch = useAppDispatch();
 	const { user } = useAuth();
@@ -144,7 +146,7 @@ export default function BackupSetNode({
 		}
 	}, [dispatch, files, showSnackbar, effectiveReadOnly]);
 
-	const groupItemId = `__backup_set__/${id}`;
+	const groupItemId = idPrefix ? `${idPrefix}:__backup_set__/${id}` : `__backup_set__/${id}`;
 
 	return (
 		<>
@@ -157,7 +159,7 @@ export default function BackupSetNode({
 					<FileTreeItem
 						key={f.name}
 						file={f}
-						itemId={f.name}
+						itemId={idPrefix ? `${idPrefix}:${f.name}` : f.name}
 						labelName={f.displayName}
 						isDirty={!!dirtyByName?.[f.name]}
 						validation={filesByName?.[f.name]?.validation}

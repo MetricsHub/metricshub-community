@@ -52,6 +52,8 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 	@NonNull
 	private final String hostname;
 
+	private final boolean logMode;
+
 	@Getter
 	private CriterionTestResult criterionTestResult;
 
@@ -62,7 +64,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 		}
 		extensionManger
 			.findExtensionByType("wmi")
-			.map(extension -> extension.processCriterion(processCriterion, null, null))
+			.map(extension -> extension.processCriterion(processCriterion, null, null, logMode))
 			.ifPresent(result -> criterionTestResult = result);
 	}
 

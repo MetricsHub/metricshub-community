@@ -171,7 +171,8 @@ const AppContent = ({ onToggleTheme }) => {
 							element={<Explorer />}
 						/>
 						<Route path={paths.configuration} element={<Configuration />} />
-						<Route path={`${paths.configuration}/:name`} element={<Configuration />} />
+						<Route path="/configuration/config/:name" element={<Configuration />} />
+						<Route path="/configuration/otel/:name" element={<Configuration />} />
 						<Route path={paths.agent} element={<AgentPage />} />
 						<Route path={paths.chat} element={<Chat />} />
 						{/* Catch-all */}

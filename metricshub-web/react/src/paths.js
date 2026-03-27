@@ -12,7 +12,10 @@ export const paths = {
 			? `/explorer/resource-groups/${encodeURIComponent(group)}/resources/${encodeURIComponent(resource)}/connectors/${encodeURIComponent(connectorId)}/monitors/${encodeURIComponent(monitorType)}`
 			: `/explorer/resources/${encodeURIComponent(resource)}/connectors/${encodeURIComponent(connectorId)}/monitors/${encodeURIComponent(monitorType)}`,
 	configuration: "/configuration",
-	configurationFile: (name) => `/configuration/${encodeURIComponent(name)}`,
+	/** Monitoring config file: /configuration/config/:name */
+	configurationFile: (name) => `/configuration/config/${encodeURIComponent(name)}`,
+	/** OTEL config file: /configuration/otel/:name */
+	configurationOtelFile: (name) => `/configuration/otel/${encodeURIComponent(name)}`,
 	chat: "/chat",
 	login: "/login",
 };

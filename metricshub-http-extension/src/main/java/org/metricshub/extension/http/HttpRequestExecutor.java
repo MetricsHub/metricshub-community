@@ -335,8 +335,8 @@ public class HttpRequestExecutor {
 	/**
 	 * @param url           The full URL of the HTTP request.
 	 * @param method        The HTTP method (GET, POST, ...).
-	 * @param username      The username for the connexion.
-	 * @param password      The password for the connexion.
+	 * @param username      The username for the connection.
+	 * @param password      The password for the connection.
 	 * @param headerContent The {@link Map} of properties-values in the header.
 	 * @param bodyContent   The body as a plain text.
 	 * @param timeout       The timeout of the request.

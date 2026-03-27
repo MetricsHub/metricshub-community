@@ -64,7 +64,7 @@ class JmxRequestExecutorIT {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("localhost").port(jmxPort).build();
 
 		final List<List<String>> result = new JmxRequestExecutor()
-			.fetchMBean(config, "org.metricshub.extension.jmx:type=TestJmx", List.of("Name"), List.of());
+			.fetchMBean(config, "org.metricshub.extension.jmx:type=TestJmx", List.of("Name"), List.of(), null);
 
 		assertNotNull(result, "Result should not be null");
 		assertEquals(1, result.size(), "Should return one row");
@@ -75,7 +75,7 @@ class JmxRequestExecutorIT {
 	void testShouldSucceedHealthCheck() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("localhost").port(jmxPort).build();
 
-		final boolean isAlive = new JmxRequestExecutor().checkConnection(config);
+		final boolean isAlive = new JmxRequestExecutor().checkConnection(config, null);
 		assertTrue(isAlive, "checkConnection should return true");
 	}
 

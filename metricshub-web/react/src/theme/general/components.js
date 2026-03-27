@@ -143,7 +143,7 @@ export const buildComponents = () => {
 						display: "none",
 					},
 					"&:after": {
-						transition: "border-bottom-color 0.4s ease",
+						display: "none",
 					},
 				},
 				input: {

@@ -230,7 +230,7 @@ class IpmiExtensionTest {
 
 		assertEquals(
 			CriterionTestResult.empty(),
-			ipmiExtension.processCriterion(ipmiCriterion, CONNECTOR_ID, telemetryManager)
+			ipmiExtension.processCriterion(ipmiCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -252,7 +252,8 @@ class IpmiExtensionTest {
 		final CriterionTestResult criterionTestResult = ipmiExtension.processCriterion(
 			ipmiCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals(null, criterionTestResult.getResult());
@@ -278,7 +279,8 @@ class IpmiExtensionTest {
 		final CriterionTestResult criterionTestResult = ipmiExtension.processCriterion(
 			ipmiCriterion,
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 
 		assertEquals(RESULT, criterionTestResult.getResult());

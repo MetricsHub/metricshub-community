@@ -194,7 +194,7 @@ class PingExtensionTest {
 	void testProcessCriterion() {
 		assertEquals(
 			CriterionTestResult.empty(),
-			pingExtension.processCriterion(new HttpCriterion(), CONNECTOR_ID, telemetryManager)
+			pingExtension.processCriterion(new HttpCriterion(), CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 

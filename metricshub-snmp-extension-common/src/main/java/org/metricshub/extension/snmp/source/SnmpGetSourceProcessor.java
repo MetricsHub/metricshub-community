@@ -95,7 +95,8 @@ public class SnmpGetSourceProcessor {
 				snmpConfiguration,
 				hostname,
 				true,
-				telemetryManager.getEmulationInputDirectory()
+				telemetryManager.getEmulationInputDirectory(),
+				telemetryManager.getHostname()
 			);
 
 			if (result != null) {

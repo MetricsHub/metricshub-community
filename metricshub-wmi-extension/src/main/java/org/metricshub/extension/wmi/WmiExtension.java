@@ -167,23 +167,29 @@ public class WmiExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		final Function<TelemetryManager, IWinConfiguration> configurationRetriever = manager ->
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WmiConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
-			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId)
+			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode)
 				.process(wmiCriterion, telemetryManager);
 		} else if (criterion instanceof ServiceCriterion serviceCriterion) {
 			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever)
-				.process(serviceCriterion, telemetryManager);
+				.process(serviceCriterion, telemetryManager, connectorId, logMode);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId)
 				.process(commandLineCriterion, telemetryManager);
 		} else if (criterion instanceof ProcessCriterion processCriterion) {
 			return new WinProcessCriterionProcessor(wmiDetectionService)
-				.process(processCriterion, WmiConfiguration.builder().username(null).password(null).timeout(30L).build());
+				.process(
+					processCriterion,
+					WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
+					connectorId,
+					logMode
+				);
 		}
 
 		throw new IllegalArgumentException(

@@ -47,6 +47,8 @@ public class SqlCriterionProcessor {
 	@NonNull
 	private SqlRequestExecutor sqlRequestExecutor;
 
+	private boolean logMode;
+
 	/**
 	 * Processes a SQL criterion by executing an SQL query.
 	 *
@@ -81,8 +83,10 @@ public class SqlCriterionProcessor {
 		try {
 			queryResult = sqlRequestExecutor.executeSql(hostname, cfg, sqlCriterion.getQuery(), false);
 		} catch (Exception e) {
-			log.error("Hostname {} - Error executing SQL criterion: {}", hostname, e.getMessage());
-			log.debug("Hostname {} - An exception occurred while executing SQL criterion.", hostname, e);
+			if (logMode) {
+				log.error("Hostname {} - Error executing SQL criterion: {}", hostname, e.getMessage());
+				log.debug("Hostname {} - An exception occurred while executing SQL criterion.", hostname, e);
+			}
 			return CriterionTestResult.error(sqlCriterion, e.getMessage());
 		}
 
@@ -129,7 +133,9 @@ public class SqlCriterionProcessor {
 			}
 		}
 
-		log.debug(message);
+		if (logMode) {
+			log.debug(message);
+		}
 
 		return CriterionTestResult.builder().result(result).message(message).success(success).build();
 	}

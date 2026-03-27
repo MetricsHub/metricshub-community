@@ -114,18 +114,19 @@ class SnmpExtensionTest {
 
 		doThrow(new TimeoutException("SNMPGetNext timeout"))
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 " +
-					"was unsuccessful due to an exception. " +
+					"timed out. " +
 					"Message: SNMPGetNext timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
@@ -139,11 +140,12 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionNullResult() throws Exception {
 		initSnmp();
 
-		doReturn(null).when(snmpRequestExecutorMock).executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+		doReturn(null).when(snmpRequestExecutorMock).executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -163,11 +165,12 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNextCriterionEmptyResult() throws Exception {
 		initSnmp();
 
-		doReturn("").when(snmpRequestExecutorMock).executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+		doReturn("").when(snmpRequestExecutorMock).executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -191,11 +194,12 @@ class SnmpExtensionTest {
 
 		doReturn(snmpGetNextResult)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -218,11 +222,12 @@ class SnmpExtensionTest {
 
 		doReturn(SNMP_GET_NEXT_SECOND_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -246,11 +251,12 @@ class SnmpExtensionTest {
 
 		doReturn(SNMP_GET_NEXT_SECOND_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -273,11 +279,12 @@ class SnmpExtensionTest {
 
 		doReturn(SNMP_GET_NEXT_THIRD_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -301,11 +308,12 @@ class SnmpExtensionTest {
 
 		doReturn(SNMP_GET_NEXT_FOURTH_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGetNext(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetNextCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -328,7 +336,7 @@ class SnmpExtensionTest {
 
 		assertNull(
 			snmpExtension
-				.processCriterion(SnmpGetNextCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager)
+				.processCriterion(SnmpGetNextCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
 				.getResult()
 		);
 	}
@@ -339,7 +347,7 @@ class SnmpExtensionTest {
 
 		assertNull(
 			snmpExtension
-				.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager)
+				.processCriterion(SnmpGetCriterion.builder().oid(OID).build(), CONNECTOR_ID, telemetryManager, true)
 				.getResult()
 		);
 	}
@@ -350,11 +358,12 @@ class SnmpExtensionTest {
 
 		doReturn(EXECUTE_SNMP_GET_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGet(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult("CMC").build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -376,11 +385,12 @@ class SnmpExtensionTest {
 
 		doReturn(EXECUTE_SNMP_GET_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGet(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).expectedResult(SNMP_VERSION).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -403,11 +413,12 @@ class SnmpExtensionTest {
 
 		doReturn(EXECUTE_SNMP_GET_RESULT)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGet(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -427,11 +438,12 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetEmptyResult() throws Exception {
 		initSnmp();
 
-		doReturn("").when(snmpRequestExecutorMock).executeSNMPGet(any(), any(), any(), eq(false), isNull());
+		doReturn("").when(snmpRequestExecutorMock).executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -451,11 +463,12 @@ class SnmpExtensionTest {
 	void testProcessSnmpGetNullResult() throws Exception {
 		initSnmp();
 
-		doReturn(null).when(snmpRequestExecutorMock).executeSNMPGet(any(), any(), any(), eq(false), isNull());
+		doReturn(null).when(snmpRequestExecutorMock).executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
@@ -476,18 +489,19 @@ class SnmpExtensionTest {
 
 		doThrow(new TimeoutException("SNMPGet timeout"))
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGet(any(), any(), any(), eq(false), isNull());
+			.executeSNMPGet(any(), any(), any(), eq(false), isNull(), any());
 		final CriterionTestResult actual = snmpExtension.processCriterion(
 			SnmpGetCriterion.builder().oid(OID).build(),
 			CONNECTOR_ID,
-			telemetryManager
+			telemetryManager,
+			true
 		);
 		final CriterionTestResult expected = CriterionTestResult
 			.builder()
 			.message(
 				String.format(
-					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful " +
-					"due to an exception. " +
+					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 " +
+					"timed out. " +
 					"Message: SNMPGet timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
@@ -510,7 +524,8 @@ class SnmpExtensionTest {
 				any(SnmpConfiguration.class),
 				anyString(),
 				anyBoolean(),
-				isNull()
+				isNull(),
+				any()
 			);
 
 		// Start the SNMP protocol check
@@ -532,7 +547,8 @@ class SnmpExtensionTest {
 				any(SnmpConfiguration.class),
 				anyString(),
 				anyBoolean(),
-				isNull()
+				isNull(),
+				any()
 			);
 
 		// Start the SNMP protocol check
@@ -645,7 +661,7 @@ class SnmpExtensionTest {
 		initSnmp();
 		doReturn(message)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGet(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull());
+			.executeSNMPGet(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull(), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
 		ObjectNode snmpQueryConfiguration = JsonNodeFactory.instance.objectNode();
@@ -661,7 +677,7 @@ class SnmpExtensionTest {
 		initSnmp();
 		doReturn(message)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPGetNext(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull());
+			.executeSNMPGetNext(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull(), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
 		ObjectNode snmpQueryConfiguration = JsonNodeFactory.instance.objectNode();
@@ -677,7 +693,7 @@ class SnmpExtensionTest {
 		initSnmp();
 		doReturn(message)
 			.when(snmpRequestExecutorMock)
-			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull());
+			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull(), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
 		ObjectNode snmpQueryConfiguration = JsonNodeFactory.instance.objectNode();
@@ -698,7 +714,8 @@ class SnmpExtensionTest {
 				any(SnmpConfiguration.class),
 				anyString(),
 				eq(false),
-				isNull()
+				isNull(),
+				any()
 			);
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
@@ -720,7 +737,7 @@ class SnmpExtensionTest {
 		initSnmp();
 		doThrow(new InterruptedException())
 			.when(snmpRequestExecutorMock)
-			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull());
+			.executeSNMPWalk(anyString(), any(SnmpConfiguration.class), anyString(), eq(false), isNull(), any());
 
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOST_NAME).build();
 		ObjectNode snmpQueryConfiguration = JsonNodeFactory.instance.objectNode();

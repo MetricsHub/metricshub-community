@@ -48,11 +48,15 @@ public class WinProcessCriterionProcessor {
 	 *
 	 * @param processCriterion      The process criterion that specifies the command line to look for in the running processes.
 	 * @param localWinConfiguration The Windows configuration to be used for the WMI query execution.
+	 * @param connectorId           The identifier of the connector for which the criterion is being processed.
+	 * @param logMode               A boolean flag indicating whether the detection test should be executed in log mode (true) or not (false).
 	 * @return A {@link CriterionTestResult} indicating the result of the detection test.
 	 */
 	public CriterionTestResult process(
 		final ProcessCriterion processCriterion,
-		final IWinConfiguration localWinConfiguration
+		final IWinConfiguration localWinConfiguration,
+		final String connectorId,
+		final boolean logMode
 	) {
 		final WmiCriterion criterion = WmiCriterion
 			.builder()
@@ -61,6 +65,6 @@ public class WinProcessCriterionProcessor {
 			.expectedResult(processCriterion.getCommandLine())
 			.build();
 
-		return wmiDetectionService.performDetectionTest(LOCALHOST, localWinConfiguration, criterion);
+		return wmiDetectionService.performDetectionTest(LOCALHOST, localWinConfiguration, criterion, connectorId, logMode);
 	}
 }

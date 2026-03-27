@@ -128,10 +128,11 @@ public class JdbcExtension implements IProtocolExtension {
 	public CriterionTestResult processCriterion(
 		Criterion criterion,
 		String connectorId,
-		TelemetryManager telemetryManager
+		TelemetryManager telemetryManager,
+		boolean logMode
 	) {
 		if (criterion instanceof SqlCriterion sqlCriterion) {
-			return new SqlCriterionProcessor(sqlRequestExecutor).process(sqlCriterion, telemetryManager);
+			return new SqlCriterionProcessor(sqlRequestExecutor, logMode).process(sqlCriterion, telemetryManager);
 		}
 
 		throw new IllegalArgumentException(

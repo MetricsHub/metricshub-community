@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.LOG_COMPUTE_KEY_SUFFIX_TEMPLATE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.MAX_CONSECUTIVE_DETECTION_FAILURES;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_FAILED;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.STATE_SET_METRIC_OK;
 
@@ -42,6 +43,7 @@ import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.JobInfo;
 import org.metricshub.engine.common.exception.RetryableException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.ThreadHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
@@ -421,7 +423,12 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
-	 * Validates the connector's detection criteria
+	 * Validates the connector's detection criteria.
+	 * <p>
+	 * Uses a consecutive failure threshold to avoid stopping a connector's job
+	 * due to a single transient failure (e.g. SNMP timeout). The connector is only
+	 * considered to no longer match the host after {@code MAX_CONSECUTIVE_DETECTION_FAILURES}
+	 * consecutive failures. The counter is reset on each successful validation.
 	 *
 	 * @param currentConnector	Connector instance
 	 * @param hostname			Hostname
@@ -443,7 +450,8 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager,
 			clientsExecutor,
 			Collections.emptySet(),
-			extensionManager
+			extensionManager,
+			true
 		)
 			.runConnectorDetectionCriteria(currentConnector, hostname);
 
@@ -470,8 +478,50 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Map<String, String> legacyTextParameters = monitor.getLegacyTextParameters();
 		legacyTextParameters.put("StatusInformation", statusInformation);
 
-		collectConnectorStatus(connectorTestResult.isSuccess(), connectorId, monitor);
-		return connectorTestResult.isSuccess();
+		final boolean detectionSuccess = connectorTestResult.isSuccess();
+
+		// Get the connector's namespace to track consecutive detection failures
+		final ConnectorNamespace connectorNamespace = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(connectorId);
+
+		if (detectionSuccess) {
+			// Detection passed: reset the consecutive failure counter
+			connectorNamespace.resetDetectionFailures();
+			collectConnectorStatus(true, connectorId, monitor);
+			return true;
+		}
+
+		// Detection failed: increment the counter and check against the threshold
+		final int failureCount = connectorNamespace.incrementDetectionFailures();
+
+		if (failureCount < MAX_CONSECUTIVE_DETECTION_FAILURES) {
+			// Transient failure: log a warning but do NOT stop the connector's job
+			log.warn(
+				"Hostname {} - Detection re-validation failed for connector {} (failure {}/{}). " +
+				"Treating as transient; the connector's {} job will continue.",
+				hostname,
+				connectorId,
+				failureCount,
+				MAX_CONSECUTIVE_DETECTION_FAILURES,
+				jobName
+			);
+			// Report the status as FAILED while we tolerate the transient failure and keep the job running
+			collectConnectorStatus(false, connectorId, monitor);
+			return true;
+		}
+
+		// Threshold exceeded: this is a persistent failure
+		log.error(
+			"Hostname {} - Detection re-validation failed {} consecutive times for connector {}. " +
+			"The connector no longer matches the host. Stopping the connector's {} job.",
+			hostname,
+			failureCount,
+			connectorId,
+			jobName
+		);
+		collectConnectorStatus(false, connectorId, monitor);
+		return false;
 	}
 
 	/**
@@ -685,5 +735,45 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager.getConnectorStore()
 		);
 		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_CONFIGURED_METRIC_NAME, 1.0, strategyTime);
+	}
+
+	/**
+	 * Collects per-host request metrics (completed and timeout counts, broken down
+	 * by operation type) on the endpoint host monitor, if self-monitoring is enabled.
+	 *
+	 * @param hostname The resource hostname.
+	 */
+	protected void collectRequestMetrics(final String hostname) {
+		if (!telemetryManager.getHostConfiguration().isEnableSelfMonitoring()) {
+			return;
+		}
+		final Map<String, ThreadHelper.Stats> statsByOperation = ThreadHelper.getStats(hostname);
+		if (statsByOperation.isEmpty()) {
+			return;
+		}
+		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+		if (endpointHostMonitor == null) {
+			return;
+		}
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
+		for (final Map.Entry<String, ThreadHelper.Stats> entry : statsByOperation.entrySet()) {
+			final String operationType = entry.getKey();
+			final ThreadHelper.Stats stats = entry.getValue();
+			metricFactory.collectNumberMetric(
+				endpointHostMonitor,
+				String.format("metricshub.host.requests{state=\"completed\", operation_type=\"%s\"}", operationType),
+				(double) stats.getCompleted(),
+				strategyTime
+			);
+			metricFactory.collectNumberMetric(
+				endpointHostMonitor,
+				String.format("metricshub.host.requests{state=\"timeout\", operation_type=\"%s\"}", operationType),
+				(double) stats.getTimeout(),
+				strategyTime
+			);
+		}
 	}
 }
