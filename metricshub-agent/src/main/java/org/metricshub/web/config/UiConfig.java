@@ -65,6 +65,11 @@ public class UiConfig implements WebMvcConfigurer {
 				new PathResourceResolver() {
 					@Override
 					protected Resource getResource(String resourcePath, Resource location) throws IOException {
+						// Let springdoc handle its own paths
+						if (resourcePath.startsWith("v3/api-docs") || resourcePath.startsWith("swagger-ui")) {
+							return null;
+						}
+
 						// Serve the file if it exists
 						Resource requested = location.createRelative(resourcePath);
 						if (requested.exists() && requested.isReadable()) {

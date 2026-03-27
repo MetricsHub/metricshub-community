@@ -21,6 +21,10 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import org.metricshub.web.dto.SearchMatch;
@@ -50,6 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "Explorer", description = "Agent hierarchy exploration and search")
 public class ExplorerController {
 
 	private final ExplorerService explorerService;
@@ -75,6 +80,11 @@ public class ExplorerController {
 	 *
 	 * @return the agent hierarchy root node
 	 */
+	@Operation(
+		summary = "Get full hierarchy",
+		description = "Retrieves the complete resource hierarchy as a children-only tree.",
+		responses = { @ApiResponse(responseCode = "200", description = "Hierarchy retrieved successfully") }
+	)
 	@GetMapping("/hierarchy")
 	public AgentTelemetry getHierarchy() {
 		return explorerService.getHierarchy();
@@ -87,8 +97,18 @@ public class ExplorerController {
 	 * @param resourceName the resource key/name as configured at the top level
 	 * @return the full resource subtree
 	 */
+	@Operation(
+		summary = "Get top-level resource",
+		description = "Retrieves a complete subtree for a top-level resource by name.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Resource retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "Resource not found")
+		}
+	)
 	@GetMapping("/resources/{resourceName}")
-	public ResourceTelemetry getTopLevelResource(@NotBlank @PathVariable("resourceName") final String resourceName) {
+	public ResourceTelemetry getTopLevelResource(
+		@Parameter(description = "Resource key/name") @NotBlank @PathVariable("resourceName") final String resourceName
+	) {
 		return explorerService.getTopLevelResource(resourceName);
 	}
 
@@ -100,10 +120,20 @@ public class ExplorerController {
 	 * @param resourceName the resource key/name within the specified group
 	 * @return the full resource subtree
 	 */
+	@Operation(
+		summary = "Get grouped resource",
+		description = "Retrieves a complete subtree for a resource within a specific resource group.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Resource retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "Resource or group not found")
+		}
+	)
 	@GetMapping("/resource-groups/{groupName}/resources/{resourceName}")
 	public ResourceTelemetry getGroupedResourceByPath(
-		@NotBlank @PathVariable("groupName") final String groupName,
-		@NotBlank @PathVariable("resourceName") final String resourceName
+		@Parameter(description = "Resource-group key/name") @NotBlank @PathVariable("groupName") final String groupName,
+		@Parameter(description = "Resource key/name within the group") @NotBlank @PathVariable(
+			"resourceName"
+		) final String resourceName
 	) {
 		return explorerService.getGroupedResource(resourceName, groupName);
 	}
@@ -115,8 +145,15 @@ public class ExplorerController {
 	 * @param q free-text query string; fuzzy matched against node names
 	 * @return a ranked list of matches with their hierarchy paths
 	 */
+	@Operation(
+		summary = "Search hierarchy",
+		description = "Searches across resource-groups, resources, connectors, monitor types and instances using Jaro-Winkler similarity.",
+		responses = { @ApiResponse(responseCode = "200", description = "Search results returned successfully") }
+	)
 	@GetMapping("/search")
-	public List<SearchMatch> search(@RequestParam("q") final String q) {
+	public List<SearchMatch> search(
+		@Parameter(description = "Free-text query string for fuzzy matching") @RequestParam("q") final String q
+	) {
 		return explorerService.search(q);
 	}
 }

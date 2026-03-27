@@ -21,6 +21,9 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.metricshub.web.dto.UserDto;
 import org.metricshub.web.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping(value = "/api/users", produces = MediaType.APPLICATION_JSON_VALUE)
+@Tag(name = "User", description = "User information")
 public class UserController {
 
 	private UserService userService;
@@ -53,6 +57,11 @@ public class UserController {
 	 *
 	 * @return A JSON string indicating the service status.
 	 */
+	@Operation(
+		summary = "Get current user",
+		description = "Returns information about the currently authenticated user.",
+		responses = { @ApiResponse(responseCode = "200", description = "User information retrieved successfully") }
+	)
 	@GetMapping("/me")
 	public UserDto me() {
 		return userService.getCurrent();

@@ -21,6 +21,7 @@ package org.metricshub.web.security.login;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,12 +30,16 @@ import lombok.NoArgsConstructor;
 /**
  * Request object for login authentication containing username and password.
  */
+@Schema(description = "Login credentials")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class LoginAuthenticationRequest {
 
+	@Schema(description = "Username")
 	private String username;
+
+	@Schema(description = "Password")
 	private String password;
 }

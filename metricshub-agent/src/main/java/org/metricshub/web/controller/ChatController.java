@@ -46,6 +46,9 @@ import com.openai.models.responses.ResponseTextDeltaEvent;
 import com.openai.models.responses.Tool;
 import com.openai.models.responses.WebSearchTool;
 import com.openai.models.responses.WebSearchTool.Type;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -85,6 +88,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 @RequestMapping(value = "/api")
 @Slf4j
 @RequiredArgsConstructor
+@Tag(name = "Chat", description = "AI-powered chat with streaming responses")
 public class ChatController {
 
 	/**
@@ -170,12 +174,24 @@ public class ChatController {
 	 * @param request the chat request
 	 * @return an SseEmitter for streaming responses
 	 */
+	@Operation(
+		summary = "Stream chat response",
+		description = "Handles streaming chat requests via Server-Sent Events with OpenAI integration.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Streaming response started"),
+			@ApiResponse(responseCode = "400", description = "Invalid request")
+		}
+	)
 	@PostMapping(
 		value = "/chat/stream",
 		consumes = MediaType.APPLICATION_JSON_VALUE,
 		produces = MediaType.TEXT_EVENT_STREAM_VALUE
 	)
-	public SseEmitter stream(@Valid @RequestBody final ChatRequest request) {
+	public SseEmitter stream(
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "Chat request with message and history"
+		) @Valid @RequestBody final ChatRequest request
+	) {
 		if (openAIClient.isEmpty()) {
 			return sendImmediateError("OpenAI API key is not configured");
 		}

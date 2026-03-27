@@ -21,7 +21,10 @@ package org.metricshub.web.dto.chat;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Error response DTO for chat endpoints.
  */
-public record ChatErrorResponse(String error) {}
+@Schema(description = "Chat error response")
+public record ChatErrorResponse(@Schema(description = "Error message") String error) {}

@@ -21,6 +21,10 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -52,6 +56,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping(value = "/api/config-files")
+@Tag(name = "Configuration Files", description = "MetricsHub configuration file management")
 public class ConfigurationFilesController {
 
 	/** Pattern to extract line and column from Velocity error messages. */
@@ -86,6 +91,11 @@ public class ConfigurationFilesController {
 	 * @return A list of ConfigurationFile representing all configuration files.
 	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
+	@Operation(
+		summary = "List configuration files",
+		description = "Lists all configuration files with their metadata.",
+		responses = { @ApiResponse(responseCode = "200", description = "Configuration files listed successfully") }
+	)
 	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<ConfigurationFile> listConfigurationFiles() throws ConfigFilesException {
 		return configurationFilesService.getAllConfigurationFiles();
@@ -98,9 +108,18 @@ public class ConfigurationFilesController {
 	 * @return the content of the configuration file as plain text.
 	 * @throws ConfigFilesException if the file is not found or cannot be read
 	 */
+	@Operation(
+		summary = "Get configuration file content",
+		description = "Returns the content of a specific configuration file as plain text.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File content retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getConfigurationFileContent(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<String> getConfigurationFileContent(
+		@Parameter(description = "Configuration file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		final String content = configurationFilesService.getFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -115,11 +134,24 @@ public class ConfigurationFilesController {
 	 *         saved file's metadata.
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
+	@Operation(
+		summary = "Save or update a configuration file",
+		description = "Creates or updates a configuration file. Optionally validates content before saving.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File saved successfully"),
+			@ApiResponse(responseCode = "400", description = "Validation failed")
+		}
+	)
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content,
-		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+		@Parameter(description = "Configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content,
+		@Parameter(description = "Whether to skip content validation before saving") @RequestParam(
+			name = "skipValidation",
+			defaultValue = "false"
+		) boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
 			if (ConfigurationFilesService.isVmFile(fileName)) {
@@ -151,15 +183,28 @@ public class ConfigurationFilesController {
 	 *         saved file's metadata.
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
+	@Operation(
+		summary = "Save or update a draft configuration file",
+		description = "Creates or updates a draft configuration file. Optionally validates content before saving.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Draft file saved successfully"),
+			@ApiResponse(responseCode = "400", description = "Validation failed")
+		}
+	)
 	@PutMapping(
 		value = "/draft/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateDraftFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content,
-		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+		@Parameter(description = "Configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content,
+		@Parameter(description = "Whether to skip content validation before saving") @RequestParam(
+			name = "skipValidation",
+			defaultValue = "false"
+		) boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
 			if (ConfigurationFilesService.isVmFile(fileName)) {
@@ -191,14 +236,24 @@ public class ConfigurationFilesController {
 	 *         validation results.
 	 * @throws ConfigFilesException if the file content cannot be read
 	 */
+	@Operation(
+		summary = "Validate a configuration file",
+		description = "Validates a configuration file's content. If no content is provided, validates the file on disk.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Validation result returned"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@PostMapping(
 		value = "/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<ConfigurationFilesService.Validation> validateConfigurationFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@Parameter(description = "Configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "File content to validate; if null, validates the file on disk"
+		) @RequestBody(required = false) String content
 	) throws ConfigFilesException {
 		if (ConfigurationFilesService.isVmFile(fileName)) {
 			// For .vm files: only validate that the Velocity script executes successfully.
@@ -229,9 +284,18 @@ public class ConfigurationFilesController {
 	 * @return a ResponseEntity with no content.
 	 * @throws ConfigFilesException if an IO error occurs during deletion
 	 */
+	@Operation(
+		summary = "Delete a configuration file",
+		description = "Deletes a configuration file by name.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "File deleted successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@DeleteMapping("/{fileName}")
-	public ResponseEntity<Void> deleteConfigurationFile(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<Void> deleteConfigurationFile(
+		@Parameter(description = "Configuration file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		configurationFilesService.deleteFile(fileName);
 		// Returns 204 No Content
 		return ResponseEntity.noContent().build();
@@ -245,14 +309,24 @@ public class ConfigurationFilesController {
 	 *         renamed file's metadata.
 	 * @throws ConfigFilesException if an IO error occurs during renaming
 	 */
+	@Operation(
+		summary = "Rename a configuration file",
+		description = "Renames a configuration file.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File renamed successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@PatchMapping(
 		value = "/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.APPLICATION_JSON_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> renameConfigurationFile(
-		@PathVariable("fileName") String oldName,
-		@Valid @RequestBody FileNewName fileNewName
+		@Parameter(description = "Current file name") @PathVariable("fileName") String oldName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "New file name"
+		) @Valid @RequestBody FileNewName fileNewName
 	) throws ConfigFilesException {
 		return ResponseEntity.ok(configurationFilesService.renameFile(oldName, fileNewName.getNewName()));
 	}
@@ -260,14 +334,21 @@ public class ConfigurationFilesController {
 	/**
 	 * Endpoint to create or update a backup file.
 	 */
+	@Operation(
+		summary = "Save or update a backup file",
+		description = "Creates or updates a backup of a configuration file.",
+		responses = { @ApiResponse(responseCode = "200", description = "Backup file saved successfully") }
+	)
 	@PutMapping(
 		value = "/backup/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateBackupFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content
 	) throws ConfigFilesException {
 		return ResponseEntity.ok(configurationFilesService.saveOrUpdateBackupFile(fileName, content));
 	}
@@ -278,6 +359,11 @@ public class ConfigurationFilesController {
 	 * @return A list of ConfigurationFile representing all backup files.
 	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
+	@Operation(
+		summary = "List backup files",
+		description = "Lists all backup configuration files with their metadata.",
+		responses = { @ApiResponse(responseCode = "200", description = "Backup files listed successfully") }
+	)
 	@GetMapping(value = "/backup", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<ConfigurationFile> listBackupFiles() throws ConfigFilesException {
 		return configurationFilesService.listAllBackupFiles();
@@ -286,9 +372,18 @@ public class ConfigurationFilesController {
 	/**
 	 * Endpoint to get the content of a backup file by its name.
 	 */
+	@Operation(
+		summary = "Get backup file content",
+		description = "Returns the content of a backup file as plain text.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Backup file content retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "Backup file not found")
+		}
+	)
 	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getBackupFileContent(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<String> getBackupFileContent(
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		final String content = configurationFilesService.getBackupFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -296,8 +391,18 @@ public class ConfigurationFilesController {
 	/**
 	 * Endpoint to delete a backup file by its name.
 	 */
+	@Operation(
+		summary = "Delete a backup file",
+		description = "Deletes a backup file by name.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "Backup file deleted successfully"),
+			@ApiResponse(responseCode = "404", description = "Backup file not found")
+		}
+	)
 	@DeleteMapping("/backup/{fileName}")
-	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName) throws ConfigFilesException {
+	public ResponseEntity<Void> deleteBackupFile(
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		configurationFilesService.deleteBackupFile(fileName);
 		return ResponseEntity.noContent().build();
 	}
@@ -316,10 +421,20 @@ public class ConfigurationFilesController {
 	 * @param content  optional template content from the editor
 	 * @return the generated YAML as plain text
 	 */
+	@Operation(
+		summary = "Test a Velocity template",
+		description = "Evaluates a Velocity template (.vm) and returns the generated YAML without schema validation.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Template evaluated successfully"),
+			@ApiResponse(responseCode = "400", description = "Not a .vm file or template evaluation failed")
+		}
+	)
 	@PostMapping(value = "/test/{fileName}", consumes = MediaType.TEXT_PLAIN_VALUE, produces = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<String> testVelocityTemplate(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@Parameter(description = "Velocity template file name (.vm)") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "Optional template content from the editor"
+		) @RequestBody(required = false) String content
 	) {
 		if (!ConfigurationFilesService.isVmFile(fileName)) {
 			throw new TextPlainException(HttpStatus.BAD_REQUEST, "Only .vm files can be tested.");

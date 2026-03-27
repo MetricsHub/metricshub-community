@@ -14,7 +14,6 @@ import {
 	Toolbar,
 	Button,
 	IconButton,
-	Tooltip,
 	Menu,
 	MenuItem,
 	ListItemIcon,
@@ -23,6 +22,7 @@ import {
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
+import DataObjectIcon from "@mui/icons-material/DataObject";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -38,6 +38,7 @@ import { selectLastVisitedPath } from "../../store/slices/explorer-slice";
 import StatusText from "./status/StatusText";
 import OtelStatusIcon from "./status/OtelStatusIcon";
 import ProfileMenu from "./ProfileMenu";
+import DocsMenu from "./DocsMenu";
 import ToggleTheme from "./ToggleTheme";
 
 // Refresh status every 30 seconds
@@ -257,20 +258,8 @@ const NavBar = ({ onToggleTheme }) => {
 
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
-						{/* Docs link button - Desktop only */}
-						{!isSmallScreen && (
-							<Tooltip title="Documentation" arrow enterDelay={200}>
-								<IconButton
-									component="a"
-									href="https://metricshub.com/docs/latest/"
-									target="_blank"
-									rel="noopener noreferrer"
-									aria-label="Open MetricsHub documentation in a new tab"
-								>
-									<MenuBookOutlinedIcon />
-								</IconButton>
-							</Tooltip>
-						)}
+						{/* Docs menu - Desktop only */}
+						{!isSmallScreen && <DocsMenu />}
 						{/* Theme toggle - Desktop only */}
 						{!isSmallScreen && <ToggleTheme onClick={handleToggleTheme} />}
 						{/* Profile menu - Desktop only */}
@@ -363,6 +352,18 @@ const NavBar = ({ onToggleTheme }) => {
 											<MenuBookOutlinedIcon fontSize="small" />
 										</ListItemIcon>
 										<ListItemText>Documentation</ListItemText>
+									</MenuItem>
+									<MenuItem
+										component="a"
+										href="/swagger-ui/index.html"
+										target="_blank"
+										rel="noopener noreferrer"
+										onClick={handleMobileMenuClose}
+									>
+										<ListItemIcon>
+											<DataObjectIcon fontSize="small" />
+										</ListItemIcon>
+										<ListItemText>OpenAPI</ListItemText>
 									</MenuItem>
 									<MenuItem
 										onClick={() => {
