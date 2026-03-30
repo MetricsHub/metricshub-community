@@ -1,7 +1,6 @@
 import React from "react";
 import { IconButton, Menu, Tooltip, Divider, Typography, Box } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import ToggleTheme from "./ToggleTheme";
 import LogoutMenuItem from "./Logout";
 
 /**

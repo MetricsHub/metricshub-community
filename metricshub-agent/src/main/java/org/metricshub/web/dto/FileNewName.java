@@ -21,6 +21,7 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -29,11 +30,13 @@ import lombok.NoArgsConstructor;
 /**
  * DTO for renaming a file.
  */
+@Schema(description = "Request body for renaming a file")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class FileNewName {
 
+	@Schema(description = "The new file name")
 	@NotBlank(message = "Field 'newName' is required")
 	private String newName;
 }

@@ -1,10 +1,10 @@
-package org.metricshub.web.dto;
+package org.metricshub.web.config;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -21,35 +21,33 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.metricshub.web.security.User;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import org.metricshub.engine.common.helpers.VersionHelper;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * Data Transfer Object (DTO) for User information.
+ * Configuration class for OpenAPI documentation.
  */
-@Schema(description = "User information")
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class UserDto {
-
-	@Schema(description = "Username")
-	private String username;
-
-	@Schema(description = "User role")
-	private String role;
+@Configuration
+public class OpenApiConfig {
 
 	/**
-	 * Create UserDto from User entity.
+	 * Creates the OpenAPI metadata bean used by springdoc to generate the specification.
 	 *
-	 * @param user The user entity
+	 * @return the configured {@link OpenAPI} instance
 	 */
-	public static UserDto fromUser(final User user) {
-		return UserDto.builder().username(user.getUsername()).role(user.getRole()).build();
+	@Bean
+	public OpenAPI metricshubOpenAPI() {
+		return new OpenAPI()
+			.info(
+				new Info()
+					.title("MetricsHub Agent API")
+					.description("REST API for the MetricsHub Agent — infrastructure metrics collection and management.")
+					.version(VersionHelper.getClassVersion())
+					.license(new License().name("AGPL-3.0").url("https://www.gnu.org/licenses/agpl-3.0.html"))
+			);
 	}
 }

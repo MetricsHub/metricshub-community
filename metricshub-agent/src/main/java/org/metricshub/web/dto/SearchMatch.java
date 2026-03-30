@@ -21,6 +21,7 @@ package org.metricshub.web.dto;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,16 +30,22 @@ import lombok.NoArgsConstructor;
 /**
  * DTO representing a search match with its hierarchy path and ranking scores.
  */
+@Schema(description = "Search match result with hierarchy path and ranking score")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class SearchMatch {
 
+	@Schema(description = "Matched element name")
 	private String name;
+
+	@Schema(description = "Element type (resource, connector, monitor, etc.)")
 	private String type;
+
+	@Schema(description = "Hierarchy path to the matched element")
 	private String path;
 
-	// Ranking data (included to allow clients to tweak sorting if needed)
+	@Schema(description = "Jaro-Winkler similarity score")
 	private double jaroWinklerScore;
 }

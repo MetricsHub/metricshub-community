@@ -21,6 +21,7 @@ package org.metricshub.web.security.login;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,11 +30,13 @@ import lombok.NoArgsConstructor;
 /**
  * This class defines the token
  */
+@Schema(description = "Authentication response containing the JWT token")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class LoginAuthenticationResponse {
 
+	@Schema(description = "JWT access token")
 	private String token;
 }

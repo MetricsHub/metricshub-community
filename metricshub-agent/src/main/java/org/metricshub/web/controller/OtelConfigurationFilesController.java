@@ -21,6 +21,10 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.metricshub.web.dto.ConfigurationFile;
@@ -53,6 +57,7 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @RestController
 @RequestMapping(value = "/api/otel/config-files")
+@Tag(name = "OTel Configuration Files", description = "OpenTelemetry Collector configuration file management")
 public class OtelConfigurationFilesController {
 
 	private final OtelConfigurationFilesService otelConfigurationFilesService;
@@ -73,6 +78,11 @@ public class OtelConfigurationFilesController {
 	 * @return A list of ConfigurationFile representing all OTEL configuration files.
 	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
+	@Operation(
+		summary = "List OTel configuration files",
+		description = "Lists all OTel configuration files with their metadata.",
+		responses = { @ApiResponse(responseCode = "200", description = "Files listed successfully") }
+	)
 	@GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<ConfigurationFile> listConfigurationFiles() throws ConfigFilesException {
 		return otelConfigurationFilesService.getAllConfigurationFiles();
@@ -85,9 +95,18 @@ public class OtelConfigurationFilesController {
 	 * @return the content of the configuration file as plain text.
 	 * @throws ConfigFilesException if the file is not found or cannot be read
 	 */
+	@Operation(
+		summary = "Get OTel configuration file content",
+		description = "Returns the content of a specific OTel configuration file as plain text.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File content retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@GetMapping(value = "/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getConfigurationFileContent(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<String> getConfigurationFileContent(
+		@Parameter(description = "OTel configuration file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		final String content = otelConfigurationFilesService.getFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -102,11 +121,24 @@ public class OtelConfigurationFilesController {
 	 *         saved file's metadata.
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
+	@Operation(
+		summary = "Save or update an OTel configuration file",
+		description = "Creates or updates an OTel configuration file. Optionally validates content before saving.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File saved successfully"),
+			@ApiResponse(responseCode = "400", description = "Validation failed")
+		}
+	)
 	@PutMapping(value = "/{fileName}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.TEXT_PLAIN_VALUE)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateConfigurationFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content,
-		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+		@Parameter(description = "OTel configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content,
+		@Parameter(description = "Whether to skip content validation before saving") @RequestParam(
+			name = "skipValidation",
+			defaultValue = "false"
+		) boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
 			final var validation = otelConfigurationFilesService.validate(content, fileName);
@@ -127,15 +159,28 @@ public class OtelConfigurationFilesController {
 	 *         saved file's metadata.
 	 * @throws ConfigFilesException if the file cannot be written
 	 */
+	@Operation(
+		summary = "Save or update a draft OTel configuration file",
+		description = "Creates or updates a draft OTel configuration file. Optionally validates content before saving.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Draft file saved successfully"),
+			@ApiResponse(responseCode = "400", description = "Validation failed")
+		}
+	)
 	@PutMapping(
 		value = "/draft/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateDraftFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content,
-		@RequestParam(name = "skipValidation", defaultValue = "false") boolean skipValidation
+		@Parameter(description = "OTel configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content,
+		@Parameter(description = "Whether to skip content validation before saving") @RequestParam(
+			name = "skipValidation",
+			defaultValue = "false"
+		) boolean skipValidation
 	) throws ConfigFilesException {
 		if (!skipValidation) {
 			final var validation = otelConfigurationFilesService.validate(content, fileName);
@@ -159,14 +204,24 @@ public class OtelConfigurationFilesController {
 	 *         validation results.
 	 * @throws ConfigFilesException if the file content cannot be read
 	 */
+	@Operation(
+		summary = "Validate an OTel configuration file",
+		description = "Validates an OTel configuration file's content. If no content is provided, validates the file on disk.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Validation result returned"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@PostMapping(
 		value = "/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<OtelConfigurationFilesService.Validation> validateConfigurationFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@Parameter(description = "OTel configuration file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "File content to validate; if null, validates the file on disk"
+		) @RequestBody(required = false) String content
 	) throws ConfigFilesException {
 		if (content == null) {
 			content = otelConfigurationFilesService.getFileContent(fileName);
@@ -181,9 +236,18 @@ public class OtelConfigurationFilesController {
 	 * @return a ResponseEntity with no content.
 	 * @throws ConfigFilesException if an IO error occurs during deletion
 	 */
+	@Operation(
+		summary = "Delete an OTel configuration file",
+		description = "Deletes an OTel configuration file by name.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "File deleted successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@DeleteMapping("/{fileName}")
-	public ResponseEntity<Void> deleteConfigurationFile(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<Void> deleteConfigurationFile(
+		@Parameter(description = "OTel configuration file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		otelConfigurationFilesService.deleteFile(fileName);
 		// Returns 204 No Content
 		return ResponseEntity.noContent().build();
@@ -197,14 +261,24 @@ public class OtelConfigurationFilesController {
 	 *         renamed file's metadata.
 	 * @throws ConfigFilesException if an IO error occurs during renaming
 	 */
+	@Operation(
+		summary = "Rename an OTel configuration file",
+		description = "Renames an OTel configuration file.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "File renamed successfully"),
+			@ApiResponse(responseCode = "404", description = "File not found")
+		}
+	)
 	@PatchMapping(
 		value = "/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.APPLICATION_JSON_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> renameConfigurationFile(
-		@PathVariable("fileName") String oldName,
-		@Valid @RequestBody FileNewName fileNewName
+		@Parameter(description = "Current file name") @PathVariable("fileName") String oldName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(
+			description = "New file name"
+		) @Valid @RequestBody FileNewName fileNewName
 	) throws ConfigFilesException {
 		return ResponseEntity.ok(otelConfigurationFilesService.renameFile(oldName, fileNewName.getNewName()));
 	}
@@ -212,14 +286,21 @@ public class OtelConfigurationFilesController {
 	/**
 	 * Endpoint to create or update an OTEL backup file.
 	 */
+	@Operation(
+		summary = "Save or update an OTel backup file",
+		description = "Creates or updates a backup of an OTel configuration file.",
+		responses = { @ApiResponse(responseCode = "200", description = "Backup file saved successfully") }
+	)
 	@PutMapping(
 		value = "/backup/{fileName}",
 		produces = MediaType.APPLICATION_JSON_VALUE,
 		consumes = MediaType.TEXT_PLAIN_VALUE
 	)
 	public ResponseEntity<ConfigurationFile> saveOrUpdateBackupFile(
-		@PathVariable("fileName") String fileName,
-		@RequestBody(required = false) String content
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName,
+		@io.swagger.v3.oas.annotations.parameters.RequestBody(description = "File content") @RequestBody(
+			required = false
+		) String content
 	) throws ConfigFilesException {
 		return ResponseEntity.ok(otelConfigurationFilesService.saveOrUpdateBackupFile(fileName, content));
 	}
@@ -230,6 +311,11 @@ public class OtelConfigurationFilesController {
 	 * @return A list of ConfigurationFile representing all OTEL backup files.
 	 * @throws ConfigFilesException an IO error occurs when listing files
 	 */
+	@Operation(
+		summary = "List OTel backup files",
+		description = "Lists all OTel backup files with their metadata.",
+		responses = { @ApiResponse(responseCode = "200", description = "Backup files listed successfully") }
+	)
 	@GetMapping(value = "/backup", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<ConfigurationFile> listBackupFiles() throws ConfigFilesException {
 		return otelConfigurationFilesService.listAllBackupFiles();
@@ -238,9 +324,18 @@ public class OtelConfigurationFilesController {
 	/**
 	 * Endpoint to get the content of an OTEL backup file by its name.
 	 */
+	@Operation(
+		summary = "Get OTel backup file content",
+		description = "Returns the content of an OTel backup file as plain text.",
+		responses = {
+			@ApiResponse(responseCode = "200", description = "Backup file content retrieved successfully"),
+			@ApiResponse(responseCode = "404", description = "Backup file not found")
+		}
+	)
 	@GetMapping(value = "/backup/{fileName}", produces = MediaType.TEXT_PLAIN_VALUE)
-	public ResponseEntity<String> getBackupFileContent(@PathVariable("fileName") String fileName)
-		throws ConfigFilesException {
+	public ResponseEntity<String> getBackupFileContent(
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		final String content = otelConfigurationFilesService.getBackupFileContent(fileName);
 		return ResponseEntity.ok(content);
 	}
@@ -248,8 +343,18 @@ public class OtelConfigurationFilesController {
 	/**
 	 * Endpoint to delete an OTEL backup file by its name.
 	 */
+	@Operation(
+		summary = "Delete an OTel backup file",
+		description = "Deletes an OTel backup file by name.",
+		responses = {
+			@ApiResponse(responseCode = "204", description = "Backup file deleted successfully"),
+			@ApiResponse(responseCode = "404", description = "Backup file not found")
+		}
+	)
 	@DeleteMapping("/backup/{fileName}")
-	public ResponseEntity<Void> deleteBackupFile(@PathVariable("fileName") String fileName) throws ConfigFilesException {
+	public ResponseEntity<Void> deleteBackupFile(
+		@Parameter(description = "Backup file name") @PathVariable("fileName") String fileName
+	) throws ConfigFilesException {
 		otelConfigurationFilesService.deleteBackupFile(fileName);
 		return ResponseEntity.noContent().build();
 	}

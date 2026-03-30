@@ -21,6 +21,7 @@ package org.metricshub.web.dto.telemetry;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.Builder;
@@ -28,6 +29,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
+@Schema(description = "Telemetry node representing a monitor instance")
 @Data
 @NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)

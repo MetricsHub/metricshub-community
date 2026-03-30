@@ -21,7 +21,16 @@ package org.metricshub.web.dto.chat;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
 /**
  * Represents a chat message in the conversation history.
  */
-public record ChatMessage(String role, String content) {}
+@Schema(description = "Chat message in the conversation history")
+public record ChatMessage(
+	@Schema(
+		description = "Message role. Use \"assistant\" for assistant messages; any other value is treated as a user message."
+	)
+	String role,
+	@Schema(description = "Message content") String content
+) {}
