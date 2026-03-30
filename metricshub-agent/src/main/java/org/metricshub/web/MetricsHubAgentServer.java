@@ -128,7 +128,16 @@ public class MetricsHubAgentServer {
 	 * @param arguments the list of Spring Boot application arguments to add to
 	 */
 	private static void addSwaggerUiArguments(final List<String> arguments) {
-		arguments.add("--springdoc.swagger-ui.filter=true");
+		final String swaggerFilterPrefix = "--springdoc.swagger-ui.filter=";
+
+		// Only add the default filter argument if it is not already present,
+		// to avoid duplicate or conflicting command-line options.
+		final boolean hasSwaggerFilterArg = arguments.stream()
+				.anyMatch(arg -> arg != null && arg.startsWith(swaggerFilterPrefix));
+
+		if (!hasSwaggerFilterArg) {
+			arguments.add(swaggerFilterPrefix + "true");
+		}
 	}
 
 	/**
