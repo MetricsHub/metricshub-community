@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.03</version>
+		<version>3.9.04-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-ping-extension</artifactId>
