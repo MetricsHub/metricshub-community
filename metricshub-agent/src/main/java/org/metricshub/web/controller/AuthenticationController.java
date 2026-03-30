@@ -59,13 +59,13 @@ public class AuthenticationController {
 	}
 
 	/**
-	 * Login endpoint that authenticates a user and returns a JWT token in a cookie.
+	 * Login endpoint that authenticates a user and returns a JWT token both in an HTTP-only cookie and in the JSON response body.
 	 * @param loginAuthenticationRequest the login request containing user credentials
 	 * @return a ResponseEntity containing the JWT tokens and setting cookies on success
 	 */
 	@Operation(
 		summary = "Login",
-		description = "Authenticates a user and returns a JWT token in an HTTP-only cookie.",
+		description = "Authenticates a user and returns a JWT token both in the JSON response body and in an HTTP-only cookie. Clients may use either: the cookie is set automatically by the browser, while the token field in the response body can be used by programmatic clients.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Login successful"),
 			@ApiResponse(responseCode = "401", description = "Invalid credentials")
