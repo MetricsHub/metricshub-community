@@ -40,6 +40,6 @@ public class LoginAuthenticationRequest {
 	@Schema(description = "Username")
 	private String username;
 
-	@Schema(description = "Password")
+	@Schema(description = "Password", format = "password")
 	private String password;
 }
