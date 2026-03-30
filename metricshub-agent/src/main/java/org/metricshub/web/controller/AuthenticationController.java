@@ -67,7 +67,8 @@ public class AuthenticationController {
 		summary = "Login",
 		description = "Authenticates a user and returns a JWT token both in the JSON response body and in an HTTP-only cookie. " +
 		"The cookie is set automatically by the browser, while the token field in the response body can be used by programmatic clients. " +
-		"Users must be created beforehand using the MetricsHub user CLI: `./user create USERNAME --password PASSWORD --role ROLE`.",
+		"Users must be created beforehand using the MetricsHub user CLI: `./user create USERNAME --password PASSWORD --role ROLE`. " +
+		"Run this command on the same machine where the MetricsHub Agent (and its keystore) is running.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Login successful"),
 			@ApiResponse(responseCode = "401", description = "Invalid credentials")
