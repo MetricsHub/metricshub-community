@@ -79,7 +79,7 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.19</community-connectors.version>
+		<community-connectors.version>1.0.20</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 
 		<project.build.outputTimestamp>2026-03-10T12:04:40Z</project.build.outputTimestamp>
