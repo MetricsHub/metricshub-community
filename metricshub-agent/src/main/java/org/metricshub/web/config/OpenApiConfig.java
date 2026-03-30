@@ -25,10 +25,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import org.metricshub.engine.common.helpers.VersionHelper;
-import org.springdoc.core.properties.SwaggerUiConfigProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 
 /**
  * Configuration class for OpenAPI documentation.
@@ -51,19 +49,5 @@ public class OpenApiConfig {
 					.version(VersionHelper.getClassVersion())
 					.license(new License().name("AGPL-3.0").url("https://www.gnu.org/licenses/agpl-3.0.html"))
 			);
-	}
-
-	/**
-	 * Configures the Swagger UI to enable the search/filter box, allowing users to easily find specific
-	 * endpoints in the API documentation.
-	 *
-	 * @param config the existing SwaggerUiConfigProperties bean to customize
-	 * @return the modified SwaggerUiConfigProperties bean with filtering enabled
-	 */
-	@Bean
-	@Primary
-	public SwaggerUiConfigProperties swaggerUiConfig(final SwaggerUiConfigProperties config) {
-		config.setFilter("true");
-		return config;
 	}
 }

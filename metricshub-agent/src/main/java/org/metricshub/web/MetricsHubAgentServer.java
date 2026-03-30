@@ -116,7 +116,19 @@ public class MetricsHubAgentServer {
 			}
 		});
 
+		addSwaggerUiArguments(arguments);
+
 		return arguments.toArray(String[]::new);
+	}
+
+	/**
+	 * Adds Swagger UI configuration arguments to the provided arguments list.
+	 * Enables the search/filter box in the Swagger UI.
+	 *
+	 * @param arguments the list of Spring Boot application arguments to add to
+	 */
+	private static void addSwaggerUiArguments(final List<String> arguments) {
+		arguments.add("--springdoc.swagger-ui.filter=true");
 	}
 
 	/**
