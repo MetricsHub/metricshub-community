@@ -400,6 +400,7 @@ jobs:
           --storetype AZUREKEYVAULT ^
           --keystore ${{ secrets.AZURE_VAULT_NAME }} ^
           --storepass ${{ steps.get_access_token.outputs.token }} ^
+          --tsaurl http://timestamp.digicert.com ^
           --alias ${{ secrets.AZURE_VAULT_ALIAS }} packages/*.msi
 
     - name: Create Windows ZIP Archive
