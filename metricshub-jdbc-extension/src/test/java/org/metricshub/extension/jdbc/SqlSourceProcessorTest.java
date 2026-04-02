@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
@@ -68,7 +69,7 @@ class SqlSourceProcessorTest {
 
 		doThrow(new RuntimeException("SQL execution error"))
 			.when(sqlRequestExecutor)
-			.executeSql(any(), any(JdbcConfiguration.class), any(), any(Boolean.class));
+			.executeSql(eq("hostname"), any(JdbcConfiguration.class), eq("SELECT * FROM test_table"), eq(false));
 
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 		assertNotNull(result);
@@ -86,7 +87,14 @@ class SqlSourceProcessorTest {
 		final TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 
 		final List<List<String>> expectedResults = List.of(List.of("row1_col1", "row1_col2"));
-		when(sqlRequestExecutor.executeSql(any(), any(JdbcConfiguration.class), any(), any(Boolean.class)))
+		when(
+			sqlRequestExecutor.executeSql(
+				eq("hostname"),
+				any(JdbcConfiguration.class),
+				eq("SELECT * FROM test_table"),
+				eq(false)
+			)
+		)
 			.thenReturn(expectedResults);
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
