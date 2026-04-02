@@ -21,6 +21,8 @@ package org.metricshub.extension.jdbc;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -81,7 +83,7 @@ public class SqlSourceProcessor {
 		try {
 			final List<List<String>> results = sqlRequestExecutor.executeSql(hostname, cfg, sqlSource.getQuery(), false);
 
-			return SourceTable.builder().table(results).build();
+			return SourceTable.builder().table(results).rawData(SourceTable.tableToCsv(results, TABLE_SEP, true)).build();
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,
