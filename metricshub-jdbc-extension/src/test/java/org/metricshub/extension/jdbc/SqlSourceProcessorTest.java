@@ -62,7 +62,7 @@ class SqlSourceProcessorTest {
 	@Test
 	void testProcessWhenRequestExecutorThrowsExceptionReturnsEmptySourceTable() throws Exception {
 		// Test case when the requestExecutor throws an exception
-		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
+		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 		final TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
@@ -81,7 +81,7 @@ class SqlSourceProcessorTest {
 	@Test
 	void testProcessWhenReturnsSourceTableWithResult() throws Exception {
 		// Test case when requestExecutor returns a valid result
-		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
+		when(jdbcConfiguration.copy()).thenReturn(JdbcConfiguration.builder().hostname("hostname").build());
 
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 		final TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
