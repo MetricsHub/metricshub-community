@@ -81,7 +81,7 @@ public class SqlSourceProcessor {
 		try {
 			final List<List<String>> results = sqlRequestExecutor.executeSql(hostname, cfg, sqlSource.getQuery(), false);
 
-			return SourceTable.builder().table(results).build();
+			return SourceTable.builder().table(results).rawData(SourceTable.tableToCsv(results, ";", true)).build();
 		} catch (Exception e) {
 			LoggingHelper.logSourceError(
 				connectorId,
