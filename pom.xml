@@ -98,6 +98,7 @@
 		<module>metricshub-agent</module>
 		<module>metricshub-assets</module>
 		<module>metricshub-classloader-agent</module>
+		<module>metricshub-emulation-extension</module>
 		<module>metricshub-engine</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>

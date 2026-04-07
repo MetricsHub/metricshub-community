@@ -23,8 +23,8 @@ package org.metricshub.extension.http;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.regex.Pattern;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -41,11 +41,49 @@ import org.metricshub.extension.http.utils.HttpRequest;
  * the actual HTTP requests.
  */
 @Slf4j
-@AllArgsConstructor
 public class HttpCriterionProcessor {
 
 	private HttpRequestExecutor httpRequestExecutor;
 	private boolean logMode;
+	private Function<TelemetryManager, HttpConfiguration> httpConfigurationProvider;
+
+	/**
+	 * Default HTTP configuration provider that retrieves the {@link HttpConfiguration}
+	 * from the telemetry manager's configuration map.
+	 */
+	private static final Function<TelemetryManager, HttpConfiguration> DEFAULT_HTTP_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(HttpConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(HttpConfiguration.class);
+
+	/**
+	 * Creates a new {@link HttpCriterionProcessor} with the given executor, log mode,
+	 * and the default HTTP configuration provider.
+	 *
+	 * @param httpRequestExecutor The executor to perform HTTP requests.
+	 * @param logMode             Whether to enable debug logging.
+	 */
+	public HttpCriterionProcessor(final HttpRequestExecutor httpRequestExecutor, final boolean logMode) {
+		this(httpRequestExecutor, logMode, DEFAULT_HTTP_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link HttpCriterionProcessor} with the given executor, log mode,
+	 * and a custom HTTP configuration provider.
+	 *
+	 * @param httpRequestExecutor        The executor to perform HTTP requests.
+	 * @param logMode                    Whether to enable debug logging.
+	 * @param httpConfigurationProvider   A function that retrieves the {@link HttpConfiguration}
+	 *                                    from the given {@link TelemetryManager}.
+	 */
+	public HttpCriterionProcessor(
+		final HttpRequestExecutor httpRequestExecutor,
+		final boolean logMode,
+		final Function<TelemetryManager, HttpConfiguration> httpConfigurationProvider
+	) {
+		this.httpRequestExecutor = httpRequestExecutor;
+		this.logMode = logMode;
+		this.httpConfigurationProvider = httpConfigurationProvider;
+	}
 
 	private static final String HTTP_TEST_SUCCESS = "Hostname %s - HTTP test succeeded. Returned result: %s.";
 
@@ -84,9 +122,7 @@ public class HttpCriterionProcessor {
 			return CriterionTestResult.empty();
 		}
 
-		final HttpConfiguration httpConfiguration = (HttpConfiguration) hostConfiguration
-			.getConfigurations()
-			.get(HttpConfiguration.class);
+		final HttpConfiguration httpConfiguration = httpConfigurationProvider.apply(telemetryManager);
 
 		if (httpConfiguration == null) {
 			if (logMode) {
