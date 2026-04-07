@@ -102,7 +102,6 @@ public class SnmpGetCriterionProcessor {
 				snmpConfiguration,
 				hostname,
 				false,
-				telemetryManager.getEmulationInputDirectory(),
 				telemetryManager.getHostname()
 			);
 

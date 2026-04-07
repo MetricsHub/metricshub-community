@@ -48,16 +48,11 @@ public abstract class AbstractSnmpRequestExecutor {
 	 *
 	 * @param configuration The SNMP configuration containing connection details.
 	 * @param hostname      The hostname or IP address of the SNMP-enabled device.
-	 * @param emulationInputDirectory Snmp emulation input file
 	 * @throws RuntimeException If an {@link IOException} is thrown during the creation of the {@link SnmpClient}
 	 * @return The created SnmpClient {@link SnmpClient}.
 	 * @throws IOException If an error occurs during the creation of the {@link SnmpClient}.
 	 */
-	protected abstract ISnmpClient createSnmpClient(
-		ISnmpConfiguration configuration,
-		String hostname,
-		String emulationInputDirectory
-	) throws IOException;
+	protected abstract ISnmpClient createSnmpClient(ISnmpConfiguration configuration, String hostname) throws IOException;
 
 	/**
 	 * Execute SNMP GetNext request
@@ -66,7 +61,6 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration  The SNMP configuration specifying parameters like version, community, etc.
 	 * @param hostname       The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode        A boolean indicating whether to log errors and warnings during execution.
-	 * @param emulationInputDirectory Snmp emulation input directory
 	 * @param resourceHostname        The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return The SNMP response as a String value.
 	 * @throws InterruptedException If the execution is interrupted.
@@ -79,7 +73,6 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
 		final boolean logMode,
-		final String emulationInputDirectory,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP GetNext request:\n- OID: {}\n", oid));
@@ -93,7 +86,6 @@ public abstract class AbstractSnmpRequestExecutor {
 			hostname,
 			null,
 			logMode,
-			emulationInputDirectory,
 			resourceHostname
 		);
 
@@ -118,7 +110,6 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration  The SNMP configuration specifying parameters like version, community, etc.
 	 * @param hostname       The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode        A boolean indicating whether to log errors and warnings during execution.
-	 * @param emulationInputDirectory Snmp emulation input directory
 	 * @param resourceHostname        The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return The SNMP response as a String value.
 	 * @throws InterruptedException If the execution is interrupted.
@@ -131,7 +122,6 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
 		final boolean logMode,
-		final String emulationInputDirectory,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP Get request:\n- OID: {}\n", oid));
@@ -145,7 +135,6 @@ public abstract class AbstractSnmpRequestExecutor {
 			hostname,
 			null,
 			logMode,
-			emulationInputDirectory,
 			resourceHostname
 		);
 
@@ -166,7 +155,6 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration     The SNMP configuration containing connection details.
 	 * @param hostname          The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode           Flag indicating whether to log warnings in case of errors.
-	 * @param emulationInputDirectory Snmp emulation input directory
 	 * @param resourceHostname        The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return A list of rows, where each row is a list of string cells representing the SNMP table.
 	 * @throws InterruptedException If the thread executing this method is interrupted.
@@ -180,7 +168,6 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
 		final boolean logMode,
-		final String emulationInputDirectory,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() ->
@@ -196,7 +183,6 @@ public abstract class AbstractSnmpRequestExecutor {
 			hostname,
 			selectColumnArray,
 			logMode,
-			emulationInputDirectory,
 			resourceHostname
 		);
 
@@ -224,7 +210,6 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param hostname          The hostname or IP address of the SNMP-enabled device.
 	 * @param selectColumnArray An array of column names for TABLE requests.
 	 * @param logMode           Flag indicating whether to log warnings in case of errors.
-	 * @param emulationInputDirectory Snmp emulation input directory
 	 * @param resourceHostname  The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @param <T>               The type of result to return.
 	 * @return The result of the SNMP request, which can be a single value, a table, or null if an error occurs.
@@ -240,14 +225,13 @@ public abstract class AbstractSnmpRequestExecutor {
 		final String hostname,
 		final String[] selectColumnArray,
 		final boolean logMode,
-		final String emulationInputDirectory,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		// Create the SNMP client outside the callable so we can guarantee cleanup
 		// even if the task thread is interrupted due to a timeout.
 		final ISnmpClient[] clientHolder = new ISnmpClient[1];
 		final java.util.concurrent.Callable<Object> callable = () -> {
-			final ISnmpClient snmpClient = createSnmpClient(protocol, hostname, emulationInputDirectory);
+			final ISnmpClient snmpClient = createSnmpClient(protocol, hostname);
 			clientHolder[0] = snmpClient;
 			try {
 				switch (request) {
@@ -333,7 +317,6 @@ public abstract class AbstractSnmpRequestExecutor {
 	 * @param configuration  The SNMP configuration specifying parameters like version, community, etc.
 	 * @param hostname       The hostname or IP address of the SNMP-enabled device.
 	 * @param logMode        A boolean indicating whether to log errors and warnings during execution.
-	 * @param emulationInputDirectory Snmp emulation input directory
 	 * @param resourceHostname        The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
 	 * @return The SNMP response as a String value.
 	 * @throws InterruptedException If the execution is interrupted.
@@ -346,7 +329,6 @@ public abstract class AbstractSnmpRequestExecutor {
 		@NonNull @SpanAttribute("snmp.config") final ISnmpConfiguration configuration,
 		@NonNull @SpanAttribute("host.hostname") final String hostname,
 		final boolean logMode,
-		final String emulationInputDirectory,
 		final String resourceHostname
 	) throws InterruptedException, ExecutionException, TimeoutException {
 		LoggingHelper.trace(() -> log.trace("Executing SNMP Walk request:\n- OID: {}\n", oid));
@@ -360,7 +342,6 @@ public abstract class AbstractSnmpRequestExecutor {
 			hostname,
 			null,
 			logMode,
-			emulationInputDirectory,
 			resourceHostname
 		);
 
