@@ -58,7 +58,9 @@ import org.metricshub.jawk.jrt.AssocArray;
 @AllArgsConstructor
 public class MetricsHubExtensionForJawk extends AbstractExtension {
 
+	@EqualsAndHashCode.Exclude
 	private SourceProcessor sourceProcessor;
+
 	private String hostname;
 	private String connectorId;
 
@@ -75,7 +77,16 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeHttpRequest")
 	public String executeHttpRequest(final @JawkAssocArray AssocArray argMap) {
-		return executeSource(Source.fromMap(HttpSource.class, argMap));
+		try {
+			return executeSource(Source.fromMap(HttpSource.class, argMap));
+		} catch (Exception exception) {
+			log.error(
+				"Hostname {} - Http Request Operation has failed. Errors:\n{}\n",
+				hostname,
+				StringHelper.getStackMessages(exception)
+			);
+			return "";
+		}
 	}
 
 	/**

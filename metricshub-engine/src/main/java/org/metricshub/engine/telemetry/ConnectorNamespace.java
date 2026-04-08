@@ -21,8 +21,8 @@ package org.metricshub.engine.telemetry;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,21 +42,21 @@ import org.metricshub.engine.strategy.source.SourceTable;
 public class ConnectorNamespace {
 
 	@Default
-	private Map<String, SourceTable> sourceTables = new HashMap<>();
+	private Map<String, SourceTable> sourceTables = new ConcurrentHashMap<>();
 
 	private String automaticWmiNamespace;
 	private String automaticWbemNamespace;
 	private boolean isStatusOk;
 
 	@Default
-	private Map<String, Integer> eventLogSourceCursors = new HashMap<>();
+	private Map<String, Integer> eventLogSourceCursors = new ConcurrentHashMap<>();
 
 	/**
 	 * A map of log file sources. Each key represents the source, and the value
 	 * is a map of cursors, where keys are the filenames, and the values are cursors.
 	 */
 	@Default
-	private Map<String, Map<String, Long>> fileSourceCursors = new HashMap<>();
+	private Map<String, Map<String, Long>> fileSourceCursors = new ConcurrentHashMap<>();
 
 	@Default
 	private ReentrantLock forceSerializationLock = new ReentrantLock(true);
@@ -135,6 +135,6 @@ public class ConnectorNamespace {
 	 * @return a mutable map of file path to cursor (byte offset); never null
 	 */
 	public Map<String, Long> getFileSourceCursors(@NonNull String sourceKey) {
-		return fileSourceCursors.computeIfAbsent(sourceKey, k -> new HashMap<>());
+		return fileSourceCursors.computeIfAbsent(sourceKey, k -> new ConcurrentHashMap<>());
 	}
 }
