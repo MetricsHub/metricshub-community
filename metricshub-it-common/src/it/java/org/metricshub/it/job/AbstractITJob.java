@@ -37,9 +37,16 @@ public abstract class AbstractITJob implements ITJob {
 	private static final Pattern JOB_DURATION_PATTERN = Pattern.compile("^metricshub\\.job\\.duration(\\{.*\\})?$");
 
 	/**
+	 * Pattern to match response time metrics, which are ignored in comparisons.
+	 */
+	private static final Pattern HOST_RESPONSE_TIME_PATTERN = Pattern.compile(
+		"^metricshub\\.host\\.response_time(\\{.*\\})?$"
+	);
+
+	/**
 	 * List of metric patterns to skip during comparison.
 	 */
-	private static final List<Pattern> SKIP_METRIC_PATTERNS = List.of(JOB_DURATION_PATTERN);
+	private static final List<Pattern> SKIP_METRIC_PATTERNS = List.of(JOB_DURATION_PATTERN, HOST_RESPONSE_TIME_PATTERN);
 
 	/**
 	 * Assert that expected and actual are equal.

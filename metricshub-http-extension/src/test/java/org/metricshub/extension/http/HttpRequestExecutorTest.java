@@ -2,11 +2,16 @@ package org.metricshub.extension.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mockStatic;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.metricshub.engine.configuration.HostConfiguration;
@@ -19,6 +24,11 @@ import org.metricshub.http.HttpResponse;
 import org.mockito.MockedStatic;
 
 class HttpRequestExecutorTest {
+
+	@AfterEach
+	void tearDown() {
+		HttpRecorder.clearInstances();
+	}
 
 	@Test
 	void testExecuteHttpGetBody() {
@@ -441,6 +451,84 @@ class HttpRequestExecutorTest {
 				.build();
 			final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
 			assertEquals(expecteBody, result);
+		}
+	}
+
+	@Test
+	void testExecuteHttpRecordsWhenRecordOutputDirectorySet(@TempDir Path tempDir) throws IOException {
+		try (MockedStatic<HttpClient> httpClientMock = mockStatic(HttpClient.class)) {
+			final String path = "/api/test";
+			final String method = "GET";
+			final String username = "username";
+			final char[] password = "pwd".toCharArray();
+			final int proxyPort = 0;
+			final Map<String, String> headerContent = Map.of("Connection", "keep-alive");
+			final String bodyContent = "{}";
+			final int timeout = 120;
+			final HttpResponse httpResponse = new HttpResponse();
+			httpResponse.setStatusCode(200);
+			final String expectedBody = "recorded response";
+			httpResponse.appendBody(expectedBody);
+			httpClientMock
+				.when(() ->
+					HttpClient.sendRequest(
+						"https://hostname:443/api/test",
+						method,
+						null,
+						username,
+						password,
+						null,
+						proxyPort,
+						null,
+						null,
+						null,
+						headerContent,
+						bodyContent,
+						timeout,
+						null
+					)
+				)
+				.thenReturn(httpResponse);
+
+			final String hostname = "hostname";
+			final HttpConfiguration httpConfiguration = HttpConfiguration
+				.builder()
+				.username(username)
+				.password(password)
+				.timeout(timeout * 1L)
+				.build();
+			final HttpRequest request = HttpRequest
+				.builder()
+				.path(path)
+				.method(method)
+				.body(bodyContent, Map.of(), "connector", hostname)
+				.hostname(hostname)
+				.httpConfiguration(httpConfiguration)
+				.header("Connection: keep-alive", Map.of(), "connector", hostname)
+				.resultContent(ResultContent.BODY)
+				.build();
+			final TelemetryManager telemetryManager = TelemetryManager
+				.builder()
+				.hostConfiguration(
+					HostConfiguration
+						.builder()
+						.hostname(hostname)
+						.hostId(hostname)
+						.hostType(DeviceKind.LINUX)
+						.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
+						.build()
+				)
+				.recordOutputDirectory(tempDir.toString())
+				.build();
+			final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
+			assertEquals(expectedBody, result);
+
+			// Verify recording files were created
+			final Path httpDir = tempDir.resolve("http");
+			assertTrue(Files.isRegularFile(httpDir.resolve("image.yaml")));
+			try (java.util.stream.Stream<Path> stream = Files.list(httpDir)) {
+				assertEquals(1, stream.filter(p -> p.toString().endsWith(".txt")).count());
+			}
 		}
 	}
 }

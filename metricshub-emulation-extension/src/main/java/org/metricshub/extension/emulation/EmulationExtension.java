@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
+import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
 
 /**
@@ -52,9 +54,18 @@ import org.metricshub.extension.http.HttpSourceProcessor;
 public class EmulationExtension implements IProtocolExtension {
 
 	/**
-	 * The identifier for the emulation protocol.
+	 * The identifier for the emulation.
 	 */
 	public static final String IDENTIFIER = "emulation";
+
+	/**
+	 * The emulated protocols supported by this extension.
+	 */
+	protected static final Set<String> EMULATED_PROTOCOLS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+
+	static {
+		EMULATED_PROTOCOLS.add(HttpExtension.IDENTIFIER);
+	}
 
 	/**
 	 * HTTP configuration provider that returns a dummy {@link HttpConfiguration}

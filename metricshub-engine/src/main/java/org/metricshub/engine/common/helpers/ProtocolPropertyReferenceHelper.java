@@ -26,6 +26,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -37,6 +39,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Protocols and properties are case-insensitive.
  */
 @Slf4j
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ProtocolPropertyReferenceHelper {
 
 	private static final Pattern PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX_PATTERN = Pattern.compile("([^\\.]+).([^}]+)");

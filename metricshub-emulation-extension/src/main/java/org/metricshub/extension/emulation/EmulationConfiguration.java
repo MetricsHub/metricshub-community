@@ -29,6 +29,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.extension.http.HttpConfiguration;
 
 /**
  * The EmulationConfiguration represents the configuration for the emulation protocol.
@@ -43,6 +44,8 @@ public class EmulationConfiguration implements IConfiguration {
 
 	@JsonDeserialize(using = MultiValueDeserializer.class)
 	private String hostname;
+
+	private HttpConfiguration http;
 
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
@@ -64,14 +67,22 @@ public class EmulationConfiguration implements IConfiguration {
 		if (property == null || property.isEmpty()) {
 			return null;
 		}
+
 		if ("hostname".equalsIgnoreCase(property)) {
 			return getHostname();
 		}
+
+		// The connector might reference properties of the HTTP protocol
+		// For example, "http.port" or "http.username"
+		if (http != null) {
+			return http.getProperty(property);
+		}
+
 		return null;
 	}
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
-		return EmulationExtension.IDENTIFIER.equalsIgnoreCase(protocol);
+		return EmulationExtension.EMULATED_PROTOCOLS.contains(protocol);
 	}
 }

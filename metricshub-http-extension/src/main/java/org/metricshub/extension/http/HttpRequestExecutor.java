@@ -166,7 +166,7 @@ public class HttpRequestExecutor {
 				)
 		);
 
-		return RetryOperation
+		final String result = RetryOperation
 			.<String>builder()
 			.withDescription(String.format("%s %s", method, fullUrl))
 			.withWaitStrategy((int) telemetryManager.getHostConfiguration().getRetryDelay())
@@ -193,6 +193,33 @@ public class HttpRequestExecutor {
 					fullUrl
 				)
 			);
+
+		// Record the HTTP exchange if recording is enabled
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank() && result != null && !result.isEmpty()) {
+			// Resolve body and headers using default credentials so that recorded values
+			// match what the emulation extension will compute during playback
+			final String defaultAuthToken = MacrosUpdater.update(
+				httpRequestAuthToken,
+				HttpRecorder.DEFAULT_USERNAME,
+				HttpRecorder.DEFAULT_PASSWORD,
+				httpRequestAuthToken,
+				hostname,
+				false
+			);
+			final Map<String, String> recordHeaders = header == null
+				? Collections.emptyMap()
+				: header.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
+			final String recordBody = body == null
+				? EMPTY
+				: body.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
+
+			HttpRecorder
+				.getInstance(recordOutputDirectory)
+				.record(method, httpRequestPath, recordBody, recordHeaders, httpRequest.getResultContent(), result);
+		}
+
+		return result;
 	}
 
 	/**
