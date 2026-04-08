@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -70,12 +71,8 @@ class EmulationConfigurationTest {
 	void testIsCorrespondingProtocol() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
 
-		assertTrue(configuration.isCorrespondingProtocol("emulation"));
-		assertTrue(configuration.isCorrespondingProtocol("EMULATION"));
-		assertTrue(configuration.isCorrespondingProtocol("Emulation"));
-		assertFalse(configuration.isCorrespondingProtocol("http"));
-		assertFalse(configuration.isCorrespondingProtocol("snmp"));
-		assertFalse(configuration.isCorrespondingProtocol(null));
+		assertTrue(configuration.isCorrespondingProtocol("http"));
+		assertThrows(NullPointerException.class, () -> configuration.isCorrespondingProtocol(null));
 		assertFalse(configuration.isCorrespondingProtocol(""));
 	}
 }

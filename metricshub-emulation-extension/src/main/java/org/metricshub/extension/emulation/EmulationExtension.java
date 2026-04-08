@@ -21,7 +21,12 @@ package org.metricshub.extension.emulation;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -68,11 +73,22 @@ public class EmulationExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * HTTP configuration provider that returns a dummy {@link HttpConfiguration}
-	 * since emulation does not require real HTTP credentials.
+	 * A function that provides the HTTP configuration for the emulation based on the telemetry manager's host configuration.
+	 * This allows the HTTP processors to access the emulation configuration when processing sources.
 	 */
 	private static final Function<TelemetryManager, HttpConfiguration> EMULATION_HTTP_CONFIGURATION_PROVIDER =
-		telemetryManager -> HttpConfiguration.builder().build();
+		telemetryManager -> {
+			final var emulationConfiguration = (EmulationConfiguration) telemetryManager
+				.getHostConfiguration()
+				.getConfigurations()
+				.get(EmulationConfiguration.class);
+			final var httpConfiguration = emulationConfiguration.getHttp();
+			if (httpConfiguration == null) {
+				return HttpConfiguration.builder().build();
+			} else {
+				return emulationConfiguration.getHttp();
+			}
+		};
 
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
@@ -146,17 +162,35 @@ public class EmulationExtension implements IProtocolExtension {
 	}
 
 	@Override
-	public IConfiguration buildConfiguration(
-		final String configurationType,
-		final JsonNode jsonNode,
-		final UnaryOperator<char[]> decrypt
-	) throws InvalidConfigurationException {
-		if (!isSupportedConfigurationType(configurationType)) {
-			throw new InvalidConfigurationException(
-				String.format("Invalid configuration type: %s. Expected: %s.", configurationType, IDENTIFIER)
+	public IConfiguration buildConfiguration(String configurationType, JsonNode jsonNode, UnaryOperator<char[]> decrypt)
+		throws InvalidConfigurationException {
+		try {
+			return newObjectMapper().treeToValue(jsonNode, EmulationConfiguration.class);
+		} catch (Exception e) {
+			final String errorMessage = String.format(
+				"Error while reading Emulation Configuration. Error: %s",
+				e.getMessage()
 			);
+			log.error(errorMessage);
+			log.debug("Error while reading Emulation Configuration. Stack trace:", e);
+			throw new InvalidConfigurationException(errorMessage, e);
 		}
-		return EmulationConfiguration.builder().build();
+	}
+
+	/**
+	 * Creates and configures a new instance of the Jackson ObjectMapper for handling YAML data.
+	 *
+	 * @return A configured ObjectMapper instance.
+	 */
+	public static JsonMapper newObjectMapper() {
+		return JsonMapper
+			.builder(new YAMLFactory())
+			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+			.enable(SerializationFeature.INDENT_OUTPUT)
+			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
+			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+			.configure(DeserializationFeature.FAIL_ON_INVALID_SUBTYPE, false)
+			.build();
 	}
 
 	@Override

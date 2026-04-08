@@ -232,15 +232,6 @@ class EmulationExtensionTest {
 	}
 
 	@Test
-	void testBuildConfigurationInvalidType() {
-		final ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
-		assertThrows(
-			InvalidConfigurationException.class,
-			() -> emulationExtension.buildConfiguration("http", jsonNode, value -> value)
-		);
-	}
-
-	@Test
 	void testBuildConfigurationNullDecrypt() throws InvalidConfigurationException {
 		final ObjectNode jsonNode = JsonNodeFactory.instance.objectNode();
 		final IConfiguration config = emulationExtension.buildConfiguration("emulation", jsonNode, null);
