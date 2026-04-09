@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
@@ -88,9 +87,8 @@ public class HttpRecorder {
 	}
 
 	/**
-	 * Records an HTTP request-response pair. If an identical request signature
-	 * (method, path, body, headers, resultContent) already exists in the image,
-	 * the call is silently skipped to avoid duplicates.
+	 * Records an HTTP request-response pair. Duplicate entries are allowed
+	 * so that the emulation extension can serve them in round-robin order.
 	 *
 	 * @param method          The HTTP method (GET, POST, etc.).
 	 * @param path            The request path.
@@ -122,12 +120,6 @@ public class HttpRecorder {
 			final Map<String, String> normalizedHeaders = (headerContent == null || headerContent.isEmpty())
 				? null
 				: headerContent;
-
-			// Check for duplicate
-			if (isDuplicate(entries, method, path, normalizedBody, normalizedHeaders, resultContent)) {
-				log.debug("HTTP recording - Skipping duplicate entry for {} {}", method, path);
-				return;
-			}
 
 			// Generate a unique response filename
 			final String responseFileName = UUID.randomUUID().toString() + ".txt";
@@ -176,85 +168,6 @@ public class HttpRecorder {
 			}
 		}
 		return new ArrayList<>();
-	}
-
-	/**
-	 * Checks whether an entry with the same request signature already exists.
-	 *
-	 * @param entries       The current list of entries.
-	 * @param method        The HTTP method.
-	 * @param path          The request path.
-	 * @param body          The normalized request body (may be {@code null}).
-	 * @param headers       The normalized request headers (may be {@code null}).
-	 * @param resultContent The result content type.
-	 * @return {@code true} if a duplicate exists.
-	 */
-	@SuppressWarnings("unchecked")
-	boolean isDuplicate(
-		final List<Map<String, Object>> entries,
-		final String method,
-		final String path,
-		final String body,
-		final Map<String, String> headers,
-		final ResultContent resultContent
-	) {
-		for (final Map<String, Object> entry : entries) {
-			final Map<String, Object> request = (Map<String, Object>) entry.get("request");
-			final Map<String, Object> response = (Map<String, Object>) entry.get("response");
-			if (request == null || response == null) {
-				continue;
-			}
-
-			final String entryMethod = (String) request.getOrDefault("method", "GET");
-			if (
-				Objects.equals(entryMethod, method) &&
-				Objects.equals(request.get("path"), path) &&
-				Objects.equals(request.get("body"), body) &&
-				headersEqual(request.get("headers"), headers) &&
-				resultContentEquals(response.get("resultContent"), resultContent)
-			) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	/**
-	 * Compares entry headers (from YAML) with request headers for equality.
-	 *
-	 * @param entryHeaders The headers from the YAML entry.
-	 * @param headers      The request headers to compare.
-	 * @return {@code true} if both are equal (both null/empty are considered equal).
-	 */
-	@SuppressWarnings("unchecked")
-	boolean headersEqual(final Object entryHeaders, final Map<String, String> headers) {
-		final Map<String, String> entryMap = entryHeaders instanceof Map ? (Map<String, String>) entryHeaders : null;
-		final boolean entryEmpty = entryMap == null || entryMap.isEmpty();
-		final boolean requestEmpty = headers == null || headers.isEmpty();
-		if (entryEmpty && requestEmpty) {
-			return true;
-		}
-		if (entryEmpty || requestEmpty) {
-			return false;
-		}
-		return entryMap.equals(headers);
-	}
-
-	/**
-	 * Compares the result content from a YAML entry with the expected result content.
-	 *
-	 * @param entryResultContent The result content string from the YAML entry.
-	 * @param resultContent      The expected result content enum value.
-	 * @return {@code true} if they represent the same result content.
-	 */
-	boolean resultContentEquals(final Object entryResultContent, final ResultContent resultContent) {
-		if (entryResultContent == null) {
-			return resultContent == null;
-		}
-		if (resultContent == null) {
-			return false;
-		}
-		return entryResultContent.toString().equalsIgnoreCase(resultContent.getName());
 	}
 
 	/**

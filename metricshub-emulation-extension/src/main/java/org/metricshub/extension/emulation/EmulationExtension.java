@@ -72,6 +72,9 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(HttpExtension.IDENTIFIER);
 	}
 
+	private final EmulationRoundRobinManager roundRobinManager = new EmulationRoundRobinManager();
+	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(roundRobinManager);
+
 	/**
 	 * A function that provides the HTTP configuration for the emulation based on the telemetry manager's host configuration.
 	 * This allows the HTTP processors to access the emulation configuration when processing sources.
@@ -132,7 +135,7 @@ public class EmulationExtension implements IProtocolExtension {
 		final TelemetryManager telemetryManager
 	) {
 		if (source instanceof HttpSource httpSource) {
-			return new HttpSourceProcessor(new EmulationHttpRequestExecutor(), EMULATION_HTTP_CONFIGURATION_PROVIDER)
+			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpSource, connectorId, telemetryManager);
 		}
 		return SourceTable.empty();
@@ -146,11 +149,7 @@ public class EmulationExtension implements IProtocolExtension {
 		final boolean logMode
 	) {
 		if (criterion instanceof HttpCriterion httpCriterion) {
-			return new HttpCriterionProcessor(
-				new EmulationHttpRequestExecutor(),
-				logMode,
-				EMULATION_HTTP_CONFIGURATION_PROVIDER
-			)
+			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpCriterion, connectorId, telemetryManager);
 		}
 		return CriterionTestResult.empty();

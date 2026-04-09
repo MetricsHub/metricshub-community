@@ -25,16 +25,20 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.http.HttpRequestExecutor;
 import org.metricshub.extension.http.utils.Body;
 import org.metricshub.extension.http.utils.Header;
@@ -43,16 +47,20 @@ import org.metricshub.extension.http.utils.HttpRequest;
 /**
  * An HTTP request executor that reads responses from emulation files instead of
  * making real network calls. It looks up the request (method, path, body, headers)
- * in the {@code http-emulation.yaml} index file and returns the content of the
- * referenced response file.
+ * in the {@code image.yaml} index file and returns the content of the
+ * referenced response file. When multiple entries match the same request,
+ * responses are served in round-robin order via {@link EmulationRoundRobinManager}.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 	private static final String HTTP_EMULATION_YAML = "image.yaml";
 	private static final String HTTP_SUBDIR = "http";
 	private static final String DEFAULT_USERNAME = "username";
 	private static final char[] DEFAULT_PASSWORD = "password".toCharArray();
+
+	private final EmulationRoundRobinManager roundRobinManager;
 
 	@Override
 	public String executeHttp(
@@ -119,8 +127,8 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			: Collections.emptyMap();
 		final ResultContent resultContent = httpRequest.getResultContent();
 
-		// Find matching entry
-		final HttpEmulationEntry matchingEntry = findMatchingEntry(
+		// Find all matching entries
+		final List<HttpEmulationEntry> matchingEntries = findMatchingEntries(
 			entries,
 			method,
 			path,
@@ -129,7 +137,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			resultContent
 		);
 
-		if (matchingEntry == null) {
+		if (matchingEntries.isEmpty()) {
 			log.warn(
 				"Hostname {} - No matching HTTP emulation entry found for {} {}",
 				httpRequest.getHostname(),
@@ -138,6 +146,15 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			);
 			return null;
 		}
+
+		// Compute request key and get the next round-robin entry
+		final String requestKey = buildRequestKey(method, path, resolvedBody, resolvedHeaders, resultContent);
+		final int index = roundRobinManager.nextIndex(
+			indexFile.toAbsolutePath().toString(),
+			requestKey,
+			matchingEntries.size()
+		);
+		final HttpEmulationEntry matchingEntry = matchingEntries.get(index);
 
 		// Read the response file
 		final String responseFileName = matchingEntry.getResponse().getFile();
@@ -158,7 +175,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	}
 
 	/**
-	 * Finds the first entry in the emulation image that matches the given HTTP
+	 * Finds all entries in the emulation image that match the given HTTP
 	 * method, path, body, headers, and result content.
 	 *
 	 * @param entries       The list of emulation entries to search.
@@ -167,9 +184,9 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	 * @param body          The request body (may be {@code null}).
 	 * @param headers       The request headers as key-value pairs (may be {@code null}).
 	 * @param resultContent The expected result content type.
-	 * @return The matching entry, or {@code null} if no match is found.
+	 * @return A list of all matching entries (may be empty).
 	 */
-	private HttpEmulationEntry findMatchingEntry(
+	List<HttpEmulationEntry> findMatchingEntries(
 		final List<HttpEmulationEntry> entries,
 		final String method,
 		final String path,
@@ -177,6 +194,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final Map<String, String> headers,
 		final ResultContent resultContent
 	) {
+		final List<HttpEmulationEntry> matches = new ArrayList<>();
 		for (final HttpEmulationEntry entry : entries) {
 			final HttpEmulationRequest request = entry.getRequest();
 			if (request == null) {
@@ -192,10 +210,10 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 				headersMatch(request.getHeaders(), headers) &&
 				resultContentMatches(entry.getResponse(), resultContent)
 			) {
-				return entry;
+				matches.add(entry);
 			}
 		}
-		return null;
+		return matches;
 	}
 
 	/**
@@ -242,5 +260,43 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			return resultContent == null;
 		}
 		return response.getResultContent().equals(resultContent);
+	}
+
+	/**
+	 * Builds a unique request key from the HTTP request fields.
+	 * This key is used by the round-robin manager to track which response
+	 * was last served for a specific request signature.
+	 *
+	 * @param method        The HTTP method.
+	 * @param path          The request path.
+	 * @param body          The resolved request body (may be {@code null}).
+	 * @param headers       The resolved request headers (may be empty).
+	 * @param resultContent The result content type.
+	 * @return A string key uniquely identifying this request.
+	 */
+	String buildRequestKey(
+		final String method,
+		final String path,
+		final String body,
+		final Map<String, String> headers,
+		final ResultContent resultContent
+	) {
+		final StringBuilder key = new StringBuilder();
+		key.append(method).append('|');
+		key.append(path != null ? path : "").append('|');
+		key.append(body != null ? body : "").append('|');
+		if (headers != null && !headers.isEmpty()) {
+			key.append(
+				headers
+					.entrySet()
+					.stream()
+					.sorted(Map.Entry.comparingByKey())
+					.map(e -> e.getKey() + "=" + e.getValue())
+					.collect(Collectors.joining(","))
+			);
+		}
+		key.append('|');
+		key.append(resultContent != null ? resultContent.name() : "");
+		return key.toString();
 	}
 }

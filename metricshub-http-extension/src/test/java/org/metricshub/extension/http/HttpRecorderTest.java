@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +115,7 @@ class HttpRecorderTest {
 
 	@Test
 	@SuppressWarnings("unchecked")
-	void testRecordSkipsDuplicate() throws IOException {
+	void testRecordAllowsDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
@@ -127,8 +126,8 @@ class HttpRecorderTest {
 		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
 		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
 
-		assertEquals(1, entries.size());
-		assertEquals(1, countTxtFiles(tempDir.resolve(HttpRecorder.HTTP_SUBDIR)));
+		assertEquals(2, entries.size());
+		assertEquals(2, countTxtFiles(tempDir.resolve(HttpRecorder.HTTP_SUBDIR)));
 	}
 
 	@Test
@@ -293,149 +292,6 @@ class HttpRecorderTest {
 	}
 
 	@Test
-	void testIsDuplicateWithMatchingEntry() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-
-		final Map<String, Object> request = new LinkedHashMap<>();
-		request.put("method", "GET");
-		request.put("path", "/api/test");
-
-		final Map<String, Object> response = new LinkedHashMap<>();
-		response.put("file", "response_001.txt");
-		response.put("resultContent", "body");
-
-		final Map<String, Object> entry = new LinkedHashMap<>();
-		entry.put("request", request);
-		entry.put("response", response);
-
-		final List<Map<String, Object>> entries = new ArrayList<>();
-		entries.add(entry);
-
-		assertTrue(recorder.isDuplicate(entries, "GET", "/api/test", null, null, ResultContent.BODY));
-	}
-
-	@Test
-	void testIsDuplicateWithNonMatchingMethod() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-
-		final Map<String, Object> request = new LinkedHashMap<>();
-		request.put("method", "GET");
-		request.put("path", "/api/test");
-
-		final Map<String, Object> response = new LinkedHashMap<>();
-		response.put("file", "response_001.txt");
-		response.put("resultContent", "body");
-
-		final Map<String, Object> entry = new LinkedHashMap<>();
-		entry.put("request", request);
-		entry.put("response", response);
-
-		final List<Map<String, Object>> entries = new ArrayList<>();
-		entries.add(entry);
-
-		assertFalse(recorder.isDuplicate(entries, "POST", "/api/test", null, null, ResultContent.BODY));
-	}
-
-	@Test
-	void testIsDuplicateWithEmptyList() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.isDuplicate(new ArrayList<>(), "GET", "/api", null, null, ResultContent.BODY));
-	}
-
-	@Test
-	void testIsDuplicateWithNullRequestInEntry() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-
-		final Map<String, Object> entry = new LinkedHashMap<>();
-		entry.put("request", null);
-		entry.put("response", new LinkedHashMap<>());
-
-		final List<Map<String, Object>> entries = new ArrayList<>();
-		entries.add(entry);
-
-		assertFalse(recorder.isDuplicate(entries, "GET", "/api", null, null, ResultContent.BODY));
-	}
-
-	@Test
-	void testHeadersEqualBothNull() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.headersEqual(null, null));
-	}
-
-	@Test
-	void testHeadersEqualBothEmpty() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.headersEqual(Map.of(), Map.of()));
-	}
-
-	@Test
-	void testHeadersEqualNullAndEmpty() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.headersEqual(null, Map.of()));
-	}
-
-	@Test
-	void testHeadersEqualEmptyAndNull() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.headersEqual(Map.of(), null));
-	}
-
-	@Test
-	void testHeadersEqualMatching() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		final Map<String, String> headers = Map.of("Content-Type", "application/json");
-		assertTrue(recorder.headersEqual(headers, headers));
-	}
-
-	@Test
-	void testHeadersEqualMismatch() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.headersEqual(Map.of("Content-Type", "application/json"), Map.of("Content-Type", "text/xml")));
-	}
-
-	@Test
-	void testHeadersEqualOneNullOneFilled() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.headersEqual(null, Map.of("Content-Type", "application/json")));
-	}
-
-	@Test
-	void testResultContentEqualsBothNull() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.resultContentEquals(null, null));
-	}
-
-	@Test
-	void testResultContentEqualsEntryNullContentNotNull() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.resultContentEquals(null, ResultContent.BODY));
-	}
-
-	@Test
-	void testResultContentEqualsContentNullEntryNotNull() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.resultContentEquals("body", null));
-	}
-
-	@Test
-	void testResultContentEqualsMatchingBody() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.resultContentEquals("body", ResultContent.BODY));
-	}
-
-	@Test
-	void testResultContentEqualsMatchingHttpStatus() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.resultContentEquals("httpStatus", ResultContent.HTTP_STATUS));
-	}
-
-	@Test
-	void testResultContentEqualsMismatch() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertFalse(recorder.resultContentEquals("body", ResultContent.HEADER));
-	}
-
-	@Test
 	void testBuildEntryMethodAndPath() {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 		final Map<String, Object> entry = recorder.buildEntry(
@@ -520,7 +376,7 @@ class HttpRecorderTest {
 
 	@Test
 	@SuppressWarnings("unchecked")
-	void testRecordWithDuplicateHeadersIsDuplicate() throws IOException {
+	void testRecordWithDuplicateHeadersAllowsDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 		final Map<String, String> headers = new LinkedHashMap<>();
 		headers.put("Content-Type", "application/json");
@@ -533,7 +389,7 @@ class HttpRecorderTest {
 		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
 		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
 
-		assertEquals(1, entries.size());
+		assertEquals(2, entries.size());
 	}
 
 	@Test
@@ -550,18 +406,5 @@ class HttpRecorderTest {
 		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
 
 		assertEquals(2, entries.size());
-	}
-
-	@Test
-	void testResultContentEqualsAllWithStatus() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.resultContentEquals("all_with_status", ResultContent.ALL_WITH_STATUS));
-	}
-
-	@Test
-	void testResultContentEqualsCaseInsensitive() {
-		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		assertTrue(recorder.resultContentEquals("BODY", ResultContent.BODY));
-		assertTrue(recorder.resultContentEquals("Body", ResultContent.BODY));
 	}
 }
