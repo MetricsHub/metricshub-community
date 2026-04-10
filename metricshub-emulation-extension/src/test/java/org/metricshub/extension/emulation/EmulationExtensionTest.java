@@ -25,14 +25,17 @@ import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
 
@@ -60,6 +63,7 @@ class EmulationExtensionTest {
 					.build()
 			)
 			.connectorStore(connectorStore)
+			.hostProperties(HostProperties.builder().isLocalhost(true).build())
 			.build();
 	}
 
@@ -119,6 +123,7 @@ class EmulationExtensionTest {
 	void testGetSupportedSources() {
 		assertFalse(emulationExtension.getSupportedSources().isEmpty());
 		assertTrue(emulationExtension.getSupportedSources().contains(HttpSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(CommandLineSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpGetSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpTableSource.class));
 	}
@@ -129,6 +134,7 @@ class EmulationExtensionTest {
 	void testGetSupportedCriteria() {
 		assertFalse(emulationExtension.getSupportedCriteria().isEmpty());
 		assertTrue(emulationExtension.getSupportedCriteria().contains(HttpCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(CommandLineCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetNextCriterion.class));
 	}
@@ -141,6 +147,7 @@ class EmulationExtensionTest {
 		assertFalse(mapping.isEmpty());
 		assertTrue(mapping.containsKey(EmulationConfiguration.class));
 		assertTrue(mapping.get(EmulationConfiguration.class).contains(HttpSource.class));
+		assertTrue(mapping.get(EmulationConfiguration.class).contains(CommandLineSource.class));
 	}
 
 	// ---- checkProtocol ----
@@ -230,6 +237,34 @@ class EmulationExtensionTest {
 		assertNotNull(result);
 	}
 
+	@Test
+	void testProcessSourceWithCommandLineSource(@TempDir Path tempDir) throws IOException {
+		final Path commandDir = tempDir.resolve("command");
+		Files.createDirectories(commandDir);
+		Files.writeString(
+			commandDir.resolve("image.yaml"),
+			"""
+			image:
+			  - command: "echo test"
+			    result: "r1.txt"
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(commandDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+		);
+		tm.setEmulationInputDirectory(tempDir.toString());
+
+		final CommandLineSource source = CommandLineSource.builder().commandLine("echo test").build();
+		final SourceTable result = emulationExtension.processSource(source, "connector", tm);
+
+		assertNotNull(result);
+		assertFalse(result.getTable().isEmpty());
+		assertEquals("ok", result.getTable().get(0).get(0));
+	}
+
 	// ---- processCriterion ----
 
 	@Test
@@ -287,6 +322,38 @@ class EmulationExtensionTest {
 			tm,
 			false
 		);
+
+		assertNotNull(result);
+		assertTrue(result.isSuccess());
+	}
+
+	@Test
+	void testProcessCriterionCommandLineCriterion(@TempDir Path tempDir) throws IOException {
+		final Path commandDir = tempDir.resolve("command");
+		Files.createDirectories(commandDir);
+		Files.writeString(
+			commandDir.resolve("image.yaml"),
+			"""
+			image:
+			  - command: "echo test"
+			    result: "r1.txt"
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(commandDir.resolve("r1.txt"), "status=OK", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+		);
+		tm.setEmulationInputDirectory(tempDir.toString());
+
+		final CommandLineCriterion criterion = CommandLineCriterion
+			.builder()
+			.commandLine("echo test")
+			.expectedResult("status=OK")
+			.build();
+
+		final CriterionTestResult result = emulationExtension.processCriterion(criterion, "connector", tm, false);
 
 		assertNotNull(result);
 		assertTrue(result.isSuccess());

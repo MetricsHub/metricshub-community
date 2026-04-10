@@ -57,7 +57,26 @@ public class OsCommandExtension implements IProtocolExtension {
 	/**
 	 * Supported configuration types
 	 */
-	private static final Set<String> SUPPORTED_CONFIGURATION_TYPES = Set.of("ssh", "oscommand");
+	public static final Set<String> SUPPORTED_CONFIGURATION_TYPES = Set.of("ssh", "oscommand");
+
+	private final OsCommandService osCommandService;
+
+	/**
+	 * Creates a new {@link OsCommandExtension} with a default {@link OsCommandService}.
+	 */
+	public OsCommandExtension() {
+		this(new OsCommandService());
+	}
+
+	/**
+	 * Creates a new {@link OsCommandExtension} with the given {@link OsCommandService}.
+	 * Intended for testing.
+	 *
+	 * @param osCommandService The OS command service to use.
+	 */
+	OsCommandExtension(final OsCommandService osCommandService) {
+		this.osCommandService = osCommandService;
+	}
 
 	/**
 	 * Protocol up status value '1.0'
@@ -135,9 +154,9 @@ public class OsCommandExtension implements IProtocolExtension {
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof CommandLineSource commandLineSource) {
-			return new CommandLineSourceProcessor().process(commandLineSource, connectorId, telemetryManager);
+			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		} else if (source instanceof FileSource fileSource) {
-			return new FileSourceProcessor().process(fileSource, connectorId, telemetryManager);
+			return new FileSourceProcessor(osCommandService).process(fileSource, connectorId, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -156,7 +175,8 @@ public class OsCommandExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof CommandLineCriterion commandLineCriterion) {
-			return new CommandLineCriterionProcessor(connectorId).process(commandLineCriterion, telemetryManager);
+			return new CommandLineCriterionProcessor(connectorId, osCommandService)
+				.process(commandLineCriterion, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -224,7 +244,7 @@ public class OsCommandExtension implements IProtocolExtension {
 	 */
 	private Double localSshTest(String hostname) {
 		try {
-			if (OsCommandService.runLocalCommand(SSH_TEST_COMMAND, OsCommandConfiguration.DEFAULT_TIMEOUT, null) == null) {
+			if (osCommandService.runLocalCommand(SSH_TEST_COMMAND, OsCommandConfiguration.DEFAULT_TIMEOUT, null) == null) {
 				log.debug(
 					"Hostname {} - Checking SSH protocol status. Local OS command has not returned any results.",
 					hostname
@@ -260,7 +280,7 @@ public class OsCommandExtension implements IProtocolExtension {
 		// CHECKSTYLE:OFF
 		try {
 			if (
-				OsCommandService.runSshCommand(
+				osCommandService.runSshCommand(
 					SSH_TEST_COMMAND,
 					hostname,
 					sshConfiguration,
@@ -315,7 +335,7 @@ public class OsCommandExtension implements IProtocolExtension {
 		final String commandLine = queryNode.get("commandLine").asText();
 		final SshConfiguration sshConfiguration = (SshConfiguration) configuration;
 		final String hostname = configuration.getHostname();
-		return OsCommandService.runSshCommand(
+		return osCommandService.runSshCommand(
 			commandLine,
 			hostname,
 			sshConfiguration,

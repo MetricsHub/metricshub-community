@@ -36,10 +36,12 @@ import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
@@ -49,11 +51,15 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
+import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
+import org.metricshub.extension.oscommand.CommandLineCriterionProcessor;
+import org.metricshub.extension.oscommand.CommandLineSourceProcessor;
+import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.extension.snmp.ISnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.snmp.SnmpExtension;
@@ -84,11 +90,13 @@ public class EmulationExtension implements IProtocolExtension {
 
 	static {
 		EMULATED_PROTOCOLS.add(HttpExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.addAll(OsCommandExtension.SUPPORTED_CONFIGURATION_TYPES);
 		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
 	}
 
 	private final EmulationRoundRobinManager roundRobinManager = new EmulationRoundRobinManager();
 	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(roundRobinManager);
+	private final EmulationOsCommandService osCommandService = new EmulationOsCommandService(roundRobinManager);
 
 	/**
 	 * Provides the HTTP configuration used by emulation processors.
@@ -139,7 +147,7 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(HttpSource.class, SnmpGetSource.class, SnmpTableSource.class);
+		return Set.of(CommandLineSource.class, HttpSource.class, SnmpGetSource.class, SnmpTableSource.class);
 	}
 
 	@Override
@@ -149,7 +157,7 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		return Set.of(HttpCriterion.class, SnmpGetCriterion.class, SnmpGetNextCriterion.class);
+		return Set.of(CommandLineCriterion.class, HttpCriterion.class, SnmpGetCriterion.class, SnmpGetNextCriterion.class);
 	}
 
 	@Override
@@ -176,6 +184,8 @@ public class EmulationExtension implements IProtocolExtension {
 		if (source instanceof HttpSource httpSource) {
 			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpSource, connectorId, telemetryManager);
+		} else if (source instanceof CommandLineSource commandLineSource) {
+			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
@@ -203,6 +213,9 @@ public class EmulationExtension implements IProtocolExtension {
 		if (criterion instanceof HttpCriterion httpCriterion) {
 			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpCriterion, connectorId, telemetryManager);
+		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
+			return new CommandLineCriterionProcessor(connectorId, osCommandService)
+				.process(commandLineCriterion, telemetryManager);
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(

@@ -50,7 +50,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
-import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.metricshub.engine.common.exception.ClientException;
@@ -69,9 +68,11 @@ import org.metricshub.engine.telemetry.SshSemaphoreFactory;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Os Command Service that handles OS commands, including local and remote execution.
+ * Service that handles OS commands, including local and remote execution.
+ *
+ * <p>Intended to be used as an instance so that it can be injected and mocked in tests.
  */
-@NoArgsConstructor(access = AccessLevel.PRIVATE)
+@NoArgsConstructor
 public class OsCommandService {
 
 	private static final String NEGATIVE_TIMEOUT = "timeout mustn't be negative nor zero.";
@@ -90,7 +91,7 @@ public class OsCommandService {
 	 * @throws TimeoutException     When the command execution times out.
 	 */
 	@WithSpan("OS Command")
-	public static String runLocalCommand(
+	public String runLocalCommand(
 		@NonNull final String command,
 		@SpanAttribute("OSCommand.timeout") final long timeout,
 		@SpanAttribute("OSCommand.command") final String noPasswordCommand
@@ -153,7 +154,7 @@ public class OsCommandService {
 	 * @param command The command to be executed.
 	 * @return The process builder for the given command.
 	 */
-	static ProcessBuilder createProcessBuilder(final String command) {
+	protected ProcessBuilder createProcessBuilder(final String command) {
 		return new ProcessBuilder().command(LOCAL_SHELL_COMMAND[0], LOCAL_SHELL_COMMAND[1], command);
 	}
 
@@ -231,7 +232,7 @@ public class OsCommandService {
 	 * @throws InterruptedException    When the thread is interrupted during execution.
 	 * @throws ControlledSshException   When there's an issue with controlled SSH execution.
 	 */
-	public static String runSshCommand(
+	public String runSshCommand(
 		@NonNull final String command,
 		@NonNull final String hostname,
 		@NonNull final SshConfiguration sshConfiguration,
@@ -280,7 +281,7 @@ public class OsCommandService {
 	 * @throws InterruptedException    When the thread is interrupted during execution.
 	 * @throws ControlledSshException   When there's an issue with controlled SSH execution.
 	 */
-	static <T> T runControlledSshCommand(Supplier<T> executable, String hostname, int timeout)
+	<T> T runControlledSshCommand(Supplier<T> executable, String hostname, int timeout)
 		throws InterruptedException, ControlledSshException {
 		final Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(hostname);
 
@@ -323,7 +324,7 @@ public class OsCommandService {
 	 * @param defaultTimeout         The default timeout in seconds.
 	 * @return The timeout in seconds.
 	 */
-	public static long getTimeout(
+	public long getTimeout(
 		final Long commandTimeout,
 		final OsCommandConfiguration osCommandConfiguration,
 		final IConfiguration sshConfiguration,
@@ -352,7 +353,7 @@ public class OsCommandService {
 	 * @param configuration The configuration object of type {@link IConfiguration}.
 	 * @return An {@link Optional} containing the username if the configuration is of type {@link SshConfiguration} and has a username set; otherwise, an empty optional.
 	 */
-	public static Optional<String> getUsername(final IConfiguration configuration) {
+	public Optional<String> getUsername(final IConfiguration configuration) {
 		if (configuration == null) {
 			return Optional.empty();
 		}
@@ -368,7 +369,7 @@ public class OsCommandService {
 	 * @param protocolConfiguration The configuration object of type {@link IConfiguration}.
 	 * @return An {@link Optional} containing the password as a char array if the configuration is of type {@link SshConfiguration} and has a password set; otherwise, an empty optional.
 	 */
-	public static Optional<char[]> getPassword(final IConfiguration protocolConfiguration) {
+	public Optional<char[]> getPassword(final IConfiguration protocolConfiguration) {
 		if (protocolConfiguration == null) {
 			return Optional.empty();
 		}
@@ -402,7 +403,7 @@ public class OsCommandService {
 	 * @throws NoCredentialProvidedException When there's no user provided for a remote command.
 	 * @throws ControlledSshException        When an error occurs during controlled SSH execution.
 	 */
-	public static OsCommandResult runOsCommand(
+	public OsCommandResult runOsCommand(
 		@NonNull final String commandLine,
 		@NonNull final TelemetryManager telemetryManager,
 		final Long commandTimeout,
@@ -522,6 +523,12 @@ public class OsCommandService {
 						commandNoPassword,
 						telemetryManager.getHostConfiguration().getHostType()
 					);
+			}
+
+			// Record the OS command exchange if recording is enabled.
+			final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+				OsCommandRecorder.getInstance(recordOutputDirectory).record(commandLine, commandResult);
 			}
 
 			return new OsCommandResult(commandResult, commandNoPassword);

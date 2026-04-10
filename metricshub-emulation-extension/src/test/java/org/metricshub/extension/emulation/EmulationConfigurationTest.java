@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
 
 /**
  * Tests for {@link EmulationConfiguration}.
@@ -68,10 +69,21 @@ class EmulationConfigurationTest {
 	}
 
 	@Test
+	void testGetPropertyFromOsCommandConfiguration() {
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.oscommand(OsCommandConfiguration.builder().timeout(42L).build())
+			.build();
+
+		assertEquals("42", configuration.getProperty("timeout"));
+	}
+
+	@Test
 	void testIsCorrespondingProtocol() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
 
 		assertTrue(configuration.isCorrespondingProtocol("http"));
+		assertTrue(configuration.isCorrespondingProtocol("oscommand"));
 		assertThrows(NullPointerException.class, () -> configuration.isCorrespondingProtocol(null));
 		assertFalse(configuration.isCorrespondingProtocol(""));
 	}

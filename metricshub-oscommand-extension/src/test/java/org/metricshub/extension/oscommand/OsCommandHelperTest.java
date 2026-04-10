@@ -16,6 +16,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -395,25 +396,23 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunLocalCommandKO() throws Exception {
-		assertThrows(IllegalArgumentException.class, () -> OsCommandService.runLocalCommand(null, 1, null));
-		assertThrows(IllegalArgumentException.class, () -> OsCommandService.runLocalCommand(CMD, -1, null));
-		assertThrows(IllegalArgumentException.class, () -> OsCommandService.runLocalCommand(CMD, 0, null));
+		final OsCommandService osCommandService = new OsCommandService();
+		assertThrows(IllegalArgumentException.class, () -> osCommandService.runLocalCommand(null, 1, null));
+		assertThrows(IllegalArgumentException.class, () -> osCommandService.runLocalCommand(CMD, -1, null));
+		assertThrows(IllegalArgumentException.class, () -> osCommandService.runLocalCommand(CMD, 0, null));
 
 		// Case IllegalStateException when the process cannot be created
 		final ProcessBuilder processBuilderMock = mock(ProcessBuilder.class);
-		try (final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);) {
-			mockedOsCommandService.when(() -> OsCommandService.runLocalCommand(CMD, 1, null)).thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.createProcessBuilder(CMD)).thenReturn(processBuilderMock);
-			when(processBuilderMock.start()).thenReturn(null);
-
-			assertThrows(IllegalStateException.class, () -> OsCommandService.runLocalCommand(CMD, 1, null));
-		}
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(processBuilderMock).when(spyService).createProcessBuilder(CMD);
+		when(processBuilderMock.start()).thenReturn(null);
+		assertThrows(IllegalStateException.class, () -> spyService.runLocalCommand(CMD, 1, null));
 	}
 
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
 	void testCreateProcessBuilderWindows() {
-		final ProcessBuilder processBuilder = OsCommandService.createProcessBuilder(CMD);
+		final ProcessBuilder processBuilder = new OsCommandService().createProcessBuilder(CMD);
 		assertNotNull(processBuilder);
 		final List<String> command = processBuilder.command();
 		assertNotNull(command.get(0));
@@ -424,7 +423,7 @@ class OsCommandHelperTest {
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testCreateProcessBuilderLinux() {
-		final ProcessBuilder processBuilder = OsCommandService.createProcessBuilder(CMD);
+		final ProcessBuilder processBuilder = new OsCommandService().createProcessBuilder(CMD);
 		assertNotNull(processBuilder);
 		final List<String> command = processBuilder.command();
 		assertNotNull(command.get(0));
@@ -435,51 +434,52 @@ class OsCommandHelperTest {
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
 	void testRunLocalCommandWindowsTimeout() throws Exception {
-		assertThrows(TimeoutException.class, () -> OsCommandService.runLocalCommand(PAUSE, 1, null));
+		assertThrows(TimeoutException.class, () -> new OsCommandService().runLocalCommand(PAUSE, 1, null));
 	}
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testRunLocalCommandLinuxTimeout() throws Exception {
-		assertThrows(TimeoutException.class, () -> OsCommandService.runLocalCommand(SLEEP_5, 1, null));
+		assertThrows(TimeoutException.class, () -> new OsCommandService().runLocalCommand(SLEEP_5, 1, null));
 	}
 
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
 	void testRunLocalCommandWindows() throws Exception {
-		assertEquals(TEST_RESULT, OsCommandService.runLocalCommand(ECHO_TEST_UPPER_CASE, 1, null));
+		assertEquals(TEST_RESULT, new OsCommandService().runLocalCommand(ECHO_TEST_UPPER_CASE, 1, null));
 	}
 
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testRunLocalCommandLinux() throws Exception {
-		assertEquals(TEST_RESULT, OsCommandService.runLocalCommand(ECHO_TEST_LOWER_CASE, 1, null));
+		assertEquals(TEST_RESULT, new OsCommandService().runLocalCommand(ECHO_TEST_LOWER_CASE, 1, null));
 	}
 
 	@Test
 	void testRunSshCommand() throws Exception {
 		final SshConfiguration sshConfiguration = mock(SshConfiguration.class);
 		final int timeout = 1000;
+		final OsCommandService osCommandService = new OsCommandService();
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+			() -> osCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+			() -> osCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, null, timeout, null, null, DeviceKind.LINUX)
+			() -> osCommandService.runSshCommand(CMD, HOST, null, timeout, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null, DeviceKind.LINUX)
+			() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null, DeviceKind.LINUX)
 		);
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null, DeviceKind.LINUX)
+			() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null, DeviceKind.LINUX)
 		);
 
 		try (
@@ -508,7 +508,7 @@ class OsCommandHelperTest {
 
 			assertEquals(
 				RESULT,
-				OsCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+				osCommandService.runSshCommand(CMD, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 			);
 		}
 	}
@@ -536,14 +536,15 @@ class OsCommandHelperTest {
 			.build();
 		sshConfiguration.setTimeout(4L);
 
-		assertEquals(1, OsCommandService.getTimeout(1L, osCommandConfig, sshConfiguration, 5));
-		assertEquals(2, OsCommandService.getTimeout(null, osCommandConfig, sshConfiguration, 5));
-		assertEquals(4, OsCommandService.getTimeout(null, null, sshConfiguration, 5));
-		assertEquals(5, OsCommandService.getTimeout(null, null, null, 5));
-		assertEquals(30, OsCommandService.getTimeout(null, new OsCommandConfiguration(), sshConfiguration, 5));
+		final OsCommandService osCommandService = new OsCommandService();
+		assertEquals(1, osCommandService.getTimeout(1L, osCommandConfig, sshConfiguration, 5));
+		assertEquals(2, osCommandService.getTimeout(null, osCommandConfig, sshConfiguration, 5));
+		assertEquals(4, osCommandService.getTimeout(null, null, sshConfiguration, 5));
+		assertEquals(5, osCommandService.getTimeout(null, null, null, 5));
+		assertEquals(30, osCommandService.getTimeout(null, new OsCommandConfiguration(), sshConfiguration, 5));
 		assertEquals(
 			30,
-			OsCommandService.getTimeout(
+			osCommandService.getTimeout(
 				null,
 				null,
 				SshConfiguration.sshConfigurationBuilder().username(USERNAME).password(PASSWORD.toCharArray()).build(),
@@ -554,16 +555,17 @@ class OsCommandHelperTest {
 
 	@Test
 	void testGetUsername() {
-		assertEquals(Optional.empty(), OsCommandService.getUsername(null));
-		assertEquals(Optional.empty(), OsCommandService.getUsername(new OsCommandConfiguration()));
+		final OsCommandService osCommandService = new OsCommandService();
+		assertEquals(Optional.empty(), osCommandService.getUsername(null));
+		assertEquals(Optional.empty(), osCommandService.getUsername(new OsCommandConfiguration()));
 		assertEquals(
 			Optional.empty(),
-			OsCommandService.getUsername(SshConfiguration.sshConfigurationBuilder().password(PASSWORD.toCharArray()).build())
+			osCommandService.getUsername(SshConfiguration.sshConfigurationBuilder().password(PASSWORD.toCharArray()).build())
 		);
 
 		assertEquals(
 			Optional.of(USERNAME),
-			OsCommandService.getUsername(
+			osCommandService.getUsername(
 				SshConfiguration.sshConfigurationBuilder().username(USERNAME).password(PASSWORD.toCharArray()).build()
 			)
 		);
@@ -571,18 +573,19 @@ class OsCommandHelperTest {
 
 	@Test
 	void testGetPassword() {
-		assertEquals(Optional.empty(), OsCommandService.getPassword(null));
-		assertEquals(Optional.empty(), OsCommandService.getPassword(new OsCommandConfiguration()));
+		final OsCommandService osCommandService = new OsCommandService();
+		assertEquals(Optional.empty(), osCommandService.getPassword(null));
+		assertEquals(Optional.empty(), osCommandService.getPassword(new OsCommandConfiguration()));
 		assertEquals(
 			Optional.empty(),
-			OsCommandService.getPassword(SshConfiguration.sshConfigurationBuilder().username(USERNAME).build())
+			osCommandService.getPassword(SshConfiguration.sshConfigurationBuilder().username(USERNAME).build())
 		);
 
 		char[] charArrayPassword = PASSWORD.toCharArray();
 
 		assertEquals(
 			Optional.of(charArrayPassword),
-			OsCommandService.getPassword(
+			osCommandService.getPassword(
 				SshConfiguration.sshConfigurationBuilder().username(USERNAME).password(charArrayPassword).build()
 			)
 		);
@@ -594,7 +597,7 @@ class OsCommandHelperTest {
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = Map.of();
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runOsCommand(null, telemetryManager, 120L, false, false, connectorEmbeddedFiles)
+			() -> new OsCommandService().runOsCommand(null, telemetryManager, 120L, false, false, connectorEmbeddedFiles)
 		);
 	}
 
@@ -603,7 +606,7 @@ class OsCommandHelperTest {
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = Map.of();
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> OsCommandService.runOsCommand(CMD, null, 120L, false, false, connectorEmbeddedFiles)
+			() -> new OsCommandService().runOsCommand(CMD, null, 120L, false, false, connectorEmbeddedFiles)
 		);
 	}
 
@@ -627,7 +630,7 @@ class OsCommandHelperTest {
 
 		assertThrows(
 			NoCredentialProvidedException.class,
-			() -> OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
+			() -> new OsCommandService().runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
 		);
 	}
 
@@ -653,7 +656,7 @@ class OsCommandHelperTest {
 
 		assertThrows(
 			TimeoutException.class,
-			() -> OsCommandService.runOsCommand(PAUSE, telemetryManager, 1L, false, true, connectorEmbeddedFiles)
+			() -> new OsCommandService().runOsCommand(PAUSE, telemetryManager, 1L, false, true, connectorEmbeddedFiles)
 		);
 	}
 
@@ -678,17 +681,9 @@ class OsCommandHelperTest {
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<EmbeddedFileHelper> mockedEmbeddedFileHelper = mockStatic(EmbeddedFileHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(osCommandConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runOsCommand(COMMAND_TO_UPDATE, telemetryManager, 120L, false, false, embeddedFiles)
-				)
-				.thenCallRealMethod();
-
 			mockedEmbeddedFileHelper
 				.when(() -> EmbeddedFileHelper.findEmbeddedFiles(anyString(), anyMap()))
 				.thenReturn(commandLineEmbeddedFiles);
@@ -706,7 +701,8 @@ class OsCommandHelperTest {
 
 			assertThrows(
 				IOException.class,
-				() -> OsCommandService.runOsCommand(COMMAND_TO_UPDATE, telemetryManager, 120L, false, false, embeddedFiles)
+				() ->
+					new OsCommandService().runOsCommand(COMMAND_TO_UPDATE, telemetryManager, 120L, false, false, embeddedFiles)
 			);
 		}
 	}
@@ -725,7 +721,7 @@ class OsCommandHelperTest {
 
 		assertThrows(
 			TimeoutException.class,
-			() -> OsCommandService.runOsCommand(SLEEP_5, telemetryManager, 1L, false, true, Map.of())
+			() -> new OsCommandService().runOsCommand(SLEEP_5, telemetryManager, 1L, false, true, Map.of())
 		);
 	}
 
@@ -745,7 +741,7 @@ class OsCommandHelperTest {
 
 		assertEquals(
 			expect,
-			OsCommandService.runOsCommand(ECHO_TEST_UPPER_CASE, telemetryManager, 120L, false, true, Map.of())
+			new OsCommandService().runOsCommand(ECHO_TEST_UPPER_CASE, telemetryManager, 120L, false, true, Map.of())
 		);
 	}
 
@@ -772,7 +768,7 @@ class OsCommandHelperTest {
 
 		assertEquals(
 			expect,
-			OsCommandService.runOsCommand(ECHO_TEST_LOWER_CASE, telemetryManager, 120L, false, true, Map.of())
+			new OsCommandService().runOsCommand(ECHO_TEST_LOWER_CASE, telemetryManager, 120L, false, true, Map.of())
 		);
 	}
 
@@ -792,7 +788,7 @@ class OsCommandHelperTest {
 
 		assertEquals(
 			expect,
-			OsCommandService.runOsCommand(ECHO_TEST_UPPER_CASE, telemetryManager, 120L, true, false, Map.of())
+			new OsCommandService().runOsCommand(ECHO_TEST_UPPER_CASE, telemetryManager, 120L, true, false, Map.of())
 		);
 	}
 
@@ -812,7 +808,7 @@ class OsCommandHelperTest {
 
 		assertEquals(
 			expect,
-			OsCommandService.runOsCommand(ECHO_TEST_LOWER_CASE, telemetryManager, 120L, true, false, Map.of())
+			new OsCommandService().runOsCommand(ECHO_TEST_LOWER_CASE, telemetryManager, 120L, true, false, Map.of())
 		);
 	}
 
@@ -834,16 +830,23 @@ class OsCommandHelperTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(AGENT_REV_RESULT)
+			.when(spyService)
+			.runSshCommand(
+				CLEAR_PASSWORD_COMMAND,
+				HOST,
+				sshConfiguration,
+				120,
+				Collections.emptyList(),
+				NO_PASSWORD_COMMAND,
+				DeviceKind.LINUX
+			);
+
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(sshConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() -> OsCommandService.getTimeout(120L, null, sshConfiguration, 300))
-				.thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.getPassword(sshConfiguration)).thenCallRealMethod();
 			mockedOsCommandHelper.when(() -> OsCommandHelper.replaceSudo(anyString(), isNull())).thenCallRealMethod();
 			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
@@ -858,30 +861,9 @@ class OsCommandHelperTest {
 				)
 				.thenCallRealMethod();
 
-			mockedOsCommandService
-				.when(() -> {
-					OsCommandService.runSshCommand(
-						CLEAR_PASSWORD_COMMAND,
-						HOST,
-						sshConfiguration,
-						120,
-						Collections.emptyList(),
-						NO_PASSWORD_COMMAND,
-						DeviceKind.LINUX
-					);
-				})
-				.thenReturn(AGENT_REV_RESULT);
-
-			mockedOsCommandService
-				.when(() -> OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()))
-				.thenCallRealMethod();
-
 			final OsCommandResult expect = new OsCommandResult(AGENT_REV_RESULT, NO_PASSWORD_COMMAND);
 
-			assertEquals(
-				expect,
-				OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
-			);
+			assertEquals(expect, spyService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()));
 		}
 	}
 
@@ -913,16 +895,23 @@ class OsCommandHelperTest {
 		);
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(AGENT_REV_RESULT)
+			.when(spyService)
+			.runSshCommand(
+				CLEAR_PASSWORD_COMMAND,
+				HOST,
+				sshConfiguration,
+				120L,
+				Collections.emptyList(),
+				NO_PASSWORD_COMMAND,
+				DeviceKind.LINUX
+			);
+
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(sshConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() -> OsCommandService.getTimeout(120L, osCommandConfiguration, sshConfiguration, 300))
-				.thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.getPassword(sshConfiguration)).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
@@ -939,30 +928,9 @@ class OsCommandHelperTest {
 				)
 				.thenCallRealMethod();
 
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						CLEAR_PASSWORD_COMMAND,
-						HOST,
-						sshConfiguration,
-						120L,
-						Collections.emptyList(),
-						NO_PASSWORD_COMMAND,
-						DeviceKind.LINUX
-					)
-				)
-				.thenReturn(AGENT_REV_RESULT);
-
-			mockedOsCommandService
-				.when(() -> OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()))
-				.thenCallRealMethod();
-
 			final OsCommandResult expect = new OsCommandResult(AGENT_REV_RESULT, NO_PASSWORD_COMMAND);
 
-			assertEquals(
-				expect,
-				OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
-			);
+			assertEquals(expect, spyService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()));
 		}
 	}
 
@@ -995,16 +963,23 @@ class OsCommandHelperTest {
 		);
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(AGENT_REV_RESULT)
+			.when(spyService)
+			.runSshCommand(
+				CLEAR_PASSWORD_COMMAND,
+				HOST,
+				sshConfiguration,
+				120,
+				Collections.emptyList(),
+				NO_PASSWORD_COMMAND,
+				DeviceKind.LINUX
+			);
+
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(sshConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() -> OsCommandService.getTimeout(120L, osCommandConfiguration, sshConfiguration, 300))
-				.thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.getPassword(sshConfiguration)).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
@@ -1021,30 +996,9 @@ class OsCommandHelperTest {
 				)
 				.thenCallRealMethod();
 
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						CLEAR_PASSWORD_COMMAND,
-						HOST,
-						sshConfiguration,
-						120,
-						Collections.emptyList(),
-						NO_PASSWORD_COMMAND,
-						DeviceKind.LINUX
-					)
-				)
-				.thenReturn(AGENT_REV_RESULT);
-
-			mockedOsCommandService
-				.when(() -> OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()))
-				.thenCallRealMethod();
-
 			final OsCommandResult expect = new OsCommandResult(AGENT_REV_RESULT, NO_PASSWORD_COMMAND);
 
-			assertEquals(
-				expect,
-				OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
-			);
+			assertEquals(expect, spyService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()));
 		}
 	}
 
@@ -1077,16 +1031,23 @@ class OsCommandHelperTest {
 		);
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(AGENT_REV_RESULT)
+			.when(spyService)
+			.runSshCommand(
+				SUDO_KEYWORD + CLEAR_PASSWORD_COMMAND,
+				HOST,
+				sshConfiguration,
+				120,
+				Collections.emptyList(),
+				SUDO_KEYWORD + NO_PASSWORD_COMMAND,
+				DeviceKind.LINUX
+			);
+
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(sshConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() -> OsCommandService.getTimeout(120L, osCommandConfiguration, sshConfiguration, 300))
-				.thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.getPassword(sshConfiguration)).thenCallRealMethod();
 			mockedOsCommandHelper
 				.when(() -> OsCommandHelper.replaceSudo(anyString(), eq(sudoInformation)))
 				.thenCallRealMethod();
@@ -1103,30 +1064,9 @@ class OsCommandHelperTest {
 				)
 				.thenCallRealMethod();
 
-			mockedOsCommandService
-				.when(() -> {
-					OsCommandService.runSshCommand(
-						SUDO_KEYWORD + CLEAR_PASSWORD_COMMAND,
-						HOST,
-						sshConfiguration,
-						120,
-						Collections.emptyList(),
-						SUDO_KEYWORD + NO_PASSWORD_COMMAND,
-						DeviceKind.LINUX
-					);
-				})
-				.thenReturn(AGENT_REV_RESULT);
-
-			mockedOsCommandService
-				.when(() -> OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()))
-				.thenCallRealMethod();
-
 			final OsCommandResult expect = new OsCommandResult(AGENT_REV_RESULT, SUDO_KEYWORD + NO_PASSWORD_COMMAND);
 
-			assertEquals(
-				expect,
-				OsCommandService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
-			);
+			assertEquals(expect, spyService.runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of()));
 		}
 	}
 
@@ -1170,17 +1110,25 @@ class OsCommandHelperTest {
 		);
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
+		final OsCommandService spyService = spy(new OsCommandService());
+		doReturn(SEN_EMBEDDED_0001_PATH).when(localFile).getAbsolutePath();
+		doReturn(HARD_DRIVE)
+			.when(spyService)
+			.runSshCommand(
+				SH_SEN_EMBEDDED_0001_PATH,
+				HOST,
+				sshConfiguration,
+				120,
+				List.of(localFile),
+				SH_SEN_EMBEDDED_0001_PATH,
+				DeviceKind.LINUX
+			);
+
 		try (
-			final MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class);
 			final MockedStatic<OsCommandHelper> mockedOsCommandHelper = mockStatic(OsCommandHelper.class);
 			final MockedStatic<EmbeddedFileHelper> mockedEmbeddedFileHelper = mockStatic(EmbeddedFileHelper.class);
 			final MockedStatic<StringHelper> mockedStringHelper = mockStatic(StringHelper.class)
 		) {
-			mockedOsCommandService.when(() -> OsCommandService.getUsername(sshConfiguration)).thenCallRealMethod();
-			mockedOsCommandService
-				.when(() -> OsCommandService.getTimeout(120L, osCommandConfiguration, sshConfiguration, 300))
-				.thenCallRealMethod();
-			mockedOsCommandService.when(() -> OsCommandService.getPassword(sshConfiguration)).thenCallRealMethod();
 			mockedStringHelper.when(() -> StringHelper.protectCaseInsensitiveRegex(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper.when(() -> OsCommandHelper.getFileNameFromSudoCommand(anyString())).thenCallRealMethod();
 			mockedOsCommandHelper
@@ -1202,37 +1150,8 @@ class OsCommandHelperTest {
 				.when(() -> EmbeddedFileHelper.findEmbeddedFiles(anyString(), anyMap()))
 				.thenReturn(commandLineEmbeddedFiles);
 
-			doReturn(SEN_EMBEDDED_0001_PATH).when(localFile).getAbsolutePath();
-
-			mockedOsCommandHelper
-				.when(() -> {
-					OsCommandService.runSshCommand(
-						SH_SEN_EMBEDDED_0001_PATH,
-						HOST,
-						sshConfiguration,
-						120,
-						List.of(localFile),
-						SH_SEN_EMBEDDED_0001_PATH,
-						DeviceKind.LINUX
-					);
-				})
-				.thenReturn(HARD_DRIVE);
-
-			mockedOsCommandHelper
-				.when(() ->
-					OsCommandService.runOsCommand(
-						SH_EMBEDDED_FILE_1,
-						telemetryManager,
-						120L,
-						false,
-						false,
-						commandLineEmbeddedFiles
-					)
-				)
-				.thenCallRealMethod();
-
 			final OsCommandResult expect = new OsCommandResult(HARD_DRIVE, SH_SEN_EMBEDDED_0001_PATH);
-			final OsCommandResult actual = OsCommandService.runOsCommand(
+			final OsCommandResult actual = spyService.runOsCommand(
 				SH_EMBEDDED_FILE_1,
 				telemetryManager,
 				120L,
@@ -1248,14 +1167,15 @@ class OsCommandHelperTest {
 	void testRunControlledSshCommand() throws InterruptedException, ControlledSshException {
 		Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(HOSTNAME);
 
-		assertEquals(7, OsCommandService.runControlledSshCommand(semaphore::availablePermits, HOSTNAME, 30));
+		final OsCommandService osCommandService = new OsCommandService();
+		assertEquals(7, osCommandService.runControlledSshCommand(semaphore::availablePermits, HOSTNAME, 30));
 
-		assertDoesNotThrow(() -> OsCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30));
+		assertDoesNotThrow(() -> osCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30));
 
 		semaphore.acquire(8);
 		assertThrows(
 			ControlledSshException.class,
-			() -> OsCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 1)
+			() -> osCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 1)
 		);
 	}
 
@@ -1267,7 +1187,7 @@ class OsCommandHelperTest {
 
 		assertThrows(
 			InterruptedException.class,
-			() -> OsCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
+			() -> new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
 		);
 
 		assertFalse(Thread.currentThread().isInterrupted());

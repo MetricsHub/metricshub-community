@@ -43,6 +43,9 @@ public class CommandLineCriterionProcessor {
 	@NonNull
 	private String connectorId;
 
+	@NonNull
+	private OsCommandService osCommandService;
+
 	/**
 	 * Processes a given {@link CommandLineCriterion}, executes the corresponding OS command, and evaluates the
 	 * command's output against the expected result.
@@ -68,7 +71,7 @@ public class CommandLineCriterionProcessor {
 		}
 
 		try {
-			final OsCommandResult osCommandResult = OsCommandService.runOsCommand(
+			final OsCommandResult osCommandResult = osCommandService.runOsCommand(
 				commandLineCriterion.getCommandLine(),
 				telemetryManager,
 				commandLineCriterion.getTimeout(),

@@ -27,6 +27,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.FilterResultHelper;
 import org.metricshub.engine.common.helpers.LoggingHelper;
@@ -40,7 +42,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * This class handles the execution of operating system commands provided through {@link CommandLineSource}, applies line and column filtering, and builds a structured table from the results.
  */
 @Slf4j
+@RequiredArgsConstructor
 public class CommandLineSourceProcessor {
+
+	@NonNull
+	private final OsCommandService osCommandService;
 
 	/**
 	 * Processes an OS command defined in a {@link CommandLineSource}, executes it, and converts the output into a structured {@link SourceTable}.
@@ -67,7 +73,7 @@ public class CommandLineSourceProcessor {
 		}
 
 		try {
-			final OsCommandResult osCommandResult = OsCommandService.runOsCommand(
+			final OsCommandResult osCommandResult = osCommandService.runOsCommand(
 				commandLineSource.getCommandLine(),
 				telemetryManager,
 				commandLineSource.getTimeout(),

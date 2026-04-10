@@ -77,16 +77,7 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	 */
 	@JawkFunction("executeHttpRequest")
 	public String executeHttpRequest(final @JawkAssocArray AssocArray argMap) {
-		try {
-			return executeSource(Source.fromMap(HttpSource.class, argMap));
-		} catch (Exception exception) {
-			log.error(
-				"Hostname {} - Http Request Operation has failed. Errors:\n{}\n",
-				hostname,
-				StringHelper.getStackMessages(exception)
-			);
-			return "";
-		}
+		return executeSource(Source.fromMap(HttpSource.class, argMap));
 	}
 
 	/**

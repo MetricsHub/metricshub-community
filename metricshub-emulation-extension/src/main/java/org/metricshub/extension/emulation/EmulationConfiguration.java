@@ -30,6 +30,7 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 
 /**
@@ -50,6 +51,8 @@ public class EmulationConfiguration implements IConfiguration {
 	private HttpConfiguration http;
 
 	private SnmpConfiguration snmp;
+
+	private OsCommandConfiguration oscommand;
 
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
@@ -80,6 +83,14 @@ public class EmulationConfiguration implements IConfiguration {
 		// For example, "http.port" or "http.username"
 		if (http != null) {
 			return http.getProperty(property);
+		}
+
+		if (snmp != null) {
+			return snmp.getProperty(property);
+		}
+
+		if (oscommand != null) {
+			return oscommand.getProperty(property);
 		}
 
 		return null;
