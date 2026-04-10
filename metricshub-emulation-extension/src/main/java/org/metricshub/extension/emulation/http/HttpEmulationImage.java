@@ -28,8 +28,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Represents the root structure of an {@code http-emulation.yaml} file.
- * The image contains a list of request-response mapping entries.
+ * Represents the root structure of an HTTP emulation {@code image.yaml} file.
+ *
+ * <p>The image contains a list of request-response mapping entries.
  */
 @Data
 @Builder

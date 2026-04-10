@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.ResultContent;
 
 /**
- * Test of {@link HttpEmulationImage}
+ * Tests for {@link HttpEmulationImage}.
  */
 class HttpEmulationImageTest {
 

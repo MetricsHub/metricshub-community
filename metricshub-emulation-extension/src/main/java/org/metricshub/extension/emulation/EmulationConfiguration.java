@@ -30,10 +30,12 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.snmp.SnmpConfiguration;
 
 /**
- * The EmulationConfiguration represents the configuration for the emulation protocol.
- * This is a marker configuration that enables file-based protocol emulation for offline
+ * Configuration for the emulation protocol.
+ *
+ * <p>This marker configuration enables file-based protocol emulation for offline
  * testing and development.
  */
 @Data
@@ -46,6 +48,8 @@ public class EmulationConfiguration implements IConfiguration {
 	private String hostname;
 
 	private HttpConfiguration http;
+
+	private SnmpConfiguration snmp;
 
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {

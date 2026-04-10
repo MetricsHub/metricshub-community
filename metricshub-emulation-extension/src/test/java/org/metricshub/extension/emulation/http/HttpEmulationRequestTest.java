@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test of {@link HttpEmulationRequest}
+ * Tests for {@link HttpEmulationRequest}.
  */
 class HttpEmulationRequestTest {
 

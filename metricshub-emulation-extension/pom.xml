@@ -25,6 +25,11 @@
 			<version>${project.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>org.metricshub</groupId>
+			<artifactId>metricshub-snmp-extension</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<scope>compile</scope>
@@ -158,7 +163,6 @@
 							<artifactSet>
 								<includes>
 									<include>org.metricshub:metricshub-emulation-extension</include>
-                                    <include>org.metricshub:metricshub-http-extension</include>
 								</includes>
 							</artifactSet>
 							<transformers>

@@ -19,7 +19,7 @@ import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.utils.HttpRequest;
 
 /**
- * Test of {@link EmulationHttpRequestExecutor}
+ * Tests for {@link EmulationHttpRequestExecutor}.
  */
 class EmulationHttpRequestExecutorTest {
 

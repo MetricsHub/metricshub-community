@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.ResultContent;
 
 /**
- * Test of {@link HttpEmulationResponse}
+ * Tests for {@link HttpEmulationResponse}.
  */
 class HttpEmulationResponseTest {
 

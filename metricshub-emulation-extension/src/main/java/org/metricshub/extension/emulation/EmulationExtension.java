@@ -38,46 +38,62 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
+import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
+import org.metricshub.extension.snmp.ISnmpConfiguration;
+import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.extension.snmp.SnmpExtension;
+import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
+import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
+import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;
+import org.metricshub.extension.snmp.source.SnmpTableSourceProcessor;
 
 /**
- * The EmulationExtension implements {@link IProtocolExtension} to provide file-based
- * protocol emulation for offline testing and development. It replays pre-recorded
- * protocol responses from emulation input files instead of making real network calls.
+ * Protocol extension that provides file-based emulation for offline testing and
+ * development.
+ *
+ * <p>It replays pre-recorded protocol responses from emulation input files instead
+ * of making real network calls.
  */
 @Slf4j
 public class EmulationExtension implements IProtocolExtension {
 
 	/**
-	 * The identifier for the emulation.
+	 * Identifier of the emulation protocol extension.
 	 */
 	public static final String IDENTIFIER = "emulation";
 
 	/**
-	 * The emulated protocols supported by this extension.
+	 * Protocols that can be emulated by this extension.
 	 */
 	protected static final Set<String> EMULATED_PROTOCOLS = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
 
 	static {
 		EMULATED_PROTOCOLS.add(HttpExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
 	}
 
 	private final EmulationRoundRobinManager roundRobinManager = new EmulationRoundRobinManager();
 	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(roundRobinManager);
 
 	/**
-	 * A function that provides the HTTP configuration for the emulation based on the telemetry manager's host configuration.
-	 * This allows the HTTP processors to access the emulation configuration when processing sources.
+	 * Provides the HTTP configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
 	 */
 	private static final Function<TelemetryManager, HttpConfiguration> EMULATION_HTTP_CONFIGURATION_PROVIDER =
 		telemetryManager -> {
@@ -86,10 +102,33 @@ public class EmulationExtension implements IProtocolExtension {
 				.getConfigurations()
 				.get(EmulationConfiguration.class);
 			final var httpConfiguration = emulationConfiguration.getHttp();
+			final String hostname = telemetryManager.getHostname();
 			if (httpConfiguration == null) {
-				return HttpConfiguration.builder().build();
+				return HttpConfiguration.builder().hostname(hostname).build();
 			} else {
-				return emulationConfiguration.getHttp();
+				httpConfiguration.setHostname(hostname);
+				return httpConfiguration;
+			}
+		};
+
+	/**
+	 * Provides the SNMP configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
+	 */
+	private static final Function<TelemetryManager, ISnmpConfiguration> EMULATION_SNMP_CONFIGURATION_PROVIDER =
+		telemetryManager -> {
+			final var emulationConfiguration = (EmulationConfiguration) telemetryManager
+				.getHostConfiguration()
+				.getConfigurations()
+				.get(EmulationConfiguration.class);
+			final var snmpConfiguration = emulationConfiguration.getSnmp();
+			final String hostname = telemetryManager.getHostname();
+			if (snmpConfiguration == null) {
+				return SnmpConfiguration.builder().hostname(hostname).build();
+			} else {
+				snmpConfiguration.setHostname(hostname);
+				return snmpConfiguration;
 			}
 		};
 
@@ -100,7 +139,7 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(HttpSource.class);
+		return Set.of(HttpSource.class, SnmpGetSource.class, SnmpTableSource.class);
 	}
 
 	@Override
@@ -110,7 +149,7 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		return Set.of(HttpCriterion.class);
+		return Set.of(HttpCriterion.class, SnmpGetCriterion.class, SnmpGetNextCriterion.class);
 	}
 
 	@Override
@@ -138,6 +177,19 @@ public class EmulationExtension implements IProtocolExtension {
 			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpSource, connectorId, telemetryManager);
 		}
+
+		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
+			telemetryManager.getEmulationInputDirectory()
+		);
+
+		if (source instanceof SnmpTableSource snmpTableSource) {
+			return new SnmpTableSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER)
+				.process(snmpTableSource, connectorId, telemetryManager);
+		} else if (source instanceof SnmpGetSource snmpGetSource) {
+			return new SnmpGetSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER)
+				.process(snmpGetSource, connectorId, telemetryManager);
+		}
+
 		return SourceTable.empty();
 	}
 
@@ -152,6 +204,19 @@ public class EmulationExtension implements IProtocolExtension {
 			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpCriterion, connectorId, telemetryManager);
 		}
+
+		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
+			telemetryManager.getEmulationInputDirectory()
+		);
+
+		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
+			return new SnmpGetCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode)
+				.process(snmpGetCriterion, connectorId, telemetryManager);
+		} else if (criterion instanceof SnmpGetNextCriterion snmpGetNextCriterion) {
+			return new SnmpGetNextCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode)
+				.process(snmpGetNextCriterion, connectorId, telemetryManager);
+		}
+
 		return CriterionTestResult.empty();
 	}
 
