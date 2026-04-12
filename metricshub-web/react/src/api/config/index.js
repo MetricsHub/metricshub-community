@@ -259,6 +259,28 @@ class ConfigApi {
 				.catch((e) => reject(normalizeError(e)));
 		});
 	}
+
+	/**
+	 * Encrypt password via agent keystore. Request body is Base64(UTF-8(password)), not plaintext.
+	 * @param {string} passwordBase64Transport Base64-encoded UTF-8 bytes of the password
+	 * @param {{ signal?: AbortSignal }} opts
+	 * @returns {Promise<string>} Encrypted value as plain text
+	 */
+	encryptPassword(passwordBase64Transport, opts = {}) {
+		const { signal } = opts;
+		return new Promise((resolve, reject) => {
+			httpRequest({
+				url: `${BASE}/encrypt-password`,
+				method: "POST",
+				signal,
+				data: passwordBase64Transport,
+				headers: { "Content-Type": "text/plain", Accept: "text/plain" },
+				responseType: "text",
+			})
+				.then(({ data }) => resolve(data))
+				.catch((e) => reject(normalizeError(e, "Password encryption failed")));
+		});
+	}
 }
 
 export const configApi = new ConfigApi();
