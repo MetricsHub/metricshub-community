@@ -1,0 +1,115 @@
+# Enables the debug mode of the core engine (Default: error). Possible values are: all, trace, debug, info, warn, error, or fatal.
+loggerLevel: error
+
+# Sets the number of jobs that MetricsHub can run simultaneously (Default: 20).
+jobPoolSize: 20
+
+# Sets the debug output directory for all the monitored resources.
+outputDirectory: /opt/metricshub/logs
+
+# Sets the collect period that MetricsHub uses to collects metrics from the monitored resources (Default: 2m).
+collectPeriod: 1m
+
+# Sets the cycle that MetricsHub uses to perform discoveries and detect new components in your monitored environment. By default, MetricsHub runs a discovery after 30 collects.
+discoveryCycle: 30
+
+# Configures MetricsHub internal alerting system
+alertingSystem:
+
+  # Disables MetricsHub's alerts for all the monitored resources (Default: false).
+  disable: false
+
+  # Overrides the default problem template used to build the alert body for all the monitored resources.
+  problemTemplate: Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}
+
+# Forces all the network calls to be executed in sequential order for all the monitored resources - NOT RECOMMENDED (Default: false).
+sequential: false
+
+# Displays the configured host.name attribute in the Host Resource `host.name` attribute instead of the resolved FQDN (Default: false).
+resolveHostnameToFqdn: false
+
+# Agent config attributes
+attributes:
+  site: Paris-main
+
+# Agent config metrics
+metrics:
+  hw.site.carbon_intensity: 250 # in g/kWh
+  hw.site.electricity_cost: 0.15 # in $/kWh
+  hw.site.pue: 1.5 # Power Usage Effectiveness. The ideal ratio is 1
+
+# Disables gRPC protocol in unit tests
+otel:
+  otel.exporter.otlp.metrics.protocol: noop
+
+resources:
+  # Resource 1 configuration
+  top-level-server-1:
+    # Adds additional static attributes to the resource.
+    attributes:
+      host.name: top-level-server-1
+      host.type: storage
+    metrics:
+      hw.host.configured: 1
+    protocols:
+      http:
+        https: true
+        port: 443
+        username: username
+        password: password
+  # Resource 2 configuration
+  top-level-server-2:
+    # Adds additional static attributes to the resource.
+    attributes:
+      host.name: top-level-server-2
+      host.type: storage
+    metrics:
+      hw.host.configured: 1
+    protocols:
+      http:
+        https: true
+        port: 443
+        username: username
+        password: password
+
+# Resource Groups configuration
+resourceGroups:
+    # Resource Group identifier
+  paris:
+    # Adds additional static attributes to all the resources in the group.
+    attributes:
+      site: Paris
+
+    # Adds additional static metrics to all the resources in the group.
+    metrics:
+      hw.site.carbon_intensity: 230 # in g/kWh
+      hw.site.electricity_cost: 0.12 # in $/kWh
+      hw.site.pue: 1.8 # Power Usage Effectiveness. The ideal ratio is 1
+    resources:
+       # Resource configuration
+      paris-server-1: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: paris-server-1
+          host.type: storage
+        metrics:
+          hw.host.configured: 1
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: username
+            password: password
+      paris-server-2: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: paris-server-2
+          host.type: storage
+        metrics:
+          hw.host.configured: 1
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: username
+            password: password

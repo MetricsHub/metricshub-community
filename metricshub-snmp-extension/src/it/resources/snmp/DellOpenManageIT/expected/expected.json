@@ -4,7 +4,7 @@
     "metrics" : {
       "hw.status{hw.type=\"battery\"}" : {
         "name" : "hw.status{hw.type=\"battery\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "battery"
@@ -29,19 +29,20 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "battery",
     "id" : "DellOpenManage_battery_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "metricshub.connector.status" : {
         "name" : "metricshub.connector.status",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : false,
         "value" : "ok",
@@ -52,6 +53,7 @@
       }
     },
     "attributes" : {
+      "filename" : "DellOpenManage.yaml",
       "name" : "Dell OpenManage Server Administrator",
       "connector_id" : "DellOpenManage",
       "applies_to_os" : "linux,windows",
@@ -59,20 +61,23 @@
       "id" : "DellOpenManage"
     },
     "conditionalCollection" : { },
-    "legacyTextParameters" : { },
+    "legacyTextParameters" : {
+      "StatusInformation" : "Executed SnmpGetNextCriterion Criterion:\n- OID: 1.3.6.1.4.1.674.10892.1.300.10.1\n\nResult:\n1.3.6.1.4.1.674.10892.1.300.10.1.1.1\tASN_INTEGER\t1\n\nMessage:\n====================================\nHostname localhost - Successful SNMP GetNext of 1.3.6.1.4.1.674.10892.1.300.10.1. Returned result: 1.3.6.1.4.1.674.10892.1.300.10.1.1.1\tASN_INTEGER\t1.\n====================================\n\nConclusion:\nTest on localhost SUCCEEDED"
+    },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "connector",
     "id" : "connector_DellOpenManage",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : true,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"cpu\"}" : {
         "name" : "hw.status{hw.type=\"cpu\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "cpu"
@@ -86,7 +91,7 @@
       },
       "hw.cpu.speed" : {
         "name" : "hw.cpu.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -97,8 +102,8 @@
       },
       "hw.cpu.speed.limit{limit_type=\"max\"}" : {
         "name" : "hw.cpu.speed.limit{limit_type=\"max\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "max"
         },
@@ -123,29 +128,30 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "cpu",
     "id" : "DellOpenManage_cpu_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.enclosure.energy" : {
         "name" : "hw.enclosure.energy",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 3191.749,
+        "value" : 1.14902964E10,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
       "hw.status{hw.type=\"enclosure\", state=\"open\"}" : {
         "name" : "hw.status{hw.type=\"enclosure\", state=\"open\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "state" : "open",
@@ -159,18 +165,18 @@
       },
       "__hw.enclosure.power.rate_from" : {
         "name" : "__hw.enclosure.power.rate_from",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 3191.749,
+        "value" : 1.14902964E10,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
       "hw.status{hw.type=\"enclosure\"}" : {
         "name" : "hw.status{hw.type=\"enclosure\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "enclosure"
@@ -190,7 +196,7 @@
       "model" : "PowerEdge R630",
       "id" : "1",
       "type" : "Computer",
-      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102 "
+      "info" : "Serial Number: FSJR3N2 Alternative Serial Number: 34377965102"
     },
     "conditionalCollection" : {
       "hw.enclosure.energy" : "3191749"
@@ -199,18 +205,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "enclosure",
     "id" : "DellOpenManage_enclosure_1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -224,7 +231,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -235,8 +242,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -248,8 +255,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -274,18 +281,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -299,7 +307,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -310,8 +318,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -323,8 +331,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -349,18 +357,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.10",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -374,7 +383,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -385,8 +394,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -398,8 +407,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -424,18 +433,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.11",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -449,7 +459,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -460,8 +470,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -473,8 +483,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -499,18 +509,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.12",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -524,7 +535,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -535,8 +546,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -548,8 +559,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -574,18 +585,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.13",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -599,7 +611,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -610,8 +622,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -623,8 +635,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -649,18 +661,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.14",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -674,7 +687,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -685,8 +698,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -698,8 +711,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -724,18 +737,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.2",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -749,7 +763,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -760,8 +774,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -773,8 +787,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -799,18 +813,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.3",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -824,7 +839,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -835,8 +850,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -848,8 +863,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -874,18 +889,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.4",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -899,7 +915,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -910,8 +926,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -923,8 +939,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -949,18 +965,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.5",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -974,7 +991,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -985,8 +1002,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -998,8 +1015,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -1024,18 +1041,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.6",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -1049,7 +1067,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -1060,8 +1078,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -1073,8 +1091,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -1099,18 +1117,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.7",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -1124,7 +1143,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -1135,8 +1154,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -1148,8 +1167,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -1174,18 +1193,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.8",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"fan\"}" : {
         "name" : "hw.status{hw.type=\"fan\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "fan"
@@ -1199,7 +1219,7 @@
       },
       "hw.fan.speed" : {
         "name" : "hw.fan.speed",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -1210,8 +1230,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.degraded\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.degraded"
         },
@@ -1223,8 +1243,8 @@
       },
       "hw.fan.speed.limit{limit_type=\"low.critical\"}" : {
         "name" : "hw.fan.speed.limit{limit_type=\"low.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "low.critical"
         },
@@ -1249,44 +1269,63 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "fan",
     "id" : "DellOpenManage_fan_1.9",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
-    "metrics" : { },
+    "metrics" : {
+      "metricshub.host.up{protocol=\"snmp\"}" : {
+        "name" : "metricshub.host.up{protocol=\"snmp\"}",
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : null,
+        "attributes" : {
+          "protocol" : "snmp"
+        },
+        "resetMetricTime" : false,
+        "value" : 1.0,
+        "previousValue" : null,
+        "type" : "NumberMetric",
+        "updated" : true
+      },
+      "metricshub.host.configured" : {
+        "name" : "metricshub.host.configured",
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
+        "attributes" : { },
+        "resetMetricTime" : false,
+        "value" : 1.0,
+        "previousValue" : 1.0,
+        "type" : "NumberMetric",
+        "updated" : true
+      }
+    },
     "attributes" : {
-      "id" : "localhost",
-      "is_endpoint" : "true",
-      "location" : "local",
-      "name" : "localhost"
+      "host.type" : "compute",
+      "host.name" : "localhost",
+      "os.type" : "linux"
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : {
-      "type" : "host",
-      "attributes" : {
-        "host.type" : "compute",
-        "os.type" : "linux",
-        "host.id" : "localhost"
-      }
-    },
-    "discoveryTime" : 1709802895345,
+    "discoveryTime" : 1762507336101,
     "type" : "host",
-    "id" : "localhost",
+    "id" : "endpoint_host_localhost",
+    "identifyingAttributeKeys" : [ "host.name" ],
     "endpointHost" : true,
     "endpoint" : true,
+    "connector" : false,
     "is_endpoint" : true
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1296,7 +1335,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1309,7 +1348,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1334,22 +1373,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1359,7 +1399,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1372,7 +1412,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1397,22 +1437,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.10",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1422,7 +1463,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1435,7 +1476,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1460,22 +1501,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.11",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1485,7 +1527,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1498,7 +1540,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1523,22 +1565,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.12",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1548,7 +1591,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1561,7 +1604,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1586,22 +1629,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.2",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1611,7 +1655,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1624,7 +1668,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1649,22 +1693,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.3",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1674,7 +1719,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1687,7 +1732,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1712,22 +1757,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.4",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1737,7 +1783,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1750,7 +1796,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1775,22 +1821,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.5",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1800,7 +1847,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1813,7 +1860,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1838,22 +1885,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.6",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1863,7 +1911,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1876,7 +1924,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1901,22 +1949,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.7",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1926,7 +1975,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1939,7 +1988,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -1964,22 +2013,23 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.8",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.memory.limit" : {
         "name" : "hw.memory.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 1.7179869184E10,
@@ -1989,7 +2039,7 @@
       },
       "hw.errors{hw.type=\"memory\"}" : {
         "name" : "hw.errors{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -2002,7 +2052,7 @@
       },
       "hw.status{hw.type=\"memory\"}" : {
         "name" : "hw.status{hw.type=\"memory\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "memory"
@@ -2027,21 +2077,22 @@
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : {
-      "StatusInformation" : ""
+      "StatusInformation" : " - 0.0"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "memory",
     "id" : "DellOpenManage_memory_1.9",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"other_device\"}" : {
         "name" : "hw.status{hw.type=\"other_device\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "other_device"
@@ -2057,7 +2108,6 @@
     "attributes" : {
       "__display_id" : "1",
       "hw.parent.type" : "enclosure",
-      "name" : "ESM: 1 ()",
       "connector_id" : "DellOpenManage",
       "additional_label" : "",
       "device_type" : "ESM",
@@ -2069,18 +2119,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "other_device",
     "id" : "DellOpenManage_other_device_1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"other_device\"}" : {
         "name" : "hw.status{hw.type=\"other_device\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "other_device"
@@ -2096,7 +2147,6 @@
     "attributes" : {
       "__display_id" : "SDCardDevice-1.1",
       "hw.parent.type" : "enclosure",
-      "name" : "vFlash: SDCardDevice-1.1 ()",
       "connector_id" : "DellOpenManage",
       "additional_label" : "",
       "device_type" : "vFlash",
@@ -2108,19 +2158,20 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "other_device",
     "id" : "DellOpenManage_other_device_SDCardDevice-1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.power_supply.limit" : {
         "name" : "hw.power_supply.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 750.0,
@@ -2130,7 +2181,7 @@
       },
       "hw.status{hw.type=\"power_supply\"}" : {
         "name" : "hw.status{hw.type=\"power_supply\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "power_supply"
@@ -2155,19 +2206,20 @@
       "StatusInformation" : "AC Switch On - AC Power On"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "power_supply",
     "id" : "DellOpenManage_power_supply_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.power_supply.limit" : {
         "name" : "hw.power_supply.limit",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : { },
         "resetMetricTime" : true,
         "value" : 750.0,
@@ -2177,7 +2229,7 @@
       },
       "hw.status{hw.type=\"power_supply\"}" : {
         "name" : "hw.status{hw.type=\"power_supply\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "power_supply"
@@ -2202,19 +2254,20 @@
       "StatusInformation" : "AC Switch On - AC Power On"
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "power_supply",
     "id" : "DellOpenManage_power_supply_1.2",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.temperature.limit{limit_type=\"high.degraded\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.degraded"
         },
@@ -2226,7 +2279,7 @@
       },
       "hw.status{hw.type=\"temperature\"}" : {
         "name" : "hw.status{hw.type=\"temperature\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "temperature"
@@ -2240,8 +2293,8 @@
       },
       "hw.temperature.limit{limit_type=\"high.critical\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.critical"
         },
@@ -2253,7 +2306,7 @@
       },
       "hw.temperature" : {
         "name" : "hw.temperature",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -2277,19 +2330,20 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.temperature.limit{limit_type=\"high.degraded\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.degraded"
         },
@@ -2301,7 +2355,7 @@
       },
       "hw.status{hw.type=\"temperature\"}" : {
         "name" : "hw.status{hw.type=\"temperature\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "temperature"
@@ -2315,8 +2369,8 @@
       },
       "hw.temperature.limit{limit_type=\"high.critical\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.critical"
         },
@@ -2328,7 +2382,7 @@
       },
       "hw.temperature" : {
         "name" : "hw.temperature",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -2352,19 +2406,20 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.2",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.temperature.limit{limit_type=\"high.degraded\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.degraded\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.degraded"
         },
@@ -2376,7 +2431,7 @@
       },
       "hw.status{hw.type=\"temperature\"}" : {
         "name" : "hw.status{hw.type=\"temperature\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "temperature"
@@ -2390,8 +2445,8 @@
       },
       "hw.temperature.limit{limit_type=\"high.critical\"}" : {
         "name" : "hw.temperature.limit{limit_type=\"high.critical\"}",
-        "collectTime" : 1709802895345,
-        "previousCollectTime" : 1709802894810,
+        "collectTime" : 1762507456101,
+        "previousCollectTime" : 1762507336101,
         "attributes" : {
           "limit_type" : "high.critical"
         },
@@ -2403,7 +2458,7 @@
       },
       "hw.temperature" : {
         "name" : "hw.temperature",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
@@ -2427,18 +2482,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "temperature",
     "id" : "DellOpenManage_temperature_1.3",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2465,18 +2521,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.1",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2503,18 +2560,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.10",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2541,18 +2599,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.11",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2579,18 +2638,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.12",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2617,18 +2677,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.13",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2655,18 +2716,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.14",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2693,18 +2755,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.15",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2731,18 +2794,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.16",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2769,18 +2833,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.17",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2807,18 +2872,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.18",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2845,18 +2911,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.19",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2883,18 +2950,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.2",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2921,18 +2989,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.20",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2959,18 +3028,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.21",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -2997,29 +3067,30 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.22",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.voltage" : {
         "name" : "hw.voltage",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 228000.0,
+        "value" : 228.0,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3040,35 +3111,36 @@
       "id" : "1.23"
     },
     "conditionalCollection" : {
-      "hw.voltage" : "228000"
+      "hw.voltage" : "228.0"
     },
     "legacyTextParameters" : {
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.23",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.voltage" : {
         "name" : "hw.voltage",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : { },
         "resetMetricTime" : false,
-        "value" : 224000.0,
+        "value" : 224.0,
         "previousValue" : null,
         "type" : "NumberMetric",
         "updated" : true
       },
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3089,24 +3161,25 @@
       "id" : "1.24"
     },
     "conditionalCollection" : {
-      "hw.voltage" : "224000"
+      "hw.voltage" : "224.0"
     },
     "legacyTextParameters" : {
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.24",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3133,18 +3206,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.3",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3171,18 +3245,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.4",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3209,18 +3284,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.5",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3247,18 +3323,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.6",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3285,18 +3362,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.7",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3323,18 +3401,19 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.8",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   }, {
     "metrics" : {
       "hw.status{hw.type=\"voltage\"}" : {
         "name" : "hw.status{hw.type=\"voltage\"}",
-        "collectTime" : 1709802895345,
+        "collectTime" : 1762507456101,
         "previousCollectTime" : null,
         "attributes" : {
           "hw.type" : "voltage"
@@ -3361,12 +3440,13 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
-    "discoveryTime" : 1709802894810,
+    "discoveryTime" : 1762507336101,
     "type" : "voltage",
     "id" : "DellOpenManage_voltage_1.9",
+    "identifyingAttributeKeys" : [ "id" ],
     "endpointHost" : false,
     "endpoint" : false,
+    "connector" : false,
     "is_endpoint" : false
   } ]
 }

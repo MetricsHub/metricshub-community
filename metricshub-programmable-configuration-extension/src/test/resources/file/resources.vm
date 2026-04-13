@@ -1,0 +1,19 @@
+#set($lines = $file.readAllLines("src/test/resources/hosts.csv"))
+
+resources:
+#foreach($line in $lines)
+  #set($fields = $collection.split($line))
+  #set($hostname = $fields.get(0))
+  #set($hostType = $fields.get(1))
+  #set($protocol = $fields.get(2))
+  #set($username = $fields.get(3))
+  #set($password = $fields.get(4))
+  $hostname:
+    attributes:
+      host.name: $hostname
+      host.type: $hostType
+    protocols:
+      $protocol:
+        username: $username
+        password: $password
+#end

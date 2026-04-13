@@ -1,9 +1,0 @@
-version: "2.1"
-services:
-  metricshub:
-    build: .        # for image we will use `image: sentrysoftware/metricshub`
-    container_name: metricshubs
-    volumes:
-      - ./lib/logs:/opt/metricshub/lib/logs
-      - ./lib/config:/opt/metricshub/lib/config
-    restart: unless-stopped

@@ -4,3 +4,24 @@ project:
 buildNumber: "@buildNumber@"
 buildDate: "@timestamp@"
 ccVersion: "@community-connectors.version@"
+
+web:
+  server.port: 31888
+  spring.main.banner-mode: "off"
+  spring.ai.mcp.server.enabled: true
+  spring.ai.mcp.server.stdio: false
+  spring.ai.mcp.server.name: metricshub-mcp-server
+  spring.ai.mcp.server.resource-change-notification: true
+  spring.ai.mcp.server.tool-change-notification: true
+  spring.ai.mcp.server.prompt-change-notification: true
+  spring.ai.mcp.server.sse-endpoint: /sse
+  spring.ai.mcp.server.sse-message-endpoint: /mcp/message
+  spring.ai.mcp.server.type: sync
+  spring.ai.mcp.server.capabilities.completion: true
+  spring.ai.mcp.server.capabilities.prompt: true
+  spring.ai.mcp.server.capabilities.resource: true
+  spring.ai.mcp.server.capabilities.tool: true
+  spring.ai.mcp.server.request-timeout: 5m
+  jwt.short_expire: 3600
+  jwt.long_expire: 86400
+  jwt.secret: eyJhbGciOiJIUzI1NiJ9.ew0KICAic3ViIjogInNlbnRyeSIsDQogICJuYW1lIjogIlNlbnRyeSBTb2Z3YXJlIiwNCiAgImlhdCI6IDE1MTYyMzkwMjINCn0.UUUxmysmx49zKKRt8_pQln-WqXjaTVQlwgjg3SbidF4

@@ -1,0 +1,4407 @@
+Server IP Address:       10.0.10.18
+Agent Rev:           7.32.32 (6.78)
+Agent/Host Information
+-----------------------
+Agent Rev:           7.32.32 (6.78)
+Name:                K10
+Desc:                
+Node:                A-CKM00120300966
+Physical Node:       K10
+Signature:           4071513
+Peer Signature:      3092803
+Revision:            05.32.000.5.225
+SCSI Id:             0
+Model:               VNX5300
+Model Type:          Rackmount
+Prom Rev:            7.20.00
+SP Memory:           8192
+Serial No:           CKM00120300966
+SP Identifier:       A
+Cabinet:             DPE7 
+Name of the software package:        -Unisphere
+Revision of the software package:    -
+Commit Required:                     NO
+Revert Possible:                     NO
+Active State:                        YES
+Is installation completed:           YES
+Is this System Software:             NO
+Name of the software package:        -UnisphereBlock
+Revision of the software package:    -
+Commit Required:                     NO
+Revert Possible:                     NO
+Active State:                        YES
+Is installation completed:           YES
+Is this System Software:             NO
+Name of the software package:        -UnisphereFile
+Revision of the software package:    -
+Commit Required:                     NO
+Revert Possible:                     NO
+Active State:                        YES
+Is installation completed:           YES
+Is this System Software:             NO
+Name of the software package:        VNX-Block-Operating-Environment
+Revision of the software package:    05.32.000.5.225
+Commit Required:                     NO
+Revert Possible:                     NO
+Active State:                        YES
+Is installation completed:           YES
+Is this System Software:             NO
+Array Information
+-----------------
+Array Name:  CKM00120300966
+Base Uuid :           0
+Hostname                                Array UID
+--------                                ----------
+A-IMAGE                                 50:06:01:60:BE:A0:4D:2B
+A-IMAGE                                 iqn.1992-04.com.emc:cx.ckm00120300966
+DPE7 Bus 0 Enclosure 0       *FAULT* 
+  (Bus 0 Enclosure 0 : Faulted; Bus 0 Enclosure 0 Disk 3 : Removed)
+Enclosure Drive Type: SAS, SATA Flash, NL SAS
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+SP A State:                 Present
+SP B State:                 Present
+Bus 0 Enclosure 0 Power A State: Present
+Bus 0 Enclosure 0 Power B State: Present
+Bus 0 Enclosure 0 SPS A State: Present
+Bus 0 Enclosure 0 SPS B State: Present
+Bus 0 Enclosure 0 SPS A Cabling State: Valid
+Bus 0 Enclosure 0 SPS B Cabling State: Valid
+Bus 0 Enclosure 0 CPU Module A State: Present
+Bus 0 Enclosure 0 CPU Module B State: Present
+Bus 0 Enclosure 0 SP A I/O Module 0 State: Present
+Bus 0 Enclosure 0 SP A I/O Module 1 State: Empty
+Bus 0 Enclosure 0 SP B I/O Module 0 State: Present
+Bus 0 Enclosure 0 SP B I/O Module 1 State: Empty
+Bus 0 Enclosure 0 DIMM Module A State: Present
+Bus 0 Enclosure 0 DIMM Module B State: Present
+DAE6S Bus 1 Enclosure 0       
+Enclosure Drive Type: SATA Flash, NL SAS
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Bus 1 Enclosure 0 Power A State: Present
+Bus 1 Enclosure 0 Power B State: Present
+Bus 1 Enclosure 0 LCC A State: Present
+Bus 1 Enclosure 0 LCC B State: Present
+Bus 1 Enclosure 0 LCC A Revision: 1.55
+Bus 1 Enclosure 0 LCC B Revision: 1.55
+Bus 1 Enclosure 0 LCC A Serial #: US1V2105000372
+Bus 1 Enclosure 0 LCC B Serial #: US1V2105201262
+Bus 1 Enclosure 0 LCC A Current Speed: 6Gbps
+Bus 1 Enclosure 0 LCC B Current Speed: 6Gbps
+Bus 1 Enclosure 0 LCC A Maximum Speed: 6Gbps
+Bus 1 Enclosure 0 LCC B Maximum Speed: 6Gbps
+HBA Information
+---------------
+Total number of initiators: 37
+SP Name:             SP A
+SP Port ID:          0
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          1
+Registered Initiators:        0
+Logged-In Initiators:         9
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          2
+Registered Initiators:        1
+Logged-In Initiators:         1
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          3
+Registered Initiators:        1
+Logged-In Initiators:         1
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          4
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          5
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          6
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP A
+SP Port ID:          7
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          4
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          5
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          6
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          7
+Registered Initiators:        0
+Logged-In Initiators:         0
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          0
+Registered Initiators:        5
+Logged-In Initiators:         13
+Not Logged-In Initiators:     2
+SP Name:             SP B
+SP Port ID:          1
+Registered Initiators:        0
+Logged-In Initiators:         9
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          2
+Registered Initiators:        1
+Logged-In Initiators:         1
+Not Logged-In Initiators:     0
+SP Name:             SP B
+SP Port ID:          3
+Registered Initiators:        1
+Logged-In Initiators:         1
+Not Logged-In Initiators:     0
+Information about each HBA:
+HBA UID:                 50:05:07:68:01:00:B6:B3:50:05:07:68:01:20:B6:B3
+Server Name:             50:05:07:68:01:00:B6:B3:50:05:07:68:01:20:B6:B3
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8849152
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8849152
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:70:FB:02:10:00:00:00:C9:70:FB:02
+Server Name:             20:00:00:00:C9:70:FB:02:10:00:00:00:C9:70:FB:02
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6360339
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:00:D3:10:01:38:1C:00:50:00:D3:10:01:38:1C:13
+Server Name:             50:00:D3:10:01:38:1C:00:50:00:D3:10:01:38:1C:13
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786432
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786432
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:70:FB:03:10:00:00:00:C9:70:FB:03
+Server Name:             20:00:00:00:C9:70:FB:03:10:00:00:00:C9:70:FB:03
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6360595
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 21:00:54:51:1B:2F:A2:E7:20:90:54:51:1B:2F:A2:E7
+Server Name:             21:00:54:51:1B:2F:A2:E7:20:90:54:51:1B:2F:A2:E7
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8782592
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8782592
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:DB:78:10:10:00:00:00:C9:DB:78:10
+Server Name:             zeno-7
+Server IP Address:       10.0.10.137
+HBA Model Description:   
+HBA Vendor Description:  VMware ESXi 5.5.0
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        naa.6006016042312f00783fb97de760e711
+    Trusted:               NO
+    Logged In:             NO
+    Defined:               YES
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:DB:78:11:10:00:00:00:C9:DB:78:11
+Server Name:             zeno-7
+Server IP Address:       10.0.10.137
+HBA Model Description:   
+HBA Vendor Description:  VMware ESXi 5.5.0
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        naa.6006016042312f00783fb97de760e711
+    Trusted:               NO
+    Logged In:             NO
+    Defined:               YES
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:54:55:25:10:00:00:00:C9:54:55:25
+Server Name:             20:00:00:00:C9:54:55:25:10:00:00:00:C9:54:55:25
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6427923
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:00:C9:79:68:55:10:00:00:00:C9:79:68:55
+Server Name:             20:00:00:00:C9:79:68:55:10:00:00:00:C9:79:68:55
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8258048
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:20:23:65:50:06:01:60:47:20:23:65
+Server Name:             Celerra_emc-vnx
+Server IP Address:       10.0.10.17
+HBA Model Description:   
+HBA Vendor Description:  EMC File Server 7.1
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            3
+    HBA Devicename:        server_2:scsi-0
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             1
+    Defined:               YES
+    Initiator Type:           32
+    StorageGroup Name:     None
+    ArrayCommPath:         0
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:20:23:65:50:06:01:61:47:20:23:65
+Server Name:             Celerra_emc-vnx
+Server IP Address:       10.0.10.17
+HBA Model Description:   
+HBA Vendor Description:  EMC File Server 7.1
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            3
+    HBA Devicename:        server_2:scsi-16
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             1
+    Defined:               YES
+    Initiator Type:           32
+    StorageGroup Name:     None
+    ArrayCommPath:         0
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:20:23:65:50:06:01:68:47:20:23:65
+Server Name:             Celerra_emc-vnx
+Server IP Address:       10.0.10.17
+HBA Model Description:   
+HBA Vendor Description:  EMC File Server 7.1
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            2
+    HBA Devicename:        server_3:scsi-0
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             1
+    Defined:               YES
+    Initiator Type:           32
+    StorageGroup Name:     None
+    ArrayCommPath:         0
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:20:23:65:50:06:01:69:47:20:23:65
+Server Name:             Celerra_emc-vnx
+Server IP Address:       10.0.10.17
+HBA Model Description:   
+HBA Vendor Description:  EMC File Server 7.1
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            2
+    HBA Devicename:        server_3:scsi-16
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             1
+    Defined:               YES
+    Initiator Type:           32
+    StorageGroup Name:     None
+    ArrayCommPath:         0
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:05:07:68:01:00:B7:0A:50:05:07:68:01:20:B7:0A
+Server Name:             50:05:07:68:01:00:B7:0A:50:05:07:68:01:20:B7:0A
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8849408
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8849408
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:01:43:80:03:BD:BC:CF:50:01:43:80:03:BD:BC:CE
+Server Name:             fermat-4.some.domain.net
+Server IP Address:       10.0.10.25
+HBA Model Description:   @ql2300.inf,%ql2300.devicedesc%;QLogic Fibre Channel Adapter
+HBA Vendor Description:  @ql2300.inf,%qlogic%;QLogic
+HBA Device Driver Name:   ql2300
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        \\.\SCSI3:0:10:0
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8258304
+    Defined:               YES
+    Initiator Type:           3
+    StorageGroup Name:     Storage Group 1
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:01:43:80:02:AE:E9:4B:50:01:43:80:02:AE:E9:4A
+Server Name:             50:01:43:80:02:AE:E9:4B:50:01:43:80:02:AE:E9:4A
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8257536
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:E0:36:F1:50:06:01:62:47:E0:36:F1
+Server Name:             50:06:01:60:C7:E0:36:F1:50:06:01:62:47:E0:36:F1
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8721920
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8721920
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:BC:E0:10:D5:50:06:01:61:3C:E0:10:D5
+Server Name:             50:06:01:60:BC:E0:10:D5:50:06:01:61:3C:E0:10:D5
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6363411
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:25:B5:00:10:00:20:00:00:25:B5:00:10:0E
+Server Name:             ucs-blade1.some.domain.net
+Server IP Address:       10.0.10.86
+HBA Model Description:   
+HBA Vendor Description:  VMware ESXi 5.1.0
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        naa.50060160bea04d2b50060160bea04d2b
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             7208966
+    Defined:               YES
+    Initiator Type:           3
+    StorageGroup Name:     Storage Group 1
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:25:B5:00:10:00:20:00:00:25:B5:00:10:0F
+Server Name:             ucs-blade1.some.domain.net
+Server IP Address:       10.0.10.86
+HBA Model Description:   
+HBA Vendor Description:  VMware ESXi 5.1.0
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        naa.50060160bea04d2b50060160bea04d2b
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             7208965
+    Defined:               YES
+    Initiator Type:           3
+    StorageGroup Name:     Storage Group 1
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:BC:E0:10:D5:50:06:01:69:3C:E0:10:D5
+Server Name:             50:06:01:60:BC:E0:10:D5:50:06:01:69:3C:E0:10:D5
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6363923
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:01:43:80:02:B0:7A:13:50:01:43:80:02:B0:7A:12
+Server Name:             50:01:43:80:02:B0:7A:13:50:01:43:80:02:B0:7A:12
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8257792
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:E0:8B:1F:DB:62:21:00:00:E0:8B:1F:DB:62
+Server Name:             20:00:00:E0:8B:1F:DB:62:21:00:00:E0:8B:1F:DB:62
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8787200
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8787200
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:01:00:E0:8B:3F:DB:62:21:01:00:E0:8B:3F:DB:62
+Server Name:             20:01:00:E0:8B:3F:DB:62:21:01:00:E0:8B:3F:DB:62
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786944
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786944
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 20:00:00:25:B5:00:10:01:20:00:00:25:B5:00:10:0D
+Server Name:             20:00:00:25:B5:00:10:01:20:00:00:25:B5:00:10:0D
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             7208967
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:00:D3:10:01:38:1C:00:50:00:D3:10:01:38:1C:05
+Server Name:             50:00:D3:10:01:38:1C:00:50:00:D3:10:01:38:1C:05
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786176
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8786176
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:06:01:60:C7:E0:36:F1:50:06:01:6A:47:E0:36:F1
+Server Name:             50:06:01:60:C7:E0:36:F1:50:06:01:6A:47:E0:36:F1
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP A
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8721664
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+    SP Name:               SP B
+    SP Port ID:            1
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             8721664
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each HBA:
+HBA UID:                 50:05:07:68:01:00:B7:0A:50:05:07:68:01:40:B7:0A
+Server Name:             50:05:07:68:01:00:B7:0A:50:05:07:68:01:40:B7:0A
+Server IP Address:       UNKNOWN
+HBA Model Description:   
+HBA Vendor Description:  
+HBA Device Driver Name:   
+Information about each port of this HBA:
+    SP Name:               SP B
+    SP Port ID:            0
+    HBA Devicename:        
+    Trusted:               NO
+    Logged In:             YES
+    Source ID:             6427411
+    Defined:               NO
+    Initiator Type:           3
+    StorageGroup Name:     None
+    ArrayCommPath:         1
+    Failover mode:         4
+    Unit serial number:    Array
+Information about each SPPORT:
+SP Name:             SP A
+SP Port ID:          0
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:60:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      YES
+Switch UID:          10:00:50:EB:1A:87:D0:8C:20:05:50:EB:1A:87:D0:8C
+SP Source ID:        7210240
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    2
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH0KD7         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP A
+SP Port ID:          1
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:61:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      YES
+Switch UID:          20:71:8C:60:4F:D7:22:01:20:0D:8C:60:4F:D7:22:00
+SP Source ID:        8788992
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    3
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH2JWU         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP A
+SP Port ID:          2
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:62:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      NO
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               213011
+Writes:              92672371
+Blocks Read:         6034710
+Blocks Written:      2435168947
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    4
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH280V         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP A
+SP Port ID:          3
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:63:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      NO
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               55239
+Writes:              29930619
+Blocks Read:         2201372
+Blocks Written:      1302878978
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    5
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH40SA         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP A
+SP Port ID:          4
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.a4
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D2:F8
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    0
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP A
+SP Port ID:          5
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.a5
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D2:F9
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    1
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP A
+SP Port ID:          6
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.a6
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D2:F6
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    2
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP A
+SP Port ID:          7
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.a7
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D2:F7
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    3
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP B
+SP Port ID:          4
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.b4
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D6:5E
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    0
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP B
+SP Port ID:          5
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.b5
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D6:5F
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    1
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP B
+SP Port ID:          6
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.b6
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D6:5C
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    2
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP B
+SP Port ID:          7
+SP UID:              iqn.1992-04.com.emc:cx.ckm00120300966.b7
+Link Status:         Down
+Port Status:         Online
+Switch Present:      Not Applicable
+Speed Value :         N/A
+Auto Negotiable :     NO
+Available Speeds:     
+1Gbps
+10Mbps
+100Mbps
+Requested Value:      1Gbps
+MAC Address:         00:60:16:4B:D6:5D
+SFP State:           None
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     0
+Physical Port ID:    3
+Usage:     General
+SFP/Connector EMC Part Number: N/A
+SFP/Connector EMC Serial Number: N/A
+SFP/Connector Vendor Part Number: N/A
+SFP/Connector Vendor Serial Number: N/A
+SFP/Connector Supported Speeds: 
+N/A
+SP Name:             SP B
+SP Port ID:          0
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:68:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      YES
+Switch UID:          10:00:08:00:88:02:00:DF:20:07:08:00:88:02:00:DF
+SP Source ID:        6424339
+ALPA Value:         0
+Speed Value :         2Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               282852
+Writes:              120652
+Blocks Read:         19521142
+Blocks Written:      1315872
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    2
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH2J5X         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP B
+SP Port ID:          1
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:69:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      YES
+Switch UID:          20:71:8C:60:4F:D7:22:01:20:0F:8C:60:4F:D7:22:00
+SP Source ID:        8788736
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               0
+Writes:              0
+Blocks Read:         0
+Blocks Written:      0
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    3
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH0MX8         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP B
+SP Port ID:          2
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:6A:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      NO
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               2186
+Writes:              396804
+Blocks Read:         70315
+Blocks Written:      9554328
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    4
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH2JPV         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Name:             SP B
+SP Port ID:          3
+SP UID:              50:06:01:60:BE:A0:4D:2B:50:06:01:6B:3E:A0:4D:2B
+Link Status:         Up
+Port Status:         Online
+Switch Present:      NO
+ALPA Value:         0
+Speed Value :         8Gbps
+Auto Negotiable :     NO
+Available Speeds:     
+2Gbps
+4Gbps
+8Gbps
+Auto
+Requested Value:      Auto
+MAC Address:         Not Applicable
+SFP State:           Online
+Reads:               179
+Writes:              46369
+Blocks Read:         179
+Blocks Written:      741891
+Queue Full/Busy:     0
+I/O Module Slot:     Onboard
+Physical Port ID:    5
+Usage:     General
+SFP/Connector EMC Part Number: 019-078-042
+SFP/Connector EMC Serial Number: 00000000000
+SFP/Connector Vendor Part Number: FTLF8528P2BNV-E5
+SFP/Connector Vendor Serial Number: PLH140G         
+SFP/Connector Supported Speeds: 
+2Gbps
+4Gbps
+8Gbps
+SP Information
+--------------
+Storage Processor:                  SP A
+Storage Processor Network Name:     A-IMAGE
+Storage Processor IP Address:       10.0.10.18
+Storage Processor Subnet Mask:      255.255.0.0
+Storage Processor Gateway Address:  10.0.0.244
+Storage Processor IPv6 Mode:               Not Supported
+Management Port Settings: 
+Link Status:                        Link-Up
+Current Speed:                      1000Mbps/full duplex
+Requested Speed:                    Auto
+Auto-Negotiate:                     YES
+Capable Speeds:                     1000Mbps half/full duplex
+                                    10Mbps half/full duplex
+                                    100Mbps half/full duplex
+                                    Auto
+System Fault LED:              ON
+Statistics Logging:            ON
+SP Read Cache State            Enabled
+SP Write Cache State           Enabled
+Max Requests:                  N/A
+Average Requests:              N/A
+Hard errors:                   N/A
+Total Reads:                   268248
+Total Writes:                  122335062
+Prct Busy:                     4.61
+Prct Idle:                     95.3
+System Date:                   02/05/2018
+Day of the week:               Monday
+System Time:                   18:27:50
+Read_requests:                 268248
+Write_requests:                122335062
+Blocks_read:                   8236080
+Blocks_written:                3734068317
+Sum_queue_lengths_by_arrivals: 195781993
+Arrivals_to_non_zero_queue:    31004502
+Hw_flush_on:                   38
+Idle_flush_on:                 5132
+Lw_flush_off:                  38
+Write_cache_flushes:           3319580
+Write_cache_blocks_flushed:    2108543376
+Internal bus 1 busy ticks:     N/A
+Internal bus 1 idle ticks:     N/A
+Internal bus 2 busy ticks:     N/A
+Internal bus 2 idle ticks:     N/A
+Internal bus 3 busy ticks:     N/A
+Internal bus 3 idle ticks:     N/A
+Internal bus 4 busy ticks:     N/A
+Internal bus 4 idle ticks:     N/A
+Internal bus 5 busy ticks:     N/A
+Internal bus 5 idle ticks:     N/A
+Controller busy ticks:         3591122
+Controller idle ticks:         74240896
+Serial Number For The SP:      CF2M9153400089
+Cache Information
+-----------------
+SP Read Cache State                 Enabled
+SP Write Cache State                Enabled
+Cache Page size:                    8
+Write Cache Mirrored:               YES
+Low Watermark:                      60
+High Watermark:                     80
+SPA Cache pages:                    223040
+SPB Cache pages:                    223039
+Unassigned Cache Pages:             0
+Read Hit Ratio:                     N/A
+Write Hit Ratio:                    N/A
+Prct Dirty Cache Pages =            46
+Prct Cache Pages Owned =            50
+SPA Read Cache State                Enabled
+SPB Read Cache State                Enabled
+SPA Write Cache State               Enabled
+SPB Write Cache State               Enabled
+System Buffer (spA):                4195 MB
+System Buffer (spB):                4195 MB
+SPS Test Day:                       Sunday
+SPS Test Time:                      02:00
+SPA Physical Memory Size =          8192
+SPB Physical Memory Size =          8192
+Physical memory size of Front-End = Switch not supported
+Physical memory size of Back-End =  Switch not supported
+SPA Free Memory Size =              0
+SPB Free Memory Size =              0
+Free Memory Size of Front-End =     Switch not supported
+Free Memory Size of Back-End =      Switch not supported
+SPA Read Cache Size =               399
+SPB Read Cache Size =               399
+SPA Write Cache Size =              3598
+SPB Write Cache Size =              3598
+SPA Optimized Raid 3 Memory Size =  0
+SPB Optimized Raid 3 Memory Size =  0
+HA Cache Vault:                     Not Available
+All Disks Information
+---------------------
+Bus 0 Enclosure 0  Disk 0
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     16 17 
+Type:                    16: RAID1/0 17: RAID1/0 
+State:                   Enabled
+Hot Spare:               16: NO 17: NO 
+Prct Rebuilt:            16: 100 17: 100 
+Prct Bound:              16: 100 17: 100 
+Serial Number:           6SE3G3SM    
+Sectors:                 87114496 (42536)
+Capacity:                274845
+Private:                 16: 384387072 17: 471513088 
+Bind Signature:          0xcac1f, 0, 0
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         16181337
+Number of Writes:        8634073
+Number of Luns:          2
+Raid Group ID:           8
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           16181337
+Write Requests:          8634073
+Kbytes Read:             1522798466
+Kbytes Written:          1051590566
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           41.539429
+Idle Ticks:              155020900
+Busy Ticks:              2160747
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 6162360
+High Sum of Seeks:       2133328108425745
+Idle Ticks SPA:          76930491
+Idle Ticks SPB:          78090409
+Busy Ticks SPA:          1660904
+Busy Ticks SPB:          499843
+Queue Length:            61391743
+Bus 0 Enclosure 0  Disk 1
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     16 17 
+Type:                    16: RAID1/0 17: RAID1/0 
+State:                   Enabled
+Hot Spare:               16: NO 17: NO 
+Prct Rebuilt:            16: 100 17: 100 
+Prct Bound:              16: 100 17: 100 
+Serial Number:           6SE2Y592    
+Sectors:                 87114496 (42536)
+Capacity:                274845
+Private:                 16: 384387072 17: 471513088 
+Bind Signature:          0xcac1f, 0, 1
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         16173036
+Number of Writes:        8632052
+Number of Luns:          2
+Raid Group ID:           8
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           16173036
+Write Requests:          8632052
+Kbytes Read:             1522751371
+Kbytes Written:          1051483102
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           41.539429
+Idle Ticks:              154973172
+Busy Ticks:              2208475
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 6166473
+High Sum of Seeks:       2132783725175113
+Idle Ticks SPA:          76895954
+Idle Ticks SPB:          78077218
+Busy Ticks SPA:          1695441
+Busy Ticks SPB:          513034
+Queue Length:            61962947
+Bus 0 Enclosure 0  Disk 2
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     Unbound
+Type:                    N/A
+State:                   Unbound
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           6SE31W6S    
+Sectors:                 0 (0)
+Capacity:                274845
+Private:                 Unbound
+Bind Signature:          0x0, 0, 2
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         2408461
+Number of Writes:        2854204
+Number of Luns:          0
+Raid Group ID:           This disk does not belong to a RAIDGroup 
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           2408461
+Write Requests:          2854204
+Kbytes Read:             153886326
+Kbytes Written:          378238722
+Stripe Boundary Crossing: None
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           0
+Idle Ticks:              58935285
+Busy Ticks:              584881
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 1736523
+High Sum of Seeks:       11091986701486
+Idle Ticks SPA:          29176183
+Idle Ticks SPB:          29759102
+Busy Ticks SPA:          584867
+Busy Ticks SPB:          14
+Queue Length:            17978170
+Bus 0 Enclosure 0  Disk 3
+State:                   Removed
+Bus 0 Enclosure 0  Disk 4
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     5 6 
+Type:                    5: RAID5 6: RAID5 
+State:                   Enabled
+Hot Spare:               5: NO 6: NO 
+Prct Rebuilt:            5: 100 6: 100 
+Prct Bound:              5: 100 6: 100 
+Serial Number:           6SE32PLK    
+Sectors:                 40265318 (19660)
+Capacity:                274845
+Private:                 5: 384387072 6: 489277440 
+Bind Signature:          0xc1f63, 0, 4
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         3143125
+Number of Writes:        9030
+Number of Luns:          2
+Raid Group ID:           0
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           3143125
+Write Requests:          9030
+Kbytes Read:             1604627356
+Kbytes Written:          73016
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           19.200000
+Idle Ticks:              156816165
+Busy Ticks:              365482
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 2297
+High Sum of Seeks:       163784676446
+Idle Ticks SPA:          78591395
+Idle Ticks SPB:          78224770
+Busy Ticks SPA:          0
+Busy Ticks SPB:          365482
+Queue Length:            3154506
+Bus 0 Enclosure 0  Disk 5
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     5 6 
+Type:                    5: RAID5 6: RAID5 
+State:                   Enabled
+Hot Spare:               5: NO 6: NO 
+Prct Rebuilt:            5: 100 6: 100 
+Prct Bound:              5: 100 6: 100 
+Serial Number:           6SE2X91W    
+Sectors:                 40265318 (19660)
+Capacity:                274845
+Private:                 5: 384387072 6: 489277440 
+Bind Signature:          0xc1f63, 0, 5
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         3138249
+Number of Writes:        0
+Number of Luns:          2
+Raid Group ID:           0
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           3138249
+Write Requests:          0
+Kbytes Read:             1604587924
+Kbytes Written:          0
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           19.200000
+Idle Ticks:              156825075
+Busy Ticks:              356572
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 476
+High Sum of Seeks:       7694104838
+Idle Ticks SPA:          78591395
+Idle Ticks SPB:          78233680
+Busy Ticks SPA:          0
+Busy Ticks SPB:          356572
+Queue Length:            3138728
+Bus 0 Enclosure 0  Disk 6
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     5 6 
+Type:                    5: RAID5 6: RAID5 
+State:                   Enabled
+Hot Spare:               5: NO 6: NO 
+Prct Rebuilt:            5: 100 6: 100 
+Prct Bound:              5: 100 6: 100 
+Serial Number:           6SE2S2LD    
+Sectors:                 40265318 (19660)
+Capacity:                274845
+Private:                 5: 384387072 6: 489277440 
+Bind Signature:          0xc1f63, 0, 6
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         3138249
+Number of Writes:        11352
+Number of Luns:          2
+Raid Group ID:           0
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           3138249
+Write Requests:          11352
+Kbytes Read:             1604587924
+Kbytes Written:          363264
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           19.200000
+Idle Ticks:              156821921
+Busy Ticks:              359726
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 242
+High Sum of Seeks:       6868933624950
+Idle Ticks SPA:          78591395
+Idle Ticks SPB:          78230526
+Busy Ticks SPA:          0
+Busy Ticks SPB:          359726
+Queue Length:            3149845
+Bus 0 Enclosure 0  Disk 7
+Vendor Id:               SEAGATE
+Product Id:              ST930060 CLAR300
+Product Revision:        FF09
+Lun:                     5 6 
+Type:                    5: RAID5 6: RAID5 
+State:                   Enabled
+Hot Spare:               5: NO 6: NO 
+Prct Rebuilt:            5: 100 6: 100 
+Prct Bound:              5: 100 6: 100 
+Serial Number:           6SE3CQZ8    
+Sectors:                 40265318 (19660)
+Capacity:                274845
+Private:                 5: 384387072 6: 489277440 
+Bind Signature:          0xc1f63, 0, 7
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         3148033
+Number of Writes:        33670
+Number of Luns:          2
+Raid Group ID:           0
+Clariion Part Number:    DG118032650  
+Request Service Time:    N/A
+Read Requests:           3148033
+Write Requests:          33670
+Kbytes Read:             1604686260
+Kbytes Written:          579480
+Stripe Boundary Crossing: 0
+Drive Type:              SAS
+Clariion TLA Part Number:005049175   
+User Capacity:           19.200000
+Idle Ticks:              156814687
+Busy Ticks:              366960
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 21738
+High Sum of Seeks:       6882226354870
+Idle Ticks SPA:          78591395
+Idle Ticks SPB:          78223292
+Busy Ticks SPA:          0
+Busy Ticks SPB:          366960
+Queue Length:            3203900
+Bus 0 Enclosure 0  Disk 8
+Vendor Id:               SATA-SAM
+Product Id:              SS160510 CLAR100
+Product Revision:        TC3Q/2270
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           S0PDNEAB910417     
+Sectors:                 N/A
+Capacity:                93928
+Private:                 Unbound
+Bind Signature:          0xbdb78, 0, 8
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         9577757
+Number of Writes:        3453
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032713  
+Request Service Time:    N/A
+Read Requests:           9577757
+Write Requests:          3453
+Kbytes Read:             605277866
+Kbytes Written:          3808
+Stripe Boundary Crossing: None
+Drive Type:              SATA Flash
+Clariion TLA Part Number:005049184   
+User Capacity:           0
+Idle Ticks:              156799648
+Busy Ticks:              381999
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 462
+High Sum of Seeks:       302677379150
+Idle Ticks SPA:          78305525
+Idle Ticks SPB:          78494123
+Busy Ticks SPA:          285870
+Busy Ticks SPB:          96129
+Queue Length:            9581697
+Bus 0 Enclosure 0  Disk 9
+Vendor Id:               SATA-SAM
+Product Id:              SS160510 CLAR100
+Product Revision:        TC3Q/2270
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           S0PDNEABA03160     
+Sectors:                 N/A
+Capacity:                93928
+Private:                 Unbound
+Bind Signature:          0xbdb78, 0, 9
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         9574300
+Number of Writes:        3423
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032713  
+Request Service Time:    N/A
+Read Requests:           9574300
+Write Requests:          3423
+Kbytes Read:             605194413
+Kbytes Written:          1735
+Stripe Boundary Crossing: None
+Drive Type:              SATA Flash
+Clariion TLA Part Number:005049184   
+User Capacity:           0
+Idle Ticks:              156826997
+Busy Ticks:              354650
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 413
+High Sum of Seeks:       169597745158
+Idle Ticks SPA:          78318548
+Idle Ticks SPB:          78508449
+Busy Ticks SPA:          272847
+Busy Ticks SPB:          81803
+Queue Length:            9578161
+Bus 0 Enclosure 0  Disk 10
+Vendor Id:               SEAGATE
+Product Id:              ST310004CLAR1000
+Product Revision:        BS1B
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           9WK5N8CR    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 10
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5757017
+Number of Writes:        27827
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032749  
+Request Service Time:    N/A
+Read Requests:           5757017
+Write Requests:          27827
+Kbytes Read:             785997774
+Kbytes Written:          91356
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049407PWR
+User Capacity:           0
+Idle Ticks:              156159470
+Busy Ticks:              1022177
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 16555
+High Sum of Seeks:       3557838575088
+Idle Ticks SPA:          77692214
+Idle Ticks SPB:          78467256
+Busy Ticks SPA:          899181
+Busy Ticks SPB:          122996
+Queue Length:            5801927
+Bus 0 Enclosure 0  Disk 11
+Vendor Id:               SEAGATE
+Product Id:              ST310004CLAR1000
+Product Revision:        BS1B
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           9WK5N6RD    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 11
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5756971
+Number of Writes:        27785
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032749  
+Request Service Time:    N/A
+Read Requests:           5756971
+Write Requests:          27785
+Kbytes Read:             785997552
+Kbytes Written:          91028
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049407PWR
+User Capacity:           0
+Idle Ticks:              156162078
+Busy Ticks:              1019569
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 19211
+High Sum of Seeks:       3472898564198
+Idle Ticks SPA:          77695491
+Idle Ticks SPB:          78466587
+Busy Ticks SPA:          895904
+Busy Ticks SPB:          123665
+Queue Length:            5804682
+Bus 0 Enclosure 0  Disk 12
+Vendor Id:               SEAGATE
+Product Id:              ST310004CLAR1000
+Product Revision:        BS1B
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           9WK5N0TM    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 12
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5790396
+Number of Writes:        61219
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032749  
+Request Service Time:    N/A
+Read Requests:           5790396
+Write Requests:          61219
+Kbytes Read:             786014437
+Kbytes Written:          108161
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049407PWR
+User Capacity:           0
+Idle Ticks:              156163992
+Busy Ticks:              1017655
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 80162
+High Sum of Seeks:       3739038592042
+Idle Ticks SPA:          77696940
+Idle Ticks SPB:          78467052
+Busy Ticks SPA:          894455
+Busy Ticks SPB:          123200
+Queue Length:            5953522
+Bus 0 Enclosure 0  Disk 13
+Vendor Id:               SEAGATE
+Product Id:              ST310004CLAR1000
+Product Revision:        BS1B
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           9WK5N0EP    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 13
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5790394
+Number of Writes:        68101
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032749  
+Request Service Time:    N/A
+Read Requests:           5790394
+Write Requests:          68101
+Kbytes Read:             786014421
+Kbytes Written:          328464
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049407PWR
+User Capacity:           0
+Idle Ticks:              156158721
+Busy Ticks:              1022926
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 80499
+High Sum of Seeks:       7079009944078
+Idle Ticks SPA:          77692570
+Idle Ticks SPB:          78466151
+Busy Ticks SPA:          898825
+Busy Ticks SPB:          124101
+Queue Length:            5960664
+Bus 0 Enclosure 0  Disk 14
+Vendor Id:               SEAGATE
+Product Id:              ST310004CLAR1000
+Product Revision:        BS1B
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           9WK5N2CY    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 14
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5805645
+Number of Writes:        83333
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032749  
+Request Service Time:    N/A
+Read Requests:           5805645
+Write Requests:          83333
+Kbytes Read:             786022410
+Kbytes Written:          336227
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049407PWR
+User Capacity:           0
+Idle Ticks:              156155183
+Busy Ticks:              1026464
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 112388
+High Sum of Seeks:       7108639686240
+Idle Ticks SPA:          77691813
+Idle Ticks SPB:          78463370
+Busy Ticks SPA:          899582
+Busy Ticks SPB:          126882
+Queue Length:            6034730
+Bus 1 Enclosure 0  Disk 0
+Vendor Id:               SATA-SAM
+Product Id:              SS160510 CLAR100
+Product Revision:        TC3Q/2270
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           S0PDNEABA06462     
+Sectors:                 N/A
+Capacity:                93928
+Private:                 Unbound
+Bind Signature:          0xbdb78, 0, 0
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         9570902
+Number of Writes:        6844
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032713  
+Request Service Time:    N/A
+Read Requests:           9570902
+Write Requests:          6844
+Kbytes Read:             605191785
+Kbytes Written:          218587
+Stripe Boundary Crossing: None
+Drive Type:              SATA Flash
+Clariion TLA Part Number:005049184   
+User Capacity:           0
+Idle Ticks:              156802728
+Busy Ticks:              378919
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 122
+High Sum of Seeks:       311953296384
+Idle Ticks SPA:          78300681
+Idle Ticks SPB:          78502047
+Busy Ticks SPA:          290714
+Busy Ticks SPB:          88205
+Queue Length:            9577891
+Bus 1 Enclosure 0  Disk 1
+Vendor Id:               SATA-SAM
+Product Id:              SS160510 CLAR100
+Product Revision:        TC3Q/2270
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           S0PDNEABA01363     
+Sectors:                 N/A
+Capacity:                93928
+Private:                 Unbound
+Bind Signature:          0xbdb78, 0, 1
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         9581150
+Number of Writes:        13662
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032713  
+Request Service Time:    N/A
+Read Requests:           9581150
+Write Requests:          13662
+Kbytes Read:             605211325
+Kbytes Written:          223674
+Stripe Boundary Crossing: None
+Drive Type:              SATA Flash
+Clariion TLA Part Number:005049184   
+User Capacity:           0
+Idle Ticks:              156805822
+Busy Ticks:              375825
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: NO
+Hardware Power Savings Eligible: NO
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 10145
+High Sum of Seeks:       370006452898
+Idle Ticks SPA:          78303231
+Idle Ticks SPB:          78502591
+Busy Ticks SPA:          288164
+Busy Ticks SPB:          87661
+Queue Length:            9605372
+Bus 1 Enclosure 0  Disk 2
+Vendor Id:               SEAGATE
+Product Id:              ST1000NMCLAR1000
+Product Revision:        PS12
+Lun:                     Unbound
+Type:                    N/A
+State:                   Enabled
+Hot Spare:               NO
+Prct Rebuilt:            Unbound
+Prct Bound:              Unbound
+Serial Number:           Z1N0WVQC    
+Sectors:                 N/A
+Capacity:                939194
+Private:                 Unbound
+Bind Signature:          0xbdbc5, 0, 2
+Hard Read Errors:        0
+Hard Write Errors:       0
+Soft Read Errors:        0
+Soft Write Errors:       0
+Read Retries:     N/A
+Write Retries:    N/A
+Remapped Sectors:        N/A
+Number of Reads:         5805602
+Number of Writes:        83308
+Number of Luns:          0
+Raid Group ID:           N/A
+Clariion Part Number:    DG118032828  
+Request Service Time:    N/A
+Read Requests:           5805602
+Write Requests:          83308
+Kbytes Read:             786022036
+Kbytes Written:          336024
+Stripe Boundary Crossing: None
+Drive Type:              NL SAS
+Clariion TLA Part Number:005049493PWR
+User Capacity:           0
+Idle Ticks:              156217545
+Busy Ticks:              964102
+Current Speed: 6Gbps
+Maximum Speed: 6Gbps
+Queue Max:        N/A
+Queue Avg:        N/A
+Prct Idle:        0
+Prct Busy:        0
+Hardware Power Savings Qualified: YES
+Hardware Power Savings Eligible: YES
+Power Savings State: Full Power
+Current Power Savings Log Timestamp: N/A
+Spinning Ticks: N/A
+Standby Ticks: N/A
+Number of Spin Ups: N/A
+Arrivals with Nonzero Queue: 111793
+High Sum of Seeks:       6961255766774
+Idle Ticks SPA:          77768329
+Idle Ticks SPB:          78449216
+Busy Ticks SPA:          823066
+Busy Ticks SPB:          141036
+Queue Length:            6030168
+Bus 1 Enclosure 0  Disk 3
+State:                   Empty
+Bus 1 Enclosure 0  Disk 4
+State:                   Empty
+Bus 1 Enclosure 0  Disk 5
+State:                   Empty
+Bus 1 Enclosure 0  Disk 6
+State:                   Empty
+Bus 1 Enclosure 0  Disk 7
+State:                   Empty
+Bus 1 Enclosure 0  Disk 8
+State:                   Empty
+Bus 1 Enclosure 0  Disk 9
+State:                   Empty
+Bus 1 Enclosure 0  Disk 10
+State:                   Empty
+Bus 1 Enclosure 0  Disk 11
+State:                   Empty
+Bus 1 Enclosure 0  Disk 12
+State:                   Empty
+Bus 1 Enclosure 0  Disk 13
+State:                   Empty
+Bus 1 Enclosure 0  Disk 14
+State:                   Empty
+All logical Units Information
+-----------------------------
+LOGICAL UNIT NUMBER 3
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        LUN-VNX-0_3
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP B
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP B
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    10240
+LUN Capacity(Blocks):       20971520
+UID:                        60:06:01:60:43:31:2F:00:DA:28:D1:E8:1C:79:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:           
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 0
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        LUN-VNX-0_0
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP B
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP A
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    10240
+LUN Capacity(Blocks):       20971520
+UID:                        60:06:01:60:43:31:2F:00:54:39:6B:E2:1C:79:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:          "Storage Group 1"
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 7
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        QA_TEST_2
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP B
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP A
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    108544
+LUN Capacity(Blocks):       222298112
+UID:                        60:06:01:60:43:31:2F:00:86:CB:2F:B8:17:84:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:          "Storage Group 1"
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 5
+Prefetch size (blocks) =         0
+Prefetch multiplier =            4
+Segment size (blocks) =          0
+Segment multiplier =             4
+Maximum prefetch (blocks) =      4096
+Prefetch Disable Size (blocks) = 4097
+Prefetch idle count =            40
+Variable length prefetching YES
+Prefetched data retained    YES
+Read cache configured according to
+ specified parameters.
+Total Hard Errors:          0
+Total Soft Errors:          0
+Total Queue Length:         37154
+Name                        Celerra_emc-vnx_5_d10
+Minimum latency reads N/A
+Read Histogram[0] 41
+Read Histogram[1] 0
+Read Histogram[2] 0
+Read Histogram[3] 0
+Read Histogram[4] 0
+Read Histogram[5] 0
+Read Histogram[6] 0
+Read Histogram[7] 0
+Read Histogram[8] 0
+Read Histogram[9] 0
+Read Histogram overflows 0
+Write Histogram[0] 0
+Write Histogram[1] 0
+Write Histogram[2] 0
+Write Histogram[3] 0
+Write Histogram[4] 23332
+Write Histogram[5] 0
+Write Histogram[6] 0
+Write Histogram[7] 0
+Write Histogram[8] 0
+Write Histogram[9] 0
+Write Histogram overflows 0
+Read Requests:              41
+Write Requests:             23332
+Blocks read:                41
+Blocks written:             373312
+Read cache hits:            40
+Read cache misses:          N/A
+Prefetched blocks:          0
+Unused prefetched blocks:   0
+Write cache hits:           23332
+Forced flushes:             0
+Read Hit Ratio:             N/A
+Write Hit Ratio:            N/A
+RAID Type:                  RAID5
+RAIDGroup ID:               0
+State:                      Faulted
+Stripe Crossing:            0
+Element Size:               128
+Current owner:              SP B
+Offset:                     0
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            20
+Write Aside Size:           2048
+Default Owner:              SP B
+Rebuild Priority:           High
+Verify Priority:            Medium
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    51200
+LUN Capacity(Blocks):       104857600
+UID:                        60:06:01:60:43:31:2F:00:70:B1:A2:BC:21:79:E7:11
+LUN Capacity(Stripes):      204800
+Blocks Read SPA:            20
+Blocks Read SPB:            21  (optimal)
+Blocks Written SPA:         0
+Blocks Written SPB:         373312  (optimal)
+Read Requests SPA:          20
+Read Requests SPB:          21  (optimal)
+Write Requests SPA:         0
+Write Requests SPB:         23332  (optimal)
+LUN Busy Ticks SPA:         11258221
+LUN Busy Ticks SPB:         21545670  (optimal)
+LUN Idle Ticks SPA:         4158047535
+LUN Idle Ticks SPB:         4169737099  (optimal)
+Number of arrivals with non-zero queue:          9185
+Sum queue lengths by arrivals:                   37154
+Statistics logging start time:                   02/05/18 19:24:22
+Statistics logging current time:                 02/05/18 18:27:50
+Explicit Trespasses SPA:                 0
+Explicit Trespasses SPB:                 1
+Explicit Trespasses:                     1
+Implicit Trespasses SPA:                 0
+Implicit Trespasses SPB:                 0
+Implicit Trespasses:                     0
+Non-zero Request Count Arrivals SPA:           0
+Non-zero Request Count Arrivals SPB:           9185  (optimal)
+Non-zero Request Count Arrivals:              9185
+Sum of Oustanding Requests SPA:    22
+Sum of Oustanding Requests SPB:    37132  (optimal)
+Sum of Oustanding Requests:      37154
+Shrink State:                    N/A
+Write cache Re-hits:        501
+Fast Write Count:           23332
+Bus 0 Enclosure 0  Disk 7  Queue Length:               3203900
+Bus 0 Enclosure 0  Disk 6  Queue Length:               3149845
+Bus 0 Enclosure 0  Disk 5  Queue Length:               3138728
+Bus 0 Enclosure 0  Disk 4  Queue Length:               3154506
+Bus 0 Enclosure 0  Disk 3  Queue Length:               0
+Bus 0 Enclosure 0  Disk 7  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 6  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 5  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 4  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 3  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 7  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 6  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 5  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 4  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 3  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 7  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 6  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 5  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 4  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 3  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 7  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 6  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 5  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 4  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 3  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 7   Enabled
+Reads:            3148033
+Writes:           33670
+Blocks Read:      3209372521
+Blocks Written:   1158960
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.76
+Prct Busy:        0.23
+Idle Ticks:       156814687
+Busy Ticks:       366960
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78223292
+Busy Ticks SPA:   0
+Busy Ticks SPB:   366960
+High Sum of Seeks:       6882226354870
+Arrivals with Nonzero Queue: 21738
+Bus 0 Enclosure 0  Disk 6   Enabled
+Reads:            3138249
+Writes:           11352
+Blocks Read:      3209175848
+Blocks Written:   726528
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.77
+Prct Busy:        0.22
+Idle Ticks:       156821921
+Busy Ticks:       359726
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78230526
+Busy Ticks SPA:   0
+Busy Ticks SPB:   359726
+High Sum of Seeks:       6868933624950
+Arrivals with Nonzero Queue: 242
+Bus 0 Enclosure 0  Disk 5   Enabled
+Reads:            3138249
+Writes:           0
+Blocks Read:      3209175848
+Blocks Written:   0
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.77
+Prct Busy:        0.22
+Idle Ticks:       156825075
+Busy Ticks:       356572
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78233680
+Busy Ticks SPA:   0
+Busy Ticks SPB:   356572
+High Sum of Seeks:       7694104838
+Arrivals with Nonzero Queue: 476
+Bus 0 Enclosure 0  Disk 4   Enabled
+Reads:            3143125
+Writes:           9030
+Blocks Read:      3209254712
+Blocks Written:   146032
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.76
+Prct Busy:        0.23
+Idle Ticks:       156816165
+Busy Ticks:       365482
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78224770
+Busy Ticks SPA:   0
+Busy Ticks SPB:   365482
+High Sum of Seeks:       163784676446
+Arrivals with Nonzero Queue: 2297
+Bus 0 Enclosure 0  Disk 3   Removed
+Reads:            0
+Writes:           0
+Blocks Read:      0
+Blocks Written:   0
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        Not Available
+Prct Busy:        Not Available
+Idle Ticks:       0
+Busy Ticks:       0
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   0
+Idle Ticks SPB:   0
+Busy Ticks SPA:   0
+Busy Ticks SPB:   0
+High Sum of Seeks:       0
+Arrivals with Nonzero Queue: 0
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             0
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                NO
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             4032817338
+LUN Busy Ticks:             32803891
+LUN Offline (Cache Dirty Condition):  NO
+LU Storage Groups:          "~filestorage"
+Device Map:                 Valid
+Average Read Time:            12702
+Average Write Time:            167021566
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 4
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        LUN-VNX-0_4
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP A
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP A
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    10240
+LUN Capacity(Blocks):       20971520
+UID:                        60:06:01:60:43:31:2F:00:DC:28:D1:E8:1C:79:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:           
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 1
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        LUN-VNX-0_1
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP B
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP B
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    10240
+LUN Capacity(Blocks):       20971520
+UID:                        60:06:01:60:43:31:2F:00:56:39:6B:E2:1C:79:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:           
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 6
+Prefetch size (blocks) =         0
+Prefetch multiplier =            4
+Segment size (blocks) =          0
+Segment multiplier =             4
+Maximum prefetch (blocks) =      4096
+Prefetch Disable Size (blocks) = 4097
+Prefetch idle count =            40
+Variable length prefetching YES
+Prefetched data retained    YES
+Read cache configured according to
+ specified parameters.
+Total Hard Errors:          0
+Total Soft Errors:          0
+Total Queue Length:         396
+Name                        QA_TEST
+Minimum latency reads N/A
+Read Histogram[0] 396
+Read Histogram[1] 0
+Read Histogram[2] 0
+Read Histogram[3] 0
+Read Histogram[4] 0
+Read Histogram[5] 0
+Read Histogram[6] 0
+Read Histogram[7] 0
+Read Histogram[8] 0
+Read Histogram[9] 0
+Read Histogram overflows 0
+Write Histogram[0] 0
+Write Histogram[1] 0
+Write Histogram[2] 0
+Write Histogram[3] 0
+Write Histogram[4] 0
+Write Histogram[5] 0
+Write Histogram[6] 0
+Write Histogram[7] 0
+Write Histogram[8] 0
+Write Histogram[9] 0
+Write Histogram overflows 0
+Read Requests:              396
+Write Requests:             0
+Blocks read:                396
+Blocks written:             0
+Read cache hits:            396
+Read cache misses:          N/A
+Prefetched blocks:          0
+Unused prefetched blocks:   0
+Write cache hits:           0
+Forced flushes:             0
+Read Hit Ratio:             N/A
+Write Hit Ratio:            N/A
+RAID Type:                  RAID5
+RAIDGroup ID:               0
+State:                      Faulted
+Stripe Crossing:            0
+Element Size:               128
+Current owner:              SP B
+Offset:                     0
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            20
+Write Aside Size:           2048
+Default Owner:              SP B
+Rebuild Priority:           High
+Verify Priority:            Medium
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    47104
+LUN Capacity(Blocks):       96468992
+UID:                        60:06:01:60:43:31:2F:00:2C:DB:68:EE:7A:83:E7:11
+LUN Capacity(Stripes):      188416
+Blocks Read SPA:            0
+Blocks Read SPB:            396  (optimal)
+Blocks Written SPA:         0
+Blocks Written SPB:         0  (optimal)
+Read Requests SPA:          0
+Read Requests SPB:          396  (optimal)
+Write Requests SPA:         0
+Write Requests SPB:         0  (optimal)
+LUN Busy Ticks SPA:         14180931
+LUN Busy Ticks SPB:         14487164  (optimal)
+LUN Idle Ticks SPA:         4155124840
+LUN Idle Ticks SPB:         4176795621  (optimal)
+Number of arrivals with non-zero queue:          0
+Sum queue lengths by arrivals:                   396
+Statistics logging start time:                   02/05/18 19:24:22
+Statistics logging current time:                 02/05/18 18:27:50
+Explicit Trespasses SPA:                 0
+Explicit Trespasses SPB:                 0
+Explicit Trespasses:                     0
+Implicit Trespasses SPA:                 0
+Implicit Trespasses SPB:                 0
+Implicit Trespasses:                     0
+Non-zero Request Count Arrivals SPA:           0
+Non-zero Request Count Arrivals SPB:           0  (optimal)
+Non-zero Request Count Arrivals:              0
+Sum of Oustanding Requests SPA:    0
+Sum of Oustanding Requests SPB:    396  (optimal)
+Sum of Oustanding Requests:      396
+Shrink State:                    N/A
+Write cache Re-hits:        0
+Fast Write Count:           0
+Bus 0 Enclosure 0  Disk 7  Queue Length:               3203900
+Bus 0 Enclosure 0  Disk 6  Queue Length:               3149845
+Bus 0 Enclosure 0  Disk 5  Queue Length:               3138728
+Bus 0 Enclosure 0  Disk 4  Queue Length:               3154506
+Bus 0 Enclosure 0  Disk 3  Queue Length:               0
+Bus 0 Enclosure 0  Disk 7  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 6  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 5  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 4  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 3  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 7  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 6  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 5  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 4  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 3  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 7  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 6  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 5  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 4  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 3  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 7  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 6  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 5  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 4  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 3  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 7   Enabled
+Reads:            3148033
+Writes:           33670
+Blocks Read:      3209372521
+Blocks Written:   1158960
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.76
+Prct Busy:        0.23
+Idle Ticks:       156814687
+Busy Ticks:       366960
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78223292
+Busy Ticks SPA:   0
+Busy Ticks SPB:   366960
+High Sum of Seeks:       6882226354870
+Arrivals with Nonzero Queue: 21738
+Bus 0 Enclosure 0  Disk 6   Enabled
+Reads:            3138249
+Writes:           11352
+Blocks Read:      3209175848
+Blocks Written:   726528
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.77
+Prct Busy:        0.22
+Idle Ticks:       156821921
+Busy Ticks:       359726
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78230526
+Busy Ticks SPA:   0
+Busy Ticks SPB:   359726
+High Sum of Seeks:       6868933624950
+Arrivals with Nonzero Queue: 242
+Bus 0 Enclosure 0  Disk 5   Enabled
+Reads:            3138249
+Writes:           0
+Blocks Read:      3209175848
+Blocks Written:   0
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.77
+Prct Busy:        0.22
+Idle Ticks:       156825075
+Busy Ticks:       356572
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78233680
+Busy Ticks SPA:   0
+Busy Ticks SPB:   356572
+High Sum of Seeks:       7694104838
+Arrivals with Nonzero Queue: 476
+Bus 0 Enclosure 0  Disk 4   Enabled
+Reads:            3143125
+Writes:           9030
+Blocks Read:      3209254712
+Blocks Written:   146032
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        99.76
+Prct Busy:        0.23
+Idle Ticks:       156816165
+Busy Ticks:       365482
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   78591395
+Idle Ticks SPB:   78224770
+Busy Ticks SPA:   0
+Busy Ticks SPB:   365482
+High Sum of Seeks:       163784676446
+Arrivals with Nonzero Queue: 2297
+Bus 0 Enclosure 0  Disk 3   Removed
+Reads:            0
+Writes:           0
+Blocks Read:      0
+Blocks Written:   0
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        Not Available
+Prct Busy:        Not Available
+Idle Ticks:       0
+Busy Ticks:       0
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   0
+Idle Ticks SPB:   0
+Busy Ticks SPA:   0
+Busy Ticks SPB:   0
+High Sum of Seeks:       0
+Arrivals with Nonzero Queue: 0
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             104890368
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                NO
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             4036953165
+LUN Busy Ticks:             28668095
+LUN Offline (Cache Dirty Condition):  NO
+LU Storage Groups:          "Storage Group 1"
+Device Map:                 Valid
+Average Read Time:            24162
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 2
+Prefetch size (blocks) =         0
+Prefetch multiplier =            0
+Segment size (blocks) =          0
+Segment multiplier =             0
+Maximum prefetch (blocks) =      0
+Prefetch Disable Size (blocks) = 0
+Prefetch idle count =            0
+Prefetching: NO
+Prefetched data retained    NO
+Read cache configured according to
+ specified parameters.
+Name                        LUN-VNX-0_2
+Minimum latency reads N/A
+RAID Type:                  N/A
+RAIDGroup ID:               N/A
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               0
+Current owner:              SP A
+Offset:                     N/A
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            0
+Write Aside Size:           0
+Default Owner:              SP A
+Rebuild Priority:           N/A
+Verify Priority:            N/A
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    10240
+LUN Capacity(Blocks):       20971520
+UID:                        60:06:01:60:43:31:2F:00:58:39:6B:E2:1C:79:E7:11
+LUN Capacity(Stripes):      N/A
+Shrink State:                    N/A
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             N/A
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                YES
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             N/A
+LUN Busy Ticks:             N/A
+LUN Offline (Cache Dirty Condition):  N/A
+LU Storage Groups:          "~filestorage"
+Device Map:                 Valid
+Average Read Time:            0
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 17
+Prefetch size (blocks) =         0
+Prefetch multiplier =            4
+Segment size (blocks) =          0
+Segment multiplier =             4
+Maximum prefetch (blocks) =      4096
+Prefetch Disable Size (blocks) = 4097
+Prefetch idle count =            40
+Variable length prefetching YES
+Prefetched data retained    YES
+Read cache configured according to
+ specified parameters.
+Total Hard Errors:          0
+Total Soft Errors:          0
+Total Queue Length:         36635
+Name                        Celerra_emc-vnx_17_d8
+Minimum latency reads N/A
+Read Histogram[0] 41
+Read Histogram[1] 0
+Read Histogram[2] 0
+Read Histogram[3] 0
+Read Histogram[4] 0
+Read Histogram[5] 0
+Read Histogram[6] 0
+Read Histogram[7] 0
+Read Histogram[8] 0
+Read Histogram[9] 0
+Read Histogram overflows 0
+Write Histogram[0] 0
+Write Histogram[1] 0
+Write Histogram[2] 0
+Write Histogram[3] 0
+Write Histogram[4] 23036
+Write Histogram[5] 0
+Write Histogram[6] 0
+Write Histogram[7] 0
+Write Histogram[8] 0
+Write Histogram[9] 0
+Write Histogram overflows 0
+Read Requests:              41
+Write Requests:             23036
+Blocks read:                41
+Blocks written:             368576
+Read cache hits:            40
+Read cache misses:          N/A
+Prefetched blocks:          0
+Unused prefetched blocks:   0
+Write cache hits:           23036
+Forced flushes:             0
+Read Hit Ratio:             N/A
+Write Hit Ratio:            N/A
+RAID Type:                  RAID1/0
+RAIDGroup ID:               8
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               128
+Current owner:              SP B
+Offset:                     0
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            20
+Write Aside Size:           2048
+Default Owner:              SP B
+Rebuild Priority:           High
+Verify Priority:            Medium
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    42536
+LUN Capacity(Blocks):       87114496
+UID:                        60:06:01:60:43:31:2F:00:E0:1B:3B:5A:2A:79:E7:11
+LUN Capacity(Stripes):      680582
+Blocks Read SPA:            20
+Blocks Read SPB:            21  (optimal)
+Blocks Written SPA:         0
+Blocks Written SPB:         368576  (optimal)
+Read Requests SPA:          20
+Read Requests SPB:          21  (optimal)
+Write Requests SPA:         0
+Write Requests SPB:         23036  (optimal)
+LUN Busy Ticks SPA:         5516666
+LUN Busy Ticks SPB:         11900362  (optimal)
+LUN Idle Ticks SPA:         4163789101
+LUN Idle Ticks SPB:         4179382417  (optimal)
+Number of arrivals with non-zero queue:          9037
+Sum queue lengths by arrivals:                   36635
+Statistics logging start time:                   02/05/18 19:24:22
+Statistics logging current time:                 02/05/18 18:27:50
+Explicit Trespasses SPA:                 0
+Explicit Trespasses SPB:                 1
+Explicit Trespasses:                     1
+Implicit Trespasses SPA:                 0
+Implicit Trespasses SPB:                 0
+Implicit Trespasses:                     0
+Non-zero Request Count Arrivals SPA:           0
+Non-zero Request Count Arrivals SPB:           9037  (optimal)
+Non-zero Request Count Arrivals:              9037
+Sum of Oustanding Requests SPA:    22
+Sum of Oustanding Requests SPB:    36613  (optimal)
+Sum of Oustanding Requests:      36635
+Shrink State:                    N/A
+Write cache Re-hits:        505
+Fast Write Count:           23036
+Bus 0 Enclosure 0  Disk 0  Queue Length:               61391743
+Bus 0 Enclosure 0  Disk 1  Queue Length:               61962947
+Bus 0 Enclosure 0  Disk 0  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 1  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 0  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 1  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 0  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 1  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 0  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 1  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 0   Enabled
+Reads:            16181337
+Writes:           8634073
+Blocks Read:      3045596932
+Blocks Written:   2103181133
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        98.62
+Prct Busy:        1.37
+Idle Ticks:       155020900
+Busy Ticks:       2160747
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   76930491
+Idle Ticks SPB:   78090409
+Busy Ticks SPA:   1660904
+Busy Ticks SPB:   499843
+High Sum of Seeks:       2133328108425745
+Arrivals with Nonzero Queue: 6162360
+Bus 0 Enclosure 0  Disk 1   Enabled
+Reads:            16173036
+Writes:           8632052
+Blocks Read:      3045502742
+Blocks Written:   2102966205
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        98.59
+Prct Busy:        1.40
+Idle Ticks:       154973172
+Busy Ticks:       2208475
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   76895954
+Idle Ticks SPB:   78077218
+Busy Ticks SPA:   1695441
+Busy Ticks SPB:   513034
+High Sum of Seeks:       2132783725175113
+Arrivals with Nonzero Queue: 6166473
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             87126016
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                NO
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             4048204222
+LUN Busy Ticks:             17417028
+LUN Offline (Cache Dirty Condition):  NO
+LU Storage Groups:          "~filestorage"
+Device Map:                 Valid
+Average Read Time:            39029
+Average Write Time:            134521753
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+LOGICAL UNIT NUMBER 16
+Prefetch size (blocks) =         0
+Prefetch multiplier =            4
+Segment size (blocks) =          0
+Segment multiplier =             4
+Maximum prefetch (blocks) =      4096
+Prefetch Disable Size (blocks) = 4097
+Prefetch idle count =            40
+Variable length prefetching YES
+Prefetched data retained    YES
+Read cache configured according to
+ specified parameters.
+Total Hard Errors:          0
+Total Soft Errors:          0
+Total Queue Length:         40
+Name                        Celerra_emc-vnx_16_d7
+Minimum latency reads N/A
+Read Histogram[0] 40
+Read Histogram[1] 0
+Read Histogram[2] 0
+Read Histogram[3] 0
+Read Histogram[4] 0
+Read Histogram[5] 0
+Read Histogram[6] 0
+Read Histogram[7] 0
+Read Histogram[8] 0
+Read Histogram[9] 0
+Read Histogram overflows 0
+Write Histogram[0] 0
+Write Histogram[1] 0
+Write Histogram[2] 0
+Write Histogram[3] 0
+Write Histogram[4] 0
+Write Histogram[5] 0
+Write Histogram[6] 0
+Write Histogram[7] 0
+Write Histogram[8] 0
+Write Histogram[9] 0
+Write Histogram overflows 0
+Read Requests:              40
+Write Requests:             0
+Blocks read:                40
+Blocks written:             0
+Read cache hits:            40
+Read cache misses:          N/A
+Prefetched blocks:          0
+Unused prefetched blocks:   0
+Write cache hits:           0
+Forced flushes:             0
+Read Hit Ratio:             N/A
+Write Hit Ratio:            N/A
+RAID Type:                  RAID1/0
+RAIDGroup ID:               8
+State:                      Bound
+Stripe Crossing:            0
+Element Size:               128
+Current owner:              SP A
+Offset:                     0
+Auto-trespass:              DISABLED
+Auto-assign:                DISABLED
+Write cache:                ENABLED
+Read cache:                 ENABLED
+Idle Threshold:             0
+Idle Delay Time:            20
+Write Aside Size:           2048
+Default Owner:              SP A
+Rebuild Priority:           High
+Verify Priority:            Medium
+Prct Reads Forced Flushed:  0
+Prct Writes Forced Flushed: 0
+Prct Rebuilt:               100
+Prct Bound:                 100
+LUN Capacity(Megabytes):    42536
+LUN Capacity(Blocks):       87114496
+UID:                        60:06:01:60:59:20:3E:00:56:64:C2:50:2A:79:E7:11
+LUN Capacity(Stripes):      680582
+Blocks Read SPA:            20  (optimal)
+Blocks Read SPB:            20
+Blocks Written SPA:         0  (optimal)
+Blocks Written SPB:         0
+Read Requests SPA:          20  (optimal)
+Read Requests SPB:          20
+Write Requests SPA:         0  (optimal)
+Write Requests SPB:         0
+LUN Busy Ticks SPA:         5490188  (optimal)
+LUN Busy Ticks SPB:         5345439
+LUN Idle Ticks SPA:         4163815574  (optimal)
+LUN Idle Ticks SPB:         4185937335
+Number of arrivals with non-zero queue:          0
+Sum queue lengths by arrivals:                   42
+Statistics logging start time:                   02/05/18 19:24:22
+Statistics logging current time:                 02/05/18 18:27:50
+Explicit Trespasses SPA:                 0
+Explicit Trespasses SPB:                 0
+Explicit Trespasses:                     0
+Implicit Trespasses SPA:                 0
+Implicit Trespasses SPB:                 0
+Implicit Trespasses:                     0
+Non-zero Request Count Arrivals SPA:           0  (optimal)
+Non-zero Request Count Arrivals SPB:           0
+Non-zero Request Count Arrivals:              0
+Sum of Oustanding Requests SPA:    20  (optimal)
+Sum of Oustanding Requests SPB:    22
+Sum of Oustanding Requests:      42
+Shrink State:                    N/A
+Write cache Re-hits:        0
+Fast Write Count:           0
+Bus 0 Enclosure 0  Disk 0  Queue Length:               61391743
+Bus 0 Enclosure 0  Disk 1  Queue Length:               61962947
+Bus 0 Enclosure 0  Disk 0  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 1  Hard Read Errors:           0
+Bus 0 Enclosure 0  Disk 0  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 1  Hard Write Errors:          0
+Bus 0 Enclosure 0  Disk 0  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 1  Soft Read Errors:           0
+Bus 0 Enclosure 0  Disk 0  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 1  Soft Write Errors:          0
+Bus 0 Enclosure 0  Disk 0   Enabled
+Reads:            16181337
+Writes:           8634073
+Blocks Read:      3045596932
+Blocks Written:   2103181133
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        98.62
+Prct Busy:        1.37
+Idle Ticks:       155020900
+Busy Ticks:       2160747
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   76930491
+Idle Ticks SPB:   78090409
+Busy Ticks SPA:   1660904
+Busy Ticks SPB:   499843
+High Sum of Seeks:       2133328108425745
+Arrivals with Nonzero Queue: 6162360
+Bus 0 Enclosure 0  Disk 1   Enabled
+Reads:            16173036
+Writes:           8632052
+Blocks Read:      3045502742
+Blocks Written:   2102966205
+Queue Max:        N/A
+Queue Avg:        N/A
+Avg Service Time: N/A
+Prct Idle:        98.59
+Prct Busy:        1.40
+Idle Ticks:       154973172
+Busy Ticks:       2208475
+Remapped Sectors: N/A
+Read Retries:     N/A
+Write Retries:    N/A
+Idle Ticks SPA:   76895954
+Idle Ticks SPB:   78077218
+Busy Ticks SPA:   1695441
+Busy Ticks SPB:   513034
+High Sum of Seeks:       2132783725175113
+Arrivals with Nonzero Queue: 6166473
+Is Private:                 NO
+Snapshots List:             Not Available
+MirrorView Name if any:     Not Available
+Address Offset:             0
+Is Meta LUN:                NO
+Is Thin LUN:                NO
+Is Pool LUN:                NO
+Is Snapshot Mount Point:    NO
+LUN Idle Ticks:             4054785613
+LUN Busy Ticks:             10835627
+LUN Offline (Cache Dirty Condition):  NO
+LU Storage Groups:          "~filestorage"
+Device Map:                 Valid
+Average Read Time:            2856
+Average Write Time:            0
+FAST Cache :             N/A
+FAST Cache Read Hits:    N/A
+FAST Cache Read Misses:  N/A
+FAST Cache Write Hits:   N/A
+FAST Cache Write Misses: N/A
+All RAID Groups Information
+----------------------------
+RaidGroup ID:                              0
+RaidGroup Type:                            r5
+RaidGroup State:                           Explicit_Remove
+                                           Valid_luns
+List of disks:                             Bus 0 Enclosure 0  Disk 7
+                                           Bus 0 Enclosure 0  Disk 6
+                                           Bus 0 Enclosure 0  Disk 5
+                                           Bus 0 Enclosure 0  Disk 4
+                                           Bus 0 Enclosure 0  Disk 3
+List of luns:                              5 6 
+Max Number of disks:                       16
+Max Number of luns:                        256
+Raw Capacity (Blocks):                     878161920
+Logical Capacity (Blocks):                 702529536
+Free Capacity (Blocks,non-contiguous):     2038489088
+Free contiguous group of unbound segments: 1537253376
+Defrag/Expand priority:                    Medium
+Percent defragmented:                      100
+Percent expanded:                          N/A
+Disk expanding onto:                       N/A
+Lun Expansion enabled:                     NO
+Legal RAID types:                          r5 
+RaidGroup ID:                              8
+RaidGroup Type:                            r1_0
+RaidGroup State:                           Explicit_Remove
+                                           Valid_luns
+List of disks:                             Bus 0 Enclosure 0  Disk 0
+                                           Bus 0 Enclosure 0  Disk 1
+List of luns:                              16 17 
+Max Number of disks:                       16
+Max Number of luns:                        256
+Raw Capacity (Blocks):                     348786688
+Logical Capacity (Blocks):                 174393344
+Free Capacity (Blocks,non-contiguous):     163840
+Free contiguous group of unbound segments: 163840
+Defrag/Expand priority:                    Medium
+Percent defragmented:                      100
+Percent expanded:                          N/A
+Disk expanding onto:                       N/A
+Lun Expansion enabled:                     NO
+Legal RAID types:                          r1_0 
+All Storage Groups Information
+------------------------------
+Data Access control: ENABLED
+Storage Group Name:    Storage Group 1
+Storage Group UID:     BC:66:08:B9:1D:79:E7:11:A8:66:9A:66:C4:9D:64:56
+HBA/SP Pairs:
+  HBA UID                                          SP Name     SPPort
+  -------                                          -------     ------ 
+  50:01:43:80:03:BD:BC:CF:50:01:43:80:03:BD:BC:CE   SP B         0
+  20:00:00:25:B5:00:10:00:20:00:00:25:B5:00:10:0E   SP B         0
+  20:00:00:25:B5:00:10:00:20:00:00:25:B5:00:10:0F   SP B         0
+HLU/ALU Pairs:
+  HLU Number     ALU Number
+  ----------     ----------
+    0               0
+    1               6
+    2               7
+Shareable:             YES
+Resume Information
+-----------------------
+  SP B
+    EMC Part Number:                 110-140-108B
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           B12
+    EMC Serial Number:               CF25M115100323
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8BSP 1.60GHZ QC CPU
+    Programmable Name:               BIOS:POST:MCU:MCU BB:PLX8608:CMDAPP:CMDTABLE:CMDBOOT:FWBL:CDES
+    Programmable Revision:           7.20:42.20:5.40:1.10:3.05:5.04:0.96:0.02:72.90:1.55
+  SP A
+    EMC Part Number:                 110-140-100B
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           FFF
+    EMC Serial Number:               CF2M9153400089
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8BSP SPARE CPU
+    Programmable Name:               BIOS:POST:CMDAPP:CMDTABLE:CMDBOOT:FWBL:MCU:MCU BB:PLX8608:CDES
+    Programmable Revision:           7.20:42.20:5.04:0.96:0.02:72.90:5.40:1.10:3.05:1.55
+Storage Processor A 
+  CPU Module 
+    EMC Part Number:                 110-140-100B
+    EMC Artwork Revision:            B01
+    EMC Assembly Revision:           FFF
+    EMC Serial Number:               CF2M9153400089
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8BSP SPARE CPU
+    Programmable Name:               BIOS:POST:CMDAPP:CMDTABLE:CMDBOOT:FWBL:MCU:MCU BB:PLX8608:CDES
+    Programmable Revision:           7.20:42.20:5.04:0.96:0.02:72.90:5.40:1.10:3.05:1.55
+Storage Processor B 
+  CPU Module 
+    EMC Part Number:                 110-140-100B
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           B11
+    EMC Serial Number:               CF2M9115100553
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8BSP 1.60GHZ QC CPU
+    Programmable Name:               BIOS:POST:MCU:MCU BB:PLX8608:CMDAPP:CMDTABLE:CMDBOOT:FWBL:CDES
+    Programmable Revision:           7.20:42.20:5.40:1.10:3.05:5.04:0.96:0.02:72.90:1.55
+Storage Processor A 
+  I/O Module  0
+    EMC Part Number:                 303-141-100A
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A12
+    EMC Serial Number:               CF2D6113700096
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   4 PORT ISCSI 1G SLIC
+    Programmable Name:               CMDAPP:CMDTABLE:CMDBOOT
+    Programmable Revision:           14.09:0.43:0.06
+Storage Processor A 
+  I/O Module Onboard 
+    EMC Part Number:                 303-151-001A
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           FFF
+    EMC Serial Number:               CF2H3153300092
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8B CPU BRD MEZZ, GROWLER DVT
+    Programmable Name:               N/A
+    Programmable Revision:           0.0
+Storage Processor A 
+  I/O Module  1
+    EMC Part Number:                 N/A
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           N/A
+    EMC Serial Number:               N/A
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   N/A
+    Programmable Name:               N/A
+    Programmable Revision:           0.0
+Storage Processor B 
+  I/O Module  1
+    EMC Part Number:                 N/A
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           N/A
+    EMC Serial Number:               N/A
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   N/A
+    Programmable Name:               N/A
+    Programmable Revision:           0.0
+Storage Processor B 
+  I/O Module  0
+    EMC Part Number:                 303-141-100A
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A12
+    EMC Serial Number:               CF2D6113700164
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   4 PORT ISCSI 1G SLIC
+    Programmable Name:               CMDAPP:CMDTABLE:CMDBOOT
+    Programmable Revision:           14.09:0.43:0.06
+Storage Processor B 
+  I/O Module Onboard 
+    EMC Part Number:                 303-151-001A
+    EMC Artwork Revision:            A01
+    EMC Assembly Revision:           A07
+    EMC Serial Number:               CF2H3115100026
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8B CPU BRD MEZZ, GROWLER DVT
+    Programmable Name:               N/A
+    Programmable Revision:           0.0
+Storage Processor B 
+  Standby Power Supply 
+    EMC Part Number:                 078-000-050
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A1
+    EMC Serial Number:               ACLSP084201759
+    Vendor Part Number:              AA23540
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     ASTEC
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   Standby Power Supply
+    Programmable Name:               SPS FW
+    Programmable Revision:           7.0
+Storage Processor A 
+  Standby Power Supply 
+    EMC Part Number:                 078-000-050
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A0
+    EMC Serial Number:               ACLSP110401396
+    Vendor Part Number:              AA23540
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     ASTEC
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   Standby Power Supply
+    Programmable Name:               SPS FW
+    Programmable Revision:           7.0
+CKM00120300966
+  I/O Carrier 0
+    I/O Carrier switch is not supported on this system.
+Bus 0 Enclosure 0
+  Chassis/Midplane 
+    EMC Part Number:                 100-562-503
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A07
+    EMC Serial Number:               FCNCH115100108
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   M8BLITE DUAL SP 8GB DVT AO
+    Programmable Name:               N/A
+    Programmable Revision:           N/A
+    EMC Product Serial Number:       CKM00120300966
+    EMC Product Part Number:         900-567-002
+    EMC Product Revision:            A02
+Bus 0 Enclosure 0
+  Power A
+    EMC Part Number:                 071-000-529
+    EMC Artwork Revision:            05I
+    EMC Assembly Revision:           A10
+    EMC Serial Number:               AC178114500038
+    Vendor Part Number:              SG7011-710G
+    Vendor Artwork Number:           05I
+    Vendor Assembly Number:          A10
+    Vendor Serial Number:            AC1114500038
+    Vendor Name:                     ACBEL POLYTECH INC.
+    Location of Manufacture:         MANILA, PHILIPPINES
+    Year of Manufacture:             2011
+    Month of Manufacture:            11
+    Day of Manufacture:              15
+    Assembly Name:                   DUAL 12V P/S WITHOUT FAN
+    Programmable Name:               PS FW
+    Programmable Revision:           0.27
+Bus 0 Enclosure 0
+  Power B
+    EMC Part Number:                 071-000-529
+    EMC Artwork Revision:            05I
+    EMC Assembly Revision:           A10
+    EMC Serial Number:               AC178114500159
+    Vendor Part Number:              SG7011-710G
+    Vendor Artwork Number:           05I
+    Vendor Assembly Number:          A10
+    Vendor Serial Number:            AC1114500159
+    Vendor Name:                     ACBEL POLYTECH INC.
+    Location of Manufacture:         MANILA, PHILIPPINES
+    Year of Manufacture:             2011
+    Month of Manufacture:            11
+    Day of Manufacture:              15
+    Assembly Name:                   DUAL 12V P/S WITHOUT FAN
+    Programmable Name:               PS FW
+    Programmable Revision:           0.27
+Bus 1 Enclosure 0
+  Chassis/Midplane 
+    EMC Part Number:                 100-562-904
+    EMC Artwork Revision:            N/A
+    EMC Assembly Revision:           A07
+    EMC Serial Number:               US1V4110110161
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     N/A
+    Location of Manufacture:         N/A
+    Year of Manufacture:             N/A
+    Month of Manufacture:            N/A
+    Day of Manufacture:              N/A
+    Assembly Name:                   6G SAS LF DAE VIPER W/FLANGES
+    Programmable Name:               N/A
+    Programmable Revision:           N/A
+Bus 1 Enclosure 0
+  LCC A 
+    EMC Part Number:                 303-108-000E
+    EMC Artwork Revision:            E
+    EMC Assembly Revision:           E07
+    EMC Serial Number:               US1V2105000372
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     USI
+    Location of Manufacture:         Shanghai,China
+    Year of Manufacture:             2010
+    Month of Manufacture:            12
+    Day of Manufacture:              27
+    Assembly Name:                   15 DRIVE VIPER 6G SAS LCC FRU
+    Programmable Name:               CDES
+    Programmable Revision:           1.55
+Bus 1 Enclosure 0
+  LCC B 
+    EMC Part Number:                 303-108-000E
+    EMC Artwork Revision:            E
+    EMC Assembly Revision:           E07
+    EMC Serial Number:               US1V2105201262
+    Vendor Part Number:              N/A
+    Vendor Artwork Number:           N/A
+    Vendor Assembly Number:          N/A
+    Vendor Serial Number:            N/A
+    Vendor Name:                     USI
+    Location of Manufacture:         Shanghai,China
+    Year of Manufacture:             2011
+    Month of Manufacture:            01
+    Day of Manufacture:              08
+    Assembly Name:                   15 DRIVE VIPER 6G SAS LCC FRU
+    Programmable Name:               CDES
+    Programmable Revision:           1.55
+Bus 1 Enclosure 0
+  Power A
+    EMC Part Number:                 071-000-518
+    EMC Artwork Revision:            012
+    EMC Assembly Revision:           A08
+    EMC Serial Number:               AC794104906389
+    Vendor Part Number:              SG7008-710G
+    Vendor Artwork Number:           012
+    Vendor Assembly Number:          A08
+    Vendor Serial Number:            AC7104906372
+    Vendor Name:                     ACBEL POLYTECH INC.
+    Location of Manufacture:         TANG XIA TOWN, DONG GUAN, CHINA
+    Year of Manufacture:             2010
+    Month of Manufacture:            12
+    Day of Manufacture:              16
+    Assembly Name:                   Third Gen 400W, Dual +12V P/S
+    Programmable Name:               Micro
+    Programmable Revision:           5.21
+Bus 1 Enclosure 0
+  Power B
+    EMC Part Number:                 071-000-518
+    EMC Artwork Revision:            012
+    EMC Assembly Revision:           A08
+    EMC Serial Number:               AC794104906392
+    Vendor Part Number:              SG7008-710G
+    Vendor Artwork Number:           012
+    Vendor Assembly Number:          A08
+    Vendor Serial Number:            AC7104906373
+    Vendor Name:                     ACBEL POLYTECH INC.
+    Location of Manufacture:         TANG XIA TOWN, DONG GUAN, CHINA
+    Year of Manufacture:             2010
+    Month of Manufacture:            12
+    Day of Manufacture:              16
+    Assembly Name:                   Third Gen 400W, Dual +12V P/S
+    Programmable Name:               Micro
+    Programmable Revision:           5.21
+Reserved LUN Pool Information
+-------------------------------
+Snap View Information
+-----------------------
+*** List of LUNs that can be snapped ***
+*** Info of SnapView Sessions ***
+*** Info of SnapView Snapshost ***
+*** Info of Reserved SnapView Sessions and Snapshots ***
+SAN Copy Information
+----------------------
+SAN Copy Destination Information
+--------------------------------
+Mirror View Information
+-----------------------
+Clone Information
+---------------------
+MetaLUN Information
+---------------------
+Can a LUN or a metaLUN be expanded on this system : Yes
+Number of metaLUNs in the system : 0
+Maximum Number of metaLUNs per system : 512
+Luns that are participated in metaLUNs : 
+Luns that are available for expansion :  5 , 6 , 16 , 17 
+Maximum Number of Components per metaLUN : 8
+Maximum Number of LUNs per Component : 32
+Migration Information
+---------------------
+No current migrations exist.
+Information about each I/O module(s) on SPA : 
+SP ID :  A
+I/O Module Slot :  0
+I/O Module Type :  iSCSI
+I/O Module State :  Present
+I/O Module Substate :  Good
+I/O Module Power state :  On
+I/O Carrier :  No
+I/O Module Label :  1 GbE iSCSI/TOE
+Information about each port on this I/O module : 
+Physical Port ID :  0
+Port Role :  FE
+Logical Port ID :  4
+Port Usage :  Special
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  1
+Port Role :  FE
+Logical Port ID :  5
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  2
+Port Role :  FE
+Logical Port ID :  6
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  3
+Port Role :  FE
+Logical Port ID :  7
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+SP ID :  A
+I/O Module Slot :  1
+I/O Module Type :  Unknown
+I/O Module State :  Empty
+I/O Module Substate :  Not Present
+I/O Module Power state :  Not Available
+I/O Carrier :  No
+I/O Module Label :  Unknown
+SP ID :  A
+I/O Module Slot :  Onboard
+I/O Module Type :  Multi Protocol
+I/O Module State :  Present
+I/O Module Substate :  Good
+I/O Module Power state :  N/A
+I/O Carrier :  No
+I/O Module Label :  N/A
+Information about each port on this I/O module : 
+Physical Port ID :  0
+Port Role :  BE
+Logical Port ID :  0
+Port Usage :  Normal
+Port Type :  SAS
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  1
+Port Role :  BE
+Logical Port ID :  1
+Port Usage :  Normal
+Port Type :  SAS
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  2
+Port Role :  FE
+Logical Port ID :  0
+Port Usage :  Special
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  3
+Port Role :  FE
+Logical Port ID :  1
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  4
+Port Role :  FE
+Logical Port ID :  2
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  5
+Port Role :  FE
+Logical Port ID :  3
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Information about each I/O module(s) on SPB : 
+SP ID :  B
+I/O Module Slot :  0
+I/O Module Type :  iSCSI
+I/O Module State :  Present
+I/O Module Substate :  Good
+I/O Module Power state :  On
+I/O Carrier :  No
+I/O Module Label :  1 GbE iSCSI/TOE
+Information about each port on this I/O module : 
+Physical Port ID :  0
+Port Role :  FE
+Logical Port ID :  4
+Port Usage :  Special
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  1
+Port Role :  FE
+Logical Port ID :  5
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  2
+Port Role :  FE
+Logical Port ID :  6
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  3
+Port Role :  FE
+Logical Port ID :  7
+Port Usage :  Normal
+Port Type :  iSCSI
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+SP ID :  B
+I/O Module Slot :  1
+I/O Module Type :  Unknown
+I/O Module State :  Empty
+I/O Module Substate :  Not Present
+I/O Module Power state :  Not Available
+I/O Carrier :  No
+I/O Module Label :  Unknown
+SP ID :  B
+I/O Module Slot :  Onboard
+I/O Module Type :  Multi Protocol
+I/O Module State :  Present
+I/O Module Substate :  Good
+I/O Module Power state :  N/A
+I/O Carrier :  No
+I/O Module Label :  N/A
+Information about each port on this I/O module : 
+Physical Port ID :  0
+Port Role :  BE
+Logical Port ID :  0
+Port Usage :  Normal
+Port Type :  SAS
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  1
+Port Role :  BE
+Logical Port ID :  1
+Port Usage :  Normal
+Port Type :  SAS
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  2
+Port Role :  FE
+Logical Port ID :  0
+Port Usage :  Special
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  3
+Port Role :  FE
+Logical Port ID :  1
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  4
+Port Role :  FE
+Logical Port ID :  2
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+Physical Port ID :  5
+Port Role :  FE
+Logical Port ID :  3
+Port Usage :  Normal
+Port Type :  Fibre Channel
+Port State :  Enabled
+Port Substate :  Good
+Is Persisted :  Yes
+FAST Cache Information
+---------------------
+Backendbus Information
+---------------------
+Bus 0
+Current Speed: 6Gbps. 
+Available Speeds: 
+              3Gbps. 
+              6Gbps. 
+SPA SFP State: N/A
+SPB SFP State: N/A
+I/O Module Slot: Onboard
+Physical Port ID: 0
+SPA Connector State: Mismatched
+SPB Connector State: Mismatched
+SPA SFP/Connector EMC Part Number: N/A
+SPB SFP/Connector EMC Part Number: N/A
+SPA SFP/Connector EMC Serial Number: N/A
+SPB SFP/Connector EMC Serial Number: N/A
+SPA SFP/Connector Vendor Part Number: N/A
+SPB SFP/Connector Vendor Part Number: N/A
+SPA SFP/Connector Vendor Serial Number: N/A
+SPB SFP/Connector Vendor Serial Number: N/A
+SPA SFP/Connector Supported Speeds: 
+              N/A
+SPB SFP/Connector Supported Speeds: 
+              N/A
+Bus 1
+Current Speed: 6Gbps. 
+Available Speeds: 
+              3Gbps. 
+              6Gbps. 
+SPA SFP State: N/A
+SPB SFP State: N/A
+I/O Module Slot: Onboard
+Physical Port ID: 1
+SPA Connector State: Mismatched
+SPB Connector State: Mismatched
+SPA SFP/Connector EMC Part Number: N/A
+SPB SFP/Connector EMC Part Number: N/A
+SPA SFP/Connector EMC Serial Number: N/A
+SPB SFP/Connector EMC Serial Number: N/A
+SPA SFP/Connector Vendor Part Number: N/A
+SPB SFP/Connector Vendor Part Number: N/A
+SPA SFP/Connector Vendor Serial Number: N/A
+SPB SFP/Connector Vendor Serial Number: N/A
+SPA SFP/Connector Supported Speeds: 
+              N/A
+SPB SFP/Connector Supported Speeds: 
+              N/A

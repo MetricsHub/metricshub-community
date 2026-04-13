@@ -1,9 +1,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
-		<groupId>org.sentrysoftware</groupId>
-		<artifactId>metricshub-parent</artifactId>
-		<version>1.0.02-SNAPSHOT</version>
+		<groupId>org.metricshub</groupId>
+		<artifactId>metricshub-community</artifactId>
+		<version>3.9.04-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -12,9 +12,12 @@
 	<description>MetricsHub Monitoring Agent</description>
 
 	<properties>
-		<log4j2.version>2.22.0</log4j2.version>
+		<log4j2.version>2.25.3</log4j2.version>
 		<!-- OpenTelemetry Javaagent location -->
 		<otelJavaAgentUrl>https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${openTelemetryVersion}/opentelemetry-javaagent.jar</otelJavaAgentUrl>
+		<jjwt.version>0.13.0</jjwt.version>
+		<spring.boot.version>3.5.8</spring.boot.version>
+		<spring.ai.version>1.1.2</spring.ai.version>
 	</properties>
 
 	<dependencies>
@@ -41,10 +44,18 @@
 			<version>${project.version}</version>
 		</dependency>
 
+		<!-- MetricsHub Programmable Configuration Extension (Velocity template evaluation) -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-programmable-configuration-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
 		<!-- MetricsHub Community Connectors -->
 		<dependency>
-			<groupId>org.sentrysoftware</groupId>
-			<artifactId>metricshub-community-connectors</artifactId>
+			<groupId>org.metricshub</groupId>
+			<artifactId>community-connectors</artifactId>
 			<classifier>sources</classifier>
 		</dependency>
 
@@ -62,40 +73,115 @@
 			<artifactId>jackson-core</artifactId>
 		</dependency>
 
-		<!-- OpenTelemetry -->
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-api</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-sdk</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-exporter-otlp</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-sdk-extension-autoconfigure</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-sdk-common</artifactId>
-		</dependency>
-
-		<!-- gRPC -->
+		<!-- gRPC Core -->
 		<dependency>
 			<groupId>io.grpc</groupId>
 			<artifactId>grpc-netty-shaded</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-protobuf</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.grpc</groupId>
+			<artifactId>grpc-stub</artifactId>
+		</dependency>
+
+		<!-- OpenTelemetry PROTO -->
+		<dependency>
+			<groupId>io.opentelemetry.proto</groupId>
+			<artifactId>opentelemetry-proto</artifactId>
+		</dependency>
+
+		<!-- Google Protobuf -->
+		<dependency>
+			<groupId>com.google.protobuf</groupId>
+			<artifactId>protobuf-java</artifactId>
+		</dependency>
+
+		<!-- Spring framework -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+			<version>${spring.ai.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.springframework.boot</groupId>
+					<artifactId>spring-boot-starter-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<!-- Official OpenAI SDK -->
+		<dependency>
+			<groupId>com.openai</groupId>
+			<artifactId>openai-java</artifactId>
+			<version>4.13.0</version>
+		</dependency>
+		<dependency>
+			<groupId>com.openai</groupId>
+			<artifactId>openai-java-client-okhttp</artifactId>
+			<version>4.13.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+			<version>5.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents.core5</groupId>
+			<artifactId>httpcore5</artifactId>
+			<version>5.4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.apache.httpcomponents.core5</groupId>
+					<artifactId>httpcore5-h2</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+			<version>${spring.boot.version}</version>
+		</dependency>
+
+		<!-- OpenAPI / Swagger UI -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>2.8.16</version>
+		</dependency>
+
+		<!-- JWT -->
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jjwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jjwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
 
 		<!-- Test -->
-		<dependency>
-			<groupId>io.opentelemetry</groupId>
-			<artifactId>opentelemetry-sdk-testing</artifactId>
-			<scope>test</scope>
-		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
@@ -112,14 +198,9 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.mockito</groupId>
-			<artifactId>mockito-inline</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
 			<groupId>org.awaitility</groupId>
 			<artifactId>awaitility</artifactId>
-			<version>4.2.0</version>
+			<version>4.3.0</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -195,6 +276,31 @@
 			<version>${project.version}</version>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-jmx-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-yaml-configuration-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>metricshub-bmchelix-enrichment-extension</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<version>3.5.0</version>
+			<scope>test</scope>
+		</dependency>
 
 		<!-- Log4j2 -->
 		<dependency>
@@ -210,12 +316,17 @@
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j2-impl</artifactId>
-			<version>2.22.1</version>
+			<version>${log4j2.version}</version>
 		</dependency>
 
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>jul-to-slf4j</artifactId>
 		</dependency>
 
 		<!-- CLI jansi -->
@@ -255,6 +366,35 @@
 				</configuration>
 			</plugin>
 
+			<!-- Generate default TLS keystore packaged in the agent JAR -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>keytool-maven-plugin</artifactId>
+				<version>2.0.0</version>
+				<executions>
+					<execution>
+						<id>create-default-m8b-keystore</id>
+						<phase>generate-resources</phase>
+						<goals>
+							<goal>generateKeyPair</goal>
+						</goals>
+						<configuration>
+							<alias>tls-selfsigned</alias>
+							<dname>CN=localhost,OU=MetricsHub,O=MetricsHub,C=FR</dname>
+							<keyalg>RSA</keyalg>
+							<keysize>2048</keysize>
+							<sigalg>SHA256withRSA</sigalg>
+							<validity>3650</validity>
+							<storetype>PKCS12</storetype>
+							<storepass>NOPWD</storepass>
+							<keypass>NOPWD</keypass>
+							<keystore>${project.build.outputDirectory}/m8b-keystore.p12</keystore>
+							<skipIfExist>true</skipIfExist>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 			<!-- Unpack Connector Library -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -268,8 +408,8 @@
 						</goals>
 						<configuration>
 							<outputDirectory>${project.build.directory}/connectors</outputDirectory>
-							<includeGroupIds>org.sentrysoftware</includeGroupIds>
-							<includeArtifactIds>metricshub-community-connectors</includeArtifactIds>
+							<includeGroupIds>org.metricshub</includeGroupIds>
+							<includeArtifactIds>community-connectors</includeArtifactIds>
 							<classifier>sources</classifier>
 							<excludes>META-INF/**</excludes>
 						</configuration>
@@ -287,6 +427,7 @@
 					<systemPropertyVariables>
 						<jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
 					</systemPropertyVariables>
+					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>
 			</plugin>
 
@@ -320,7 +461,7 @@
 										<limit>
 											<counter>COMPLEXITY</counter>
 											<value>COVEREDRATIO</value>
-											<minimum>0.53</minimum>
+											<minimum>0.54</minimum>
 										</limit>
 									</limits>
 								</rule>
@@ -330,7 +471,7 @@
 				</executions>
 				<configuration>
 					<excludes>
-						<exclude>org/sentrysoftware/metricshub/agent/config/**</exclude>
+						<exclude>org/metricshub/agent/config/**</exclude>
 					</excludes>
 					<outputDirectory>${project.build.directory}/coverage-reports/jacoco</outputDirectory>
 				</configuration>
@@ -354,6 +495,16 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<!-- Dependency for Log4j2PluginCacheFileTransformer
+							due to the StatusLogger errors: https://github.com/apache/logging-log4j2/discussions/2874 
+						-->
+						<groupId>org.apache.logging.log4j</groupId>
+						<artifactId>log4j-transform-maven-shade-plugin-extensions</artifactId>
+						<version>0.1.0</version>
+					</dependency>
+				</dependencies>
 				<executions>
 					<execution>
 						<phase>package</phase>
@@ -363,13 +514,35 @@
 						<configuration>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>org.sentrysoftware.metricshub.agent.MetricsHubAgentApplication</mainClass>
+									<mainClass>org.metricshub.agent.MetricsHubAgentApplication</mainClass>
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
 									</manifestEntries>
 								</transformer>
+								<transformer implementation="org.apache.logging.log4j.maven.plugins.shade.transformer.Log4j2PluginCacheFileTransformer"/>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
 									<resource>META-INF/cxf/bus-extensions.txt</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.handlers</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.schemas</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring/org.springframework.boot.actuate.autoconfigure.web.ManagementContextConfiguration.imports</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring.factories</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring/aot.factories</resource>
+								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+									<resource>META-INF/spring-autoconfigure-metadata.properties</resource>
 								</transformer>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
 							</transformers>
@@ -388,7 +561,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<!-- assembly -->
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>

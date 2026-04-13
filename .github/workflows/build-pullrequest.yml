@@ -1,0 +1,41 @@
+name: Build - Pull Request
+run-name: Build - Pull Request ${{ github.head_ref }}
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      debug:
+        type: boolean
+        description: Maven debug mode
+        required: false
+        default: false
+      ssh:
+        type: boolean
+        description: Open SSH session in the runner
+        required: false
+        default: false
+
+jobs:
+
+  build-community-artifacts:
+    name: Build Community Artifacts
+    uses: ./.github/workflows/maven-build.yml
+    with:
+      jdkVersion: "21"
+      debug: ${{ github.event_name == 'workflow_dispatch' && inputs.debug }}
+      ssh: ${{ github.event_name == 'workflow_dispatch' && inputs.ssh }}
+      mavenPhases: "clean verify"
+    secrets: inherit
+
+  package-community:
+    name: Package Community Artifacts
+    needs: build-community-artifacts
+    uses: ./.github/workflows/packaging.yml
+    with:
+      jdkVersion: "21"
+      assetPackage: ${{ needs.build-community-artifacts.outputs.packageArtifact }}
+      version: ${{ needs.build-community-artifacts.outputs.version }}
+      deploy: true
+    secrets: inherit

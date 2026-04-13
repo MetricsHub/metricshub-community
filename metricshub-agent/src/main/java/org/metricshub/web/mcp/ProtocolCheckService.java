@@ -1,0 +1,232 @@
+package org.metricshub.web.mcp;
+
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Agent
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2025 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import org.metricshub.engine.common.helpers.NumberHelper;
+import org.metricshub.engine.configuration.HostConfiguration;
+import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.extension.IProtocolExtension;
+import org.metricshub.engine.telemetry.HostProperties;
+import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.web.AgentContextHolder;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+/**
+ * Service responsible for checking the reachability and availability of a host
+ * using a specified protocol (e.g., SSH, WinRM, WMI, etc.).
+ * <p>
+ * This service dynamically resolves the appropriate {@link IProtocolExtension}
+ * based on the provided protocol type, builds the corresponding configuration,
+ * and delegates the protocol check operation.
+ * </p>
+ */
+@Service
+public class ProtocolCheckService implements IMCPToolService {
+
+	/**
+	 * Default timeout to be used for protocol check
+	 */
+	private static final long DEFAULT_PROTOCOL_CHECK_TIMEOUT = 10L;
+
+	/**
+	 * Default pool size for protocol checks.
+	 */
+	private static final int DEFAULT_PROTOCOL_CHECK_POOL_SIZE = 60;
+
+	/**
+	 * Holds contextual information about the current agent instance.
+	 */
+	private AgentContextHolder agentContextHolder;
+
+	/**
+	 * Constructor for PingToolService.
+	 *
+	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
+	 */
+	@Autowired
+	public ProtocolCheckService(AgentContextHolder agentContextHolder) {
+		this.agentContextHolder = agentContextHolder;
+	}
+
+	/**
+	 * Checks whether the specified host is reachable using the specified protocol.
+	 *
+	 * @param hostname the target host to check
+	 * @param protocol the name of the protocol to check (e.g., http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, wmi)
+	 * @param timeout optional timeout for the HTTP check in seconds
+	 * @param poolSize optional pool size for concurrent protocol checks; defaults to {@value #DEFAULT_PROTOCOL_CHECK_POOL_SIZE} when {@code null} or ≤ 0
+	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long the check took
+	 */
+	@Tool(
+		name = "CheckProtocol",
+		description = """
+		Determines if the specified hosts are accessible using a given protocol.
+		Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi.
+		Provides a response detailing the host reachability status along with the response time.
+		"""
+	)
+	public MultiHostToolResponse<ProtocolCheckResponse> checkProtocol(
+		@ToolParam(description = "The hostname(s) to check") final List<String> hostname,
+		@ToolParam(
+			description = "The name of the protocol to check. Supported protocols include: http, ipmi, jdbc, jmx, snmp, snmpv3, ssh, wbem, winrm, and wmi",
+			required = true
+		) final String protocol,
+		@ToolParam(description = "Timeout for the protocol check in seconds", required = false) final Long timeout,
+		@ToolParam(
+			description = "Optional pool size for concurrent protocol checks. Defaults to 60.",
+			required = false
+		) final Integer poolSize
+	) {
+		final String protocolIdentifier = protocol;
+		final int resolvedPoolSize = resolvePoolSize(poolSize, DEFAULT_PROTOCOL_CHECK_POOL_SIZE);
+		return agentContextHolder
+			.getAgentContext()
+			.getExtensionManager()
+			.findExtensionByType(protocol)
+			.map((IProtocolExtension extension) ->
+				executeForHosts(
+					hostname,
+					this::buildNullHostnameResponse,
+					host ->
+						HostToolResponse
+							.<ProtocolCheckResponse>builder()
+							.hostname(host)
+							.response(checkWithExtension(host, timeout, extension))
+							.build(),
+					resolvedPoolSize
+				)
+			)
+			.orElseGet(() -> MultiHostToolResponse.buildError(protocolIdentifier + " extension is not available"));
+	}
+
+	/**
+	 * Performs a safe protocol check using the provided extension.
+	 *
+	 * @param hostname the target host to check
+	 * @param timeout optional timeout for the protocol check in seconds
+	 * @param extension the protocol extension to use
+	 * @return a {@link ProtocolCheckResponse} indicating the reachability status or an error message if an exception occurs
+	 */
+	private ProtocolCheckResponse checkWithExtension(
+		final String hostname,
+		final Long timeout,
+		final IProtocolExtension extension
+	) {
+		try {
+			return checkProtocolWithExtensionSafe(hostname, extension.getIdentifier(), timeout, extension);
+		} catch (Exception e) {
+			// Error
+			return ProtocolCheckResponse
+				.builder()
+				.hostname(hostname)
+				.errorMessage("Error detected during protocol check: " + e.getMessage())
+				.build();
+		}
+	}
+
+	/**
+	 * Executes a protocol check using all available configurations for the given host.
+	 * Returns as soon as one configuration reports the host as reachable.
+	 *
+	 * @param hostname  the host to check
+	 * @param protocol  the protocol type used (e.g., "ssh", "snmp", etc.)
+	 * @param timeout  the timeout for the protocol check operation in seconds
+	 * @param extension the resolved protocol extension responsible for performing the check
+	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long it took
+	 */
+	public ProtocolCheckResponse checkProtocolWithExtensionSafe(
+		final String hostname,
+		final String protocol,
+		final Long timeout,
+		final IProtocolExtension extension
+	) {
+		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
+			hostname,
+			agentContextHolder
+		);
+
+		for (final IConfiguration configuration : configurations) {
+			IConfiguration validConfiguration = configuration;
+
+			if (!extension.isValidConfiguration(configuration)) {
+				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
+				if (validConfiguration == null) {
+					continue;
+				}
+			}
+
+			validConfiguration.setHostname(hostname);
+			validConfiguration.setTimeout(
+				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
+			);
+
+			final var telemetryManager = TelemetryManager
+				.builder()
+				.hostConfiguration(
+					HostConfiguration
+						.builder()
+						.configurations(Map.of(validConfiguration.getClass(), validConfiguration))
+						.hostname(hostname)
+						.build()
+				)
+				.hostProperties(HostProperties.builder().mustCheckSshStatus(protocol.equalsIgnoreCase("ssh")).build())
+				.build();
+
+			final long startTime = System.currentTimeMillis();
+			final Optional<Boolean> response = extension.checkProtocol(telemetryManager);
+
+			if (response.isPresent()) {
+				final boolean isUp = response.get();
+				if (isUp) {
+					final double responseTime = (System.currentTimeMillis() - startTime);
+					return ProtocolCheckResponse
+						.builder()
+						.hostname(hostname)
+						.isReachable(true)
+						.responseTime(responseTime)
+						.build();
+				}
+			}
+		}
+
+		return ProtocolCheckResponse.builder().hostname(hostname).isReachable(false).build();
+	}
+
+	/**
+	 * Builds a {@link HostToolResponse} indicating that the hostname parameter was
+	 * not provided.
+	 *
+	 * @return a host-level response with an error payload highlighting the missing hostname
+	 */
+	private HostToolResponse<ProtocolCheckResponse> buildNullHostnameResponse() {
+		return IMCPToolService.super.buildNullHostnameResponse(() ->
+			ProtocolCheckResponse.builder().errorMessage(NULL_HOSTNAME_ERROR).build()
+		);
+	}
+}

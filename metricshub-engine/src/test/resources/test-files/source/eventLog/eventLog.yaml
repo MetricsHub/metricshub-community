@@ -1,0 +1,12 @@
+connector:
+  detection:
+    appliesTo: Windows
+
+beforeAll:
+  testEventLogSource:
+    type: eventLog
+    logName: System
+    sources: WindowsUpdateClient, Kernel-Power
+    eventIds: 566, 507, 19, 43, 44
+    maxEventsPerPoll: 30
+    levels: info , warn, err

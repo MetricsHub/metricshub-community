@@ -19,13 +19,17 @@ on:
         description: "Release staging repository immediately?"
         required: false
         default: false
+      pushToDockerHub:
+        type: boolean
+        description: "Publish Docker images on Docker Hub?"
+        required: false
+        default: false
 
 permissions:
   contents: write
   pull-requests: write
-  pages: write
-  id-token: write
   packages: write
+  id-token: write
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these releases and deployments to complete.
@@ -40,8 +44,7 @@ defaults:
     
 jobs:
   prepare:
-    name:  Prepare Release v${{ inputs.releaseVersion }}
-
+    name: Prepare Release v${{ inputs.releaseVersion }}
     runs-on: ubuntu-latest
 
     outputs:
@@ -49,10 +52,10 @@ jobs:
       tagName: ${{ env.tagName }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Set up JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'temurin'
@@ -110,39 +113,35 @@ jobs:
         git push origin ${{ env.branchName }}
 
   release:
-    name: Release v${{ inputs.releaseVersion }} on ${{ matrix.os }}
-
+    name: Build Release v${{ inputs.releaseVersion }}
     needs: prepare
+    runs-on: ubuntu-latest
 
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ ubuntu-latest, windows-latest ]
-    
     steps:
-
-    - name: Setup GitHub Pages
-      id: pages
-      uses: actions/configure-pages@v5
-      with:
-        enablement: true
-
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Set up JDK 21
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         java-version: '21'
         distribution: 'temurin'
         cache: 'maven'
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
 
-    - name: Set up Maven settings.xml on ${{ matrix.os }}
-      uses: s4u/maven-settings-action@v3.1.0
+    - name: Set up Maven settings.xml
+      uses: s4u/maven-settings-action@v4.0.0
       with:
-        repositories: '[{"id":"github","name":"MetricsHub JRE Builder","url":"https://maven.pkg.github.com/sentrysoftware/metricshub-jre-builder","snapshots":{"enabled":true},"releases":{"enabled":true}}]'
-        servers: '[{"id": "ossrh", "username": "${env.OSSRH_USERNAME}", "password": "${env.OSSRH_TOKEN}"}, {"id": "gpg.passphrase", "passphrase": "${env.MAVEN_GPG_PASSPHRASE}", "configuration": {}}]'
+        repositories: >-
+          [
+            {
+              "id": "central-snapshots",
+              "name": "Maven Repository Switchboard",
+              "url": "https://central.sonatype.com/repository/maven-snapshots",
+              "snapshots": { "enabled": true },
+              "releases": { "enabled": false }
+            }
+          ]
+        servers: '[{"id": "central", "username": "${env.MAVEN_CENTRAL_USERNAME}", "password": "${env.MAVEN_CENTRAL_TOKEN}"}, {"id": "gpg.passphrase", "passphrase": "${env.MAVEN_GPG_PASSPHRASE}", "configuration": {}}]'
         sonatypeSnapshots: true
 
     - name: Checkout ${{ needs.prepare.outputs.tagName }} branch
@@ -159,91 +158,81 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
         AUTO_RELEASE_AFTER_CLOSE: ${{ inputs.autoRelease }}
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        MAVEN_CENTRAL_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+        MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
 
-    - name: Upload Maven Site to GitHub Pages
-      uses: actions/upload-pages-artifact@v3
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        path: ./metricshub-doc/target/site
-
-    - name: Upload Linux Artifact
-      uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        name: metricshub-linux-package-${{ inputs.releaseVersion }}
-        path: |
-          ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}.tar.gz
-          ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}.buildinfo
-
-    - name: Upload Windows Artifact
-      uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'windows-latest' }}
-      with:
-        name: metricshub-windows-package-${{ inputs.releaseVersion }}
-        path: |
-          ./metricshub-windows/target/metricshub-windows-${{ inputs.releaseVersion }}.zip
-          ./metricshub-windows/target/metricshub-windows-${{ inputs.releaseVersion }}.buildinfo
-
-    - name: Upload Site Artifact
-      uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        name: metricshub-site-${{ inputs.releaseVersion }}
-        path: |
-          ./metricshub-doc/target/metricshub-doc-${{ inputs.releaseVersion }}-site.jar
-          ./metricshub-doc/target/metricshub-doc-${{ inputs.releaseVersion }}.buildinfo
-
-    - name: Upload Docker Artifact
-      uses: actions/upload-artifact@v4
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      with:
-        name: metricshub-docker-package-${{ inputs.releaseVersion }}
-        path: ./metricshub-linux/target/metricshub-linux-${{ inputs.releaseVersion }}-docker.tar.gz
-
-    - name: Summary with staging repositories and buildinfo
-      id: stagingList
+    - name: Get Project Version
+      id: version
       run: |
-        echo "# Staging Repositories" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        mvn -B -U \
-          -Prelease \
-          org.sonatype.plugins:nexus-staging-maven-plugin:rc-list >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        echo "# Buildinfo" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        cat target/*.buildinfo >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-      env:
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
+        echo "version=$(mvn help:evaluate -Dexpression=project.version -q -N -DforceStdout)" >> $GITHUB_OUTPUT
 
-  # Deployment job
-  deploy:
-    name: Deploy GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    - name: Prepare packaging assets
+      run: |
+        mkdir -p packaging-assets
+        cp metricshub-assets/target/assets-*.zip packaging-assets/
+        cp -r metricshub-assets/target/assets-docker/* packaging-assets/
+        cp -r metricshub-assets/target/assets-packaging/* packaging-assets/
+        ls -l packaging-assets/
+
+    - name: Upload Community Package Artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-artifacts
+        include-hidden-files: true
+        path: packaging-assets/
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      packageArtifacts: package-artifacts
+
+  # Create Packages for Linux and Windows
+  package-community:
+    name: Package Community Artifacts
     needs: release
-    steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v4
+    uses: ./.github/workflows/packaging.yml
+    with:
+      jdkVersion: "21"
+      assetPackage: ${{ needs.release.outputs.packageArtifacts }}
+      deploy: true
+      deployDockerHub: ${{ inputs.pushToDockerHub }}
+      debRepository: apt-releases-public
+      rpmRepository: rpm-releases-public
+      version: ${{ needs.release.outputs.version }}
+    secrets: inherit
 
   # Finalize job
   finalize:
+
     name: Finalize release
+
     runs-on: ubuntu-latest
-    needs: [ prepare, release, deploy ]
+
+    needs:
+    - prepare
+    - release
+    - package-community
+
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
-    - uses: actions/download-artifact@v4
+    - name: Download Package Artifacts
+      uses: actions/download-artifact@v8
       with:
         merge-multiple: true
+        name: ${{ needs.release.outputs.packageArtifacts }}
+
+    - name: Download Linux Package
+      uses: actions/download-artifact@v8
+      with:
+        merge-multiple: true
+        name: ${{ needs.package-community.outputs.linuxPackage }}
+
+    - name: Download Windows Package
+      uses: actions/download-artifact@v8
+      with:
+        merge-multiple: true
+        name: ${{ needs.package-community.outputs.windowsPackage }}
 
     - name: Create a GitHub Release
       uses: softprops/action-gh-release@v2
@@ -252,16 +241,12 @@ jobs:
         fail_on_unmatched_files: false
         generate_release_notes: true
         files: |
-          metricshub-linux-${{ inputs.releaseVersion }}-docker.tar.gz
-          metricshub-doc-${{ inputs.releaseVersion }}-site.jar
-          metricshub-doc-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-windows-${{ inputs.releaseVersion }}.zip
-          metricshub-windows-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-linux-${{ inputs.releaseVersion }}.buildinfo
-          metricshub-linux-${{ inputs.releaseVersion }}.tar.gz
+          metricshub-community-windows-${{ inputs.releaseVersion }}-AMD64.zip
+          metricshub-community-linux-${{ inputs.releaseVersion }}-aarch64.tar.gz
+          metricshub-community-linux-${{ inputs.releaseVersion }}-x86_64.tar.gz
 
     - name: Create Pull Request from ${{ needs.prepare.outputs.branchName }} to ${{ github.event.repository.default_branch }}
-      uses: devops-infra/action-pull-request@v0.6.0
+      uses: devops-infra/action-pull-request@v1.0.2
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ needs.prepare.outputs.branchName }}
@@ -275,3 +260,27 @@ jobs:
         label: automatic
         get_diff: true
         allow_no_diff: true
+
+    - name: Configure AWS Credentials
+      if: ${{ github.repository_owner == 'MetricsHub' }}
+      uses: aws-actions/configure-aws-credentials@v6.1.0
+      with:
+        role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
+        role-session-name: ci
+        aws-region: ${{ vars.AWS_REGION }}
+
+    - name: Publish Packages on MetricsHub.com Website
+      if: ${{ github.repository_owner == 'MetricsHub' }}
+      run: |
+        packagedir="packages/${{ github.ref_name }}"
+        mkdir -p ${packagedir}
+        ls -al
+        # Get packages
+        cp *.rpm "${packagedir}"
+        cp *.deb "${packagedir}"
+        cp *.msi "${packagedir}"
+        aws s3 cp ${packagedir}/ s3://${AWS_PROTECTED_BUCKET_NAME}/protected/metricshub-community/${{ inputs.releaseVersion }}/ --recursive
+      env:
+        AWS_PROTECTED_BUCKET_NAME: ${{ secrets.AWS_PROTECTED_BUCKET_NAME }}
+
+

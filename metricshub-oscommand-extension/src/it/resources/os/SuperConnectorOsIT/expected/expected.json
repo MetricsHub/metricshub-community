@@ -54,7 +54,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "battery",
     "id" : "SuperConnectorOS_battery_1",
@@ -115,7 +114,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "battery",
     "id" : "SuperConnectorOS_battery_2",
@@ -176,7 +174,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "battery",
     "id" : "SuperConnectorOS_battery_3",
@@ -225,7 +222,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "blade",
     "id" : "SuperConnectorOS_blade_1",
@@ -274,7 +270,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "blade",
     "id" : "SuperConnectorOS_blade_2",
@@ -306,7 +301,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "connector",
     "id" : "connector_SuperConnectorOS",
@@ -395,7 +389,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "cpu",
     "id" : "SuperConnectorOS_cpu_1",
@@ -484,7 +477,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "cpu",
     "id" : "SuperConnectorOS_cpu_2",
@@ -573,7 +565,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "cpu",
     "id" : "SuperConnectorOS_cpu_3",
@@ -612,7 +603,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "disk_controller",
     "id" : "SuperConnectorOS_disk_controller_1",
@@ -651,7 +641,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "disk_controller",
     "id" : "SuperConnectorOS_disk_controller_2",
@@ -690,7 +679,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "disk_controller",
     "id" : "SuperConnectorOS_disk_controller_3",
@@ -753,7 +741,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "enclosure",
     "id" : "SuperConnectorOS_enclosure_1",
@@ -802,7 +789,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "enclosure",
     "id" : "SuperConnectorOS_enclosure_2",
@@ -861,7 +847,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "fan",
     "id" : "SuperConnectorOS_fan_1",
@@ -920,7 +905,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "fan",
     "id" : "SuperConnectorOS_fan_2",
@@ -1091,7 +1075,6 @@
       "StatusInformation" : "Overheat"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "gpu",
     "id" : "SuperConnectorOS_gpu_GPUAMD150",
@@ -1235,7 +1218,6 @@
       "StatusInformation" : "Idle"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "gpu",
     "id" : "SuperConnectorOS_gpu_GPUINTEL",
@@ -1406,7 +1388,6 @@
       "StatusInformation" : "Normal"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "gpu",
     "id" : "SuperConnectorOS_gpu_GPUNvidia",
@@ -1416,25 +1397,15 @@
   }, {
     "metrics" : { },
     "attributes" : {
-      "is_endpoint" : "true",
-      "id" : "localhost",
-      "name" : "localhost",
-      "location" : "local"
+      "host.type" : "storage",
+      "os.type" : "storage"
     },
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : {
-      "type" : "host",
-      "attributes" : {
-        "host.type" : "storage",
-        "host.id" : "localhost",
-        "os.type" : "storage"
-      }
-    },
     "discoveryTime" : 1709803030590,
     "type" : "host",
-    "id" : "localhost",
+    "id" : "endpoint_host_localhost",
     "endpointHost" : true,
     "endpoint" : true,
     "is_endpoint" : true
@@ -1471,7 +1442,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "led",
     "id" : "SuperConnectorOS_led_1",
@@ -1511,7 +1481,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "led",
     "id" : "SuperConnectorOS_led_2",
@@ -1573,7 +1542,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "logical_disk",
     "id" : "SuperConnectorOS_logical_disk_1",
@@ -1635,7 +1603,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "logical_disk",
     "id" : "SuperConnectorOS_logical_disk_2",
@@ -1697,7 +1664,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "logical_disk",
     "id" : "SuperConnectorOS_logical_disk_3",
@@ -1772,7 +1738,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "logical_disk",
     "id" : "SuperConnectorOS_logical_disk_4",
@@ -1825,7 +1790,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "lun",
     "id" : "SuperConnectorOS_lun_1",
@@ -1878,7 +1842,6 @@
       "StatusInformation" : "UNKNOWN"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "lun",
     "id" : "SuperConnectorOS_lun_2",
@@ -1931,7 +1894,6 @@
       "StatusInformation" : "Dead"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "lun",
     "id" : "SuperConnectorOS_lun_3",
@@ -1984,7 +1946,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "lun",
     "id" : "SuperConnectorOS_lun_4",
@@ -2062,7 +2023,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "memory",
     "id" : "SuperConnectorOS_memory_1",
@@ -2127,7 +2087,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "memory",
     "id" : "SuperConnectorOS_memory_2",
@@ -2205,7 +2164,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "memory",
     "id" : "SuperConnectorOS_memory_3",
@@ -2309,7 +2267,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "network",
     "id" : "SuperConnectorOS_network_1",
@@ -2413,7 +2370,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "network",
     "id" : "SuperConnectorOS_network_2",
@@ -2557,7 +2513,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "network",
     "id" : "SuperConnectorOS_network_3",
@@ -2712,7 +2667,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "network",
     "id" : "SuperConnectorOS_network_4",
@@ -2798,7 +2752,6 @@
       "StatusInformation" : "Working fine"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "other_device",
     "id" : "SuperConnectorOS_other_device_1",
@@ -2884,7 +2837,6 @@
       "StatusInformation" : "Atention ralentissements"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "other_device",
     "id" : "SuperConnectorOS_other_device_2",
@@ -2959,7 +2911,6 @@
       "StatusInformation" : "Les commandes ne repondent plus"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "other_device",
     "id" : "SuperConnectorOS_other_device_3",
@@ -3150,7 +3101,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_1",
@@ -3341,7 +3291,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_10",
@@ -3532,7 +3481,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_100",
@@ -3723,7 +3671,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_101",
@@ -3914,7 +3861,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_102",
@@ -4105,7 +4051,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_103",
@@ -4296,7 +4241,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_104",
@@ -4487,7 +4431,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_105",
@@ -4678,7 +4621,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_106",
@@ -4869,7 +4811,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_107",
@@ -5060,7 +5001,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_108",
@@ -5251,7 +5191,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_109",
@@ -5442,7 +5381,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_11",
@@ -5633,7 +5571,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_110",
@@ -5824,7 +5761,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_111",
@@ -6015,7 +5951,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_112",
@@ -6206,7 +6141,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_113",
@@ -6397,7 +6331,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_114",
@@ -6588,7 +6521,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_115",
@@ -6779,7 +6711,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_116",
@@ -6970,7 +6901,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_117",
@@ -7161,7 +7091,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_118",
@@ -7352,7 +7281,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_119",
@@ -7543,7 +7471,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_12",
@@ -7734,7 +7661,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_120",
@@ -7925,7 +7851,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_121",
@@ -8116,7 +8041,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_122",
@@ -8307,7 +8231,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_123",
@@ -8498,7 +8421,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_124",
@@ -8689,7 +8611,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_125",
@@ -8880,7 +8801,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_126",
@@ -9071,7 +8991,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_127",
@@ -9262,7 +9181,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_128",
@@ -9453,7 +9371,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_129",
@@ -9644,7 +9561,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_13",
@@ -9835,7 +9751,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_130",
@@ -10026,7 +9941,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_131",
@@ -10217,7 +10131,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_132",
@@ -10408,7 +10321,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_133",
@@ -10599,7 +10511,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_134",
@@ -10790,7 +10701,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_135",
@@ -10981,7 +10891,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_136",
@@ -11172,7 +11081,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_137",
@@ -11363,7 +11271,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_138",
@@ -11554,7 +11461,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_139",
@@ -11745,7 +11651,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_14",
@@ -11936,7 +11841,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_140",
@@ -12127,7 +12031,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_141",
@@ -12318,7 +12221,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_142",
@@ -12509,7 +12411,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_143",
@@ -12700,7 +12601,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_144",
@@ -12891,7 +12791,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_145",
@@ -13082,7 +12981,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_146",
@@ -13273,7 +13171,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_147",
@@ -13464,7 +13361,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_148",
@@ -13655,7 +13551,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_149",
@@ -13846,7 +13741,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_15",
@@ -14037,7 +13931,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_150",
@@ -14228,7 +14121,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_151",
@@ -14419,7 +14311,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_152",
@@ -14610,7 +14501,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_153",
@@ -14801,7 +14691,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_154",
@@ -14992,7 +14881,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_155",
@@ -15183,7 +15071,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_156",
@@ -15374,7 +15261,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_157",
@@ -15565,7 +15451,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_158",
@@ -15756,7 +15641,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_159",
@@ -15947,7 +15831,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_16",
@@ -16138,7 +16021,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_160",
@@ -16329,7 +16211,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_161",
@@ -16520,7 +16401,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_162",
@@ -16711,7 +16591,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_163",
@@ -16902,7 +16781,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_164",
@@ -17093,7 +16971,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_165",
@@ -17284,7 +17161,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_166",
@@ -17475,7 +17351,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_167",
@@ -17666,7 +17541,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_168",
@@ -17857,7 +17731,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_169",
@@ -18048,7 +17921,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_17",
@@ -18239,7 +18111,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_170",
@@ -18430,7 +18301,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_171",
@@ -18621,7 +18491,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_172",
@@ -18812,7 +18681,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_173",
@@ -19003,7 +18871,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_174",
@@ -19194,7 +19061,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_175",
@@ -19385,7 +19251,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_176",
@@ -19576,7 +19441,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_177",
@@ -19767,7 +19631,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_178",
@@ -19958,7 +19821,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_179",
@@ -20149,7 +20011,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_18",
@@ -20340,7 +20201,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_180",
@@ -20531,7 +20391,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_181",
@@ -20722,7 +20581,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_182",
@@ -20913,7 +20771,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_183",
@@ -21104,7 +20961,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_184",
@@ -21295,7 +21151,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_185",
@@ -21486,7 +21341,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_186",
@@ -21677,7 +21531,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_187",
@@ -21868,7 +21721,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_188",
@@ -22059,7 +21911,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_189",
@@ -22250,7 +22101,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_19",
@@ -22441,7 +22291,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_190",
@@ -22632,7 +22481,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_191",
@@ -22823,7 +22671,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_192",
@@ -23014,7 +22861,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_193",
@@ -23205,7 +23051,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_194",
@@ -23396,7 +23241,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_195",
@@ -23587,7 +23431,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_196",
@@ -23778,7 +23621,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_197",
@@ -23969,7 +23811,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_198",
@@ -24160,7 +24001,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_199",
@@ -24351,7 +24191,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_2",
@@ -24542,7 +24381,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_20",
@@ -24733,7 +24571,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_200",
@@ -24924,7 +24761,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_201",
@@ -25115,7 +24951,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_202",
@@ -25306,7 +25141,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_203",
@@ -25497,7 +25331,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_204",
@@ -25688,7 +25521,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_205",
@@ -25879,7 +25711,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_206",
@@ -26070,7 +25901,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_207",
@@ -26261,7 +26091,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_208",
@@ -26452,7 +26281,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_209",
@@ -26643,7 +26471,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_21",
@@ -26834,7 +26661,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_210",
@@ -27025,7 +26851,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_211",
@@ -27216,7 +27041,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_212",
@@ -27407,7 +27231,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_213",
@@ -27598,7 +27421,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_214",
@@ -27789,7 +27611,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_215",
@@ -27980,7 +27801,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_216",
@@ -28171,7 +27991,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_217",
@@ -28362,7 +28181,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_218",
@@ -28553,7 +28371,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_219",
@@ -28744,7 +28561,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_22",
@@ -28935,7 +28751,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_220",
@@ -29126,7 +28941,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_221",
@@ -29317,7 +29131,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_222",
@@ -29508,7 +29321,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_223",
@@ -29699,7 +29511,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_224",
@@ -29890,7 +29701,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_225",
@@ -30081,7 +29891,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_226",
@@ -30272,7 +30081,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_227",
@@ -30463,7 +30271,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_228",
@@ -30654,7 +30461,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_229",
@@ -30845,7 +30651,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_23",
@@ -31036,7 +30841,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_230",
@@ -31227,7 +31031,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_231",
@@ -31418,7 +31221,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_232",
@@ -31609,7 +31411,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_233",
@@ -31800,7 +31601,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_234",
@@ -31991,7 +31791,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_235",
@@ -32182,7 +31981,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_236",
@@ -32373,7 +32171,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_237",
@@ -32564,7 +32361,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_238",
@@ -32755,7 +32551,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_239",
@@ -32946,7 +32741,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_24",
@@ -33137,7 +32931,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_240",
@@ -33328,7 +33121,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_241",
@@ -33519,7 +33311,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_242",
@@ -33710,7 +33501,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_243",
@@ -33901,7 +33691,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_244",
@@ -34092,7 +33881,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_245",
@@ -34283,7 +34071,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_246",
@@ -34474,7 +34261,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_247",
@@ -34665,7 +34451,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_248",
@@ -34856,7 +34641,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_249",
@@ -35047,7 +34831,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_25",
@@ -35238,7 +35021,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_250",
@@ -35429,7 +35211,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_26",
@@ -35620,7 +35401,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_27",
@@ -35811,7 +35591,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_28",
@@ -36002,7 +35781,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_29",
@@ -36193,7 +35971,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_3",
@@ -36384,7 +36161,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_30",
@@ -36575,7 +36351,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_31",
@@ -36766,7 +36541,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_32",
@@ -36957,7 +36731,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_33",
@@ -37148,7 +36921,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_34",
@@ -37339,7 +37111,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_35",
@@ -37530,7 +37301,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_36",
@@ -37721,7 +37491,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_37",
@@ -37912,7 +37681,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_38",
@@ -38103,7 +37871,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_39",
@@ -38294,7 +38061,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_4",
@@ -38485,7 +38251,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_40",
@@ -38676,7 +38441,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_41",
@@ -38867,7 +38631,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_42",
@@ -39058,7 +38821,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_43",
@@ -39249,7 +39011,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_44",
@@ -39440,7 +39201,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_45",
@@ -39631,7 +39391,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_46",
@@ -39822,7 +39581,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_47",
@@ -40013,7 +39771,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_48",
@@ -40204,7 +39961,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_49",
@@ -40395,7 +40151,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_5",
@@ -40586,7 +40341,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_50",
@@ -40777,7 +40531,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_500",
@@ -40968,7 +40721,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_501",
@@ -41159,7 +40911,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_502",
@@ -41350,7 +41101,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_503",
@@ -41541,7 +41291,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_51",
@@ -41732,7 +41481,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_52",
@@ -41923,7 +41671,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_53",
@@ -42114,7 +41861,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_54",
@@ -42305,7 +42051,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_55",
@@ -42496,7 +42241,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_56",
@@ -42687,7 +42431,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_57",
@@ -42878,7 +42621,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_58",
@@ -43069,7 +42811,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_59",
@@ -43260,7 +43001,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_6",
@@ -43451,7 +43191,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_60",
@@ -43642,7 +43381,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_61",
@@ -43833,7 +43571,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_62",
@@ -44024,7 +43761,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_63",
@@ -44215,7 +43951,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_64",
@@ -44406,7 +44141,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_65",
@@ -44597,7 +44331,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_66",
@@ -44788,7 +44521,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_67",
@@ -44979,7 +44711,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_68",
@@ -45170,7 +44901,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_69",
@@ -45361,7 +45091,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_7",
@@ -45552,7 +45281,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_70",
@@ -45743,7 +45471,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_71",
@@ -45934,7 +45661,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_72",
@@ -46125,7 +45851,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_73",
@@ -46316,7 +46041,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_74",
@@ -46507,7 +46231,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_75",
@@ -46698,7 +46421,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_76",
@@ -46889,7 +46611,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_77",
@@ -47080,7 +46801,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_78",
@@ -47271,7 +46991,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_79",
@@ -47462,7 +47181,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_8",
@@ -47653,7 +47371,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_80",
@@ -47844,7 +47561,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_81",
@@ -48035,7 +47751,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_82",
@@ -48226,7 +47941,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_83",
@@ -48417,7 +48131,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_84",
@@ -48608,7 +48321,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_85",
@@ -48799,7 +48511,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_86",
@@ -48990,7 +48701,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_87",
@@ -49181,7 +48891,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_88",
@@ -49372,7 +49081,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_89",
@@ -49563,7 +49271,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_9",
@@ -49754,7 +49461,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_90",
@@ -49945,7 +49651,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_91",
@@ -50136,7 +49841,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_92",
@@ -50327,7 +50031,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_93",
@@ -50518,7 +50221,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_94",
@@ -50709,7 +50411,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_95",
@@ -50900,7 +50601,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_96",
@@ -51091,7 +50791,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_97",
@@ -51282,7 +50981,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_98",
@@ -51473,7 +51171,6 @@
       "StatusInformation" : "Disk OK"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "physical_disk",
     "id" : "SuperConnectorOS_physical_disk_99",
@@ -51543,7 +51240,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "power_supply",
     "id" : "SuperConnectorOS_power_supply_1",
@@ -51613,7 +51309,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "power_supply",
     "id" : "SuperConnectorOS_power_supply_2",
@@ -51672,7 +51367,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "power_supply",
     "id" : "SuperConnectorOS_power_supply_3",
@@ -51738,7 +51432,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "robotics",
     "id" : "SuperConnectorOS_robotics_1",
@@ -51804,7 +51497,6 @@
       "StatusInformation" : "Cassette blocked"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "robotics",
     "id" : "SuperConnectorOS_robotics_2",
@@ -51870,7 +51562,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "robotics",
     "id" : "SuperConnectorOS_robotics_3",
@@ -51964,7 +51655,6 @@
       "StatusInformation" : "All good"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "tape_drive",
     "id" : "SuperConnectorOS_tape_drive_1",
@@ -52058,7 +51748,6 @@
       "StatusInformation" : "Critical failure"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "tape_drive",
     "id" : "SuperConnectorOS_tape_drive_2",
@@ -52152,7 +51841,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "tape_drive",
     "id" : "SuperConnectorOS_tape_drive_3",
@@ -52228,7 +51916,6 @@
       "StatusInformation" : "Temp ok"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "temperature",
     "id" : "SuperConnectorOS_temperature_1",
@@ -52304,7 +51991,6 @@
       "StatusInformation" : "Temp ok"
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "temperature",
     "id" : "SuperConnectorOS_temperature_2",
@@ -52350,7 +52036,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "vm",
     "id" : "SuperConnectorOS_vm_weil",
@@ -52396,7 +52081,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "vm",
     "id" : "SuperConnectorOS_vm_weil2",
@@ -52442,7 +52126,6 @@
     "conditionalCollection" : { },
     "legacyTextParameters" : { },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "vm",
     "id" : "SuperConnectorOS_vm_weil3",
@@ -52492,7 +52175,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "voltage",
     "id" : "SuperConnectorOS_voltage_1",
@@ -52542,7 +52224,6 @@
       "StatusInformation" : ""
     },
     "alertRules" : { },
-    "resource" : null,
     "discoveryTime" : 1709803029544,
     "type" : "voltage",
     "id" : "SuperConnectorOS_voltage_2",

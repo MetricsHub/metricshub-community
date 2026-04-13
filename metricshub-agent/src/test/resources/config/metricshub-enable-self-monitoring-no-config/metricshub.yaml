@@ -1,0 +1,18 @@
+# Disables gRPC protocol in unit tests
+otel:
+  otel.exporter.otlp.metrics.protocol: noop
+
+# Resource Groups configuration
+resourceGroups:
+    # Resource Group identifier
+  paris:
+    # Adds additional static attributes to all the resources in the group.
+    attributes:
+      site: Paris
+    resources:
+       # Resource configuration
+      server-1: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: server-1
+          host.type: storage

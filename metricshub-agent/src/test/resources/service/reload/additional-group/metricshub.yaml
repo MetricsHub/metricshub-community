@@ -1,0 +1,102 @@
+# Base: default-config.yaml with an added resource group 'lyon'
+loggerLevel: error
+jobPoolSize: 20
+outputDirectory: /opt/metricshub/logs
+collectPeriod: 1m
+discoveryCycle: 30
+
+alertingSystem:
+  disable: false
+  problemTemplate: Problem on ${FQDN} with ${MONITOR_NAME}.${NEWLINE}${NEWLINE}${ALERT_DETAILS}${NEWLINE}${NEWLINE}${FULLREPORT}
+
+sequential: false
+resolveHostnameToFqdn: false
+
+attributes:
+  site: Paris-main
+
+metrics:
+  hw.site.carbon_intensity: 250
+  hw.site.electricity_cost: 0.15
+  hw.site.pue: 1.5
+
+otel:
+  otel.exporter.otlp.metrics.protocol: noop
+
+resources:
+  top-level-server-1:
+    attributes:
+      host.name: top-level-server-1
+      host.type: storage
+    metrics:
+      hw.host.configured: 1
+    protocols:
+      http:
+        https: true
+        port: 443
+        username: username
+        password: password
+  top-level-server-2:
+    attributes:
+      host.name: top-level-server-2
+      host.type: storage
+    metrics:
+      hw.host.configured: 1
+    protocols:
+      http:
+        https: true
+        port: 443
+        username: username
+        password: password
+
+resourceGroups:
+  paris:
+    attributes:
+      site: Paris
+    metrics:
+      hw.site.carbon_intensity: 230
+      hw.site.electricity_cost: 0.12
+      hw.site.pue: 1.8
+    resources:
+      paris-server-1:
+        attributes:
+          host.name: paris-server-1
+          host.type: storage
+        metrics:
+          hw.host.configured: 1
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: username
+            password: password
+      paris-server-2:
+        attributes:
+          host.name: paris-server-2
+          host.type: storage
+        metrics:
+          hw.host.configured: 1
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: username
+            password: password
+  lyon:
+    attributes:
+      site: Lyon
+    metrics:
+      hw.site.carbon_intensity: 200
+      hw.site.electricity_cost: 0.10
+      hw.site.pue: 1.6
+    resources:
+      lyon-server-1:
+        attributes:
+          host.name: lyon-server-1
+          host.type: compute
+        protocols:
+          http:
+            https: true
+            port: 443
+            username: username
+            password: password

@@ -1,0 +1,125 @@
+import * as React from "react";
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { DataGrid } from "@mui/x-data-grid";
+import NodeTypeIcons from "../../tree/icons/NodeTypeIcons";
+import { sectionTitleSx, dataGridSx } from "./table-styles";
+
+const ATTRIBUTE_COLUMNS = [
+	{ field: "key", headerName: "Key", flex: 1 },
+	{ field: "value", headerName: "Value", flex: 1 },
+];
+
+/**
+ * Generic header section for an entity (Resource, Resource Group, Agent),
+ * showing its title/icon and attributes.
+ *
+ * @param {object} props - Component props
+ * @param {React.ReactNode} props.title - The title of the entity
+ * @param {string} [props.iconType] - The type of icon to display (agent, resource-group, resource)
+ * @param {React.ReactNode} [props.icon] - A custom icon element to display
+ * @param {Record<string, unknown>} [props.attributes] - Attributes of the entity
+ * @param {React.ReactNode} [props.children] - Child elements
+ * @param {React.ReactNode} [props.action] - Action element to display on the right
+ * @returns {JSX.Element | null}
+ */
+const EntityHeader = ({ title, iconType, icon, attributes, children, action }) => {
+	const hasAttributes = React.useMemo(
+		() => attributes && Object.keys(attributes).length > 0,
+		[attributes],
+	);
+
+	const rows = React.useMemo(
+		() =>
+			Object.entries(attributes || {}).map(([key, value]) => ({
+				id: key,
+				key,
+				value,
+			})),
+		[attributes],
+	);
+
+	const titleSx = React.useMemo(() => ({ display: "flex", alignItems: "center", gap: 0.5 }), []);
+
+	const attributesTitleSx = React.useMemo(() => ({ ...sectionTitleSx, mb: 1 }), []);
+
+	return (
+		<Box display="flex" flexDirection="column" gap={3}>
+			<Box display="flex" justifyContent="space-between" alignItems="flex-start">
+				<Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+					<Typography variant="h4" gutterBottom sx={{ ...titleSx, transition: "color 0.4s ease" }}>
+						{icon ? (
+							<Box component="span" sx={{ display: "inline-flex", mr: 1 }}>
+								{icon}
+							</Box>
+						) : (
+							iconType && <NodeTypeIcons type={iconType} fontSize="large" />
+						)}
+						{title}
+					</Typography>
+					{children}
+				</Box>
+				{action && <Box>{action}</Box>}
+			</Box>
+
+			{hasAttributes && (
+				<Accordion
+					defaultExpanded={false}
+					disableGutters
+					elevation={0}
+					square
+					sx={{
+						bgcolor: "transparent",
+						border: 1,
+						borderColor: "divider",
+						borderRadius: 1,
+						"&:before": { display: "none" },
+						"& .MuiAccordionSummary-root": {
+							minHeight: 48,
+							bgcolor: "action.hover",
+							borderRadius: 1,
+							"&:hover": {
+								bgcolor: "action.selected",
+							},
+						},
+						"& .MuiAccordionSummary-root.Mui-expanded": {
+							borderBottomLeftRadius: 0,
+							borderBottomRightRadius: 0,
+						},
+						"& .MuiAccordionDetails-root": {
+							p: 0,
+						},
+					}}
+				>
+					<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+						<Typography variant="h6" sx={{ ...attributesTitleSx, mb: 0 }}>
+							Attributes
+						</Typography>
+					</AccordionSummary>
+					<AccordionDetails>
+						<DataGrid
+							rows={rows}
+							columns={ATTRIBUTE_COLUMNS}
+							disableRowSelectionOnClick
+							hideFooter
+							autoHeight
+							density="compact"
+							sx={{
+								...dataGridSx,
+								border: 0,
+								borderRadius: 0,
+								"& .MuiDataGrid-columnHeaders": {
+									...dataGridSx["& .MuiDataGrid-columnHeaders"],
+									borderTop: 1,
+									borderColor: "divider",
+								},
+							}}
+						/>
+					</AccordionDetails>
+				</Accordion>
+			)}
+		</Box>
+	);
+};
+
+export default React.memo(EntityHeader);

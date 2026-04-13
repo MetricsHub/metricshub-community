@@ -1,0 +1,1 @@
+@metricshub-jre.version@

@@ -1,0 +1,97 @@
+resources:
+    # Resource configuration
+  snmp-resources: 
+    # Adds additional static attributes to the resource.
+    attributes:
+      host.name: [ snmp-agent-1, snmp-agent-2 ]
+      host.id: [ snmp-agent-1-id, snmp-agent-2-id ]
+      host.type: storage
+    protocols:
+      snmp:
+        hostname: [ snmp-agent-1-card, snmp-agent-2-card ]
+        version: 2c
+
+# Disables gRPC protocol in unit tests
+otel:
+  otel.exporter.otlp.metrics.protocol: noop
+
+# Resource Groups configuration
+resourceGroups:
+    # Resource Group identifier
+  paris:
+    # Adds additional static metrics to all the resources in the group.
+    resources:
+       # Resource configuration
+      ssh-resources1: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-1, server-2 ]
+          host.id: [ server-1-id, server-2-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+      ssh-resources2: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: server-3
+          host.id: [ server-3-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+      ssh-resources3: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-4, server-5 ]
+          host.id: [ server-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+      ssh-resources4: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-6, server-7 ]
+          host.id: [ server-6-id, server-7-id, server-8-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+      ssh-resources5: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-8, server-9 ]
+          host.id: [ server-8-id, server-9-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+            hostname: [ server-8-card, server-9-card ]
+      ssh-resources6: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-10, server-11 ]
+          host.id: [ server-10-id, server-11-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+            hostname: [ server-card ]
+      ssh-resources7: 
+        # Adds additional static attributes to the resource.
+        attributes:
+          host.name: [ server-12, server-13 ]
+          host.id: [ server-12-id, server-13-id ]
+          host.type: storage
+        protocols:
+          ssh:
+            username: username
+            password: pass
+            hostname: [ server-12-card, server-13-card, server-14-card ]

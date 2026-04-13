@@ -2,7 +2,7 @@
 connector:
   detection:
     criteria:
-    # Hardware Sentry v10.3.00+
+    # Hardware v10.3.00+
     - type: productRequirements
       kmVersion: 10.3.00
     - type: http

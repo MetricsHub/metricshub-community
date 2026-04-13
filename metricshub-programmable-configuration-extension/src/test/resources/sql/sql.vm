@@ -1,0 +1,26 @@
+## Velocity syntax reminder: # = directive, ## = comment, $ = variable
+
+#set($url = "jdbc:h2:mem:testdb1")
+#set($user = "sa")
+#set($pass = "pwd1")
+#set($rows = $sql.query("SELECT hostname, ostype, username, password FROM users ORDER BY hostname", $url, $user, $pass, 120))
+resources:
+#foreach($r in $rows)
+  #set($hostname = $r.get(0))
+  #set($ostype   = $r.get(1))
+  #set($username = $r.get(2))
+  #set($password = $r.get(3))
+  #if($ostype.equals("STORAGE"))
+  $hostname:
+    attributes:
+      host.name: $hostname
+      host.type: $ostype
+    protocols:
+      http:
+        hostname: $hostname
+        https: true
+        port: 443
+        username: $username
+        password: $password
+  #end
+#end
