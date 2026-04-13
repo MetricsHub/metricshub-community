@@ -2,6 +2,7 @@ import { httpRequest } from "../../utils/axios-request";
 import { normalizeAxiosError } from "../../utils/http-errors";
 
 const BASE = "/api/config-files";
+const SECURITY_BASE = "/api/security";
 
 // Backward-compatible alias used locally in this module
 const normalizeError = (e, fallback = "Request failed") => normalizeAxiosError(e, fallback);
@@ -261,23 +262,29 @@ class ConfigApi {
 	}
 
 	/**
-	 * Encrypt password via agent keystore. Request body is Base64(UTF-8(password)), not plaintext.
+	 * Encrypt password via agent keystore. Request JSON: { passwordBase64 } (UTF-8 password bytes, Base64-encoded).
 	 * @param {string} passwordBase64Transport Base64-encoded UTF-8 bytes of the password
 	 * @param {{ signal?: AbortSignal }} opts
-	 * @returns {Promise<string>} Encrypted value as plain text
+	 * @returns {Promise<string>} Encrypted password string (encryptedPassword from response)
 	 */
 	encryptPassword(passwordBase64Transport, opts = {}) {
 		const { signal } = opts;
 		return new Promise((resolve, reject) => {
 			httpRequest({
-				url: `${BASE}/encrypt-password`,
+				url: `${SECURITY_BASE}/encrypt-password`,
 				method: "POST",
 				signal,
-				data: passwordBase64Transport,
-				headers: { "Content-Type": "text/plain", Accept: "text/plain" },
-				responseType: "text",
+				data: { passwordBase64: passwordBase64Transport },
+				headers: { "Content-Type": "application/json", Accept: "application/json" },
 			})
-				.then(({ data }) => resolve(data))
+				.then(({ data }) => {
+					const ciphertext = data?.encryptedPassword;
+					if (ciphertext == null) {
+						reject(new Error("Password encryption failed: missing encryptedPassword"));
+						return;
+					}
+					resolve(ciphertext);
+				})
 				.catch((e) => reject(normalizeError(e, "Password encryption failed")));
 		});
 	}

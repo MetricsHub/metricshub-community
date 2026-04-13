@@ -1,8 +1,8 @@
 import * as React from "react";
 import {
 	Button,
+	CircularProgress,
 	Dialog,
-	DialogActions,
 	DialogContent,
 	DialogTitle,
 	IconButton,
@@ -11,6 +11,7 @@ import {
 	TextField,
 } from "@mui/material";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
+import CloseIcon from "@mui/icons-material/Close";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
@@ -44,6 +45,25 @@ async function copyTextToClipboard(text) {
 	}
 }
 
+/** Minimum time to show the encrypt spinner so the UI does not flash on fast responses. */
+const ENCRYPT_SPINNER_MIN_MS = 400;
+
+function delay(ms) {
+	return new Promise((resolve) => {
+		setTimeout(resolve, ms);
+	});
+}
+
+/** Mask ciphertext in the UI: only the last 4 characters are visible; the rest are asterisks. */
+function maskCiphertextForDisplay(ciphertext) {
+	if (!ciphertext) return "";
+	const n = ciphertext.length;
+	if (n <= 4) {
+		return "*".repeat(n);
+	}
+	return `${"*".repeat(n - 4)}${ciphertext.slice(-4)}`;
+}
+
 /** Opens a dialog to encrypt a password via the agent; ciphertext is copied to the clipboard. */
 export default function EncryptPasswordDialog({
 	disabled = false,
@@ -66,16 +86,18 @@ export default function EncryptPasswordDialog({
 	}, []);
 
 	const handleEncode = React.useCallback(async () => {
+		if (busy || disabled) return;
 		const transport = encodeUtf8ToBase64(password);
+		const startedAt = Date.now();
 		setBusy(true);
 		try {
 			const ciphertext = await configApi.encryptPassword(transport);
 			setLastCiphertext(ciphertext);
 			const copied = await copyTextToClipboard(ciphertext);
 			if (copied) {
-				showSnackbar("Encrypted value copied to clipboard", { severity: "success" });
-			} else if (ciphertext) {
-				showSnackbar("Encrypted, but clipboard failed — use Copy to clipboard", {
+				showSnackbar("Encrypted password copied to clipboard", { severity: "success" });
+			} else {
+				showSnackbar("Encrypted; could not copy automatically — use the copy control", {
 					severity: "warning",
 				});
 			}
@@ -83,9 +105,13 @@ export default function EncryptPasswordDialog({
 			showSnackbar(e?.message || "Password encryption failed", { severity: "error" });
 			setLastCiphertext("");
 		} finally {
+			const elapsed = Date.now() - startedAt;
+			if (elapsed < ENCRYPT_SPINNER_MIN_MS) {
+				await delay(ENCRYPT_SPINNER_MIN_MS - elapsed);
+			}
 			setBusy(false);
 		}
-	}, [password, showSnackbar]);
+	}, [busy, disabled, password, showSnackbar]);
 
 	const handleCopyAgain = React.useCallback(async () => {
 		if (!lastCiphertext) return;
@@ -114,7 +140,27 @@ export default function EncryptPasswordDialog({
 				fullWidth
 				aria-labelledby="encrypt-pwd-title"
 			>
-				<DialogTitle id="encrypt-pwd-title">Encrypt password</DialogTitle>
+				<DialogTitle
+					id="encrypt-pwd-title"
+					sx={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						gap: 1,
+						pr: 1,
+					}}
+				>
+					Encrypt password
+					<IconButton
+						type="button"
+						aria-label="Close"
+						onClick={handleClose}
+						edge="end"
+						size="small"
+					>
+						<CloseIcon />
+					</IconButton>
+				</DialogTitle>
 				<DialogContent>
 					<Stack spacing={2} sx={{ pt: 1 }}>
 						<TextField
@@ -124,6 +170,12 @@ export default function EncryptPasswordDialog({
 							onChange={(e) => {
 								setPassword(e.target.value);
 								setLastCiphertext("");
+							}}
+							onKeyDown={(e) => {
+								if (e.key === "Enter" && !disabled && !busy) {
+									e.preventDefault();
+									void handleEncode();
+								}
 							}}
 							fullWidth
 							autoFocus
@@ -145,24 +197,55 @@ export default function EncryptPasswordDialog({
 								},
 							}}
 						/>
-						<Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-							<Button variant="contained" onClick={handleEncode} disabled={disabled || busy}>
-								{busy ? "Encrypting…" : "Encrypt"}
-							</Button>
+						<TextField
+							label="Encrypted password"
+							value={maskCiphertextForDisplay(lastCiphertext)}
+							fullWidth
+							sx={{
+								"& .MuiInputBase-input": {
+									fontFamily: "ui-monospace, monospace",
+								},
+							}}
+							slotProps={{
+								htmlInput: {
+									"aria-label": lastCiphertext
+										? "Encrypted password, mostly masked; use copy for the full value"
+										: "Encrypted password",
+								},
+								input: {
+									readOnly: true,
+									endAdornment: (
+										<InputAdornment position="end">
+											<IconButton
+												aria-label="Copy encrypted password"
+												onClick={handleCopyAgain}
+												edge="end"
+												size="small"
+												disabled={!lastCiphertext}
+											>
+												<ContentCopyIcon fontSize="small" />
+											</IconButton>
+										</InputAdornment>
+									),
+								},
+							}}
+						/>
+						<Stack direction="row" justifyContent="flex-end" alignItems="center">
 							<Button
-								variant="outlined"
-								startIcon={<ContentCopyIcon />}
-								onClick={handleCopyAgain}
-								disabled={!lastCiphertext}
+								variant="contained"
+								onClick={() => void handleEncode()}
+								disabled={disabled || busy}
+								startIcon={
+									busy ? (
+										<CircularProgress size={18} color="inherit" aria-label="Encrypting" />
+									) : null
+								}
 							>
-								Copy to clipboard
+								{busy ? "Encrypting…" : "Encrypt"}
 							</Button>
 						</Stack>
 					</Stack>
 				</DialogContent>
-				<DialogActions sx={{ px: 3, pb: 2 }}>
-					<Button onClick={handleClose}>Close</Button>
-				</DialogActions>
 			</Dialog>
 		</>
 	);

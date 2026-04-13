@@ -21,22 +21,15 @@ package org.metricshub.web.controller;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import static org.metricshub.agent.security.PasswordEncrypt.getKeyStoreFile;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.metricshub.agent.deserialization.DeserializationFailure;
-import org.metricshub.engine.security.MetricsHubSecurityException;
-import org.metricshub.engine.security.SecurityManager;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.dto.FileNewName;
 import org.metricshub.web.exception.ConfigFilesException;
@@ -412,66 +405,6 @@ public class ConfigurationFilesController {
 	) throws ConfigFilesException {
 		configurationFilesService.deleteBackupFile(fileName);
 		return ResponseEntity.noContent().build();
-	}
-
-	/**
-	 * Encrypts a plaintext password using the MetricsHub keystore, in the same format as the CLI encrypt command.
-	 * The request body must be plain text whose content is the Base64 encoding of the UTF-8 bytes of the
-	 * password. The server decodes Base64, derives the password, then encrypts it with
-	 * {@link SecurityManager#encrypt(char[], java.io.File)}.
-	 * On success, the response body is {@code text/plain} containing the encrypted password. The password
-	 * {@code char[]} is cleared in a {@code finally} block after encryption attempt.
-	 *
-	 * @param passwordBase64 Base64-encoded UTF-8 bytes of the password; must not be null or blank after trim
-	 * @return HTTP 200 with the encrypted password as plain text in the body
-	 * @throws ResponseStatusException HTTP 400 if the body is missing or blank, Base64 is invalid, or encryption fails
-	 */
-	@Operation(
-		summary = "Encrypt a password",
-		description = "Request body must be the Base64 encoding of the UTF-8 password bytes (not ciphertext). " +
-		"The server decodes it, then encrypts with the MetricsHub keystore. " +
-		"Response body is the encrypted value as plain text (same format as the encrypt CLI).",
-		responses = {
-			@ApiResponse(responseCode = "200", description = "Encrypted password returned"),
-			@ApiResponse(responseCode = "400", description = "Invalid or missing body, bad Base64, or encryption failed")
-		}
-	)
-	@PostMapping(
-		value = "/encrypt-password",
-		consumes = MediaType.TEXT_PLAIN_VALUE,
-		produces = MediaType.TEXT_PLAIN_VALUE
-	)
-	public ResponseEntity<String> encryptPassword(
-		@io.swagger.v3.oas.annotations.parameters.RequestBody(
-			description = "Base64(UTF-8 bytes of the password)",
-			required = true
-		) @RequestBody String passwordBase64
-	) {
-		if (passwordBase64 == null || passwordBase64.isBlank()) {
-			throw new ResponseStatusException(
-				HttpStatus.BAD_REQUEST,
-				"Request body must contain Base64-encoded UTF-8 password bytes."
-			);
-		}
-
-		final byte[] decoded;
-		try {
-			decoded = Base64.getDecoder().decode(passwordBase64.trim());
-		} catch (final IllegalArgumentException e) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Base64 in request body.", e);
-		}
-
-		final String plainPassword = new String(decoded, StandardCharsets.UTF_8);
-		final char[] passwordChars = plainPassword.toCharArray();
-		try {
-			final char[] encrypted = SecurityManager.encrypt(passwordChars, getKeyStoreFile(true));
-			return ResponseEntity.ok(new String(encrypted));
-		} catch (final MetricsHubSecurityException e) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to encrypt password: " + e.getMessage(), e);
-		} finally {
-			// Overriding the password char array for security purpose.
-			Arrays.fill(passwordChars, '\0');
-		}
 	}
 
 	/**
