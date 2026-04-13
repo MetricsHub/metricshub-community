@@ -1,6 +1,7 @@
 package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,6 +43,105 @@ class ExtensionLoaderTest {
 		// Check the expected results
 		assertEquals(1, strategyProviderExtensions.size());
 		assertEquals(expected, strategyProviderExtensions.get(0));
+	}
+
+	@Test
+	void testFilterDefaultProtocolExtensions() {
+		final ExtensionLoader extensionLoader = new ExtensionLoader(new File("fake" + UUID.randomUUID().toString()));
+		final TestProtocolExtension httpExtension = new TestProtocolExtension("http");
+		final TestProtocolExtension emulationExtension = new TestProtocolExtension("emulation");
+
+		assertIterableEquals(
+			List.of(httpExtension),
+			extensionLoader.filterDefaultProtocolExtensions(List.of(httpExtension, emulationExtension))
+		);
+	}
+
+	private static final class TestProtocolExtension implements IProtocolExtension {
+
+		private final String identifier;
+
+		private TestProtocolExtension(final String identifier) {
+			this.identifier = identifier;
+		}
+
+		@Override
+		public boolean isValidConfiguration(final org.metricshub.engine.configuration.IConfiguration configuration) {
+			return false;
+		}
+
+		@Override
+		public java.util.Set<
+			Class<? extends org.metricshub.engine.connector.model.monitor.task.source.Source>
+		> getSupportedSources() {
+			return java.util.Set.of();
+		}
+
+		@Override
+		public java.util.Map<
+			Class<? extends org.metricshub.engine.configuration.IConfiguration>,
+			java.util.Set<Class<? extends org.metricshub.engine.connector.model.monitor.task.source.Source>>
+		> getConfigurationToSourceMapping() {
+			return java.util.Map.of();
+		}
+
+		@Override
+		public java.util.Set<
+			Class<? extends org.metricshub.engine.connector.model.identity.criterion.Criterion>
+		> getSupportedCriteria() {
+			return java.util.Set.of();
+		}
+
+		@Override
+		public java.util.Optional<Boolean> checkProtocol(final TelemetryManager telemetryManager) {
+			return java.util.Optional.empty();
+		}
+
+		@Override
+		public org.metricshub.engine.strategy.source.SourceTable processSource(
+			final org.metricshub.engine.connector.model.monitor.task.source.Source source,
+			final String connectorId,
+			final TelemetryManager telemetryManager
+		) {
+			return org.metricshub.engine.strategy.source.SourceTable.empty();
+		}
+
+		@Override
+		public org.metricshub.engine.strategy.detection.CriterionTestResult processCriterion(
+			final org.metricshub.engine.connector.model.identity.criterion.Criterion criterion,
+			final String connectorId,
+			final TelemetryManager telemetryManager,
+			final boolean logMode
+		) {
+			return org.metricshub.engine.strategy.detection.CriterionTestResult.empty();
+		}
+
+		@Override
+		public boolean isSupportedConfigurationType(final String configurationType) {
+			return identifier.equalsIgnoreCase(configurationType);
+		}
+
+		@Override
+		public org.metricshub.engine.configuration.IConfiguration buildConfiguration(
+			final String configurationType,
+			final com.fasterxml.jackson.databind.JsonNode jsonNode,
+			final java.util.function.UnaryOperator<char[]> decrypt
+		) {
+			return null;
+		}
+
+		@Override
+		public String getIdentifier() {
+			return identifier;
+		}
+
+		@Override
+		public String executeQuery(
+			final org.metricshub.engine.configuration.IConfiguration configuration,
+			final com.fasterxml.jackson.databind.JsonNode queryNode
+		) {
+			return null;
+		}
 	}
 
 	class TestStrategyProvider implements IStrategyProviderExtension {

@@ -66,6 +66,9 @@ public class ExtensionManager {
 	private List<IProtocolExtension> protocolExtensions = new ArrayList<>();
 
 	@Default
+	private List<IProtocolExtension> availableProtocolExtensions = new ArrayList<>();
+
+	@Default
 	private List<IStrategyProviderExtension> strategyProviderExtensions = new ArrayList<>();
 
 	@Default
@@ -182,6 +185,47 @@ public class ExtensionManager {
 	 */
 	public Optional<IProtocolExtension> findExtensionByType(final String type) {
 		return findExtensionByType(protocolExtensions, type);
+	}
+
+	/**
+	 * Activates the protocol extension matching the specified identifier if it was loaded but is not yet active.
+	 *
+	 * @param extensionIdentifier unique protocol extension identifier
+	 */
+	public void activateProtocolExtension(final String extensionIdentifier) {
+		if (extensionIdentifier == null || extensionIdentifier.isBlank()) {
+			return;
+		}
+
+		protocolExtensions = new ArrayList<>(protocolExtensions);
+
+		availableProtocolExtensions
+			.stream()
+			.filter(extension -> extensionIdentifier.equalsIgnoreCase(extension.getIdentifier()))
+			.filter(extension ->
+				protocolExtensions
+					.stream()
+					.noneMatch(active -> extension.getIdentifier().equalsIgnoreCase(active.getIdentifier()))
+			)
+			.findFirst()
+			.ifPresent(protocolExtensions::add);
+	}
+
+	/**
+	 * Keeps only the protocol extension matching the specified identifier in the active protocol extension list.
+	 *
+	 * @param extensionIdentifier unique protocol extension identifier to keep active
+	 */
+	public void keepOnlyProtocolExtension(final String extensionIdentifier) {
+		if (extensionIdentifier == null || extensionIdentifier.isBlank()) {
+			return;
+		}
+
+		protocolExtensions =
+			protocolExtensions
+				.stream()
+				.filter(extension -> extensionIdentifier.equalsIgnoreCase(extension.getIdentifier()))
+				.collect(Collectors.toCollection(ArrayList::new));
 	}
 
 	/**

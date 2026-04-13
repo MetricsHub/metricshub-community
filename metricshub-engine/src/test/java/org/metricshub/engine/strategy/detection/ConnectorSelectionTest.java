@@ -89,7 +89,6 @@ class ConnectorSelectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			null,
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
@@ -131,7 +130,6 @@ class ConnectorSelectionTest {
 			hostConfiguration,
 			connectorStore,
 			STRATEGY_TIME,
-			null,
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);

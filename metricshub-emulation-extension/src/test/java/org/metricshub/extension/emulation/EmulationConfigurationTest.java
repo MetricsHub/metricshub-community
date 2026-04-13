@@ -1,13 +1,16 @@
 package org.metricshub.extension.emulation;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 
@@ -72,10 +75,47 @@ class EmulationConfigurationTest {
 	void testGetPropertyFromOsCommandConfiguration() {
 		final EmulationConfiguration configuration = EmulationConfiguration
 			.builder()
-			.oscommand(OsCommandConfiguration.builder().timeout(42L).build())
+			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().timeout(42L).build(), null))
 			.build();
 
 		assertEquals("42", configuration.getProperty("timeout"));
+	}
+
+	@Test
+	void testBuildConfigurationWithNestedProtocolConfigurationNode() throws Exception {
+		final JsonNode jsonNode = EmulationExtension
+			.newObjectMapper()
+			.readTree(
+				"""
+				http:
+				  directory: http-recordings
+				  configuration:
+				    username: http-user
+				    password: http-password
+				    port: 8443
+				ssh:
+				  directory: ssh-recordings
+				  configuration:
+				    username: ssh-user
+				    password: ssh-password
+				    port: 2222
+				"""
+			);
+
+		final EmulationConfiguration configuration = (EmulationConfiguration) new EmulationExtension()
+			.buildConfiguration(EmulationExtension.IDENTIFIER, jsonNode, value -> value);
+
+		assertNotNull(configuration.getHttp());
+		assertEquals("http-recordings", configuration.getHttp().getDirectory());
+		assertEquals("http-user", configuration.getHttp().getUsername());
+		assertArrayEquals("http-password".toCharArray(), configuration.getHttp().getPassword());
+		assertEquals(8443, configuration.getHttp().getPort());
+
+		assertNotNull(configuration.getSsh());
+		assertEquals("ssh-recordings", configuration.getSsh().getDirectory());
+		assertEquals("ssh-user", configuration.getSsh().getUsername());
+		assertArrayEquals("ssh-password".toCharArray(), configuration.getSsh().getPassword());
+		assertEquals(2222, configuration.getSsh().getPort());
 	}
 
 	@Test

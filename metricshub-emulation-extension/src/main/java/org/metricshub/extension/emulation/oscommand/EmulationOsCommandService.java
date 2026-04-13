@@ -39,6 +39,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.oscommand.OsCommandService;
 
@@ -68,7 +69,11 @@ public class EmulationOsCommandService extends OsCommandService {
 			throw new IllegalArgumentException("commandLine and telemetryManager cannot be null.");
 		}
 
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+		final EmulationConfiguration emulationConfiguration = (EmulationConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(EmulationConfiguration.class);
+		final String emulationInputDirectory = resolveEmulationInputDirectory(emulationConfiguration);
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - Emulation input directory is not configured.", telemetryManager.getHostname());
 			return new OsCommandResult("", commandLine);
@@ -157,5 +162,30 @@ public class EmulationOsCommandService extends OsCommandService {
 			.stream()
 			.filter(entry -> entry != null && commandLine.equals(entry.getCommand()))
 			.collect(Collectors.toCollection(ArrayList::new));
+	}
+
+	/**
+	 * Resolves the emulation input directory for OS command replay.
+	 *
+	 * <p>Priority order:
+	 * <ol>
+	 * <li>OS command emulation directory</li>
+	 * <li>SSH emulation directory (fallback)</li>
+	 * </ol>
+	 *
+	 * @param configuration emulation configuration for the current host
+	 * @return resolved directory path, or {@code null} when not configured
+	 */
+	private String resolveEmulationInputDirectory(final EmulationConfiguration configuration) {
+		if (configuration == null) {
+			return null;
+		}
+		if (configuration.getOscommand() != null && configuration.getOscommand().getDirectory() != null) {
+			return configuration.getOscommand().getDirectory();
+		}
+		if (configuration.getSsh() != null) {
+			return configuration.getSsh().getDirectory();
+		}
+		return null;
 	}
 }

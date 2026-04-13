@@ -29,9 +29,6 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
-import org.metricshub.extension.http.HttpConfiguration;
-import org.metricshub.extension.oscommand.OsCommandConfiguration;
-import org.metricshub.extension.snmp.SnmpConfiguration;
 
 /**
  * Configuration for the emulation protocol.
@@ -48,11 +45,13 @@ public class EmulationConfiguration implements IConfiguration {
 	@JsonDeserialize(using = MultiValueDeserializer.class)
 	private String hostname;
 
-	private HttpConfiguration http;
+	private HttpEmulationConfig http;
 
-	private SnmpConfiguration snmp;
+	private SnmpEmulationConfig snmp;
 
-	private OsCommandConfiguration oscommand;
+	private OsCommandEmulationConfig oscommand;
+
+	private SshEmulationConfig ssh;
 
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
@@ -91,6 +90,10 @@ public class EmulationConfiguration implements IConfiguration {
 
 		if (oscommand != null) {
 			return oscommand.getProperty(property);
+		}
+
+		if (ssh != null) {
+			return ssh.getProperty(property);
 		}
 
 		return null;

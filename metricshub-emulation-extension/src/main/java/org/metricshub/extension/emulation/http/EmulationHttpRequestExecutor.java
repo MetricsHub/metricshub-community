@@ -38,6 +38,7 @@ import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.http.HttpRequestExecutor;
 import org.metricshub.extension.http.utils.Body;
@@ -68,7 +69,13 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final boolean logMode,
 		final TelemetryManager telemetryManager
 	) {
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
+		final EmulationConfiguration emulationConfiguration = (EmulationConfiguration) telemetryManager
+			.getHostConfiguration()
+			.getConfigurations()
+			.get(EmulationConfiguration.class);
+		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getHttp() != null
+			? emulationConfiguration.getHttp().getDirectory()
+			: null;
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - Emulation input directory is not configured.", httpRequest.getHostname());
 			return null;

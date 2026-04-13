@@ -72,7 +72,6 @@ public class TelemetryManager {
 	private HostConfiguration hostConfiguration;
 	private ConnectorStore connectorStore;
 	private Long strategyTime;
-	private String emulationInputDirectory;
 	private String recordOutputDirectory;
 
 	/**

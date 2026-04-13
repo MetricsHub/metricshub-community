@@ -38,6 +38,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.snmp.SnmpConfiguration;
 
 /**
  * Tests for {@link EmulationExtension}.
@@ -64,6 +66,16 @@ class EmulationExtensionTest {
 			)
 			.connectorStore(connectorStore)
 			.hostProperties(HostProperties.builder().isLocalhost(true).build())
+			.build();
+	}
+
+	private EmulationConfiguration buildEmulationConfiguration(final String directory) {
+		return EmulationConfiguration
+			.builder()
+			.hostname(HOSTNAME)
+			.http(new HttpEmulationConfig(HttpConfiguration.builder().hostname(HOSTNAME).build(), directory))
+			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().hostname(HOSTNAME).build(), directory))
+			.oscommand(new OsCommandEmulationConfig(new OsCommandConfiguration(), directory))
 			.build();
 	}
 
@@ -208,9 +220,8 @@ class EmulationExtensionTest {
 		);
 
 		final TelemetryManager tm = buildTelemetryManager(
-			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
-		tm.setEmulationInputDirectory(tempDir.toString());
 
 		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1.2.1.1.1.0").build();
 		final SourceTable result = emulationExtension.processSource(snmpSource, "connector", tm);
@@ -253,9 +264,8 @@ class EmulationExtensionTest {
 		Files.writeString(commandDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
-			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
-		tm.setEmulationInputDirectory(tempDir.toString());
 
 		final CommandLineSource source = CommandLineSource.builder().commandLine("echo test").build();
 		final SourceTable result = emulationExtension.processSource(source, "connector", tm);
@@ -289,9 +299,8 @@ class EmulationExtensionTest {
 		);
 
 		final TelemetryManager tm = buildTelemetryManager(
-			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
-		tm.setEmulationInputDirectory(tempDir.toString());
 
 		final SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
 		final CriterionTestResult result = emulationExtension.processCriterion(snmpGetCriterion, "connector", tm, false);
@@ -311,9 +320,8 @@ class EmulationExtensionTest {
 		);
 
 		final TelemetryManager tm = buildTelemetryManager(
-			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
-		tm.setEmulationInputDirectory(tempDir.toString());
 
 		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder().oid("1.3.6.1.2.1.1").build();
 		final CriterionTestResult result = emulationExtension.processCriterion(
@@ -343,9 +351,8 @@ class EmulationExtensionTest {
 		Files.writeString(commandDir.resolve("r1.txt"), "status=OK", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
-			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
-		tm.setEmulationInputDirectory(tempDir.toString());
 
 		final CommandLineCriterion criterion = CommandLineCriterion
 			.builder()

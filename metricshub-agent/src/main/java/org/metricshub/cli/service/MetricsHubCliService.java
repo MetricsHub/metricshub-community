@@ -46,6 +46,7 @@ import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.Ansi.Attribute;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.cli.service.converter.DeviceKindConverter;
+import org.metricshub.cli.service.protocol.EmulationConfigCli;
 import org.metricshub.cli.service.protocol.HttpConfigCli;
 import org.metricshub.cli.service.protocol.IpmiConfigCli;
 import org.metricshub.cli.service.protocol.JdbcConfigCli;
@@ -188,6 +189,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Additional Connectors Options|@:%n", multiplicity = "0..*")
 	List<AdditionalConnectorConfigCli> additionalConnectors;
 
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Emulation Options|@:%n")
+	EmulationConfigCli emulationConfigCli;
+
 	@Option(names = { "-u", "--username" }, order = 2, paramLabel = "USER", description = "Username for authentication")
 	String username;
 
@@ -293,15 +297,6 @@ public class MetricsHubCliService implements Callable<Integer> {
 	)
 	boolean record;
 
-	@Option(
-		names = { "-e", "--emulate" },
-		order = 15,
-		defaultValue = "",
-		description = "Enables/disables reading the recorded sources execution results",
-		help = true
-	)
-	String emulate;
-
 	@Override
 	public Integer call() throws Exception {
 		// Check whether iterations is greater than 0. If it's not the case, throw a ParameterException
@@ -371,7 +366,6 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
 			.recordOutputDirectory(record ? ConfigHelper.getDefaultOutputDirectory().toString() : null)
-			.emulationInputDirectory(emulate)
 			.build();
 
 		// Instantiate a new ClientsExecutor
@@ -612,7 +606,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 * @return A {@link Map} associating the input protocol type to its input credentials.
 	 */
 	private Map<Class<? extends IConfiguration>, IConfiguration> buildConfigurations() {
-		return Stream
+		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = Stream
 			.of(
 				ipmiConfigCli,
 				snmpConfigCli,
@@ -638,6 +632,28 @@ public class MetricsHubCliService implements Callable<Integer> {
 				}
 			})
 			.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
+
+		if (emulationConfigCli != null && emulationConfigCli.isEnabled()) {
+			CliExtensionManager.activateEmulationProtocolExtension();
+			try {
+				emulationConfigCli
+					.buildConfiguration(username, password)
+					.ifPresent(configuration -> {
+						try {
+							configuration.setHostname(hostname);
+							configuration.validateConfiguration(hostname);
+							protocolConfigurations.put(configuration.getClass(), configuration);
+							CliExtensionManager.keepOnlyEmulationProtocolExtension();
+						} catch (InvalidConfigurationException e) {
+							throw new IllegalStateException("Invalid emulation configuration detected.", e);
+						}
+					});
+			} catch (InvalidConfigurationException e) {
+				throw new IllegalStateException("Invalid emulation configuration detected.", e);
+			}
+		}
+
+		return protocolConfigurations;
 	}
 
 	/**
@@ -670,7 +686,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 			)
 			.allMatch(Objects::isNull);
 
-		if (protocolsNotConfigured) {
+		final boolean emulationNotConfigured = emulationConfigCli == null || !emulationConfigCli.isEnabled();
+
+		if (protocolsNotConfigured && emulationNotConfigured) {
 			throw new ParameterException(
 				spec.commandLine(),
 				"At least one protocol must be specified: --http[s], --ipmi, --jdbc, --snmp, --snmpv3, --ssh, --wbem, --winrm, --wmi."

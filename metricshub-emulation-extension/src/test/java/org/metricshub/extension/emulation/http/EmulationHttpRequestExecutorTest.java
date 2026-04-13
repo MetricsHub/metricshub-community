@@ -14,7 +14,9 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.emulation.HttpEmulationConfig;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.utils.HttpRequest;
 
@@ -41,10 +43,20 @@ class EmulationHttpRequestExecutorTest {
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.LINUX)
-					.configurations(Map.of(HttpConfiguration.class, HttpConfiguration.builder().build()))
+					.configurations(
+						Map.of(
+							EmulationConfiguration.class,
+							EmulationConfiguration
+								.builder()
+								.hostname(HOSTNAME)
+								.http(
+									new HttpEmulationConfig(HttpConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir)
+								)
+								.build()
+						)
+					)
 					.build()
 			)
-			.emulationInputDirectory(emulationInputDir)
 			.build();
 	}
 

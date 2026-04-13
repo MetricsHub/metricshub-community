@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.util.Map;
 import java.util.Optional;
@@ -94,9 +95,31 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
 	}
 
+	/**
+	 * Round-robin index manager shared by all emulation protocol services to rotate
+	 * among multiple recorded responses.
+	 */
 	private final EmulationRoundRobinManager roundRobinManager = new EmulationRoundRobinManager();
+
+	/**
+	 * HTTP request executor that replays responses from emulation files.
+	 */
 	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(roundRobinManager);
+
+	/**
+	 * OS command service that replays command outputs from emulation files.
+	 */
 	private final EmulationOsCommandService osCommandService = new EmulationOsCommandService(roundRobinManager);
+
+	/**
+	 * Retrieves the emulation configuration from the telemetry manager.
+	 */
+	private static final Function<TelemetryManager, EmulationConfiguration> EMULATION_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(EmulationConfiguration) telemetryManager
+				.getHostConfiguration()
+				.getConfigurations()
+				.get(EmulationConfiguration.class);
 
 	/**
 	 * Provides the HTTP configuration used by emulation processors.
@@ -105,10 +128,10 @@ public class EmulationExtension implements IProtocolExtension {
 	 */
 	private static final Function<TelemetryManager, HttpConfiguration> EMULATION_HTTP_CONFIGURATION_PROVIDER =
 		telemetryManager -> {
-			final var emulationConfiguration = (EmulationConfiguration) telemetryManager
-				.getHostConfiguration()
-				.getConfigurations()
-				.get(EmulationConfiguration.class);
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return HttpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
+			}
 			final var httpConfiguration = emulationConfiguration.getHttp();
 			final String hostname = telemetryManager.getHostname();
 			if (httpConfiguration == null) {
@@ -126,10 +149,10 @@ public class EmulationExtension implements IProtocolExtension {
 	 */
 	private static final Function<TelemetryManager, ISnmpConfiguration> EMULATION_SNMP_CONFIGURATION_PROVIDER =
 		telemetryManager -> {
-			final var emulationConfiguration = (EmulationConfiguration) telemetryManager
-				.getHostConfiguration()
-				.getConfigurations()
-				.get(EmulationConfiguration.class);
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return SnmpConfiguration.builder().hostname(telemetryManager.getHostname()).build();
+			}
 			final var snmpConfiguration = emulationConfiguration.getSnmp();
 			final String hostname = telemetryManager.getHostname();
 			if (snmpConfiguration == null) {
@@ -181,6 +204,7 @@ public class EmulationExtension implements IProtocolExtension {
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
+		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		if (source instanceof HttpSource httpSource) {
 			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpSource, connectorId, telemetryManager);
@@ -189,7 +213,9 @@ public class EmulationExtension implements IProtocolExtension {
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
-			telemetryManager.getEmulationInputDirectory()
+			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
+				? emulationConfiguration.getSnmp().getDirectory()
+				: null
 		);
 
 		if (source instanceof SnmpTableSource snmpTableSource) {
@@ -210,6 +236,7 @@ public class EmulationExtension implements IProtocolExtension {
 		final TelemetryManager telemetryManager,
 		final boolean logMode
 	) {
+		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		if (criterion instanceof HttpCriterion httpCriterion) {
 			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpCriterion, connectorId, telemetryManager);
@@ -219,7 +246,9 @@ public class EmulationExtension implements IProtocolExtension {
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
-			telemetryManager.getEmulationInputDirectory()
+			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
+				? emulationConfiguration.getSnmp().getDirectory()
+				: null
 		);
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
@@ -242,7 +271,7 @@ public class EmulationExtension implements IProtocolExtension {
 	public IConfiguration buildConfiguration(String configurationType, JsonNode jsonNode, UnaryOperator<char[]> decrypt)
 		throws InvalidConfigurationException {
 		try {
-			return newObjectMapper().treeToValue(jsonNode, EmulationConfiguration.class);
+			return newObjectMapper().treeToValue(normalizeProtocolConfigurationNodes(jsonNode), EmulationConfiguration.class);
 		} catch (Exception e) {
 			final String errorMessage = String.format(
 				"Error while reading Emulation Configuration. Error: %s",
@@ -251,6 +280,50 @@ public class EmulationExtension implements IProtocolExtension {
 			log.error(errorMessage);
 			log.debug("Error while reading Emulation Configuration. Stack trace:", e);
 			throw new InvalidConfigurationException(errorMessage, e);
+		}
+	}
+
+	/**
+	 * Flattens nested protocol configuration nodes into the emulation protocol nodes before deserialization.
+	 *
+	 * <p>The CLI builds each emulated protocol as a node containing a {@code directory} field and a nested
+	 * {@code configuration} object. The extension model remains flat, so this method merges the nested
+	 * configuration object back into the protocol node while preserving explicit top-level emulation fields.</p>
+	 *
+	 * @param jsonNode raw emulation configuration node
+	 * @return normalized emulation configuration node ready for deserialization
+	 */
+	private JsonNode normalizeProtocolConfigurationNodes(final JsonNode jsonNode) {
+		if (!(jsonNode instanceof ObjectNode objectNode)) {
+			return jsonNode;
+		}
+
+		final ObjectNode normalizedNode = objectNode.deepCopy();
+		EMULATED_PROTOCOLS.forEach(protocol -> flattenProtocolConfiguration(normalizedNode, protocol));
+		return normalizedNode;
+	}
+
+	/**
+	 * Merges a nested {@code configuration} node into its parent emulated protocol node.
+	 *
+	 * @param rootNode root emulation configuration node
+	 * @param protocol protocol identifier to normalize
+	 */
+	private void flattenProtocolConfiguration(final ObjectNode rootNode, final String protocol) {
+		final JsonNode protocolNode = rootNode.get(protocol);
+		if (!(protocolNode instanceof ObjectNode protocolObjectNode)) {
+			return;
+		}
+
+		final JsonNode nestedConfigurationNode = protocolObjectNode.remove("configuration");
+		if (!(nestedConfigurationNode instanceof ObjectNode configurationObjectNode)) {
+			return;
+		}
+
+		for (Map.Entry<String, JsonNode> entry : configurationObjectNode.properties()) {
+			if (!protocolObjectNode.has(entry.getKey())) {
+				protocolObjectNode.set(entry.getKey(), entry.getValue());
+			}
 		}
 	}
 

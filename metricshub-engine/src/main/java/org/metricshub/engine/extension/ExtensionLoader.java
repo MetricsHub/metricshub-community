@@ -48,6 +48,8 @@ import org.metricshub.classloader.agent.ClassLoaderAgent;
 @Slf4j
 public class ExtensionLoader {
 
+	static final String EMULATION_PROTOCOL_IDENTIFIER = "emulation";
+
 	@NonNull
 	private File extensionsDirectory;
 
@@ -93,7 +95,8 @@ public class ExtensionLoader {
 			IProtocolExtension.class,
 			classLoader
 		);
-		protocolExtensions.forEach(extension ->
+		final List<IProtocolExtension> loadedProtocolExtensions = convertProviderStreamToList(protocolExtensions.stream());
+		loadedProtocolExtensions.forEach(extension ->
 			log.info("Loaded protocol extension {}.", extension.getClass().getSimpleName())
 		);
 
@@ -155,7 +158,8 @@ public class ExtensionLoader {
 		extensionManager =
 			ExtensionManager
 				.builder()
-				.withProtocolExtensions(convertProviderStreamToList(protocolExtensions.stream()))
+				.withProtocolExtensions(filterDefaultProtocolExtensions(loadedProtocolExtensions))
+				.withAvailableProtocolExtensions(loadedProtocolExtensions)
 				.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
 				.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
 				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
@@ -165,6 +169,19 @@ public class ExtensionLoader {
 				.build();
 
 		return extensionManager;
+	}
+
+	/**
+	 * Filters protocol extensions that should be active by default.
+	 *
+	 * @param loadedProtocolExtensions all loaded protocol extensions
+	 * @return active-by-default protocol extensions
+	 */
+	List<IProtocolExtension> filterDefaultProtocolExtensions(final List<IProtocolExtension> loadedProtocolExtensions) {
+		return loadedProtocolExtensions
+			.stream()
+			.filter(extension -> !EMULATION_PROTOCOL_IDENTIFIER.equalsIgnoreCase(extension.getIdentifier()))
+			.collect(Collectors.toCollection(ArrayList::new));
 	}
 
 	/**
