@@ -57,7 +57,6 @@ import org.metricshub.extension.http.utils.HttpRequest;
 public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 	private static final String HTTP_EMULATION_YAML = "image.yaml";
-	private static final String HTTP_SUBDIR = "http";
 	private static final String DEFAULT_USERNAME = "username";
 	private static final char[] DEFAULT_PASSWORD = "password".toCharArray();
 
@@ -81,7 +80,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			return null;
 		}
 
-		final Path httpDir = Path.of(emulationInputDirectory, HTTP_SUBDIR);
+		final Path httpDir = Path.of(emulationInputDirectory);
 		final Path indexFile = httpDir.resolve(HTTP_EMULATION_YAML);
 
 		if (!Files.isRegularFile(indexFile)) {

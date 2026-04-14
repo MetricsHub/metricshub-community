@@ -33,9 +33,8 @@ import org.metricshub.snmp.client.OfflineSnmpClient;
 
 /**
  * An SNMP request executor that creates an {@link OfflineSnmpClient} backed by
- * {@code .walk} files located in the emulation input directory's {@code snmp/}
- * subdirectory. This enables file-based SNMP emulation without making real
- * network calls.
+ * {@code .walk} files located directly in the configured emulation input directory.
+ * This enables file-based SNMP emulation without making real network calls.
  *
  * <p>The walk files are the standard SNMP walk dump format produced by
  * {@code snmpcli} and {@code snmpv3cli}, where each line contains:
@@ -51,8 +50,6 @@ import org.metricshub.snmp.client.OfflineSnmpClient;
 @RequiredArgsConstructor
 public class EmulationSnmpRequestExecutor extends AbstractSnmpRequestExecutor {
 
-	private static final String SNMP_SUBDIR = "snmp";
-
 	private final String emulationInputDirectory;
 
 	@Override
@@ -62,7 +59,7 @@ public class EmulationSnmpRequestExecutor extends AbstractSnmpRequestExecutor {
 			throw new IOException("Emulation input directory is not configured.");
 		}
 
-		final Path snmpDir = Path.of(emulationInputDirectory, SNMP_SUBDIR);
+		final Path snmpDir = Path.of(emulationInputDirectory);
 
 		if (!Files.isDirectory(snmpDir)) {
 			throw new IOException("SNMP emulation directory not found: " + snmpDir);

@@ -71,8 +71,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testExecuteSNMPGet(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "device.walk", WALK_CONTENT);
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		final String result = executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null);
@@ -81,8 +80,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testExecuteSNMPGetOidNotFound(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "device.walk", WALK_CONTENT);
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		// OID not in walk file → OfflineSnmpClient throws, executor returns null
@@ -94,8 +92,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testExecuteSNMPGetNext(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "device.walk", WALK_CONTENT);
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		final String result = executor.executeSNMPGetNext("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null);
@@ -109,8 +106,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testExecuteSNMPTable(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "device.walk", WALK_CONTENT);
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		// Table under 1.3.6.1.2.1.2.2.1 (ifEntry) with columns 1 (ifIndex) and 2 (ifDescr)
@@ -137,8 +133,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testExecuteSNMPWalk(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "device.walk", WALK_CONTENT);
+		writeWalkFile(tempDir, "device.walk", WALK_CONTENT);
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		final String result = executor.executeSNMPWalk("1.3.6.1.2.1.1", SNMP_CONFIG, HOSTNAME, false, null);
@@ -153,9 +148,11 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testCreateSnmpClientMissingDirectory(@TempDir Path tempDir) {
-		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
+		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(
+			tempDir.resolve("missing").toString()
+		);
 
-		// No snmp/ subdirectory exists → should throw
+		// Configured directory does not exist -> should throw
 		assertThrows(
 			Exception.class,
 			() -> executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
@@ -176,10 +173,9 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testMultipleWalkFiles(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "system.walk", "1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n");
+		writeWalkFile(tempDir, "system.walk", "1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n");
 		writeWalkFile(
-			snmpDir,
+			tempDir,
 			"interfaces.walk",
 			"1.3.6.1.2.1.2.2.1.1.1\tInteger\t1\n" + "1.3.6.1.2.1.2.2.1.2.1\tOctetString\teth0\n"
 		);
@@ -197,8 +193,7 @@ class EmulationSnmpRequestExecutorTest {
 
 	@Test
 	void testEmptyWalkFile(@TempDir Path tempDir) throws Exception {
-		final Path snmpDir = tempDir.resolve("snmp");
-		writeWalkFile(snmpDir, "empty.walk", "");
+		writeWalkFile(tempDir, "empty.walk", "");
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(tempDir.toString());
 
 		// No OIDs loaded, GET should fail/return null

@@ -75,14 +75,13 @@ class EmulationHttpRequestExecutorTest {
 	}
 
 	/**
-	 * Writes a standard image.yaml and response files under the given base directory.
+	 * Writes a standard image.yaml and response files directly under the given base directory.
 	 */
 	private void writeStandardImage(final Path baseDir) throws IOException {
-		final Path httpDir = baseDir.resolve("http");
-		Files.createDirectories(httpDir);
+		Files.createDirectories(baseDir);
 
 		Files.writeString(
-			httpDir.resolve("image.yaml"),
+			baseDir.resolve("image.yaml"),
 			"""
 			image:
 			  - request:
@@ -124,22 +123,22 @@ class EmulationHttpRequestExecutorTest {
 		);
 
 		Files.writeString(
-			httpDir.resolve("get-status-response.txt"),
+			baseDir.resolve("get-status-response.txt"),
 			"{\"status\":\"OK\",\"version\":\"1.0\"}",
 			StandardCharsets.UTF_8
 		);
 		Files.writeString(
-			httpDir.resolve("post-data-response.json"),
+			baseDir.resolve("post-data-response.json"),
 			"{\"result\":\"success\",\"data\":[1,2,3]}",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(httpDir.resolve("get-status-httpstatus.txt"), "200", StandardCharsets.UTF_8);
+		Files.writeString(baseDir.resolve("get-status-httpstatus.txt"), "200", StandardCharsets.UTF_8);
 		Files.writeString(
-			httpDir.resolve("get-headers-response.txt"),
+			baseDir.resolve("get-headers-response.txt"),
 			"X-Custom-Header: custom-value",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(httpDir.resolve("delete-response.txt"), "deleted", StandardCharsets.UTF_8);
+		Files.writeString(baseDir.resolve("delete-response.txt"), "deleted", StandardCharsets.UTF_8);
 	}
 
 	// ---- Null / blank emulation input directory ----
@@ -175,9 +174,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpMalformedYaml(@TempDir Path tempDir) throws IOException {
-		final Path httpDir = tempDir.resolve("http");
-		Files.createDirectories(httpDir);
-		Files.writeString(httpDir.resolve("image.yaml"), "this: is: [not: valid: yaml: {{{{", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("image.yaml"), "this: is: [not: valid: yaml: {{{{", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		final HttpRequest request = buildHttpRequest("GET", "/something");
@@ -189,9 +186,7 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpEmptyImage(@TempDir Path tempDir) throws IOException {
-		final Path httpDir = tempDir.resolve("http");
-		Files.createDirectories(httpDir);
-		Files.writeString(httpDir.resolve("image.yaml"), "image: []\n", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("image.yaml"), "image: []\n", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		final HttpRequest request = buildHttpRequest("GET", "/something");
@@ -382,10 +377,8 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpNullRequestEntrySkipped(@TempDir Path tempDir) throws IOException {
-		final Path httpDir = tempDir.resolve("http");
-		Files.createDirectories(httpDir);
 		Files.writeString(
-			httpDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - request:
@@ -400,7 +393,7 @@ class EmulationHttpRequestExecutorTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(httpDir.resolve("valid-response.txt"), "valid answer", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("valid-response.txt"), "valid answer", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		final HttpRequest request = buildHttpRequest("GET", "/valid");
@@ -413,10 +406,8 @@ class EmulationHttpRequestExecutorTest {
 
 	@Test
 	void testExecuteHttpMissingResponseFile(@TempDir Path tempDir) throws IOException {
-		final Path httpDir = tempDir.resolve("http");
-		Files.createDirectories(httpDir);
 		Files.writeString(
-			httpDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - request:

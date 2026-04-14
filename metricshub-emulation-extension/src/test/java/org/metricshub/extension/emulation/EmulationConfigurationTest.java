@@ -56,34 +56,6 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final EmulationConfiguration configuration = EmulationConfiguration.builder().hostname("my-host").build();
-
-		assertNull(configuration.getProperty(null));
-		assertNull(configuration.getProperty(""));
-		assertNull(configuration.getProperty("badProperty"));
-		assertEquals("my-host", configuration.getProperty("hostname"));
-		assertEquals("my-host", configuration.getProperty("HOSTNAME"));
-		assertEquals("my-host", configuration.getProperty("Hostname"));
-	}
-
-	@Test
-	void testGetPropertyNullHostname() {
-		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
-		assertNull(configuration.getProperty("hostname"));
-	}
-
-	@Test
-	void testGetPropertyFromOsCommandConfiguration() {
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
-			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().timeout(42L).build(), null))
-			.build();
-
-		assertEquals("42", configuration.getProperty("timeout"));
-	}
-
-	@Test
-	void testGetPropertyWithProtocolScope() {
 		final EmulationConfiguration configuration = EmulationConfiguration
 			.builder()
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().timeout(10L).build(), null))
@@ -91,10 +63,16 @@ class EmulationConfigurationTest {
 			.hostname("my-host")
 			.build();
 
+		// Single-argument form is unsupported — use the protocol-scoped overload instead
+		assertThrows(UnsupportedOperationException.class, () -> configuration.getProperty("timeout"));
+
+		// Protocol-scoped lookups
 		assertEquals("10", configuration.getProperty("http", "timeout"));
 		assertEquals("42", configuration.getProperty("oscommand", "timeout"));
 		assertEquals("my-host", configuration.getProperty("http", "hostname"));
 		assertNull(configuration.getProperty("ssh", "timeout"));
+		assertNull(configuration.getProperty(null, "timeout"));
+		assertNull(configuration.getProperty("http", null));
 	}
 
 	@Test

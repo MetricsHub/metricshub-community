@@ -52,10 +52,8 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandMatch(@TempDir Path tempDir) throws Exception {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
 		Files.writeString(
-			commandDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - command: \"echo test\"
@@ -63,7 +61,7 @@ class EmulationOsCommandServiceTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(commandDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final OsCommandResult result = service.runOsCommand(
 			"echo test",
@@ -80,10 +78,8 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandNoMatchReturnsEmpty(@TempDir Path tempDir) throws Exception {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
 		Files.writeString(
-			commandDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - command: \"echo other\"
@@ -91,7 +87,7 @@ class EmulationOsCommandServiceTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(commandDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final OsCommandResult result = service.runOsCommand(
 			"echo test",
@@ -107,10 +103,8 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandRoundRobin(@TempDir Path tempDir) throws Exception {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
 		Files.writeString(
-			commandDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - command: \"echo test\"
@@ -120,8 +114,8 @@ class EmulationOsCommandServiceTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(commandDir.resolve("r1.txt"), "first", StandardCharsets.UTF_8);
-		Files.writeString(commandDir.resolve("r2.txt"), "second", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r1.txt"), "first", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r2.txt"), "second", StandardCharsets.UTF_8);
 
 		final TelemetryManager telemetryManager = buildTelemetryManager(tempDir.toString());
 
@@ -150,9 +144,7 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunOsCommandMalformedYaml(@TempDir Path tempDir) throws Exception {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
-		Files.writeString(commandDir.resolve("image.yaml"), "this: is: [bad", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("image.yaml"), "this: is: [bad", StandardCharsets.UTF_8);
 
 		final OsCommandResult result = service.runOsCommand(
 			"echo test",

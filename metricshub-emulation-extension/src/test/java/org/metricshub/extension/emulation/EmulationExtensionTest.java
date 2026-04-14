@@ -211,10 +211,8 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithSnmpGetSource(@TempDir Path tempDir) throws IOException {
-		final Path snmpDir = tempDir.resolve("snmp");
-		Files.createDirectories(snmpDir);
 		Files.writeString(
-			snmpDir.resolve("device.walk"),
+			tempDir.resolve("device.walk"),
 			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n",
 			StandardCharsets.UTF_8
 		);
@@ -250,10 +248,8 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessSourceWithCommandLineSource(@TempDir Path tempDir) throws IOException {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
 		Files.writeString(
-			commandDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - command: "echo test"
@@ -261,7 +257,7 @@ class EmulationExtensionTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(commandDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r1.txt"), "ok", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
@@ -290,10 +286,8 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionSnmpGetCriterion(@TempDir Path tempDir) throws IOException {
-		final Path snmpDir = tempDir.resolve("snmp");
-		Files.createDirectories(snmpDir);
 		Files.writeString(
-			snmpDir.resolve("device.walk"),
+			tempDir.resolve("device.walk"),
 			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n",
 			StandardCharsets.UTF_8
 		);
@@ -311,10 +305,8 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionSnmpGetNextCriterion(@TempDir Path tempDir) throws IOException {
-		final Path snmpDir = tempDir.resolve("snmp");
-		Files.createDirectories(snmpDir);
 		Files.writeString(
-			snmpDir.resolve("device.walk"),
+			tempDir.resolve("device.walk"),
 			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n" + "1.3.6.1.2.1.1.3.0\tTimeTicks\t123456\n",
 			StandardCharsets.UTF_8
 		);
@@ -337,10 +329,8 @@ class EmulationExtensionTest {
 
 	@Test
 	void testProcessCriterionCommandLineCriterion(@TempDir Path tempDir) throws IOException {
-		final Path commandDir = tempDir.resolve("command");
-		Files.createDirectories(commandDir);
 		Files.writeString(
-			commandDir.resolve("image.yaml"),
+			tempDir.resolve("image.yaml"),
 			"""
 			image:
 			  - command: "echo test"
@@ -348,7 +338,7 @@ class EmulationExtensionTest {
 			""",
 			StandardCharsets.UTF_8
 		);
-		Files.writeString(commandDir.resolve("r1.txt"), "status=OK", StandardCharsets.UTF_8);
+		Files.writeString(tempDir.resolve("r1.txt"), "status=OK", StandardCharsets.UTF_8);
 
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))

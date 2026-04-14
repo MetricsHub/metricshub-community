@@ -71,33 +71,7 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	@Override
 	public String getProperty(final String property) {
-		if (property == null || property.isEmpty()) {
-			return null;
-		}
-
-		if ("hostname".equalsIgnoreCase(property)) {
-			return getHostname();
-		}
-
-		// The connector might reference properties of the HTTP protocol
-		// For example, "http.port" or "http.username"
-		if (http != null) {
-			return http.getProperty(property);
-		}
-
-		if (snmp != null) {
-			return snmp.getProperty(property);
-		}
-
-		if (oscommand != null) {
-			return oscommand.getProperty(property);
-		}
-
-		if (ssh != null) {
-			return ssh.getProperty(property);
-		}
-
-		return null;
+		throw new UnsupportedOperationException("Use getProperty with protocol parameter for EmulationConfiguration");
 	}
 
 	@Override

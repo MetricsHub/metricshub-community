@@ -51,7 +51,6 @@ import org.metricshub.extension.oscommand.OsCommandService;
 public class EmulationOsCommandService extends OsCommandService {
 
 	private static final String COMMAND_EMULATION_YAML = "image.yaml";
-	private static final String COMMAND_SUBDIR = "command";
 
 	private final EmulationRoundRobinManager roundRobinManager;
 
@@ -79,7 +78,7 @@ public class EmulationOsCommandService extends OsCommandService {
 			return new OsCommandResult("", commandLine);
 		}
 
-		final Path commandDir = Path.of(emulationInputDirectory, COMMAND_SUBDIR);
+		final Path commandDir = Path.of(emulationInputDirectory);
 		final Path indexFile = commandDir.resolve(COMMAND_EMULATION_YAML);
 
 		if (!Files.isRegularFile(indexFile)) {
