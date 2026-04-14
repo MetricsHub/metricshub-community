@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 
 /**
@@ -79,6 +80,21 @@ class EmulationConfigurationTest {
 			.build();
 
 		assertEquals("42", configuration.getProperty("timeout"));
+	}
+
+	@Test
+	void testGetPropertyWithProtocolScope() {
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.http(new HttpEmulationConfig(HttpConfiguration.builder().timeout(10L).build(), null))
+			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().timeout(42L).build(), null))
+			.hostname("my-host")
+			.build();
+
+		assertEquals("10", configuration.getProperty("http", "timeout"));
+		assertEquals("42", configuration.getProperty("oscommand", "timeout"));
+		assertEquals("my-host", configuration.getProperty("http", "hostname"));
+		assertNull(configuration.getProperty("ssh", "timeout"));
 	}
 
 	@Test

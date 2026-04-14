@@ -28,6 +28,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.configuration.IProtocolScopedPropertyAccessor;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
 
 /**
@@ -40,7 +41,7 @@ import org.metricshub.engine.deserialization.MultiValueDeserializer;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class EmulationConfiguration implements IConfiguration {
+public class EmulationConfiguration implements IConfiguration, IProtocolScopedPropertyAccessor {
 
 	@JsonDeserialize(using = MultiValueDeserializer.class)
 	private String hostname;
@@ -97,6 +98,30 @@ public class EmulationConfiguration implements IConfiguration {
 		}
 
 		return null;
+	}
+
+	@Override
+	public String getProperty(final String protocol, final String property) {
+		if (protocol == null || protocol.isBlank() || property == null || property.isBlank()) {
+			return null;
+		}
+
+		if ("hostname".equalsIgnoreCase(property)) {
+			return getHostname();
+		}
+
+		switch (protocol.toLowerCase()) {
+			case "http":
+				return http != null ? http.getProperty(property) : null;
+			case "snmp":
+				return snmp != null ? snmp.getProperty(property) : null;
+			case "oscommand":
+				return oscommand != null ? oscommand.getProperty(property) : null;
+			case "ssh":
+				return ssh != null ? ssh.getProperty(property) : null;
+			default:
+				return null;
+		}
 	}
 
 	@Override
