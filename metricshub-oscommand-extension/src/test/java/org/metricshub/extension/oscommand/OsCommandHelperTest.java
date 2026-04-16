@@ -1181,7 +1181,6 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunControlledSshCommandClearsInterruptFlag() {
-
 		Thread.currentThread().interrupt();
 
 		assertThrows(
