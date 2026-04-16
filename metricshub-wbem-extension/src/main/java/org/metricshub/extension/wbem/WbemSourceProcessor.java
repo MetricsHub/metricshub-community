@@ -25,15 +25,14 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.AUTOMATIC
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAULT_NAMESPACE;
 
 import java.util.List;
+import java.util.function.Function;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
-@RequiredArgsConstructor
 @Slf4j
 public class WbemSourceProcessor {
 
@@ -42,6 +41,43 @@ public class WbemSourceProcessor {
 
 	@NonNull
 	private String connectorId;
+
+	@NonNull
+	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
+
+	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(WbemConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(WbemConfiguration.class);
+
+	/**
+	 * Creates a new {@link WbemSourceProcessor} with the given executor and connector ID,
+	 * using the default WBEM configuration provider.
+	 *
+	 * @param wbemRequestExecutor The executor to perform WBEM requests.
+	 * @param connectorId         The connector identifier.
+	 */
+	public WbemSourceProcessor(final WbemRequestExecutor wbemRequestExecutor, final String connectorId) {
+		this(wbemRequestExecutor, connectorId, DEFAULT_WBEM_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link WbemSourceProcessor} with the given executor, connector ID,
+	 * and a custom WBEM configuration provider.
+	 *
+	 * @param wbemRequestExecutor       The executor to perform WBEM requests.
+	 * @param connectorId               The connector identifier.
+	 * @param wbemConfigurationProvider A function that retrieves the {@link WbemConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public WbemSourceProcessor(
+		final WbemRequestExecutor wbemRequestExecutor,
+		final String connectorId,
+		final Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider
+	) {
+		this.wbemRequestExecutor = wbemRequestExecutor;
+		this.connectorId = connectorId;
+		this.wbemConfigurationProvider = wbemConfigurationProvider;
+	}
 
 	/**
 	 * Get the namespace to use for the execution of the given {@link WbemSource} instance
@@ -68,18 +104,17 @@ public class WbemSourceProcessor {
 	 * @return {@link SourceTable} instance
 	 */
 	public SourceTable process(WbemSource wbemSource, TelemetryManager telemetryManager) {
+		final WbemConfiguration wbemConfiguration = wbemConfigurationProvider.apply(telemetryManager);
+
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
-		final String hostname = telemetryManager.getHostname(List.of(WbemConfiguration.class));
+		final String hostname = wbemConfiguration != null && wbemConfiguration.getHostname() != null
+			? wbemConfiguration.getHostname()
+			: telemetryManager.getHostname();
 
 		if (wbemSource == null) {
 			log.error("Hostname {} - Malformed WBEM Source {}. Returning an empty table.", hostname, wbemSource);
 			return SourceTable.empty();
 		}
-
-		final WbemConfiguration wbemConfiguration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(WbemConfiguration.class);
 
 		if (wbemConfiguration == null) {
 			log.debug(

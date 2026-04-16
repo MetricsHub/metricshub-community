@@ -42,11 +42,13 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -54,6 +56,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
 import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
+import org.metricshub.extension.emulation.wbem.EmulationWbemRequestExecutor;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
@@ -68,6 +71,10 @@ import org.metricshub.extension.snmp.detection.SnmpGetCriterionProcessor;
 import org.metricshub.extension.snmp.detection.SnmpGetNextCriterionProcessor;
 import org.metricshub.extension.snmp.source.SnmpGetSourceProcessor;
 import org.metricshub.extension.snmp.source.SnmpTableSourceProcessor;
+import org.metricshub.extension.wbem.WbemConfiguration;
+import org.metricshub.extension.wbem.WbemCriterionProcessor;
+import org.metricshub.extension.wbem.WbemExtension;
+import org.metricshub.extension.wbem.WbemSourceProcessor;
 
 /**
  * Protocol extension that provides file-based emulation for offline testing and
@@ -93,6 +100,7 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(HttpExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.addAll(OsCommandExtension.SUPPORTED_CONFIGURATION_TYPES);
 		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(WbemExtension.IDENTIFIER);
 	}
 
 	/**
@@ -110,6 +118,11 @@ public class EmulationExtension implements IProtocolExtension {
 	 * OS command service that replays command outputs from emulation files.
 	 */
 	private final EmulationOsCommandService osCommandService = new EmulationOsCommandService(roundRobinManager);
+
+	/**
+	 * WBEM request executor that replays query results from emulation files.
+	 */
+	private final EmulationWbemRequestExecutor wbemRequestExecutor = new EmulationWbemRequestExecutor(roundRobinManager);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -163,6 +176,27 @@ public class EmulationExtension implements IProtocolExtension {
 			}
 		};
 
+	/**
+	 * Provides the WBEM configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
+	 */
+	private static final Function<TelemetryManager, WbemConfiguration> EMULATION_WBEM_CONFIGURATION_PROVIDER =
+		telemetryManager -> {
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return null;
+			}
+			final var wbemConfiguration = emulationConfiguration.getWbem();
+			final String hostname = telemetryManager.getHostname();
+			if (wbemConfiguration == null) {
+				return null;
+			} else {
+				wbemConfiguration.setHostname(hostname);
+				return wbemConfiguration;
+			}
+		};
+
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
 		return configuration instanceof EmulationConfiguration;
@@ -170,7 +204,13 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Source>> getSupportedSources() {
-		return Set.of(CommandLineSource.class, HttpSource.class, SnmpGetSource.class, SnmpTableSource.class);
+		return Set.of(
+			CommandLineSource.class,
+			HttpSource.class,
+			SnmpGetSource.class,
+			SnmpTableSource.class,
+			WbemSource.class
+		);
 	}
 
 	@Override
@@ -180,7 +220,13 @@ public class EmulationExtension implements IProtocolExtension {
 
 	@Override
 	public Set<Class<? extends Criterion>> getSupportedCriteria() {
-		return Set.of(CommandLineCriterion.class, HttpCriterion.class, SnmpGetCriterion.class, SnmpGetNextCriterion.class);
+		return Set.of(
+			CommandLineCriterion.class,
+			HttpCriterion.class,
+			SnmpGetCriterion.class,
+			SnmpGetNextCriterion.class,
+			WbemCriterion.class
+		);
 	}
 
 	@Override
@@ -204,14 +250,17 @@ public class EmulationExtension implements IProtocolExtension {
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
-		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		if (source instanceof HttpSource httpSource) {
 			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpSource, connectorId, telemetryManager);
+		} else if (source instanceof WbemSource wbemSource) {
+			return new WbemSourceProcessor(wbemRequestExecutor, connectorId, EMULATION_WBEM_CONFIGURATION_PROVIDER)
+				.process(wbemSource, telemetryManager);
 		} else if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		}
 
+		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
 			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
 				? emulationConfiguration.getSnmp().getDirectory()
@@ -236,15 +285,23 @@ public class EmulationExtension implements IProtocolExtension {
 		final TelemetryManager telemetryManager,
 		final boolean logMode
 	) {
-		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		if (criterion instanceof HttpCriterion httpCriterion) {
 			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
 				.process(httpCriterion, connectorId, telemetryManager);
+		} else if (criterion instanceof WbemCriterion wbemCriterion) {
+			return new WbemCriterionProcessor(
+				wbemRequestExecutor,
+				connectorId,
+				logMode,
+				EMULATION_WBEM_CONFIGURATION_PROVIDER
+			)
+				.process(wbemCriterion, telemetryManager);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new CommandLineCriterionProcessor(connectorId, osCommandService)
 				.process(commandLineCriterion, telemetryManager);
 		}
 
+		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
 			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
 				? emulationConfiguration.getSnmp().getDirectory()

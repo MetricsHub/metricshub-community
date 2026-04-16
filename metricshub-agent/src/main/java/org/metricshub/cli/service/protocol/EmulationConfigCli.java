@@ -73,13 +73,28 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	)
 	private String emulateSsh;
 
+	@Option(
+		names = { "--emulate-wbem" },
+		order = 19,
+		defaultValue = "",
+		description = "Reads WBEM recorded sources execution results from the specified directory",
+		help = true
+	)
+	private String emulateWbem;
+
 	/**
 	 * Indicates whether at least one emulation option has been configured on the CLI.
 	 *
 	 * @return {@code true} when one or more emulation directories are provided
 	 */
 	public boolean isEnabled() {
-		return !isBlank(emulateHttp) || !isBlank(emulateSnmp) || !isBlank(emulateOsCommand) || !isBlank(emulateSsh);
+		final boolean hasHttp = !isBlank(emulateHttp);
+		final boolean hasSnmp = !isBlank(emulateSnmp);
+		final boolean hasOsCommand = !isBlank(emulateOsCommand);
+		final boolean hasSsh = !isBlank(emulateSsh);
+		final boolean hasWbem = !isBlank(emulateWbem);
+
+		return hasHttp || hasSnmp || hasOsCommand || hasSsh || hasWbem;
 	}
 
 	/**
@@ -136,6 +151,10 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 
 		if (!isBlank(emulateSsh)) {
 			emulationConfigurationNode.set("ssh", buildProtocolEmulationNode(emulateSsh, defaultUsername, defaultPassword));
+		}
+
+		if (!isBlank(emulateWbem)) {
+			emulationConfigurationNode.set("wbem", buildProtocolEmulationNode(emulateWbem, defaultUsername, defaultPassword));
 		}
 
 		return CliExtensionManager

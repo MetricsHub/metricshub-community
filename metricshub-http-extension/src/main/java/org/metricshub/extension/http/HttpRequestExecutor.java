@@ -196,7 +196,7 @@ public class HttpRequestExecutor {
 
 		// Record the HTTP exchange if recording is enabled
 		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank() && result != null && !result.isEmpty()) {
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank() && result != null) {
 			// Resolve body and headers using default credentials so that recorded values
 			// match what the emulation extension will compute during playback
 			final String defaultAuthToken = MacrosUpdater.update(

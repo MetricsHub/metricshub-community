@@ -54,6 +54,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	private SshEmulationConfig ssh;
 
+	private WbemEmulationConfig wbem;
+
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		// No specific validation needed for the emulation configuration
@@ -93,6 +95,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 				return oscommand != null ? oscommand.getProperty(property) : null;
 			case "ssh":
 				return ssh != null ? ssh.getProperty(property) : null;
+			case "wbem":
+				return wbem != null ? wbem.getProperty(property) : null;
 			default:
 				return null;
 		}

@@ -29,10 +29,12 @@ import org.metricshub.engine.connector.model.identity.criterion.CommandLineCrite
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.HostProperties;
@@ -40,6 +42,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.extension.wbem.WbemConfiguration;
 
 /**
  * Tests for {@link EmulationExtension}.
@@ -76,6 +79,7 @@ class EmulationExtensionTest {
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().hostname(HOSTNAME).build(), directory))
 			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().hostname(HOSTNAME).build(), directory))
 			.oscommand(new OsCommandEmulationConfig(new OsCommandConfiguration(), directory))
+			.wbem(new WbemEmulationConfig(WbemConfiguration.builder().hostname(HOSTNAME).build(), directory))
 			.build();
 	}
 
@@ -138,6 +142,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedSources().contains(CommandLineSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpGetSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpTableSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(WbemSource.class));
 	}
 
 	// ---- getSupportedCriteria ----
@@ -149,6 +154,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedCriteria().contains(CommandLineCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetNextCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(WbemCriterion.class));
 	}
 
 	// ---- getConfigurationToSourceMapping ----

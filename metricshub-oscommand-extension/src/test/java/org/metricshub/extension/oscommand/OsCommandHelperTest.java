@@ -1181,7 +1181,6 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunControlledSshCommandClearsInterruptFlag() {
-		Semaphore semaphore = SshSemaphoreFactory.getInstance().createOrGetSempahore(HOSTNAME);
 
 		Thread.currentThread().interrupt();
 

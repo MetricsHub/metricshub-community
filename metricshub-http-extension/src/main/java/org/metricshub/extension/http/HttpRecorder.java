@@ -21,6 +21,7 @@ package org.metricshub.extension.http;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -158,13 +159,13 @@ public class HttpRecorder {
 	 * @return A mutable list of existing entries.
 	 * @throws IOException If the file cannot be read or parsed.
 	 */
-	@SuppressWarnings("unchecked")
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
 		if (Files.isRegularFile(indexFile)) {
-			final Map<String, Object> existing = yamlMapper.readValue(indexFile.toFile(), Map.class);
-			final Object imageObj = existing.get("image");
-			if (imageObj instanceof List) {
-				return new ArrayList<>((List<Map<String, Object>>) imageObj);
+			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
+			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
+			final List<Map<String, Object>> imageList = existing.get("image");
+			if (imageList != null) {
+				return new ArrayList<>(imageList);
 			}
 		}
 		return new ArrayList<>();
