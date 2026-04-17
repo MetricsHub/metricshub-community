@@ -2,7 +2,6 @@ package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import java.util.HashMap;
 import java.util.List;
@@ -79,24 +78,6 @@ class ExtensionManagerTest {
 		rawConnectorStoreExpected.setStore(rawStore);
 		assertInstanceOf(TreeMap.class, rawConnectorStore.getStore());
 		assertEquals(rawConnectorStoreExpected.getStore(), rawConnectorStore.getStore());
-	}
-
-	@Test
-	void testActivateAndKeepOnlyProtocolExtension() {
-		final IProtocolExtension httpExtension = new TestProtocolExtension("http");
-		final IProtocolExtension emulationExtension = new TestProtocolExtension("emulation");
-
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
-			.withProtocolExtensions(List.of(httpExtension))
-			.withAvailableProtocolExtensions(List.of(httpExtension, emulationExtension))
-			.build();
-
-		extensionManager.activateProtocolExtension("emulation");
-		assertIterableEquals(List.of(httpExtension, emulationExtension), extensionManager.getProtocolExtensions());
-
-		extensionManager.keepOnlyProtocolExtension("emulation");
-		assertIterableEquals(List.of(emulationExtension), extensionManager.getProtocolExtensions());
 	}
 
 	private static final class TestProtocolExtension implements IProtocolExtension {

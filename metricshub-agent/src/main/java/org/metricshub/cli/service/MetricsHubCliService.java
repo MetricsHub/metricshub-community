@@ -617,7 +617,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				winRmConfigCli,
 				wbemConfigCli,
 				jdbcConfigCli,
-				jmxConfigCli
+				jmxConfigCli,
+				emulationConfigCli
 			)
 			.filter(Objects::nonNull)
 			.map(protocolConfig -> {
@@ -632,26 +633,6 @@ public class MetricsHubCliService implements Callable<Integer> {
 				}
 			})
 			.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
-
-		if (emulationConfigCli != null && emulationConfigCli.isEnabled()) {
-			CliExtensionManager.activateEmulationProtocolExtension();
-			try {
-				emulationConfigCli
-					.buildConfiguration(username, password)
-					.ifPresent(configuration -> {
-						try {
-							configuration.setHostname(hostname);
-							configuration.validateConfiguration(hostname);
-							protocolConfigurations.put(configuration.getClass(), configuration);
-							CliExtensionManager.keepOnlyEmulationProtocolExtension();
-						} catch (InvalidConfigurationException e) {
-							throw new IllegalStateException("Invalid emulation configuration detected.", e);
-						}
-					});
-			} catch (InvalidConfigurationException e) {
-				throw new IllegalStateException("Invalid emulation configuration detected.", e);
-			}
-		}
 
 		return protocolConfigurations;
 	}
@@ -682,13 +663,12 @@ public class MetricsHubCliService implements Callable<Integer> {
 				winRmConfigCli,
 				wbemConfigCli,
 				jdbcConfigCli,
-				jmxConfigCli
+				jmxConfigCli,
+				emulationConfigCli
 			)
 			.allMatch(Objects::isNull);
 
-		final boolean emulationNotConfigured = emulationConfigCli == null || !emulationConfigCli.isEnabled();
-
-		if (protocolsNotConfigured && emulationNotConfigured) {
+		if (protocolsNotConfigured) {
 			throw new ParameterException(
 				spec.commandLine(),
 				"At least one protocol must be specified: --http[s], --ipmi, --jdbc, --snmp, --snmpv3, --ssh, --wbem, --winrm, --wmi."

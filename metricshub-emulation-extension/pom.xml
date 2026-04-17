@@ -12,7 +12,7 @@
 	<artifactId>metricshub-emulation-extension</artifactId>
 
 	<name>MetricsHub Emulation Extension</name>
-	<description>MetricsHub Emulation Extension providing file-based protocol emulation for offline testing and development.</description>
+	<description>Unified Protocol Emulation Extension for Offline Testing</description>
 
 	<dependencies>
 		<dependency>

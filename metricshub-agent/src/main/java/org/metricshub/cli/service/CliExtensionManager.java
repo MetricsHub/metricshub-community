@@ -29,8 +29,6 @@ import org.metricshub.engine.extension.ExtensionManager;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CliExtensionManager {
 
-	private static final String EMULATION_PROTOCOL_IDENTIFIER = "emulation";
-
 	private static final ExtensionManager EXTENSION_MANAGER = ConfigHelper.loadExtensionManager();
 
 	/**
@@ -40,19 +38,5 @@ public class CliExtensionManager {
 	 */
 	public static ExtensionManager getExtensionManagerSingleton() {
 		return EXTENSION_MANAGER;
-	}
-
-	/**
-	 * Activates the emulation protocol extension in the singleton extension manager.
-	 */
-	public static void activateEmulationProtocolExtension() {
-		EXTENSION_MANAGER.activateProtocolExtension(EMULATION_PROTOCOL_IDENTIFIER);
-	}
-
-	/**
-	 * Keeps only the emulation protocol extension active in the singleton extension manager.
-	 */
-	public static void keepOnlyEmulationProtocolExtension() {
-		EXTENSION_MANAGER.keepOnlyProtocolExtension(EMULATION_PROTOCOL_IDENTIFIER);
 	}
 }
