@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
 
@@ -46,6 +47,28 @@ class EmulationConfigurationTest {
 	}
 
 	@Test
+	void testCopyWithJdbc() {
+		final JdbcConfiguration jdbcConfig = JdbcConfiguration
+			.builder()
+			.hostname("test-host")
+			.username("user")
+			.password("pass".toCharArray())
+			.build();
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.hostname("test-host")
+			.jdbc(new JdbcEmulationConfig(jdbcConfig, "/jdbc/dir"))
+			.build();
+
+		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
+
+		assertNotSame(configuration, copy);
+		assertNotNull(copy.getJdbc());
+		assertEquals("/jdbc/dir", copy.getJdbc().getDirectory());
+		assertEquals("user", copy.getJdbc().getUsername());
+	}
+
+	@Test
 	void testCopyNullHostname() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
 		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
@@ -73,6 +96,7 @@ class EmulationConfigurationTest {
 		assertEquals("42", configuration.getProperty("oscommand", "timeout"));
 		assertEquals("12", configuration.getProperty("wbem", "timeout"));
 		assertEquals("my-host", configuration.getProperty("http", "hostname"));
+		assertNull(configuration.getProperty("jdbc", "timeout"));
 		assertNull(configuration.getProperty("ssh", "timeout"));
 		assertNull(configuration.getProperty(null, "timeout"));
 		assertNull(configuration.getProperty("http", null));

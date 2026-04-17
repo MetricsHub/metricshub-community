@@ -56,15 +56,6 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	private String emulateSnmp;
 
 	@Option(
-		names = { "--emulate-oscommand" },
-		order = 17,
-		defaultValue = "",
-		description = "Reads OS command recorded sources execution results from the specified directory",
-		help = true
-	)
-	private String emulateOsCommand;
-
-	@Option(
 		names = { "--emulate-ssh" },
 		order = 18,
 		defaultValue = "",
@@ -82,6 +73,15 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	)
 	private String emulateWbem;
 
+	@Option(
+		names = { "--emulate-jdbc" },
+		order = 20,
+		defaultValue = "",
+		description = "Reads JDBC recorded sources execution results from the specified directory",
+		help = true
+	)
+	private String emulateJdbc;
+
 	/**
 	 * Indicates whether at least one emulation option has been configured on the CLI.
 	 *
@@ -90,11 +90,11 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	public boolean isEnabled() {
 		final boolean hasHttp = !isBlank(emulateHttp);
 		final boolean hasSnmp = !isBlank(emulateSnmp);
-		final boolean hasOsCommand = !isBlank(emulateOsCommand);
 		final boolean hasSsh = !isBlank(emulateSsh);
 		final boolean hasWbem = !isBlank(emulateWbem);
+		final boolean hasJdbc = !isBlank(emulateJdbc);
 
-		return hasHttp || hasSnmp || hasOsCommand || hasSsh || hasWbem;
+		return hasHttp || hasSnmp || hasSsh || hasWbem || hasJdbc;
 	}
 
 	/**
@@ -142,19 +142,16 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 			emulationConfigurationNode.set("snmp", buildProtocolEmulationNode(emulateSnmp, defaultUsername, defaultPassword));
 		}
 
-		if (!isBlank(emulateOsCommand)) {
-			emulationConfigurationNode.set(
-				"oscommand",
-				buildProtocolEmulationNode(emulateOsCommand, defaultUsername, defaultPassword)
-			);
-		}
-
 		if (!isBlank(emulateSsh)) {
 			emulationConfigurationNode.set("ssh", buildProtocolEmulationNode(emulateSsh, defaultUsername, defaultPassword));
 		}
 
 		if (!isBlank(emulateWbem)) {
 			emulationConfigurationNode.set("wbem", buildProtocolEmulationNode(emulateWbem, defaultUsername, defaultPassword));
+		}
+
+		if (!isBlank(emulateJdbc)) {
+			emulationConfigurationNode.set("jdbc", buildProtocolEmulationNode(emulateJdbc, defaultUsername, defaultPassword));
 		}
 
 		return CliExtensionManager

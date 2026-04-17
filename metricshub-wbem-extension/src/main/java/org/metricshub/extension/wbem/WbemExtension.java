@@ -46,6 +46,11 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * The {@code WbemExtension} class implements the {@link IProtocolExtension} interface to provide
+ * support for the Web-Based Enterprise Management (WBEM) protocol in the MetricsHub engine.
+ * It includes methods for validating configurations, processing criteria and sources, and performing protocol health checks.
+ */
 @Slf4j
 public class WbemExtension implements IProtocolExtension {
 

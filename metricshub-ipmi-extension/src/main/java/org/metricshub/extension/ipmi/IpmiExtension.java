@@ -48,6 +48,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
 
+/**
+ * The IpmiExtension class implements the IProtocolExtension interface to provide support for the IPMI (Intelligent Platform Management Interface) protocol in the MetricsHub engine.
+ */
 @Slf4j
 public class IpmiExtension implements IProtocolExtension {
 

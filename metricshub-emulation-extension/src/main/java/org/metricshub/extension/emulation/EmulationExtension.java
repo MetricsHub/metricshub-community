@@ -42,18 +42,21 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
+import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
+import org.metricshub.extension.emulation.jdbc.EmulationSqlRequestExecutor;
 import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
 import org.metricshub.extension.emulation.wbem.EmulationWbemRequestExecutor;
@@ -61,6 +64,10 @@ import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
+import org.metricshub.extension.jdbc.JdbcConfiguration;
+import org.metricshub.extension.jdbc.JdbcExtension;
+import org.metricshub.extension.jdbc.SqlCriterionProcessor;
+import org.metricshub.extension.jdbc.SqlSourceProcessor;
 import org.metricshub.extension.oscommand.CommandLineCriterionProcessor;
 import org.metricshub.extension.oscommand.CommandLineSourceProcessor;
 import org.metricshub.extension.oscommand.OsCommandExtension;
@@ -101,6 +108,7 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.addAll(OsCommandExtension.SUPPORTED_CONFIGURATION_TYPES);
 		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(WbemExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(JdbcExtension.IDENTIFIER);
 	}
 
 	/**
@@ -123,6 +131,11 @@ public class EmulationExtension implements IProtocolExtension {
 	 * WBEM request executor that replays query results from emulation files.
 	 */
 	private final EmulationWbemRequestExecutor wbemRequestExecutor = new EmulationWbemRequestExecutor(roundRobinManager);
+
+	/**
+	 * SQL request executor that replays query results from emulation files.
+	 */
+	private final EmulationSqlRequestExecutor sqlRequestExecutor = new EmulationSqlRequestExecutor(roundRobinManager);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -197,6 +210,27 @@ public class EmulationExtension implements IProtocolExtension {
 			}
 		};
 
+	/**
+	 * Provides the JDBC configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
+	 */
+	private static final Function<TelemetryManager, JdbcConfiguration> EMULATION_JDBC_CONFIGURATION_PROVIDER =
+		telemetryManager -> {
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return null;
+			}
+			final var jdbcConfiguration = emulationConfiguration.getJdbc();
+			final String hostname = telemetryManager.getHostname();
+			if (jdbcConfiguration == null) {
+				return null;
+			} else {
+				jdbcConfiguration.setHostname(hostname);
+				return jdbcConfiguration;
+			}
+		};
+
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
 		return configuration instanceof EmulationConfiguration;
@@ -209,6 +243,7 @@ public class EmulationExtension implements IProtocolExtension {
 			HttpSource.class,
 			SnmpGetSource.class,
 			SnmpTableSource.class,
+			SqlSource.class,
 			WbemSource.class
 		);
 	}
@@ -225,6 +260,7 @@ public class EmulationExtension implements IProtocolExtension {
 			HttpCriterion.class,
 			SnmpGetCriterion.class,
 			SnmpGetNextCriterion.class,
+			SqlCriterion.class,
 			WbemCriterion.class
 		);
 	}
@@ -258,6 +294,9 @@ public class EmulationExtension implements IProtocolExtension {
 				.process(wbemSource, telemetryManager);
 		} else if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
+		} else if (source instanceof SqlSource sqlSource) {
+			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, EMULATION_JDBC_CONFIGURATION_PROVIDER)
+				.process(sqlSource, telemetryManager);
 		}
 
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
@@ -299,6 +338,9 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
 			return new CommandLineCriterionProcessor(connectorId, osCommandService)
 				.process(commandLineCriterion, telemetryManager);
+		} else if (criterion instanceof SqlCriterion sqlCriterion) {
+			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, EMULATION_JDBC_CONFIGURATION_PROVIDER)
+				.process(sqlCriterion, telemetryManager);
 		}
 
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);

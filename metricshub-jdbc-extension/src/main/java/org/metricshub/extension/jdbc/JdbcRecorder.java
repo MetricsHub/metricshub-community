@@ -1,8 +1,8 @@
-package org.metricshub.extension.wbem;
+package org.metricshub.extension.jdbc;
 
 /*-
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
- * MetricsHub Wbem Extension
+ * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
  * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
@@ -39,31 +39,32 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * Records WBEM query/namespace exchanges to an emulation image ({@code image.yaml})
- * and response payload files under a {@code wbem/} subdirectory.
+ * Records JDBC SQL query exchanges to an emulation image ({@code image.yaml})
+ * and response payload files under a {@code jdbc/} subdirectory.
  *
  * <p>The image format is:
  * <pre>
  * image:
- * - request:
- *     wql: SELECT ...
- *     namespace: root/emc
- *   response: uuid-random.txt
+ * - query: SELECT ...
+ *   response: uuid-random.csv
  * </pre>
+ *
+ * <p>Thread-safe: all writes are synchronized per recorder instance, and one
+ * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class WbemRecorder {
+public class JdbcRecorder {
 
-	static final String WBEM_SUBDIR = "wbem";
+	static final String JDBC_SUBDIR = "jdbc";
 	static final String IMAGE_YAML = "image.yaml";
 
-	private static final ConcurrentHashMap<String, WbemRecorder> RECORDERS = new ConcurrentHashMap<>();
+	private static final ConcurrentHashMap<String, JdbcRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path wbemDir;
+	private final Path jdbcDir;
 	private final ObjectMapper yamlMapper;
 
-	WbemRecorder(final String recordOutputDirectory) {
-		this.wbemDir = Path.of(recordOutputDirectory, WBEM_SUBDIR);
+	JdbcRecorder(final String recordOutputDirectory) {
+		this.jdbcDir = Path.of(recordOutputDirectory, JDBC_SUBDIR);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -73,8 +74,8 @@ public class WbemRecorder {
 	 * @param recordOutputDirectory root recording output directory
 	 * @return shared recorder instance
 	 */
-	public static WbemRecorder getInstance(final String recordOutputDirectory) {
-		return RECORDERS.computeIfAbsent(recordOutputDirectory, WbemRecorder::new);
+	public static JdbcRecorder getInstance(final String recordOutputDirectory) {
+		return RECORDERS.computeIfAbsent(recordOutputDirectory, JdbcRecorder::new);
 	}
 
 	/**
@@ -86,32 +87,27 @@ public class WbemRecorder {
 	}
 
 	/**
-	 * Records a WBEM response.
+	 * Records a JDBC SQL response.
 	 *
-	 * @param wql WQL query
-	 * @param namespace WBEM namespace
+	 * @param sqlQuery      SQL query string
 	 * @param responseTable response table values
 	 */
-	public synchronized void record(final String wql, final String namespace, final List<List<String>> responseTable) {
+	public synchronized void record(final String sqlQuery, final List<List<String>> responseTable) {
 		try {
-			Files.createDirectories(wbemDir);
+			Files.createDirectories(jdbcDir);
 
-			final Path indexFile = wbemDir.resolve(IMAGE_YAML);
+			final Path indexFile = jdbcDir.resolve(IMAGE_YAML);
 			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
 
 			final String responseFileName = UUID.randomUUID() + ".csv";
 			Files.writeString(
-				wbemDir.resolve(responseFileName),
+				jdbcDir.resolve(responseFileName),
 				SourceTable.tableToCsv(responseTable, MetricsHubConstants.TABLE_SEP, true),
 				StandardCharsets.UTF_8
 			);
 
-			final Map<String, Object> request = new LinkedHashMap<>();
-			request.put("wql", wql);
-			request.put("namespace", namespace);
-
 			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("request", request);
+			entry.put("query", sqlQuery);
 			entry.put("response", responseFileName);
 			entries.add(entry);
 
@@ -119,8 +115,8 @@ public class WbemRecorder {
 			image.put("image", entries);
 			yamlMapper.writeValue(indexFile.toFile(), image);
 		} catch (IOException e) {
-			log.error("WBEM recording - Failed to record query for namespace {}: {}", namespace, e.getMessage());
-			log.debug("WBEM recording - Error details:", e);
+			log.error("JDBC recording - Failed to record SQL query: {}", e.getMessage());
+			log.debug("JDBC recording - Error details:", e);
 		}
 	}
 

@@ -185,7 +185,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("1")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -204,7 +204,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of())
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -224,7 +224,7 @@ class JdbcExtensionTest {
 
 		doThrow(new ClientException("SQL query failed"))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -259,7 +259,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("value1", "value2")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
 
@@ -361,7 +361,7 @@ class JdbcExtensionTest {
 	void tesExecuteQuery() throws Exception {
 		doReturn(SQL_RESULT)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
@@ -381,7 +381,7 @@ class JdbcExtensionTest {
 	void tesExecuteQueryThrow() throws Exception {
 		doThrow(ClientException.class)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));

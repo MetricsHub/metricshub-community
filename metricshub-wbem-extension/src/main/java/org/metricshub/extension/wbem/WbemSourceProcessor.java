@@ -26,23 +26,20 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.WMI_DEFAU
 
 import java.util.List;
 import java.util.function.Function;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * Processor for WBEM sources. It is responsible for executing the WBEM query and returning the resulting table.
+ */
 @Slf4j
 public class WbemSourceProcessor {
 
-	@NonNull
 	private WbemRequestExecutor wbemRequestExecutor;
-
-	@NonNull
 	private String connectorId;
-
-	@NonNull
 	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
 
 	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =

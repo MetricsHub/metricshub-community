@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -29,17 +30,20 @@ import org.metricshub.engine.connector.model.identity.criterion.CommandLineCrite
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
+import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
@@ -143,6 +147,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpGetSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpTableSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(WbemSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(SqlSource.class));
 	}
 
 	// ---- getSupportedCriteria ----
@@ -155,6 +160,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetNextCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(WbemCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(SqlCriterion.class));
 	}
 
 	// ---- getConfigurationToSourceMapping ----
@@ -277,6 +283,55 @@ class EmulationExtensionTest {
 		assertEquals("ok", result.getTable().get(0).get(0));
 	}
 
+	@Test
+	void testProcessSourceWithSqlSource(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - query: SELECT * FROM test_table
+			    response: r1.csv
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(
+			tempDir.resolve("r1.csv"),
+			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
+			StandardCharsets.UTF_8
+		);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration
+					.builder()
+					.hostname(HOSTNAME)
+					.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
+		final SourceTable result = emulationExtension.processSource(sqlSource, "connector", tm);
+
+		assertNotNull(result);
+		assertFalse(result.getTable().isEmpty());
+		assertEquals("col1", result.getTable().get(0).get(0));
+	}
+
+	@Test
+	void testProcessSourceWithSqlSourceNoEmulationDir() {
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().build())
+		);
+
+		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
+		final SourceTable result = emulationExtension.processSource(sqlSource, "connector", tm);
+
+		assertNotNull(result);
+		assertTrue(result.getTable().isEmpty());
+	}
+
 	// ---- processCriterion ----
 
 	@Test
@@ -357,6 +412,41 @@ class EmulationExtensionTest {
 			.build();
 
 		final CriterionTestResult result = emulationExtension.processCriterion(criterion, "connector", tm, false);
+
+		assertNotNull(result);
+		assertTrue(result.isSuccess());
+	}
+
+	@Test
+	void testProcessCriterionSqlCriterion(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - query: SELECT * FROM test_table
+			    response: r1.csv
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(
+			tempDir.resolve("r1.csv"),
+			SourceTable.tableToCsv(List.of(List.of("col1", "col2")), ";", true),
+			StandardCharsets.UTF_8
+		);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration
+					.builder()
+					.hostname(HOSTNAME)
+					.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final SqlCriterion sqlCriterion = SqlCriterion.builder().query("SELECT * FROM test_table").build();
+		final CriterionTestResult result = emulationExtension.processCriterion(sqlCriterion, "connector", tm, false);
 
 		assertNotNull(result);
 		assertTrue(result.isSuccess());

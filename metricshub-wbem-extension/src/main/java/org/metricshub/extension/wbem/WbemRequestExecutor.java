@@ -38,6 +38,9 @@ import org.metricshub.wbem.client.WbemExecutor;
 import org.metricshub.wbem.client.WbemQueryResult;
 import org.metricshub.wbem.javax.wbem.WBEMException;
 
+/**
+ * Provides functionality to execute WBEM queries, including handling vCenter authentication when needed.
+ */
 @Slf4j
 public class WbemRequestExecutor {
 

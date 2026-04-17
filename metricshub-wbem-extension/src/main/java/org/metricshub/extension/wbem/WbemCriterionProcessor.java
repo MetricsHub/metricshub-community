@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
@@ -48,8 +47,11 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * This class is responsible for processing {@link WbemCriterion} instances, which are used to detect the appropriate WBEM namespace
+ * when the namespace is set to "Automatic". It performs the necessary WBEM queries to find the correct namespace and tests the criterion against it.
+ */
 @Slf4j
-@RequiredArgsConstructor
 public class WbemCriterionProcessor {
 
 	private static final String SELECT_NAME_FROM_CIM_NAMESPACE = "SELECT Name from CIM_Namespace";
@@ -66,15 +68,12 @@ public class WbemCriterionProcessor {
 		new WqlQuery(SELECT_NAME_FROM_CIM_NAMESPACE, INTEROP_LOWER_CASE)
 	);
 
-	@NonNull
 	private WbemRequestExecutor wbemRequestExecutor;
 
-	@NonNull
 	private String connectorId;
 
 	private boolean logMode;
 
-	@NonNull
 	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
 
 	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =

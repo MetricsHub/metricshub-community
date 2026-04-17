@@ -30,6 +30,12 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.configuration.IProtocolScopedPropertyAccessor;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.jdbc.JdbcConfiguration;
+import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.SshConfiguration;
+import org.metricshub.extension.snmp.SnmpConfiguration;
+import org.metricshub.extension.wbem.WbemConfiguration;
 
 /**
  * Configuration for the emulation protocol.
@@ -56,6 +62,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	private WbemEmulationConfig wbem;
 
+	private JdbcEmulationConfig jdbc;
+
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		// No specific validation needed for the emulation configuration
@@ -68,7 +76,20 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	@Override
 	public IConfiguration copy() {
-		return EmulationConfiguration.builder().hostname(hostname).build();
+		return EmulationConfiguration
+			.builder()
+			.hostname(hostname)
+			.http(http != null ? new HttpEmulationConfig((HttpConfiguration) http.copy(), http.getDirectory()) : null)
+			.snmp(snmp != null ? new SnmpEmulationConfig((SnmpConfiguration) snmp.copy(), snmp.getDirectory()) : null)
+			.oscommand(
+				oscommand != null
+					? new OsCommandEmulationConfig((OsCommandConfiguration) oscommand.copy(), oscommand.getDirectory())
+					: null
+			)
+			.ssh(ssh != null ? new SshEmulationConfig((SshConfiguration) ssh.copy(), ssh.getDirectory()) : null)
+			.wbem(wbem != null ? new WbemEmulationConfig((WbemConfiguration) wbem.copy(), wbem.getDirectory()) : null)
+			.jdbc(jdbc != null ? new JdbcEmulationConfig((JdbcConfiguration) jdbc.copy(), jdbc.getDirectory()) : null)
+			.build();
 	}
 
 	@Override
@@ -97,6 +118,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 				return ssh != null ? ssh.getProperty(property) : null;
 			case "wbem":
 				return wbem != null ? wbem.getProperty(property) : null;
+			case "jdbc":
+				return jdbc != null ? jdbc.getProperty(property) : null;
 			default:
 				return null;
 		}
