@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy.utils;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.ArrayList;
@@ -193,7 +194,7 @@ public class PslUtils {
 
 		int i = 1;
 
-		for (String value : row.split(",")) {
+		for (String value : SourceTable.lineToList(row, TABLE_SEP)) {
 			jsonContent.append("\"Column(").append(i).append(")\":\"").append(value).append("\",\n");
 			i++;
 		}

@@ -26,11 +26,11 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -772,7 +772,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final List<String> row,
 		final SourceTable sourceTableToConcat
 	) {
-		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(rowToCsv(row, ","), sourceTableToConcat);
+		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(
+			SourceTable.lineToCsv(row, TABLE_SEP, true),
+			sourceTableToConcat
+		);
 		// This will mess the JSON Extended
 		if (formattedExtendedJSON.isBlank()) {
 			return;
@@ -809,24 +812,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		currentResult.setRawData(
 			(currentResult.getRawData().isBlank() ? EMPTY : currentResult.getRawData().concat(separator)).concat(string)
 		);
-	}
-
-	/**
-	 * Transform the {@link List} row to a {@link String} representation
-	 * [a1,b1,c2]
-	 *  =>
-	 * a1,b1,c1
-	 *
-	 * @param row             The row result we wish to parse
-	 * @param separator       The cells separator on each line
-	 * @return {@link String} value
-	 */
-	public static String rowToCsv(final List<String> row, final String separator) {
-		if (row != null) {
-			return row.stream().filter(Objects::nonNull).collect(Collectors.joining(separator));
-		}
-
-		return EMPTY;
 	}
 
 	/**

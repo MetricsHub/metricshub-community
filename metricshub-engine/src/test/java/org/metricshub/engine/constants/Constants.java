@@ -66,7 +66,7 @@ public class Constants {
 	public static final String EXPECTED_RESULT =
 		"[{\n" +
 		"\"Entry\":{\n" +
-		"\"Full\":\"val1,val2,val3\",\n" +
+		"\"Full\":\"val1;val2;val3;\",\n" +
 		"\"Column(1)\":\"val1\",\n" +
 		"\"Column(2)\":\"val2\",\n" +
 		"\"Column(3)\":\"val3\",\n" +
@@ -75,7 +75,7 @@ public class Constants {
 		"},\n" +
 		"{\n" +
 		"\"Entry\":{\n" +
-		"\"Full\":\"a1,b1,c1\",\n" +
+		"\"Full\":\"a1;b1;c1;\",\n" +
 		"\"Column(1)\":\"a1\",\n" +
 		"\"Column(2)\":\"b1\",\n" +
 		"\"Column(3)\":\"c1\",\n" +

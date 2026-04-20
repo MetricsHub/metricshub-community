@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
@@ -80,16 +81,33 @@ public class SourceTable {
 			return table
 				.stream()
 				.filter(Objects::nonNull)
-				.map(line ->
-					replaceSeparator
-						? line.stream().map(val -> val.replace(separator, ALTERNATE_COLUMN_SEPARATOR)).collect(Collectors.toList()) // NOSONAR
-						: line
-				)
-				.map(line -> String.join(separator, line) + separator)
+				.map(line -> lineToCsv(line, separator, replaceSeparator))
 				.collect(Collectors.joining(NEW_LINE));
 		}
 
 		return "";
+	}
+
+	/**
+	 * Convert a line of data to a CSV-formatted string.
+	 *
+	 * @param line The row of data to convert.
+	 * @param separator The separator to use between values.
+	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
+	 * @return The CSV-formatted string.
+	 */
+	public static final String lineToCsv(
+		final List<String> line,
+		final String separator,
+		final boolean replaceSeparator
+	) {
+		Stream<String> stream = line.stream().map(val -> val == null ? EMPTY : val);
+
+		if (replaceSeparator) {
+			stream = stream.map(val -> val.replace(separator, ALTERNATE_COLUMN_SEPARATOR));
+		}
+
+		return stream.collect(Collectors.joining(separator, EMPTY, separator));
 	}
 
 	/**
