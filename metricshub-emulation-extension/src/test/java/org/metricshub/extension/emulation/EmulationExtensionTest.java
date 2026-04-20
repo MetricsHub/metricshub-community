@@ -28,12 +28,14 @@ import org.metricshub.engine.connector.model.common.HttpMethod;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -43,6 +45,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
@@ -148,6 +151,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedSources().contains(SnmpTableSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(WbemSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SqlSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(IpmiSource.class));
 	}
 
 	// ---- getSupportedCriteria ----
@@ -161,6 +165,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SnmpGetNextCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(WbemCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SqlCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(IpmiCriterion.class));
 	}
 
 	// ---- getConfigurationToSourceMapping ----
@@ -332,6 +337,50 @@ class EmulationExtensionTest {
 		assertTrue(result.getTable().isEmpty());
 	}
 
+	@Test
+	void testProcessSourceWithIpmiSource(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request: GetSensors
+			    response: sensors.txt
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("sensors.txt"), "FRU data here", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration
+					.builder()
+					.hostname(HOSTNAME)
+					.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final IpmiSource ipmiSource = IpmiSource.builder().build();
+		final SourceTable result = emulationExtension.processSource(ipmiSource, "connector", tm);
+
+		assertNotNull(result);
+		assertEquals("FRU data here", result.getRawData());
+	}
+
+	@Test
+	void testProcessSourceWithIpmiSourceNoEmulationDir() {
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().build())
+		);
+
+		final IpmiSource ipmiSource = IpmiSource.builder().build();
+		final SourceTable result = emulationExtension.processSource(ipmiSource, "connector", tm);
+
+		assertNotNull(result);
+		assertTrue(result.getTable().isEmpty());
+	}
+
 	// ---- processCriterion ----
 
 	@Test
@@ -450,6 +499,38 @@ class EmulationExtensionTest {
 
 		assertNotNull(result);
 		assertTrue(result.isSuccess());
+	}
+
+	@Test
+	void testProcessCriterionIpmiCriterion(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request: IpmiDetection
+			    response: detection.txt
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("detection.txt"), "System power state is up.", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration
+					.builder()
+					.hostname(HOSTNAME)
+					.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().build();
+		final CriterionTestResult result = emulationExtension.processCriterion(ipmiCriterion, "connector", tm, false);
+
+		assertNotNull(result);
+		assertTrue(result.isSuccess());
+		assertEquals("System power state is up.", result.getResult());
 	}
 
 	// ---- isSupportedConfigurationType ----

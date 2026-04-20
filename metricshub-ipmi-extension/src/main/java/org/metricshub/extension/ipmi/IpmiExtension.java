@@ -151,6 +151,10 @@ public class IpmiExtension implements IProtocolExtension {
 			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
 
 			if (result != null) {
+				final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+				if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+					IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.GET_SENSORS_REQUEST, result);
+				}
 				return SourceTable.builder().rawData(result).build();
 			} else {
 				log.error("Hostname {} - IPMI-over-LAN request returned <null> result. Returning an empty table.", hostname);
@@ -194,6 +198,11 @@ public class IpmiExtension implements IProtocolExtension {
 					.builder()
 					.message("Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.")
 					.build();
+			}
+
+			final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+				IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.IPMI_DETECTION_REQUEST, result);
 			}
 
 			return CriterionTestResult

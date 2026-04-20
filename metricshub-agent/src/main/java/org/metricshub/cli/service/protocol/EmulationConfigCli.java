@@ -82,6 +82,15 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	)
 	private String emulateJdbc;
 
+	@Option(
+		names = { "--emulate-ipmi" },
+		order = 21,
+		defaultValue = "",
+		description = "Reads IPMI recorded sources execution results from the specified directory",
+		help = true
+	)
+	private String emulateIpmi;
+
 	/**
 	 * Indicates whether at least one emulation option has been configured on the CLI.
 	 *
@@ -93,8 +102,9 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 		final boolean hasSsh = !isBlank(emulateSsh);
 		final boolean hasWbem = !isBlank(emulateWbem);
 		final boolean hasJdbc = !isBlank(emulateJdbc);
+		final boolean hasIpmi = !isBlank(emulateIpmi);
 
-		return hasHttp || hasSnmp || hasSsh || hasWbem || hasJdbc;
+		return hasHttp || hasSnmp || hasSsh || hasWbem || hasJdbc || hasIpmi;
 	}
 
 	/**
@@ -152,6 +162,10 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 
 		if (!isBlank(emulateJdbc)) {
 			emulationConfigurationNode.set("jdbc", buildProtocolEmulationNode(emulateJdbc, defaultUsername, defaultPassword));
+		}
+
+		if (!isBlank(emulateIpmi)) {
+			emulationConfigurationNode.set("ipmi", buildProtocolEmulationNode(emulateIpmi, defaultUsername, defaultPassword));
 		}
 
 		return CliExtensionManager

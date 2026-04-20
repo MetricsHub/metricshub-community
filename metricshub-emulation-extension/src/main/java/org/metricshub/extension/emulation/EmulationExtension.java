@@ -40,12 +40,14 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
+import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -56,6 +58,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
+import org.metricshub.extension.emulation.ipmi.EmulationIpmiRequestExecutor;
 import org.metricshub.extension.emulation.jdbc.EmulationSqlRequestExecutor;
 import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
@@ -64,6 +67,8 @@ import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.extension.http.HttpSourceProcessor;
+import org.metricshub.extension.ipmi.IpmiConfiguration;
+import org.metricshub.extension.ipmi.IpmiExtension;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jdbc.JdbcExtension;
 import org.metricshub.extension.jdbc.SqlCriterionProcessor;
@@ -109,6 +114,7 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(SnmpExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(WbemExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(JdbcExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(IpmiExtension.IDENTIFIER);
 	}
 
 	/**
@@ -136,6 +142,11 @@ public class EmulationExtension implements IProtocolExtension {
 	 * SQL request executor that replays query results from emulation files.
 	 */
 	private final EmulationSqlRequestExecutor sqlRequestExecutor = new EmulationSqlRequestExecutor(roundRobinManager);
+
+	/**
+	 * IPMI request executor that replays responses from emulation files.
+	 */
+	private final EmulationIpmiRequestExecutor ipmiRequestExecutor = new EmulationIpmiRequestExecutor(roundRobinManager);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -241,6 +252,7 @@ public class EmulationExtension implements IProtocolExtension {
 		return Set.of(
 			CommandLineSource.class,
 			HttpSource.class,
+			IpmiSource.class,
 			SnmpGetSource.class,
 			SnmpTableSource.class,
 			SqlSource.class,
@@ -258,6 +270,7 @@ public class EmulationExtension implements IProtocolExtension {
 		return Set.of(
 			CommandLineCriterion.class,
 			HttpCriterion.class,
+			IpmiCriterion.class,
 			SnmpGetCriterion.class,
 			SnmpGetNextCriterion.class,
 			SqlCriterion.class,
@@ -297,6 +310,15 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (source instanceof SqlSource sqlSource) {
 			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, EMULATION_JDBC_CONFIGURATION_PROVIDER)
 				.process(sqlSource, telemetryManager);
+		} else if (source instanceof IpmiSource) {
+			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			final String hostname = telemetryManager.getHostname();
+			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
+			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiCfg, emulCfg);
+			if (result != null) {
+				return SourceTable.builder().rawData(result).build();
+			}
+			return SourceTable.empty();
 		}
 
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
@@ -341,6 +363,20 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (criterion instanceof SqlCriterion sqlCriterion) {
 			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, EMULATION_JDBC_CONFIGURATION_PROVIDER)
 				.process(sqlCriterion, telemetryManager);
+		} else if (criterion instanceof IpmiCriterion) {
+			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			final String hostname = telemetryManager.getHostname();
+			final IpmiConfiguration ipmiCfg = emulCfg != null ? emulCfg.getIpmi() : null;
+			final String result = ipmiRequestExecutor.executeIpmiDetection(hostname, ipmiCfg, emulCfg);
+			if (result == null) {
+				return CriterionTestResult.builder().message("IPMI emulation - No recorded detection result found.").build();
+			}
+			return CriterionTestResult
+				.builder()
+				.result(result)
+				.message("Successfully replayed IPMI detection from emulation files.")
+				.success(true)
+				.build();
 		}
 
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);

@@ -13,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
@@ -69,6 +70,23 @@ class EmulationConfigurationTest {
 	}
 
 	@Test
+	void testCopyWithIpmi() {
+		final IpmiConfiguration ipmiConfig = IpmiConfiguration.builder().hostname("test-host").username("admin").build();
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.hostname("test-host")
+			.ipmi(new IpmiEmulationConfig(ipmiConfig, "/ipmi/dir"))
+			.build();
+
+		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
+
+		assertNotSame(configuration, copy);
+		assertNotNull(copy.getIpmi());
+		assertEquals("/ipmi/dir", copy.getIpmi().getDirectory());
+		assertEquals("admin", copy.getIpmi().getUsername());
+	}
+
+	@Test
 	void testCopyNullHostname() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
 		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
@@ -97,6 +115,7 @@ class EmulationConfigurationTest {
 		assertEquals("12", configuration.getProperty("wbem", "timeout"));
 		assertEquals("my-host", configuration.getProperty("http", "hostname"));
 		assertNull(configuration.getProperty("jdbc", "timeout"));
+		assertNull(configuration.getProperty("ipmi", "timeout"));
 		assertNull(configuration.getProperty("ssh", "timeout"));
 		assertNull(configuration.getProperty(null, "timeout"));
 		assertNull(configuration.getProperty("http", null));

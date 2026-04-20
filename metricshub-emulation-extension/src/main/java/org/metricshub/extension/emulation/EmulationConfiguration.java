@@ -31,6 +31,7 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.configuration.IProtocolScopedPropertyAccessor;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
 import org.metricshub.extension.http.HttpConfiguration;
+import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.oscommand.SshConfiguration;
@@ -64,6 +65,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	private JdbcEmulationConfig jdbc;
 
+	private IpmiEmulationConfig ipmi;
+
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		// No specific validation needed for the emulation configuration
@@ -89,6 +92,7 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 			.ssh(ssh != null ? new SshEmulationConfig((SshConfiguration) ssh.copy(), ssh.getDirectory()) : null)
 			.wbem(wbem != null ? new WbemEmulationConfig((WbemConfiguration) wbem.copy(), wbem.getDirectory()) : null)
 			.jdbc(jdbc != null ? new JdbcEmulationConfig((JdbcConfiguration) jdbc.copy(), jdbc.getDirectory()) : null)
+			.ipmi(ipmi != null ? new IpmiEmulationConfig((IpmiConfiguration) ipmi.copy(), ipmi.getDirectory()) : null)
 			.build();
 	}
 
@@ -120,6 +124,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 				return wbem != null ? wbem.getProperty(property) : null;
 			case "jdbc":
 				return jdbc != null ? jdbc.getProperty(property) : null;
+			case "ipmi":
+				return ipmi != null ? ipmi.getProperty(property) : null;
 			default:
 				return null;
 		}
