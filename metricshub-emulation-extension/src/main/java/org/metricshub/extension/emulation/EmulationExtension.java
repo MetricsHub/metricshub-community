@@ -374,7 +374,7 @@ public class EmulationExtension implements IProtocolExtension {
 			return CriterionTestResult
 				.builder()
 				.result(result)
-				.message("Successfully replayed IPMI detection from emulation files.")
+				.message("Successfully connected to the IPMI BMC chip with the IPMI-over-LAN interface.")
 				.success(true)
 				.build();
 		}
