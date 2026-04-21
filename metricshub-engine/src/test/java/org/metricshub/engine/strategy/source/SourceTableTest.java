@@ -2,8 +2,10 @@ package org.metricshub.engine.strategy.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.MY_CONNECTOR_1_NAME;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -62,5 +64,20 @@ class SourceTableTest {
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostProperties(hostProperties).build();
 
 		assertTrue(SourceTable.lookupSourceTable(SOURCE_REF_KEY, MY_CONNECTOR_1_NAME, telemetryManager).isEmpty());
+	}
+
+	@Test
+	void testLineToCsvShouldJoinValuesWithTrailingSeparator() {
+		assertEquals("a;b;c;", SourceTable.lineToCsv(List.of("a", "b", "c"), TABLE_SEP, false));
+	}
+
+	@Test
+	void testLineToCsvShouldConvertNullCellsToEmpty() {
+		assertEquals("a;;c;", SourceTable.lineToCsv(Arrays.asList("a", null, "c"), TABLE_SEP, false));
+	}
+
+	@Test
+	void testLineToCsvShouldReplaceSeparatorInValuesWhenEnabled() {
+		assertEquals("a,b;c;", SourceTable.lineToCsv(List.of("a;b", "c"), TABLE_SEP, true));
 	}
 }
