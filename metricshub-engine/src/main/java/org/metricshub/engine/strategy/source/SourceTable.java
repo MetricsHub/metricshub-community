@@ -93,13 +93,13 @@ public class SourceTable {
 	 * Convert a line of data to a CSV-formatted string.
 	 *
 	 * @param line The non-null row of data to convert.
-	 * @param separator The separator to use between values.
+	 * @param separator The non-null separator to use between values.
 	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
 	 * @return The CSV-formatted string.
 	 */
-	public static final String lineToCsv(
+	public static String lineToCsv(
 		@NonNull final List<String> line,
-		final String separator,
+		@NonNull final String separator,
 		final boolean replaceSeparator
 	) {
 		Stream<String> stream = line.stream().map(val -> val == null ? EMPTY : val);
@@ -115,13 +115,13 @@ public class SourceTable {
 	 * Safe version of the {@link #lineToCsv(List, String, boolean)} method that handles null input.
 	 *
 	 * @param line The row of data to convert.
-	 * @param separator The separator to use between values.
+	 * @param separator The non-null separator to use between values.
 	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
 	 * @return The CSV-formatted string.
 	 */
-	public static final String lineToCsvSafe(
+	public static String lineToCsvSafe(
 		final List<String> line,
-		final String separator,
+		@NonNull final String separator,
 		final boolean replaceSeparator
 	) {
 		if (line == null) {
