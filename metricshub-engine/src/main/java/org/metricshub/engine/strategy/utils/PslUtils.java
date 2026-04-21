@@ -197,7 +197,8 @@ public class PslUtils {
 		int i = 1;
 
 		for (String value : row) {
-			jsonContent.append("\"Column(").append(i).append(")\":\"").append(value).append("\",\n");
+			final String normalizedValue = value == null ? EMPTY : value;
+			jsonContent.append("\"Column(").append(i).append(")\":\"").append(normalizedValue).append("\",\n");
 			i++;
 		}
 
