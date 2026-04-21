@@ -26,7 +26,6 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SEMICOLON;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
-import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -622,6 +621,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
 
 		for (List<String> row : maybeSourceTable.get().getTable()) {
+			if (row == null) {
+				continue;
+			}
+
 			final Source copy = source.copy();
 
 			try {

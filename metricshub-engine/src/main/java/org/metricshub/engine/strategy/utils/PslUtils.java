@@ -179,7 +179,7 @@ public class PslUtils {
 	public static String formatExtendedJSON(@NonNull List<String> row, @NonNull SourceTable tableResult)
 		throws IllegalArgumentException {
 		if (row.isEmpty()) {
-			log.error("formatExtendedJSON received Empty row of values. Returning empty string.");
+			log.error("formatExtendedJSON received an Empty row of values. Returning empty string.");
 			return EMPTY;
 		}
 
