@@ -37,6 +37,7 @@ import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -97,7 +98,7 @@ public class SourceTable {
 	 * @return The CSV-formatted string.
 	 */
 	public static final String lineToCsv(
-		final List<String> line,
+		@NonNull final List<String> line,
 		final String separator,
 		final boolean replaceSeparator
 	) {
