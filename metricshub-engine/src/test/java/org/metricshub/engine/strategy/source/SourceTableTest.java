@@ -67,17 +67,17 @@ class SourceTableTest {
 	}
 
 	@Test
-	void testLineToCsvShouldJoinValuesWithTrailingSeparator() {
+	void testLineToCsvAppendsTrailingSeparator() {
 		assertEquals("a;b;c;", SourceTable.lineToCsv(List.of("a", "b", "c"), TABLE_SEP, false));
 	}
 
 	@Test
-	void testLineToCsvShouldConvertNullCellsToEmpty() {
+	void testLineToCsvConvertsNullsToEmpty() {
 		assertEquals("a;;c;", SourceTable.lineToCsv(Arrays.asList("a", null, "c"), TABLE_SEP, false));
 	}
 
 	@Test
-	void testLineToCsvShouldReplaceSeparatorInValuesWhenEnabled() {
+	void testLineToCsvReplacesSeparatorWhenEnabled() {
 		assertEquals("a,b;c;", SourceTable.lineToCsv(List.of("a;b", "c"), TABLE_SEP, true));
 	}
 }
