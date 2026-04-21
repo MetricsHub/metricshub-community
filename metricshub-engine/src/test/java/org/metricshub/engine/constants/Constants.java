@@ -1,5 +1,7 @@
 package org.metricshub.engine.constants;
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
+
 import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +98,6 @@ public class Constants {
 	public static final String SNMP_SELECTED_COLUMNS = "ID, 9, 11, 49";
 	public static final List<String> SNMP_SELECTED_COLUMNS_LIST = Arrays.asList("ID", "9", "11", "49");
 	public static final String TAB1_REF = "${source::monitors.cpu.discovery.sources.tab1}";
-	public static final String TABLE_SEP = ";";
 
 	public static final String MONITOR_ID_ATTRIBUTE_VALUE = "anyMonitorId";
 
