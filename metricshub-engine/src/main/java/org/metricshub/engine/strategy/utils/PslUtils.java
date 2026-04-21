@@ -172,14 +172,14 @@ public class PslUtils {
 	 * 		}
 	 * 	}
 	 *
-	 * @param row The row of values as List
+	 * @param row The row of values as a List.
 	 * @param tableResult The output returned by the SourceVisitor.
 	 * @return String value
 	 */
 	public static String formatExtendedJSON(@NonNull List<String> row, @NonNull SourceTable tableResult)
 		throws IllegalArgumentException {
 		if (row.isEmpty()) {
-			log.error("formatExtendedJSON received an Empty row of values. Returning empty string.");
+			log.error("formatExtendedJSON received an empty row of values. Returning empty string.");
 			return EMPTY;
 		}
 
