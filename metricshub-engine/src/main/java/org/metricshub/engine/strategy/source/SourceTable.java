@@ -92,7 +92,7 @@ public class SourceTable {
 	/**
 	 * Convert a line of data to a CSV-formatted string.
 	 *
-	 * @param line The row of data to convert.
+	 * @param line The non-null row of data to convert.
 	 * @param separator The separator to use between values.
 	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
 	 * @return The CSV-formatted string.
