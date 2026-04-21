@@ -128,6 +128,7 @@ public class SourceTable {
 		}
 		return lineToCsv(line, separator, replaceSeparator);
 	}
+
 	/**
 	 * Return the List representation of the CSV String table :
 	 * a1,b1,c1,

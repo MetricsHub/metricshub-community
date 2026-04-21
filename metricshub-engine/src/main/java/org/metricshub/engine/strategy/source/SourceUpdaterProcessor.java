@@ -772,10 +772,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final List<String> row,
 		final SourceTable sourceTableToConcat
 	) {
-		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(
-			row,
-			sourceTableToConcat
-		);
+		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(row, sourceTableToConcat);
 		// This will mess the JSON Extended
 		if (formattedExtendedJSON.isBlank()) {
 			return;
