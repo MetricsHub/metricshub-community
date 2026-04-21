@@ -111,6 +111,24 @@ public class SourceTable {
 	}
 
 	/**
+	 * Safe version of the {@link #lineToCsv(List, String, boolean)} method that handles null input.
+	 *
+	 * @param line The row of data to convert.
+	 * @param separator The separator to use between values.
+	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
+	 * @return The CSV-formatted string.
+	 */
+	public static final String lineToCsvSafe(
+		final List<String> line,
+		final String separator,
+		final boolean replaceSeparator
+	) {
+		if (line == null) {
+			return EMPTY;
+		}
+		return lineToCsv(line, separator, replaceSeparator);
+	}
+	/**
 	 * Return the List representation of the CSV String table :
 	 * a1,b1,c1,
 	 * a2,b2,c2,
