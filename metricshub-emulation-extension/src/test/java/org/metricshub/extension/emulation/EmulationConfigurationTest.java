@@ -18,6 +18,7 @@ import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jmx.JmxConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
+import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**
  * Tests for {@link EmulationConfiguration}.
@@ -105,6 +106,23 @@ class EmulationConfigurationTest {
 	}
 
 	@Test
+	void testCopyWithWmi() {
+		final WmiConfiguration wmiConfig = WmiConfiguration.builder().hostname("test-host").username("admin").build();
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.hostname("test-host")
+			.wmi(new WmiEmulationConfig(wmiConfig, "/wmi/dir"))
+			.build();
+
+		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
+
+		assertNotSame(configuration, copy);
+		assertNotNull(copy.getWmi());
+		assertEquals("/wmi/dir", copy.getWmi().getDirectory());
+		assertEquals("admin", copy.getWmi().getUsername());
+	}
+
+	@Test
 	void testCopyNullHostname() {
 		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
 		final EmulationConfiguration copy = (EmulationConfiguration) configuration.copy();
@@ -135,6 +153,7 @@ class EmulationConfigurationTest {
 		assertNull(configuration.getProperty("jdbc", "timeout"));
 		assertNull(configuration.getProperty("ipmi", "timeout"));
 		assertNull(configuration.getProperty("jmx", "timeout"));
+		assertNull(configuration.getProperty("wmi", "timeout"));
 		assertNull(configuration.getProperty("ssh", "timeout"));
 		assertNull(configuration.getProperty(null, "timeout"));
 		assertNull(configuration.getProperty("http", null));

@@ -34,6 +34,7 @@ import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -42,6 +43,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
+import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.HostProperties;
@@ -52,6 +54,7 @@ import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
+import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**
  * Tests for {@link EmulationExtension}.
@@ -155,6 +158,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedSources().contains(SqlSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(IpmiSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(JmxSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(WmiSource.class));
 	}
 
 	// ---- getSupportedCriteria ----
@@ -170,6 +174,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SqlCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(IpmiCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(JmxCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(WmiCriterion.class));
 	}
 
 	// ---- getConfigurationToSourceMapping ----
@@ -535,6 +540,65 @@ class EmulationExtensionTest {
 		assertNotNull(result);
 		assertTrue(result.isSuccess());
 		assertEquals("System power state is up.", result.getResult());
+	}
+
+	@Test
+	void testProcessSourceWithWmiSource(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      wql: SELECT Name FROM Win32_ComputerSystem
+			      namespace: root\\cimv2
+			    response: r1.csv
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(
+			tempDir.resolve("r1.csv"),
+			SourceTable.tableToCsv(List.of(List.of("MyHost")), ";", true),
+			StandardCharsets.UTF_8
+		);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(
+				EmulationConfiguration.class,
+				EmulationConfiguration
+					.builder()
+					.hostname(HOSTNAME)
+					.wmi(new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
+					.build()
+			)
+		);
+
+		final WmiSource wmiSource = WmiSource
+			.builder()
+			.query("SELECT Name FROM Win32_ComputerSystem")
+			.namespace("root\\cimv2")
+			.build();
+		final SourceTable result = emulationExtension.processSource(wmiSource, "connector", tm);
+
+		assertNotNull(result);
+		assertFalse(result.getTable().isEmpty());
+		assertEquals("MyHost", result.getTable().get(0).get(0));
+	}
+
+	@Test
+	void testProcessSourceWithWmiSourceNoEmulationDir() {
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().build())
+		);
+
+		final WmiSource wmiSource = WmiSource
+			.builder()
+			.query("SELECT Name FROM Win32_ComputerSystem")
+			.namespace("root\\cimv2")
+			.build();
+		final SourceTable result = emulationExtension.processSource(wmiSource, "connector", tm);
+
+		assertNotNull(result);
+		assertTrue(result.getTable().isEmpty());
 	}
 
 	// ---- isSupportedConfigurationType ----

@@ -42,10 +42,12 @@ import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.ServiceCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.WmiCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
@@ -55,6 +57,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
+import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -66,6 +69,7 @@ import org.metricshub.extension.emulation.jmx.EmulationJmxRequestExecutor;
 import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
 import org.metricshub.extension.emulation.wbem.EmulationWbemRequestExecutor;
+import org.metricshub.extension.emulation.wmi.EmulationWmiRequestExecutor;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpCriterionProcessor;
 import org.metricshub.extension.http.HttpExtension;
@@ -94,6 +98,12 @@ import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wbem.WbemCriterionProcessor;
 import org.metricshub.extension.wbem.WbemExtension;
 import org.metricshub.extension.wbem.WbemSourceProcessor;
+import org.metricshub.extension.win.IWinConfiguration;
+import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
+import org.metricshub.extension.win.detection.WmiCriterionProcessor;
+import org.metricshub.extension.win.detection.WmiDetectionService;
+import org.metricshub.extension.win.source.WmiSourceProcessor;
+import org.metricshub.extension.wmi.WmiExtension;
 
 /**
  * Protocol extension that provides file-based emulation for offline testing and
@@ -123,6 +133,7 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(JdbcExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(IpmiExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(JmxExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(WmiExtension.IDENTIFIER);
 	}
 
 	/**
@@ -160,6 +171,11 @@ public class EmulationExtension implements IProtocolExtension {
 	 * JMX request executor that replays responses from emulation files.
 	 */
 	private final EmulationJmxRequestExecutor jmxRequestExecutor = new EmulationJmxRequestExecutor(roundRobinManager);
+
+	/**
+	 * WMI request executor that replays responses from emulation files.
+	 */
+	private final EmulationWmiRequestExecutor wmiRequestExecutor = new EmulationWmiRequestExecutor(roundRobinManager);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -276,6 +292,27 @@ public class EmulationExtension implements IProtocolExtension {
 			}
 		};
 
+	/**
+	 * Provides the WMI configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
+	 */
+	private static final Function<TelemetryManager, IWinConfiguration> EMULATION_WMI_CONFIGURATION_PROVIDER =
+		telemetryManager -> {
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return null;
+			}
+			final var wmiConfiguration = emulationConfiguration.getWmi();
+			final String hostname = telemetryManager.getHostname();
+			if (wmiConfiguration == null) {
+				return null;
+			} else {
+				wmiConfiguration.setHostname(hostname);
+				return wmiConfiguration;
+			}
+		};
+
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
 		return configuration instanceof EmulationConfiguration;
@@ -291,7 +328,8 @@ public class EmulationExtension implements IProtocolExtension {
 			SnmpGetSource.class,
 			SnmpTableSource.class,
 			SqlSource.class,
-			WbemSource.class
+			WbemSource.class,
+			WmiSource.class
 		);
 	}
 
@@ -310,7 +348,9 @@ public class EmulationExtension implements IProtocolExtension {
 			SnmpGetCriterion.class,
 			SnmpGetNextCriterion.class,
 			SqlCriterion.class,
-			WbemCriterion.class
+			WbemCriterion.class,
+			WmiCriterion.class,
+			ServiceCriterion.class
 		);
 	}
 
@@ -349,6 +389,9 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (source instanceof JmxSource jmxSource) {
 			return new JmxSourceProcessor(jmxRequestExecutor, EMULATION_JMX_CONFIGURATION_PROVIDER)
 				.process(jmxSource, telemetryManager);
+		} else if (source instanceof WmiSource wmiSource) {
+			return new WmiSourceProcessor(wmiRequestExecutor, EMULATION_WMI_CONFIGURATION_PROVIDER, connectorId)
+				.process(wmiSource, telemetryManager);
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -405,6 +448,14 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (criterion instanceof JmxCriterion jmxCriterion) {
 			return new JmxCriterionProcessor(jmxRequestExecutor, logMode, EMULATION_JMX_CONFIGURATION_PROVIDER)
 				.process(jmxCriterion, connectorId, telemetryManager);
+		} else if (criterion instanceof WmiCriterion wmiCriterion) {
+			return new WmiCriterionProcessor(
+				new WmiDetectionService(wmiRequestExecutor),
+				EMULATION_WMI_CONFIGURATION_PROVIDER,
+				connectorId,
+				logMode
+			)
+				.process(wmiCriterion, telemetryManager);
 		} else if (criterion instanceof IpmiCriterion) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -419,6 +470,12 @@ public class EmulationExtension implements IProtocolExtension {
 				.message("Successfully connected to the IPMI BMC chip with the IPMI-over-LAN interface.")
 				.success(true)
 				.build();
+		} else if (criterion instanceof ServiceCriterion serviceCriterion) {
+			return new WinServiceCriterionProcessor(
+				new WmiDetectionService(wmiRequestExecutor),
+				EMULATION_WMI_CONFIGURATION_PROVIDER
+			)
+				.process(serviceCriterion, telemetryManager, connectorId, logMode);
 		}
 
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);

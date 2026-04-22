@@ -57,13 +57,14 @@ public class WmiDetectionService {
 	 * Note: "Automatic" namespace is not supported in this method.
 	 * <br>
 	 *
-	 * @param hostname         Host name
-	 * @param winConfiguration Win configuration (credentials, timeout)
-	 * @param wmiCriterion     WMI detection properties (WQL, namespace, expected result)
-	 * @param connectorId      Connector ID (used for logging purposes)
-	 * @param logMode          Whether to log or not the error in case of failure
-	 *                          (can be set to false when this method is used as part of namespace
-	 *                          detection, to avoid polluting logs with expected failures)
+	 * @param hostname               Host name
+	 * @param winConfiguration       Win configuration (credentials, timeout)
+	 * @param wmiCriterion           WMI detection properties (WQL, namespace, expected result)
+	 * @param connectorId            Connector ID (used for logging purposes)
+	 * @param logMode                Whether to log or not the error in case of failure
+	 *                                (can be set to false when this method is used as part of namespace
+	 *                                detection, to avoid polluting logs with expected failures)
+	 * @param recordOutputDirectory  Directory where WMI responses are recorded, or {@code null} to skip recording
 	 * @return {@link CriterionTestResult} which indicates if the check has succeeded or not.
 	 */
 	public CriterionTestResult performDetectionTest(
@@ -71,13 +72,20 @@ public class WmiDetectionService {
 		@NonNull final IWinConfiguration winConfiguration,
 		@NonNull final WmiCriterion wmiCriterion,
 		@NonNull String connectorId,
-		final boolean logMode
+		final boolean logMode,
+		final String recordOutputDirectory
 	) {
 		// Make the WBEM query
 		final List<List<String>> queryResult;
 		try {
 			queryResult =
-				winRequestExecutor.executeWmi(hostname, winConfiguration, wmiCriterion.getQuery(), wmiCriterion.getNamespace());
+				winRequestExecutor.executeWmi(
+					hostname,
+					winConfiguration,
+					wmiCriterion.getQuery(),
+					wmiCriterion.getNamespace(),
+					recordOutputDirectory
+				);
 		} catch (Exception e) {
 			if (logMode) {
 				log.error(

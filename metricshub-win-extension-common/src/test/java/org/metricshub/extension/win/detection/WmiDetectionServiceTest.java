@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 
@@ -50,7 +51,7 @@ class WmiDetectionServiceTest {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
 		doReturn(List.of(List.of("MetricsHubServiceManager"), List.of("otelcol-contrib")))
 			.when(winRequestExecutorMock)
-			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE);
+			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).expectedResult("metricshub").build();
 
 		final CriterionTestResult result = wmiDetectionService.performDetectionTest(
@@ -58,7 +59,8 @@ class WmiDetectionServiceTest {
 			winConfiguration,
 			wmiCriterion,
 			CONNECTOR_ID,
-			true
+			true,
+			null
 		);
 		assertTrue(result.isSuccess());
 	}
@@ -68,7 +70,7 @@ class WmiDetectionServiceTest {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
 		doReturn(List.of(List.of("otelcol-contrib")))
 			.when(winRequestExecutorMock)
-			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE);
+			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).expectedResult("metricshub").build();
 
 		final CriterionTestResult result = wmiDetectionService.performDetectionTest(
@@ -76,7 +78,8 @@ class WmiDetectionServiceTest {
 			winConfiguration,
 			wmiCriterion,
 			CONNECTOR_ID,
-			true
+			true,
+			null
 		);
 		assertFalse(result.isSuccess());
 	}
@@ -86,7 +89,7 @@ class WmiDetectionServiceTest {
 		final IWinConfiguration winConfiguration = WmiTestConfiguration.builder().build();
 		doReturn(List.of(List.of("otelcol-contrib")))
 			.when(winRequestExecutorMock)
-			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE);
+			.executeWmi(HOST_NAME, winConfiguration, WMI_QUERY, WMI_NAMESPACE, null);
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WMI_QUERY).build();
 
 		final CriterionTestResult result = wmiDetectionService.performDetectionTest(
@@ -94,7 +97,8 @@ class WmiDetectionServiceTest {
 			winConfiguration,
 			wmiCriterion,
 			CONNECTOR_ID,
-			true
+			true,
+			null
 		);
 		assertTrue(result.isSuccess());
 	}
@@ -105,7 +109,7 @@ class WmiDetectionServiceTest {
 
 		assertThrows(
 			IllegalArgumentException.class,
-			() -> wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true)
+			() -> wmiDetectionService.performDetectionTest(HOST_NAME, null, null, CONNECTOR_ID, true, null)
 		);
 
 		// ClientException
@@ -113,14 +117,15 @@ class WmiDetectionServiceTest {
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().build();
 		doThrow(new ClientException(CLIENT_ERROR_MSG, new TimeoutException()))
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 		WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).build();
 		CriterionTestResult result = wmiDetectionService.performDetectionTest(
 			HOST_NAME,
 			wmiConfiguration,
 			wmiCriterion,
 			CONNECTOR_ID,
-			true
+			true,
+			null
 		);
 		assertFalse(result.isSuccess());
 		assertNotNull(result.getException());
@@ -130,30 +135,34 @@ class WmiDetectionServiceTest {
 		// ClientException
 		doReturn(Collections.emptyList())
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
-		result = wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true);
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
+		result =
+			wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true, null);
 		assertFalse(result.isSuccess());
 		assertNull(result.getException());
 
 		// Non-empty result, and no expected result => success
 
-		doReturn(WQL_RESULT).when(winRequestExecutorMock).executeWmi(any(), eq(wmiConfiguration), any(), any());
-		result = wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true);
+		doReturn(WQL_RESULT).when(winRequestExecutorMock).executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
+		result =
+			wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true, null);
 		assertTrue(result.isSuccess());
 		assertTrue(result.getMessage().contains(WQL_RESULT_VALUE), RESULT_MESSAGE_SHOULD_CONTAIN_RESULT);
 
 		// Non-empty result, and matching expected result => success
 		wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).expectedResult(WQL_RESULT_VALUE).build();
-		result = wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true);
+		result =
+			wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true, null);
 		assertTrue(result.isSuccess());
 		assertTrue(result.getMessage().contains(WQL_RESULT_VALUE), RESULT_MESSAGE_SHOULD_CONTAIN_RESULT);
 
 		// Non-empty result, and non-matching expected result => failure
 		doReturn(List.of(List.of("non-matching")))
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 		wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).expectedResult(WQL_RESULT_VALUE).build();
-		result = wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true);
+		result =
+			wmiDetectionService.performDetectionTest(HOST_NAME, wmiConfiguration, wmiCriterion, CONNECTOR_ID, true, null);
 		assertFalse(result.isSuccess());
 		assertNull(result.getException());
 		assertTrue(result.getMessage().contains(WQL_RESULT_VALUE), RESULT_MESSAGE_SHOULD_CONTAIN_RESULT);

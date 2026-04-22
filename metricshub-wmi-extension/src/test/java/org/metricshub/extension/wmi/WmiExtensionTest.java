@@ -10,6 +10,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -151,7 +152,8 @@ class WmiExtensionTest {
 					anyString(),
 					any(WmiConfiguration.class),
 					eq(WmiExtension.WMI_TEST_QUERY),
-					eq(WmiExtension.WMI_TEST_NAMESPACE)
+					eq(WmiExtension.WMI_TEST_NAMESPACE),
+					isNull()
 				);
 
 			// Start the WMI Health Check strategy
@@ -168,7 +170,8 @@ class WmiExtensionTest {
 					anyString(),
 					any(WmiConfiguration.class),
 					eq(WmiExtension.WMI_TEST_QUERY),
-					eq(WmiExtension.WMI_TEST_NAMESPACE)
+					eq(WmiExtension.WMI_TEST_NAMESPACE),
+					isNull()
 				);
 
 			doCallRealMethod().when(wmiRequestExecutorMock).isAcceptableException(any());
@@ -192,7 +195,8 @@ class WmiExtensionTest {
 				anyString(),
 				any(WmiConfiguration.class),
 				eq(WmiExtension.WMI_TEST_QUERY),
-				eq(WmiExtension.WMI_TEST_NAMESPACE)
+				eq(WmiExtension.WMI_TEST_NAMESPACE),
+				isNull()
 			);
 
 		// Start the WMI Health Check
@@ -308,7 +312,7 @@ class WmiExtensionTest {
 			final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL).namespace(namespace).build();
 			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), eq(wmiConfiguration), eq(wmiCriterion), anyString(), anyBoolean());
+				.performDetectionTest(any(), eq(wmiConfiguration), eq(wmiCriterion), anyString(), anyBoolean(), isNull());
 			assertTrue(wmiExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
 		{
@@ -343,7 +347,7 @@ class WmiExtensionTest {
 
 				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running"))
 					.when(wmiDetectionServiceMock)
-					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean());
+					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean(), any());
 
 				assertTrue(wmiExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 			}
@@ -359,7 +363,8 @@ class WmiExtensionTest {
 					any(IWinConfiguration.class),
 					any(WmiCriterion.class),
 					anyString(),
-					anyBoolean()
+					anyBoolean(),
+					isNull()
 				);
 			assertTrue(wmiExtension.processCriterion(processCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
@@ -438,7 +443,7 @@ class WmiExtensionTest {
 			);
 			doReturn(expected)
 				.when(wmiRequestExecutorMock)
-				.executeWmi(HOST_NAME, wmiConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE);
+				.executeWmi(HOST_NAME, wmiConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
 				SourceTable.builder().table(expected).build(),
@@ -486,7 +491,7 @@ class WmiExtensionTest {
 
 		doReturn(EXECUTE_WMI_RESULT)
 			.when(wmiRequestExecutorMock)
-			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString());
+			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
@@ -513,7 +518,7 @@ class WmiExtensionTest {
 
 		doThrow(ClientException.class)
 			.when(wmiRequestExecutorMock)
-			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString());
+			.executeWmi(anyString(), any(WmiConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));

@@ -4,7 +4,7 @@ package org.metricshub.extension.wmi;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub WMI Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -34,6 +34,7 @@ import org.metricshub.engine.common.helpers.NetworkHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.wmi.WmiHelper;
 import org.metricshub.wmi.WmiStringConverter;
 import org.metricshub.wmi.exceptions.WmiComException;
@@ -63,10 +64,11 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * Execute a WMI query
 	 *
-	 * @param hostname  The hostname of the device where the WMI service is running (<code>null</code> for localhost)
-	 * @param wmiConfig WMI Protocol configuration (credentials, timeout)
-	 * @param wbemQuery The WQL to execute
-	 * @param namespace The WBEM namespace where all the classes reside
+	 * @param hostname              The hostname of the device where the WMI service is running (<code>null</code> for localhost)
+	 * @param wmiConfig             WMI Protocol configuration (credentials, timeout)
+	 * @param wbemQuery             The WQL to execute
+	 * @param namespace             The WBEM namespace where all the classes reside
+	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
 	 * @return A list of rows, where each row is represented as a list of strings.
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -76,7 +78,8 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("host.hostname") final String hostname,
 		@SpanAttribute("wmi.config") @NonNull final IWinConfiguration wmiConfig,
 		@SpanAttribute("wmi.query") @NonNull final String wbemQuery,
-		@SpanAttribute("wmi.namespace") @NonNull final String namespace
+		@SpanAttribute("wmi.namespace") @NonNull final String namespace,
+		final String recordOutputDirectory
 	) throws ClientException {
 		final String username = wmiConfig.getUsername();
 		char[] password = wmiConfig.getPassword();
@@ -135,6 +138,10 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 					responseTime
 				)
 			);
+
+			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+				WmiRecorder.getInstance(recordOutputDirectory).record(wbemQuery, namespace, resultTable);
+			}
 
 			return resultTable;
 		} catch (Exception e) {

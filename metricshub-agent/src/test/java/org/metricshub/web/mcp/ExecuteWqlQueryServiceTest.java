@@ -7,6 +7,7 @@ import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WBEM_NAMESPA
 import static org.metricshub.web.mcp.ExecuteWqlQueryService.DEFAULT_WQL_NAMESPACE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -174,7 +175,15 @@ class ExecuteWqlQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeWmi query on WMI request executor
-		when(wmiRequestExecutorMock.executeWmi(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE)))
+		when(
+			wmiRequestExecutorMock.executeWmi(
+				eq(HOSTNAME),
+				any(WmiConfiguration.class),
+				eq(WQL_QUERY),
+				eq(NAMESPACE),
+				isNull()
+			)
+		)
 			.thenReturn(List.of(List.of("Value1", "Value2")));
 
 		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT)
@@ -216,7 +225,15 @@ class ExecuteWqlQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Make the executor throw when the extension tries to execute
-		when(wmiRequestExecutorMock.executeWmi(eq(HOSTNAME), any(WmiConfiguration.class), eq(WQL_QUERY), eq(NAMESPACE)))
+		when(
+			wmiRequestExecutorMock.executeWmi(
+				eq(HOSTNAME),
+				any(WmiConfiguration.class),
+				eq(WQL_QUERY),
+				eq(NAMESPACE),
+				isNull()
+			)
+		)
 			.thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method

@@ -38,6 +38,7 @@ import org.metricshub.extension.oscommand.OsCommandConfiguration;
 import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
+import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**
  * Configuration for the emulation protocol.
@@ -70,6 +71,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	private JmxEmulationConfig jmx;
 
+	private WmiEmulationConfig wmi;
+
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		// No specific validation needed for the emulation configuration
@@ -97,6 +100,7 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 			.jdbc(jdbc != null ? new JdbcEmulationConfig((JdbcConfiguration) jdbc.copy(), jdbc.getDirectory()) : null)
 			.ipmi(ipmi != null ? new IpmiEmulationConfig((IpmiConfiguration) ipmi.copy(), ipmi.getDirectory()) : null)
 			.jmx(jmx != null ? new JmxEmulationConfig((JmxConfiguration) jmx.copy(), jmx.getDirectory()) : null)
+			.wmi(wmi != null ? new WmiEmulationConfig((WmiConfiguration) wmi.copy(), wmi.getDirectory()) : null)
 			.build();
 	}
 
@@ -132,6 +136,8 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 				return ipmi != null ? ipmi.getProperty(property) : null;
 			case "jmx":
 				return jmx != null ? jmx.getProperty(property) : null;
+			case "wmi":
+				return wmi != null ? wmi.getProperty(property) : null;
 			default:
 				return null;
 		}

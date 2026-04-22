@@ -147,7 +147,13 @@ public class WinRmExtension implements IProtocolExtension {
 
 		try {
 			winRmResult =
-				winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, WINRM_TEST_QUERY, WINRM_TEST_NAMESPACE);
+				winRmRequestExecutor.executeWmi(
+					hostname,
+					winRmConfiguration,
+					WINRM_TEST_QUERY,
+					WINRM_TEST_NAMESPACE,
+					telemetryManager.getRecordOutputDirectory()
+				);
 		} catch (Exception e) {
 			if (winRmRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -305,7 +311,7 @@ public class WinRmExtension implements IProtocolExtension {
 	) {
 		List<List<String>> resultList;
 		try {
-			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace);
+			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace, null);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
 			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);

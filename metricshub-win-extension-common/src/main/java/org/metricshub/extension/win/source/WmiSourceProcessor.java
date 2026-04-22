@@ -108,7 +108,8 @@ public class WmiSourceProcessor {
 				hostname,
 				winConfiguration,
 				wmiSource.getQuery(),
-				namespace
+				namespace,
+				telemetryManager.getRecordOutputDirectory()
 			);
 
 			return SourceTable.builder().table(table).build();

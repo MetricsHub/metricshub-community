@@ -4,7 +4,7 @@ package org.metricshub.extension.wmi;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub WMI Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -148,7 +148,14 @@ public class WmiExtension implements IProtocolExtension {
 		);
 
 		try {
-			wmiResult = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, WMI_TEST_QUERY, WMI_TEST_NAMESPACE);
+			wmiResult =
+				wmiRequestExecutor.executeWmi(
+					hostname,
+					wmiConfiguration,
+					WMI_TEST_QUERY,
+					WMI_TEST_NAMESPACE,
+					telemetryManager.getRecordOutputDirectory()
+				);
 		} catch (Exception e) {
 			if (wmiRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -188,7 +195,8 @@ public class WmiExtension implements IProtocolExtension {
 					processCriterion,
 					WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
 					connectorId,
-					logMode
+					logMode,
+					telemetryManager.getRecordOutputDirectory()
 				);
 		}
 
@@ -313,7 +321,7 @@ public class WmiExtension implements IProtocolExtension {
 	) {
 		List<List<String>> resultList;
 		try {
-			resultList = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, query, namespace);
+			resultList = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, query, namespace, null);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
 			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);
