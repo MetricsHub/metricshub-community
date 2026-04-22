@@ -22,6 +22,7 @@ package org.metricshub.extension.emulation;
  */
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.util.StringJoiner;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -76,6 +77,39 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 	@Override
 	public void validateConfiguration(final String resourceKey) throws InvalidConfigurationException {
 		// No specific validation needed for the emulation configuration
+	}
+
+	@Override
+	public String toString() {
+		final StringJoiner protocols = new StringJoiner(", ");
+		if (http != null) {
+			protocols.add("HTTP");
+		}
+		if (snmp != null) {
+			protocols.add("SNMP");
+		}
+		if (oscommand != null) {
+			protocols.add("OSCommand");
+		}
+		if (ssh != null) {
+			protocols.add("SSH");
+		}
+		if (wbem != null) {
+			protocols.add("WBEM");
+		}
+		if (jdbc != null) {
+			protocols.add("JDBC");
+		}
+		if (ipmi != null) {
+			protocols.add("IPMI");
+		}
+		if (jmx != null) {
+			protocols.add("JMX");
+		}
+		if (wmi != null) {
+			protocols.add("WMI");
+		}
+		return "Emulation(" + (protocols.length() > 0 ? protocols : "none") + ")";
 	}
 
 	@Override

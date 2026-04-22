@@ -17,6 +17,8 @@ import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jmx.JmxConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.SshConfiguration;
+import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wmi.WmiConfiguration;
 
@@ -204,5 +206,48 @@ class EmulationConfigurationTest {
 		assertTrue(configuration.isCorrespondingProtocol("oscommand"));
 		assertThrows(NullPointerException.class, () -> configuration.isCorrespondingProtocol(null));
 		assertFalse(configuration.isCorrespondingProtocol(""));
+	}
+
+	@Test
+	void testToStringNoProtocols() {
+		final EmulationConfiguration configuration = EmulationConfiguration.builder().build();
+		assertEquals("Emulation(none)", configuration.toString());
+	}
+
+	@Test
+	void testToStringSingleProtocol() {
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.wmi(new WmiEmulationConfig(WmiConfiguration.builder().build(), "/wmi/dir"))
+			.build();
+		assertEquals("Emulation(WMI)", configuration.toString());
+	}
+
+	@Test
+	void testToStringMultipleProtocols() {
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.http(new HttpEmulationConfig(HttpConfiguration.builder().build(), "/http/dir"))
+			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().build(), "/snmp/dir"))
+			.wmi(new WmiEmulationConfig(WmiConfiguration.builder().build(), "/wmi/dir"))
+			.build();
+		assertEquals("Emulation(HTTP, SNMP, WMI)", configuration.toString());
+	}
+
+	@Test
+	void testToStringAllProtocols() {
+		final EmulationConfiguration configuration = EmulationConfiguration
+			.builder()
+			.http(new HttpEmulationConfig(HttpConfiguration.builder().build(), null))
+			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().build(), null))
+			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().build(), null))
+			.ssh(new SshEmulationConfig(SshConfiguration.sshConfigurationBuilder().build(), null))
+			.wbem(new WbemEmulationConfig(WbemConfiguration.builder().build(), null))
+			.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().build(), null))
+			.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().build(), null))
+			.jmx(new JmxEmulationConfig(JmxConfiguration.builder().build(), null))
+			.wmi(new WmiEmulationConfig(WmiConfiguration.builder().build(), null))
+			.build();
+		assertEquals("Emulation(HTTP, SNMP, OSCommand, SSH, WBEM, JDBC, IPMI, JMX, WMI)", configuration.toString());
 	}
 }
