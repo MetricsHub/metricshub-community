@@ -54,6 +54,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Memory",
 			List.of("HeapMemoryUsage"),
 			List.of(),
+			null,
 			null
 		);
 
@@ -73,6 +74,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=NonExistent",
 			List.of("attr"),
 			List.of(),
+			null,
 			null
 		);
 
@@ -97,6 +99,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=GarbageCollector,name=*",
 			List.of("CollectionCount"),
 			List.of("name", "type"),
+			null,
 			null
 		);
 
@@ -121,6 +124,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Runtime",
 			List.of(),
 			List.of("nonExistentKey"),
+			null,
 			null
 		);
 
@@ -143,6 +147,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Memory",
 			List.of("BadAttr"),
 			List.of(),
+			null,
 			null
 		);
 
@@ -162,6 +167,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Memory",
 			List.of("HeapMemoryUsage"),
 			List.of(),
+			null,
 			null
 		);
 
@@ -182,7 +188,8 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Runtime",
 			List.of("Uptime"),
 			List.of(),
-			"myHost"
+			"myHost",
+			null
 		);
 
 		assertNotNull(result);
@@ -209,6 +216,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=GarbageCollector,name=*",
 			List.of("CollectionCount"),
 			List.of("name"),
+			null,
 			null
 		);
 
@@ -269,6 +277,7 @@ class JmxRequestExecutorTest {
 			"java.lang:type=Runtime",
 			List.of(),
 			List.of("type"),
+			null,
 			null
 		);
 

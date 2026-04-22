@@ -25,8 +25,8 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.strategy.source.SourceTable;
@@ -36,12 +36,43 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Processes a JmxSource by delegating attribute reads to JmxRequestExecutor.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class JmxSourceProcessor {
 
 	// Executor instance for JMX requests
 	@NonNull
 	private final JmxRequestExecutor jmxExecutor;
+
+	private final Function<TelemetryManager, JmxConfiguration> jmxConfigurationProvider;
+
+	private static final Function<TelemetryManager, JmxConfiguration> DEFAULT_JMX_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(JmxConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JmxConfiguration.class);
+
+	/**
+	 * Creates a new {@link JmxSourceProcessor} with the given executor,
+	 * using the default JMX configuration provider.
+	 *
+	 * @param jmxExecutor The executor to perform JMX requests.
+	 */
+	public JmxSourceProcessor(final JmxRequestExecutor jmxExecutor) {
+		this(jmxExecutor, DEFAULT_JMX_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link JmxSourceProcessor} with the given executor
+	 * and a custom JMX configuration provider.
+	 *
+	 * @param jmxExecutor               The executor to perform JMX requests.
+	 * @param jmxConfigurationProvider A function that retrieves the {@link JmxConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public JmxSourceProcessor(
+		final JmxRequestExecutor jmxExecutor,
+		final Function<TelemetryManager, JmxConfiguration> jmxConfigurationProvider
+	) {
+		this.jmxExecutor = jmxExecutor;
+		this.jmxConfigurationProvider = jmxConfigurationProvider;
+	}
 
 	/**
 	 * Processes a JmxSource by fetching its attributes and returning a SourceTable.
@@ -51,10 +82,7 @@ public class JmxSourceProcessor {
 	 * @return SourceTable containing the fetched attributes.
 	 */
 	public SourceTable process(final JmxSource jmxSource, final TelemetryManager telemetryManager) {
-		final JmxConfiguration jmxConfig = (JmxConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(JmxConfiguration.class);
+		final JmxConfiguration jmxConfig = jmxConfigurationProvider.apply(telemetryManager);
 
 		final String objectName = jmxSource.getObjectName();
 		List<String> attributes = jmxSource.getAttributes();
@@ -73,7 +101,14 @@ public class JmxSourceProcessor {
 		try {
 			// Fetch attributes; this also validates exactly one match
 			rows.addAll(
-				jmxExecutor.fetchMBean(jmxConfig, objectName, attributes, keyProperties, telemetryManager.getHostname())
+				jmxExecutor.fetchMBean(
+					jmxConfig,
+					objectName,
+					attributes,
+					keyProperties,
+					telemetryManager.getHostname(),
+					telemetryManager.getRecordOutputDirectory()
+				)
 			);
 		} catch (Exception e) {
 			String hostname = jmxConfig.getHostname();

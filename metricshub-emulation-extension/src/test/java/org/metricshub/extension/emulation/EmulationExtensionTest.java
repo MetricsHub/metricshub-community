@@ -29,6 +29,7 @@ import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
@@ -36,6 +37,7 @@ import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -152,6 +154,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedSources().contains(WbemSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(SqlSource.class));
 		assertTrue(emulationExtension.getSupportedSources().contains(IpmiSource.class));
+		assertTrue(emulationExtension.getSupportedSources().contains(JmxSource.class));
 	}
 
 	// ---- getSupportedCriteria ----
@@ -166,6 +169,7 @@ class EmulationExtensionTest {
 		assertTrue(emulationExtension.getSupportedCriteria().contains(WbemCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(SqlCriterion.class));
 		assertTrue(emulationExtension.getSupportedCriteria().contains(IpmiCriterion.class));
+		assertTrue(emulationExtension.getSupportedCriteria().contains(JmxCriterion.class));
 	}
 
 	// ---- getConfigurationToSourceMapping ----

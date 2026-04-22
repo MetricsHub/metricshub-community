@@ -91,6 +91,15 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	)
 	private String emulateIpmi;
 
+	@Option(
+		names = { "--emulate-jmx" },
+		order = 22,
+		defaultValue = "",
+		description = "Reads JMX recorded sources execution results from the specified directory",
+		help = true
+	)
+	private String emulateJmx;
+
 	/**
 	 * Indicates whether at least one emulation option has been configured on the CLI.
 	 *
@@ -103,8 +112,9 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 		final boolean hasWbem = !isBlank(emulateWbem);
 		final boolean hasJdbc = !isBlank(emulateJdbc);
 		final boolean hasIpmi = !isBlank(emulateIpmi);
+		final boolean hasJmx = !isBlank(emulateJmx);
 
-		return hasHttp || hasSnmp || hasSsh || hasWbem || hasJdbc || hasIpmi;
+		return hasHttp || hasSnmp || hasSsh || hasWbem || hasJdbc || hasIpmi || hasJmx;
 	}
 
 	/**
@@ -166,6 +176,10 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 
 		if (!isBlank(emulateIpmi)) {
 			emulationConfigurationNode.set("ipmi", buildProtocolEmulationNode(emulateIpmi, defaultUsername, defaultPassword));
+		}
+
+		if (!isBlank(emulateJmx)) {
+			emulationConfigurationNode.set("jmx", buildProtocolEmulationNode(emulateJmx, defaultUsername, defaultPassword));
 		}
 
 		return CliExtensionManager

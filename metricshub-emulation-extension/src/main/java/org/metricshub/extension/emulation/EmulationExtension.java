@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.model.identity.criterion.CommandLineCrite
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.HttpCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.IpmiCriterion;
+import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
@@ -48,6 +49,7 @@ import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
 import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 import org.metricshub.engine.connector.model.monitor.task.source.IpmiSource;
+import org.metricshub.engine.connector.model.monitor.task.source.JmxSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpGetSource;
 import org.metricshub.engine.connector.model.monitor.task.source.SnmpTableSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -60,6 +62,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.http.EmulationHttpRequestExecutor;
 import org.metricshub.extension.emulation.ipmi.EmulationIpmiRequestExecutor;
 import org.metricshub.extension.emulation.jdbc.EmulationSqlRequestExecutor;
+import org.metricshub.extension.emulation.jmx.EmulationJmxRequestExecutor;
 import org.metricshub.extension.emulation.oscommand.EmulationOsCommandService;
 import org.metricshub.extension.emulation.snmp.EmulationSnmpRequestExecutor;
 import org.metricshub.extension.emulation.wbem.EmulationWbemRequestExecutor;
@@ -73,6 +76,10 @@ import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jdbc.JdbcExtension;
 import org.metricshub.extension.jdbc.SqlCriterionProcessor;
 import org.metricshub.extension.jdbc.SqlSourceProcessor;
+import org.metricshub.extension.jmx.JmxConfiguration;
+import org.metricshub.extension.jmx.JmxCriterionProcessor;
+import org.metricshub.extension.jmx.JmxExtension;
+import org.metricshub.extension.jmx.JmxSourceProcessor;
 import org.metricshub.extension.oscommand.CommandLineCriterionProcessor;
 import org.metricshub.extension.oscommand.CommandLineSourceProcessor;
 import org.metricshub.extension.oscommand.OsCommandExtension;
@@ -115,6 +122,7 @@ public class EmulationExtension implements IProtocolExtension {
 		EMULATED_PROTOCOLS.add(WbemExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(JdbcExtension.IDENTIFIER);
 		EMULATED_PROTOCOLS.add(IpmiExtension.IDENTIFIER);
+		EMULATED_PROTOCOLS.add(JmxExtension.IDENTIFIER);
 	}
 
 	/**
@@ -147,6 +155,11 @@ public class EmulationExtension implements IProtocolExtension {
 	 * IPMI request executor that replays responses from emulation files.
 	 */
 	private final EmulationIpmiRequestExecutor ipmiRequestExecutor = new EmulationIpmiRequestExecutor(roundRobinManager);
+
+	/**
+	 * JMX request executor that replays responses from emulation files.
+	 */
+	private final EmulationJmxRequestExecutor jmxRequestExecutor = new EmulationJmxRequestExecutor(roundRobinManager);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -242,6 +255,27 @@ public class EmulationExtension implements IProtocolExtension {
 			}
 		};
 
+	/**
+	 * Provides the JMX configuration used by emulation processors.
+	 *
+	 * <p>The returned configuration always has its hostname aligned with the telemetry manager hostname.
+	 */
+	private static final Function<TelemetryManager, JmxConfiguration> EMULATION_JMX_CONFIGURATION_PROVIDER =
+		telemetryManager -> {
+			final var emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+			if (emulationConfiguration == null) {
+				return null;
+			}
+			final var jmxConfiguration = emulationConfiguration.getJmx();
+			final String hostname = telemetryManager.getHostname();
+			if (jmxConfiguration == null) {
+				return null;
+			} else {
+				jmxConfiguration.setHostname(hostname);
+				return jmxConfiguration;
+			}
+		};
+
 	@Override
 	public boolean isValidConfiguration(final IConfiguration configuration) {
 		return configuration instanceof EmulationConfiguration;
@@ -253,6 +287,7 @@ public class EmulationExtension implements IProtocolExtension {
 			CommandLineSource.class,
 			HttpSource.class,
 			IpmiSource.class,
+			JmxSource.class,
 			SnmpGetSource.class,
 			SnmpTableSource.class,
 			SqlSource.class,
@@ -271,6 +306,7 @@ public class EmulationExtension implements IProtocolExtension {
 			CommandLineCriterion.class,
 			HttpCriterion.class,
 			IpmiCriterion.class,
+			JmxCriterion.class,
 			SnmpGetCriterion.class,
 			SnmpGetNextCriterion.class,
 			SqlCriterion.class,
@@ -310,6 +346,9 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (source instanceof SqlSource sqlSource) {
 			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, EMULATION_JDBC_CONFIGURATION_PROVIDER)
 				.process(sqlSource, telemetryManager);
+		} else if (source instanceof JmxSource jmxSource) {
+			return new JmxSourceProcessor(jmxRequestExecutor, EMULATION_JMX_CONFIGURATION_PROVIDER)
+				.process(jmxSource, telemetryManager);
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -363,6 +402,9 @@ public class EmulationExtension implements IProtocolExtension {
 		} else if (criterion instanceof SqlCriterion sqlCriterion) {
 			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, EMULATION_JDBC_CONFIGURATION_PROVIDER)
 				.process(sqlCriterion, telemetryManager);
+		} else if (criterion instanceof JmxCriterion jmxCriterion) {
+			return new JmxCriterionProcessor(jmxRequestExecutor, logMode, EMULATION_JMX_CONFIGURATION_PROVIDER)
+				.process(jmxCriterion, connectorId, telemetryManager);
 		} else if (criterion instanceof IpmiCriterion) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();

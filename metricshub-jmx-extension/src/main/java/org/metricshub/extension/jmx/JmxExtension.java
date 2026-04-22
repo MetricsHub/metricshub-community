@@ -234,6 +234,7 @@ public class JmxExtension implements IProtocolExtension {
 			objectName,
 			attributes,
 			keyProperties,
+			null,
 			null
 		);
 		final List<String> columns = new ArrayList<>();

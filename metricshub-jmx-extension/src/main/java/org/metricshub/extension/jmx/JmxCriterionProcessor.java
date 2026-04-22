@@ -24,9 +24,9 @@ package org.metricshub.extension.jmx;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.JmxCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
@@ -38,15 +38,50 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Reads zero or more attributes from one MBean and compares each against an optional expected result.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class JmxCriterionProcessor {
 
 	protected static final String JMX_TEST_SUCCESS = "Hostname %s - JMX test succeeded. Returned result: %s.";
 
 	@NonNull
-	private JmxRequestExecutor jmxRequestExecutor;
+	private final JmxRequestExecutor jmxRequestExecutor;
 
 	private final boolean logMode;
+
+	private final Function<TelemetryManager, JmxConfiguration> jmxConfigurationProvider;
+
+	private static final Function<TelemetryManager, JmxConfiguration> DEFAULT_JMX_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(JmxConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JmxConfiguration.class);
+
+	/**
+	 * Creates a new {@link JmxCriterionProcessor} with the given executor and log mode,
+	 * using the default JMX configuration provider.
+	 *
+	 * @param jmxRequestExecutor The executor to perform JMX requests.
+	 * @param logMode            Whether logging is enabled.
+	 */
+	public JmxCriterionProcessor(final JmxRequestExecutor jmxRequestExecutor, final boolean logMode) {
+		this(jmxRequestExecutor, logMode, DEFAULT_JMX_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link JmxCriterionProcessor} with the given executor, log mode,
+	 * and a custom JMX configuration provider.
+	 *
+	 * @param jmxRequestExecutor       The executor to perform JMX requests.
+	 * @param logMode                  Whether logging is enabled.
+	 * @param jmxConfigurationProvider A function that retrieves the {@link JmxConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public JmxCriterionProcessor(
+		final JmxRequestExecutor jmxRequestExecutor,
+		final boolean logMode,
+		final Function<TelemetryManager, JmxConfiguration> jmxConfigurationProvider
+	) {
+		this.jmxRequestExecutor = jmxRequestExecutor;
+		this.logMode = logMode;
+		this.jmxConfigurationProvider = jmxConfigurationProvider;
+	}
 
 	/**
 	 * Processes a JMX criterion by executing an JMX query.
@@ -68,10 +103,7 @@ public class JmxCriterionProcessor {
 			);
 		}
 
-		final var jmxConfiguration = (JmxConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(JmxConfiguration.class);
+		final var jmxConfiguration = jmxConfigurationProvider.apply(telemetryManager);
 
 		if (jmxConfiguration == null) {
 			return CriterionTestResult.error(jmxCriterion, "The JMX credentials are not configured for this host.");
@@ -83,7 +115,8 @@ public class JmxCriterionProcessor {
 				jmxCriterion.getObjectName(),
 				jmxCriterion.getAttributes(),
 				List.of(),
-				telemetryManager.getHostname()
+				telemetryManager.getHostname(),
+				telemetryManager.getRecordOutputDirectory()
 			);
 
 			// Serialize the result as a CSV

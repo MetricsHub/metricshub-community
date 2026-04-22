@@ -49,6 +49,7 @@ This is a multi-module project:
 * **metricshub-jawk-extension**: Allows execution of Jawk scripts.
 * **metricshub-jdbc-extension**: Provides support for monitoring SQL databases.
 * **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
+* **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
 * **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory.
 * **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts.
