@@ -88,6 +88,15 @@ public class HttpRecorder {
 	}
 
 	/**
+	 * Removes the cached recorder instance for the specified output directory.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void removeInstance(final String recordOutputDirectory) {
+		RECORDERS.remove(recordOutputDirectory);
+	}
+
+	/**
 	 * Records an HTTP request-response pair. Duplicate entries are allowed
 	 * so that the emulation extension can serve them in round-robin order.
 	 *

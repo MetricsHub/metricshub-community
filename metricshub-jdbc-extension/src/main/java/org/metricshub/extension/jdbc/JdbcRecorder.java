@@ -87,6 +87,15 @@ public class JdbcRecorder {
 	}
 
 	/**
+	 * Removes the cached recorder instance for the specified output directory.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void removeInstance(final String recordOutputDirectory) {
+		RECORDERS.remove(recordOutputDirectory);
+	}
+
+	/**
 	 * Records a JDBC SQL response.
 	 *
 	 * @param sqlQuery      SQL query string

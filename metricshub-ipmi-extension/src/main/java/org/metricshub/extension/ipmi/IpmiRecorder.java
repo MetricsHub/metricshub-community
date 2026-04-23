@@ -97,6 +97,15 @@ public class IpmiRecorder {
 	}
 
 	/**
+	 * Removes the cached recorder instance for the specified output directory.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void removeInstance(final String recordOutputDirectory) {
+		RECORDERS.remove(recordOutputDirectory);
+	}
+
+	/**
 	 * Records an IPMI response.
 	 *
 	 * @param requestType the request type identifier (e.g., {@code "IpmiDetection"} or {@code "GetSensors"})
