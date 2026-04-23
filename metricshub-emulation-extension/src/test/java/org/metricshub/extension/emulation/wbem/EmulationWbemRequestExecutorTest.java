@@ -18,6 +18,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.WbemEmulationConfig;
 import org.metricshub.extension.wbem.WbemConfiguration;
@@ -30,7 +31,8 @@ class EmulationWbemRequestExecutorTest {
 	private static final String HOSTNAME = "test-host";
 
 	private final EmulationWbemRequestExecutor executor = new EmulationWbemRequestExecutor(
-		new EmulationRoundRobinManager()
+		new EmulationRoundRobinManager(),
+		new EmulationImageCacheManager()
 	);
 
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {

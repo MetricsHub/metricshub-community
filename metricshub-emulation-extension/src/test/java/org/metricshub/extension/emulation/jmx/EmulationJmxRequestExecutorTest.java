@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.JmxEmulationConfig;
 import org.metricshub.extension.jmx.JmxConfiguration;
@@ -20,7 +21,7 @@ class EmulationJmxRequestExecutorTest {
 	Path tempDir;
 
 	private EmulationJmxRequestExecutor createExecutor() {
-		return new EmulationJmxRequestExecutor(new EmulationRoundRobinManager());
+		return new EmulationJmxRequestExecutor(new EmulationRoundRobinManager(), new EmulationImageCacheManager());
 	}
 
 	private void writeImageYaml(final Path dir, final String content) throws Exception {

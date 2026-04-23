@@ -15,6 +15,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.HttpEmulationConfig;
 import org.metricshub.extension.http.HttpConfiguration;
@@ -28,7 +29,8 @@ class EmulationHttpRequestExecutorTest {
 	private static final String HOSTNAME = "test-host";
 
 	private final EmulationHttpRequestExecutor executor = new EmulationHttpRequestExecutor(
-		new EmulationRoundRobinManager()
+		new EmulationRoundRobinManager(),
+		new EmulationImageCacheManager()
 	);
 
 	/**

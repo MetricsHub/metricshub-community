@@ -12,6 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.WmiEmulationConfig;
 import org.metricshub.extension.wmi.WmiConfiguration;
@@ -24,7 +25,8 @@ class EmulationWmiRequestExecutorTest {
 	private static final String HOSTNAME = "test-host";
 
 	private final EmulationWmiRequestExecutor executor = new EmulationWmiRequestExecutor(
-		new EmulationRoundRobinManager()
+		new EmulationRoundRobinManager(),
+		new EmulationImageCacheManager()
 	);
 
 	private WmiEmulationConfig buildWmiEmulationConfig(final String emulationInputDir) {

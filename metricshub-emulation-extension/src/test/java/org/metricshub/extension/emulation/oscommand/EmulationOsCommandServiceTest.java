@@ -13,6 +13,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.OsCommandEmulationConfig;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
@@ -24,7 +25,10 @@ class EmulationOsCommandServiceTest {
 
 	private static final String HOSTNAME = "test-host";
 
-	private final EmulationOsCommandService service = new EmulationOsCommandService(new EmulationRoundRobinManager());
+	private final EmulationOsCommandService service = new EmulationOsCommandService(
+		new EmulationRoundRobinManager(),
+		new EmulationImageCacheManager()
+	);
 
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {
 		return TelemetryManager

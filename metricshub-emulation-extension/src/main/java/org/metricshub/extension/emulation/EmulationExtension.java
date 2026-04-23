@@ -143,39 +143,65 @@ public class EmulationExtension implements IProtocolExtension {
 	private final EmulationRoundRobinManager roundRobinManager = new EmulationRoundRobinManager();
 
 	/**
+	 * Shared cache manager for parsed emulation image files.
+	 */
+	private final EmulationImageCacheManager emulationImageCacheManager = new EmulationImageCacheManager();
+
+	/**
 	 * HTTP request executor that replays responses from emulation files.
 	 */
-	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(roundRobinManager);
+	private final EmulationHttpRequestExecutor httpRequestExecutor = new EmulationHttpRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * OS command service that replays command outputs from emulation files.
 	 */
-	private final EmulationOsCommandService osCommandService = new EmulationOsCommandService(roundRobinManager);
+	private final EmulationOsCommandService osCommandService = new EmulationOsCommandService(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * WBEM request executor that replays query results from emulation files.
 	 */
-	private final EmulationWbemRequestExecutor wbemRequestExecutor = new EmulationWbemRequestExecutor(roundRobinManager);
+	private final EmulationWbemRequestExecutor wbemRequestExecutor = new EmulationWbemRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * SQL request executor that replays query results from emulation files.
 	 */
-	private final EmulationSqlRequestExecutor sqlRequestExecutor = new EmulationSqlRequestExecutor(roundRobinManager);
+	private final EmulationSqlRequestExecutor sqlRequestExecutor = new EmulationSqlRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * IPMI request executor that replays responses from emulation files.
 	 */
-	private final EmulationIpmiRequestExecutor ipmiRequestExecutor = new EmulationIpmiRequestExecutor(roundRobinManager);
+	private final EmulationIpmiRequestExecutor ipmiRequestExecutor = new EmulationIpmiRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * JMX request executor that replays responses from emulation files.
 	 */
-	private final EmulationJmxRequestExecutor jmxRequestExecutor = new EmulationJmxRequestExecutor(roundRobinManager);
+	private final EmulationJmxRequestExecutor jmxRequestExecutor = new EmulationJmxRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * WMI request executor that replays responses from emulation files.
 	 */
-	private final EmulationWmiRequestExecutor wmiRequestExecutor = new EmulationWmiRequestExecutor(roundRobinManager);
+	private final EmulationWmiRequestExecutor wmiRequestExecutor = new EmulationWmiRequestExecutor(
+		roundRobinManager,
+		emulationImageCacheManager
+	);
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.

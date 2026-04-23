@@ -33,9 +33,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.jmx.JmxConfiguration;
@@ -51,6 +51,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 	private static final String JMX_EMULATION_YAML = "image.yaml";
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	@Override
 	public List<List<String>> fetchMBean(
@@ -91,7 +92,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 
 		final JmxEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), JmxEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, JmxEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse JMX emulation index file {}. Error: {}",

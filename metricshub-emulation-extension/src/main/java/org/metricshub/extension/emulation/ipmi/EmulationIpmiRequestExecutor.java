@@ -31,8 +31,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.IpmiEmulationConfig;
@@ -50,6 +50,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 	private static final String IPMI_EMULATION_YAML = "image.yaml";
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	/**
 	 * Replays an IPMI detection result from emulation files.
@@ -117,7 +118,7 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 
 		final IpmiEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), IpmiEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, IpmiEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse IPMI emulation index file {}. Error: {}",

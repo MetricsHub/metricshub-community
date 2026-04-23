@@ -12,6 +12,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.IpmiEmulationConfig;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
@@ -24,7 +25,8 @@ class EmulationIpmiRequestExecutorTest {
 	private static final String HOSTNAME = "test-host";
 
 	private final EmulationIpmiRequestExecutor executor = new EmulationIpmiRequestExecutor(
-		new EmulationRoundRobinManager()
+		new EmulationRoundRobinManager(),
+		new EmulationImageCacheManager()
 	);
 
 	private EmulationConfiguration buildEmulationConfiguration(final String emulationInputDir) {

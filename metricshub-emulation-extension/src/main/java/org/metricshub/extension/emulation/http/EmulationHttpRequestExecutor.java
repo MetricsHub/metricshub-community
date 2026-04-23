@@ -33,12 +33,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MacrosUpdater;
 import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.http.HttpRequestExecutor;
@@ -62,6 +62,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	private static final char[] DEFAULT_PASSWORD = "password".toCharArray();
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	@Override
 	public String executeHttp(
@@ -92,7 +93,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		// Parse the emulation index
 		final HttpEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), HttpEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, HttpEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse HTTP emulation index file {}. Error: {}",

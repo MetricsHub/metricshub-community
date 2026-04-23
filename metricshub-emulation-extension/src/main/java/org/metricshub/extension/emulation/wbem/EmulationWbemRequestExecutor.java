@@ -32,11 +32,11 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.wbem.WbemConfiguration;
@@ -52,6 +52,7 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 	private static final String WBEM_EMULATION_YAML = "image.yaml";
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	@Override
 	public List<List<String>> executeWbem(
@@ -90,7 +91,7 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 
 		final WbemEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), WbemEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, WbemEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse WBEM emulation index file {}. Error: {}",

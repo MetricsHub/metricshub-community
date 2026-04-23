@@ -32,9 +32,9 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.WmiEmulationConfig;
@@ -51,6 +51,7 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 	private static final String WMI_EMULATION_YAML = "image.yaml";
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	@Override
 	public List<List<String>> executeWmi(
@@ -86,7 +87,7 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 
 		final WmiEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), WmiEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, WmiEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse WMI emulation index file {}. Error: {}",

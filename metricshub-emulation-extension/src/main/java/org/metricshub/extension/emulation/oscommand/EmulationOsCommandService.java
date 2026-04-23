@@ -35,11 +35,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.ControlledSshException;
 import org.metricshub.engine.common.exception.NoCredentialProvidedException;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.oscommand.OsCommandService;
@@ -54,6 +54,7 @@ public class EmulationOsCommandService extends OsCommandService {
 	private static final String COMMAND_EMULATION_YAML = "image.yaml";
 
 	private final EmulationRoundRobinManager roundRobinManager;
+	private final EmulationImageCacheManager imageCacheManager;
 
 	@Override
 	public OsCommandResult runOsCommand(
@@ -93,7 +94,7 @@ public class EmulationOsCommandService extends OsCommandService {
 
 		final OsCommandEmulationImage emulationImage;
 		try {
-			emulationImage = JsonHelper.buildYamlMapper().readValue(indexFile.toFile(), OsCommandEmulationImage.class);
+			emulationImage = imageCacheManager.getImage(indexFile, OsCommandEmulationImage.class);
 		} catch (IOException e) {
 			log.error(
 				"Hostname {} - Failed to parse OS command emulation index file {}. Error: {}",
