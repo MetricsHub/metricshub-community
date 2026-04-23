@@ -28,6 +28,7 @@ class IpmiRecorderTest {
 		final IpmiRecorder recorder = IpmiRecorder.getInstance(tempDir.toString());
 
 		recorder.record(IpmiRecorder.IPMI_DETECTION_REQUEST, "System power state is up.");
+		recorder.flush();
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		assertTrue(Files.isDirectory(ipmiDir));
@@ -53,6 +54,7 @@ class IpmiRecorderTest {
 		final IpmiRecorder recorder = IpmiRecorder.getInstance(tempDir.toString());
 
 		recorder.record(IpmiRecorder.GET_SENSORS_REQUEST, "FRU data here");
+		recorder.flush();
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		final String indexContent = Files.readString(ipmiDir.resolve("image.yaml"), StandardCharsets.UTF_8);
@@ -66,6 +68,7 @@ class IpmiRecorderTest {
 		recorder.record(IpmiRecorder.IPMI_DETECTION_REQUEST, "detection result 1");
 		recorder.record(IpmiRecorder.GET_SENSORS_REQUEST, "sensors result 1");
 		recorder.record(IpmiRecorder.IPMI_DETECTION_REQUEST, "detection result 2");
+		recorder.flush();
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		final var yamlMapper = JsonHelper.buildYamlMapper();
@@ -93,6 +96,7 @@ class IpmiRecorderTest {
 		final IpmiRecorder recorder = IpmiRecorder.getInstance(tempDir.toString());
 
 		recorder.record(IpmiRecorder.IPMI_DETECTION_REQUEST, null);
+		recorder.flush();
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		final var yamlMapper = JsonHelper.buildYamlMapper();

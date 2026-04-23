@@ -139,6 +139,7 @@ class WbemRequestExecutorTest {
 			);
 
 			assertEquals(values, result);
+			WbemRecorder.flushAndRemoveInstance(tempDir.toString());
 			final Path wbemDir = tempDir.resolve(WbemRecorder.WBEM_SUBDIR);
 			final Path imageFile = wbemDir.resolve(WbemRecorder.IMAGE_YAML);
 			assertTrue(Files.isRegularFile(imageFile));

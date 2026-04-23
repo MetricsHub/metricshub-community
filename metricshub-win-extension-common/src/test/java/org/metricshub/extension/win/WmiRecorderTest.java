@@ -30,6 +30,7 @@ class WmiRecorderTest {
 		final WmiRecorder recorder = WmiRecorder.getInstance(tempDir.toString());
 
 		recorder.record("SELECT Name FROM Win32_ComputerSystem", "root\\cimv2", List.of(List.of("MyComputer")));
+		recorder.flush();
 
 		final Path wmiDir = tempDir.resolve(WmiRecorder.WMI_SUBDIR);
 		assertTrue(Files.isDirectory(wmiDir));
@@ -59,6 +60,7 @@ class WmiRecorderTest {
 
 		recorder.record("SELECT Name FROM Win32_Process", "root\\cimv2", List.of(List.of("proc1")));
 		recorder.record("SELECT Name FROM Win32_Service", "root\\cimv2", List.of(List.of("svc1")));
+		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(WmiRecorder.WMI_SUBDIR).resolve(WmiRecorder.IMAGE_YAML);
 		final JsonNode root = JsonHelper.buildYamlMapper().readTree(indexFile.toFile());
@@ -83,6 +85,7 @@ class WmiRecorderTest {
 
 		recorder.record("SELECT Name FROM Win32_Process", "root\\cimv2", List.of(List.of("proc1")));
 		recorder.record("SELECT Name FROM Win32_Process", "root\\cimv2", List.of(List.of("proc2")));
+		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(WmiRecorder.WMI_SUBDIR).resolve(WmiRecorder.IMAGE_YAML);
 		final JsonNode root = JsonHelper.buildYamlMapper().readTree(indexFile.toFile());

@@ -55,6 +55,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
 import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiCriterionProcessor;
@@ -277,6 +278,19 @@ public class WinRmExtension implements IProtocolExtension {
 	@Override
 	public String getIdentifier() {
 		return IDENTIFIER;
+	}
+
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			WmiRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
 	}
 
 	@Override

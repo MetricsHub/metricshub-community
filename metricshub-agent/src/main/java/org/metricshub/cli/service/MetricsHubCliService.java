@@ -418,6 +418,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 						.toString()
 				);
 				printWriter.flush();
+				flushRecordingSession(telemetryManager);
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 
@@ -522,8 +523,18 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		// Print the result
 		new PrettyPrinterService(telemetryManager, printWriter).print(monitorTypes);
+		flushRecordingSession(telemetryManager);
 
 		return CommandLine.ExitCode.OK;
+	}
+
+	/**
+	 * Flushes recorder buffers for all protocol extensions for the current session.
+	 *
+	 * @param telemetryManager telemetry manager holding the recording context
+	 */
+	private void flushRecordingSession(final TelemetryManager telemetryManager) {
+		CliExtensionManager.getExtensionManagerSingleton().onRecordingSessionEnd(telemetryManager);
 	}
 
 	/**

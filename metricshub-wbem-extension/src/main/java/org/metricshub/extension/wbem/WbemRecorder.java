@@ -60,10 +60,13 @@ public class WbemRecorder {
 	private static final ConcurrentHashMap<String, WbemRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path wbemDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	WbemRecorder(final String recordOutputDirectory) {
 		this.wbemDir = Path.of(recordOutputDirectory, WBEM_SUBDIR);
+		this.indexFile = wbemDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -95,6 +98,18 @@ public class WbemRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final WbemRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records a WBEM response.
 	 *
 	 * @param wql WQL query
@@ -104,9 +119,7 @@ public class WbemRecorder {
 	public synchronized void record(final String wql, final String namespace, final List<List<String>> responseTable) {
 		try {
 			Files.createDirectories(wbemDir);
-
-			final Path indexFile = wbemDir.resolve(IMAGE_YAML);
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			final String responseFileName = UUID.randomUUID() + ".csv";
 			Files.writeString(
@@ -123,14 +136,41 @@ public class WbemRecorder {
 			entry.put("request", request);
 			entry.put("response", responseFileName);
 			entries.add(entry);
-
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
 		} catch (IOException e) {
 			log.error("WBEM recording - Failed to record query for namespace {}: {}", namespace, e.getMessage());
 			log.debug("WBEM recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(wbemDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("WBEM recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("WBEM recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {

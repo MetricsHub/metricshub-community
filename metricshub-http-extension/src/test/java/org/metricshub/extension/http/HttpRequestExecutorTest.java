@@ -522,6 +522,7 @@ class HttpRequestExecutorTest {
 				.build();
 			final String result = new HttpRequestExecutor().executeHttp(request, true, telemetryManager);
 			assertEquals(expectedBody, result);
+			HttpRecorder.flushAndRemoveInstance(tempDir.toString());
 
 			// Verify recording files were created
 			final Path httpDir = tempDir.resolve("http");

@@ -56,7 +56,9 @@ public class HttpRecorder {
 	private static final ConcurrentHashMap<String, HttpRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path httpDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	/**
 	 * Creates a new {@link HttpRecorder} writing to the given output directory.
@@ -65,6 +67,7 @@ public class HttpRecorder {
 	 */
 	HttpRecorder(final String recordOutputDirectory) {
 		this.httpDir = Path.of(recordOutputDirectory, HTTP_SUBDIR);
+		this.indexFile = httpDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -97,6 +100,18 @@ public class HttpRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final HttpRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records an HTTP request-response pair. Duplicate entries are allowed
 	 * so that the emulation extension can serve them in round-robin order.
 	 *
@@ -117,11 +132,7 @@ public class HttpRecorder {
 	) {
 		try {
 			Files.createDirectories(httpDir);
-
-			final Path indexFile = httpDir.resolve(IMAGE_YAML);
-
-			// Load existing entries or start fresh
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			// Normalize body: treat empty string as null for recording
 			final String normalizedBody = (bodyContent == null || bodyContent.isEmpty()) ? null : bodyContent;
@@ -148,16 +159,42 @@ public class HttpRecorder {
 			);
 			entries.add(entry);
 
-			// Write image.yaml
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-
 			log.debug("HTTP recording - Recorded {} {} -> {}", method, path, responseFileName);
 		} catch (IOException e) {
 			log.error("HTTP recording - Failed to record HTTP request {} {}: {}", method, path, e.getMessage());
 			log.debug("HTTP recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(httpDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("HTTP recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("HTTP recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	/**

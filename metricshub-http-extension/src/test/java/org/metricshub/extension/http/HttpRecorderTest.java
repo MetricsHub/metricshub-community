@@ -48,6 +48,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
+		recorder.flush();
 
 		final Path httpDir = tempDir.resolve(HttpRecorder.HTTP_SUBDIR);
 		assertTrue(Files.isRegularFile(httpDir.resolve(HttpRecorder.IMAGE_YAML)));
@@ -59,6 +60,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/data", null, null, ResultContent.BODY, "response body content");
+		recorder.flush();
 
 		final Path responseFile = findSingleTxtFile(tempDir.resolve(HttpRecorder.HTTP_SUBDIR));
 		assertNotNull(responseFile);
@@ -72,6 +74,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("POST", "/api/v1/query", "request body", null, ResultContent.BODY, "response");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -100,6 +103,7 @@ class HttpRecorderTest {
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
 		recorder.record("GET", "/api/v1/metrics", null, null, ResultContent.BODY, "metrics data");
 		recorder.record("POST", "/api/v1/query", "query body", null, ResultContent.BODY, "query result");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -120,6 +124,7 @@ class HttpRecorderTest {
 
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK again");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -137,6 +142,7 @@ class HttpRecorderTest {
 
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.HTTP_STATUS, "200");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -155,6 +161,7 @@ class HttpRecorderTest {
 		headers.put("Accept", "application/json");
 
 		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -173,6 +180,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", "", null, ResultContent.BODY, "OK");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -189,6 +197,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", null, Map.of(), ResultContent.BODY, "OK");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -205,6 +214,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/path", null, null, ResultContent.ALL, "all content");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -221,6 +231,7 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/path", null, null, ResultContent.HTTP_STATUS, "200");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -383,6 +394,7 @@ class HttpRecorderTest {
 
 		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response 1");
 		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response 2");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -399,6 +411,7 @@ class HttpRecorderTest {
 
 		recorder.record("POST", "/api/v1/query", "body1", null, ResultContent.BODY, "response 1");
 		recorder.record("POST", "/api/v1/query", "body2", null, ResultContent.BODY, "response 2");
+		recorder.flush();
 
 		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);

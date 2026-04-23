@@ -53,7 +53,9 @@ public class OsCommandRecorder {
 	private static final ConcurrentHashMap<String, OsCommandRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path commandDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	/**
 	 * Creates a new {@link OsCommandRecorder} writing to the given output directory.
@@ -62,6 +64,7 @@ public class OsCommandRecorder {
 	 */
 	OsCommandRecorder(final String recordOutputDirectory) {
 		this.commandDir = Path.of(recordOutputDirectory, COMMAND_SUBDIR);
+		this.indexFile = commandDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -94,6 +97,18 @@ public class OsCommandRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final OsCommandRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records an OS command execution. Duplicate entries are allowed
 	 * so that the emulation extension can serve them in round-robin order.
 	 *
@@ -103,11 +118,7 @@ public class OsCommandRecorder {
 	public synchronized void record(final String commandLine, final String result) {
 		try {
 			Files.createDirectories(commandDir);
-
-			final Path indexFile = commandDir.resolve(IMAGE_YAML);
-
-			// Load existing entries or start fresh
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			// Generate a unique result filename
 			final String resultFileName = UUID.randomUUID().toString() + ".txt";
@@ -121,16 +132,42 @@ public class OsCommandRecorder {
 			entry.put("result", resultFileName);
 			entries.add(entry);
 
-			// Write image.yaml
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-
 			log.debug("OS command recording - Recorded command -> {}", resultFileName);
 		} catch (IOException e) {
 			log.error("OS command recording - Failed to record command: {}", e.getMessage());
 			log.debug("OS command recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(commandDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("OS command recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("OS command recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	/**

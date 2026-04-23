@@ -60,10 +60,13 @@ public class WmiRecorder {
 	private static final ConcurrentHashMap<String, WmiRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path wmiDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	WmiRecorder(final String recordOutputDirectory) {
 		this.wmiDir = Path.of(recordOutputDirectory, WMI_SUBDIR);
+		this.indexFile = wmiDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -95,6 +98,18 @@ public class WmiRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final WmiRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records a WMI response.
 	 *
 	 * @param wql WQL query
@@ -104,9 +119,7 @@ public class WmiRecorder {
 	public synchronized void record(final String wql, final String namespace, final List<List<String>> responseTable) {
 		try {
 			Files.createDirectories(wmiDir);
-
-			final Path indexFile = wmiDir.resolve(IMAGE_YAML);
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			final String responseFileName = UUID.randomUUID() + ".csv";
 			Files.writeString(
@@ -123,14 +136,41 @@ public class WmiRecorder {
 			entry.put("request", request);
 			entry.put("response", responseFileName);
 			entries.add(entry);
-
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
 		} catch (IOException e) {
 			log.error("WMI recording - Failed to record query for namespace {}: {}", namespace, e.getMessage());
 			log.debug("WMI recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(wmiDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("WMI recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("WMI recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {

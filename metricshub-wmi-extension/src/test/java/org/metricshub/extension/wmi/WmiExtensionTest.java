@@ -57,6 +57,7 @@ import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.extension.win.detection.WmiDetectionService;
 import org.metricshub.wmi.exceptions.WmiComException;
 import org.mockito.InjectMocks;
@@ -483,6 +484,37 @@ class WmiExtensionTest {
 		String identifier = wmiExtension.getIdentifier();
 
 		assertEquals(WMI, identifier);
+	}
+
+	@Test
+	void testOnRecordingSessionEndFlushesRecorderWhenDirectorySet() {
+		final String recordOutputDirectory = "C:/recordings";
+		final TelemetryManager manager = TelemetryManager.builder().recordOutputDirectory(recordOutputDirectory).build();
+
+		try (MockedStatic<WmiRecorder> recorderMock = mockStatic(WmiRecorder.class)) {
+			wmiExtension.onRecordingSessionEnd(manager);
+			recorderMock.verify(() -> WmiRecorder.flushAndRemoveInstance(recordOutputDirectory));
+		}
+	}
+
+	@Test
+	void testOnRecordingSessionEndNoopWhenDirectoryMissing() {
+		final TelemetryManager manager = TelemetryManager.builder().recordOutputDirectory("   ").build();
+
+		try (MockedStatic<WmiRecorder> recorderMock = mockStatic(WmiRecorder.class)) {
+			wmiExtension.onRecordingSessionEnd(manager);
+			recorderMock.verifyNoInteractions();
+		}
+	}
+
+	@Test
+	void testOnRecordingSessionEndNoopWhenDirectoryNull() {
+		final TelemetryManager manager = TelemetryManager.builder().recordOutputDirectory(null).build();
+
+		try (MockedStatic<WmiRecorder> recorderMock = mockStatic(WmiRecorder.class)) {
+			wmiExtension.onRecordingSessionEnd(manager);
+			recorderMock.verifyNoInteractions();
+		}
 	}
 
 	@Test

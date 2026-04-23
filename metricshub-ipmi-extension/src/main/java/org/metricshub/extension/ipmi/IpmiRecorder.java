@@ -71,10 +71,13 @@ public class IpmiRecorder {
 	private static final ConcurrentHashMap<String, IpmiRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path ipmiDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	IpmiRecorder(final String recordOutputDirectory) {
 		this.ipmiDir = Path.of(recordOutputDirectory, IPMI_SUBDIR);
+		this.indexFile = ipmiDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -106,6 +109,18 @@ public class IpmiRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final IpmiRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records an IPMI response.
 	 *
 	 * @param requestType the request type identifier (e.g., {@code "IpmiDetection"} or {@code "GetSensors"})
@@ -114,9 +129,7 @@ public class IpmiRecorder {
 	public synchronized void record(final String requestType, final String response) {
 		try {
 			Files.createDirectories(ipmiDir);
-
-			final Path indexFile = ipmiDir.resolve(IMAGE_YAML);
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			final String responseFileName = UUID.randomUUID() + ".txt";
 			Files.writeString(ipmiDir.resolve(responseFileName), response != null ? response : "", StandardCharsets.UTF_8);
@@ -125,14 +138,41 @@ public class IpmiRecorder {
 			entry.put("request", requestType);
 			entry.put("response", responseFileName);
 			entries.add(entry);
-
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
 		} catch (IOException e) {
 			log.error("IPMI recording - Failed to record {} response: {}", requestType, e.getMessage());
 			log.debug("IPMI recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(ipmiDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("IPMI recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("IPMI recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {

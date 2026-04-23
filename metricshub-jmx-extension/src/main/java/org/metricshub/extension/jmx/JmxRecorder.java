@@ -64,10 +64,13 @@ public class JmxRecorder {
 	private static final ConcurrentHashMap<String, JmxRecorder> RECORDERS = new ConcurrentHashMap<>();
 
 	private final Path jmxDir;
+	private final Path indexFile;
 	private final ObjectMapper yamlMapper;
+	private List<Map<String, Object>> entries;
 
 	JmxRecorder(final String recordOutputDirectory) {
 		this.jmxDir = Path.of(recordOutputDirectory, JMX_SUBDIR);
+		this.indexFile = jmxDir.resolve(IMAGE_YAML);
 		this.yamlMapper = JsonHelper.buildYamlMapper();
 	}
 
@@ -99,6 +102,18 @@ public class JmxRecorder {
 	}
 
 	/**
+	 * Flushes the recorder for the specified output directory and removes it from cache.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
+	public static void flushAndRemoveInstance(final String recordOutputDirectory) {
+		final JmxRecorder recorder = RECORDERS.remove(recordOutputDirectory);
+		if (recorder != null) {
+			recorder.flush();
+		}
+	}
+
+	/**
 	 * Records a JMX response.
 	 *
 	 * @param objectName    the MBean ObjectName pattern
@@ -114,9 +129,7 @@ public class JmxRecorder {
 	) {
 		try {
 			Files.createDirectories(jmxDir);
-
-			final Path indexFile = jmxDir.resolve(IMAGE_YAML);
-			final List<Map<String, Object>> entries = loadExistingEntries(indexFile);
+			final List<Map<String, Object>> entries = getEntries();
 
 			final String responseFileName = UUID.randomUUID() + ".txt";
 			Files.writeString(
@@ -134,14 +147,41 @@ public class JmxRecorder {
 			entry.put("request", request);
 			entry.put("response", responseFileName);
 			entries.add(entry);
-
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
 		} catch (IOException e) {
 			log.error("JMX recording - Failed to record JMX query: {}", e.getMessage());
 			log.debug("JMX recording - Error details:", e);
 		}
+	}
+
+	/**
+	 * Flushes buffered entries to {@code image.yaml}.
+	 */
+	public synchronized void flush() {
+		if (entries == null) {
+			return;
+		}
+		try {
+			Files.createDirectories(jmxDir);
+			final Map<String, Object> image = new LinkedHashMap<>();
+			image.put("image", entries);
+			yamlMapper.writeValue(indexFile.toFile(), image);
+		} catch (IOException e) {
+			log.error("JMX recording - Failed to flush image file: {}", e.getMessage());
+			log.debug("JMX recording - Flush error details:", e);
+		}
+	}
+
+	/**
+	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 *
+	 * @return mutable list of recording entries
+	 * @throws IOException if the index file cannot be read
+	 */
+	private List<Map<String, Object>> getEntries() throws IOException {
+		if (entries == null) {
+			entries = loadExistingEntries(indexFile);
+		}
+		return entries;
 	}
 
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {

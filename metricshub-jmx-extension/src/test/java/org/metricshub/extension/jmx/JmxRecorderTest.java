@@ -30,6 +30,7 @@ class JmxRecorderTest {
 		final JmxRecorder recorder = JmxRecorder.getInstance(tempDir.toString());
 
 		recorder.record("java.lang:type=Memory", List.of("HeapMemoryUsage"), List.of(), "\"val1\";\"val2\"");
+		recorder.flush();
 
 		final Path jmxDir = tempDir.resolve("jmx");
 		assertTrue(Files.isDirectory(jmxDir));
@@ -58,6 +59,7 @@ class JmxRecorderTest {
 
 		recorder.record("obj1", List.of("attr1"), List.of("key1"), "\"a\"");
 		recorder.record("obj2", List.of("attr2"), List.of(), "\"b\"");
+		recorder.flush();
 
 		final JsonNode root = readImageYaml(tempDir.resolve("jmx").resolve("image.yaml"));
 		assertEquals(2, root.get("image").size());
@@ -80,6 +82,7 @@ class JmxRecorderTest {
 			List.of("scope", "name"),
 			"\"scope1\";\"name1\";\"100\""
 		);
+		recorder.flush();
 
 		final JsonNode root = readImageYaml(tempDir.resolve("jmx").resolve("image.yaml"));
 		final JsonNode request = root.get("image").get(0).get("request");
@@ -93,6 +96,7 @@ class JmxRecorderTest {
 	void testRecordEmptyResponse() throws Exception {
 		final JmxRecorder recorder = JmxRecorder.getInstance(tempDir.toString());
 		recorder.record("obj", List.of("attr"), List.of(), "");
+		recorder.flush();
 
 		final Path jmxDir = tempDir.resolve("jmx");
 		final Path indexFile = jmxDir.resolve("image.yaml");
