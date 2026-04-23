@@ -1,0 +1,39 @@
+name: Test - Main Branch
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+
+  build-community-artifacts:
+    name: Build Community Artifacts
+    uses: ./.github/workflows/maven-build.yml
+    with:
+      jdkVersion: "21"
+      mavenPhases: "clean verify"
+    secrets: inherit
+
+  package-community:
+    name: Package Community Artifacts
+    needs: build-community-artifacts
+    uses: ./.github/workflows/packaging.yml
+    with:
+      jdkVersion: "21"
+      assetPackage: ${{ needs.build-community-artifacts.outputs.packageArtifact }}
+      version: ${{ needs.build-community-artifacts.outputs.version }}
+      deploy: false
+    secrets: inherit
+
+  test-package-installation:
+    name: Test Package Installation
+    needs:
+    - build-community-artifacts
+    - package-community
+    uses: ./.github/workflows/package-installation-tests.yml
+    with:
+      linuxArtifact: ${{ needs.package-community.outputs.linuxPackage }}
+      windowsArtifact: ${{ needs.package-community.outputs.windowsPackage }}
+      expectedVersion: ${{ needs.build-community-artifacts.outputs.version }}
+    secrets: inherit

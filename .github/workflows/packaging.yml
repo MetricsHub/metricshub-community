@@ -110,8 +110,6 @@ jobs:
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v4
-      with:
-        install: true
 
     - name: Compute Image Names from Version
       id: version
@@ -301,7 +299,6 @@ jobs:
       with:
         java-version: ${{ inputs.jdkVersion }}
         distribution: temurin
-        cache: maven
 
     - name: Download Jsign
       shell: cmd
