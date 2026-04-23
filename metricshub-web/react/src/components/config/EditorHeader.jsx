@@ -7,6 +7,7 @@ import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backup-names";
 import { isVmFile, getFileType } from "../../utils/file-type-utils";
 import FileTypeIcon from "./tree/icons/FileTypeIcons";
+import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 
 /**
  * Editor header component showing file name, save button, and status.
@@ -135,6 +136,7 @@ export default function EditorHeader({
 							{testLoading ? "Testing..." : "Test"}
 						</Button>
 					)}
+					<EncryptPasswordDialog disabled={isReadOnly} />
 					<Button
 						size="small"
 						startIcon={<SaveIcon />}
