@@ -4,7 +4,7 @@ package org.metricshub.extension.emulation.jmx;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Emulation Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2026 MetricsHub
+ * Copyright (C) 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -36,6 +36,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.jmx.JmxConfiguration;
 import org.metricshub.extension.jmx.JmxRequestExecutor;
@@ -137,7 +138,10 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 			return List.of();
 		}
 
-		final Path responseFile = jmxDir.resolve(responseFileName);
+		final Path responseFile = EmulationPathHelper.resolveSecurely(jmxDir, responseFileName);
+		if (responseFile == null) {
+			return List.of();
+		}
 		try {
 			final String content = Files.readString(responseFile, StandardCharsets.UTF_8);
 			return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);

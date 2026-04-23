@@ -4,7 +4,7 @@ package org.metricshub.extension.emulation.ipmi;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Emulation Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2026 MetricsHub
+ * Copyright (C) 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.emulation.IpmiEmulationConfig;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
@@ -150,7 +151,10 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 			return null;
 		}
 
-		final Path responseFile = ipmiDir.resolve(responseFileName);
+		final Path responseFile = EmulationPathHelper.resolveSecurely(ipmiDir, responseFileName);
+		if (responseFile == null) {
+			return null;
+		}
 		try {
 			return Files.readString(responseFile, StandardCharsets.UTF_8);
 		} catch (Exception e) {

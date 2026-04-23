@@ -4,7 +4,7 @@ package org.metricshub.extension.emulation.oscommand;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Emulation Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2026 MetricsHub
+ * Copyright (C) 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -40,6 +40,7 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.oscommand.OsCommandService;
 
@@ -134,7 +135,10 @@ public class EmulationOsCommandService extends OsCommandService {
 			return new OsCommandResult("", commandLine);
 		}
 
-		final Path responseFile = commandDir.resolve(resultFileName);
+		final Path responseFile = EmulationPathHelper.resolveSecurely(commandDir, resultFileName);
+		if (responseFile == null) {
+			return new OsCommandResult("", commandLine);
+		}
 		try {
 			final String result = Files.readString(responseFile, StandardCharsets.UTF_8);
 			return new OsCommandResult(result, commandLine);

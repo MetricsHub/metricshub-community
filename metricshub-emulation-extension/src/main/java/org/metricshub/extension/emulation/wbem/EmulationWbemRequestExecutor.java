@@ -4,7 +4,7 @@ package org.metricshub.extension.emulation.wbem;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Emulation Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2026 MetricsHub
+ * Copyright (C) 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -37,6 +37,7 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wbem.WbemRequestExecutor;
@@ -129,7 +130,10 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			return List.of();
 		}
 
-		final Path responseFile = wbemDir.resolve(responseFileName);
+		final Path responseFile = EmulationPathHelper.resolveSecurely(wbemDir, responseFileName);
+		if (responseFile == null) {
+			return List.of();
+		}
 		try {
 			final String content = Files.readString(responseFile, StandardCharsets.UTF_8);
 			return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);

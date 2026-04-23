@@ -4,7 +4,7 @@ package org.metricshub.extension.emulation.http;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Emulation Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2026 MetricsHub
+ * Copyright (C) 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -39,6 +39,7 @@ import org.metricshub.engine.common.helpers.MapHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
+import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.http.HttpRequestExecutor;
 import org.metricshub.extension.http.utils.Body;
@@ -164,7 +165,10 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 		// Read the response file
 		final String responseFileName = matchingEntry.getResponse().getFile();
-		final Path responseFile = httpDir.resolve(responseFileName);
+		final Path responseFile = EmulationPathHelper.resolveSecurely(httpDir, responseFileName);
+		if (responseFile == null) {
+			return null;
+		}
 
 		try {
 			return Files.readString(responseFile, StandardCharsets.UTF_8);
