@@ -23,6 +23,7 @@ package org.metricshub.extension.emulation;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -89,5 +90,30 @@ class EmulationRoundRobinManagerTest {
 		assertEquals(1, manager.nextIndex("/path/image.yaml", "key1", 2));
 		assertEquals(0, manager.nextIndex("/path/image.yaml", "key1", 2));
 		assertEquals(1, manager.nextIndex("/path/image.yaml", "key1", 2));
+	}
+
+	@Test
+	void testNextIndexHandlesIntegerOverflow() {
+		final EmulationRoundRobinManager manager = new EmulationRoundRobinManager();
+		final String imagePath = "/path/image.yaml";
+		final String requestKey = "overflowKey";
+		final int matchCount = 3;
+
+		// Initialize the counter by calling nextIndex once
+		manager.nextIndex(imagePath, requestKey, matchCount);
+
+		// Set the internal counter to Integer.MAX_VALUE - 1 via package-private field
+		manager.state.get(imagePath).get(requestKey).set(Integer.MAX_VALUE - 1);
+
+		// These calls cross the Integer.MAX_VALUE boundary.
+		// With Math.floorMod, all results must remain non-negative.
+		final int result1 = manager.nextIndex(imagePath, requestKey, matchCount);
+		final int result2 = manager.nextIndex(imagePath, requestKey, matchCount);
+		// This call uses a counter value of Integer.MIN_VALUE (wrapped)
+		final int result3 = manager.nextIndex(imagePath, requestKey, matchCount);
+
+		assertTrue(result1 >= 0 && result1 < matchCount, "result1 should be in [0, matchCount): " + result1);
+		assertTrue(result2 >= 0 && result2 < matchCount, "result2 should be in [0, matchCount): " + result2);
+		assertTrue(result3 >= 0 && result3 < matchCount, "result3 should be in [0, matchCount): " + result3);
 	}
 }

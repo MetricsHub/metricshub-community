@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class EmulationRoundRobinManager {
 
-	private final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicInteger>> state = new ConcurrentHashMap<>();
+	final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicInteger>> state = new ConcurrentHashMap<>();
 
 	/**
 	 * Returns the next index (0-based) for the given request key within the given
@@ -70,6 +70,6 @@ public class EmulationRoundRobinManager {
 		);
 		final AtomicInteger counter = imageState.computeIfAbsent(requestKey, key -> new AtomicInteger(0));
 		final int index = counter.getAndIncrement();
-		return index % matchCount;
+		return Math.floorMod(index, matchCount);
 	}
 }
