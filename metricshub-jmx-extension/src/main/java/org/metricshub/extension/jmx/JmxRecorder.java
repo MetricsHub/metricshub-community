@@ -21,20 +21,17 @@ package org.metricshub.extension.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 
 /**
  * Records JMX query exchanges to an emulation image ({@code image.yaml})
@@ -56,22 +53,17 @@ import org.metricshub.engine.common.helpers.JsonHelper;
  * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class JmxRecorder {
+public class JmxRecorder extends AbstractRecorder<JmxRecorder.JmxRecordRequest> {
 
 	static final String JMX_SUBDIR = "jmx";
 	static final String IMAGE_YAML = "image.yaml";
 
 	private static final ConcurrentHashMap<String, JmxRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path jmxDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	record JmxRecordRequest(String objectName, List<String> attributes, List<String> keyProperties, String csvResponse) {}
 
 	JmxRecorder(final String recordOutputDirectory) {
-		this.jmxDir = Path.of(recordOutputDirectory, JMX_SUBDIR);
-		this.indexFile = jmxDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, JMX_SUBDIR);
 	}
 
 	/**
@@ -121,54 +113,27 @@ public class JmxRecorder {
 	 * @param keyProperties the list of key properties included
 	 * @param csvResponse   the response already serialized as CSV
 	 */
-	public synchronized void record(
+	public void record(
 		final String objectName,
 		final List<String> attributes,
 		final List<String> keyProperties,
 		final String csvResponse
 	) {
-		try {
-			Files.createDirectories(jmxDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			final String responseFileName = UUID.randomUUID() + ".txt";
-			Files.writeString(
-				jmxDir.resolve(responseFileName),
-				csvResponse != null ? csvResponse : "",
-				StandardCharsets.UTF_8
-			);
-
-			final Map<String, Object> request = new LinkedHashMap<>();
-			request.put("objectName", objectName);
-			request.put("attributes", attributes != null ? attributes : List.of());
-			request.put("keyProperties", keyProperties != null ? keyProperties : List.of());
-
-			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("request", request);
-			entry.put("response", responseFileName);
-			entries.add(entry);
-		} catch (IOException e) {
-			log.error("JMX recording - Failed to record JMX query: {}", e.getMessage());
-			log.debug("JMX recording - Error details:", e);
-		}
+		recordInternal(new JmxRecordRequest(objectName, attributes, keyProperties, csvResponse));
 	}
 
 	/**
 	 * Flushes buffered entries to {@code image.yaml}.
 	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(jmxDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("JMX recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("JMX recording - Flush error details:", e);
-		}
+	@Override
+	protected String writeResponsePayload(final JmxRecordRequest request, final Path outputDir) throws IOException {
+		final String responseFileName = UUID.randomUUID() + ".txt";
+		Files.writeString(
+			outputDir.resolve(responseFileName),
+			request.csvResponse() != null ? request.csvResponse() : "",
+			StandardCharsets.UTF_8
+		);
+		return responseFileName;
 	}
 
 	/**
@@ -177,22 +142,28 @@ public class JmxRecorder {
 	 * @return mutable list of recording entries
 	 * @throws IOException if the index file cannot be read
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected Map<String, Object> buildEntry(final JmxRecordRequest request, final String responseFileName) {
+		final Map<String, Object> requestMap = new LinkedHashMap<>();
+		requestMap.put("objectName", request.objectName());
+		requestMap.put("attributes", request.attributes() != null ? request.attributes() : List.of());
+		requestMap.put("keyProperties", request.keyProperties() != null ? request.keyProperties() : List.of());
+
+		final Map<String, Object> entry = new LinkedHashMap<>();
+		entry.put("request", requestMap);
+		entry.put("response", responseFileName);
+		return entry;
 	}
 
-	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
-		if (Files.isRegularFile(indexFile)) {
-			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
-			final List<Map<String, Object>> imageList = existing.get("image");
-			if (imageList != null) {
-				return new ArrayList<>(imageList);
-			}
-		}
-		return new ArrayList<>();
+	@Override
+	protected void logRecordFailure(final JmxRecordRequest request, final IOException exception) {
+		log.error("JMX recording - Failed to record JMX query: {}", exception.getMessage());
+		log.debug("JMX recording - Error details:", exception);
+	}
+
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("JMX recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("JMX recording - Flush error details:", exception);
 	}
 }

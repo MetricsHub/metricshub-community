@@ -21,21 +21,18 @@ package org.metricshub.extension.jdbc;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
@@ -53,22 +50,17 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class JdbcRecorder {
+public class JdbcRecorder extends AbstractRecorder<JdbcRecorder.JdbcRecordRequest> {
 
 	static final String JDBC_SUBDIR = "jdbc";
 	static final String IMAGE_YAML = "image.yaml";
 
 	private static final ConcurrentHashMap<String, JdbcRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path jdbcDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	record JdbcRecordRequest(String sqlQuery, List<List<String>> responseTable) {}
 
 	JdbcRecorder(final String recordOutputDirectory) {
-		this.jdbcDir = Path.of(recordOutputDirectory, JDBC_SUBDIR);
-		this.indexFile = jdbcDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, JDBC_SUBDIR);
 	}
 
 	/**
@@ -116,44 +108,22 @@ public class JdbcRecorder {
 	 * @param sqlQuery      SQL query string
 	 * @param responseTable response table values
 	 */
-	public synchronized void record(final String sqlQuery, final List<List<String>> responseTable) {
-		try {
-			Files.createDirectories(jdbcDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			final String responseFileName = UUID.randomUUID() + ".csv";
-			Files.writeString(
-				jdbcDir.resolve(responseFileName),
-				SourceTable.tableToCsv(responseTable, MetricsHubConstants.TABLE_SEP, true),
-				StandardCharsets.UTF_8
-			);
-
-			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("query", sqlQuery);
-			entry.put("response", responseFileName);
-			entries.add(entry);
-		} catch (IOException e) {
-			log.error("JDBC recording - Failed to record SQL query: {}", e.getMessage());
-			log.debug("JDBC recording - Error details:", e);
-		}
+	public void record(final String sqlQuery, final List<List<String>> responseTable) {
+		recordInternal(new JdbcRecordRequest(sqlQuery, responseTable));
 	}
 
 	/**
 	 * Flushes buffered entries to {@code image.yaml}.
 	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(jdbcDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("JDBC recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("JDBC recording - Flush error details:", e);
-		}
+	@Override
+	protected String writeResponsePayload(final JdbcRecordRequest request, final Path outputDir) throws IOException {
+		final String responseFileName = UUID.randomUUID() + ".csv";
+		Files.writeString(
+			outputDir.resolve(responseFileName),
+			SourceTable.tableToCsv(request.responseTable(), MetricsHubConstants.TABLE_SEP, true),
+			StandardCharsets.UTF_8
+		);
+		return responseFileName;
 	}
 
 	/**
@@ -162,22 +132,23 @@ public class JdbcRecorder {
 	 * @return mutable list of recording entries
 	 * @throws IOException if the index file cannot be read
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected Map<String, Object> buildEntry(final JdbcRecordRequest request, final String responseFileName) {
+		final Map<String, Object> entry = new LinkedHashMap<>();
+		entry.put("query", request.sqlQuery());
+		entry.put("response", responseFileName);
+		return entry;
 	}
 
-	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
-		if (Files.isRegularFile(indexFile)) {
-			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
-			final List<Map<String, Object>> imageList = existing.get("image");
-			if (imageList != null) {
-				return new ArrayList<>(imageList);
-			}
-		}
-		return new ArrayList<>();
+	@Override
+	protected void logRecordFailure(final JdbcRecordRequest request, final IOException exception) {
+		log.error("JDBC recording - Failed to record SQL query: {}", exception.getMessage());
+		log.debug("JDBC recording - Error details:", exception);
+	}
+
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("JDBC recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("JDBC recording - Flush error details:", exception);
 	}
 }

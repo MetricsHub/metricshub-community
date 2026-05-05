@@ -22,7 +22,6 @@ package org.metricshub.extension.http;
  */
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -36,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 
 /**
  * Records HTTP request-response pairs to an emulation image ({@code image.yaml})
@@ -46,7 +46,7 @@ import org.metricshub.engine.connector.model.common.ResultContent;
  * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class HttpRecorder {
+public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordRequest> {
 
 	static final String HTTP_SUBDIR = "http";
 	static final String IMAGE_YAML = "image.yaml";
@@ -55,10 +55,14 @@ public class HttpRecorder {
 
 	private static final ConcurrentHashMap<String, HttpRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path httpDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	record HttpRecordRequest(
+		String method,
+		String path,
+		String body,
+		Map<String, String> headers,
+		ResultContent resultContent,
+		String responseContent
+	) {}
 
 	/**
 	 * Creates a new {@link HttpRecorder} writing to the given output directory.
@@ -66,9 +70,7 @@ public class HttpRecorder {
 	 * @param recordOutputDirectory The root output directory for recorded files.
 	 */
 	HttpRecorder(final String recordOutputDirectory) {
-		this.httpDir = Path.of(recordOutputDirectory, HTTP_SUBDIR);
-		this.indexFile = httpDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, HTTP_SUBDIR);
 	}
 
 	/**
@@ -122,7 +124,7 @@ public class HttpRecorder {
 	 * @param resultContent   The requested result content type.
 	 * @param responseContent The response content returned by the server.
 	 */
-	public synchronized void record(
+	public void record(
 		final String method,
 		final String path,
 		final String bodyContent,
@@ -130,58 +132,27 @@ public class HttpRecorder {
 		final ResultContent resultContent,
 		final String responseContent
 	) {
-		try {
-			Files.createDirectories(httpDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			// Normalize body: treat empty string as null for recording
-			final String normalizedBody = (bodyContent == null || bodyContent.isEmpty()) ? null : bodyContent;
-
-			// Normalize headers: treat empty map as null for recording
-			final Map<String, String> normalizedHeaders = (headerContent == null || headerContent.isEmpty())
-				? null
-				: headerContent;
-
-			// Generate a unique response filename
-			final String responseFileName = UUID.randomUUID().toString() + ".txt";
-
-			// Write response file
-			Files.writeString(httpDir.resolve(responseFileName), responseContent, StandardCharsets.UTF_8);
-
-			// Build and append entry
-			final Map<String, Object> entry = buildEntry(
-				method,
-				path,
-				normalizedBody,
-				normalizedHeaders,
-				resultContent,
-				responseFileName
-			);
-			entries.add(entry);
-
-			log.debug("HTTP recording - Recorded {} {} -> {}", method, path, responseFileName);
-		} catch (IOException e) {
-			log.error("HTTP recording - Failed to record HTTP request {} {}: {}", method, path, e.getMessage());
-			log.debug("HTTP recording - Error details:", e);
-		}
+		final String normalizedBody = bodyContent == null || bodyContent.isEmpty() ? null : bodyContent;
+		final Map<String, String> normalizedHeaders = headerContent == null || headerContent.isEmpty()
+			? null
+			: headerContent;
+		recordInternal(
+			new HttpRecordRequest(method, path, normalizedBody, normalizedHeaders, resultContent, responseContent)
+		);
 	}
 
 	/**
 	 * Flushes buffered entries to {@code image.yaml}.
 	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(httpDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("HTTP recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("HTTP recording - Flush error details:", e);
-		}
+	@Override
+	protected String writeResponsePayload(final HttpRecordRequest request, final Path outputDir) throws IOException {
+		final String responseFileName = UUID.randomUUID() + ".txt";
+		Files.writeString(
+			outputDir.resolve(responseFileName),
+			request.responseContent() != null ? request.responseContent() : "",
+			StandardCharsets.UTF_8
+		);
+		return responseFileName;
 	}
 
 	/**
@@ -190,11 +161,16 @@ public class HttpRecorder {
 	 * @return mutable list of recording entries
 	 * @throws IOException if the index file cannot be read
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected Map<String, Object> buildEntry(final HttpRecordRequest request, final String responseFileName) {
+		return buildEntry(
+			request.method(),
+			request.path(),
+			request.body(),
+			request.headers(),
+			request.resultContent(),
+			responseFileName
+		);
 	}
 
 	/**
@@ -208,7 +184,9 @@ public class HttpRecorder {
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
 		if (Files.isRegularFile(indexFile)) {
 			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
+			final Map<String, List<Map<String, Object>>> existing = JsonHelper
+				.buildYamlMapper()
+				.readValue(indexFile.toFile(), typeRef);
 			final List<Map<String, Object>> imageList = existing.get("image");
 			if (imageList != null) {
 				return new ArrayList<>(imageList);
@@ -258,5 +236,22 @@ public class HttpRecorder {
 		entry.put("request", request);
 		entry.put("response", response);
 		return entry;
+	}
+
+	@Override
+	protected void logRecordFailure(final HttpRecordRequest request, final IOException exception) {
+		log.error(
+			"HTTP recording - Failed to record HTTP request {} {}: {}",
+			request.method(),
+			request.path(),
+			exception.getMessage()
+		);
+		log.debug("HTTP recording - Error details:", exception);
+	}
+
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("HTTP recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("HTTP recording - Flush error details:", exception);
 	}
 }

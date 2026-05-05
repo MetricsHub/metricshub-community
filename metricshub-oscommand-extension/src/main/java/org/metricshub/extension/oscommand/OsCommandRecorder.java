@@ -21,20 +21,16 @@ package org.metricshub.extension.oscommand;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 
 /**
  * Records OS command executions to an emulation image ({@code image.yaml})
@@ -45,17 +41,14 @@ import org.metricshub.engine.common.helpers.JsonHelper;
  * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class OsCommandRecorder {
+public class OsCommandRecorder extends AbstractRecorder<OsCommandRecorder.OsCommandRecordRequest> {
 
 	static final String COMMAND_SUBDIR = "command";
 	static final String IMAGE_YAML = "image.yaml";
 
 	private static final ConcurrentHashMap<String, OsCommandRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path commandDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	record OsCommandRecordRequest(String commandLine, String result) {}
 
 	/**
 	 * Creates a new {@link OsCommandRecorder} writing to the given output directory.
@@ -63,9 +56,7 @@ public class OsCommandRecorder {
 	 * @param recordOutputDirectory The root output directory for recorded files.
 	 */
 	OsCommandRecorder(final String recordOutputDirectory) {
-		this.commandDir = Path.of(recordOutputDirectory, COMMAND_SUBDIR);
-		this.indexFile = commandDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, COMMAND_SUBDIR);
 	}
 
 	/**
@@ -115,46 +106,22 @@ public class OsCommandRecorder {
 	 * @param commandLine The raw OS command line (before any interpolation).
 	 * @param result      The output returned by the command execution.
 	 */
-	public synchronized void record(final String commandLine, final String result) {
-		try {
-			Files.createDirectories(commandDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			// Generate a unique result filename
-			final String resultFileName = UUID.randomUUID().toString() + ".txt";
-
-			// Write result file
-			Files.writeString(commandDir.resolve(resultFileName), result != null ? result : "", StandardCharsets.UTF_8);
-
-			// Build and append entry
-			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("command", commandLine);
-			entry.put("result", resultFileName);
-			entries.add(entry);
-
-			log.debug("OS command recording - Recorded command -> {}", resultFileName);
-		} catch (IOException e) {
-			log.error("OS command recording - Failed to record command: {}", e.getMessage());
-			log.debug("OS command recording - Error details:", e);
-		}
+	public void record(final String commandLine, final String result) {
+		recordInternal(new OsCommandRecordRequest(commandLine, result));
 	}
 
 	/**
 	 * Flushes buffered entries to {@code image.yaml}.
 	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(commandDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("OS command recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("OS command recording - Flush error details:", e);
-		}
+	@Override
+	protected String writeResponsePayload(final OsCommandRecordRequest request, final Path outputDir) throws IOException {
+		final String resultFileName = UUID.randomUUID() + ".txt";
+		Files.writeString(
+			outputDir.resolve(resultFileName),
+			request.result() != null ? request.result() : "",
+			StandardCharsets.UTF_8
+		);
+		return resultFileName;
 	}
 
 	/**
@@ -163,11 +130,12 @@ public class OsCommandRecorder {
 	 * @return mutable list of recording entries
 	 * @throws IOException if the index file cannot be read
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected Map<String, Object> buildEntry(final OsCommandRecordRequest request, final String responseFileName) {
+		final Map<String, Object> entry = new LinkedHashMap<>();
+		entry.put("command", request.commandLine());
+		entry.put("result", responseFileName);
+		return entry;
 	}
 
 	/**
@@ -178,15 +146,15 @@ public class OsCommandRecorder {
 	 * @return A mutable list of existing entries.
 	 * @throws IOException If the file cannot be read or parsed.
 	 */
-	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
-		if (Files.isRegularFile(indexFile)) {
-			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
-			final List<Map<String, Object>> imageList = existing.get("image");
-			if (imageList != null) {
-				return new ArrayList<>(imageList);
-			}
-		}
-		return new ArrayList<>();
+	@Override
+	protected void logRecordFailure(final OsCommandRecordRequest request, final IOException exception) {
+		log.error("OS command recording - Failed to record command: {}", exception.getMessage());
+		log.debug("OS command recording - Error details:", exception);
+	}
+
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("OS command recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("OS command recording - Flush error details:", exception);
 	}
 }

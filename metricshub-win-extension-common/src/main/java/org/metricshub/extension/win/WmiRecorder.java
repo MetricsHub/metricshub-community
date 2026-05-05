@@ -21,20 +21,16 @@ package org.metricshub.extension.win;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
 
@@ -52,22 +48,30 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * </pre>
  */
 @Slf4j
-public class WmiRecorder {
+public class WmiRecorder
+	extends org.metricshub.engine.extension.recorder.AbstractRecorder<WmiRecorder.WmiRecordRequest> {
 
 	static final String WMI_SUBDIR = "wmi";
 	static final String IMAGE_YAML = "image.yaml";
 
 	private static final ConcurrentHashMap<String, WmiRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path wmiDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	/**
+	 * Protocol-specific payload used to record one WMI query response.
+	 *
+	 * @param wql WQL query
+	 * @param namespace WMI namespace
+	 * @param responseTable response table values
+	 */
+	record WmiRecordRequest(String wql, String namespace, List<List<String>> responseTable) {}
 
+	/**
+	 * Creates a recorder instance for the provided output directory.
+	 *
+	 * @param recordOutputDirectory root recording output directory
+	 */
 	WmiRecorder(final String recordOutputDirectory) {
-		this.wmiDir = Path.of(recordOutputDirectory, WMI_SUBDIR);
-		this.indexFile = wmiDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, WMI_SUBDIR);
 	}
 
 	/**
@@ -116,72 +120,72 @@ public class WmiRecorder {
 	 * @param namespace WMI namespace
 	 * @param responseTable response table values
 	 */
-	public synchronized void record(final String wql, final String namespace, final List<List<String>> responseTable) {
-		try {
-			Files.createDirectories(wmiDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			final String responseFileName = UUID.randomUUID() + ".csv";
-			Files.writeString(
-				wmiDir.resolve(responseFileName),
-				SourceTable.tableToCsv(responseTable, MetricsHubConstants.TABLE_SEP, true),
-				StandardCharsets.UTF_8
-			);
-
-			final Map<String, Object> request = new LinkedHashMap<>();
-			request.put("wql", wql);
-			request.put("namespace", namespace);
-
-			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("request", request);
-			entry.put("response", responseFileName);
-			entries.add(entry);
-		} catch (IOException e) {
-			log.error("WMI recording - Failed to record query for namespace {}: {}", namespace, e.getMessage());
-			log.debug("WMI recording - Error details:", e);
-		}
+	public void record(final String wql, final String namespace, final List<List<String>> responseTable) {
+		recordInternal(new WmiRecordRequest(wql, namespace, responseTable));
 	}
 
 	/**
-	 * Flushes buffered entries to {@code image.yaml}.
-	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(wmiDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("WMI recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("WMI recording - Flush error details:", e);
-		}
-	}
-
-	/**
-	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 * Writes the response table as CSV and returns the generated response file name.
 	 *
-	 * @return mutable list of recording entries
-	 * @throws IOException if the index file cannot be read
+	 * @param request WMI record payload
+	 * @param outputDir protocol output directory
+	 * @return generated response file name
+	 * @throws IOException if writing response payload fails
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected String writeResponsePayload(final WmiRecordRequest request, final Path outputDir) throws IOException {
+		final String responseFileName = UUID.randomUUID() + ".csv";
+		Files.writeString(
+			outputDir.resolve(responseFileName),
+			SourceTable.tableToCsv(request.responseTable(), MetricsHubConstants.TABLE_SEP, true),
+			StandardCharsets.UTF_8
+		);
+		return responseFileName;
 	}
 
-	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
-		if (Files.isRegularFile(indexFile)) {
-			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
-			final List<Map<String, Object>> imageList = existing.get("image");
-			if (imageList != null) {
-				return new ArrayList<>(imageList);
-			}
-		}
-		return new ArrayList<>();
+	/**
+	 * Builds one YAML image entry for the recorded WMI request and response file.
+	 *
+	 * @param request WMI record payload
+	 * @param responseFileName generated response file name
+	 * @return YAML image entry
+	 */
+	@Override
+	protected Map<String, Object> buildEntry(final WmiRecordRequest request, final String responseFileName) {
+		final Map<String, Object> requestMap = new LinkedHashMap<>();
+		requestMap.put("wql", request.wql());
+		requestMap.put("namespace", request.namespace());
+
+		final Map<String, Object> entry = new LinkedHashMap<>();
+		entry.put("request", requestMap);
+		entry.put("response", responseFileName);
+		return entry;
+	}
+
+	/**
+	 * Logs failures raised while recording WMI responses.
+	 *
+	 * @param request WMI record payload
+	 * @param exception thrown exception
+	 */
+	@Override
+	protected void logRecordFailure(final WmiRecordRequest request, final IOException exception) {
+		log.error(
+			"WMI recording - Failed to record query for namespace {}: {}",
+			request.namespace(),
+			exception.getMessage()
+		);
+		log.debug("WMI recording - Error details:", exception);
+	}
+
+	/**
+	 * Logs failures raised while flushing the buffered image.
+	 *
+	 * @param exception thrown exception
+	 */
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("WMI recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("WMI recording - Flush error details:", exception);
 	}
 }

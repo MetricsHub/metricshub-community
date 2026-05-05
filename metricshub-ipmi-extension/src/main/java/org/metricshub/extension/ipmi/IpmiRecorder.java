@@ -21,20 +21,16 @@ package org.metricshub.extension.ipmi;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
-import org.metricshub.engine.common.helpers.JsonHelper;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 
 /**
  * Records IPMI over-LAN exchanges to an emulation image ({@code image.yaml})
@@ -53,7 +49,7 @@ import org.metricshub.engine.common.helpers.JsonHelper;
  * recorder is created per output directory via {@link #getInstance(String)}.
  */
 @Slf4j
-public class IpmiRecorder {
+public class IpmiRecorder extends AbstractRecorder<IpmiRecorder.IpmiRecordRequest> {
 
 	/**
 	 * Request type identifier for IPMI chassis status detection.
@@ -70,15 +66,10 @@ public class IpmiRecorder {
 
 	private static final ConcurrentHashMap<String, IpmiRecorder> RECORDERS = new ConcurrentHashMap<>();
 
-	private final Path ipmiDir;
-	private final Path indexFile;
-	private final ObjectMapper yamlMapper;
-	private List<Map<String, Object>> entries;
+	record IpmiRecordRequest(String requestType, String response) {}
 
 	IpmiRecorder(final String recordOutputDirectory) {
-		this.ipmiDir = Path.of(recordOutputDirectory, IPMI_SUBDIR);
-		this.indexFile = ipmiDir.resolve(IMAGE_YAML);
-		this.yamlMapper = JsonHelper.buildYamlMapper();
+		super(recordOutputDirectory, IPMI_SUBDIR);
 	}
 
 	/**
@@ -126,40 +117,22 @@ public class IpmiRecorder {
 	 * @param requestType the request type identifier (e.g., {@code "IpmiDetection"} or {@code "GetSensors"})
 	 * @param response    the raw response string
 	 */
-	public synchronized void record(final String requestType, final String response) {
-		try {
-			Files.createDirectories(ipmiDir);
-			final List<Map<String, Object>> entries = getEntries();
-
-			final String responseFileName = UUID.randomUUID() + ".txt";
-			Files.writeString(ipmiDir.resolve(responseFileName), response != null ? response : "", StandardCharsets.UTF_8);
-
-			final Map<String, Object> entry = new LinkedHashMap<>();
-			entry.put("request", requestType);
-			entry.put("response", responseFileName);
-			entries.add(entry);
-		} catch (IOException e) {
-			log.error("IPMI recording - Failed to record {} response: {}", requestType, e.getMessage());
-			log.debug("IPMI recording - Error details:", e);
-		}
+	public void record(final String requestType, final String response) {
+		recordInternal(new IpmiRecordRequest(requestType, response));
 	}
 
 	/**
 	 * Flushes buffered entries to {@code image.yaml}.
 	 */
-	public synchronized void flush() {
-		if (entries == null) {
-			return;
-		}
-		try {
-			Files.createDirectories(ipmiDir);
-			final Map<String, Object> image = new LinkedHashMap<>();
-			image.put("image", entries);
-			yamlMapper.writeValue(indexFile.toFile(), image);
-		} catch (IOException e) {
-			log.error("IPMI recording - Failed to flush image file: {}", e.getMessage());
-			log.debug("IPMI recording - Flush error details:", e);
-		}
+	@Override
+	protected String writeResponsePayload(final IpmiRecordRequest request, final Path outputDir) throws IOException {
+		final String responseFileName = UUID.randomUUID() + ".txt";
+		Files.writeString(
+			outputDir.resolve(responseFileName),
+			request.response() != null ? request.response() : "",
+			StandardCharsets.UTF_8
+		);
+		return responseFileName;
 	}
 
 	/**
@@ -168,22 +141,23 @@ public class IpmiRecorder {
 	 * @return mutable list of recording entries
 	 * @throws IOException if the index file cannot be read
 	 */
-	private List<Map<String, Object>> getEntries() throws IOException {
-		if (entries == null) {
-			entries = loadExistingEntries(indexFile);
-		}
-		return entries;
+	@Override
+	protected Map<String, Object> buildEntry(final IpmiRecordRequest request, final String responseFileName) {
+		final Map<String, Object> entry = new LinkedHashMap<>();
+		entry.put("request", request.requestType());
+		entry.put("response", responseFileName);
+		return entry;
 	}
 
-	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
-		if (Files.isRegularFile(indexFile)) {
-			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = yamlMapper.readValue(indexFile.toFile(), typeRef);
-			final List<Map<String, Object>> imageList = existing.get("image");
-			if (imageList != null) {
-				return new ArrayList<>(imageList);
-			}
-		}
-		return new ArrayList<>();
+	@Override
+	protected void logRecordFailure(final IpmiRecordRequest request, final IOException exception) {
+		log.error("IPMI recording - Failed to record {} response: {}", request.requestType(), exception.getMessage());
+		log.debug("IPMI recording - Error details:", exception);
+	}
+
+	@Override
+	protected void logFlushFailure(final IOException exception) {
+		log.error("IPMI recording - Failed to flush image file: {}", exception.getMessage());
+		log.debug("IPMI recording - Flush error details:", exception);
 	}
 }
