@@ -23,6 +23,7 @@ package org.metricshub.engine.strategy.utils;
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.WHITE_SPACE;
 
 import java.util.ArrayList;
@@ -171,16 +172,18 @@ public class PslUtils {
 	 * 		}
 	 * 	}
 	 *
-	 * @param row The row of values.
+	 * @param row The row of values as a List.
 	 * @param tableResult The output returned by the SourceVisitor.
 	 * @return String value
 	 */
-	public static String formatExtendedJSON(@NonNull String row, @NonNull SourceTable tableResult)
+	public static String formatExtendedJSON(@NonNull List<String> row, @NonNull SourceTable tableResult)
 		throws IllegalArgumentException {
 		if (row.isEmpty()) {
-			log.error("formatExtendedJSON received Empty row of values. Returning empty string.");
+			log.error("formatExtendedJSON received an empty row of values. Returning empty string.");
 			return EMPTY;
 		}
+
+		final String rowCsv = SourceTable.lineToCsvSafe(row, TABLE_SEP, true);
 
 		String rawData = tableResult.getRawData();
 		if (rawData == null || rawData.isEmpty()) {
@@ -189,12 +192,13 @@ public class PslUtils {
 		}
 
 		StringBuilder jsonContent = new StringBuilder();
-		jsonContent.append("{\n\"Entry\":{\n\"Full\":\"").append(row).append("\",\n");
+		jsonContent.append("{\n\"Entry\":{\n\"Full\":\"").append(rowCsv).append("\",\n");
 
 		int i = 1;
 
-		for (String value : row.split(",")) {
-			jsonContent.append("\"Column(").append(i).append(")\":\"").append(value).append("\",\n");
+		for (String value : row) {
+			final String normalizedValue = value == null ? EMPTY : value;
+			jsonContent.append("\"Column(").append(i).append(")\":\"").append(normalizedValue).append("\",\n");
 			i++;
 		}
 
