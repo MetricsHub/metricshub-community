@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,7 @@ import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
+import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.OsCommandHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -147,7 +149,7 @@ public class FileSourceProcessor {
 			final FileSourceProcessingMode mode = fileSource.getMode();
 
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
-				return SourceTable.builder().table(processFilesInFlatMode(ops, sourceResolvedPaths, hostname)).build();
+				return LogTable.builder().logs(processFilesInFlatMode(ops, sourceResolvedPaths, hostname)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager
@@ -155,9 +157,9 @@ public class FileSourceProcessor {
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
-				return SourceTable
+				return LogTable
 					.builder()
-					.table(processFilesInLogMode(ops, sourceResolvedPaths, sourceCursors, fileSource, hostname))
+					.logs(processFilesInLogMode(ops, sourceResolvedPaths, sourceCursors, fileSource, hostname))
 					.build();
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
@@ -170,7 +172,7 @@ public class FileSourceProcessor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - FileSource processing failed.", hostname, e);
-			return SourceTable.empty();
+			return LogTable.builder().build();
 		}
 	}
 
@@ -184,12 +186,12 @@ public class FileSourceProcessor {
 	 * @param hostname The hostname for logging purposes
 	 * @return A list of lists containing file paths and their complete content
 	 */
-	List<List<String>> processFilesInFlatMode(
+	Map<String, String> processFilesInFlatMode(
 		final FileOperations fileOperations,
 		final Set<String> paths,
 		final String hostname
 	) {
-		final List<List<String>> results = new ArrayList<>();
+		final Map<String, String> results = new HashMap<>();
 
 		// Fetch the content of each file given its path, and add it to the results list
 		for (final String path : paths) {
@@ -198,11 +200,8 @@ public class FileSourceProcessor {
 				if (content != null) {
 					final long contentSizeBytes = content.getBytes(StandardCharsets.UTF_8).length;
 					log.debug("Hostname {} - Path [{}]: content fetched, size={} bytes", hostname, path, contentSizeBytes);
-					final List<String> row = new ArrayList<>();
-					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
-					results.add(row);
 				}
+				results.put(path, content != null ? content : "");
 			} catch (Exception e) {
 				// I/O or other error reading this file; log and skip so other paths can still be processed
 				log.info("Hostname {} - Unable to read file located under: {}. Message: {}", hostname, path, e.getMessage());
@@ -224,7 +223,7 @@ public class FileSourceProcessor {
 	 * @param hostname The hostname for logging purposes
 	 * @return A list of lists containing file paths and their new content since last read
 	 */
-	List<List<String>> processFilesInLogMode(
+	Map<String, String> processFilesInLogMode(
 		final FileOperations fileOperations,
 		final Set<String> paths,
 		final Map<String, Long> sourceCursors,
@@ -234,12 +233,13 @@ public class FileSourceProcessor {
 		// Initialize remaining size with the maximum size per poll limit (already in bytes)
 		long remainingSize = fileSource.getMaxSizePerPoll();
 
-		final List<List<String>> resultedContent = new ArrayList<>();
+		final Map<String, String> resultedContent = new HashMap<>();
 
 		try {
 			for (final String path : paths) {
 				// Skip if the maximum size per poll has been reached
 				if (remainingSize == 0) {
+					resultedContent.put(path, "");
 					continue;
 				}
 
@@ -265,12 +265,8 @@ public class FileSourceProcessor {
 					result.getCursor(),
 					remainingSize
 				);
-				if (content != null) {
-					final List<String> row = new ArrayList<>();
-					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
-					resultedContent.add(row);
-				}
+
+				resultedContent.put(path, content != null ? content : "");
 			}
 		} catch (Exception e) {
 			// Catches errors during LOG-mode read; log and return partial results

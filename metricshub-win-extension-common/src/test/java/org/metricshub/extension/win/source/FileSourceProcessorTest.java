@@ -2,6 +2,7 @@ package org.metricshub.extension.win.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -13,6 +14,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +29,7 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
+import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
@@ -60,6 +63,11 @@ class FileSourceProcessorTest {
 
 	@Mock
 	private Function<TelemetryManager, IWinConfiguration> mockConfigurationRetriever;
+
+	private static Map<String, String> requireLogs(final SourceTable table) {
+		assertInstanceOf(LogTable.class, table);
+		return ((LogTable) table).getLogs();
+	}
 
 	/**
 	 * Test subclass that overrides createLocalFileOperations to inject a mock.
@@ -134,10 +142,10 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		assertFalse(result1.getTable().isEmpty());
-		assertEquals(1, result1.getTable().size());
-		assertEquals(resolvedPath, result1.getTable().get(0).get(0));
-		assertEquals(escapeNewLines(initialContent), result1.getTable().get(0).get(1));
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals(initialContent, logs1.get(resolvedPath));
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
 		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
@@ -146,10 +154,10 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		assertFalse(result2.getTable().isEmpty());
-		assertEquals(1, result2.getTable().size());
-		assertEquals(resolvedPath, result2.getTable().get(0).get(0));
-		assertEquals(escapeNewLines(newContent), result2.getTable().get(0).get(1));
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 	}
 
 	@Test
@@ -207,7 +215,10 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		assertTrue(result1.getTable().isEmpty());
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals("", logs1.get(resolvedPath));
 
 		Map<String, Long> cursors = telemetryManager
 			.getHostProperties()
@@ -219,10 +230,10 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		assertFalse(result2.getTable().isEmpty());
-		assertEquals(1, result2.getTable().size());
-		assertEquals(resolvedPath, result2.getTable().get(0).get(0));
-		assertEquals(escapeNewLines(newContent), result2.getTable().get(0).get(1));
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 		assertEquals(newFileSize, cursors.get(resolvedPath));
 	}
 
@@ -274,17 +285,17 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertFalse(result1.getTable().isEmpty());
-			assertEquals(1, result1.getTable().size());
-			assertEquals(resolvedPath, result1.getTable().get(0).get(0));
-			assertEquals(escapeNewLines(content), result1.getTable().get(0).get(1));
+			Map<String, String> logs1 = requireLogs(result1);
+			assertFalse(logs1.isEmpty());
+			assertEquals(1, logs1.size());
+			assertEquals(content, logs1.get(resolvedPath));
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertFalse(result2.getTable().isEmpty());
-			assertEquals(1, result2.getTable().size());
-			assertEquals(resolvedPath, result2.getTable().get(0).get(0));
-			assertEquals(escapeNewLines(content), result2.getTable().get(0).get(1));
+			Map<String, String> logs2 = requireLogs(result2);
+			assertFalse(logs2.isEmpty());
+			assertEquals(1, logs2.size());
+			assertEquals(content, logs2.get(resolvedPath));
 		}
 	}
 
@@ -339,7 +350,10 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertTrue(result1.getTable().isEmpty());
+			Map<String, String> logs1 = requireLogs(result1);
+			assertFalse(logs1.isEmpty());
+			assertEquals(1, logs1.size());
+			assertEquals("", logs1.get(resolvedPath));
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -349,10 +363,10 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertFalse(result2.getTable().isEmpty());
-			assertEquals(1, result2.getTable().size());
-			assertEquals(resolvedPath, result2.getTable().get(0).get(0));
-			assertEquals(escapeNewLines(newContent), result2.getTable().get(0).get(1));
+			Map<String, String> logs2 = requireLogs(result2);
+			assertFalse(logs2.isEmpty());
+			assertEquals(1, logs2.size());
+			assertEquals(newContent, logs2.get(resolvedPath));
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -408,7 +422,10 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			assertTrue(result1.getTable().isEmpty());
+			Map<String, String> logs1 = requireLogs(result1);
+			assertFalse(logs1.isEmpty());
+			assertEquals(1, logs1.size());
+			assertEquals("", logs1.get(resolvedPath));
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -418,10 +435,10 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			assertFalse(result2.getTable().isEmpty());
-			assertEquals(1, result2.getTable().size());
-			assertEquals(resolvedPath, result2.getTable().get(0).get(0));
-			assertEquals(escapeNewLines(newContent), result2.getTable().get(0).get(1));
+			Map<String, String> logs2 = requireLogs(result2);
+			assertFalse(logs2.isEmpty());
+			assertEquals(1, logs2.size());
+			assertEquals(newContent, logs2.get(resolvedPath));
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -585,13 +602,65 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result);
-		assertEquals(2, result.getTable().size());
-		// Set iteration order is undefined; ensure both files and contents are present
-		Set<String> paths = Set.of(result.getTable().get(0).get(0), result.getTable().get(1).get(0));
-		Set<String> contents = Set.of(result.getTable().get(0).get(1), result.getTable().get(1).get(1));
-		assertTrue(paths.contains(path1));
-		assertTrue(paths.contains(path2));
-		assertTrue(contents.contains(escapeNewLines(content1)));
-		assertTrue(contents.contains(escapeNewLines(content2)));
+		Map<String, String> logs = requireLogs(result);
+		assertEquals(2, logs.size());
+		assertEquals(Set.of(path1, path2), logs.keySet());
+		assertEquals(Set.of(content1, content2), Set.copyOf(logs.values()));
+	}
+
+	@Test
+	void testProcessWithLocalhostFlatModeSkipsPathWhenReadThrows() throws Exception {
+		final String path1 = "C:\\temp\\ok.log";
+		final String path2 = "C:\\temp\\ko.log";
+		final String content1 = "Content one";
+
+		final HostProperties hostProperties = HostProperties
+			.builder()
+			.isLocalhost(true)
+			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
+			.build();
+		final HostConfiguration hostConfiguration = HostConfiguration
+			.builder()
+			.hostname(HOSTNAME)
+			.hostType(DeviceKind.WINDOWS)
+			.build();
+		final TelemetryManager telemetryManager = TelemetryManager
+			.builder()
+			.hostProperties(hostProperties)
+			.hostConfiguration(hostConfiguration)
+			.build();
+		final FileSource fileSource = FileSource
+			.builder()
+			.maxSizePerPoll(100L * 1024 * 1024)
+			.key("sourceKey")
+			.mode(FileSourceProcessingMode.FLAT)
+			.paths(Set.of("C:\\temp\\*.log"))
+			.build();
+
+		final FileOperations mockFileOps = mock(FileOperations.class);
+		when(mockFileOps.readFileContent(eq(path1))).thenReturn(content1);
+		when(mockFileOps.readFileContent(eq(path2))).thenThrow(new IOException("boom"));
+
+		try (MockedStatic<FileHelper> mockedFileHelper = mockStatic(FileHelper.class)) {
+			mockedFileHelper
+				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
+				.thenReturn(Set.of(path1, path2));
+			mockedFileHelper
+				.when(() -> FileHelper.escapeNewLines(any()))
+				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
+
+			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
+				mockWinRequestExecutor,
+				mockConfigurationRetriever,
+				CONNECTOR_ID,
+				mockFileOps
+			);
+
+			final SourceTable result = processor.process(fileSource, telemetryManager);
+			assertNotNull(result);
+			Map<String, String> logsResult = requireLogs(result);
+			assertEquals(1, logsResult.size());
+			assertEquals(content1, logsResult.get(path1));
+		}
 	}
 }

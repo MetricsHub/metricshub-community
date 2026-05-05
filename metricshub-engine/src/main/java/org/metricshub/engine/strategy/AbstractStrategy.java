@@ -55,6 +55,7 @@ import org.metricshub.engine.strategy.detection.ConnectorSelection;
 import org.metricshub.engine.strategy.detection.ConnectorTestResult;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.ISourceProcessor;
+import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceProcessor;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.source.SourceUpdaterProcessor;
@@ -176,12 +177,11 @@ public abstract class AbstractStrategy implements IStrategy {
 					monitorType
 				);
 				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained
+				final String rawData = sourceTable != null ? sourceTable.getRawData() : null;
 				sourceTable =
-					SourceTable
-						.builder()
-						.rawData(sourceTable != null ? sourceTable.getRawData() : null)
-						.table(new ArrayList<>())
-						.build();
+					sourceTable instanceof LogTable
+						? LogTable.builder().rawData(rawData).table(new ArrayList<>()).build()
+						: SourceTable.builder().rawData(rawData).table(new ArrayList<>()).build();
 			}
 
 			// log the source table

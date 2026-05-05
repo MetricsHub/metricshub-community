@@ -104,8 +104,6 @@ public class SourceProcessor implements ISourceProcessor {
 			return SourceTable.empty();
 		}
 
-		final SourceTable sourceTable = new SourceTable();
-
 		final Optional<SourceTable> maybeOrigin = SourceTable.lookupSourceTable(copyFrom, connectorId, telemetryManager);
 
 		if (maybeOrigin.isEmpty()) {
@@ -113,6 +111,7 @@ public class SourceProcessor implements ISourceProcessor {
 		}
 
 		final SourceTable origin = maybeOrigin.get();
+		final SourceTable sourceTable = origin instanceof LogTable ? new LogTable() : new SourceTable();
 
 		final List<List<String>> table = origin
 			.getTable()
@@ -126,6 +125,9 @@ public class SourceProcessor implements ISourceProcessor {
 
 		if (origin.getRawData() != null) {
 			sourceTable.setRawData(origin.getRawData());
+		}
+		if (origin instanceof LogTable originLogTable && sourceTable instanceof LogTable copiedLogTable) {
+			copiedLogTable.setLogs(originLogTable.getLogs());
 		}
 
 		logSourceCopy(connectorId, copyFrom, copySource.getKey(), sourceTable, hostname);

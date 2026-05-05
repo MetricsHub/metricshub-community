@@ -32,10 +32,10 @@ import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -46,7 +46,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Builder
+@SuperBuilder
 public class SourceTable {
 
 	private static final String ALTERNATE_COLUMN_SEPARATOR = ",";
