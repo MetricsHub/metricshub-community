@@ -34,6 +34,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class IpmiEmulationEntry {
 
+	/**
+	 * Recorded IPMI request identifier used as request key.
+	 */
 	private String request;
+
+	/**
+	 * File name containing the recorded command output.
+	 */
 	private String response;
 }

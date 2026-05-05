@@ -34,5 +34,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class JmxEmulationImage {
 
+	/**
+	 * Recorded JMX request/response mappings to replay.
+	 */
 	private List<JmxEmulationEntry> image;
 }

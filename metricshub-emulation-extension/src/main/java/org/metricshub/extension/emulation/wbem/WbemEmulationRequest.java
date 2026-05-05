@@ -29,6 +29,13 @@ import lombok.Data;
 @Data
 public class WbemEmulationRequest {
 
+	/**
+	 * Recorded WQL query string used as request key.
+	 */
 	private String wql;
+
+	/**
+	 * Recorded WBEM namespace used as request key.
+	 */
 	private String namespace;
 }

@@ -26,9 +26,21 @@ import lombok.Data;
 
 /**
  * Root object for WMI emulation image YAML files.
+ *
+ * <p>Expected YAML shape:
+ * <pre>
+ * image:
+ *   - request:
+ *       wql: <WQL query>
+ *       namespace: <WMI namespace>
+ *     response: <response file name>
+ * </pre>
  */
 @Data
 public class WmiEmulationImage {
 
+	/**
+	 * Recorded WMI request/response mappings to replay.
+	 */
 	private List<WmiEmulationEntry> image;
 }

@@ -34,6 +34,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class JdbcEmulationEntry {
 
+	/**
+	 * Recorded SQL query used as request key.
+	 */
 	private String query;
+
+	/**
+	 * File name containing the recorded query result.
+	 */
 	private String response;
 }

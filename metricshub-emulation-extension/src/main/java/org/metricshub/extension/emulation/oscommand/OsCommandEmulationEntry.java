@@ -35,6 +35,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OsCommandEmulationEntry {
 
+	/**
+	 * Original command line used as lookup key during replay.
+	 */
 	private String command;
+
+	/**
+	 * File name containing the recorded command output.
+	 */
 	private String result;
 }

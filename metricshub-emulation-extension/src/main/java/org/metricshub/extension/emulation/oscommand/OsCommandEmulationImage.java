@@ -29,6 +29,13 @@ import lombok.NoArgsConstructor;
 
 /**
  * Represents the root structure of an OS command emulation {@code image.yaml} file.
+ *
+ * <p>Expected YAML shape:
+ * <pre>
+ * image:
+ *   - command: <original command line>
+ *     result: <response file name>
+ * </pre>
  */
 @Data
 @Builder
@@ -36,5 +43,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class OsCommandEmulationImage {
 
+	/**
+	 * Recorded OS command entries to replay.
+	 */
 	private List<OsCommandEmulationEntry> image;
 }

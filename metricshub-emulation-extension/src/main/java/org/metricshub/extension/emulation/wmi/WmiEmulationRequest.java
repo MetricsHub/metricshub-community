@@ -29,6 +29,13 @@ import lombok.Data;
 @Data
 public class WmiEmulationRequest {
 
+	/**
+	 * Recorded WQL query string used as request key.
+	 */
 	private String wql;
+
+	/**
+	 * Recorded WMI namespace used as request key.
+	 */
 	private String namespace;
 }

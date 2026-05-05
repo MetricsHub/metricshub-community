@@ -29,6 +29,13 @@ import lombok.Data;
 @Data
 public class WmiEmulationEntry {
 
+	/**
+	 * Recorded WMI request descriptor (query and namespace).
+	 */
 	private WmiEmulationRequest request;
+
+	/**
+	 * File name containing the recorded WMI table response.
+	 */
 	private String response;
 }

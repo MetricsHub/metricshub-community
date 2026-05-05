@@ -33,6 +33,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class JmxEmulationEntry {
 
+	/**
+	 * Recorded JMX request descriptor (object name and attribute set).
+	 */
 	private JmxEmulationRequest request;
+
+	/**
+	 * File name containing the recorded JMX response.
+	 */
 	private String response;
 }

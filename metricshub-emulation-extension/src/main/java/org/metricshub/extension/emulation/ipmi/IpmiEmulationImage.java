@@ -34,5 +34,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class IpmiEmulationImage {
 
+	/**
+	 * Recorded IPMI request/response mappings to replay.
+	 */
 	private List<IpmiEmulationEntry> image;
 }

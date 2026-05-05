@@ -34,5 +34,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class JdbcEmulationImage {
 
+	/**
+	 * Recorded SQL request/response mappings to replay.
+	 */
 	private List<JdbcEmulationEntry> image;
 }

@@ -29,6 +29,13 @@ import lombok.Data;
 @Data
 public class WbemEmulationEntry {
 
+	/**
+	 * Recorded WBEM request descriptor (query and namespace).
+	 */
 	private WbemEmulationRequest request;
+
+	/**
+	 * File name containing the recorded WBEM table response.
+	 */
 	private String response;
 }

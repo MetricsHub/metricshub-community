@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
@@ -202,6 +203,14 @@ public class EmulationExtension implements IProtocolExtension {
 		roundRobinManager,
 		emulationImageCacheManager
 	);
+
+	/**
+	 * Cache of SNMP executors keyed by emulation input directory.
+	 *
+	 * <p>Each executor internally creates {@code OfflineSnmpClient} instances from walk files; reusing executors
+	 * avoids repeatedly reparsing the same directory across source and criterion processing.</p>
+	 */
+	private final Map<String, EmulationSnmpRequestExecutor> snmpRequestExecutorsByDirectory = new ConcurrentHashMap<>();
 
 	/**
 	 * Retrieves the emulation configuration from the telemetry manager.
@@ -429,12 +438,7 @@ public class EmulationExtension implements IProtocolExtension {
 			return SourceTable.empty();
 		}
 
-		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
-			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
-				? emulationConfiguration.getSnmp().getDirectory()
-				: null
-		);
+		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
 
 		if (source instanceof SnmpTableSource snmpTableSource) {
 			return new SnmpTableSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER)
@@ -504,12 +508,7 @@ public class EmulationExtension implements IProtocolExtension {
 				.process(serviceCriterion, telemetryManager, connectorId, logMode);
 		}
 
-		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-		final EmulationSnmpRequestExecutor snmpExecutor = new EmulationSnmpRequestExecutor(
-			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
-				? emulationConfiguration.getSnmp().getDirectory()
-				: null
-		);
+		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
 			return new SnmpGetCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode)
@@ -585,6 +584,27 @@ public class EmulationExtension implements IProtocolExtension {
 				protocolObjectNode.set(entry.getKey(), entry.getValue());
 			}
 		}
+	}
+
+	/**
+	 * Returns the cached SNMP emulation executor for the configured input directory.
+	 *
+	 * <p>The cache key is the raw directory value (or an empty key when directory is missing), which provides
+	 * stable executor reuse within this extension instance.</p>
+	 *
+	 * @param telemetryManager telemetry context used to resolve emulation configuration
+	 * @return cached or newly created SNMP emulation executor
+	 */
+	private EmulationSnmpRequestExecutor getSnmpRequestExecutor(final TelemetryManager telemetryManager) {
+		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
+		final String directory = emulationConfiguration != null && emulationConfiguration.getSnmp() != null
+			? emulationConfiguration.getSnmp().getDirectory()
+			: null;
+		final String cacheKey = directory == null ? "" : directory;
+		return snmpRequestExecutorsByDirectory.computeIfAbsent(
+			cacheKey,
+			ignored -> new EmulationSnmpRequestExecutor(directory)
+		);
 	}
 
 	/**
