@@ -41,6 +41,7 @@ import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
+import org.metricshub.extension.http.HttpMacroDefaults;
 import org.metricshub.extension.http.HttpRequestExecutor;
 import org.metricshub.extension.http.utils.Body;
 import org.metricshub.extension.http.utils.Header;
@@ -58,8 +59,6 @@ import org.metricshub.extension.http.utils.HttpRequest;
 public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 	private static final String HTTP_EMULATION_YAML = "image.yaml";
-	private static final String DEFAULT_USERNAME = "username";
-	private static final char[] DEFAULT_PASSWORD = "password".toCharArray();
 
 	private final EmulationRoundRobinManager roundRobinManager;
 	private final EmulationImageCacheManager imageCacheManager;
@@ -111,12 +110,13 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			return null;
 		}
 
-		// Resolve macros in the authentication token (same logic as HttpRequestExecutor)
+		// Resolve macros with shared synthetic credentials so playback uses the same deterministic
+		// placeholder values as recording (never real authentication credentials).
 		final String httpRequestAuthToken = httpRequest.getAuthenticationToken();
 		final String authenticationToken = MacrosUpdater.update(
 			httpRequestAuthToken,
-			DEFAULT_USERNAME,
-			DEFAULT_PASSWORD,
+			HttpMacroDefaults.USERNAME,
+			HttpMacroDefaults.PASSWORD,
 			httpRequestAuthToken,
 			httpRequest.getHostname(),
 			false
@@ -127,11 +127,21 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final String path = httpRequest.getPath();
 		final Body body = httpRequest.getBody();
 		final String resolvedBody = body != null
-			? body.getContent(DEFAULT_USERNAME, DEFAULT_PASSWORD, authenticationToken, httpRequest.getHostname())
+			? body.getContent(
+				HttpMacroDefaults.USERNAME,
+				HttpMacroDefaults.PASSWORD,
+				authenticationToken,
+				httpRequest.getHostname()
+			)
 			: null;
 		final Header header = httpRequest.getHeader();
 		final Map<String, String> resolvedHeaders = header != null
-			? header.getContent(DEFAULT_USERNAME, DEFAULT_PASSWORD, authenticationToken, httpRequest.getHostname())
+			? header.getContent(
+				HttpMacroDefaults.USERNAME,
+				HttpMacroDefaults.PASSWORD,
+				authenticationToken,
+				httpRequest.getHostname()
+			)
 			: Collections.emptyMap();
 		final ResultContent resultContent = httpRequest.getResultContent();
 

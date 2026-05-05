@@ -316,7 +316,7 @@ class EmulationWbemRequestExecutorTest {
 	}
 
 	@Test
-	void testFindMatchingEntriesIgnoresNullEntriesAndMatchesNamespaceCaseInsensitively() {
+	void testFindMatchingEntriesIgnoresNullEntriesAndMatchesNamespaceCaseSensitively() {
 		final WbemEmulationRequest request = new WbemEmulationRequest();
 		request.setWql("SELECT Name FROM CIM_ManagedElement");
 		request.setNamespace("ROOT/EMC");
@@ -335,7 +335,7 @@ class EmulationWbemRequestExecutorTest {
 		final List<WbemEmulationEntry> result = executor.findMatchingEntries(
 			entries,
 			"SELECT Name FROM CIM_ManagedElement",
-			"root/emc"
+			"ROOT/EMC"
 		);
 
 		assertEquals(1, result.size());

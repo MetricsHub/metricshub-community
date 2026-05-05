@@ -147,6 +147,17 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 	}
 
 	@Override
+	/**
+	 * Retrieves a configuration property without protocol context.
+	 *
+	 * <p>This method is intentionally unsupported for emulation because multiple protocol
+	 * configurations can coexist in the same {@link EmulationConfiguration}. Callers must use
+	 * {@link #getProperty(String, String)} to specify the target protocol.</p>
+	 *
+	 * @param property property name
+	 * @return never returns; always throws
+	 * @throws UnsupportedOperationException always, to enforce protocol-scoped access
+	 */
 	public String getProperty(final String property) {
 		throw new UnsupportedOperationException("Use getProperty with protocol parameter for EmulationConfiguration");
 	}
@@ -187,6 +198,9 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	@Override
 	public boolean isCorrespondingProtocol(final String protocol) {
+		if (protocol == null) {
+			return false;
+		}
 		return EmulationExtension.EMULATED_PROTOCOLS.contains(protocol);
 	}
 }

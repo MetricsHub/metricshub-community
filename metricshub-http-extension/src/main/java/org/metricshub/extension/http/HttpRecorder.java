@@ -50,8 +50,9 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 
 	static final String HTTP_SUBDIR = "http";
 	static final String IMAGE_YAML = "image.yaml";
-	static final String DEFAULT_USERNAME = "username";
-	static final char[] DEFAULT_PASSWORD = "password".toCharArray();
+	// Shared synthetic credentials used only for deterministic macro expansion in recorded payloads.
+	static final String DEFAULT_USERNAME = HttpMacroDefaults.USERNAME;
+	static final char[] DEFAULT_PASSWORD = HttpMacroDefaults.PASSWORD;
 
 	private static final ConcurrentHashMap<String, HttpRecorder> RECORDERS = new ConcurrentHashMap<>();
 

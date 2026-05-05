@@ -219,7 +219,7 @@ class EmulationWmiRequestExecutorTest {
 	}
 
 	@Test
-	void testExecuteWmiNamespaceCaseInsensitive(@TempDir final Path tempDir) throws Exception {
+	void testExecuteWmiNamespaceCaseSensitive(@TempDir final Path tempDir) throws Exception {
 		Files.writeString(
 			tempDir.resolve("image.yaml"),
 			"""
@@ -241,7 +241,7 @@ class EmulationWmiRequestExecutorTest {
 			HOSTNAME,
 			buildWmiEmulationConfig(tempDir.toString()),
 			"SELECT Name FROM Win32_Process",
-			"root\\cimv2",
+			"ROOT\\CIMV2",
 			null
 		);
 

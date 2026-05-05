@@ -213,7 +213,7 @@ class EmulationConfigurationTest {
 
 		assertTrue(configuration.isCorrespondingProtocol("http"));
 		assertTrue(configuration.isCorrespondingProtocol("oscommand"));
-		assertThrows(NullPointerException.class, () -> configuration.isCorrespondingProtocol(null));
+		assertFalse(configuration.isCorrespondingProtocol(null));
 		assertFalse(configuration.isCorrespondingProtocol(""));
 	}
 
