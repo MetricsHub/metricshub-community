@@ -608,6 +608,17 @@ public class EmulationExtension implements IProtocolExtension {
 	}
 
 	/**
+	 * Returns the current size of the SNMP executor cache.
+	 *
+	 * <p>Package-private for test visibility without reflection.</p>
+	 *
+	 * @return SNMP executor cache size
+	 */
+	int getSnmpExecutorCacheSizeForTesting() {
+		return snmpRequestExecutorsByDirectory.size();
+	}
+
+	/**
 	 * Creates and configures a new instance of the Jackson ObjectMapper for handling YAML data.
 	 *
 	 * @return A configured ObjectMapper instance.

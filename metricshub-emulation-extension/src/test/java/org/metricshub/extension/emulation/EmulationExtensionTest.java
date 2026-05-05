@@ -454,6 +454,56 @@ class EmulationExtensionTest {
 	}
 
 	@Test
+	void testSnmpExecutorCacheReusedForSameDirectory(@TempDir Path tempDir) throws Exception {
+		Files.writeString(
+			tempDir.resolve("device.walk"),
+			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0\n",
+			StandardCharsets.UTF_8
+		);
+
+		final TelemetryManager tm = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
+		);
+
+		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1.2.1.1.1.0").build();
+		emulationExtension.processSource(snmpSource, "connector", tm);
+		emulationExtension.processSource(snmpSource, "connector", tm);
+
+		assertEquals(1, getSnmpExecutorCacheSize(emulationExtension));
+	}
+
+	@Test
+	void testSnmpExecutorCacheCreatesOneEntryPerDirectory(@TempDir Path tempDir) throws Exception {
+		final Path dir1 = tempDir.resolve("snmp1");
+		final Path dir2 = tempDir.resolve("snmp2");
+		Files.createDirectories(dir1);
+		Files.createDirectories(dir2);
+		Files.writeString(
+			dir1.resolve("device.walk"),
+			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 1\n",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(
+			dir2.resolve("device.walk"),
+			"1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 2\n",
+			StandardCharsets.UTF_8
+		);
+
+		final TelemetryManager tm1 = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(dir1.toString()))
+		);
+		final TelemetryManager tm2 = buildTelemetryManager(
+			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(dir2.toString()))
+		);
+
+		final SnmpGetSource snmpSource = SnmpGetSource.builder().oid("1.3.6.1.2.1.1.1.0").build();
+		emulationExtension.processSource(snmpSource, "connector", tm1);
+		emulationExtension.processSource(snmpSource, "connector", tm2);
+
+		assertEquals(2, getSnmpExecutorCacheSize(emulationExtension));
+	}
+
+	@Test
 	void testProcessCriterionCommandLineCriterion(@TempDir Path tempDir) throws IOException {
 		Files.writeString(
 			tempDir.resolve("image.yaml"),
@@ -656,5 +706,9 @@ class EmulationExtensionTest {
 			UnsupportedOperationException.class,
 			() -> emulationExtension.executeQuery(EmulationConfiguration.builder().build(), queryNode)
 		);
+	}
+
+	private int getSnmpExecutorCacheSize(final EmulationExtension extension) throws Exception {
+		return extension.getSnmpExecutorCacheSizeForTesting();
 	}
 }

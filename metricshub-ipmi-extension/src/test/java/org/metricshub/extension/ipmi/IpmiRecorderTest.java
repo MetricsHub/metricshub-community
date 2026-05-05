@@ -3,6 +3,7 @@ package org.metricshub.extension.ipmi;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,6 +18,8 @@ import org.metricshub.engine.common.helpers.JsonHelper;
  * Tests for {@link IpmiRecorder}.
  */
 class IpmiRecorderTest {
+
+	private static final TypeReference<Map<String, List<Map<String, String>>>> IMAGE_TYPE = new TypeReference<>() {};
 
 	@AfterEach
 	void tearDown() {
@@ -39,10 +42,9 @@ class IpmiRecorderTest {
 
 		// Verify response file content
 		final var yamlMapper = JsonHelper.buildYamlMapper();
-		@SuppressWarnings("unchecked")
 		final Map<String, List<Map<String, String>>> image = yamlMapper.readValue(
 			ipmiDir.resolve("image.yaml").toFile(),
-			Map.class
+			IMAGE_TYPE
 		);
 		final String responseFileName = image.get("image").get(0).get("response");
 		final String responseContent = Files.readString(ipmiDir.resolve(responseFileName), StandardCharsets.UTF_8);
@@ -72,10 +74,9 @@ class IpmiRecorderTest {
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		final var yamlMapper = JsonHelper.buildYamlMapper();
-		@SuppressWarnings("unchecked")
 		final Map<String, List<Map<String, String>>> image = yamlMapper.readValue(
 			ipmiDir.resolve("image.yaml").toFile(),
-			Map.class
+			IMAGE_TYPE
 		);
 
 		assertEquals(3, image.get("image").size());
@@ -100,10 +101,9 @@ class IpmiRecorderTest {
 
 		final Path ipmiDir = tempDir.resolve("ipmi");
 		final var yamlMapper = JsonHelper.buildYamlMapper();
-		@SuppressWarnings("unchecked")
 		final Map<String, List<Map<String, String>>> image = yamlMapper.readValue(
 			ipmiDir.resolve("image.yaml").toFile(),
-			Map.class
+			IMAGE_TYPE
 		);
 		final String responseFileName = image.get("image").get(0).get("response");
 		final String responseContent = Files.readString(ipmiDir.resolve(responseFileName), StandardCharsets.UTF_8);

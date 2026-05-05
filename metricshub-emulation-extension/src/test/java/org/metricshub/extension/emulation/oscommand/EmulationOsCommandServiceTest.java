@@ -1,10 +1,13 @@
 package org.metricshub.extension.emulation.oscommand;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -16,6 +19,7 @@ import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
+import org.metricshub.extension.oscommand.SshConfiguration;
 
 /**
  * Tests for {@link EmulationOsCommandService}.
@@ -159,5 +163,27 @@ class EmulationOsCommandServiceTest {
 		);
 
 		assertEquals("", result.getResult());
+	}
+
+	@Test
+	void testRunLocalCommandThrowsUnsupportedOperationException() {
+		assertThrows(UnsupportedOperationException.class, () -> service.runLocalCommand("echo test", 30L, "echo test"));
+	}
+
+	@Test
+	void testRunSshCommandThrowsUnsupportedOperationException() {
+		assertThrows(
+			UnsupportedOperationException.class,
+			() ->
+				service.runSshCommand(
+					"echo test",
+					HOSTNAME,
+					new SshConfiguration(),
+					30L,
+					List.<File>of(),
+					"echo test",
+					DeviceKind.LINUX
+				)
+		);
 	}
 }

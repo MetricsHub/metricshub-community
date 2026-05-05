@@ -44,12 +44,11 @@ import org.metricshub.snmp.client.SnmpClient;
 public abstract class AbstractSnmpRequestExecutor {
 
 	/**
-	 * Create an SNMPClient based on the provided configuration and hostname.
+	 * Creates an SNMP client based on the provided configuration and hostname.
 	 *
 	 * @param configuration The SNMP configuration containing connection details.
 	 * @param hostname      The hostname or IP address of the SNMP-enabled device.
-	 * @throws RuntimeException If an {@link IOException} is thrown during the creation of the {@link SnmpClient}
-	 * @return The created SnmpClient {@link SnmpClient}.
+	 * @return The created {@link SnmpClient}.
 	 * @throws IOException If an error occurs during the creation of the {@link SnmpClient}.
 	 */
 	protected abstract ISnmpClient createSnmpClient(ISnmpConfiguration configuration, String hostname) throws IOException;
@@ -79,15 +78,7 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(
-			SnmpGetRequest.GETNEXT,
-			oid,
-			configuration,
-			hostname,
-			null,
-			logMode,
-			resourceHostname
-		);
+		String result = runSnmpGetNext(oid, configuration, hostname, logMode, resourceHostname);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -128,15 +119,7 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(
-			SnmpGetRequest.GET,
-			oid,
-			configuration,
-			hostname,
-			null,
-			logMode,
-			resourceHostname
-		);
+		String result = runSnmpGet(oid, configuration, hostname, logMode, resourceHostname);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -176,12 +159,11 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		List<List<String>> result = executeSnmpGetRequest(
-			SnmpGetRequest.TABLE,
+		final List<List<String>> result = runSnmpTable(
 			oid,
+			selectColumnArray,
 			configuration,
 			hostname,
-			selectColumnArray,
 			logMode,
 			resourceHostname
 		);
@@ -202,56 +184,48 @@ public abstract class AbstractSnmpRequestExecutor {
 	}
 
 	/**
-	 * Execute SNMP request.
+	 * Executes a generic SNMP request operation.
 	 *
-	 * @param request           The type of SNMP request (GET, GETNEXT, TABLE).
-	 * @param oid               The SNMP Object Identifier (OID) for the request.
-	 * @param protocol     The SNMP configuration containing connection details.
-	 * @param hostname          The hostname or IP address of the SNMP-enabled device.
-	 * @param selectColumnArray An array of column names for TABLE requests.
-	 * @param logMode           Flag indicating whether to log warnings in case of errors.
-	 * @param resourceHostname  The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
-	 * @param <T>               The type of result to return.
-	 * @return The result of the SNMP request, which can be a single value, a table, or null if an error occurs.
+	 * <p>This method centralizes common concerns for all SNMP operations:
+	 * client creation, timeout-aware execution, optional stats tracking, error logging, and
+	 * deterministic resource cleanup.</p>
+	 *
+	 * @param <T> The type of result to return.
+	 * @param operation The operation to execute against the SNMP client.
+	 * @param protocol The SNMP configuration containing connection details.
+	 * @param hostname The hostname or IP address of the SNMP-enabled device.
+	 * @param logMode Flag indicating whether to log warnings in case of errors.
+	 * @param resourceHostname The HostConfiguration hostname for stats tracking, or {@code null} to skip tracking.
+	 * @param requestName The request name used in warning/debug logs (e.g. {@code GET}, {@code TABLE}).
+	 * @param oid The SNMP Object Identifier (OID) for the request.
+	 * @return The result of the SNMP request, which can be a single value, a table, or {@code null} if an error occurs.
 	 * @throws InterruptedException If the thread executing this method is interrupted.
 	 * @throws ExecutionException  If an exception occurs during the execution of the SNMP request.
 	 * @throws TimeoutException    If the SNMP request times out.
 	 */
-	@SuppressWarnings("unchecked")
-	protected <T> T executeSnmpGetRequest(
-		final SnmpGetRequest request,
-		final String oid,
+	private <T> T runSnmpRequest(
+		final SnmpOperation<T> operation,
 		final ISnmpConfiguration protocol,
 		final String hostname,
-		final String[] selectColumnArray,
 		final boolean logMode,
-		final String resourceHostname
+		final String resourceHostname,
+		final String requestName,
+		final String oid
 	) throws InterruptedException, ExecutionException, TimeoutException {
-		// Create the SNMP client outside the callable so we can guarantee cleanup
-		// even if the task thread is interrupted due to a timeout.
 		final ISnmpClient[] clientHolder = new ISnmpClient[1];
-		final java.util.concurrent.Callable<Object> callable = () -> {
+
+		final java.util.concurrent.Callable<T> callable = () -> {
 			final ISnmpClient snmpClient = createSnmpClient(protocol, hostname);
 			clientHolder[0] = snmpClient;
+
 			try {
-				switch (request) {
-					case GET:
-						return snmpClient.get(oid);
-					case GETNEXT:
-						return snmpClient.getNext(oid);
-					case TABLE:
-						return snmpClient.table(oid, selectColumnArray);
-					case WALK:
-						return snmpClient.walk(oid);
-					default:
-						throw new IllegalArgumentException("Not implemented.");
-				}
+				return operation.apply(snmpClient);
 			} catch (Exception e) {
 				if (logMode) {
 					log.warn(
 						"Hostname {} - Error detected when running SNMP {} Query OID: {}. Error message: {}.",
 						hostname,
-						request,
+						requestName,
 						oid,
 						e.getMessage()
 					);
@@ -259,12 +233,12 @@ public abstract class AbstractSnmpRequestExecutor {
 				return null;
 			}
 		};
+
 		try {
-			return (T) (resourceHostname != null
-					? ThreadHelper.execute(callable, protocol.getTimeout(), resourceHostname, "snmp")
-					: ThreadHelper.execute(callable, protocol.getTimeout()));
+			return resourceHostname != null
+				? ThreadHelper.execute(callable, protocol.getTimeout(), resourceHostname, "snmp")
+				: ThreadHelper.execute(callable, protocol.getTimeout());
 		} finally {
-			// Guarantee resource cleanup regardless of timeout, interruption, or success
 			final ISnmpClient snmpClient = clientHolder[0];
 			if (snmpClient != null) {
 				try {
@@ -273,7 +247,7 @@ public abstract class AbstractSnmpRequestExecutor {
 					log.debug(
 						"Hostname {} - Error while freeing SNMP client resources for {} query OID: {}. Error: {}.",
 						hostname,
-						request,
+						requestName,
 						oid,
 						e.getMessage()
 					);
@@ -335,15 +309,7 @@ public abstract class AbstractSnmpRequestExecutor {
 
 		final long startTime = System.currentTimeMillis();
 
-		String result = executeSnmpGetRequest(
-			SnmpGetRequest.WALK,
-			oid,
-			configuration,
-			hostname,
-			null,
-			logMode,
-			resourceHostname
-		);
+		String result = runSnmpWalk(oid, configuration, hostname, logMode, resourceHostname);
 
 		final long responseTime = System.currentTimeMillis() - startTime;
 
@@ -357,5 +323,148 @@ public abstract class AbstractSnmpRequestExecutor {
 		);
 
 		return result;
+	}
+
+	/**
+	 * Executes an SNMP {@code GET} operation.
+	 *
+	 * @param oid The OID to query.
+	 * @param protocol SNMP configuration.
+	 * @param hostname Target host.
+	 * @param logMode Whether warnings should be logged on request failure.
+	 * @param resourceHostname Hostname used for optional stats tracking.
+	 * @return The SNMP value, or {@code null} when request execution fails.
+	 * @throws InterruptedException If execution is interrupted.
+	 * @throws ExecutionException If execution fails.
+	 * @throws TimeoutException If execution times out.
+	 */
+	protected String runSnmpGet(
+		final String oid,
+		final ISnmpConfiguration protocol,
+		final String hostname,
+		final boolean logMode,
+		final String resourceHostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return runSnmpRequest(
+			client -> client.get(oid),
+			protocol,
+			hostname,
+			logMode,
+			resourceHostname,
+			SnmpGetRequest.GET.name(),
+			oid
+		);
+	}
+
+	/**
+	 * Executes an SNMP {@code GETNEXT} operation.
+	 *
+	 * @param oid The OID to query.
+	 * @param protocol SNMP configuration.
+	 * @param hostname Target host.
+	 * @param logMode Whether warnings should be logged on request failure.
+	 * @param resourceHostname Hostname used for optional stats tracking.
+	 * @return The SNMP value, or {@code null} when request execution fails.
+	 * @throws InterruptedException If execution is interrupted.
+	 * @throws ExecutionException If execution fails.
+	 * @throws TimeoutException If execution times out.
+	 */
+	protected String runSnmpGetNext(
+		final String oid,
+		final ISnmpConfiguration protocol,
+		final String hostname,
+		final boolean logMode,
+		final String resourceHostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return runSnmpRequest(
+			client -> client.getNext(oid),
+			protocol,
+			hostname,
+			logMode,
+			resourceHostname,
+			SnmpGetRequest.GETNEXT.name(),
+			oid
+		);
+	}
+
+	/**
+	 * Executes an SNMP {@code TABLE} operation.
+	 *
+	 * @param oid The table OID to query.
+	 * @param selectColumnArray Requested table columns.
+	 * @param protocol SNMP configuration.
+	 * @param hostname Target host.
+	 * @param logMode Whether warnings should be logged on request failure.
+	 * @param resourceHostname Hostname used for optional stats tracking.
+	 * @return The SNMP table rows, or {@code null} when request execution fails.
+	 * @throws InterruptedException If execution is interrupted.
+	 * @throws ExecutionException If execution fails.
+	 * @throws TimeoutException If execution times out.
+	 */
+	protected List<List<String>> runSnmpTable(
+		final String oid,
+		final String[] selectColumnArray,
+		final ISnmpConfiguration protocol,
+		final String hostname,
+		final boolean logMode,
+		final String resourceHostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return runSnmpRequest(
+			client -> client.table(oid, selectColumnArray),
+			protocol,
+			hostname,
+			logMode,
+			resourceHostname,
+			SnmpGetRequest.TABLE.name(),
+			oid
+		);
+	}
+
+	/**
+	 * Executes an SNMP {@code WALK} operation.
+	 *
+	 * @param oid The root OID to walk.
+	 * @param protocol SNMP configuration.
+	 * @param hostname Target host.
+	 * @param logMode Whether warnings should be logged on request failure.
+	 * @param resourceHostname Hostname used for optional stats tracking.
+	 * @return The SNMP walk output, or {@code null} when request execution fails.
+	 * @throws InterruptedException If execution is interrupted.
+	 * @throws ExecutionException If execution fails.
+	 * @throws TimeoutException If execution times out.
+	 */
+	protected String runSnmpWalk(
+		final String oid,
+		final ISnmpConfiguration protocol,
+		final String hostname,
+		final boolean logMode,
+		final String resourceHostname
+	) throws InterruptedException, ExecutionException, TimeoutException {
+		return runSnmpRequest(
+			client -> client.walk(oid),
+			protocol,
+			hostname,
+			logMode,
+			resourceHostname,
+			SnmpGetRequest.WALK.name(),
+			oid
+		);
+	}
+
+	/**
+	 * Functional contract describing a single SNMP operation to run using a provided client.
+	 *
+	 * @param <T> operation result type
+	 */
+	@FunctionalInterface
+	private interface SnmpOperation<T> {
+		/**
+		 * Executes the operation with the given SNMP client.
+		 *
+		 * @param client active SNMP client
+		 * @return operation result
+		 * @throws Exception if execution fails
+		 */
+		T apply(ISnmpClient client) throws Exception;
 	}
 }

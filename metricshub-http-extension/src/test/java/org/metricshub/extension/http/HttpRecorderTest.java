@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -22,6 +23,8 @@ import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.common.ResultContent;
 
 class HttpRecorderTest {
+
+	private static final TypeReference<Map<String, Object>> IMAGE_TYPE = new TypeReference<>() {};
 
 	@TempDir
 	Path tempDir;
@@ -41,6 +44,25 @@ class HttpRecorderTest {
 		try (Stream<Path> stream = Files.list(dir)) {
 			return stream.filter(p -> p.toString().endsWith(".txt")).findFirst().orElse(null);
 		}
+	}
+
+	private List<Map<String, Object>> readImageEntries(final Path indexFile) throws IOException {
+		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
+		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), IMAGE_TYPE);
+		return asMapList(image.get("image"));
+	}
+
+	private Map<String, Object> asMap(final Object value) {
+		assertTrue(value instanceof Map<?, ?>);
+		final Map<?, ?> raw = (Map<?, ?>) value;
+		final Map<String, Object> converted = new LinkedHashMap<>();
+		raw.forEach((k, v) -> converted.put(String.valueOf(k), v));
+		return converted;
+	}
+
+	private List<Map<String, Object>> asMapList(final Object value) {
+		assertTrue(value instanceof List<?>);
+		return ((List<?>) value).stream().map(this::asMap).toList();
 	}
 
 	@Test
@@ -69,34 +91,30 @@ class HttpRecorderTest {
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordWritesCorrectImageYaml() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("POST", "/api/v1/query", "request body", null, ResultContent.BODY, "response");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(1, entries.size());
 
 		final Map<String, Object> entry = entries.get(0);
-		final Map<String, Object> request = (Map<String, Object>) entry.get("request");
+		final Map<String, Object> request = asMap(entry.get("request"));
 		assertEquals("POST", request.get("method"));
 		assertEquals("/api/v1/query", request.get("path"));
 		assertEquals("request body", request.get("body"));
 		assertFalse(request.containsKey("headers"));
 
-		final Map<String, Object> response = (Map<String, Object>) entry.get("response");
+		final Map<String, Object> response = asMap(entry.get("response"));
 		assertTrue(((String) response.get("file")).endsWith(".txt"));
 		assertEquals("body", response.get("resultContent"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordMultipleEntriesAppendsToImage() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
@@ -105,10 +123,8 @@ class HttpRecorderTest {
 		recorder.record("POST", "/api/v1/query", "query body", null, ResultContent.BODY, "query result");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(3, entries.size());
 
@@ -118,7 +134,6 @@ class HttpRecorderTest {
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordAllowsDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
@@ -126,17 +141,14 @@ class HttpRecorderTest {
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK again");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(2, entries.size());
 		assertEquals(2, countTxtFiles(tempDir.resolve(HttpRecorder.HTTP_SUBDIR)));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordDifferentResultContentNotDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
@@ -144,16 +156,13 @@ class HttpRecorderTest {
 		recorder.record("GET", "/api/v1/health", null, null, ResultContent.HTTP_STATUS, "200");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(2, entries.size());
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordWithHeaders() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 		final Map<String, String> headers = new LinkedHashMap<>();
@@ -163,81 +172,67 @@ class HttpRecorderTest {
 		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
-		final Map<String, Object> request = (Map<String, Object>) entries.get(0).get("request");
-		final Map<String, String> recordedHeaders = (Map<String, String>) request.get("headers");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
+		final Map<String, Object> recordedHeaders = asMap(request.get("headers"));
 
 		assertEquals("application/json", recordedHeaders.get("Content-Type"));
 		assertEquals("application/json", recordedHeaders.get("Accept"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordEmptyBodyIsOmitted() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", "", null, ResultContent.BODY, "OK");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
-		final Map<String, Object> request = (Map<String, Object>) entries.get(0).get("request");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
 
 		assertFalse(request.containsKey("body"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordEmptyHeadersAreOmitted() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/api/v1/health", null, Map.of(), ResultContent.BODY, "OK");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
-		final Map<String, Object> request = (Map<String, Object>) entries.get(0).get("request");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
 
 		assertFalse(request.containsKey("headers"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordAllResultContent() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/path", null, null, ResultContent.ALL, "all content");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
-		final Map<String, Object> response = (Map<String, Object>) entries.get(0).get("response");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+		final Map<String, Object> response = asMap(entries.get(0).get("response"));
 
 		assertEquals("all", response.get("resultContent"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordHttpStatusResultContent() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
 		recorder.record("GET", "/path", null, null, ResultContent.HTTP_STATUS, "200");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
-		final Map<String, Object> response = (Map<String, Object>) entries.get(0).get("response");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+		final Map<String, Object> response = asMap(entries.get(0).get("response"));
 
 		assertEquals("httpStatus", response.get("resultContent"));
 	}
@@ -314,15 +309,13 @@ class HttpRecorderTest {
 			"response_001.txt"
 		);
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> request = (Map<String, Object>) entry.get("request");
+		final Map<String, Object> request = asMap(entry.get("request"));
 		assertEquals("GET", request.get("method"));
 		assertEquals("/api/v1/health", request.get("path"));
 		assertFalse(request.containsKey("body"));
 		assertFalse(request.containsKey("headers"));
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = (Map<String, Object>) entry.get("response");
+		final Map<String, Object> response = asMap(entry.get("response"));
 		assertEquals("response_001.txt", response.get("file"));
 		assertEquals("body", response.get("resultContent"));
 	}
@@ -342,18 +335,15 @@ class HttpRecorderTest {
 			"response_002.txt"
 		);
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> request = (Map<String, Object>) entry.get("request");
+		final Map<String, Object> request = asMap(entry.get("request"));
 		assertEquals("POST", request.get("method"));
 		assertEquals("/api/query", request.get("path"));
 		assertEquals("request body", request.get("body"));
 
-		@SuppressWarnings("unchecked")
-		final Map<String, String> recordedHeaders = (Map<String, String>) request.get("headers");
+		final Map<String, Object> recordedHeaders = asMap(request.get("headers"));
 		assertEquals("text/xml", recordedHeaders.get("Accept"));
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = (Map<String, Object>) entry.get("response");
+		final Map<String, Object> response = asMap(entry.get("response"));
 		assertEquals("response_002.txt", response.get("file"));
 		assertEquals("all", response.get("resultContent"));
 	}
@@ -370,8 +360,7 @@ class HttpRecorderTest {
 			"response_001.txt"
 		);
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> request = (Map<String, Object>) entry.get("request");
+		final Map<String, Object> request = asMap(entry.get("request"));
 		assertFalse(request.containsKey("path"));
 	}
 
@@ -380,13 +369,11 @@ class HttpRecorderTest {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 		final Map<String, Object> entry = recorder.buildEntry("GET", "/path", null, null, null, "response_001.txt");
 
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = (Map<String, Object>) entry.get("response");
+		final Map<String, Object> response = asMap(entry.get("response"));
 		assertFalse(response.containsKey("resultContent"));
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordWithDuplicateHeadersAllowsDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 		final Map<String, String> headers = new LinkedHashMap<>();
@@ -396,16 +383,13 @@ class HttpRecorderTest {
 		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response 2");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(2, entries.size());
 	}
 
 	@Test
-	@SuppressWarnings("unchecked")
 	void testRecordSamePathDifferentBodyNotDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
@@ -413,10 +397,8 @@ class HttpRecorderTest {
 		recorder.record("POST", "/api/v1/query", "body2", null, ResultContent.BODY, "response 2");
 		recorder.flush();
 
-		final ObjectMapper yamlMapper = JsonHelper.buildYamlMapper();
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
-		final Map<String, Object> image = yamlMapper.readValue(indexFile.toFile(), Map.class);
-		final List<Map<String, Object>> entries = (List<Map<String, Object>>) image.get("image");
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(2, entries.size());
 	}
