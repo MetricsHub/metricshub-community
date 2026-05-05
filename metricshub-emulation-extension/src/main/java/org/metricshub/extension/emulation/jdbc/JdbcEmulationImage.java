@@ -28,6 +28,13 @@ import lombok.NoArgsConstructor;
 
 /**
  * Root container for the JDBC emulation image file ({@code image.yaml}).
+ *
+ * <p>Expected YAML shape:
+ * <pre>
+ * image:
+ *   - query: <SQL query>
+ *     response: <response file name>
+ * </pre>
  */
 @Data
 @AllArgsConstructor

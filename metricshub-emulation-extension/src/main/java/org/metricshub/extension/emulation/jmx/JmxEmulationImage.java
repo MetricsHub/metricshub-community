@@ -28,6 +28,18 @@ import lombok.NoArgsConstructor;
 
 /**
  * Root container for the JMX emulation image.yaml file.
+ *
+ * <p>Expected YAML shape:
+ * <pre>
+ * image:
+ *   - request:
+ *       objectName: <JMX object name pattern>
+ *       attributes:
+ *         - <attribute name>
+ *       keyProperties:
+ *         - <key property>
+ *     response: <response file name>
+ * </pre>
  */
 @Data
 @AllArgsConstructor

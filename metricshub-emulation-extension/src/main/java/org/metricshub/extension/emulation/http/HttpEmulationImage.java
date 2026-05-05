@@ -30,7 +30,19 @@ import lombok.NoArgsConstructor;
 /**
  * Represents the root structure of an HTTP emulation {@code image.yaml} file.
  *
- * <p>The image contains a list of request-response mapping entries.
+ * <p>Expected YAML shape:
+ * <pre>
+ * image:
+ *   - request:
+ *       method: <HTTP method>
+ *       path: <request path>
+ *       body: <request body> # optional
+ *       headers:             # optional
+ *         Header-Name: <header value>
+ *     response:
+ *       file: <response file name>
+ *       resultContent: <body|all|httpStatus>
+ * </pre>
  */
 @Data
 @Builder

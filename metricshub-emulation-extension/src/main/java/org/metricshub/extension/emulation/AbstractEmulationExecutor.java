@@ -40,6 +40,12 @@ public class AbstractEmulationExecutor {
 	private final EmulationRoundRobinManager roundRobinManager;
 	private final EmulationImageCacheManager imageCacheManager;
 
+	/**
+	 * Constructs an AbstractEmulationExecutor with the given round-robin manager and image cache manager.
+	 *
+	 * @param roundRobinManager Manager for round-robin selection of emulation images
+	 * @param imageCacheManager Cache manager for emulation images to optimize performance
+	 */
 	public AbstractEmulationExecutor(
 		final EmulationRoundRobinManager roundRobinManager,
 		final EmulationImageCacheManager imageCacheManager
@@ -50,6 +56,11 @@ public class AbstractEmulationExecutor {
 
 	/**
 	 * Replays a response from an emulation directory using a common execution flow.
+	 *
+	 * @param <I> emulation image type
+	 * @param <E> emulation entry type
+	 * @param <C> request context type
+	 * @param <R> replay result type
 	 *
 	 * @param hostname host name used for logs
 	 * @param emulationInputDirectory protocol emulation input directory
