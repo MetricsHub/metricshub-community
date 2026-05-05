@@ -12,6 +12,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.emulation.http.HttpEmulationConfig;
+import org.metricshub.extension.emulation.ipmi.IpmiEmulationConfig;
+import org.metricshub.extension.emulation.jdbc.JdbcEmulationConfig;
+import org.metricshub.extension.emulation.jmx.JmxEmulationConfig;
+import org.metricshub.extension.emulation.oscommand.OsCommandEmulationConfig;
+import org.metricshub.extension.emulation.oscommand.SshEmulationConfig;
+import org.metricshub.extension.emulation.snmp.SnmpEmulationConfig;
+import org.metricshub.extension.emulation.wbem.WbemEmulationConfig;
+import org.metricshub.extension.emulation.wmi.WmiEmulationConfig;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;

@@ -14,7 +14,6 @@ import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.WmiEmulationConfig;
 import org.metricshub.extension.wmi.WmiConfiguration;
 
 /**

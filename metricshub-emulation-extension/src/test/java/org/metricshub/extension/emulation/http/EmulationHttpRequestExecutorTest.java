@@ -17,7 +17,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.HttpEmulationConfig;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.utils.HttpRequest;
 

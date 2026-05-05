@@ -31,12 +31,20 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.configuration.IProtocolScopedPropertyAccessor;
 import org.metricshub.engine.deserialization.MultiValueDeserializer;
+import org.metricshub.extension.emulation.http.HttpEmulationConfig;
+import org.metricshub.extension.emulation.ipmi.IpmiEmulationConfig;
+import org.metricshub.extension.emulation.jdbc.JdbcEmulationConfig;
+import org.metricshub.extension.emulation.jmx.JmxEmulationConfig;
+import org.metricshub.extension.emulation.oscommand.OsCommandEmulationConfig;
+import org.metricshub.extension.emulation.oscommand.SshEmulationConfig;
+import org.metricshub.extension.emulation.snmp.SnmpEmulationConfig;
+import org.metricshub.extension.emulation.wbem.WbemEmulationConfig;
+import org.metricshub.extension.emulation.wmi.WmiEmulationConfig;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jmx.JmxConfiguration;
 import org.metricshub.extension.oscommand.OsCommandConfiguration;
-import org.metricshub.extension.oscommand.SshConfiguration;
 import org.metricshub.extension.snmp.SnmpConfiguration;
 import org.metricshub.extension.wbem.WbemConfiguration;
 import org.metricshub.extension.wmi.WmiConfiguration;
@@ -129,7 +137,7 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 					? new OsCommandEmulationConfig((OsCommandConfiguration) oscommand.copy(), oscommand.getDirectory())
 					: null
 			)
-			.ssh(ssh != null ? new SshEmulationConfig((SshConfiguration) ssh.copy(), ssh.getDirectory()) : null)
+			.ssh(ssh != null ? new SshEmulationConfig(ssh.copy(), ssh.getDirectory()) : null)
 			.wbem(wbem != null ? new WbemEmulationConfig((WbemConfiguration) wbem.copy(), wbem.getDirectory()) : null)
 			.jdbc(jdbc != null ? new JdbcEmulationConfig((JdbcConfiguration) jdbc.copy(), jdbc.getDirectory()) : null)
 			.ipmi(ipmi != null ? new IpmiEmulationConfig((IpmiConfiguration) ipmi.copy(), ipmi.getDirectory()) : null)

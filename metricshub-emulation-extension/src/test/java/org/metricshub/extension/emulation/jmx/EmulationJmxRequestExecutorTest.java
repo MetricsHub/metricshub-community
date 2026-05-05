@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.JmxEmulationConfig;
 import org.metricshub.extension.jmx.JmxConfiguration;
 
 class EmulationJmxRequestExecutorTest {

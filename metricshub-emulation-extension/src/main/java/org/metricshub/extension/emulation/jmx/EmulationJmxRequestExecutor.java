@@ -21,22 +21,17 @@ package org.metricshub.extension.emulation.jmx;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
-import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.jmx.JmxConfiguration;
 import org.metricshub.extension.jmx.JmxRequestExecutor;
@@ -45,13 +40,24 @@ import org.metricshub.extension.jmx.JmxRequestExecutor;
  * JMX request executor that replays query results from recorded emulation files.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 
-	private static final String JMX_EMULATION_YAML = "image.yaml";
+	record JmxContext(String objectName, List<String> attributes, List<String> keyProperties) {}
 
-	private final EmulationRoundRobinManager roundRobinManager;
-	private final EmulationImageCacheManager imageCacheManager;
+	private final AbstractEmulationExecutor executorHelper;
+
+	/**
+	 * Constructs an EmulationJmxRequestExecutor with the given round-robin manager and image cache manager.
+	 *
+	 * @param roundRobinManager Manager for round-robin selection of emulation images
+	 * @param imageCacheManager Cache manager for emulation images to optimize performance
+	 */
+	public EmulationJmxRequestExecutor(
+		final EmulationRoundRobinManager roundRobinManager,
+		final EmulationImageCacheManager imageCacheManager
+	) {
+		executorHelper = new AbstractEmulationExecutor(roundRobinManager, imageCacheManager);
+	}
 
 	@Override
 	public List<List<String>> fetchMBean(
@@ -70,7 +76,7 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 
 		// Determine emulation directory from JmxEmulationConfig
 		final String emulationInputDirectory;
-		if (jmxConfiguration instanceof org.metricshub.extension.emulation.JmxEmulationConfig jmxEmulationConfig) {
+		if (jmxConfiguration instanceof JmxEmulationConfig jmxEmulationConfig) {
 			emulationInputDirectory = jmxEmulationConfig.getDirectory();
 		} else {
 			log.warn("Hostname {} - JMX emulation configuration is not an emulation config.", hostname);
@@ -82,80 +88,72 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 			return List.of();
 		}
 
-		final Path jmxDir = Path.of(emulationInputDirectory);
-		final Path indexFile = jmxDir.resolve(JMX_EMULATION_YAML);
-
-		if (!Files.isRegularFile(indexFile)) {
-			log.warn("Hostname {} - JMX emulation index file not found: {}", hostname, indexFile);
-			return List.of();
-		}
-
-		final JmxEmulationImage emulationImage;
-		try {
-			emulationImage = imageCacheManager.getImage(indexFile, JmxEmulationImage.class);
-		} catch (IOException e) {
-			log.error(
-				"Hostname {} - Failed to parse JMX emulation index file {}. Error: {}",
-				hostname,
-				indexFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - JMX emulation index parse error:", hostname, e);
-			return List.of();
-		}
-
-		final List<JmxEmulationEntry> entries = emulationImage != null
-			? emulationImage.getImage()
-			: Collections.emptyList();
-
 		// Convert Iterable to List for matching
 		final List<String> attributesList = new ArrayList<>();
 		if (attributes != null) {
 			attributes.forEach(attributesList::add);
 		}
 		final List<String> keyPropertiesList = keyProperties != null ? new ArrayList<>(keyProperties) : List.of();
+		return executorHelper.replayFromImage(
+			hostname,
+			emulationInputDirectory,
+			JmxEmulationImage.class,
+			new JmxContext(objectNamePattern, attributesList, keyPropertiesList),
+			new AbstractEmulationExecutor.ReplayOperations<
+				JmxEmulationImage,
+				JmxEmulationEntry,
+				JmxContext,
+				List<List<String>>
+			>() {
+				@Override
+				public String protocolName() {
+					return "JMX";
+				}
 
-		final List<JmxEmulationEntry> matchingEntries = findMatchingEntries(
-			entries,
-			objectNamePattern,
-			attributesList,
-			keyPropertiesList
+				@Override
+				public String describeRequest(final JmxContext context) {
+					return "objectName '" + context.objectName() + "'";
+				}
+
+				@Override
+				public List<JmxEmulationEntry> extractEntries(final JmxEmulationImage image) {
+					return image != null ? image.getImage() : Collections.emptyList();
+				}
+
+				@Override
+				public List<JmxEmulationEntry> findMatchingEntries(
+					final List<JmxEmulationEntry> entries,
+					final JmxContext context
+				) {
+					return EmulationJmxRequestExecutor.this.findMatchingEntries(
+							entries,
+							context.objectName(),
+							context.attributes(),
+							context.keyProperties()
+						);
+				}
+
+				@Override
+				public String buildRequestKey(final JmxContext context) {
+					return context.objectName() + "|" + context.attributes() + "|" + context.keyProperties();
+				}
+
+				@Override
+				public String extractResponseFileName(final JmxEmulationEntry entry) {
+					return entry.getResponse();
+				}
+
+				@Override
+				public List<List<String>> mapResponse(final String content) {
+					return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);
+				}
+
+				@Override
+				public List<List<String>> emptyResult() {
+					return List.of();
+				}
+			}
 		);
-		if (matchingEntries.isEmpty()) {
-			log.warn("Hostname {} - No matching JMX emulation entry found for objectName '{}'.", hostname, objectNamePattern);
-			return List.of();
-		}
-
-		final String requestKey = objectNamePattern + "|" + attributesList + "|" + keyPropertiesList;
-		final int index = roundRobinManager.nextIndex(
-			indexFile.toAbsolutePath().toString(),
-			requestKey,
-			matchingEntries.size()
-		);
-
-		final String responseFileName = matchingEntries.get(index).getResponse();
-		if (responseFileName == null || responseFileName.isBlank()) {
-			log.warn("Hostname {} - Matched JMX emulation entry has no response file.", hostname);
-			return List.of();
-		}
-
-		final Path responseFile = EmulationPathHelper.resolveSecurely(jmxDir, responseFileName);
-		if (responseFile == null) {
-			return List.of();
-		}
-		try {
-			final String content = Files.readString(responseFile, StandardCharsets.UTF_8);
-			return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);
-		} catch (Exception e) {
-			log.error(
-				"Hostname {} - Failed to read JMX emulation response file {}. Error: {}",
-				hostname,
-				responseFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - JMX emulation response read error:", hostname, e);
-			return List.of();
-		}
 	}
 
 	@Override

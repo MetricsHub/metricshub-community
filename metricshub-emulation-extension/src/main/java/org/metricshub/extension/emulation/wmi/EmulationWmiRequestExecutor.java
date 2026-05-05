@@ -21,23 +21,17 @@ package org.metricshub.extension.emulation.wmi;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
-import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.WmiEmulationConfig;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 
@@ -45,13 +39,24 @@ import org.metricshub.extension.win.IWinRequestExecutor;
  * WMI request executor that replays query results from recorded emulation files.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 
-	private static final String WMI_EMULATION_YAML = "image.yaml";
+	record WmiContext(String query, String namespace) {}
 
-	private final EmulationRoundRobinManager roundRobinManager;
-	private final EmulationImageCacheManager imageCacheManager;
+	private final AbstractEmulationExecutor executorHelper;
+
+	/**
+	 * Constructs an EmulationWmiRequestExecutor with the given round-robin manager and image cache manager.
+	 *
+	 * @param roundRobinManager Manager for round-robin selection of emulation images
+	 * @param imageCacheManager Cache manager for emulation images to optimize performance
+	 */
+	public EmulationWmiRequestExecutor(
+		final EmulationRoundRobinManager roundRobinManager,
+		final EmulationImageCacheManager imageCacheManager
+	) {
+		executorHelper = new AbstractEmulationExecutor(roundRobinManager, imageCacheManager);
+	}
 
 	@Override
 	public List<List<String>> executeWmi(
@@ -77,73 +82,61 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 			return List.of();
 		}
 
-		final Path wmiDir = Path.of(emulationInputDirectory);
-		final Path indexFile = wmiDir.resolve(WMI_EMULATION_YAML);
+		return executorHelper.replayFromImage(
+			hostname,
+			emulationInputDirectory,
+			WmiEmulationImage.class,
+			new WmiContext(query, namespace),
+			new AbstractEmulationExecutor.ReplayOperations<
+				WmiEmulationImage,
+				WmiEmulationEntry,
+				WmiContext,
+				List<List<String>>
+			>() {
+				@Override
+				public String protocolName() {
+					return "WMI";
+				}
 
-		if (!Files.isRegularFile(indexFile)) {
-			log.warn("Hostname {} - WMI emulation index file not found: {}", hostname, indexFile);
-			return List.of();
-		}
+				@Override
+				public String describeRequest(final WmiContext context) {
+					return "query '" + context.query() + "' and namespace '" + context.namespace() + "'";
+				}
 
-		final WmiEmulationImage emulationImage;
-		try {
-			emulationImage = imageCacheManager.getImage(indexFile, WmiEmulationImage.class);
-		} catch (IOException e) {
-			log.error(
-				"Hostname {} - Failed to parse WMI emulation index file {}. Error: {}",
-				hostname,
-				indexFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - WMI emulation index parse error:", hostname, e);
-			return List.of();
-		}
+				@Override
+				public List<WmiEmulationEntry> extractEntries(final WmiEmulationImage image) {
+					return image != null ? image.getImage() : Collections.emptyList();
+				}
 
-		final List<WmiEmulationEntry> entries = emulationImage != null
-			? emulationImage.getImage()
-			: Collections.emptyList();
+				@Override
+				public List<WmiEmulationEntry> findMatchingEntries(
+					final List<WmiEmulationEntry> entries,
+					final WmiContext context
+				) {
+					return EmulationWmiRequestExecutor.this.findMatchingEntries(entries, context.query(), context.namespace());
+				}
 
-		final List<WmiEmulationEntry> matchingEntries = findMatchingEntries(entries, query, namespace);
-		if (matchingEntries.isEmpty()) {
-			log.warn(
-				"Hostname {} - No matching WMI emulation entry found for query '{}' and namespace '{}'.",
-				hostname,
-				query,
-				namespace
-			);
-			return List.of();
-		}
+				@Override
+				public String buildRequestKey(final WmiContext context) {
+					return context.query() + "|" + context.namespace();
+				}
 
-		final String requestKey = query + "|" + namespace;
-		final int index = roundRobinManager.nextIndex(
-			indexFile.toAbsolutePath().toString(),
-			requestKey,
-			matchingEntries.size()
+				@Override
+				public String extractResponseFileName(final WmiEmulationEntry entry) {
+					return entry.getResponse();
+				}
+
+				@Override
+				public List<List<String>> mapResponse(final String content) {
+					return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);
+				}
+
+				@Override
+				public List<List<String>> emptyResult() {
+					return List.of();
+				}
+			}
 		);
-
-		final String responseFileName = matchingEntries.get(index).getResponse();
-		if (responseFileName == null || responseFileName.isBlank()) {
-			log.warn("Hostname {} - Matched WMI emulation entry has no response file.", hostname);
-			return List.of();
-		}
-
-		final Path responseFile = EmulationPathHelper.resolveSecurely(wmiDir, responseFileName);
-		if (responseFile == null) {
-			return List.of();
-		}
-		try {
-			final String content = Files.readString(responseFile, StandardCharsets.UTF_8);
-			return SourceTable.csvToTable(content, MetricsHubConstants.TABLE_SEP);
-		} catch (Exception e) {
-			log.error(
-				"Hostname {} - Failed to read WMI emulation response file {}. Error: {}",
-				hostname,
-				responseFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - WMI emulation response read error:", hostname, e);
-			return List.of();
-		}
 	}
 
 	@Override
@@ -161,6 +154,14 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 		return "";
 	}
 
+	/**
+	 * Finds emulation entries matching the given query and namespace.
+	 *
+	 * @param entries    list of emulation entries to search
+	 * @param query      WQL query to match
+	 * @param namespace  namespace to match
+	 * @return list of matching emulation entries, or empty list if no matches found
+	 */
 	List<WmiEmulationEntry> findMatchingEntries(
 		final List<WmiEmulationEntry> entries,
 		final String query,
@@ -179,7 +180,7 @@ public class EmulationWmiRequestExecutor implements IWinRequestExecutor {
 
 				final String requestWql = entry.getRequest().getWql();
 				final String requestNamespace = entry.getRequest().getNamespace();
-				return query.equals(requestWql) && namespace.equalsIgnoreCase(requestNamespace);
+				return query.equals(requestWql) && namespace.equals(requestNamespace);
 			})
 			.collect(Collectors.toCollection(ArrayList::new));
 	}

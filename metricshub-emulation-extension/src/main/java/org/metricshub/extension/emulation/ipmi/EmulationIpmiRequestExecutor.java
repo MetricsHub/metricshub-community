@@ -21,21 +21,15 @@ package org.metricshub.extension.emulation.ipmi;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.metricshub.extension.emulation.AbstractEmulationExecutor;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
-import org.metricshub.extension.emulation.EmulationPathHelper;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.IpmiEmulationConfig;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 import org.metricshub.extension.ipmi.IpmiRecorder;
 import org.metricshub.extension.ipmi.IpmiRequestExecutor;
@@ -44,13 +38,24 @@ import org.metricshub.extension.ipmi.IpmiRequestExecutor;
  * IPMI request executor that replays responses from recorded emulation files.
  */
 @Slf4j
-@RequiredArgsConstructor
 public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 
-	private static final String IPMI_EMULATION_YAML = "image.yaml";
+	record IpmiContext(String requestType) {}
 
-	private final EmulationRoundRobinManager roundRobinManager;
-	private final EmulationImageCacheManager imageCacheManager;
+	private final AbstractEmulationExecutor executorHelper;
+
+	/**
+	 * Constructs an EmulationIpmiRequestExecutor with the given round-robin manager and image cache manager.
+	 *
+	 * @param roundRobinManager Manager for round-robin selection of emulation images
+	 * @param imageCacheManager Cache manager for emulation images to optimize performance
+	 */
+	public EmulationIpmiRequestExecutor(
+		final EmulationRoundRobinManager roundRobinManager,
+		final EmulationImageCacheManager imageCacheManager
+	) {
+		executorHelper = new AbstractEmulationExecutor(roundRobinManager, imageCacheManager);
+	}
 
 	/**
 	 * Replays an IPMI detection result from emulation files.
@@ -108,68 +113,65 @@ public class EmulationIpmiRequestExecutor extends IpmiRequestExecutor {
 			return null;
 		}
 
-		final Path ipmiDir = Path.of(emulationInputDirectory);
-		final Path indexFile = ipmiDir.resolve(IPMI_EMULATION_YAML);
+		return executorHelper.replayFromImage(
+			hostname,
+			emulationInputDirectory,
+			IpmiEmulationImage.class,
+			new IpmiContext(requestType),
+			new AbstractEmulationExecutor.ReplayOperations<IpmiEmulationImage, IpmiEmulationEntry, IpmiContext, String>() {
+				@Override
+				public String protocolName() {
+					return "IPMI";
+				}
 
-		if (!Files.isRegularFile(indexFile)) {
-			log.warn("Hostname {} - IPMI emulation index file not found: {}", hostname, indexFile);
-			return null;
-		}
+				@Override
+				public String describeRequest(final IpmiContext context) {
+					return "request '" + context.requestType() + "'";
+				}
 
-		final IpmiEmulationImage emulationImage;
-		try {
-			emulationImage = imageCacheManager.getImage(indexFile, IpmiEmulationImage.class);
-		} catch (IOException e) {
-			log.error(
-				"Hostname {} - Failed to parse IPMI emulation index file {}. Error: {}",
-				hostname,
-				indexFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - IPMI emulation index parse error:", hostname, e);
-			return null;
-		}
+				@Override
+				public List<IpmiEmulationEntry> extractEntries(final IpmiEmulationImage image) {
+					return image != null ? image.getImage() : Collections.emptyList();
+				}
 
-		final List<IpmiEmulationEntry> entries = emulationImage != null
-			? emulationImage.getImage()
-			: Collections.emptyList();
+				@Override
+				public List<IpmiEmulationEntry> findMatchingEntries(
+					final List<IpmiEmulationEntry> entries,
+					final IpmiContext context
+				) {
+					return EmulationIpmiRequestExecutor.this.findMatchingEntries(entries, context.requestType());
+				}
 
-		final List<IpmiEmulationEntry> matchingEntries = findMatchingEntries(entries, requestType);
-		if (matchingEntries.isEmpty()) {
-			log.warn("Hostname {} - No matching IPMI emulation entry found for request '{}'.", hostname, requestType);
-			return null;
-		}
+				@Override
+				public String buildRequestKey(final IpmiContext context) {
+					return context.requestType();
+				}
 
-		final int index = roundRobinManager.nextIndex(
-			indexFile.toAbsolutePath().toString(),
-			requestType,
-			matchingEntries.size()
+				@Override
+				public String extractResponseFileName(final IpmiEmulationEntry entry) {
+					return entry.getResponse();
+				}
+
+				@Override
+				public String mapResponse(final String content) {
+					return content;
+				}
+
+				@Override
+				public String emptyResult() {
+					return null;
+				}
+			}
 		);
-
-		final String responseFileName = matchingEntries.get(index).getResponse();
-		if (responseFileName == null || responseFileName.isBlank()) {
-			log.warn("Hostname {} - Matched IPMI emulation entry has no response file.", hostname);
-			return null;
-		}
-
-		final Path responseFile = EmulationPathHelper.resolveSecurely(ipmiDir, responseFileName);
-		if (responseFile == null) {
-			return null;
-		}
-		try {
-			return Files.readString(responseFile, StandardCharsets.UTF_8);
-		} catch (Exception e) {
-			log.error(
-				"Hostname {} - Failed to read IPMI emulation response file {}. Error: {}",
-				hostname,
-				responseFile,
-				e.getMessage()
-			);
-			log.debug("Hostname {} - IPMI emulation response read error:", hostname, e);
-			return null;
-		}
 	}
 
+	/**
+	 * Finds matching IPMI emulation entries for the given request type.
+	 *
+	 * @param entries     the list of emulation entries to search
+	 * @param requestType the request type to match
+	 * @return a list of matching entries, or an empty list if none found
+	 */
 	List<IpmiEmulationEntry> findMatchingEntries(final List<IpmiEmulationEntry> entries, final String requestType) {
 		if (entries == null || entries.isEmpty()) {
 			return List.of();

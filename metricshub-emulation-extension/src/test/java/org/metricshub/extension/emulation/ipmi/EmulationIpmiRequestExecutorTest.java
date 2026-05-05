@@ -14,7 +14,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.extension.emulation.EmulationConfiguration;
 import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
-import org.metricshub.extension.emulation.IpmiEmulationConfig;
 import org.metricshub.extension.ipmi.IpmiConfiguration;
 
 /**
