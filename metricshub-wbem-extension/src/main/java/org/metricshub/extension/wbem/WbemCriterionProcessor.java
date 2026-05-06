@@ -31,13 +31,13 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.connector.model.identity.criterion.WbemCriterion;
@@ -47,8 +47,11 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * This class is responsible for processing {@link WbemCriterion} instances, which are used to detect the appropriate WBEM namespace
+ * when the namespace is set to "Automatic". It performs the necessary WBEM queries to find the correct namespace and tests the criterion against it.
+ */
 @Slf4j
-@RequiredArgsConstructor
 public class WbemCriterionProcessor {
 
 	private static final String SELECT_NAME_FROM_CIM_NAMESPACE = "SELECT Name from CIM_Namespace";
@@ -65,13 +68,55 @@ public class WbemCriterionProcessor {
 		new WqlQuery(SELECT_NAME_FROM_CIM_NAMESPACE, INTEROP_LOWER_CASE)
 	);
 
-	@NonNull
 	private WbemRequestExecutor wbemRequestExecutor;
 
-	@NonNull
 	private String connectorId;
 
-	private final boolean logMode;
+	private boolean logMode;
+
+	private Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider;
+
+	private static final Function<TelemetryManager, WbemConfiguration> DEFAULT_WBEM_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(WbemConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(WbemConfiguration.class);
+
+	/**
+	 * Creates a new {@link WbemCriterionProcessor} with the given executor, connector ID, and log mode,
+	 * using the default WBEM configuration provider.
+	 *
+	 * @param wbemRequestExecutor The executor to perform WBEM requests.
+	 * @param connectorId         The connector identifier.
+	 * @param logMode             Whether to enable logging mode.
+	 */
+	public WbemCriterionProcessor(
+		final WbemRequestExecutor wbemRequestExecutor,
+		final String connectorId,
+		final boolean logMode
+	) {
+		this(wbemRequestExecutor, connectorId, logMode, DEFAULT_WBEM_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link WbemCriterionProcessor} with the given executor, connector ID, log mode,
+	 * and a custom WBEM configuration provider.
+	 *
+	 * @param wbemRequestExecutor       The executor to perform WBEM requests.
+	 * @param connectorId               The connector identifier.
+	 * @param logMode                   Whether to enable logging mode.
+	 * @param wbemConfigurationProvider A function that retrieves the {@link WbemConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public WbemCriterionProcessor(
+		final WbemRequestExecutor wbemRequestExecutor,
+		final String connectorId,
+		final boolean logMode,
+		final Function<TelemetryManager, WbemConfiguration> wbemConfigurationProvider
+	) {
+		this.wbemRequestExecutor = wbemRequestExecutor;
+		this.connectorId = connectorId;
+		this.logMode = logMode;
+		this.wbemConfigurationProvider = wbemConfigurationProvider;
+	}
 
 	/**
 	 * Find the namespace to use for the execution of the given {@link WbemCriterion}.
@@ -404,16 +449,15 @@ public class WbemCriterionProcessor {
 		}
 
 		// Gather the necessary info on the test that needs to be performed
-		final WbemConfiguration wbemConfiguration = (WbemConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(WbemConfiguration.class);
+		final WbemConfiguration wbemConfiguration = wbemConfigurationProvider.apply(telemetryManager);
 		if (wbemConfiguration == null) {
 			return CriterionTestResult.error(wbemCriterion, "The WBEM credentials are not configured for this host.");
 		}
 
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
-		final String hostname = telemetryManager.getHostname(List.of(WbemConfiguration.class));
+		final String hostname = wbemConfiguration.getHostname() != null
+			? wbemConfiguration.getHostname()
+			: telemetryManager.getHostname();
 
 		// If namespace is specified as "Automatic"
 		if (AUTOMATIC_NAMESPACE.equalsIgnoreCase(wbemCriterion.getNamespace())) {

@@ -21,6 +21,7 @@ package org.metricshub.engine.strategy.source;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.NEW_LINE;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_REF_PATTERN;
 
@@ -36,6 +37,7 @@ import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -80,16 +82,52 @@ public class SourceTable {
 			return table
 				.stream()
 				.filter(Objects::nonNull)
-				.map(line ->
-					replaceSeparator
-						? line.stream().map(val -> val.replace(separator, ALTERNATE_COLUMN_SEPARATOR)).collect(Collectors.toList()) // NOSONAR
-						: line
-				)
-				.map(line -> String.join(separator, line) + separator)
+				.map(line -> lineToCsv(line, separator, replaceSeparator))
 				.collect(Collectors.joining(NEW_LINE));
 		}
 
 		return "";
+	}
+
+	/**
+	 * Convert a line of data to a CSV-formatted string.
+	 *
+	 * @param line The non-null row of data to convert.
+	 * @param separator The non-null separator to use between values.
+	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
+	 * @return The CSV-formatted string.
+	 */
+	public static String lineToCsv(
+		@NonNull final List<String> line,
+		@NonNull final String separator,
+		final boolean replaceSeparator
+	) {
+		Stream<String> stream = line.stream().map(val -> val == null ? EMPTY : val);
+
+		if (replaceSeparator) {
+			stream = stream.map(val -> val.replace(separator, ALTERNATE_COLUMN_SEPARATOR));
+		}
+
+		return stream.collect(Collectors.joining(separator, EMPTY, separator));
+	}
+
+	/**
+	 * Safe version of the {@link #lineToCsv(List, String, boolean)} method that handles null input.
+	 *
+	 * @param line The row of data to convert.
+	 * @param separator The non-null separator to use between values.
+	 * @param replaceSeparator Whether to replace the separator with an alternate column separator.
+	 * @return The CSV-formatted string.
+	 */
+	public static String lineToCsvSafe(
+		final List<String> line,
+		@NonNull final String separator,
+		final boolean replaceSeparator
+	) {
+		if (line == null) {
+			return EMPTY;
+		}
+		return lineToCsv(line, separator, replaceSeparator);
 	}
 
 	/**

@@ -95,7 +95,6 @@ public class SnmpTableSourceProcessorTest {
 				snmpConfiguration,
 				"hostname",
 				true,
-				null,
 				"hostname"
 			);
 
@@ -126,7 +125,6 @@ public class SnmpTableSourceProcessorTest {
 				snmpConfiguration,
 				"hostname",
 				true,
-				null,
 				"hostname"
 			)
 		)

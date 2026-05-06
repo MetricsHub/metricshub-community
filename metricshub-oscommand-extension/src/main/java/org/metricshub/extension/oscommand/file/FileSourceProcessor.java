@@ -31,7 +31,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.ControlledSshException;
@@ -53,8 +54,11 @@ import org.metricshub.ssh.SshClient;
  * Supports incremental file reading using cursors to track file position.
  */
 @Slf4j
-@NoArgsConstructor
+@RequiredArgsConstructor
 public class FileSourceProcessor {
+
+	@NonNull
+	private OsCommandService osCommandService;
 
 	// PowerShell command template for resolving file paths on Windows.
 	public static final String RESOLVE_WINDOWS_FILES_COMMAND =
@@ -433,7 +437,7 @@ public class FileSourceProcessor {
 				: RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
 			try {
 				// Execute SSH command to find matching files on remote host
-				final String result = OsCommandService.runSshCommand(
+				final String result = osCommandService.runSshCommand(
 					command,
 					hostname,
 					sshConfiguration,

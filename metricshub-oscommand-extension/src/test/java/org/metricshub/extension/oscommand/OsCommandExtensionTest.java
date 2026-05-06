@@ -11,7 +11,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
@@ -19,13 +21,12 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledOnOs;
 import org.junit.jupiter.api.condition.OS;
@@ -46,9 +47,6 @@ import org.metricshub.engine.strategy.utils.OsCommandResult;
 import org.metricshub.engine.telemetry.HostProperties;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.mockito.InjectMocks;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -60,7 +58,6 @@ class OsCommandExtensionTest {
 	public static final String MY_CONNECTOR_1_NAME = "myConnector1";
 	public static final String TEST_COMMAND_LINE = "echo test";
 
-	@InjectMocks
 	private OsCommandExtension osCommandExtension;
 
 	static Map<String, Map<String, Monitor>> monitors;
@@ -236,6 +233,11 @@ class OsCommandExtensionTest {
 		}
 	}
 
+	@BeforeEach
+	void init() {
+		osCommandExtension = new OsCommandExtension(new OsCommandService());
+	}
+
 	void setup() {
 		Monitor hostMonitor = Monitor.builder().type(HOST.getKey()).isEndpoint(true).build();
 		monitors = new HashMap<>(Map.of(HOST.getKey(), Map.of(HOSTNAME, hostMonitor)));
@@ -291,7 +293,10 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
-	void testCheckSshHealthLocally() {
+	void testCheckSshHealthLocally() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		// Create a telemetry manager using an SSH HostConfiguration.
 		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();
 
@@ -299,33 +304,28 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setMustCheckSshStatus(true);
 		telemetryManager.getHostProperties().setOsCommandExecutesLocally(true);
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
+		// Start the SSH Health Check strategy
+		Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Assert the result
-			assertTrue(result.get());
-		}
+		// Assert the result
+		assertTrue(result.get());
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(null);
+		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
+		// Start the SSH Health Check strategy
+		result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Assert the result
-			assertFalse(result.get());
-		}
+		// Assert the result
+		assertFalse(result.get());
 	}
 
 	@Test
-	void testCheckSshUpHealthRemotely() {
+	void testCheckSshUpHealthRemotely() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		// Create a telemetry manager using an SSH HostConfiguration.
 		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();
 
@@ -334,53 +334,32 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setOsCommandExecutesLocally(false);
 		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
+		// Start the SSH Health Check strategy
+		Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Assert the result
-			assertTrue(result.get());
-		}
+		// Assert the result
+		assertTrue(result.get());
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(null);
+		doReturn((String) null)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
+		// Start the SSH Health Check strategy
+		result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Assert the result
-			assertFalse(result.get());
-		}
+		// Assert the result
+		assertFalse(result.get());
 	}
 
 	@Test
-	void testCheckSshUpHealthBothLocallyAndRemotely() {
+	void testCheckSshUpHealthBothLocallyAndRemotely() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		// Create a telemetry manager using an SSH HostConfiguration.
 		final TelemetryManager telemetryManager = createTelemetryManagerWithSshConfig();
 
@@ -390,110 +369,51 @@ class OsCommandExtensionTest {
 		telemetryManager.getHostProperties().setOsCommandExecutesRemotely(true);
 
 		// Both local and remote commands working fine
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(SUCCESS_RESPONSE);
+		// Start the SSH Health Check strategy
+		Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
-
-			// Assert the result
-			assertTrue(result.get());
-		}
+		// Assert the result
+		assertTrue(result.get());
 
 		// Local commands not working
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
+		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(null);
+		// Start the SSH Health Check strategy
+		result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
+		// Assert the result
+		assertFalse(result.get());
 
-			// Assert the result
-			assertFalse(result.get());
-		}
 		// remote command not working
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(null);
+		doReturn((String) null)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
+		doReturn(SUCCESS_RESPONSE).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(SUCCESS_RESPONSE);
+		// Start the SSH Health Check strategy
+		result = osCommandExtension.checkProtocol(telemetryManager);
 
-			// Start the SSH Health Check strategy
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
-
-			// Assert the result
-			assertFalse(result.get());
-		}
+		// Assert the result
+		assertFalse(result.get());
 
 		// Both local and remote commands not working, but not throwing exceptions
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						anyString(),
-						any(SshConfiguration.class),
-						anyLong(),
-						any(),
-						any(),
-						any()
-					)
-				)
-				.thenReturn(null);
+		doReturn((String) null)
+			.when(osCommandService)
+			.runSshCommand(anyString(), anyString(), any(SshConfiguration.class), anyLong(), any(), any(), any());
+		doReturn(null).when(osCommandService).runLocalCommand(anyString(), anyLong(), any());
 
-			staticOsCommandHelper
-				.when(() -> OsCommandService.runLocalCommand(anyString(), anyLong(), any()))
-				.thenReturn(null);
+		result = osCommandExtension.checkProtocol(telemetryManager);
 
-			Optional<Boolean> result = osCommandExtension.checkProtocol(telemetryManager);
-
-			// Assert the result
-			assertFalse(result.get());
-		}
+		// Assert the result
+		assertFalse(result.get());
 	}
 
 	@Test
@@ -531,7 +451,10 @@ class OsCommandExtensionTest {
 	}
 
 	@Test
-	void testProcessOsCommandSource() {
+	void testProcessOsCommandSource() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		final Connector connector = Connector.builder().build();
 
 		final Map<String, Connector> store = Map.of(MY_CONNECTOR_1_NAME, connector);
@@ -587,70 +510,58 @@ class OsCommandExtensionTest {
 		commandSource.setSelectColumns(selectColumns);
 		commandSource.setExecuteLocally(true);
 
-		try (final MockedStatic<OsCommandService> mockedOsCommandHelper = mockStatic(OsCommandService.class)) {
-			mockedOsCommandHelper
-				.when(() ->
-					OsCommandService.runOsCommand(
-						commandLine,
-						telemetryManager,
-						commandSource.getTimeout(),
-						commandSource.getExecuteLocally(),
-						hostProperties.isLocalhost(),
-						Map.of()
-					)
-				)
-				.thenThrow(NoCredentialProvidedException.class);
-
-			assertEquals(
-				SourceTable.empty(),
-				osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
+		doThrow(NoCredentialProvidedException.class)
+			.when(osCommandService)
+			.runOsCommand(
+				eq(commandLine),
+				eq(telemetryManager),
+				eq(commandSource.getTimeout()),
+				eq(commandSource.getExecuteLocally()),
+				eq(hostProperties.isLocalhost()),
+				eq(Map.of())
 			);
-		}
 
-		try (final MockedStatic<OsCommandService> mockedOsCommandHelper = mockStatic(OsCommandService.class)) {
-			mockedOsCommandHelper
-				.when(() ->
-					OsCommandService.runOsCommand(
-						commandLine,
-						telemetryManager,
-						commandSource.getTimeout(),
-						commandSource.getExecuteLocally(),
-						hostProperties.isLocalhost(),
-						Map.of()
-					)
-				)
-				.thenThrow(IOException.class);
+		assertEquals(
+			SourceTable.empty(),
+			osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
+		);
 
-			assertEquals(
-				SourceTable.empty(),
-				osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
+		doThrow(IOException.class)
+			.when(osCommandService)
+			.runOsCommand(
+				eq(commandLine),
+				eq(telemetryManager),
+				eq(commandSource.getTimeout()),
+				eq(commandSource.getExecuteLocally()),
+				eq(hostProperties.isLocalhost()),
+				eq(Map.of())
 			);
-		}
 
-		try (final MockedStatic<OsCommandService> mockedOsCommandHelper = mockStatic(OsCommandService.class)) {
-			final String result = "xxxxxx\n" + "xxxxxx\n" + "0:1:ext_bus:3:4:5:6:7:8\n" + "xxxxxx\n" + "xxxxxx\n";
-			final OsCommandResult commandResult = new OsCommandResult(result, commandLine);
+		assertEquals(
+			SourceTable.empty(),
+			osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager)
+		);
 
-			mockedOsCommandHelper
-				.when(() ->
-					OsCommandService.runOsCommand(
-						commandLine,
-						telemetryManager,
-						commandSource.getTimeout(),
-						commandSource.getExecuteLocally(),
-						hostProperties.isLocalhost(),
-						Map.of()
-					)
-				)
-				.thenReturn(commandResult);
+		final String result = "xxxxxx\n" + "xxxxxx\n" + "0:1:ext_bus:3:4:5:6:7:8\n" + "xxxxxx\n" + "xxxxxx\n";
+		final OsCommandResult commandResult = new OsCommandResult(result, commandLine);
 
-			final SourceTable expected = SourceTable
-				.builder()
-				.rawData("1;ext_bus;3;4;5")
-				.table(List.of(List.of("1", "ext_bus", "3", "4", "5")))
-				.build();
-			assertEquals(expected, osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager));
-		}
+		doReturn(commandResult)
+			.when(osCommandService)
+			.runOsCommand(
+				eq(commandLine),
+				eq(telemetryManager),
+				eq(commandSource.getTimeout()),
+				eq(commandSource.getExecuteLocally()),
+				eq(hostProperties.isLocalhost()),
+				eq(Map.of())
+			);
+
+		final SourceTable expected = SourceTable
+			.builder()
+			.rawData("1;ext_bus;3;4;5")
+			.table(List.of(List.of("1", "ext_bus", "3", "4", "5")))
+			.build();
+		assertEquals(expected, osCommandExtension.processSource(commandSource, MY_CONNECTOR_1_NAME, telemetryManager));
 	}
 
 	@Test
@@ -998,60 +909,58 @@ class OsCommandExtensionTest {
 
 	@Test
 	void testExecuteQuery() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder().hostname(HOSTNAME).build();
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
 		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(), // commandLine
-						anyString(), // hostname
-						any(SshConfiguration.class), // sshConfiguration
-						anyLong(), // timeout
-						any(), // local files
-						anyString(), // no password command
-						any() // host type
-					)
-				)
-				.thenReturn(SUCCESS_RESPONSE);
+		doReturn(SUCCESS_RESPONSE)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(), // commandLine
+				anyString(), // hostname
+				any(SshConfiguration.class), // sshConfiguration
+				anyLong(), // timeout
+				any(), // local files
+				anyString(), // no password command
+				any() // host type
+			);
 
-			// Start the SSH Health Check strategy
-			final String result = osCommandExtension.executeQuery(sshConfiguration, queryNode);
+		// Start the SSH Health Check strategy
+		final String result = osCommandExtension.executeQuery(sshConfiguration, queryNode);
 
-			// Assert the result
-			assertEquals(SUCCESS_RESPONSE, result);
-		}
+		// Assert the result
+		assertEquals(SUCCESS_RESPONSE, result);
 	}
 
 	@Test
 	void testExecuteQueryThrowsException() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+		final OsCommandExtension osCommandExtension = new OsCommandExtension(osCommandService);
+
 		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder().hostname(HOSTNAME).build();
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("commandLine", new TextNode(TEST_COMMAND_LINE));
 		queryNode.set("hostType", new TextNode(DeviceKind.LINUX.toString()));
 
-		try (MockedStatic<OsCommandService> staticOsCommandHelper = Mockito.mockStatic(OsCommandService.class)) {
-			staticOsCommandHelper
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(), // commandLine
-						anyString(), // hostname
-						any(SshConfiguration.class), // sshConfiguration
-						anyLong(), // timeout
-						any(), // local files
-						anyString(), // no password command
-						any() // host type
-					)
-				)
-				.thenThrow(ClientException.class);
+		doThrow(ClientException.class)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(), // commandLine
+				anyString(), // hostname
+				any(SshConfiguration.class), // sshConfiguration
+				anyLong(), // timeout
+				any(), // local files
+				anyString(), // no password command
+				any() // host type
+			);
 
-			// Assert the result
-			assertThrows(ClientException.class, () -> osCommandExtension.executeQuery(sshConfiguration, queryNode));
-		}
+		// Assert the result
+		assertThrows(ClientException.class, () -> osCommandExtension.executeQuery(sshConfiguration, queryNode));
 	}
 }

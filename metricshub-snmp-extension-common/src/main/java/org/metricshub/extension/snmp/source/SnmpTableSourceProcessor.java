@@ -107,7 +107,6 @@ public class SnmpTableSourceProcessor {
 				snmpConfiguration,
 				hostname,
 				true,
-				telemetryManager.getEmulationInputDirectory(),
 				telemetryManager.getHostname()
 			);
 

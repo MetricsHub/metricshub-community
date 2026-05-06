@@ -55,6 +55,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
 import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
 import org.metricshub.extension.win.detection.WmiCriterionProcessor;
@@ -147,7 +148,13 @@ public class WinRmExtension implements IProtocolExtension {
 
 		try {
 			winRmResult =
-				winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, WINRM_TEST_QUERY, WINRM_TEST_NAMESPACE);
+				winRmRequestExecutor.executeWmi(
+					hostname,
+					winRmConfiguration,
+					WINRM_TEST_QUERY,
+					WINRM_TEST_NAMESPACE,
+					telemetryManager.getRecordOutputDirectory()
+				);
 		} catch (Exception e) {
 			if (winRmRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -273,6 +280,19 @@ public class WinRmExtension implements IProtocolExtension {
 		return IDENTIFIER;
 	}
 
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			WmiRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String query = queryNode.get("query").asText();
@@ -305,7 +325,7 @@ public class WinRmExtension implements IProtocolExtension {
 	) {
 		List<List<String>> resultList;
 		try {
-			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace);
+			resultList = winRmRequestExecutor.executeWmi(hostname, winRmConfiguration, query, namespace, null);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
 			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);

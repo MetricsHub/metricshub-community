@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -97,10 +98,10 @@ class WmiCriterionProcessorTest {
 			.build();
 		doReturn(CriterionTestResult.success(wmiCriterion, WQL_RESULT_VALUE))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
 		doReturn(List.of(List.of(FIRST_NAMESPACE)))
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 
 		final CriterionTestResult result = wmiCriterionProcessor.process(wmiCriterion, telemetryManager);
 		assertTrue(result.isSuccess());
@@ -133,7 +134,7 @@ class WmiCriterionProcessorTest {
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).namespace(namespace).build();
 		doReturn(CriterionTestResult.success(wmiCriterion, WQL_RESULT_VALUE))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), eq(wmiCriterion), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), eq(wmiCriterion), anyString(), eq(true), isNull());
 
 		final CriterionTestResult result = wmiCriterionProcessor.process(wmiCriterion, telemetryManager);
 		assertTrue(result.isSuccess());
@@ -174,7 +175,7 @@ class WmiCriterionProcessorTest {
 		cachedNamespaceCriterion.setNamespace(cachedNamespace);
 		doReturn(CriterionTestResult.success(cachedNamespaceCriterion, WQL_RESULT_VALUE))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), eq(cachedNamespaceCriterion), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), eq(cachedNamespaceCriterion), anyString(), eq(true), isNull());
 
 		final CriterionTestResult result = wmiCriterionProcessor.process(wmiCriterion, telemetryManager);
 		assertTrue(result.isSuccess());
@@ -233,7 +234,8 @@ class WmiCriterionProcessorTest {
 
 		final WmiCriterionProcessor.PossibleNamespacesResult result = wmiCriterionProcessor.findPossibleNamespaces(
 			null,
-			wmiConfiguration
+			wmiConfiguration,
+			null
 		);
 		assertTrue(result.isSuccess());
 		assertEquals(FORCED_NAMESPACE, result.getPossibleNamespaces().stream().findFirst().orElseThrow());
@@ -252,11 +254,12 @@ class WmiCriterionProcessorTest {
 		// No response from the host
 		doThrow(new ClientException(CLIENT_ERROR_MSG, new TimeoutException(TIMEOUT_MSG)))
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 
 		final WmiCriterionProcessor.PossibleNamespacesResult result = wmiCriterionProcessor.findPossibleNamespaces(
 			HOST_NAME,
-			wmiConfiguration
+			wmiConfiguration,
+			null
 		);
 		assertFalse(result.isSuccess());
 		assertTrue(result.getErrorMessage().contains(TIMEOUT_MSG));
@@ -276,11 +279,12 @@ class WmiCriterionProcessorTest {
 		// We return an empty list
 		doReturn(Collections.emptyList())
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), eq(WmiCriterionProcessor.ROOT_NAMESPACE));
+			.executeWmi(any(), eq(wmiConfiguration), any(), eq(WmiCriterionProcessor.ROOT_NAMESPACE), isNull());
 
 		final WmiCriterionProcessor.PossibleNamespacesResult result = wmiCriterionProcessor.findPossibleNamespaces(
 			HOST_NAME,
-			wmiConfiguration
+			wmiConfiguration,
+			null
 		);
 		assertFalse(result.isSuccess());
 	}
@@ -298,11 +302,12 @@ class WmiCriterionProcessorTest {
 
 		doReturn(List.of(List.of(FIRST_NAMESPACE), List.of(SECOND_NAMESPACE)))
 			.when(winRequestExecutorMock)
-			.executeWmi(any(), eq(wmiConfiguration), any(), any());
+			.executeWmi(any(), eq(wmiConfiguration), any(), any(), isNull());
 
 		final WmiCriterionProcessor.PossibleNamespacesResult result = wmiCriterionProcessor.findPossibleNamespaces(
 			HOST_NAME,
-			wmiConfiguration
+			wmiConfiguration,
+			null
 		);
 		assertTrue(result.isSuccess());
 		assertEquals(2, result.getPossibleNamespaces().size());
@@ -330,17 +335,19 @@ class WmiCriterionProcessorTest {
 			)
 		)
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
 
 		final WmiCriterionProcessor.NamespaceResult result = wmiCriterionProcessor.detectNamespace(
 			HOST_NAME,
 			wmiConfiguration,
 			wmiCriterion,
-			Set.of(FIRST_NAMESPACE, SECOND_NAMESPACE)
+			Set.of(FIRST_NAMESPACE, SECOND_NAMESPACE),
+			null
 		);
 		assertFalse(result.getResult().isSuccess());
 		assertTrue(result.getResult().getMessage().contains(TimeoutException.class.getSimpleName()));
-		verify(wmiDetectionServiceMock).performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true));
+		verify(wmiDetectionServiceMock)
+			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
 	}
 
 	@Test
@@ -364,23 +371,25 @@ class WmiCriterionProcessorTest {
 		copyCriterion1.setNamespace(FIRST_NAMESPACE);
 		doReturn(CriterionTestResult.error(wmiCriterion, TimeoutException.class.getSimpleName(), clientException))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), any(), eq(copyCriterion1), anyString(), eq(true));
+			.performDetectionTest(any(), any(), eq(copyCriterion1), anyString(), eq(true), isNull());
 		doReturn(true).when(winRequestExecutorMock).isAcceptableException(clientException);
 		final WmiCriterion copyCriterion2 = wmiCriterion.copy();
 		copyCriterion2.setNamespace(SECOND_NAMESPACE);
 		doReturn(CriterionTestResult.error(wmiCriterion, CLIENT_ERROR_MSG))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), any(), eq(copyCriterion2), anyString(), eq(true));
+			.performDetectionTest(any(), any(), eq(copyCriterion2), anyString(), eq(true), isNull());
 
 		final WmiCriterionProcessor.NamespaceResult result = wmiCriterionProcessor.detectNamespace(
 			HOST_NAME,
 			wmiConfiguration,
 			wmiCriterion,
-			Set.of(FIRST_NAMESPACE, SECOND_NAMESPACE)
+			Set.of(FIRST_NAMESPACE, SECOND_NAMESPACE),
+			null
 		);
 		assertFalse(result.getResult().isSuccess());
 		assertNull(result.getResult().getException());
-		verify(wmiDetectionServiceMock, times(2)).performDetectionTest(anyString(), any(), any(), anyString(), eq(true));
+		verify(wmiDetectionServiceMock, times(2))
+			.performDetectionTest(anyString(), any(), any(), anyString(), eq(true), isNull());
 	}
 
 	@Test
@@ -391,18 +400,20 @@ class WmiCriterionProcessorTest {
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).build();
 		doReturn(CriterionTestResult.success(wmiCriterion, WQL_RESULT_VALUE))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
 
 		final WmiCriterionProcessor.NamespaceResult result = wmiCriterionProcessor.detectNamespace(
 			HOST_NAME,
 			wmiConfiguration,
 			wmiCriterion,
-			Set.of(CRITERION_DEFAULT_WMI_NAMESPACE, FIRST_NAMESPACE)
+			Set.of(CRITERION_DEFAULT_WMI_NAMESPACE, FIRST_NAMESPACE),
+			null
 		);
 		assertTrue(result.getResult().isSuccess());
 		assertNull(result.getResult().getException());
 		assertEquals(FIRST_NAMESPACE, result.getNamespace());
-		verify(wmiDetectionServiceMock, times(2)).performDetectionTest(any(), any(), any(), anyString(), eq(true));
+		verify(wmiDetectionServiceMock, times(2))
+			.performDetectionTest(any(), any(), any(), anyString(), eq(true), isNull());
 	}
 
 	@Test
@@ -413,13 +424,14 @@ class WmiCriterionProcessorTest {
 		final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL_CUSTOM).build();
 		doReturn(CriterionTestResult.success(wmiCriterion, WQL_RESULT_VALUE))
 			.when(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true));
+			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
 
 		final WmiCriterionProcessor.NamespaceResult result = wmiCriterionProcessor.detectNamespace(
 			HOST_NAME,
 			wmiConfiguration,
 			wmiCriterion,
-			Set.of(CRITERION_DEFAULT_WMI_NAMESPACE)
+			Set.of(CRITERION_DEFAULT_WMI_NAMESPACE),
+			null
 		);
 		assertTrue(result.getResult().isSuccess());
 		assertEquals(CRITERION_DEFAULT_WMI_NAMESPACE, result.getNamespace());

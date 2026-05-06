@@ -46,10 +46,11 @@ public interface IWinRequestExecutor {
 	/**
 	 * Execute a WMI query
 	 *
-	 * @param hostname         The hostname of the device where the WMI service is running (<code>null</code> for localhost)
-	 * @param winConfiguration Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
-	 * @param query            The WQL to execute.
-	 * @param namespace        The WMI namespace where all the classes reside.
+	 * @param hostname              The hostname of the device where the WMI service is running (<code>null</code> for localhost)
+	 * @param winConfiguration      Windows Protocol configuration (credentials, timeout). E.g. WMI or WinRm.
+	 * @param query                 The WQL to execute.
+	 * @param namespace             The WMI namespace where all the classes reside.
+	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
 	 * @return A list of rows, where each row is represented as a list of strings.
 	 * @throws ClientException when anything goes wrong (details in cause).
 	 */
@@ -57,7 +58,8 @@ public interface IWinRequestExecutor {
 		String hostname,
 		@NonNull IWinConfiguration winConfiguration,
 		@NonNull String query,
-		String namespace
+		String namespace,
+		String recordOutputDirectory
 	) throws ClientException;
 
 	/**

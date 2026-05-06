@@ -46,6 +46,7 @@ import org.fusesource.jansi.Ansi;
 import org.fusesource.jansi.Ansi.Attribute;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.cli.service.converter.DeviceKindConverter;
+import org.metricshub.cli.service.protocol.EmulationConfigCli;
 import org.metricshub.cli.service.protocol.HttpConfigCli;
 import org.metricshub.cli.service.protocol.IpmiConfigCli;
 import org.metricshub.cli.service.protocol.JdbcConfigCli;
@@ -188,6 +189,9 @@ public class MetricsHubCliService implements Callable<Integer> {
 	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Additional Connectors Options|@:%n", multiplicity = "0..*")
 	List<AdditionalConnectorConfigCli> additionalConnectors;
 
+	@ArgGroup(exclusive = false, heading = "%n@|bold,underline Emulation Options|@:%n")
+	EmulationConfigCli emulationConfigCli;
+
 	@Option(names = { "-u", "--username" }, order = 2, paramLabel = "USER", description = "Username for authentication")
 	String username;
 
@@ -293,15 +297,6 @@ public class MetricsHubCliService implements Callable<Integer> {
 	)
 	boolean record;
 
-	@Option(
-		names = { "-e", "--emulate" },
-		order = 15,
-		defaultValue = "",
-		description = "Enables/disables reading the recorded sources execution results",
-		help = true
-	)
-	String emulate;
-
 	@Override
 	public Integer call() throws Exception {
 		// Check whether iterations is greater than 0. If it's not the case, throw a ParameterException
@@ -371,7 +366,6 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
 			.recordOutputDirectory(record ? ConfigHelper.getDefaultOutputDirectory().toString() : null)
-			.emulationInputDirectory(emulate)
 			.build();
 
 		// Instantiate a new ClientsExecutor
@@ -424,6 +418,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 						.toString()
 				);
 				printWriter.flush();
+				flushRecordingSession(telemetryManager);
 				return CommandLine.ExitCode.SOFTWARE;
 			}
 
@@ -528,8 +523,18 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		// Print the result
 		new PrettyPrinterService(telemetryManager, printWriter).print(monitorTypes);
+		flushRecordingSession(telemetryManager);
 
 		return CommandLine.ExitCode.OK;
+	}
+
+	/**
+	 * Flushes recorder buffers for all protocol extensions for the current session.
+	 *
+	 * @param telemetryManager telemetry manager holding the recording context
+	 */
+	private void flushRecordingSession(final TelemetryManager telemetryManager) {
+		CliExtensionManager.getExtensionManagerSingleton().onRecordingSessionEnd(telemetryManager);
 	}
 
 	/**
@@ -612,7 +617,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 * @return A {@link Map} associating the input protocol type to its input credentials.
 	 */
 	private Map<Class<? extends IConfiguration>, IConfiguration> buildConfigurations() {
-		return Stream
+		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = Stream
 			.of(
 				ipmiConfigCli,
 				snmpConfigCli,
@@ -623,7 +628,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				winRmConfigCli,
 				wbemConfigCli,
 				jdbcConfigCli,
-				jmxConfigCli
+				jmxConfigCli,
+				emulationConfigCli
 			)
 			.filter(Objects::nonNull)
 			.map(protocolConfig -> {
@@ -638,6 +644,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				}
 			})
 			.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
+
+		return protocolConfigurations;
 	}
 
 	/**
@@ -666,7 +674,8 @@ public class MetricsHubCliService implements Callable<Integer> {
 				winRmConfigCli,
 				wbemConfigCli,
 				jdbcConfigCli,
-				jmxConfigCli
+				jmxConfigCli,
+				emulationConfigCli
 			)
 			.allMatch(Objects::isNull);
 

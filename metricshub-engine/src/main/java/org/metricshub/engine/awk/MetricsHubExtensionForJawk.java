@@ -58,7 +58,9 @@ import org.metricshub.jawk.jrt.AssocArray;
 @AllArgsConstructor
 public class MetricsHubExtensionForJawk extends AbstractExtension {
 
+	@EqualsAndHashCode.Exclude
 	private SourceProcessor sourceProcessor;
+
 	private String hostname;
 	private String connectorId;
 
