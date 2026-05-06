@@ -39,9 +39,13 @@ public class EmulationPathHelper {
 	 *
 	 * @param baseDir          The base emulation directory (e.g., the protocol-specific subdirectory).
 	 * @param responseFileName The response filename read from {@code image.yaml}.
-	 * @return The validated, normalized {@link Path}, or {@code null} if the path escapes the base directory.
+	 * @return The validated, normalized {@link Path}, or {@code null} if the filename is null/blank
+	 *         or the path escapes the base directory.
 	 */
 	public static Path resolveSecurely(final Path baseDir, final String responseFileName) {
+		if (responseFileName == null || responseFileName.isBlank()) {
+			return null;
+		}
 		final Path resolved = baseDir.resolve(responseFileName).normalize();
 		if (!resolved.startsWith(baseDir.normalize())) {
 			log.error("Path traversal detected in response filename: {}", responseFileName);

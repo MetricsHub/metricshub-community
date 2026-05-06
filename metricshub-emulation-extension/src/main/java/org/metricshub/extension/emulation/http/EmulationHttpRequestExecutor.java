@@ -175,7 +175,27 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final HttpEmulationEntry matchingEntry = matchingEntries.get(index);
 
 		// Read the response file
+		if (matchingEntry.getResponse() == null) {
+			log.warn(
+				"Hostname {} - Malformed HTTP emulation entry found for {} {}: missing response section",
+				httpRequest.getHostname(),
+				method,
+				path
+			);
+			return null;
+		}
+
 		final String responseFileName = matchingEntry.getResponse().getFile();
+		if (responseFileName == null || responseFileName.isBlank()) {
+			log.warn(
+				"Hostname {} - Malformed HTTP emulation entry found for {} {}: missing or blank response file",
+				httpRequest.getHostname(),
+				method,
+				path
+			);
+			return null;
+		}
+
 		final Path responseFile = EmulationPathHelper.resolveSecurely(httpDir, responseFileName);
 		if (responseFile == null) {
 			return null;
