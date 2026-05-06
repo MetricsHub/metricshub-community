@@ -1,0 +1,465 @@
+name: Package Installation Tests
+run-name: Package Installation Tests for ${{ github.head_ref || github.ref_name }}
+
+on:
+  workflow_call:
+    inputs:
+      linuxArtifact:
+        type: string
+        description: Name of the Linux package artifact to download
+        required: false
+        default: linux-packages
+      windowsArtifact:
+        type: string
+        description: Name of the Windows package artifact to download
+        required: false
+        default: windows-packages
+      expectedVersion:
+        type: string
+        description: Optional expected version text present in metricshub --version output
+        required: false
+        default: ""
+      windowsSignerSubjectContains:
+        type: string
+        description: Optional signer subject fragment expected for MSI Authenticode signature
+        required: false
+        default: ""
+    outputs:
+      reportArtifact:
+        description: Name of the generated installation test report artifact
+        value: package-installation-test-report
+
+permissions:
+  contents: read
+
+jobs:
+  linux-install-tests:
+    name: Linux install test (${{ matrix.id }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: debian12-amd64-deb
+            osLabel: Debian 12
+            image: debian:12
+            platform: linux/amd64
+            packageType: deb
+            packagePattern: metricshub-community_*_amd64.deb
+            arch: amd64
+          - id: debian13-amd64-deb
+            osLabel: Debian 13
+            image: debian:13
+            platform: linux/amd64
+            packageType: deb
+            packagePattern: metricshub-community_*_amd64.deb
+            arch: amd64
+          - id: debian12-arm64-deb
+            osLabel: Debian 12
+            image: debian:12
+            platform: linux/arm64
+            packageType: deb
+            packagePattern: metricshub-community_*_arm64.deb
+            arch: arm64
+          - id: debian13-arm64-deb
+            osLabel: Debian 13
+            image: debian:13
+            platform: linux/arm64
+            packageType: deb
+            packagePattern: metricshub-community_*_arm64.deb
+            arch: arm64
+          - id: ubi9-amd64-rpm
+            osLabel: Red Hat UBI 9
+            image: redhat/ubi9
+            platform: linux/amd64
+            packageType: rpm
+            packagePattern: metricshub-community-*.x86_64.rpm
+            arch: amd64
+          - id: ubi10-amd64-rpm
+            osLabel: Red Hat UBI 10
+            image: redhat/ubi10
+            platform: linux/amd64
+            packageType: rpm
+            packagePattern: metricshub-community-*.x86_64.rpm
+            arch: amd64
+          - id: ubi9-arm64-rpm
+            osLabel: Red Hat UBI 9
+            image: redhat/ubi9
+            platform: linux/arm64
+            packageType: rpm
+            packagePattern: metricshub-community-*.aarch64.rpm
+            arch: arm64
+          - id: ubi10-arm64-rpm
+            osLabel: Red Hat UBI 10
+            image: redhat/ubi10
+            platform: linux/arm64
+            packageType: rpm
+            packagePattern: metricshub-community-*.aarch64.rpm
+            arch: arm64
+          - id: debian13-amd64-tar
+            osLabel: Debian 13
+            image: debian:13
+            platform: linux/amd64
+            packageType: tar
+            packagePattern: metricshub-community-linux-*-x86_64.tar.gz
+            arch: amd64
+          - id: debian13-arm64-tar
+            osLabel: Debian 13
+            image: debian:13
+            platform: linux/arm64
+            packageType: tar
+            packagePattern: metricshub-community-linux-*-aarch64.tar.gz
+            arch: arm64
+          - id: ubi10-amd64-tar
+            osLabel: Red Hat UBI 10
+            image: redhat/ubi10
+            platform: linux/amd64
+            packageType: tar
+            packagePattern: metricshub-community-linux-*-x86_64.tar.gz
+            arch: amd64
+          - id: ubi10-arm64-tar
+            osLabel: Red Hat UBI 10
+            image: redhat/ubi10
+            platform: linux/arm64
+            packageType: tar
+            packagePattern: metricshub-community-linux-*-aarch64.tar.gz
+            arch: arm64
+
+    steps:
+    - name: Download Linux packages
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.linuxArtifact }}
+        path: packages
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v4
+
+    - name: Run installation test in container
+      id: test
+      shell: bash
+      run: |
+        set -u
+        mkdir -p results
+        log_file="results/${{ matrix.id }}.log"
+        json_file="results/${{ matrix.id }}.json"
+
+        package_file=$(find packages -maxdepth 1 -type f -name '${{ matrix.packagePattern }}' | head -n 1)
+        if [ -z "${package_file}" ]; then
+          printf 'Package not found for pattern: %s\n' '${{ matrix.packagePattern }}' | tee "${log_file}"
+          jq -n \
+            --arg scenario '${{ matrix.id }}' \
+            --arg os '${{ matrix.osLabel }}' \
+            --arg packageType '${{ matrix.packageType }}' \
+            --arg arch '${{ matrix.arch }}' \
+            --arg status 'failed' \
+            --arg details 'package not found' \
+            '{scenario: $scenario, os: $os, packageType: $packageType, arch: $arch, status: $status, details: $details}' > "${json_file}"
+          exit 1
+        fi
+
+        package_name=$(basename "${package_file}")
+        case '${{ matrix.packageType }}' in
+          deb)
+            container_command="dpkg -i /tmp/packages/${package_name} ; /opt/metricshub/bin/metricshub --version"
+            ;;
+          rpm)
+            container_command="rpm -i /tmp/packages/${package_name} ; /opt/metricshub/bin/metricshub --version"
+            ;;
+          tar)
+            container_command="mkdir -p /tmp/install && tar -xzf /tmp/packages/${package_name} -C /tmp/install && /tmp/install/metricshub/bin/metricshub --version"
+            ;;
+          *)
+            printf 'Unsupported package type: %s\n' '${{ matrix.packageType }}' | tee "${log_file}"
+            jq -n \
+              --arg scenario '${{ matrix.id }}' \
+              --arg os '${{ matrix.osLabel }}' \
+              --arg packageType '${{ matrix.packageType }}' \
+              --arg arch '${{ matrix.arch }}' \
+              --arg status 'failed' \
+              --arg details 'unsupported package type' \
+              '{scenario: $scenario, os: $os, packageType: $packageType, arch: $arch, status: $status, details: $details}' > "${json_file}"
+            exit 1
+            ;;
+        esac
+
+        set +e
+        docker run --rm \
+          --platform '${{ matrix.platform }}' \
+          -v "${PWD}/packages:/tmp/packages:ro" \
+          -w /tmp \
+          '${{ matrix.image }}' \
+          bash -lc "${container_command}" 2>&1 | tee "${log_file}"
+        cmd_exit=${PIPESTATUS[0]}
+        set -e
+
+        status='passed'
+        details='installation and version check successful'
+
+        if [ "${cmd_exit}" -ne 0 ]; then
+          status='failed'
+          details="container command exited with code ${cmd_exit}"
+        fi
+
+        if ! grep -Eiq 'metricshub.*version|version.*metricshub' "${log_file}"; then
+          status='failed'
+          details='metricshub version output not detected'
+        fi
+
+        if [ -n '${{ inputs.expectedVersion }}' ] && ! grep -Fq '${{ inputs.expectedVersion }}' "${log_file}"; then
+          status='failed'
+          details='expected version not found in metricshub output'
+        fi
+
+        jq -n \
+          --arg scenario '${{ matrix.id }}' \
+          --arg os '${{ matrix.osLabel }}' \
+          --arg packageType '${{ matrix.packageType }}' \
+          --arg arch '${{ matrix.arch }}' \
+          --arg status "${status}" \
+          --arg details "${details}" \
+          --arg packageFile "${package_name}" \
+          '{scenario: $scenario, os: $os, packageType: $packageType, arch: $arch, status: $status, details: $details, packageFile: $packageFile}' > "${json_file}"
+
+        if [ "${status}" != 'passed' ]; then
+          exit 1
+        fi
+
+    - name: Upload test result
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-test-result-${{ matrix.id }}
+        path: results/*
+
+  windows-install-tests:
+    name: Windows install test (${{ matrix.id }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: windows-x64-msi
+            packageType: msi
+            packagePattern: metricshub-community-*.msi
+            arch: x86_64
+          - id: windows-x64-zip
+            packageType: zip
+            packagePattern: metricshub-community-windows-*-AMD64.zip
+            arch: x86_64
+
+    steps:
+    - name: Download Windows packages
+      uses: actions/download-artifact@v8
+      with:
+        name: ${{ inputs.windowsArtifact }}
+        path: packages
+
+    - name: Run Windows package test
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path results -Force | Out-Null
+
+        $scenario = '${{ matrix.id }}'
+        $packageType = '${{ matrix.packageType }}'
+        $pattern = '${{ matrix.packagePattern }}'
+        $expectedVersion = '${{ inputs.expectedVersion }}'
+        $expectedSignerSubject = '${{ inputs.windowsSignerSubjectContains }}'
+        $logPath = Join-Path 'results' ("$scenario.log")
+        $jsonPath = Join-Path 'results' ("$scenario.json")
+
+        $status = 'passed'
+        $details = 'installation and version check successful'
+        $versionOutput = ''
+        $signatureStatus = 'not-applicable'
+        $signatureSubject = ''
+
+        $package = Get-ChildItem -Path packages -Filter $pattern -File | Select-Object -First 1
+        if (-not $package) {
+          $status = 'failed'
+          $details = "package not found for pattern: $pattern"
+        }
+
+        if ($status -eq 'passed' -and $packageType -eq 'msi') {
+          $signature = Get-AuthenticodeSignature -FilePath $package.FullName
+          $signatureStatus = [string]$signature.Status
+          if ($null -ne $signature.SignerCertificate) {
+            $signatureSubject = [string]$signature.SignerCertificate.Subject
+          }
+
+          if ($signature.Status -ne 'Valid') {
+            $status = 'failed'
+            $details = "msi signature invalid: $($signature.Status)"
+          } elseif (-not [string]::IsNullOrWhiteSpace($expectedSignerSubject) -and $signatureSubject -notlike "*$expectedSignerSubject*") {
+            $status = 'failed'
+            $details = 'msi signature subject does not match expected value'
+          }
+        }
+
+        if ($status -eq 'passed' -and $packageType -eq 'msi') {
+          $msiLogPath = Join-Path $env:RUNNER_TEMP 'metricshub-msi-install.log'
+          $process = Start-Process -FilePath msiexec.exe -ArgumentList @('/i', $package.FullName, '/qn', '/norestart', '/L*v', $msiLogPath) -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            $status = 'failed'
+            $details = "msi install failed with exit code $($process.ExitCode)"
+          }
+
+          if ($status -eq 'passed') {
+            $candidates = @(
+              "$env:ProgramFiles\\MetricsHub\\bin\\metricshub.bat",
+              "$env:ProgramFiles\\MetricsHub\\bin\\metricshub.exe",
+              "$env:ProgramFiles\\MetricsHub Community\\bin\\metricshub.bat",
+              "$env:ProgramFiles\\MetricsHub Community\\bin\\metricshub.exe",
+              "$env:ProgramFiles\\Metricshub\\bin\\metricshub.bat",
+              "$env:ProgramFiles\\Metricshub\\bin\\metricshub.exe"
+            )
+
+            $binary = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $binary) {
+              $status = 'failed'
+              $details = 'metricshub binary not found after msi installation'
+            } else {
+              if ($binary.ToLowerInvariant().EndsWith('.bat')) {
+                $versionOutput = cmd /c "`"$binary`" --version" 2>&1 | Out-String
+              } else {
+                $versionOutput = & $binary --version 2>&1 | Out-String
+              }
+            }
+          }
+        }
+
+        if ($status -eq 'passed' -and $packageType -eq 'zip') {
+          $extractPath = Join-Path $env:RUNNER_TEMP 'metricshub-zip-test'
+          if (Test-Path $extractPath) {
+            Remove-Item -Path $extractPath -Recurse -Force
+          }
+          Expand-Archive -Path $package.FullName -DestinationPath $extractPath -Force
+
+          $binary = Get-ChildItem -Path $extractPath -Recurse -File |
+            Where-Object { $_.Name -ieq 'metricshub.bat' -or $_.Name -ieq 'metricshub.exe' } |
+            Select-Object -First 1
+
+          if (-not $binary) {
+            $status = 'failed'
+            $details = 'metricshub binary not found in zip archive'
+          } else {
+            if ($binary.Extension -ieq '.bat') {
+              $versionOutput = cmd /c "`"$($binary.FullName)`" --version" 2>&1 | Out-String
+            } else {
+              $versionOutput = & $binary.FullName --version 2>&1 | Out-String
+            }
+          }
+        }
+
+        if ($status -eq 'passed') {
+          if ($versionOutput -notmatch '(?i)metricshub.*version|version.*metricshub') {
+            $status = 'failed'
+            $details = 'metricshub version output not detected'
+          } elseif (-not [string]::IsNullOrWhiteSpace($expectedVersion) -and $versionOutput -notmatch [regex]::Escape($expectedVersion)) {
+            $status = 'failed'
+            $details = 'expected version not found in metricshub output'
+          }
+        }
+
+        $versionOutput | Out-File -FilePath $logPath -Encoding utf8
+        [pscustomobject]@{
+          scenario = $scenario
+          os = 'Windows'
+          packageType = $packageType
+          arch = '${{ matrix.arch }}'
+          status = $status
+          details = $details
+          packageFile = if ($package) { $package.Name } else { '' }
+          signatureStatus = $signatureStatus
+          signatureSubject = $signatureSubject
+        } | ConvertTo-Json -Depth 4 | Out-File -FilePath $jsonPath -Encoding utf8
+
+        if ($status -ne 'passed') {
+          Write-Error $details
+          exit 1
+        }
+
+    - name: Upload test result
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-test-result-${{ matrix.id }}
+        path: results/*
+
+  package-test-report:
+    name: Package installation report
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+    - linux-install-tests
+    - windows-install-tests
+
+    steps:
+    - name: Download test result artifacts
+      uses: actions/download-artifact@v8
+      with:
+        pattern: package-test-result-*
+        path: results
+        merge-multiple: true
+
+    - name: Build report
+      shell: bash
+      run: |
+        shopt -s nullglob
+        report_file='package-installation-report.md'
+
+        {
+          echo '# Package Installation Test Report'
+          echo
+          echo "Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          echo
+          echo '| Scenario | OS | Package | Arch | Status | Details |'
+          echo '|---|---|---|---|---|---|'
+        } > "${report_file}"
+
+        failures=0
+        total=0
+
+        for file in results/*.json; do
+          total=$((total + 1))
+          scenario=$(jq -r '.scenario' "${file}")
+          os=$(jq -r '.os' "${file}")
+          package_type=$(jq -r '.packageType' "${file}")
+          arch=$(jq -r '.arch' "${file}")
+          status=$(jq -r '.status' "${file}")
+          details=$(jq -r '.details' "${file}")
+
+          if [ "${status}" != 'passed' ]; then
+            failures=$((failures + 1))
+          fi
+
+          printf '| %s | %s | %s | %s | %s | %s |\n' \
+            "${scenario}" "${os}" "${package_type}" "${arch}" "${status}" "${details}" >> "${report_file}"
+        done
+
+        {
+          echo
+          echo "Total scenarios: ${total}"
+          echo "Failures: ${failures}"
+        } >> "${report_file}"
+
+        cat "${report_file}" >> "${GITHUB_STEP_SUMMARY}"
+
+        if [ "${total}" -eq 0 ]; then
+          echo 'No result files found. Failing the workflow.'
+          exit 1
+        fi
+
+        if [ "${failures}" -gt 0 ]; then
+          echo "${failures} scenario(s) failed."
+          exit 1
+        fi
+
+    - name: Upload consolidated report
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: package-installation-test-report
+        path: |
+          package-installation-report.md
+          results/*
