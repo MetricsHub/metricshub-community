@@ -213,12 +213,31 @@ public class JdbcExtension implements IProtocolExtension {
 		return IDENTIFIER;
 	}
 
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			JdbcRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String hostname = configuration.getHostname();
 		final String sqlQuery = queryNode.get("query").asText();
 		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) configuration;
-		final List<List<String>> resultList = sqlRequestExecutor.executeSql(hostname, jdbcConfiguration, sqlQuery, false);
+		final List<List<String>> resultList = sqlRequestExecutor.executeSql(
+			hostname,
+			jdbcConfiguration,
+			sqlQuery,
+			false,
+			null
+		);
 		final String[] columns = StringHelper.extractColumns(sqlQuery);
 		if (columns.length == 1 && columns[0].equals("*")) {
 			return TextTableHelper.generateTextTable(resultList);

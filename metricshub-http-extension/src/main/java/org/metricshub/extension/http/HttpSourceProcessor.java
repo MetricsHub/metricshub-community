@@ -23,7 +23,7 @@ package org.metricshub.extension.http;
 
 import java.util.List;
 import java.util.Map;
-import lombok.AllArgsConstructor;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.common.EmbeddedFile;
@@ -39,10 +39,44 @@ import org.metricshub.extension.http.utils.HttpRequest;
  * the actual HTTP requests.
  */
 @Slf4j
-@AllArgsConstructor
 public class HttpSourceProcessor {
 
 	private HttpRequestExecutor httpRequestExecutor;
+	private Function<TelemetryManager, HttpConfiguration> httpConfigurationProvider;
+
+	/**
+	 * Default HTTP configuration provider that retrieves the {@link HttpConfiguration}
+	 * from the telemetry manager's configuration map.
+	 */
+	private static final Function<TelemetryManager, HttpConfiguration> DEFAULT_HTTP_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(HttpConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(HttpConfiguration.class);
+
+	/**
+	 * Creates a new {@link HttpSourceProcessor} with the given executor and the
+	 * default HTTP configuration provider.
+	 *
+	 * @param httpRequestExecutor The executor to perform HTTP requests.
+	 */
+	public HttpSourceProcessor(final HttpRequestExecutor httpRequestExecutor) {
+		this(httpRequestExecutor, DEFAULT_HTTP_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link HttpSourceProcessor} with the given executor and a
+	 * custom HTTP configuration provider.
+	 *
+	 * @param httpRequestExecutor        The executor to perform HTTP requests.
+	 * @param httpConfigurationProvider   A function that retrieves the {@link HttpConfiguration}
+	 *                                    from the given {@link TelemetryManager}.
+	 */
+	public HttpSourceProcessor(
+		final HttpRequestExecutor httpRequestExecutor,
+		final Function<TelemetryManager, HttpConfiguration> httpConfigurationProvider
+	) {
+		this.httpRequestExecutor = httpRequestExecutor;
+		this.httpConfigurationProvider = httpConfigurationProvider;
+	}
 
 	/**
 	 * Fetches data using HTTP based on the provided {@link HttpSource} connector's directive,
@@ -60,10 +94,7 @@ public class HttpSourceProcessor {
 		final String connectorId,
 		final TelemetryManager telemetryManager
 	) {
-		final HttpConfiguration httpConfiguration = (HttpConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(HttpConfiguration.class);
+		final HttpConfiguration httpConfiguration = httpConfigurationProvider.apply(telemetryManager);
 
 		if (httpConfiguration == null) {
 			log.debug(

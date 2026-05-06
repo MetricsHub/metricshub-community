@@ -24,9 +24,8 @@ package org.metricshub.extension.jdbc;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
+import java.util.function.Function;
 import java.util.regex.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
@@ -39,15 +38,47 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * and generate criterion test results accordingly.
  */
 @Slf4j
-@AllArgsConstructor
 public class SqlCriterionProcessor {
 
 	private static final String SQL_TEST_SUCCESS = "Hostname %s - SQL test succeeded. Returned result: %s.";
 
-	@NonNull
 	private SqlRequestExecutor sqlRequestExecutor;
-
 	private boolean logMode;
+	private Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider;
+
+	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(JdbcConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JdbcConfiguration.class);
+
+	/**
+	 * Creates a new {@link SqlCriterionProcessor} with the given executor and log mode,
+	 * using the default JDBC configuration provider.
+	 *
+	 * @param sqlRequestExecutor The executor to perform SQL requests.
+	 * @param logMode            Whether to enable logging mode.
+	 */
+	public SqlCriterionProcessor(final SqlRequestExecutor sqlRequestExecutor, final boolean logMode) {
+		this(sqlRequestExecutor, logMode, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link SqlCriterionProcessor} with the given executor, log mode,
+	 * and a custom JDBC configuration provider.
+	 *
+	 * @param sqlRequestExecutor        The executor to perform SQL requests.
+	 * @param logMode                   Whether to enable logging mode.
+	 * @param jdbcConfigurationProvider A function that retrieves the {@link JdbcConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public SqlCriterionProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final boolean logMode,
+		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
+	) {
+		this.sqlRequestExecutor = sqlRequestExecutor;
+		this.logMode = logMode;
+		this.jdbcConfigurationProvider = jdbcConfigurationProvider;
+	}
 
 	/**
 	 * Processes a SQL criterion by executing an SQL query.
@@ -61,10 +92,7 @@ public class SqlCriterionProcessor {
 			return CriterionTestResult.error(sqlCriterion, "Malformed criterion. Cannot perform detection.");
 		}
 
-		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(JdbcConfiguration.class);
+		final JdbcConfiguration jdbcConfiguration = jdbcConfigurationProvider.apply(telemetryManager);
 
 		if (jdbcConfiguration == null) {
 			return CriterionTestResult.error(sqlCriterion, "The SQL database credentials are not configured for this host.");
@@ -81,7 +109,7 @@ public class SqlCriterionProcessor {
 
 		final List<List<String>> queryResult;
 		try {
-			queryResult = sqlRequestExecutor.executeSql(hostname, cfg, sqlCriterion.getQuery(), false);
+			queryResult = sqlRequestExecutor.executeSql(hostname, cfg, sqlCriterion.getQuery(), false, telemetryManager);
 		} catch (Exception e) {
 			if (logMode) {
 				log.error("Hostname {} - Error executing SQL criterion: {}", hostname, e.getMessage());

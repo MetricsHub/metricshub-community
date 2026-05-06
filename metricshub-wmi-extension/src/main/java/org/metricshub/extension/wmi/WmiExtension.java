@@ -4,7 +4,7 @@ package org.metricshub.extension.wmi;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub WMI Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -56,6 +56,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.WinCommandService;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.extension.win.detection.WinCommandLineCriterionProcessor;
 import org.metricshub.extension.win.detection.WinProcessCriterionProcessor;
 import org.metricshub.extension.win.detection.WinServiceCriterionProcessor;
@@ -148,7 +149,14 @@ public class WmiExtension implements IProtocolExtension {
 		);
 
 		try {
-			wmiResult = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, WMI_TEST_QUERY, WMI_TEST_NAMESPACE);
+			wmiResult =
+				wmiRequestExecutor.executeWmi(
+					hostname,
+					wmiConfiguration,
+					WMI_TEST_QUERY,
+					WMI_TEST_NAMESPACE,
+					telemetryManager.getRecordOutputDirectory()
+				);
 		} catch (Exception e) {
 			if (wmiRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -188,7 +196,8 @@ public class WmiExtension implements IProtocolExtension {
 					processCriterion,
 					WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
 					connectorId,
-					logMode
+					logMode,
+					telemetryManager.getRecordOutputDirectory()
 				);
 		}
 
@@ -281,6 +290,19 @@ public class WmiExtension implements IProtocolExtension {
 		return IDENTIFIER;
 	}
 
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			WmiRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String query = queryNode.get("query").asText();
@@ -313,7 +335,7 @@ public class WmiExtension implements IProtocolExtension {
 	) {
 		List<List<String>> resultList;
 		try {
-			resultList = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, query, namespace);
+			resultList = wmiRequestExecutor.executeWmi(hostname, wmiConfiguration, query, namespace, null);
 		} catch (ClientException e) {
 			log.error("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e.getMessage());
 			log.debug("Hostname {}. Error while executing WMI query. Stack trace: {}", hostname, e);

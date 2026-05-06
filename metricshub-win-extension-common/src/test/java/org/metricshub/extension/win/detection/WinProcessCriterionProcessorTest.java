@@ -3,6 +3,7 @@ package org.metricshub.extension.win.detection;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doReturn;
 
 import org.junit.jupiter.api.Test;
@@ -38,12 +39,13 @@ class WinProcessCriterionProcessorTest {
 				any(IWinConfiguration.class),
 				any(WmiCriterion.class),
 				any(String.class),
-				eq(true)
+				eq(true),
+				isNull()
 			);
 
 		assertTrue(
 			winProcessCriterionProcessor
-				.process(processCriterion, WmiTestConfiguration.builder().build(), "testConnector", true)
+				.process(processCriterion, WmiTestConfiguration.builder().build(), "testConnector", true, null)
 				.isSuccess()
 		);
 	}
