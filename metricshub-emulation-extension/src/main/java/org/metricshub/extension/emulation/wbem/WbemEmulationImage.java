@@ -31,9 +31,9 @@ import lombok.Data;
  * <pre>
  * image:
  *   - request:
- *       wql: <WQL query>
- *       namespace: <WBEM namespace>
- *     response: <response file name>
+ *       wql: &lt;WQL query&gt;
+ *       namespace: &lt;WBEM namespace&gt;
+ *     response: &lt;response file name&gt;
  * </pre>
  */
 @Data

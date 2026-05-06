@@ -33,12 +33,12 @@ import lombok.NoArgsConstructor;
  * <pre>
  * image:
  *   - request:
- *       objectName: <JMX object name pattern>
+ *       objectName: &lt;JMX object name pattern&gt;
  *       attributes:
- *         - <attribute name>
+ *         - &lt;attribute name&gt;
  *       keyProperties:
- *         - <key property>
- *     response: <response file name>
+ *         - &lt;key property&gt;
+ *     response: &lt;response file name&gt;
  * </pre>
  */
 @Data

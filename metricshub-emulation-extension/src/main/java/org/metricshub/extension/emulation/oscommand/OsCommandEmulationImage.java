@@ -33,8 +33,8 @@ import lombok.NoArgsConstructor;
  * <p>Expected YAML shape:
  * <pre>
  * image:
- *   - command: <original command line>
- *     result: <response file name>
+ *   - command: &lt;original command line&gt;
+ *     result: &lt;response file name&gt;
  * </pre>
  */
 @Data

@@ -34,14 +34,14 @@ import lombok.NoArgsConstructor;
  * <pre>
  * image:
  *   - request:
- *       method: <HTTP method>
- *       path: <request path>
- *       body: <request body> # optional
+ *       method: &lt;HTTP method&gt;
+ *       path: &lt;request path&gt;
+ *       body: &lt;request body&gt; # optional
  *       headers:             # optional
- *         Header-Name: <header value>
+ *         Header-Name: &lt;header value&gt;
  *     response:
- *       file: <response file name>
- *       resultContent: <body|all|httpStatus>
+ *       file: &lt;response file name&gt;
+ *       resultContent: &lt;body|all|httpStatus&gt;
  * </pre>
  */
 @Data
