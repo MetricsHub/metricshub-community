@@ -5,6 +5,7 @@ import { useTheme } from "@mui/material/styles";
 
 import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
+import { SUPPORT_URL } from "../../utils/constants";
 
 import { NavLink } from "react-router-dom";
 import {
@@ -23,6 +24,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import DataObjectIcon from "@mui/icons-material/DataObject";
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -38,7 +40,7 @@ import { selectLastVisitedPath } from "../../store/slices/explorer-slice";
 import StatusText from "./status/StatusText";
 import OtelStatusIcon from "./status/OtelStatusIcon";
 import ProfileMenu from "./ProfileMenu";
-import DocsMenu from "./DocsMenu";
+import HelpMenu from "./HelpMenu";
 import ToggleTheme from "./ToggleTheme";
 
 // Refresh status every 30 seconds
@@ -258,8 +260,8 @@ const NavBar = ({ onToggleTheme }) => {
 
 					{/* ================= RIGHT SIDE ================= */}
 					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
-						{/* Docs menu - Desktop only */}
-						{!isSmallScreen && <DocsMenu />}
+						{/* Help menu - Desktop only */}
+						{!isSmallScreen && <HelpMenu />}
 						{/* Theme toggle - Desktop only */}
 						{!isSmallScreen && <ToggleTheme onClick={handleToggleTheme} />}
 						{/* Profile menu - Desktop only */}
@@ -364,6 +366,18 @@ const NavBar = ({ onToggleTheme }) => {
 											<DataObjectIcon fontSize="small" />
 										</ListItemIcon>
 										<ListItemText>OpenAPI</ListItemText>
+									</MenuItem>
+									<MenuItem
+										component="a"
+										href={SUPPORT_URL}
+										target="_blank"
+										rel="noopener noreferrer"
+										onClick={handleMobileMenuClose}
+									>
+										<ListItemIcon>
+											<SupportAgentIcon fontSize="small" />
+										</ListItemIcon>
+										<ListItemText>Support</ListItemText>
 									</MenuItem>
 									<MenuItem
 										onClick={() => {
