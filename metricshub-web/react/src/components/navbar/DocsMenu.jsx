@@ -3,6 +3,8 @@ import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Tooltip } from 
 import HelpIcon from "@mui/icons-material/Help";
 import MenuBookOutlinedIcon from "@mui/icons-material/MenuBookOutlined";
 import DataObjectIcon from "@mui/icons-material/DataObject";
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
+import { SUPPORT_URL } from "../../utils/constants";
 
 /**
  * Help / documentation menu with links to external docs and OpenAPI spec.
@@ -63,6 +65,18 @@ const DocsMenu = () => {
 						<DataObjectIcon fontSize="small" />
 					</ListItemIcon>
 					<ListItemText>OpenAPI</ListItemText>
+				</MenuItem>
+				<MenuItem
+					component="a"
+					href={SUPPORT_URL}
+					target="_blank"
+					rel="noopener noreferrer"
+					onClick={handleClose}
+				>
+					<ListItemIcon>
+						<SupportAgentIcon fontSize="small" />
+					</ListItemIcon>
+					<ListItemText>Support</ListItemText>
 				</MenuItem>
 			</Menu>
 		</>

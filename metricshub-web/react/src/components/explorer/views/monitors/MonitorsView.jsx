@@ -1,11 +1,45 @@
 import * as React from "react";
 import { useDispatch } from "react-redux";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, Alert, Link } from "@mui/material";
 import { formatRelativeTime } from "../../../../utils/formatters";
 import MonitorsHeader from "./components/MonitorsHeader";
 import ConnectorAccordion from "./components/ConnectorAccordion";
 import { setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
+import { SUPPORT_URL } from "../../../../utils/constants";
+
+/**
+ * Monitors section displayed inside the Resource page.
+ *
+ * - Shows H2 "Monitors".
+ * - For each monitor type, if instances count <= 20, lists all instances
+ *   and their metrics in a table.
+ * - If instances count > 20, shows a badge with the count that would
+ *   redirect to a dedicated monitor type page (navigation not wired yet).
+ * - Shows a "last updated" label based on when the resource
+ *   data was last fetched (provided by parent).
+ *
+ * @param {object} props - Component props
+ * @param {any[]} [props.connectors] - List of connectors
+ * @param {number | string | Date} [props.lastUpdatedAt] - Last updated timestamp
+ * @param {string} [props.resourceId] - The ID of the resource
+ * @param {string} [props.resourceName] - The name of the resource
+ * @param {string} [props.resourceGroupName] - The name of the resource group
+ */
+
+/**
+ * Alert component for displaying failed connectors.
+ */
+const FailedConnectorsAlert = ({ failedConnectorsDescription }) => (
+	<Alert severity="warning" sx={{ mb: 1 }}>
+		The following connectors have failed: {failedConnectorsDescription}. Please check the
+		detection criteria and logs for more details. Contact{" "}
+		<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+			support
+		</Link>{" "}
+		if you need assistance.
+	</Alert>
+);
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -27,6 +61,7 @@ import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
  */
 const MonitorsView = ({
 	connectors,
+	failedConnectors,
 	lastUpdatedAt,
 	resourceId,
 	resourceName,
@@ -44,6 +79,14 @@ const MonitorsView = ({
 	const safeConnectors = React.useMemo(
 		() => (Array.isArray(connectors) ? connectors : []),
 		[connectors],
+	);
+	const safeFailedConnectors = React.useMemo(
+		() => (Array.isArray(failedConnectors) ? failedConnectors : []),
+		[failedConnectors],
+	);
+	const failedConnectorsDescription = React.useMemo(
+		() => safeFailedConnectors.map((c) => c.name || c.id || "Unknown").join(", "),
+		[safeFailedConnectors],
 	);
 
 	const lastUpdatedLabel = React.useMemo(
@@ -73,6 +116,9 @@ const MonitorsView = ({
 		return (
 			<Box>
 				<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
+				{safeFailedConnectors.length > 0 && (
+					<FailedConnectorsAlert failedConnectorsDescription={failedConnectorsDescription} />
+				)}
 				<Typography variant="body2">No connectors available for this resource.</Typography>
 			</Box>
 		);
@@ -81,6 +127,9 @@ const MonitorsView = ({
 	return (
 		<Box display="flex" flexDirection="column">
 			<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
+			{safeFailedConnectors.length > 0 && (
+				<FailedConnectorsAlert failedConnectorsDescription={failedConnectorsDescription} />
+			)}
 
 			{safeConnectors.map((connector, connectorIndex) => (
 				<ConnectorAccordion

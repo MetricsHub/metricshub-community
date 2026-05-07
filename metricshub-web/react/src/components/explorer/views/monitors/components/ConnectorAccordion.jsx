@@ -9,6 +9,8 @@ import {
 	AccordionSummary,
 	AccordionDetails,
 	Tooltip,
+	Alert,
+	Link,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -32,6 +34,7 @@ import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
+import { SUPPORT_URL } from "../../../../../utils/constants";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
 
 import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
@@ -292,6 +295,7 @@ const ConnectorAccordion = ({
 
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);
+	const hasFailed = statusValue === "failed";
 
 	const metricKeys = connector.metrics ? Object.keys(connector.metrics) : [];
 	const showMetricsTable =
@@ -419,6 +423,15 @@ const ConnectorAccordion = ({
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
+				{hasFailed && (
+					<Alert severity="warning" sx={{ m: 2, mb: 0 }}>
+						This connector has failed. Contact{" "}
+						<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+							support
+						</Link>{" "}
+						if you need assistance.
+					</Alert>
+				)}
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (

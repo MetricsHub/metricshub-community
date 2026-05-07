@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Box, Stack, Typography, Alert, Collapse, IconButton, Divider } from "@mui/material";
+import { Box, Stack, Typography, Alert, Collapse, IconButton, Divider, Link } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
@@ -11,6 +11,8 @@ import AgentMetrics from "../components/agent/AgentMetrics";
 import KeyValueTable from "../components/agent/KeyValueTable";
 import LogFilesViewer from "../components/agent/LogFilesViewer";
 import { objectToRows, EXCLUDED_STATUS_KEYS } from "../components/agent/utils";
+import { SUPPORT_URL } from "../utils/constants";
+import { getLicenseWarning } from "../utils/license-warning";
 
 /**
  * Agent page component showing agent information, metrics, and actions.
@@ -38,6 +40,7 @@ function AgentPage() {
 		memoryTotalBytes,
 		cpuUsage,
 		licenseDaysRemaining,
+		licenseType,
 		agentInfo,
 	} = status || {};
 
@@ -48,15 +51,22 @@ function AgentPage() {
 
 	// Memoized license warning computation
 	const licenseWarning = React.useMemo(() => {
-		if (licenseDaysRemaining == null) return null;
-		if (licenseDaysRemaining < 7) {
-			return { severity: "error", message: `License expires in ${licenseDaysRemaining} days!` };
-		}
-		if (licenseDaysRemaining < 30) {
-			return { severity: "warning", message: `License expires in ${licenseDaysRemaining} days.` };
-		}
-		return null;
-	}, [licenseDaysRemaining]);
+		const warning = getLicenseWarning({ licenseDaysRemaining, licenseType });
+		if (!warning) return null;
+
+		return {
+			severity: warning.severity,
+			message: (
+				<>
+					{warning.message} {" "}
+					<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+						support
+					</Link>
+					{warning.suffix}
+				</>
+			),
+		};
+	}, [licenseDaysRemaining, licenseType]);
 
 	// Memoized agent info rows
 	const agentInfoRows = React.useMemo(
