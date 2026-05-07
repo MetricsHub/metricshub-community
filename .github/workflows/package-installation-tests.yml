@@ -305,25 +305,20 @@ jobs:
           }
 
           if ($status -eq 'passed') {
-            $candidates = @(
-              "$env:ProgramFiles\\MetricsHub\\bin\\metricshub.bat",
-              "$env:ProgramFiles\\MetricsHub\\bin\\metricshub.exe",
-              "$env:ProgramFiles\\MetricsHub Community\\bin\\metricshub.bat",
-              "$env:ProgramFiles\\MetricsHub Community\\bin\\metricshub.exe",
-              "$env:ProgramFiles\\Metricshub\\bin\\metricshub.bat",
-              "$env:ProgramFiles\\Metricshub\\bin\\metricshub.exe"
-            )
+            $installRoot = Join-Path $env:ProgramFiles 'MetricsHub'
+            $binary = $null
 
-            $binary = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (Test-Path $installRoot) {
+              $binary = Get-ChildItem -Path $installRoot -Recurse -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -ieq 'MetricsHub.exe' } |
+                Select-Object -ExpandProperty FullName -First 1
+            }
+
             if (-not $binary) {
               $status = 'failed'
-              $details = 'metricshub binary not found after msi installation'
+              $details = "MetricsHub.exe not found under $installRoot after msi installation"
             } else {
-              if ($binary.ToLowerInvariant().EndsWith('.bat')) {
-                $versionOutput = cmd /c "`"$binary`" --version" 2>&1 | Out-String
-              } else {
-                $versionOutput = & $binary --version 2>&1 | Out-String
-              }
+              $versionOutput = & $binary --version 2>&1 | Out-String
             }
           }
         }
@@ -335,19 +330,15 @@ jobs:
           }
           Expand-Archive -Path $package.FullName -DestinationPath $extractPath -Force
 
-          $binary = Get-ChildItem -Path $extractPath -Recurse -File |
-            Where-Object { $_.Name -ieq 'metricshub.bat' -or $_.Name -ieq 'metricshub.exe' } |
-            Select-Object -First 1
+          $binary = Get-ChildItem -Path $extractPath -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -ieq 'MetricsHub.exe' } |
+            Select-Object -ExpandProperty FullName -First 1
 
           if (-not $binary) {
             $status = 'failed'
-            $details = 'metricshub binary not found in zip archive'
+            $details = "MetricsHub.exe not found in zip archive under $extractPath"
           } else {
-            if ($binary.Extension -ieq '.bat') {
-              $versionOutput = cmd /c "`"$($binary.FullName)`" --version" 2>&1 | Out-String
-            } else {
-              $versionOutput = & $binary.FullName --version 2>&1 | Out-String
-            }
+            $versionOutput = & $binary --version 2>&1 | Out-String
           }
         }
 
