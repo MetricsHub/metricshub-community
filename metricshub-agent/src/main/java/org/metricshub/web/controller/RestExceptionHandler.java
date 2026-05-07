@@ -36,6 +36,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
@@ -182,15 +183,18 @@ public class RestExceptionHandler {
 	 */
 	@ExceptionHandler(BindException.class)
 	public ResponseEntity<Map<String, String>> handleValidationExceptions(final BindException ex) {
-		final Map<String, String> errors = ex
-			.getBindingResult()
-			.getFieldErrors()
-			.stream()
-			.map(error ->
-				Map.entry(error.getField(), error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value")
-			)
-			.collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
-		return ResponseEntity.badRequest().body(errors);
+		return ResponseEntity.badRequest().body(fieldErrorsToMap(ex));
+	}
+
+	/**
+	 * Handle {@link MethodArgumentNotValidException} (e.g. {@code @Valid} on {@code @RequestBody}).
+	 *
+	 * @param ex the exception to handle
+	 * @return a ResponseEntity containing the validation errors
+	 */
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<Map<String, String>> handleMethodArgumentNotValid(final MethodArgumentNotValidException ex) {
+		return ResponseEntity.badRequest().body(fieldErrorsToMap(ex));
 	}
 
 	/**
@@ -205,5 +209,25 @@ public class RestExceptionHandler {
 	@ExceptionHandler(TextPlainException.class)
 	public ResponseEntity<String> handleTextPlainException(final TextPlainException ex) {
 		return ResponseEntity.status(ex.getStatus()).contentType(MediaType.TEXT_PLAIN).body(ex.getMessage());
+	}
+
+	private static Map<String, String> fieldErrorsToMap(
+		final org.springframework.validation.BindingResult bindingResult
+	) {
+		return bindingResult
+			.getFieldErrors()
+			.stream()
+			.map(error ->
+				Map.entry(error.getField(), error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value")
+			)
+			.collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
+	}
+
+	private static Map<String, String> fieldErrorsToMap(final BindException ex) {
+		return fieldErrorsToMap(ex.getBindingResult());
+	}
+
+	private static Map<String, String> fieldErrorsToMap(final MethodArgumentNotValidException ex) {
+		return fieldErrorsToMap(ex.getBindingResult());
 	}
 }
