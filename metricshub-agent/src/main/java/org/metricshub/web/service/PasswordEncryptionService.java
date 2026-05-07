@@ -70,7 +70,12 @@ public class PasswordEncryptionService {
 
 			try {
 				final char[] encrypted = SecurityManager.encrypt(passwordChars, getKeyStoreFile(true));
-				return new String(encrypted);
+				try {
+					return new String(encrypted);
+				} finally {
+					// Wipe the encrypted char array after converting to String
+					Arrays.fill(encrypted, '\0');
+				}
 			} finally {
 				Arrays.fill(passwordChars, '\0');
 			}
