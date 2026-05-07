@@ -32,8 +32,8 @@ import { SUPPORT_URL } from "../../../../utils/constants";
  */
 const FailedConnectorsAlert = ({ failedConnectorsDescription }) => (
 	<Alert severity="warning" sx={{ mb: 1 }}>
-		The following connectors have failed: {failedConnectorsDescription}. Please check the
-		detection criteria and logs for more details. Contact{" "}
+		The following connectors have failed: {failedConnectorsDescription}. Please check the detection
+		criteria and logs for more details. Contact{" "}
 		<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
 			support
 		</Link>{" "}

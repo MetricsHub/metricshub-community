@@ -58,7 +58,7 @@ function AgentPage() {
 			severity: warning.severity,
 			message: (
 				<>
-					{warning.message} {" "}
+					{warning.message}{" "}
 					<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
 						support
 					</Link>

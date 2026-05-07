@@ -18,7 +18,9 @@ describe("MonitorsView failed connectors alert", () => {
 		);
 
 		expect(screen.getByText(/The following connectors have failed/i)).toBeInTheDocument();
-		expect(screen.getByText(/Please check the detection\/activation criteria and logs/i)).toBeInTheDocument();
+		expect(
+			screen.getByText(/Please check the detection\/activation criteria and logs/i),
+		).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: /support/i })).toHaveAttribute(
 			"href",
 			"https://support.metricshub.com/",

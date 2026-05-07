@@ -9,7 +9,8 @@ export const getLicenseWarning = ({ licenseDaysRemaining, licenseType }) => {
 		if (licenseType === "Enterprise") {
 			return {
 				severity: "error",
-				message: "No valid enterprise license was detected. If your trial period has expired, please",
+				message:
+					"No valid enterprise license was detected. If your trial period has expired, please",
 				includeSupportLink: true,
 				suffix: ".",
 			};
