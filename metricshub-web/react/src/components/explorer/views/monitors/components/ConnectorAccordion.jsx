@@ -9,7 +9,6 @@ import {
 	AccordionSummary,
 	AccordionDetails,
 	Tooltip,
-	Alert,
 	Link,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
@@ -35,6 +34,7 @@ import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
 import { SUPPORT_URL } from "../../../../../utils/constants";
+import AppAlert from "../../../../common/AppAlert";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
 
 import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
@@ -424,13 +424,13 @@ const ConnectorAccordion = ({
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
 				{hasFailed && (
-					<Alert severity="warning" sx={{ m: 2, mb: 0 }}>
+					<AppAlert severity="warning" sx={{ m: 2, mb: 0 }}>
 						This connector has failed. Contact{" "}
 						<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
 							support
 						</Link>{" "}
 						if you need assistance.
-					</Alert>
+					</AppAlert>
 				)}
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||

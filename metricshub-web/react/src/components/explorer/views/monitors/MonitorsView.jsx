@@ -1,12 +1,13 @@
 import * as React from "react";
 import { useDispatch } from "react-redux";
-import { Box, Typography, Alert, Link } from "@mui/material";
+import { Box, Typography, Link } from "@mui/material";
 import { formatRelativeTime } from "../../../../utils/formatters";
 import MonitorsHeader from "./components/MonitorsHeader";
 import ConnectorAccordion from "./components/ConnectorAccordion";
 import { setMonitorExpanded } from "../../../../store/slices/explorer-slice";
 import { useScrollToHash } from "../../../../hooks/use-scroll-to-hash";
 import { SUPPORT_URL } from "../../../../utils/constants";
+import AppAlert from "../../../common/AppAlert";
 
 /**
  * Monitors section displayed inside the Resource page.
@@ -31,14 +32,14 @@ import { SUPPORT_URL } from "../../../../utils/constants";
  * Alert component for displaying failed connectors.
  */
 const FailedConnectorsAlert = ({ failedConnectorsDescription }) => (
-	<Alert severity="warning" sx={{ mb: 1 }}>
+	<AppAlert severity="warning">
 		The following connectors have failed: {failedConnectorsDescription}. Please check the detection
 		criteria and logs for more details. Contact{" "}
 		<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
 			support
 		</Link>{" "}
 		if you need assistance.
-	</Alert>
+	</AppAlert>
 );
 
 /**
