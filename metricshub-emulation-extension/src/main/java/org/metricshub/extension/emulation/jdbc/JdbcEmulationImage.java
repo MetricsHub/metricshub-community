@@ -32,8 +32,8 @@ import lombok.NoArgsConstructor;
  * <p>Expected YAML shape:
  * <pre>
  * image:
- *   - query: <SQL query>
- *     response: <response file name>
+ *   - query: &lt;SQL query&gt;
+ *     response: &lt;response file name&gt;
  * </pre>
  */
 @Data

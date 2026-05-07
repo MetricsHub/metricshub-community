@@ -32,8 +32,8 @@ import lombok.NoArgsConstructor;
  * <p>Expected YAML shape:
  * <pre>
  * image:
- *   - request: <request identifier>
- *     response: <response file name>
+ *   - request: &lt;request identifier&gt;
+ *     response: &lt;response file name&gt;
  * </pre>
  */
 @Data
