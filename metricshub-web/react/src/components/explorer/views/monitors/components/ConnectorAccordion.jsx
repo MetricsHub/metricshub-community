@@ -296,6 +296,11 @@ const ConnectorAccordion = ({
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);
 	const hasFailed = statusValue === "failed";
+	const [showFailedAlert, setShowFailedAlert] = React.useState(true);
+
+	React.useEffect(() => {
+		setShowFailedAlert(true);
+	}, [hasFailed, connectorKey]);
 
 	const metricKeys = connector.metrics ? Object.keys(connector.metrics) : [];
 	const showMetricsTable =
@@ -423,8 +428,13 @@ const ConnectorAccordion = ({
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
-				{hasFailed && (
-					<AppAlert severity="warning" sx={{ m: 2, mb: 0 }}>
+				{hasFailed && showFailedAlert && (
+					<AppAlert
+						severity="warning"
+						sx={{ m: 2, mb: 0 }}
+						closable
+						onClose={() => setShowFailedAlert(false)}
+					>
 						This connector has failed. Contact{" "}
 						<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
 							support

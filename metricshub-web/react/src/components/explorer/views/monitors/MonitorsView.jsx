@@ -31,8 +31,8 @@ import AppAlert from "../../../common/AppAlert";
 /**
  * Alert component for displaying failed connectors.
  */
-const FailedConnectorsAlert = ({ failedConnectorsDescription }) => (
-	<AppAlert severity="warning">
+const FailedConnectorsAlert = ({ failedConnectorsDescription, onClose }) => (
+	<AppAlert severity="warning" closable onClose={onClose}>
 		The following connectors have failed: {failedConnectorsDescription}. Please check the detection
 		criteria and logs for more details. Contact{" "}
 		<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
@@ -69,6 +69,7 @@ const MonitorsView = ({
 	resourceGroupName,
 }) => {
 	const dispatch = useDispatch();
+	const [showFailedConnectorsAlert, setShowFailedConnectorsAlert] = React.useState(true);
 	// Force re-render every 5 seconds to update "last updated" relative time
 	const [_now, setNow] = React.useState(Date.now());
 
@@ -89,6 +90,10 @@ const MonitorsView = ({
 		() => safeFailedConnectors.map((c) => c.name || c.id || "Unknown").join(", "),
 		[safeFailedConnectors],
 	);
+
+	React.useEffect(() => {
+		setShowFailedConnectorsAlert(true);
+	}, [failedConnectorsDescription]);
 
 	const lastUpdatedLabel = React.useMemo(
 		() => (!lastUpdatedAt ? "Never" : formatRelativeTime(lastUpdatedAt)),
@@ -117,8 +122,11 @@ const MonitorsView = ({
 		return (
 			<Box>
 				<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
-				{safeFailedConnectors.length > 0 && (
-					<FailedConnectorsAlert failedConnectorsDescription={failedConnectorsDescription} />
+				{safeFailedConnectors.length > 0 && showFailedConnectorsAlert && (
+					<FailedConnectorsAlert
+						failedConnectorsDescription={failedConnectorsDescription}
+						onClose={() => setShowFailedConnectorsAlert(false)}
+					/>
 				)}
 				<Typography variant="body2">No connectors available for this resource.</Typography>
 			</Box>
@@ -128,8 +136,11 @@ const MonitorsView = ({
 	return (
 		<Box display="flex" flexDirection="column">
 			<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
-			{safeFailedConnectors.length > 0 && (
-				<FailedConnectorsAlert failedConnectorsDescription={failedConnectorsDescription} />
+			{safeFailedConnectors.length > 0 && showFailedConnectorsAlert && (
+				<FailedConnectorsAlert
+					failedConnectorsDescription={failedConnectorsDescription}
+					onClose={() => setShowFailedConnectorsAlert(false)}
+				/>
 			)}
 
 			{safeConnectors.map((connector, connectorIndex) => (

@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Box, Stack, Typography, Alert, Collapse, IconButton, Divider, Link } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Box, Stack, Typography, Collapse, Divider, Link } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
 import { useSnackbar } from "../hooks/use-snackbar";
@@ -13,6 +12,7 @@ import LogFilesViewer from "../components/agent/LogFilesViewer";
 import { objectToRows, EXCLUDED_STATUS_KEYS } from "../components/agent/utils";
 import { SUPPORT_URL } from "../utils/constants";
 import { getLicenseWarning } from "../utils/license-warning";
+import AppAlert from "../components/common/AppAlert";
 
 /**
  * Agent page component showing agent information, metrics, and actions.
@@ -31,6 +31,7 @@ function AgentPage() {
 	const restarting = useAppSelector((s) => s.applicationStatus?.restarting);
 
 	const [showLicenseWarning, setShowLicenseWarning] = React.useState(true);
+	const [showStatusError, setShowStatusError] = React.useState(true);
 
 	// Destructure status values with defaults
 	const {
@@ -105,6 +106,10 @@ function AgentPage() {
 		setShowLicenseWarning(false);
 	}, []);
 
+	React.useEffect(() => {
+		setShowStatusError(true);
+	}, [error]);
+
 	return (
 		<Box
 			sx={{
@@ -127,26 +132,22 @@ function AgentPage() {
 				{/* License Warning */}
 				{licenseWarning && (
 					<Collapse in={showLicenseWarning}>
-						<Alert
+						<AppAlert
 							severity={licenseWarning.severity}
-							action={
-								<IconButton
-									aria-label="close"
-									color="inherit"
-									size="small"
-									onClick={handleCloseLicenseWarning}
-								>
-									<CloseIcon fontSize="inherit" />
-								</IconButton>
-							}
+							closable
+							onClose={handleCloseLicenseWarning}
 						>
 							{licenseWarning.message}
-						</Alert>
+						</AppAlert>
 					</Collapse>
 				)}
 
 				{/* Error */}
-				{error && <Alert severity="error">{error}</Alert>}
+				{error && showStatusError && (
+					<AppAlert severity="error" closable onClose={() => setShowStatusError(false)}>
+						{error}
+					</AppAlert>
+				)}
 
 				{/* Stats Cards */}
 				<AgentMetrics

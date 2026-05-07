@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Typography, Box, Stack, Alert, Collapse, IconButton, Link } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Typography, Box, Stack, Collapse, Link } from "@mui/material";
 import EntityHeader from "../common/EntityHeader";
 import MetricsAccordion from "../common/MetricsAccordion";
 import MetricCard from "../../../common/MetricCard";
@@ -9,6 +8,7 @@ import { formatBytes } from "../../../../utils/formatters";
 import { gradients, getUsageColorScheme } from "../../../../theme/colors";
 import { SUPPORT_URL } from "../../../../utils/constants";
 import { getLicenseWarning } from "../../../../utils/license-warning";
+import AppAlert from "../../../common/AppAlert";
 
 /**
  * Agent header, attributes and metrics section for the welcome page.
@@ -125,21 +125,13 @@ const AgentData = ({ agent, totalResources, status }) => {
 		<Box display="flex" flexDirection="column" gap={2}>
 			{licenseWarning && (
 				<Collapse in={showLicenseWarning}>
-					<Alert
+					<AppAlert
 						severity={licenseWarning.severity}
-						action={
-							<IconButton
-								aria-label="close"
-								color="inherit"
-								size="small"
-								onClick={() => setShowLicenseWarning(false)}
-							>
-								<CloseIcon fontSize="inherit" />
-							</IconButton>
-						}
+						closable
+						onClose={() => setShowLicenseWarning(false)}
 					>
 						{licenseWarning.message}
-					</Alert>
+					</AppAlert>
 				</Collapse>
 			)}
 
