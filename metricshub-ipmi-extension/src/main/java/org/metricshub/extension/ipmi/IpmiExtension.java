@@ -48,6 +48,9 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
 
+/**
+ * The IpmiExtension class implements the IProtocolExtension interface to provide support for the IPMI (Intelligent Platform Management Interface) protocol in the MetricsHub engine.
+ */
 @Slf4j
 public class IpmiExtension implements IProtocolExtension {
 
@@ -148,6 +151,10 @@ public class IpmiExtension implements IProtocolExtension {
 			final String result = ipmiRequestExecutor.executeIpmiGetSensors(hostname, ipmiConfiguration);
 
 			if (result != null) {
+				final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+				if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+					IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.GET_SENSORS_REQUEST, result);
+				}
 				return SourceTable.builder().rawData(result).build();
 			} else {
 				log.error("Hostname {} - IPMI-over-LAN request returned <null> result. Returning an empty table.", hostname);
@@ -191,6 +198,11 @@ public class IpmiExtension implements IProtocolExtension {
 					.builder()
 					.message("Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.")
 					.build();
+			}
+
+			final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+				IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.IPMI_DETECTION_REQUEST, result);
 			}
 
 			return CriterionTestResult
@@ -260,6 +272,19 @@ public class IpmiExtension implements IProtocolExtension {
 	@Override
 	public String getIdentifier() {
 		return IDENTIFIER;
+	}
+
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			IpmiRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
 	}
 
 	@Override

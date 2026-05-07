@@ -60,7 +60,7 @@ class SqlCriterionProcessorTest {
 		String expectedResult = List.of(List.of("row1_col1", "row1_col2")).toString();
 		SqlCriterion sqlCriterion = SqlCriterion.builder().query(query).expectedResult(expectedResult).build();
 		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
-		when(sqlRequestExecutor.executeSql(any(), eq(jdbcConfiguration), eq(query), eq(false)))
+		when(sqlRequestExecutor.executeSql(any(), eq(jdbcConfiguration), eq(query), eq(false), any()))
 			.thenReturn(List.of(List.of("row1_col1", "row1_col2")));
 
 		CriterionTestResult criterionTestResult = sqlCriterionProcessor.process(sqlCriterion, telemetryManager);
@@ -104,7 +104,8 @@ class SqlCriterionProcessorTest {
 				any(String.class),
 				any(JdbcConfiguration.class),
 				any(String.class),
-				any(Boolean.class)
+				any(Boolean.class),
+				any()
 			)
 		)
 			.thenThrow(new RuntimeException("Test exception"));
@@ -127,7 +128,8 @@ class SqlCriterionProcessorTest {
 				any(String.class),
 				any(JdbcConfiguration.class),
 				any(String.class),
-				any(Boolean.class)
+				any(Boolean.class),
+				any()
 			)
 		)
 			.thenReturn(null);

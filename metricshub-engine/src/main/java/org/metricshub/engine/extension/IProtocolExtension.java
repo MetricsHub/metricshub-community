@@ -165,4 +165,15 @@ public interface IProtocolExtension {
 	 * @throws Exception if the query execution fails due to an error or unexpected condition.
 	 */
 	String executeQuery(IConfiguration configuration, JsonNode queryNode) throws Exception;
+
+	/**
+	 * Invoked when a recording session ends for a host.
+	 *
+	 * <p>Extensions that buffer recording data in memory can override this hook
+	 * to flush buffered payloads and release related resources. Implementations
+	 * that do not record data can rely on this default no-op behavior.
+	 *
+	 * @param telemetryManager The telemetry manager of the completed session.
+	 */
+	default void onRecordingSessionEnd(TelemetryManager telemetryManager) {}
 }

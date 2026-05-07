@@ -28,6 +28,7 @@ import java.util.List;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.jdbc.client.JdbcClient;
 import org.metricshub.extension.jdbc.client.SqlResult;
 
@@ -40,10 +41,11 @@ public class SqlRequestExecutor {
 	/**
 	 * Execute an SQL query using the provided configuration and return the result.
 	 *
-	 * @param hostname        The hostname of the database server.
-	 * @param jdbcConfig      JDBC configuration including URL, username, password, and timeout.
-	 * @param sqlQuery        The SQL query to execute.
-	 * @param showWarnings    Whether to show SQL warnings.
+	 * @param hostname         The hostname of the database server.
+	 * @param jdbcConfig       JDBC configuration including URL, username, password, and timeout.
+	 * @param sqlQuery         The SQL query to execute.
+	 * @param showWarnings     Whether to show SQL warnings.
+	 * @param telemetryManager The telemetry manager providing host properties.
 	 * @return A {@link List} of {@link List} of {@link String}s representing the result table.
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -52,7 +54,8 @@ public class SqlRequestExecutor {
 		@SpanAttribute("host.hostname") final String hostname,
 		@SpanAttribute("jdbc.config") @NonNull final JdbcConfiguration jdbcConfig,
 		@SpanAttribute("sql.query") @NonNull final String sqlQuery,
-		@SpanAttribute("sql.showWarnings") final boolean showWarnings
+		@SpanAttribute("sql.showWarnings") final boolean showWarnings,
+		final TelemetryManager telemetryManager
 	) throws ClientException {
 		try {
 			final String url = String.valueOf(jdbcConfig.getUrl());
@@ -97,6 +100,14 @@ public class SqlRequestExecutor {
 				jdbcConfig.getTimeout(),
 				results
 			);
+
+			// Record the JDBC exchange if recording is enabled
+			if (telemetryManager != null) {
+				final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+				if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+					JdbcRecorder.getInstance(recordOutputDirectory).record(sqlQuery, results);
+				}
+			}
 
 			return results;
 		} catch (SQLException e) {

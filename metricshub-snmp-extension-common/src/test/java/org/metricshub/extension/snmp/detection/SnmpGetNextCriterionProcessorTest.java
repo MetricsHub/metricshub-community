@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,9 +66,7 @@ public class SnmpGetNextCriterionProcessorTest {
 		String expectedResult = "1.3.6.1.2.1.1.1.0 OID_TYPE TestValue";
 		String expectedHostname = "hostname";
 
-		when(
-			snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, null, "hostname")
-		)
+		when(snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, "hostname"))
 			.thenReturn(expectedResult);
 
 		SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
@@ -130,7 +127,6 @@ public class SnmpGetNextCriterionProcessorTest {
 				any(ISnmpConfiguration.class),
 				any(String.class),
 				any(Boolean.class),
-				isNull(),
 				any()
 			)
 		)

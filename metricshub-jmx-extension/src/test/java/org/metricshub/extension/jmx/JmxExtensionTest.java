@@ -136,7 +136,7 @@ class JmxExtensionTest {
 
 		// Mock behavior: delegate to JmxSourceProcessor, which internally uses our mocked executor
 		final List<List<String>> table = List.of(List.of("value1"));
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any())).thenReturn(table);
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any(), any())).thenReturn(table);
 
 		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("my-host").build();
 		final HostConfiguration hostConfig = mock(HostConfiguration.class);
@@ -168,7 +168,7 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
 
 		// Mock response from fetchBeanInfo
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any()))
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any(), any()))
 			.thenReturn(List.of(List.of("12345")));
 
 		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager, true);
@@ -224,7 +224,8 @@ class JmxExtensionTest {
 		final List<List<String>> rows = List.of(List.of("Key1Val", "Attr1Val", "Attr2Val"));
 
 		// Mock fetchBeanInfo result
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any())).thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any()))
+			.thenReturn(rows);
 
 		// Run executeQuery
 		final String table = jmxExtension.executeQuery(config, query);
@@ -408,7 +409,8 @@ class JmxExtensionTest {
 		);
 
 		final List<List<String>> rows = List.of(List.of("G1YoungGen"));
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any())).thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any()))
+			.thenReturn(rows);
 
 		final String table = jmxExtension.executeQuery(config, query);
 

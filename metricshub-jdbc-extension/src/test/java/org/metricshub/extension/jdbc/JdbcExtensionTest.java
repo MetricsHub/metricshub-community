@@ -14,6 +14,8 @@ import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.engine.common.exception.ClientException;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
@@ -185,7 +188,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("1")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -204,7 +207,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of())
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -224,7 +227,7 @@ class JdbcExtensionTest {
 
 		doThrow(new ClientException("SQL query failed"))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -259,7 +262,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("value1", "value2")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
 
@@ -358,10 +361,22 @@ class JdbcExtensionTest {
 	}
 
 	@Test
+	void testOnRecordingSessionEndFlushesRecorder(@TempDir final Path tempDir) {
+		final String recordOutputDirectory = tempDir.toString();
+		JdbcRecorder.getInstance(recordOutputDirectory).record("SELECT 1", List.of(List.of("1")));
+
+		jdbcExtension.onRecordingSessionEnd(
+			TelemetryManager.builder().recordOutputDirectory(recordOutputDirectory).build()
+		);
+
+		assertTrue(Files.isRegularFile(tempDir.resolve(JdbcRecorder.JDBC_SUBDIR).resolve(JdbcRecorder.IMAGE_YAML)));
+	}
+
+	@Test
 	void tesExecuteQuery() throws Exception {
 		doReturn(SQL_RESULT)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
@@ -381,7 +396,7 @@ class JdbcExtensionTest {
 	void tesExecuteQueryThrow() throws Exception {
 		doThrow(ClientException.class)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));

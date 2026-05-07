@@ -24,8 +24,7 @@ package org.metricshub.extension.jdbc;
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import java.util.List;
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
@@ -35,15 +34,46 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 /**
  * A class responsible for processing SQL sources and returning the result as a {@link SourceTable}.
  */
-@RequiredArgsConstructor
 @Slf4j
 public class SqlSourceProcessor {
 
-	@NonNull
 	private SqlRequestExecutor sqlRequestExecutor;
-
-	@NonNull
 	private String connectorId;
+	private Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider;
+
+	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER =
+		telemetryManager ->
+			(JdbcConfiguration) telemetryManager.getHostConfiguration().getConfigurations().get(JdbcConfiguration.class);
+
+	/**
+	 * Creates a new {@link SqlSourceProcessor} with the given executor and connector ID,
+	 * using the default JDBC configuration provider.
+	 *
+	 * @param sqlRequestExecutor The executor to perform SQL requests.
+	 * @param connectorId        The connector identifier.
+	 */
+	public SqlSourceProcessor(final SqlRequestExecutor sqlRequestExecutor, final String connectorId) {
+		this(sqlRequestExecutor, connectorId, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link SqlSourceProcessor} with the given executor, connector ID,
+	 * and a custom JDBC configuration provider.
+	 *
+	 * @param sqlRequestExecutor        The executor to perform SQL requests.
+	 * @param connectorId               The connector identifier.
+	 * @param jdbcConfigurationProvider A function that retrieves the {@link JdbcConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public SqlSourceProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final String connectorId,
+		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
+	) {
+		this.sqlRequestExecutor = sqlRequestExecutor;
+		this.connectorId = connectorId;
+		this.jdbcConfigurationProvider = jdbcConfigurationProvider;
+	}
 
 	/**
 	 * Processes a SQL source by executing its associated SQL query using the configuration and hostname retrieved
@@ -55,10 +85,7 @@ public class SqlSourceProcessor {
 	 * @return A {@link SourceTable} containing the results of the executed query, or an empty table if an error occurs.
 	 */
 	public SourceTable process(final SqlSource sqlSource, final TelemetryManager telemetryManager) {
-		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) telemetryManager
-			.getHostConfiguration()
-			.getConfigurations()
-			.get(JdbcConfiguration.class);
+		final JdbcConfiguration jdbcConfiguration = jdbcConfigurationProvider.apply(telemetryManager);
 
 		if (jdbcConfiguration == null) {
 			log.debug(
@@ -81,7 +108,13 @@ public class SqlSourceProcessor {
 		}
 
 		try {
-			final List<List<String>> results = sqlRequestExecutor.executeSql(hostname, cfg, sqlSource.getQuery(), false);
+			final List<List<String>> results = sqlRequestExecutor.executeSql(
+				hostname,
+				cfg,
+				sqlSource.getQuery(),
+				false,
+				telemetryManager
+			);
 
 			return SourceTable.builder().table(results).rawData(SourceTable.tableToCsv(results, TABLE_SEP, true)).build();
 		} catch (Exception e) {

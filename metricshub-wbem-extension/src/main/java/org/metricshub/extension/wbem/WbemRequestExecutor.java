@@ -38,6 +38,9 @@ import org.metricshub.wbem.client.WbemExecutor;
 import org.metricshub.wbem.client.WbemQueryResult;
 import org.metricshub.wbem.javax.wbem.WBEMException;
 
+/**
+ * Provides functionality to execute WBEM queries, including handling vCenter authentication when needed.
+ */
 @Slf4j
 public class WbemRequestExecutor {
 
@@ -83,12 +86,20 @@ public class WbemRequestExecutor {
 		@NonNull final TelemetryManager telemetryManager,
 		final String resourceHostname
 	) throws ClientException {
+		List<List<String>> result;
 		// handle vCenter case
 		if (wbemConfig.getVCenter() != null) {
-			return doVCenterQuery(hostname, wbemConfig, query, namespace, telemetryManager, resourceHostname);
+			result = doVCenterQuery(hostname, wbemConfig, query, namespace, telemetryManager, resourceHostname);
 		} else {
-			return doWbemQuery(hostname, wbemConfig, query, namespace);
+			result = doWbemQuery(hostname, wbemConfig, query, namespace);
 		}
+
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank() && result != null) {
+			WbemRecorder.getInstance(recordOutputDirectory).record(query, namespace, result);
+		}
+
+		return result;
 	}
 
 	/**
