@@ -39,7 +39,7 @@ class ProtocolHealthCheckStrategyTest {
 	private static IProtocolExtension protocolExtensionMock;
 
 	@Mock
-	private static IProtocolExtension secondProtocolExtensionMock;
+	private static IProtocolExtension additionalProtocolExtensionMock;
 
 	static Map<String, Map<String, Monitor>> monitors;
 
@@ -165,20 +165,20 @@ class ProtocolHealthCheckStrategyTest {
 		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
 		final ExtensionManager extensionManager = ExtensionManager
 			.builder()
-			.withProtocolExtensions(List.of(protocolExtensionMock, secondProtocolExtensionMock))
+			.withProtocolExtensions(List.of(protocolExtensionMock, additionalProtocolExtensionMock))
 			.build();
 
 		doReturn(true)
 			.when(protocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 		doReturn(true)
-			.when(secondProtocolExtensionMock)
+			.when(additionalProtocolExtensionMock)
 			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
 
 		doReturn("snmp").when(protocolExtensionMock).getIdentifier();
-		doReturn("ssh").when(secondProtocolExtensionMock).getIdentifier();
+		doReturn("ssh").when(additionalProtocolExtensionMock).getIdentifier();
 		doReturn(Optional.of(false)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
-		doReturn(Optional.of(true)).when(secondProtocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+		doReturn(Optional.of(true)).when(additionalProtocolExtensionMock).checkProtocol(any(TelemetryManager.class));
 
 		final ProtocolHealthCheckStrategy healthCheckStrategy = new ProtocolHealthCheckStrategy(
 			telemetryManager,

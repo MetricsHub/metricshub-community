@@ -93,7 +93,9 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 
 		boolean observed = false;
 		for (final IProtocolExtension protocolExtension : protocolExtensions) {
-			observed = checkAndCollectProtocolMetrics(protocolExtension) || observed;
+			if (checkAndCollectProtocolMetrics(protocolExtension)) {
+				observed = true;
+			}
 		}
 		collectHostObserved(observed ? UP : DOWN);
 	}
