@@ -27,13 +27,14 @@ class HostMetricsDefinitionLoaderTest {
 	void testAllMetricsLoaded() {
 		final Map<String, MetricDefinition> metrics = HostMetricsDefinitionLoader.getInstance().getHostMetricDefinitions();
 		assertNotNull(metrics, "Host metric definitions map should not be null");
-		// metricshub-host-metrics.yaml defines 9 metrics
-		assertTrue(metrics.size() >= 9, "Expected at least 9 host metric definitions, got " + metrics.size());
+		// metricshub-host-metrics.yaml defines 10 metrics
+		assertTrue(metrics.size() >= 10, "Expected at least 10 host metric definitions, got " + metrics.size());
 		assertTrue(metrics.containsKey("hw.host.ambient_temperature"), "Should contain hw.host.ambient_temperature");
 		assertTrue(metrics.containsKey("hw.host.energy"), "Should contain hw.host.energy");
 		assertTrue(metrics.containsKey("hw.host.heating_margin"), "Should contain hw.host.heating_margin");
 		assertTrue(metrics.containsKey("hw.host.power"), "Should contain hw.host.power");
 		assertTrue(metrics.containsKey("metricshub.host.configured"), "Should contain metricshub.host.configured");
+		assertTrue(metrics.containsKey("metricshub.host.observed"), "Should contain metricshub.host.observed");
 		assertTrue(metrics.containsKey("metricshub.host.up"), "Should contain metricshub.host.up");
 		assertTrue(metrics.containsKey("hw.status"), "Should contain hw.status");
 		assertTrue(metrics.containsKey("metricshub.host.response_time"), "Should contain metricshub.host.response_time");
@@ -71,6 +72,17 @@ class HostMetricsDefinitionLoaderTest {
 			type.get(),
 			"metricshub.host.configured should be of type UP_DOWN_COUNTER"
 		);
+	}
+
+	@Test
+	void testObservedIsUpDownCounter() {
+		final MetricDefinition observedDef = HostMetricsDefinitionLoader
+			.getInstance()
+			.getMetricDefinition("metricshub.host.observed");
+		assertNotNull(observedDef, "metricshub.host.observed definition should not be null");
+		final IMetricType type = observedDef.getType();
+		assertNotNull(type, "metricshub.host.observed type should not be null");
+		assertEquals(MetricType.UP_DOWN_COUNTER, type.get(), "metricshub.host.observed should be of type UP_DOWN_COUNTER");
 	}
 
 	@Test

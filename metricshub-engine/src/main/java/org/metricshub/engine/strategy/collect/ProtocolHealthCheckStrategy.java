@@ -91,19 +91,27 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 		// Call the extensions to check the protocol health
 		final List<IProtocolExtension> protocolExtensions = extensionManager.findProtocolCheckExtensions(telemetryManager);
 
-		protocolExtensions.forEach(this::checkAndCollectProtocolMetrics);
+		boolean observed = false;
+		for (final IProtocolExtension protocolExtension : protocolExtensions) {
+			if (checkAndCollectProtocolMetrics(protocolExtension)) {
+				observed = true;
+			}
+		}
+		collectHostObserved(observed ? UP : DOWN);
 	}
 
 	/**
 	 * Executes the protocol check and collects metricshub.host.up and metricshub.host.response_time metrics.
+	 *
 	 * @param protocolExtension the protocol extension to check and collect metrics for
+	 * @return {@code true} when the protocol check reports the host as up, {@code false} otherwise
 	 */
-	private void checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
+	private boolean checkAndCollectProtocolMetrics(final IProtocolExtension protocolExtension) {
 		// Record the start time before launching protocol checks
 		final long startTime = System.currentTimeMillis();
-		protocolExtension
+		return protocolExtension
 			.checkProtocol(telemetryManager)
-			.ifPresent(isUp -> {
+			.map(isUp -> {
 				final Double responseTime = (System.currentTimeMillis() - startTime) / 1000.0;
 				final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
 				final Long strategyTime = telemetryManager.getStrategyTime();
@@ -131,7 +139,9 @@ public class ProtocolHealthCheckStrategy extends AbstractStrategy {
 					up,
 					strategyTime
 				);
-			});
+				return Boolean.TRUE.equals(isUp);
+			})
+			.orElse(false);
 	}
 
 	@Override

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.metricshub.engine.common.helpers.KnownMonitorType.HOST;
 import static org.metricshub.engine.constants.Constants.HOSTNAME;
+import static org.metricshub.engine.strategy.AbstractStrategy.HOST_OBSERVED_METRIC_NAME;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 
@@ -36,6 +37,9 @@ class ProtocolHealthCheckStrategyTest {
 
 	@Mock
 	private static IProtocolExtension protocolExtensionMock;
+
+	@Mock
+	private static IProtocolExtension additionalProtocolExtensionMock;
 
 	static Map<String, Map<String, Monitor>> monitors;
 
@@ -112,6 +116,95 @@ class ProtocolHealthCheckStrategyTest {
 			telemetryManager
 				.getEndpointHostMonitor()
 				.getMetric(ProtocolHealthCheckStrategy.RESPONSE_TIME_METRIC_FORMAT.formatted(protocol), NumberMetric.class)
+		);
+		assertEquals(
+			ProtocolHealthCheckStrategy.UP,
+			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
+		);
+	}
+
+	@Test
+	void testCheckHealthCollectsObservedDownWhenAllProtocolsAreDown() {
+		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
+		final ExtensionManager extensionManager = ExtensionManager
+			.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock))
+			.build();
+
+		doReturn(true)
+			.when(protocolExtensionMock)
+			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
+
+		final String protocol = "ssh";
+		doReturn(protocol).when(protocolExtensionMock).getIdentifier();
+		doReturn(Optional.of(false)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+
+		final ProtocolHealthCheckStrategy healthCheckStrategy = new ProtocolHealthCheckStrategy(
+			telemetryManager,
+			CURRENT_TIME_MILLIS,
+			clientsExecutorMock,
+			extensionManager
+		);
+
+		assertDoesNotThrow(healthCheckStrategy::run);
+		assertEquals(
+			ProtocolHealthCheckStrategy.DOWN,
+			telemetryManager
+				.getEndpointHostMonitor()
+				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted(protocol), NumberMetric.class)
+				.getValue()
+		);
+		assertEquals(
+			ProtocolHealthCheckStrategy.DOWN,
+			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
+		);
+	}
+
+	@Test
+	void testCheckHealthCollectsObservedUpWhenAtLeastOneProtocolIsUp() {
+		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
+		final ExtensionManager extensionManager = ExtensionManager
+			.builder()
+			.withProtocolExtensions(List.of(protocolExtensionMock, additionalProtocolExtensionMock))
+			.build();
+
+		doReturn(true)
+			.when(protocolExtensionMock)
+			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
+		doReturn(true)
+			.when(additionalProtocolExtensionMock)
+			.isValidConfiguration(telemetryManager.getHostConfiguration().getConfigurations().get(TestConfiguration.class));
+
+		doReturn("snmp").when(protocolExtensionMock).getIdentifier();
+		doReturn("ssh").when(additionalProtocolExtensionMock).getIdentifier();
+		doReturn(Optional.of(false)).when(protocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+		doReturn(Optional.of(true)).when(additionalProtocolExtensionMock).checkProtocol(any(TelemetryManager.class));
+
+		final ProtocolHealthCheckStrategy healthCheckStrategy = new ProtocolHealthCheckStrategy(
+			telemetryManager,
+			CURRENT_TIME_MILLIS,
+			clientsExecutorMock,
+			extensionManager
+		);
+
+		assertDoesNotThrow(healthCheckStrategy::run);
+		assertEquals(
+			ProtocolHealthCheckStrategy.DOWN,
+			telemetryManager
+				.getEndpointHostMonitor()
+				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted("snmp"), NumberMetric.class)
+				.getValue()
+		);
+		assertEquals(
+			ProtocolHealthCheckStrategy.UP,
+			telemetryManager
+				.getEndpointHostMonitor()
+				.getMetric(ProtocolHealthCheckStrategy.UP_METRIC_FORMAT.formatted("ssh"), NumberMetric.class)
+				.getValue()
+		);
+		assertEquals(
+			ProtocolHealthCheckStrategy.UP,
+			telemetryManager.getEndpointHostMonitor().getMetric(HOST_OBSERVED_METRIC_NAME, NumberMetric.class).getValue()
 		);
 	}
 }
