@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.security.MetricsHubSecurityException;
 import org.metricshub.web.security.dto.EncryptPasswordRequest;
 import org.metricshub.web.security.dto.EncryptPasswordResponse;
@@ -41,6 +42,7 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * REST API for security-related operations (keystore password encryption, etc.).
  */
+@Slf4j
 @RestController
 @RequestMapping(value = "/api/security")
 @Tag(name = "Security", description = "MetricsHub security management")
@@ -94,7 +96,10 @@ public class SecurityController {
 		} catch (final IllegalArgumentException e) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
 		} catch (final MetricsHubSecurityException e) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to encrypt password: " + e.getMessage(), e);
+			// Log the detailed exception server-side for diagnostics
+			log.error("Password encryption failed: {}", e.getMessage(), e);
+			// Return a generic message to the client to avoid leaking internal keystore/crypto details
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Failed to encrypt password", e);
 		}
 	}
 }

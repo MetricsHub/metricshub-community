@@ -23,6 +23,9 @@ package org.metricshub.web.service;
 
 import static org.metricshub.agent.security.PasswordEncrypt.getKeyStoreFile;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharsetDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -57,13 +60,32 @@ public class PasswordEncryptionService {
 			throw new IllegalArgumentException("Invalid Base64 in request body.", e);
 		}
 
-		final String plainPassword = new String(decoded, StandardCharsets.UTF_8);
-		final char[] passwordChars = plainPassword.toCharArray();
+		CharBuffer charBuffer = null;
 		try {
-			final char[] encrypted = SecurityManager.encrypt(passwordChars, getKeyStoreFile(true));
-			return new String(encrypted);
+			// Decode UTF-8 bytes to char[] using CharsetDecoder to avoid creating an immutable String
+			final CharsetDecoder decoder = StandardCharsets.UTF_8.newDecoder();
+			charBuffer = decoder.decode(ByteBuffer.wrap(decoded));
+			final char[] passwordChars = new char[charBuffer.remaining()];
+			charBuffer.get(passwordChars);
+
+			try {
+				final char[] encrypted = SecurityManager.encrypt(passwordChars, getKeyStoreFile(true));
+				return new String(encrypted);
+			} finally {
+				Arrays.fill(passwordChars, '\0');
+			}
+		} catch (final MetricsHubSecurityException e) {
+			// Re-throw security exceptions as-is
+			throw e;
+		} catch (final Exception e) {
+			throw new IllegalArgumentException("Failed to decode UTF-8 password bytes.", e);
 		} finally {
-			Arrays.fill(passwordChars, '\0');
+			// Wipe the decoded byte array
+			Arrays.fill(decoded, (byte) 0);
+			// Wipe the CharBuffer if it was created
+			if (charBuffer != null && charBuffer.hasArray()) {
+				Arrays.fill(charBuffer.array(), '\0');
+			}
 		}
 	}
 }
