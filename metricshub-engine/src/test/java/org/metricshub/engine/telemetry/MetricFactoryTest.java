@@ -75,6 +75,15 @@ class MetricFactoryTest {
 	}
 
 	@Test
+	void testResolveMetricTypeFromNameObservedMetric() {
+		assertEquals(
+			"UpDownCounter",
+			MetricFactory.resolveMetricTypeFromName("metricshub.host.observed"),
+			"metricshub.host.observed should resolve to UpDownCounter"
+		);
+	}
+
+	@Test
 	void testResolveMetricTypeFromNameUnknownMetric() {
 		// Unknown metric should fallback to null
 		assertNull(MetricFactory.resolveMetricTypeFromName("unknown.metric.name"), "Unknown metric should resolve to null");
