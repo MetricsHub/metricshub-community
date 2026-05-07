@@ -106,13 +106,11 @@ export default function EditorHeader({
 				</Stack>
 				{/* Right side buttons */}
 				<Stack direction="row" spacing={1} alignItems="center">
-					{isVm && (
-						<EncryptPasswordDialog
-							size="small"
-							variant="outlined"
-							disabled={!selected || saving || testLoading || isReadOnly}
-						/>
-					)}
+					<EncryptPasswordDialog
+						size="small"
+						variant="outlined"
+						disabled={!selected || saving || testLoading || isReadOnly}
+					/>
 					{isDraft && onApply && (
 						<Button
 							size="small"
