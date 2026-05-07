@@ -46,3 +46,6 @@ node_modules
 ### Connectors used for testing ###
 /metricshub-agent/connectors
 **/dependency-reduced-pom.xml
+
+### Agent log files ###
+**/${ctx:outputDirectory}/
