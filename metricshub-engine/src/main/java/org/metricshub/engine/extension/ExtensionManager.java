@@ -377,4 +377,22 @@ public class ExtensionManager {
 			.flatMap((IConfigurationProvider provider) -> provider.getFileExtensions().stream())
 			.collect(Collectors.toSet());
 	}
+
+	/**
+	 * Notify protocol extensions that the recording session has ended.
+	 *
+	 * @param telemetryManager The telemetry manager associated to the completed session.
+	 */
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		if (telemetryManager == null) {
+			return;
+		}
+		protocolExtensions.forEach(extension -> {
+			try {
+				extension.onRecordingSessionEnd(telemetryManager);
+			} catch (Exception ignored) { // NOSONAR keep flush resilient
+				// Recording flush should not fail the engine lifecycle.
+			}
+		});
+	}
 }

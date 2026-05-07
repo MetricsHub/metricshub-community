@@ -26,8 +26,11 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.configuration.IProtocolScopedPropertyAccessor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
@@ -37,9 +40,10 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * Protocols and properties are case-insensitive.
  */
 @Slf4j
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class ProtocolPropertyReferenceHelper {
 
-	private static final Pattern PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX_PATTERN = Pattern.compile("([^\\.]+).([^}]+)");
+	private static final Pattern PROTOCOL_DOT_PROPERTY_REFERENCE_REGEX_PATTERN = Pattern.compile("([^\\.]+)\\.([^}]+)");
 
 	/**
 	 * Returns the property associated to the protocol from the parameter protocolDotProperty
@@ -64,12 +68,24 @@ public class ProtocolPropertyReferenceHelper {
 			return null;
 		}
 
-		final Optional<IConfiguration> optionalConfiguration = getProtocol(protocol, telemetryManager);
-		if (optionalConfiguration.isPresent()) {
-			return optionalConfiguration.get().getProperty(property);
-		} else {
-			return null;
+		return getProtocol(protocol, telemetryManager)
+			.map(configuration -> getProperty(configuration, protocol, property))
+			.orElse(null);
+	}
+
+	/**
+	 * Retrieves a property from a configuration and uses protocol-aware lookup when supported.
+	 *
+	 * @param configuration resolved configuration
+	 * @param protocol protocol name parsed from the macro
+	 * @param property property name parsed from the macro
+	 * @return resolved property value, or {@code null} when unavailable
+	 */
+	private static String getProperty(final IConfiguration configuration, final String protocol, final String property) {
+		if (configuration instanceof IProtocolScopedPropertyAccessor scopedPropertyAccessor) {
+			return scopedPropertyAccessor.getProperty(protocol, property);
 		}
+		return configuration.getProperty(property);
 	}
 
 	/**

@@ -32,6 +32,9 @@ import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.ipmi.client.IpmiClient;
 import org.metricshub.ipmi.client.IpmiClientConfiguration;
 
+/**
+ * The IpmiRequestExecutor class is responsible for executing IPMI (Intelligent Platform Management Interface) requests to retrieve information about the chassis power state and sensors of a host.
+ */
 @Slf4j
 public class IpmiRequestExecutor {
 

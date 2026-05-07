@@ -41,19 +41,15 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.client.ClientsExecutor;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
 import org.metricshub.engine.connector.model.identity.Detection;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
-import org.metricshub.engine.connector.model.identity.criterion.SnmpGetCriterion;
-import org.metricshub.engine.connector.model.identity.criterion.SnmpGetNextCriterion;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
 import org.metricshub.engine.extension.ExtensionManager;
-import org.metricshub.engine.strategy.utils.EmulationHelper;
 import org.metricshub.engine.strategy.utils.ForceSerializationHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -415,60 +411,16 @@ public abstract class AbstractConnectorProcessor {
 			return connectorTestResult;
 		}
 
-		// Retrieve emulation input directory and read recorded criterion from it
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-
-		// Persist source output if required and if not SNMP source
-		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
-
-		int criterionId = 1;
-
 		for (final Criterion criterion : criteria) {
-			CriterionTestResult criterionTestResult = null;
-
-			// CHECKSTYLE:OFF
-			if (
-				StringHelper.nonNullNonBlank(emulationInputDirectory) &&
-				!(criterion instanceof SnmpGetCriterion) &&
-				!(criterion instanceof SnmpGetNextCriterion)
-			) {
-				criterionTestResult =
-					EmulationHelper
-						.readEmulatedCriterionResult(
-							connector.getCompiledFilename(),
-							criterion,
-							emulationInputDirectory,
-							criterionId,
-							telemetryManager
-						)
-						.orElseGet(CriterionTestResult::empty);
-			} else {
-				criterionTestResult = processCriterion(criterion, connector);
-				if (!criterionTestResult.isSuccess()) {
-					log.debug(
-						"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
-						hostname,
-						connector.getConnectorIdentity().getCompiledFilename(),
-						criterionTestResult.getMessage()
-					);
-				}
-				if (
-					StringHelper.nonNullNonBlank(recordOutputDirectory) &&
-					!(criterion instanceof SnmpGetCriterion) &&
-					!(criterion instanceof SnmpGetNextCriterion)
-				) {
-					EmulationHelper.persist(
-						criterionTestResult,
-						connector.getCompiledFilename(),
-						criterion,
-						recordOutputDirectory,
-						criterionId,
-						telemetryManager
-					);
-				}
-				// CHECKSTYLE:ON
+			final CriterionTestResult criterionTestResult = processCriterion(criterion, connector);
+			if (!criterionTestResult.isSuccess()) {
+				log.debug(
+					"Hostname {} - Detected failed criterion for connector {}. Message: {}.",
+					hostname,
+					connector.getConnectorIdentity().getCompiledFilename(),
+					criterionTestResult.getMessage()
+				);
 			}
-			criterionId++;
 			connectorTestResult.getCriterionTestResults().add(criterionTestResult);
 		}
 

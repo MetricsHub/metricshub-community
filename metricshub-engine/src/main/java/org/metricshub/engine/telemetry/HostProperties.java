@@ -21,10 +21,10 @@ package org.metricshub.engine.telemetry;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
@@ -59,7 +59,7 @@ public class HostProperties {
 	private boolean mustCheckSshStatus;
 
 	@Default
-	private Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
+	private Map<String, ConnectorNamespace> connectorNamespaces = new ConcurrentHashMap<>();
 
 	/**
 	 * Get the connector namespace defined for the given connector identifier
@@ -68,8 +68,6 @@ public class HostProperties {
 	 * @return ConnectorNamespace instance
 	 */
 	public ConnectorNamespace getConnectorNamespace(@NonNull final String connectorId) {
-		synchronized (connectorNamespaces) {
-			return connectorNamespaces.computeIfAbsent(connectorId, cn -> ConnectorNamespace.builder().build());
-		}
+		return connectorNamespaces.computeIfAbsent(connectorId, cn -> ConnectorNamespace.builder().build());
 	}
 }

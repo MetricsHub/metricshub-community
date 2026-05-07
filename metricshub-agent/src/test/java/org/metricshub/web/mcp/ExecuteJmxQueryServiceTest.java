@@ -177,6 +177,7 @@ class ExecuteJmxQueryServiceTest {
 				eq(OBJECT_NAME),
 				eq(List.of("LiveNodes", "MovingNodes")),
 				eq(List.of("scope", "path")),
+				any(),
 				any()
 			)
 		)
@@ -228,6 +229,7 @@ class ExecuteJmxQueryServiceTest {
 				eq(OBJECT_NAME),
 				eq(List.of("LiveNodes", "MovingNodes")),
 				eq(List.of("scope", "path")),
+				any(),
 				any()
 			)
 		)

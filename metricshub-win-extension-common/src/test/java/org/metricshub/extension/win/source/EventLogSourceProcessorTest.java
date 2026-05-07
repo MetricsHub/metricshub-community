@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
@@ -148,7 +149,7 @@ class EventLogSourceProcessorTest {
 			"SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
@@ -218,7 +219,7 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
@@ -246,7 +247,7 @@ class EventLogSourceProcessorTest {
 		// ITERATION 3:
 		// A ClientException is thrown, the client returns null
 		// Cursors are set, they remain unchanged
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
 			.thenThrow(ClientException.class);
 		results = processor.process(source, telemetryManagerMock);
 		assertEquals(
@@ -335,7 +336,7 @@ class EventLogSourceProcessorTest {
 			"SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
@@ -408,7 +409,7 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString()))
+		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
 			.thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
