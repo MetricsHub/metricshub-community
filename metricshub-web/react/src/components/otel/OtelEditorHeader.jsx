@@ -10,7 +10,6 @@ import { useAppSelector } from "../../hooks/store";
 import { isBackupFileName } from "../../utils/backup-names";
 import { getFileType } from "../../utils/file-type-utils";
 import FileTypeIcon from "../config/tree/icons/FileTypeIcons";
-import EncryptPasswordDialog from "../common/EncryptPasswordDialog";
 import { otelCollectorApi } from "../../api/config/otel-collector-api";
 import { useSnackbar } from "../../hooks/use-snackbar";
 
@@ -127,7 +126,6 @@ export default function OtelEditorHeader({
 							{saving ? "Applying..." : "Apply"}
 						</Button>
 					)}
-					<EncryptPasswordDialog disabled={isReadOnly} />
 					<Button
 						size="small"
 						startIcon={<SaveIcon />}
