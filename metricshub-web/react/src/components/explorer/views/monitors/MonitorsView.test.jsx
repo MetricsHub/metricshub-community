@@ -10,11 +10,16 @@ vi.mock("./components/ConnectorAccordion", () => ({
 describe("MonitorsView", () => {
 	it("renders connectors even when they have no monitors", () => {
 		renderWithReduxAndRouter(
-			<MonitorsView connectors={[{ name: "ConnectorA", monitors: [] }]} lastUpdatedAt={Date.now()} />,
+			<MonitorsView
+				connectors={[{ name: "ConnectorA", monitors: [] }]}
+				lastUpdatedAt={Date.now()}
+			/>,
 		);
 
 		expect(screen.getByText("connector:ConnectorA")).toBeInTheDocument();
-		expect(screen.queryByText(/No connectors available for this resource/i)).not.toBeInTheDocument();
+		expect(
+			screen.queryByText(/No connectors available for this resource/i),
+		).not.toBeInTheDocument();
 	});
 
 	it("shows empty message when there are no connectors", () => {
