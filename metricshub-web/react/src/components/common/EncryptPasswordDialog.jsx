@@ -93,6 +93,8 @@ export default function EncryptPasswordDialog({
 		try {
 			const ciphertext = await configApi.encryptPassword(transport);
 			setLastCiphertext(ciphertext);
+			setPassword("");
+			setShowPassword(false);
 			const copied = await copyTextToClipboard(ciphertext);
 			if (copied) {
 				showSnackbar("Encrypted password copied to clipboard", { severity: "success" });
