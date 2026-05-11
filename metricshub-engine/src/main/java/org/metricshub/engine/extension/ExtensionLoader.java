@@ -93,7 +93,8 @@ public class ExtensionLoader {
 			IProtocolExtension.class,
 			classLoader
 		);
-		protocolExtensions.forEach(extension ->
+		final List<IProtocolExtension> loadedProtocolExtensions = convertProviderStreamToList(protocolExtensions.stream());
+		loadedProtocolExtensions.forEach(extension ->
 			log.info("Loaded protocol extension {}.", extension.getClass().getSimpleName())
 		);
 
@@ -155,7 +156,7 @@ public class ExtensionLoader {
 		extensionManager =
 			ExtensionManager
 				.builder()
-				.withProtocolExtensions(convertProviderStreamToList(protocolExtensions.stream()))
+				.withProtocolExtensions(loadedProtocolExtensions)
 				.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
 				.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
 				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))

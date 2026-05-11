@@ -78,6 +78,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 public abstract class AbstractStrategy implements IStrategy {
 
 	public static final String HOST_CONFIGURED_METRIC_NAME = "metricshub.host.configured";
+	public static final String HOST_OBSERVED_METRIC_NAME = "metricshub.host.observed";
 
 	@NonNull
 	protected TelemetryManager telemetryManager;
@@ -735,6 +736,20 @@ public abstract class AbstractStrategy implements IStrategy {
 			telemetryManager.getConnectorStore()
 		);
 		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_CONFIGURED_METRIC_NAME, 1.0, strategyTime);
+	}
+
+	/**
+	 * Collects the host observed metric.
+	 *
+	 * @param observed Whether the host is observed or not.
+	 */
+	protected void collectHostObserved(final Double observed) {
+		final Monitor endpointHostMonitor = telemetryManager.getEndpointHostMonitor();
+		final MetricFactory metricFactory = new MetricFactory(
+			telemetryManager.getHostname(),
+			telemetryManager.getConnectorStore()
+		);
+		metricFactory.collectNumberMetric(endpointHostMonitor, HOST_OBSERVED_METRIC_NAME, observed, strategyTime);
 	}
 
 	/**

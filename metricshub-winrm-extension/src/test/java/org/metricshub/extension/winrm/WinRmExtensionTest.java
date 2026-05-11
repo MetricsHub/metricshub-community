@@ -12,6 +12,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -152,7 +153,13 @@ class WinRmExtensionTest {
 			// Mock a positive WinRm protocol health check response
 			doReturn(WQL_SUCCESS_RESPONSE)
 				.when(winRmRequestExecutorMock)
-				.executeWmi(anyString(), any(WinRmConfiguration.class), eq(WINRM_TEST_QUERY), eq(WINRM_TEST_NAMESPACE));
+				.executeWmi(
+					anyString(),
+					any(WinRmConfiguration.class),
+					eq(WINRM_TEST_QUERY),
+					eq(WINRM_TEST_NAMESPACE),
+					isNull()
+				);
 
 			// Start the WinRm Health Check
 			Optional<Boolean> result = winRmExtension.checkProtocol(telemetryManager);
@@ -164,7 +171,13 @@ class WinRmExtensionTest {
 			// Mock an acceptable WinRm protocol health check exception
 			doThrow(new RuntimeException(new WqlQuerySyntaxException("WBEM_E_INVALID_NAMESPACE")))
 				.when(winRmRequestExecutorMock)
-				.executeWmi(anyString(), any(WinRmConfiguration.class), eq(WINRM_TEST_QUERY), eq(WINRM_TEST_NAMESPACE));
+				.executeWmi(
+					anyString(),
+					any(WinRmConfiguration.class),
+					eq(WINRM_TEST_QUERY),
+					eq(WINRM_TEST_NAMESPACE),
+					isNull()
+				);
 
 			doCallRealMethod().when(winRmRequestExecutorMock).isAcceptableException(any());
 
@@ -183,7 +196,7 @@ class WinRmExtensionTest {
 		// Mock a null WinRm protocol health check response
 		doReturn(null)
 			.when(winRmRequestExecutorMock)
-			.executeWmi(anyString(), any(WinRmConfiguration.class), eq(WINRM_TEST_QUERY), eq(WINRM_TEST_NAMESPACE));
+			.executeWmi(anyString(), any(WinRmConfiguration.class), eq(WINRM_TEST_QUERY), eq(WINRM_TEST_NAMESPACE), isNull());
 
 		// Start the WinRm Health Check
 		Optional<Boolean> result = winRmExtension.checkProtocol(telemetryManager);
@@ -300,7 +313,7 @@ class WinRmExtensionTest {
 			final WmiCriterion wmiCriterion = WmiCriterion.builder().query(WQL).namespace(namespace).build();
 			doReturn(CriterionTestResult.success(wmiCriterion, "metricshub"))
 				.when(wmiDetectionServiceMock)
-				.performDetectionTest(any(), eq(winRmConfiguration), eq(wmiCriterion), anyString(), anyBoolean());
+				.performDetectionTest(any(), eq(winRmConfiguration), eq(wmiCriterion), anyString(), anyBoolean(), isNull());
 			assertTrue(winRmExtension.processCriterion(wmiCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 		}
 		{
@@ -337,7 +350,7 @@ class WinRmExtensionTest {
 
 				doReturn(CriterionTestResult.success(serviceCriterion, "metricshub;running"))
 					.when(wmiDetectionServiceMock)
-					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean());
+					.performDetectionTest(any(), any(), any(), anyString(), anyBoolean(), any());
 
 				assertTrue(winRmExtension.processCriterion(serviceCriterion, CONNECTOR_ID, telemetryManager, true).isSuccess());
 			}
@@ -417,7 +430,7 @@ class WinRmExtensionTest {
 			);
 			doReturn(expected)
 				.when(winRmRequestExecutorMock)
-				.executeWmi(HOST_NAME, winRmConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE);
+				.executeWmi(HOST_NAME, winRmConfiguration, WQL, MetricsHubConstants.WMI_DEFAULT_NAMESPACE, null);
 			final WmiSource wmiSource = WmiSource.builder().query(WQL).build();
 			assertEquals(
 				SourceTable.builder().table(expected).build(),
@@ -482,7 +495,7 @@ class WinRmExtensionTest {
 
 		doReturn(WQL_SUCCESS_RESPONSE)
 			.when(winRmRequestExecutorMock)
-			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
+			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
@@ -509,7 +522,7 @@ class WinRmExtensionTest {
 
 		doThrow(ClientException.class)
 			.when(winRmRequestExecutorMock)
-			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString());
+			.executeWmi(anyString(), any(WinRmConfiguration.class), anyString(), anyString(), isNull());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));

@@ -1,0 +1,1039 @@
+groups:
+
+  # ---------------------------------------------------------------------
+  # Storage Pools
+  # ---------------------------------------------------------------------
+  - name: storage_pools
+    rules:
+
+      - alert: MetricsHub-Storage-Pool-CloseToSaturation-Warning
+        expr: |
+          (
+            storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}
+          /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 0.85
+          and ignoring(storage_provisioning_state)
+          (
+            storage_provisioning_bytes{storage_type="pool", storage_provisioning_state="subscribed"}
+          /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 1
+        for: 10m
+        labels:
+          severity: warning
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} is above 85% capacity AND oversubscribed (current: {{ $value | humanizePercentage }})"
+          description: |
+            Pool used capacity is above 85% of its limit while the pool is also oversubscribed (subscribed capacity exceeds physical limit).
+            Consequence: Thin-provisioning commitments can no longer be fully honored by physical capacity; reduced headroom for growth (thin volume expansion, snapshots, temporary allocations) makes write failures increasingly likely.
+            Recommended action: Identify the largest pool consumers, validate snapshot/clone growth, run reclamation if applicable, reduce overcommit, and plan pool expansion or volume migration to restore headroom.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Used capacity (used/limit): {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-Storage-Pool-CloseToSaturation-Critical
+        expr: |
+          (
+            storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}
+          /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 0.95
+          and ignoring(storage_provisioning_state)
+          (
+            storage_provisioning_bytes{storage_type="pool", storage_provisioning_state="subscribed"}
+          /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 1
+        for: 10m
+        labels:
+          severity: critical
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} is above 95% capacity AND oversubscribed (current: {{ $value | humanizePercentage }})"
+          description: |
+            Pool used capacity is above 95% of its limit while the pool is also oversubscribed (subscribed capacity exceeds physical limit).
+            Consequence: Imminent risk of allocation/write failures once free space is exhausted; thin-provisioned space cannot be honored and applications may experience errors and failed provisioning operations.
+            Recommended action: Halt non-essential allocations, delete/expire snapshots if safe, migrate or delete cold data, reduce overcommit, and execute a capacity expansion as soon as possible.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Used capacity (used/limit): {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-Storage-Pool-SaturationRisk-Warning
+        expr: |
+          (
+            predict_linear(
+              storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}[1d],
+              14 * 24 * 3600
+            )
+            >
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"} * 0.98
+          )
+          and
+          (
+            deriv(storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}[1d]) > 0
+          )
+        for: 30m
+        labels:
+          severity: warning
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} projected to reach 98% capacity within 14 days"
+          description: |
+            Pool growth trend projects the pool to exceed 98% utilization within 14 days.
+            Consequence: Medium-term capacity exhaustion risk; if the growth trend continues, the pool may reach a state where allocations fail or operational work (snapshots, clones, rebuild tasks) becomes unsafe.
+            Recommended action: Review recent capacity growth drivers (new workloads, snapshot retention, replication, log growth), and schedule a remediation plan (cleanup, tiering, migration, or expansion) before the projected date.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Projected used capacity (14 days): {{ $value | humanize1024 }}
+
+      - alert: MetricsHub-Storage-Pool-SaturationRisk-Critical
+        expr: |
+          (
+            predict_linear(
+              storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}[1d],
+              3 * 24 * 3600
+            )
+            >
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"} * 0.98
+          )
+          and
+          (
+            deriv(storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}[1d]) > 0
+          )
+        for: 15m
+        labels:
+          severity: critical
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} projected to reach 98% capacity within 3 days"
+          description: |
+            Pool growth trend projects the pool to exceed 98% utilization within 3 days.
+            Consequence: Short-term capacity exhaustion risk with a high probability of allocation or write failures if no action is taken.
+            Recommended action: Prioritize immediate remediation—free space safely (snapshots, temporary data), reduce allocation rates, and fast-track pool expansion or workload migration.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Projected used capacity (3 days): {{ $value | humanize1024 }}
+
+      - alert: MetricsHub-Storage-Pool-AbnormalGrowthSpike-Warning
+        expr: |
+          (
+            delta(storage_usage_bytes{storage_type="pool", storage_provisioning_state="used"}[1h])
+            /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 0.01
+        for: 20m
+        labels:
+          severity: warning
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} grew by {{ $value | humanizePercentage }} in the last hour"
+          description: |
+            Pool used capacity increased abnormally fast in the last hour.
+            Consequence: Unexpected growth can rapidly consume free space, invalidate capacity plans, and accelerate time-to-full for the pool.
+            Recommended action: Investigate what changed in the last hour (new volumes, snapshot storms, backups, clone creation, runaway writes). Confirm against change management and stop the growth source if unplanned.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Growth in last hour (delta used / limit): {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-Storage-Pool-Oversubscription-Warning
+        expr: |
+          (
+            storage_provisioning_bytes{storage_type="pool", storage_provisioning_state="subscribed"}
+            /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) > 1.5
+          and ignoring(storage_provisioning_state)
+          (
+            storage_usage_bytes{storage_type="pool", storage_provisioning_state="free"}
+            /
+            ignoring(storage_provisioning_state)
+            storage_limit_bytes{storage_type="pool"}
+          ) < 0.15
+        for: 1h
+        labels:
+          severity: warning
+          category: pool
+        annotations:
+          summary: "Pool {{ $labels.host_name }} / {{ $labels.id }} is oversubscribed ({{ printf \"%.2f\" $value }}x) with low free space"
+          description: |
+            Pool is heavily over-committed while free capacity is low (thin provisioning risk).
+            Consequence: Thin-provisioned volumes may expand into insufficient physical capacity, causing sudden out-of-space conditions and potential write failures under burst growth.
+            Recommended action: Reduce overcommit (quotas, reclaim, delete unused allocations), restore free space, and/or add physical capacity. Validate that growth policies and snapshot retention match expected usage.
+
+            Host: {{ $labels.host_name }}
+            Pool ID: {{ $labels.id }}
+            Pool name: {{ $labels.name }}
+            {{- if $labels.storage_pool_type }}
+            Pool type: {{ $labels.storage_pool_type }}
+            {{- else if $labels.type }}
+            Pool type: {{ $labels.type }}
+            {{- end }}
+            Oversubscription ratio (subscribed/limit): {{ printf "%.2f" $value }}x
+
+  # ---------------------------------------------------------------------
+  # Storage Volumes
+  # ---------------------------------------------------------------------
+  - name: storage_volumes
+    rules:
+
+      - alert: MetricsHub-Storage-Volume-LatencyUnderLoad-Warning
+        expr: |
+          (
+            rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+            /
+            clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+          ) > 0.020
+          and
+          rate(storage_operations_total{storage_type="volume"}[5m]) > 50
+        for: 10m
+        labels:
+          severity: warning
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} latency above 20ms (current: {{ $value | humanizeDuration }})"
+          description: |
+            Average volume service time is above 20 ms while the volume is under load.
+            Consequence: Application response times may degrade (higher I/O wait, slower transactions) and tail latency may increase.
+            Recommended action: Correlate with pool/controller/disk health, verify the storage path (FC/iSCSI/NVMe/TCP), and identify the top contributor workload. Consider QoS, workload scheduling, or volume migration if contention is confirmed.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            Average service time per operation: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-Storage-Volume-LatencyUnderLoad-Critical
+        expr: |
+          (
+            rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+            /
+            clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+          ) > 0.050
+          and
+          rate(storage_operations_total{storage_type="volume"}[5m]) > 50
+        for: 10m
+        labels:
+          severity: critical
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} latency above 50ms (current: {{ $value | humanizeDuration }})"
+          description: |
+            Average volume service time is above 50 ms while the volume is under load.
+            Consequence: High probability of application timeouts, stalled job pipelines, and cascading performance impact on dependent services.
+            Recommended action: Treat as an incident—validate host multipath/path health, check controller and pool contention, and mitigate quickly (throttle noisy workloads, fail over paths, or migrate the volume/workload).
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            Average service time per operation: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-Storage-Volume-Stalled-Warning
+        expr: |
+          (
+            avg_over_time(rate(storage_operations_total{storage_type="volume"}[5m])[30m:])
+          ) > 200
+          and
+          rate(storage_operations_total{storage_type="volume"}[5m]) < 10
+          and
+          (
+            rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+            /
+            clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+          ) > 0.050
+        for: 5m
+        labels:
+          severity: warning
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} was averaging {{ printf \"%.0f\" $value }} ops/s and has suddenly stalled"
+          description: |
+            A previously busy volume appears to have stalled (sharp IOPS drop with high latency condition).
+            Consequence: The application may be blocked on I/O (hung processes, timeouts), which can look like an outage at the application layer.
+            Recommended action: Check host connectivity and multipath status first, then validate array-side volume health/status and the parent pool state. If this is a critical workload, initiate failover/migration procedures per your runbook.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            30-minute average IOPS before stall: {{ printf "%.1f" $value }} ops/s
+
+      - alert: MetricsHub-Storage-Volume-Orphan-Info
+        expr: |
+          storage_limit_bytes{storage_type="volume", storage_consumer_state="unmapped"} > 0
+          and ignoring(storage_provisioning_state)
+          storage_usage_bytes{storage_type="volume", storage_provisioning_state="used"} > 0
+        for: 6h
+        labels:
+          severity: info
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} is unmapped but still contains data ({{ $value | humanize1024 }} allocated)"
+          description: |
+            Volume is unmapped but still contains data and allocated capacity (potential orphan).
+            Consequence: Capacity is consumed by a volume that is not attached to any consumer, increasing waste and creating data retention / sprawl risk.
+            Recommended action: Confirm ownership and retention requirements (who created it, why it is kept). If safe, archive or delete. If it is still needed, re-map to the correct consumer and update inventory.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            Allocated capacity (limit): {{ $value | humanize1024 }}
+
+      - alert: MetricsHub-Storage-Volume-MappedWithoutConsumerIdentity-Info
+        expr: |
+          storage_limit_bytes{
+            storage_type="volume",
+            storage_consumer_state="mapped",
+            storage_consumer_naa_id="",
+            storage_consumer_name=""
+          } > 0
+        for: 6h
+        labels:
+          severity: info
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} is mapped but consumer identity is missing ({{ $value | humanize1024 }} allocated)"
+          description: |
+            Volume is reported as mapped, but consumer identity labels are missing (mapped-to-unknown).
+            Consequence: Without consumer identity, volume ownership is unresolvable. These volumes can be overlooked and may consume pool capacity indefinitely without being flagged for reclamation or decommissioning.
+            Recommended action: Verify the mapping on the storage system, ensure initiator/host objects are resolvable, and re-run discovery/collection.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- else }}
+            Consumer NAA ID: (empty)
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- else }}
+            Consumer name: (empty)
+            {{- end }}
+            Allocated capacity (limit): {{ $value | humanize1024 }}
+
+      - alert: MetricsHub-Storage-Volume-Status-Warning
+        expr: storage_status{storage_type="volume", state="degraded"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} is in degraded state"
+          description: |
+            Volume reports a degraded health state.
+            Consequence: Reduced redundancy or impaired components may increase risk of data unavailability and may also degrade performance.
+            Recommended action: Review the storage system health details for the volume (replication/mirror state, protection status, background rebuild). Correct underlying faults and monitor for state recovery.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_raid_level }}
+            RAID level: {{ $labels.storage_raid_level }}
+            {{- else if $labels.raid_level }}
+            RAID level: {{ $labels.raid_level }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            {{- if $labels.state }}
+            Reported state: {{ $labels.state }}
+            {{- end }}
+
+      - alert: MetricsHub-Storage-Volume-Status-Critical
+        expr: storage_status{storage_type="volume", state="failed"} == 1
+        for: 0m
+        labels:
+          severity: critical
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} is in failed state"
+          description: |
+            Volume reports a failed health state.
+            Consequence: Data on this volume may be unavailable; dependent applications may be down or in error state.
+            Recommended action: Execute incident response—validate failover targets, restore from snapshots/replicas if necessary, and engage storage support to recover the volume or underlying protection group.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_raid_level }}
+            RAID level: {{ $labels.storage_raid_level }}
+            {{- else if $labels.raid_level }}
+            RAID level: {{ $labels.raid_level }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            {{- if $labels.state }}
+            Reported state: {{ $labels.state }}
+            {{- end }}
+
+      - alert: MetricsHub-Storage-Volume-LatencyAnomaly-Warning
+        expr: |
+          (
+            (
+              (rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+               /
+               clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+              )
+              -
+              avg_over_time(
+                (rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+                 /
+                 clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+                )[6h:]
+              )
+            )
+            /
+            clamp_min(stddev_over_time(
+              (rate(storage_operation_time_seconds_total{storage_type="volume"}[5m])
+               /
+               clamp_min(rate(storage_operations_total{storage_type="volume"}[5m]), 1)
+              )[6h:]
+            ), 0.001)
+          ) > 4
+          and
+          rate(storage_operations_total{storage_type="volume"}[5m]) > 50
+        for: 10m
+        labels:
+          severity: warning
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} latency anomaly vs baseline (Z-score: {{ $value | humanize }})"
+          description: |
+            Volume latency is anomalously high compared to its recent baseline (statistical anomaly under load).
+            Consequence: A sudden latency regression can indicate emerging contention or infrastructure degradation, leading to unpredictable application performance.
+            Recommended action: Compare current workload patterns to the last 6 hours, then check parent pool contention, disk outliers, controller CPU, and storage network. If this is a recurring pattern, implement throttling or tiering/migration.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_volume_type }}
+            Volume type: {{ $labels.storage_volume_type }}
+            {{- end }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            Latency anomaly score (Z-score vs 6h baseline): {{ $value | humanize }}
+
+      - alert: MetricsHub-Storage-Volume-NoisyNeighbor-Warning
+        expr: |
+          (
+            rate(storage_operations_total{storage_type="volume", storage_parent_type="pool"}[5m])
+            /
+            on(host_name, storage_parent_id) group_left()
+            sum by (host_name, storage_parent_id) (
+              rate(storage_operations_total{storage_type="volume", storage_parent_type="pool"}[5m])
+            )
+          ) > 0.60
+          and on(host_name, storage_parent_id)
+          (
+            (
+              sum by (host_name, storage_parent_id) (
+                rate(storage_operations_total{storage_type="volume", storage_parent_type="pool"}[5m])
+              )
+              -
+              avg_over_time(
+                sum by (host_name, storage_parent_id) (
+                  rate(storage_operations_total{storage_type="volume", storage_parent_type="pool"}[5m])
+                )[6h:]
+              )
+            )
+            /
+            clamp_min(
+              stddev_over_time(
+                sum by (host_name, storage_parent_id) (
+                  rate(storage_operations_total{storage_type="volume", storage_parent_type="pool"}[5m])
+                )[6h:]
+              ),
+              1
+            )
+          ) > 3
+        for: 10m
+        labels:
+          severity: warning
+          category: volume
+        annotations:
+          summary: "Volume {{ $labels.host_name }} / {{ $labels.id }} is consuming {{ $value | humanizePercentage }} of pool {{ $labels.storage_parent_id }} IOPS during a spike"
+          description: |
+            One volume is dominating parent pool IOPS during an abnormal pool activity spike (noisy-neighbor signal).
+            Consequence: Peer volumes in the same pool may experience contention (higher latency and lower throughput) during the spike window.
+            Recommended action: Identify the workload generating the IOPS surge. Consider QoS limits, rescheduling batch jobs, or moving the volume/workload to another pool/tier to protect shared performance.
+
+            Host: {{ $labels.host_name }}
+            Volume ID: {{ $labels.id }}
+            Volume name: {{ $labels.name }}
+            {{- if $labels.storage_consumer_naa_id }}
+            Consumer NAA ID: {{ $labels.storage_consumer_naa_id }}
+            {{- end }}
+            {{- if $labels.storage_consumer_name }}
+            Consumer name: {{ $labels.storage_consumer_name }}
+            {{- end }}
+            Pool IOPS share (this volume): {{ $value | humanizePercentage }}
+
+  # ---------------------------------------------------------------------
+  # Storage Controllers
+  # ---------------------------------------------------------------------
+  - name: storage_controllers
+    rules:
+
+      - alert: MetricsHub-Storage-Controller-CPUSaturation-Warning
+        expr: |
+          system_cpu_utilization_ratio{storage_type="controller"} > 0.8
+          and on(host_name, id, storage_type)
+          (
+            (
+              rate(storage_operation_time_seconds_total{storage_type="controller"}[5m])
+              /
+              clamp_min(rate(storage_operations_total{storage_type="controller"}[5m]), 1)
+            ) > 0.02
+          )
+        for: 10m
+        labels:
+          severity: warning
+          category: controller
+        annotations:
+          summary: "Controller {{ $labels.host_name }} / {{ $labels.id }} CPU at {{ $value | humanizePercentage }} with elevated latency"
+          description: |
+            Controller CPU utilization is high while average controller service time is elevated.
+            Consequence: Controller saturation can increase latency across multiple volumes/pools and reduce overall throughput.
+            Recommended action: Correlate with workload spikes, verify that background tasks (rebuild, replication, GC) are not causing the pressure, and consider rebalancing workloads or scaling controller resources (where applicable).
+
+            Host: {{ $labels.host_name }}
+            Controller ID: {{ $labels.id }}
+            {{- if $labels.hw_parent_id }}
+            Parent ID: {{ $labels.hw_parent_id }}
+            {{- end }}
+            {{- if $labels.hw_parent_type }}
+            Parent type: {{ $labels.hw_parent_type }}
+            {{- end }}
+            CPU utilization: {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-Storage-Controller-CPUSaturation-Critical
+        expr: |
+          system_cpu_utilization_ratio{storage_type="controller"} > 0.9
+          and on(host_name, id, storage_type)
+          (
+            (
+              rate(storage_operation_time_seconds_total{storage_type="controller"}[5m])
+              /
+              clamp_min(rate(storage_operations_total{storage_type="controller"}[5m]), 1)
+            ) > 0.03
+          )
+        for: 10m
+        labels:
+          severity: critical
+          category: controller
+        annotations:
+          summary: "Controller {{ $labels.host_name }} / {{ $labels.id }} CPU at {{ $value | humanizePercentage }} with critically elevated latency"
+          description: |
+            Controller CPU utilization is critically high while average controller service time is elevated.
+            Consequence: High likelihood of widespread latency increase and potential service impact across the storage system.
+            Recommended action: Treat as an incident—reduce load (throttle/top talkers), validate controller health, and escalate to storage operations/vendor support if sustained.
+
+            Host: {{ $labels.host_name }}
+            Controller ID: {{ $labels.id }}
+            {{- if $labels.hw_parent_id }}
+            Parent ID: {{ $labels.hw_parent_id }}
+            {{- end }}
+            {{- if $labels.hw_parent_type }}
+            Parent type: {{ $labels.hw_parent_type }}
+            {{- end }}
+            CPU utilization: {{ $value | humanizePercentage }}
+
+  # ---------------------------------------------------------------------
+  # Storage Network
+  # ---------------------------------------------------------------------
+  - name: storage_network
+    rules:
+
+      - alert: MetricsHub-Storage-Network-HighLatency-Warning
+        expr: |
+          (
+            rate(storage_operation_time_seconds_total{storage_type="network"}[5m])
+            /
+            clamp_min(rate(storage_operations_total{storage_type="network"}[5m]), 10)
+          ) > 0.005
+          and
+          rate(storage_operations_total{storage_type="network"}[5m]) > 500
+        for: 10m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "Network {{ $labels.host_name }} / {{ $labels.id }} latency at {{ $value | humanizeDuration }} under load"
+          description: |
+            Storage network component shows elevated average service time per operation under heavy activity.
+            Consequence: Network-side latency can propagate to host I/O, causing higher application response time and reduced throughput.
+            Recommended action: Check port utilization and error counters on the storage and switches, validate link speed/duplex, and ensure multipath redundancy is healthy. Investigate congestion or failing optics/cabling.
+
+            Host: {{ $labels.host_name }}
+            Interface ID: {{ $labels.id }}
+            Interface name: {{ $labels.name }}
+            {{- if $labels.network_type }}
+            Network type: {{ $labels.network_type }}
+            {{- end }}
+            {{- if $labels.role }}
+            Role: {{ $labels.role }}
+            {{- end }}
+            {{- if $labels.address }}
+            Address: {{ $labels.address }}
+            {{- end }}
+            {{- if $labels.logical_address }}
+            Logical address: {{ $labels.logical_address }}
+            {{- end }}
+            {{- if $labels.physical_address }}
+            Physical address: {{ $labels.physical_address }}
+            {{- end }}
+            {{- if $labels.device_type }}
+            Device type: {{ $labels.device_type }}
+            {{- end }}
+            {{- if $labels.model }}
+            Model: {{ $labels.model }}
+            {{- end }}
+            {{- if $labels.vendor }}
+            Vendor: {{ $labels.vendor }}
+            {{- end }}
+            {{- if $labels.hw_parent_id }}
+            Parent ID: {{ $labels.hw_parent_id }}
+            {{- end }}
+            {{- if $labels.hw_parent_type }}
+            Parent type: {{ $labels.hw_parent_type }}
+            {{- end }}
+            Average service time per operation: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-Storage-Network-InterfaceFlap-Info
+        expr: changes(hw_network_up{network_type!="", role!=""}[1h]) > 1
+        for: 0m
+        labels:
+          severity: info
+          category: network
+        annotations:
+          summary: "Network interface {{ $labels.host_name }} / {{ $labels.id }} has flapped {{ $value | humanize }} times in the last hour"
+          description: |
+            Network interface is flapping (frequent up/down state changes) within the last hour.
+            Consequence: Intermittent path loss can cause transient I/O errors, multipath failovers, and sporadic application timeouts.
+            Recommended action: Inspect cabling/optics, switch port logs, and link negotiation settings. Stabilize the link and confirm the interface remains up after the fix.
+
+            Host: {{ $labels.host_name }}
+            Interface ID: {{ $labels.id }}
+            Interface name: {{ $labels.name }}
+            {{- if $labels.network_type }}
+            Network type: {{ $labels.network_type }}
+            {{- end }}
+            {{- if $labels.role }}
+            Role: {{ $labels.role }}
+            {{- end }}
+            {{- if $labels.address }}
+            Address: {{ $labels.address }}
+            {{- end }}
+            {{- if $labels.logical_address }}
+            Logical address: {{ $labels.logical_address }}
+            {{- end }}
+            {{- if $labels.physical_address }}
+            Physical address: {{ $labels.physical_address }}
+            {{- end }}
+            {{- if $labels.device_type }}
+            Device type: {{ $labels.device_type }}
+            {{- end }}
+            {{- if $labels.model }}
+            Model: {{ $labels.model }}
+            {{- end }}
+            {{- if $labels.vendor }}
+            Vendor: {{ $labels.vendor }}
+            {{- end }}
+            {{- if $labels.hw_parent_id }}
+            Parent ID: {{ $labels.hw_parent_id }}
+            {{- end }}
+            {{- if $labels.hw_parent_type }}
+            Parent type: {{ $labels.hw_parent_type }}
+            {{- end }}
+            State changes in the last hour: {{ $value | humanize }}
+
+      - alert: MetricsHub-Storage-Network-InterfaceFlap-Warning
+        expr: changes(hw_network_up{network_type!="", role!=""}[1h]) > 2
+        for: 0m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "Network interface {{ $labels.host_name }} / {{ $labels.id }} has flapped {{ $value | humanize }} times in the last hour"
+          description: |
+            Network interface is severely flapping (repeated up/down state changes) within the last hour.
+            Consequence: High risk of sustained instability and repeated path failovers; this can lead to I/O storms and application impact.
+            Recommended action: Prioritize immediate remediation—move traffic to redundant paths, replace suspicious optics/cables, and engage network/storage teams to isolate the failing component.
+
+            Host: {{ $labels.host_name }}
+            Interface ID: {{ $labels.id }}
+            Interface name: {{ $labels.name }}
+            {{- if $labels.network_type }}
+            Network type: {{ $labels.network_type }}
+            {{- end }}
+            {{- if $labels.role }}
+            Role: {{ $labels.role }}
+            {{- end }}
+            {{- if $labels.address }}
+            Address: {{ $labels.address }}
+            {{- end }}
+            {{- if $labels.logical_address }}
+            Logical address: {{ $labels.logical_address }}
+            {{- end }}
+            {{- if $labels.physical_address }}
+            Physical address: {{ $labels.physical_address }}
+            {{- end }}
+            {{- if $labels.device_type }}
+            Device type: {{ $labels.device_type }}
+            {{- end }}
+            {{- if $labels.model }}
+            Model: {{ $labels.model }}
+            {{- end }}
+            {{- if $labels.vendor }}
+            Vendor: {{ $labels.vendor }}
+            {{- end }}
+            {{- if $labels.hw_parent_id }}
+            Parent ID: {{ $labels.hw_parent_id }}
+            {{- end }}
+            {{- if $labels.hw_parent_type }}
+            Parent type: {{ $labels.hw_parent_type }}
+            {{- end }}
+            State changes in the last hour: {{ $value | humanize }}
+
+  # ---------------------------------------------------------------------
+  # Storage Physical Disks
+  # ---------------------------------------------------------------------
+  - name: storage_physical_disks
+    rules:
+
+      - alert: MetricsHub-Storage-PhysicalDisk-HighLatency-Warning
+        expr: |
+          (
+            rate(storage_operation_time_seconds_total{storage_type="physical_disk"}[5m])
+            /
+            clamp_min(rate(storage_operations_total{storage_type="physical_disk"}[5m]), 1)
+          ) > 0.050
+          and
+          rate(storage_operations_total{storage_type="physical_disk"}[5m]) > 100
+        for: 15m
+        labels:
+          severity: warning
+          category: physical_disk
+        annotations:
+          summary: "Disk {{ $labels.host_name }} / {{ $labels.id }} latency at {{ $value | humanizeDuration }} under load"
+          description: |
+            Physical disk average service time is high under load.
+            Consequence: A slow disk can degrade RAID group performance and increase latency for volumes hosted on it (especially during rebuild or parity operations).
+            Recommended action: Check disk health (errors, SMART/firmware), validate controller/back-end paths, and consider proactive replacement if the disk is degrading. Correlate with rebuild activities and peer disk latencies.
+
+            Host: {{ $labels.host_name }}
+            Disk ID: {{ $labels.id }}
+            Disk name: {{ $labels.name }}
+            {{- if $labels.model }}
+            Model: {{ $labels.model }}
+            {{- end }}
+            {{- if $labels.manufacturer }}
+            Manufacturer: {{ $labels.manufacturer }}
+            {{- end }}
+            {{- if $labels.vendor }}
+            Vendor: {{ $labels.vendor }}
+            {{- end }}
+            {{- if $labels.serial_number }}
+            Serial number: {{ $labels.serial_number }}
+            {{- end }}
+            {{- if $labels.info }}
+            Information: {{ $labels.info }}
+            {{- end }}
+            Average service time per operation: {{ $value | humanizeDuration }}
+
+      - alert: MetricsHub-Storage-PhysicalDisk-HighLatencyOutlier-Warning
+        expr: |
+          (
+            max by(host_name, id, name, model, manufacturer, vendor, serial_number) (
+              rate(storage_operation_time_seconds_total{storage_type="physical_disk"}[5m])
+              /
+              clamp_min(rate(storage_operations_total{storage_type="physical_disk"}[5m]), 1)
+            )
+            -
+            on(host_name) group_left()
+            avg by(host_name) (
+              max by(host_name, id) (
+                rate(storage_operation_time_seconds_total{storage_type="physical_disk"}[5m])
+                /
+                clamp_min(rate(storage_operations_total{storage_type="physical_disk"}[5m]), 1)
+              )
+            )
+          )
+          /
+          on(host_name) group_left()
+          clamp_min(
+            stddev by(host_name) (
+              max by(host_name, id) (
+                rate(storage_operation_time_seconds_total{storage_type="physical_disk"}[5m])
+                /
+                clamp_min(rate(storage_operations_total{storage_type="physical_disk"}[5m]), 1)
+              )
+            ),
+            0.001
+          ) > 4
+        for: 15m
+        labels:
+          severity: warning
+          category: physical_disk
+        annotations:
+          summary: "Disk {{ $labels.host_name }} / {{ $labels.id }} is an abnormal latency outlier vs its peers (Z-score: {{ $value | humanize }})"
+          description: |
+            Physical disk latency is a strong outlier compared to peer disks on the same host (statistical outlier).
+            Consequence: Outlier disks are often early indicators of impending failure or back-end path issues and may cause uneven performance and rebuild stress.
+            Recommended action: Compare this disk to peers, check for media/transport errors, and escalate for replacement or remediation of the back-end path if the outlier persists.
+
+            Host: {{ $labels.host_name }}
+            Disk ID: {{ $labels.id }}
+            Disk name: {{ $labels.name }}
+            {{- if $labels.model }}
+            Model: {{ $labels.model }}
+            {{- end }}
+            {{- if $labels.manufacturer }}
+            Manufacturer: {{ $labels.manufacturer }}
+            {{- end }}
+            {{- if $labels.vendor }}
+            Vendor: {{ $labels.vendor }}
+            {{- end }}
+            {{- if $labels.serial_number }}
+            Serial number: {{ $labels.serial_number }}
+            {{- end }}
+            Latency outlier score (Z-score vs peers): {{ $value | humanize }}
+
+  # ---------------------------------------------------------------------
+  # Storage Consumers
+  # ---------------------------------------------------------------------
+  - name: storage_consumers
+    rules:
+
+      - alert: MetricsHub-Storage-Consumer-ActiveGoneIdle-Warning
+        expr: |
+          avg_over_time(
+            sum by (host_name, storage_consumer_name) (
+              rate(storage_operations_total{storage_type="volume"}[5m])
+            )[2h:]
+          ) > 50
+          and
+          sum by (host_name, storage_consumer_name) (
+            rate(storage_operations_total{storage_type="volume"}[5m])
+          ) < 1
+        for: 10m
+        labels:
+          severity: warning
+          category: consumer
+        annotations:
+          summary: "Consumer {{ $labels.storage_consumer_name }} on {{ $labels.host_name }} has gone idle (was averaging {{ printf \"%.0f\" $value }} ops/s)"
+          description: |
+            A storage consumer that was consistently active has become idle.
+            Consequence: This may indicate an application stop, a host/connectivity issue, or an unexpected workload interruption (potentially impacting SLAs).
+            Recommended action: Confirm whether the consumer should be active. If not expected, check host status, storage mappings, and multipath health; then verify recent changes or scheduled maintenance.
+
+            Host: {{ $labels.host_name }}
+            Consumer: {{ $labels.storage_consumer_name }}
+            Previous average IOPS (2h): {{ printf "%.1f" $value }} ops/s
+
+      - alert: MetricsHub-Storage-Consumer-OperationsSpike-Warning
+        expr: |
+          (
+            (
+              sum by (host_name, storage_consumer_name) (
+                rate(storage_operations_total{storage_type="volume"}[5m])
+              )
+              -
+              avg_over_time(
+                sum by (host_name, storage_consumer_name) (
+                  rate(storage_operations_total{storage_type="volume"}[5m])
+                )[6h:]
+              )
+            )
+            /
+            clamp_min(
+              stddev_over_time(
+                sum by (host_name, storage_consumer_name) (
+                  rate(storage_operations_total{storage_type="volume"}[5m])
+                )[6h:]
+              ),
+              1
+            )
+          ) > 4
+          and
+          sum by (host_name, storage_consumer_name) (
+            rate(storage_operations_total{storage_type="volume"}[5m])
+          ) > 50
+        for: 10m
+        labels:
+          severity: warning
+          category: consumer
+        annotations:
+          summary: "Consumer {{ $labels.storage_consumer_name }} is experiencing an abnormal IOPS spike (Z-score: {{ $value | humanize }})"
+          description: |
+            Consumer IOPS are abnormally high compared to the last 6 hours (statistical spike).
+            Consequence: Sudden IOPS spikes can create contention on shared pools/controllers and may degrade performance for other workloads.
+            Recommended action: Identify the process/job causing the spike, validate it is expected, and apply throttling/QoS or scheduling changes if it threatens shared performance.
+
+            Host: {{ $labels.host_name }}
+            Consumer: {{ $labels.storage_consumer_name }}
+            IOPS spike score (Z-score vs 6h baseline): {{ $value | humanize }}
+
+      - alert: MetricsHub-Storage-Consumer-OverProvisionedCapacity-Info
+        expr: |
+          (
+            sum by (host_name, storage_consumer_name) (
+              storage_usage_bytes{storage_type="volume", storage_provisioning_state="used"}
+            )
+            /
+            clamp_min(
+              sum by (host_name, storage_consumer_name) (
+                storage_limit_bytes{storage_type="volume"}
+              ),
+              1
+            )
+          ) < 0.05
+          and
+          sum by (host_name, storage_consumer_name) (
+            storage_limit_bytes{storage_type="volume"}
+          ) > 500 * 1024 * 1024 * 1024
+        for: 24h
+        labels:
+          severity: info
+          category: consumer
+        annotations:
+          summary: "Consumer {{ $labels.storage_consumer_name }} on {{ $labels.host_name }} has more than 500 GiB provisioned but is using {{ $value | humanizePercentage }}"
+          description: |
+            Consumer has a large amount of allocated/provisioned capacity but very low utilization.
+            Consequence: Over-provisioning wastes capacity and increases operational risk by reducing available headroom in pools for real growth needs.
+            Recommended action: Review capacity rightsizing for this consumer (reduce allocated volume sizes where safe, reclaim unused volumes, and implement quotas/chargeback).
+
+            Host: {{ $labels.host_name }}
+            Consumer: {{ $labels.storage_consumer_name }}
+            Used capacity ratio (used/limit): {{ $value | humanizePercentage }}
+
+      - alert: MetricsHub-Storage-Consumer-GrowthSpike-Warning
+        expr: |
+          (
+            delta(
+              sum by (host_name, storage_consumer_name) (
+                storage_usage_bytes{storage_type="volume", storage_provisioning_state="used"}
+              )[1h:]
+            )
+            /
+            clamp_min(
+              sum by (host_name, storage_consumer_name) (
+                storage_limit_bytes{storage_type="volume"}
+              ),
+              1
+            )
+          ) > 0.02
+        for: 20m
+        labels:
+          severity: warning
+          category: consumer
+        annotations:
+          summary: "Consumer {{ $labels.storage_consumer_name }} on {{ $labels.host_name }} used capacity grew by {{ $value | humanizePercentage }} in the last hour"
+          description: |
+            Consumer used capacity increased significantly in the last hour.
+            Consequence: Rapid growth can unexpectedly consume pool capacity and may indicate runaway writes (logs, temp data), snapshot expansion, or an abnormal ingestion pipeline.
+            Recommended action: Identify the growth source quickly (application logs, backups, snapshots, cloning). If unplanned, stop the growth driver and apply quotas/retention controls to prevent recurrence.
+
+            Host: {{ $labels.host_name }}
+            Consumer: {{ $labels.storage_consumer_name }}
+            Growth in last hour (delta used / limit): {{ $value | humanizePercentage }}

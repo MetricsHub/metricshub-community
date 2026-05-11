@@ -33,6 +33,7 @@ import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
+import org.metricshub.extension.win.WmiRecorder;
 import org.metricshub.winrm.WinRMHttpProtocolEnum;
 import org.metricshub.winrm.WindowsRemoteCommandResult;
 import org.metricshub.winrm.command.WinRMCommandExecutor;
@@ -51,10 +52,11 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 	/**
 	 * Execute a WinRM query
 	 *
-	 * @param hostname           The hostname of the device where the WinRM service is running (<code>null</code> for localhost)
-	 * @param winConfiguration   WinRM Protocol configuration (credentials, timeout)
-	 * @param query              The query to execute
-	 * @param namespace          The namespace on which to execute the query
+	 * @param hostname              The hostname of the device where the WinRM service is running (<code>null</code> for localhost)
+	 * @param winConfiguration      WinRM Protocol configuration (credentials, timeout)
+	 * @param query                 The query to execute
+	 * @param namespace             The namespace on which to execute the query
+	 * @param recordOutputDirectory The directory for recording the query result, or {@code null} to skip recording.
 	 * @return The result of the query
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
@@ -64,7 +66,8 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		@SpanAttribute("host.hostname") @NonNull final String hostname,
 		@SpanAttribute("winrm.config") @NonNull final IWinConfiguration winConfiguration,
 		@SpanAttribute("winrm.query") @NonNull final String query,
-		@SpanAttribute("winrm.namespace") @NonNull final String namespace
+		@SpanAttribute("winrm.namespace") @NonNull final String namespace,
+		final String recordOutputDirectory
 	) throws ClientException {
 		if (!(winConfiguration instanceof WinRmConfiguration winRmConfiguration)) {
 			throw new ClientException("Invalid WinRmConfiguration on " + hostname);
@@ -129,6 +132,10 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 					responseTime
 				)
 			);
+
+			if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+				WmiRecorder.getInstance(recordOutputDirectory).record(query, namespace, table);
+			}
 
 			return table;
 		} catch (Exception e) {

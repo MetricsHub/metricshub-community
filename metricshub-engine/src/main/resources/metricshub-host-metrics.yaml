@@ -24,6 +24,10 @@ metrics:
     description: Whether the host is configured or not.
     type: UpDownCounter
 
+  metricshub.host.observed:
+    description: Whether the host is observed through at least one configured protocol.
+    type: UpDownCounter
+
   metricshub.host.up:
     description: Whether the configured protocol (http, ipmi, snmp, ssh, wbem, winrm and wmi) is up (1) or not (0).	
     type: UpDownCounter

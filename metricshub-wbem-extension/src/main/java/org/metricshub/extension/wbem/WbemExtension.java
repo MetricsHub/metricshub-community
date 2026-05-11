@@ -46,6 +46,11 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
+/**
+ * The {@code WbemExtension} class implements the {@link IProtocolExtension} interface to provide
+ * support for the Web-Based Enterprise Management (WBEM) protocol in the MetricsHub engine.
+ * It includes methods for validating configurations, processing criteria and sources, and performing protocol health checks.
+ */
 @Slf4j
 public class WbemExtension implements IProtocolExtension {
 
@@ -239,6 +244,19 @@ public class WbemExtension implements IProtocolExtension {
 	@Override
 	public String getIdentifier() {
 		return IDENTIFIER;
+	}
+
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			WbemRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
 	}
 
 	@Override

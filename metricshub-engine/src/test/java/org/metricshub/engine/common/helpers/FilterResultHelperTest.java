@@ -2,8 +2,8 @@ package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 import static org.metricshub.engine.constants.Constants.SINGLE_SPACE;
-import static org.metricshub.engine.constants.Constants.TABLE_SEP;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;

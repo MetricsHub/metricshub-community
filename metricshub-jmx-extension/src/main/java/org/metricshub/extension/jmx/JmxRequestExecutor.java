@@ -22,6 +22,7 @@ package org.metricshub.extension.jmx;
  */
 
 import static org.metricshub.engine.common.helpers.MetricsHubConstants.EMPTY;
+import static org.metricshub.engine.common.helpers.MetricsHubConstants.TABLE_SEP;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
@@ -38,6 +39,7 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ThreadHelper;
+import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * Helper that connects to JMX, resolves exactly one MBean, and reads zero or more attributes in one call.
@@ -49,11 +51,12 @@ public class JmxRequestExecutor {
 	 * Fetches information about JMX beans matching the specified object name pattern and attributes.<br>
 	 * This entry point is used to run JMX requests in a separate thread, allowing for timeout handling.
 	 *
-	 * @param jmxConfiguration  the JMX configuration containing hostname, port, username, and password
-	 * @param objectNamePattern the pattern for matching MBean object names
-	 * @param attributes        the list of attributes to fetch from the MBeans
-	 * @param keyProperties     the list of key properties to include in the result set, used for identifying MBeans uniquely
-	 * @param resourceHostname  the HostConfiguration hostname for stats tracking, or {@code null} to skip tracking
+	 * @param jmxConfiguration      the JMX configuration containing hostname, port, username, and password
+	 * @param objectNamePattern     the pattern for matching MBean object names
+	 * @param attributes            the list of attributes to fetch from the MBeans
+	 * @param keyProperties         the list of key properties to include in the result set, used for identifying MBeans uniquely
+	 * @param resourceHostname      the HostConfiguration hostname for stats tracking, or {@code null} to skip tracking
+	 * @param recordOutputDirectory the output directory for recording (nullable; when set, the exchange is recorded)
 	 * @return a list of lists, where each inner list contains the values of the key attributes followed by the requested attributes
 	 * @throws Exception if an error occurs while connecting to the JMX server or fetching attributes
 	 */
@@ -63,20 +66,38 @@ public class JmxRequestExecutor {
 		@SpanAttribute("jmx.objectName") final String objectNamePattern,
 		@SpanAttribute("jmx.attributes") final Iterable<String> attributes,
 		@SpanAttribute("jmx.keyProperties") final Collection<String> keyProperties,
-		final String resourceHostname
+		final String resourceHostname,
+		final String recordOutputDirectory
 	) throws Exception {
+		final List<List<String>> result;
 		if (resourceHostname != null) {
-			return ThreadHelper.execute(
-				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-				jmxConfiguration.getTimeout(),
-				resourceHostname,
-				"jmx"
-			);
+			result =
+				ThreadHelper.execute(
+					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+					jmxConfiguration.getTimeout(),
+					resourceHostname,
+					"jmx"
+				);
+		} else {
+			result =
+				ThreadHelper.execute(
+					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+					jmxConfiguration.getTimeout()
+				);
 		}
-		return ThreadHelper.execute(
-			() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-			jmxConfiguration.getTimeout()
-		);
+
+		// Record the JMX exchange if recording is enabled
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			final List<String> attrList = new ArrayList<>();
+			if (attributes != null) {
+				attributes.forEach(attrList::add);
+			}
+			final List<String> keyPropList = keyProperties != null ? new ArrayList<>(keyProperties) : List.of();
+			final String csv = SourceTable.tableToCsv(result, TABLE_SEP, true);
+			JmxRecorder.getInstance(recordOutputDirectory).record(objectNamePattern, attrList, keyPropList, csv);
+		}
+
+		return result;
 	}
 
 	/**

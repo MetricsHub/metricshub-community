@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -53,6 +54,8 @@ class FileSourceProcessorTest {
 
 	private final String SOURCE_KEY = "sourceKey";
 
+	private final String EMPTY = "";
+
 	@Mock
 	private RemoteFilesRequestExecutor mockRequestExecutor;
 
@@ -69,7 +72,8 @@ class FileSourceProcessorTest {
 
 		private final RemoteFilesRequestExecutor mockRequestExecutor;
 
-		TestableFileSourceProcessor(RemoteFilesRequestExecutor mockRequestExecutor) {
+		TestableFileSourceProcessor(RemoteFilesRequestExecutor mockRequestExecutor, OsCommandService osCommandService) {
+			super(osCommandService);
 			this.mockRequestExecutor = mockRequestExecutor;
 		}
 
@@ -90,6 +94,7 @@ class FileSourceProcessorTest {
 		private final FileOperations mockLocalFileOperations;
 
 		TestableFileSourceProcessorForLocalhost(FileOperations mockLocalFileOperations) {
+			super(new OsCommandService());
 			this.mockLocalFileOperations = mockLocalFileOperations;
 		}
 
@@ -101,6 +106,8 @@ class FileSourceProcessorTest {
 
 	@Test
 	void testProcessWithWindowsHostFlatMode() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+
 		// Setup configuration for remote Windows host
 		final SshConfiguration sshConfiguration = SshConfiguration
 			.sshConfigurationBuilder()
@@ -137,53 +144,50 @@ class FileSourceProcessorTest {
 		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
 		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
 
-		// Mock OsCommandService.runSshCommand for path resolution
-		try (MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class)) {
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						eq(HOSTNAME),
-						eq(sshConfiguration),
-						anyLong(),
-						any(),
-						anyString(),
-						eq(DeviceKind.WINDOWS)
-					)
-				)
-				.thenReturn(resolvedPath);
+		doReturn(resolvedPath)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				anyString(),
+				eq(DeviceKind.WINDOWS)
+			);
 
-			// Create testable processor with injected mock
-			final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor);
+		// Create testable processor with injected mock
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-			// Iteration 1: First read
-			when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
+		// Iteration 1: First read
+		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
 
-			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 1
-			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(initialContent, logs1.get(resolvedPath));
+		// Assertions for iteration 1
+		assertNotNull(result1);
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals(initialContent, logs1.get(resolvedPath));
 
-			// Iteration 2: Second read with new content
-			when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
+		// Iteration 2: Second read with new content
+		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
 
-			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 2
-			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
-		}
+		// Assertions for iteration 2
+		assertNotNull(result2);
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 	}
 
 	@Test
 	void testProcessWithWindowsHostLogMode() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+
 		// Setup configuration for remote Windows host
 		final SshConfiguration sshConfiguration = SshConfiguration
 			.sshConfigurationBuilder()
@@ -221,65 +225,62 @@ class FileSourceProcessorTest {
 		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
 		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
 
-		// Mock OsCommandService.runSshCommand for path resolution
-		try (MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class)) {
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						eq(HOSTNAME),
-						eq(sshConfiguration),
-						anyLong(),
-						any(),
-						anyString(),
-						eq(DeviceKind.WINDOWS)
-					)
-				)
-				.thenReturn(resolvedPath);
+		doReturn(resolvedPath)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				anyString(),
+				eq(DeviceKind.WINDOWS)
+			);
 
-			// Create testable processor with injected mock
-			final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor);
+		// Create testable processor with injected mock
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-			// Iteration 1: First read - should set cursor but return empty table
-			when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
+		// Iteration 1: First read - should set cursor but return empty table
+		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
 
-			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 1
-			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+		// Assertions for iteration 1
+		assertNotNull(result1);
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals(EMPTY, logs1.get(resolvedPath));
 
-			// Verify cursor was set correctly
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
-				.getConnectorNamespace(CONNECTOR_ID)
-				.getFileSourceCursors(SOURCE_KEY);
-			assertEquals(initialFileSize, cursors.get(resolvedPath));
+		// Verify cursor was set correctly
+		Map<String, Long> cursors = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.getFileSourceCursors(SOURCE_KEY);
+		assertEquals(initialFileSize, cursors.get(resolvedPath));
 
-			// Iteration 2: Second read with new content
-			when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-			when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
-				.thenReturn(newContent);
+		// Iteration 2: Second read with new content
+		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
+		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
+			.thenReturn(newContent);
 
-			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 2
-			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+		// Assertions for iteration 2
+		assertNotNull(result2);
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 
-			// Verify cursor was updated correctly
-			assertEquals(newFileSize, cursors.get(resolvedPath));
-		}
+		// Verify cursor was updated correctly
+		assertEquals(newFileSize, cursors.get(resolvedPath));
 	}
 
 	@Test
 	void testProcessWithLinuxHostFlatMode() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+
 		// Setup configuration for remote Linux host
 		final SshConfiguration sshConfiguration = SshConfiguration
 			.sshConfigurationBuilder()
@@ -316,53 +317,50 @@ class FileSourceProcessorTest {
 		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
 		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
 
-		// Mock OsCommandService.runSshCommand for path resolution
-		try (MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class)) {
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						eq(HOSTNAME),
-						eq(sshConfiguration),
-						anyLong(),
-						any(),
-						anyString(),
-						eq(DeviceKind.LINUX)
-					)
-				)
-				.thenReturn(resolvedPath);
+		doReturn(resolvedPath)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				anyString(),
+				eq(DeviceKind.LINUX)
+			);
 
-			// Create testable processor with injected mock
-			final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor);
+		// Create testable processor with injected mock
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-			// Iteration 1: First read
-			when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
+		// Iteration 1: First read
+		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(initialContent);
 
-			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 1
-			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(initialContent, logs1.get(resolvedPath));
+		// Assertions for iteration 1
+		assertNotNull(result1);
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals(initialContent, logs1.get(resolvedPath));
 
-			// Iteration 2: Second read with new content
-			when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
+		// Iteration 2: Second read with new content
+		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
 
-			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 2
-			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
-		}
+		// Assertions for iteration 2
+		assertNotNull(result2);
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 	}
 
 	@Test
 	void testProcessWithLinuxHostLogMode() throws Exception {
+		final OsCommandService osCommandService = mock(OsCommandService.class);
+
 		// Setup configuration for remote Linux host
 		final SshConfiguration sshConfiguration = SshConfiguration
 			.sshConfigurationBuilder()
@@ -402,61 +400,56 @@ class FileSourceProcessorTest {
 		when(mockRequestExecutor.connectSshClient()).thenReturn(true);
 		when(mockRequestExecutor.authenticateSshClient()).thenReturn(true);
 
-		// Mock OsCommandService.runSshCommand for path resolution
-		try (MockedStatic<OsCommandService> mockedOsCommandService = mockStatic(OsCommandService.class)) {
-			mockedOsCommandService
-				.when(() ->
-					OsCommandService.runSshCommand(
-						anyString(),
-						eq(HOSTNAME),
-						eq(sshConfiguration),
-						anyLong(),
-						any(),
-						anyString(),
-						eq(DeviceKind.LINUX)
-					)
-				)
-				.thenReturn(resolvedPath);
+		doReturn(resolvedPath)
+			.when(osCommandService)
+			.runSshCommand(
+				anyString(),
+				eq(HOSTNAME),
+				eq(sshConfiguration),
+				anyLong(),
+				any(),
+				anyString(),
+				eq(DeviceKind.LINUX)
+			);
 
-			// Create testable processor with injected mock
-			final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor);
+		// Create testable processor with injected mock
+		final FileSourceProcessor processor = new TestableFileSourceProcessor(mockRequestExecutor, osCommandService);
 
-			// Iteration 1: First read - should set cursor but return empty table
-			when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
+		// Iteration 1: First read - should set cursor but return empty table
+		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(initialFileSize);
 
-			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 1
-			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+		// Assertions for iteration 1
+		assertNotNull(result1);
+		Map<String, String> logs1 = requireLogs(result1);
+		assertFalse(logs1.isEmpty());
+		assertEquals(1, logs1.size());
+		assertEquals(EMPTY, logs1.get(resolvedPath));
 
-			// Verify cursor was set correctly
-			Map<String, Long> cursors = telemetryManager
-				.getHostProperties()
-				.getConnectorNamespace(CONNECTOR_ID)
-				.getFileSourceCursors(SOURCE_KEY);
-			assertEquals(initialFileSize, cursors.get(resolvedPath));
+		// Verify cursor was set correctly
+		Map<String, Long> cursors = telemetryManager
+			.getHostProperties()
+			.getConnectorNamespace(CONNECTOR_ID)
+			.getFileSourceCursors(SOURCE_KEY);
+		assertEquals(initialFileSize, cursors.get(resolvedPath));
 
-			// Iteration 2: Second read with new content
-			when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-			when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
-				.thenReturn(newContent);
+		// Iteration 2: Second read with new content
+		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
+		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
+			.thenReturn(newContent);
 
-			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
+		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
-			// Assertions for iteration 2
-			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+		// Assertions for iteration 2
+		assertNotNull(result2);
+		Map<String, String> logs2 = requireLogs(result2);
+		assertFalse(logs2.isEmpty());
+		assertEquals(1, logs2.size());
+		assertEquals(newContent, logs2.get(resolvedPath));
 
-			// Verify cursor was updated correctly
-			assertEquals(newFileSize, cursors.get(resolvedPath));
-		}
+		// Verify cursor was updated correctly
+		assertEquals(newFileSize, cursors.get(resolvedPath));
 	}
 
 	@Test
@@ -557,7 +550,7 @@ class FileSourceProcessorTest {
 			Map<String, String> logs1 = requireLogs(result1);
 			assertFalse(logs1.isEmpty());
 			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+			assertEquals(EMPTY, logs1.get(resolvedPath));
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -622,7 +615,7 @@ class FileSourceProcessorTest {
 			Map<String, String> logs1 = requireLogs(result1);
 			assertFalse(logs1.isEmpty());
 			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+			assertEquals(EMPTY, logs1.get(resolvedPath));
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()

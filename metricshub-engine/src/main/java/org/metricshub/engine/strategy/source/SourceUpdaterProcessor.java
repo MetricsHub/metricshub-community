@@ -30,9 +30,7 @@ import static org.metricshub.engine.common.helpers.MetricsHubConstants.SOURCE_RE
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -44,7 +42,6 @@ import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ProtocolPropertyReferenceHelper;
-import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.connector.model.common.CustomConcatMethod;
 import org.metricshub.engine.connector.model.common.EntryConcatMethod;
 import org.metricshub.engine.connector.model.common.IEntryConcatMethod;
@@ -67,7 +64,6 @@ import org.metricshub.engine.connector.model.monitor.task.source.TableUnionSourc
 import org.metricshub.engine.connector.model.monitor.task.source.WbemSource;
 import org.metricshub.engine.connector.model.monitor.task.source.WmiSource;
 import org.metricshub.engine.extension.ExtensionManager;
-import org.metricshub.engine.strategy.utils.EmulationHelper;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
@@ -211,27 +207,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 	 * @return {@link SourceTable}
 	 */
 	private SourceTable processSource(final Source copy) {
-		// Retrieve emulation input directory and read recorded source from it
-		final String emulationInputDirectory = telemetryManager.getEmulationInputDirectory();
-
-		// Predicate to check whether we should record or emulate the source
-		final Predicate<Source> shouldRecordOrEmulate = this::shouldRecordOrEmulate;
-
-		// CHECKSTYLE:OFF
-		if (StringHelper.nonNullNonBlank(emulationInputDirectory) && shouldRecordOrEmulate.test(copy)) {
-			return EmulationHelper
-				.readEmulatedSourceTable(connectorId, copy, emulationInputDirectory, telemetryManager)
-				.orElseGet(SourceTable::empty);
-		}
-		// CHECKSTYLE:ON
-
 		if (copy.isExecuteForEachEntryOf()) {
-			var table = runExecuteForEachEntryOf(copy);
-
-			// Persist if it is requested through recordOutputDirectory
-			EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
-
-			return table;
+			return runExecuteForEachEntryOf(copy);
 		}
 
 		copy.update(value ->
@@ -245,28 +222,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 
 		copy.update(value -> value == null ? value : value.replace("$$", "$"));
 
-		var table = copy.accept(sourceProcessor);
-
-		// Persist if it is requested through recordOutputDirectory
-		EmulationHelper.persistIfRequired(copy, connectorId, telemetryManager, table, shouldRecordOrEmulate);
-
-		return table;
-	}
-
-	/**
-	 * Checks whether we should record or emulate the given source copy
-	 *
-	 * @param copy {@link Source} instance copy
-	 * @return boolean value
-	 */
-	private boolean shouldRecordOrEmulate(final Source copy) {
-		// CHECKSTYLE:OFF
-		return (
-			!(copy instanceof SnmpTableSource || copy instanceof SnmpGetSource) &&
-			(extensionManager.findSourceExtension(copy, telemetryManager).isPresent() ||
-				extensionManager.findCompositeSourceScriptExtension(copy).isPresent())
-		);
-		// CHECKSTYLE:ON
+		return copy.accept(sourceProcessor);
 	}
 
 	/**
@@ -622,6 +578,10 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final Integer sleep = source.getSleepExecuteForEachEntryOf();
 
 		for (List<String> row : maybeSourceTable.get().getTable()) {
+			if (row == null) {
+				continue;
+			}
+
 			final Source copy = source.copy();
 
 			try {
@@ -772,7 +732,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		final List<String> row,
 		final SourceTable sourceTableToConcat
 	) {
-		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(rowToCsv(row, ","), sourceTableToConcat);
+		final String formattedExtendedJSON = PslUtils.formatExtendedJSON(row, sourceTableToConcat);
 		// This will mess the JSON Extended
 		if (formattedExtendedJSON.isBlank()) {
 			return;
@@ -809,24 +769,6 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		currentResult.setRawData(
 			(currentResult.getRawData().isBlank() ? EMPTY : currentResult.getRawData().concat(separator)).concat(string)
 		);
-	}
-
-	/**
-	 * Transform the {@link List} row to a {@link String} representation
-	 * [a1,b1,c2]
-	 *  =>
-	 * a1,b1,c1
-	 *
-	 * @param row             The row result we wish to parse
-	 * @param separator       The cells separator on each line
-	 * @return {@link String} value
-	 */
-	public static String rowToCsv(final List<String> row, final String separator) {
-		if (row != null) {
-			return row.stream().filter(Objects::nonNull).collect(Collectors.joining(separator));
-		}
-
-		return EMPTY;
 	}
 
 	/**

@@ -98,6 +98,7 @@
 		<module>metricshub-agent</module>
 		<module>metricshub-assets</module>
 		<module>metricshub-classloader-agent</module>
+		<module>metricshub-emulation-extension</module>
 		<module>metricshub-engine</module>
 		<module>metricshub-hardware</module>
 		<module>metricshub-http-extension</module>
@@ -328,7 +329,7 @@
 			<dependency>
 				<groupId>info.picocli</groupId>
 				<artifactId>picocli</artifactId>
-				<version>4.7.5</version>
+				<version>4.7.7</version>
 			</dependency>
 			<dependency>
 				<groupId>com.fasterxml.jackson</groupId>
@@ -364,18 +365,10 @@
 			</dependency>
 			<dependency>
 				<groupId>io.grpc</groupId>
-				<artifactId>grpc-netty-shaded</artifactId>
-				<version>1.75.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.grpc</groupId>
-				<artifactId>grpc-protobuf</artifactId>
-				<version>1.71.0</version>
-			</dependency>
-			<dependency>
-				<groupId>io.grpc</groupId>
-				<artifactId>grpc-stub</artifactId>
-				<version>1.71.0</version>
+				<artifactId>grpc-bom</artifactId>
+				<version>1.80.0</version>
+				<type>pom</type>
+				<scope>import</scope>
 			</dependency>
 			<dependency>
 				<groupId>com.google.protobuf</groupId>

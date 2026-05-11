@@ -219,6 +219,19 @@ public class HttpExtension implements IProtocolExtension {
 		return IDENTIFIER;
 	}
 
+	/**
+	 * Flushes and releases recorder resources at the end of a recording session.
+	 *
+	 * @param telemetryManager telemetry manager that carries the recording output directory
+	 */
+	@Override
+	public void onRecordingSessionEnd(final TelemetryManager telemetryManager) {
+		final String recordOutputDirectory = telemetryManager.getRecordOutputDirectory();
+		if (recordOutputDirectory != null && !recordOutputDirectory.isBlank()) {
+			HttpRecorder.flushAndRemoveInstance(recordOutputDirectory);
+		}
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode query) {
 		final String hostname = configuration.getHostname();
