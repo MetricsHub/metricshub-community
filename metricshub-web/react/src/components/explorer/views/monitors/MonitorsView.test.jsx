@@ -4,7 +4,7 @@ import MonitorsView from "./MonitorsView";
 import { renderWithReduxAndRouter } from "../../../../test/test-utils";
 
 vi.mock("./components/ConnectorAccordion", () => ({
-	default: () => null,
+	default: ({ connector }) => <div>{`connector:${connector?.name || "unknown"}`}</div>,
 }));
 
 describe("MonitorsView failed connectors alert", () => {
@@ -35,5 +35,30 @@ describe("MonitorsView failed connectors alert", () => {
 		);
 
 		expect(screen.queryByText(/The following connectors have failed/i)).not.toBeInTheDocument();
+	});
+});
+
+describe("MonitorsView", () => {
+	it("renders connectors even when they have no monitors", () => {
+		renderWithReduxAndRouter(
+			<MonitorsView
+				connectors={[{ name: "ConnectorA", monitors: [] }]}
+				failedConnectors={[]}
+				lastUpdatedAt={Date.now()}
+			/>,
+		);
+
+		expect(screen.getByText("connector:ConnectorA")).toBeInTheDocument();
+		expect(
+			screen.queryByText(/No connectors available for this resource/i),
+		).not.toBeInTheDocument();
+	});
+
+	it("shows empty message when there are no connectors", () => {
+		renderWithReduxAndRouter(
+			<MonitorsView connectors={[]} failedConnectors={[]} lastUpdatedAt={Date.now()} />,
+		);
+
+		expect(screen.getByText(/No connectors available for this resource/i)).toBeInTheDocument();
 	});
 });

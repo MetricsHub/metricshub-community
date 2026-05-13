@@ -101,14 +101,7 @@ const MonitorsView = ({
 		[lastUpdatedAt, _now],
 	);
 
-	// Check if there are any monitors across all connectors
-	const hasAnyMonitors = React.useMemo(
-		() =>
-			safeConnectors.some(
-				(connector) => Array.isArray(connector?.monitors) && connector.monitors.length > 0,
-			),
-		[safeConnectors],
-	);
+	const hasAnyConnectors = safeConnectors.length > 0;
 
 	const highlightedId = useScrollToHash();
 
@@ -118,7 +111,7 @@ const MonitorsView = ({
 		}
 	}, [highlightedId, resourceId, dispatch]);
 
-	if (!hasAnyMonitors) {
+	if (!hasAnyConnectors) {
 		return (
 			<Box>
 				<MonitorsHeader lastUpdatedLabel={lastUpdatedLabel} />
