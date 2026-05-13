@@ -9,6 +9,7 @@ import {
 	AccordionSummary,
 	AccordionDetails,
 	Tooltip,
+	Link,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -32,6 +33,8 @@ import MetricNameHighlighter from "../../common/MetricNameHighlighter.jsx";
 import MetricValueCell from "../../common/MetricValueCell";
 import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
+import { SUPPORT_URL } from "../../../../../utils/constants";
+import AppAlert from "../../../../common/AppAlert";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
 
 import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
@@ -292,6 +295,12 @@ const ConnectorAccordion = ({
 
 	const statusMetric = connector.metrics?.["metricshub.connector.status"];
 	const statusValue = getMetricValue(statusMetric);
+	const hasFailed = statusValue === "failed";
+	const [showFailedAlert, setShowFailedAlert] = React.useState(true);
+
+	React.useEffect(() => {
+		setShowFailedAlert(true);
+	}, [hasFailed, connectorKey]);
 
 	const metricKeys = connector.metrics ? Object.keys(connector.metrics) : [];
 	const showMetricsTable =
@@ -419,6 +428,20 @@ const ConnectorAccordion = ({
 				</Box>
 			</AccordionSummary>
 			<AccordionDetails sx={{ p: 0 }}>
+				{hasFailed && showFailedAlert && (
+					<AppAlert
+						severity="warning"
+						sx={{ m: 2, mb: 0 }}
+						closable
+						onClose={() => setShowFailedAlert(false)}
+					>
+						This connector has failed. Contact{" "}
+						<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+							support
+						</Link>{" "}
+						if you need assistance.
+					</AppAlert>
+				)}
 				{/* Connector Attributes & Metrics Container */}
 				{((connector.attributes && Object.keys(connector.attributes).length > 0) ||
 					showMetricsTable) && (
