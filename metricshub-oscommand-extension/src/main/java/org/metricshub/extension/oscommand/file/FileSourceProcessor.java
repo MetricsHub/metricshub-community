@@ -25,7 +25,7 @@ import static org.metricshub.engine.connector.model.monitor.task.source.FileSour
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -43,7 +43,6 @@ import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
 import org.metricshub.engine.strategy.source.FileSourceProcessingResult;
-import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.oscommand.OsCommandService;
@@ -67,6 +66,9 @@ public class FileSourceProcessor {
 
 	// Linux find command template for resolving file paths.
 	public static final String RESOLVE_LINUX_FILES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -name \"%s\" -print";
+
+	// Linux find command template for resolving directory paths.
+	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
 
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
@@ -108,8 +110,10 @@ public class FileSourceProcessor {
 		try (FileOperations ops = fileOperations) {
 			final Set<String> sourceResolvedPaths = new HashSet<>();
 
+			final Set<String> paths = fileSource.getPaths();
+
 			if (isLocalhost) {
-				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, fileSource.getPaths(), deviceKind));
+				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, paths, deviceKind));
 			} else {
 				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, fileSource, telemetryManager, deviceKind));
 			}
@@ -127,7 +131,9 @@ public class FileSourceProcessor {
 					log.debug("Hostname {} - Configuration Type: {}", hostname, sshConfig.getClass().getSimpleName());
 				}
 			}
+
 			final List<List<String>> pathsTable = sourceResolvedPaths.stream().map(List::of).collect(Collectors.toList());
+
 			log.debug(
 				"Hostname {} - Resolved paths:\n{}",
 				hostname,
@@ -137,7 +143,9 @@ public class FileSourceProcessor {
 			final FileSourceProcessingMode mode = fileSource.getMode();
 
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
-				return LogTable.builder().logs(processFilesInFlatMode(ops, sourceResolvedPaths, hostname)).build();
+				final List<List<String>> results = processFilesInFlatMode(ops, sourceResolvedPaths, hostname);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager
@@ -145,10 +153,15 @@ public class FileSourceProcessor {
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
-				return LogTable
-					.builder()
-					.logs(processFilesInLogMode(ops, sourceResolvedPaths, sourceCursors, fileSource, hostname))
-					.build();
+				final List<List<String>> results = processFilesInLogMode(
+					ops,
+					sourceResolvedPaths,
+					sourceCursors,
+					fileSource,
+					hostname
+				);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}
@@ -160,7 +173,7 @@ public class FileSourceProcessor {
 				e.getMessage()
 			);
 			log.debug("Hostname {} - FileSource processing failed.", hostname, e);
-			return LogTable.builder().build();
+			return SourceTable.empty();
 		}
 	}
 
@@ -174,12 +187,12 @@ public class FileSourceProcessor {
 	 * @param hostname The hostname for logging purposes
 	 * @return A list of lists containing file paths and their complete content
 	 */
-	Map<String, String> processFilesInFlatMode(
+	List<List<String>> processFilesInFlatMode(
 		final FileOperations fileOperations,
 		final Set<String> paths,
 		final String hostname
 	) {
-		final Map<String, String> results = new HashMap<>();
+		final List<List<String>> results = new ArrayList<>();
 
 		// Fetch the content of each file given its path, and add it to the results list
 		for (final String path : paths) {
@@ -188,8 +201,11 @@ public class FileSourceProcessor {
 				if (content != null) {
 					final long contentSizeBytes = content.getBytes(StandardCharsets.UTF_8).length;
 					log.debug("Hostname {} - Path [{}]: content fetched, size={} bytes", hostname, path, contentSizeBytes);
+					final List<String> row = new ArrayList<>();
+					row.add(path);
+					row.add(content);
+					results.add(row);
 				}
-				results.put(path, content != null ? content : "");
 			} catch (Exception e) {
 				// I/O or other error reading this file; log and skip so other paths can still be processed
 				log.info("Hostname {} - Unable to read file located under: {}. Message: {}", hostname, path, e.getMessage());
@@ -211,7 +227,7 @@ public class FileSourceProcessor {
 	 * @param hostname The hostname for logging purposes
 	 * @return A list of lists containing file paths and their new content since last read
 	 */
-	Map<String, String> processFilesInLogMode(
+	List<List<String>> processFilesInLogMode(
 		final FileOperations fileOperations,
 		final Set<String> paths,
 		final Map<String, Long> sourceCursors,
@@ -221,13 +237,12 @@ public class FileSourceProcessor {
 		// Initialize remaining size with the maximum size per poll limit (already in bytes)
 		long remainingSize = fileSource.getMaxSizePerPoll();
 
-		final Map<String, String> resultedContent = new HashMap<>();
+		final List<List<String>> resultedContent = new ArrayList<>();
 
 		try {
 			for (final String path : paths) {
 				// Skip if the maximum size per poll has been reached
 				if (remainingSize == 0) {
-					resultedContent.put(path, "");
 					continue;
 				}
 
@@ -253,7 +268,12 @@ public class FileSourceProcessor {
 					result.getCursor(),
 					remainingSize
 				);
-				resultedContent.put(path, content != null ? content : "");
+				if (content != null) {
+					final List<String> row = new ArrayList<>();
+					row.add(path);
+					row.add(content);
+					resultedContent.add(row);
+				}
 			}
 		} catch (Exception e) {
 			// Catches errors during LOG-mode read (e.g. readFromOffset); log and return partial results
@@ -422,13 +442,20 @@ public class FileSourceProcessor {
 
 		for (final String path : rawPaths) {
 			// Extract filename pattern and base path from the path pattern
-			final String filename = FileHelper.extractFilename(path, deviceKind);
+			String filename = FileHelper.extractFilename(path, deviceKind);
 			final String basePath = FileHelper.extractBasePath(path, deviceKind);
 
 			// Build OS-specific command to find matching files
-			final String command = deviceKind.equals(DeviceKind.WINDOWS)
-				? RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename)
-				: RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
+			String command;
+
+			if (deviceKind.equals(DeviceKind.WINDOWS)) {
+				command = RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename);
+			} else if (filename.equals("*") || filename.isBlank()) {
+				command = RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(basePath);
+			} else {
+				command = RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
+			}
+
 			try {
 				// Execute SSH command to find matching files on remote host
 				final String result = osCommandService.runSshCommand(

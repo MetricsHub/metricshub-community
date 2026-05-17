@@ -2,11 +2,13 @@ package org.metricshub.extension.oscommand.file;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -26,7 +28,6 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
-import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
@@ -54,14 +55,13 @@ class FileSourceProcessorTest {
 
 	private final String SOURCE_KEY = "sourceKey";
 
-	private final String EMPTY = "";
-
 	@Mock
 	private RemoteFilesRequestExecutor mockRequestExecutor;
 
-	private static Map<String, String> requireLogs(final SourceTable table) {
-		assertInstanceOf(LogTable.class, table);
-		return ((LogTable) table).getLogs();
+	private static String expectedMarkedLogCell(final String path, final String rawContent) {
+		final StringBuilder logBlock = new StringBuilder();
+		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
+		return logBlock.toString();
 	}
 
 	/**
@@ -166,10 +166,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals(initialContent, logs1.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content
 		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
@@ -178,10 +175,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 2
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 	}
 
 	@Test
@@ -247,10 +241,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals(EMPTY, logs1.get(resolvedPath));
+		assertTrue(result1.isEmpty());
 
 		// Verify cursor was set correctly
 		Map<String, Long> cursors = telemetryManager
@@ -268,10 +259,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 2
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 
 		// Verify cursor was updated correctly
 		assertEquals(newFileSize, cursors.get(resolvedPath));
@@ -339,10 +327,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals(initialContent, logs1.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content
 		when(mockRequestExecutor.readRemoteFileOffsetContent(anyString(), eq(null), eq(null))).thenReturn(newContent);
@@ -351,10 +336,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 2
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 	}
 
 	@Test
@@ -422,10 +404,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 1
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals(EMPTY, logs1.get(resolvedPath));
+		assertTrue(result1.isEmpty());
 
 		// Verify cursor was set correctly
 		Map<String, Long> cursors = telemetryManager
@@ -443,10 +422,7 @@ class FileSourceProcessorTest {
 
 		// Assertions for iteration 2
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 
 		// Verify cursor was updated correctly
 		assertEquals(newFileSize, cursors.get(resolvedPath));
@@ -484,22 +460,20 @@ class FileSourceProcessorTest {
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(mockFileOps);
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(content, logs1.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getRawData());
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(content, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getRawData());
 		}
 	}
 
@@ -542,15 +516,16 @@ class FileSourceProcessorTest {
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(mockFileOps);
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(EMPTY, logs1.get(resolvedPath));
+			assertTrue(result1.isEmpty());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -560,10 +535,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -607,15 +579,16 @@ class FileSourceProcessorTest {
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(resolvedPath));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(mockFileOps);
 
 			SourceTable result1 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(EMPTY, logs1.get(resolvedPath));
+			assertTrue(result1.isEmpty());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -625,10 +598,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -667,14 +637,16 @@ class FileSourceProcessorTest {
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.LINUX)))
 				.thenReturn(Set.of(path1, path2));
 			mockedFileHelper.when(() -> FileHelper.escapeNewLines(any())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(mockFileOps);
 			final SourceTable result = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
 			assertNotNull(result);
-			Map<String, String> logsResult = requireLogs(result);
-			assertEquals(1, logsResult.size());
-			assertEquals(content1, logsResult.get(path1));
+			assertEquals(expectedMarkedLogCell(path1, content1), result.getRawData());
 		}
 	}
 }

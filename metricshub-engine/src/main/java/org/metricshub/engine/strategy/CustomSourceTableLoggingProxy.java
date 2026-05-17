@@ -27,7 +27,8 @@ import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
  * {@link SourceTableLoggingProxy} that builds the full log message unless the source is FileSource,
- * in which case only the header is displayed to avoid OOM and log flooding.
+ * in which case only the header is displayed to avoid OOM and log flooding. Set
+ * {@code -Dfilesource.log.enable=true} to log full FileSource results.
  */
 public class CustomSourceTableLoggingProxy implements SourceTableLoggingProxy {
 
@@ -44,10 +45,14 @@ public class CustomSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final SourceTable sourceTable,
 		final String hostname
 	) {
-		if (FILE_SOURCE_CLASS.equals(executionClassName)) {
+		if (FILE_SOURCE_CLASS.equals(executionClassName) && !isFileSourceDetailLoggingEnabled()) {
 			return buildHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
 		}
 		return buildFullMessage(operationTag, executionClassName, executionKey, connectorId, sourceTable, hostname);
+	}
+
+	static boolean isFileSourceDetailLoggingEnabled() {
+		return Boolean.parseBoolean(System.getProperty("filesource.log.enable", "false"));
 	}
 
 	private static String buildHeader(

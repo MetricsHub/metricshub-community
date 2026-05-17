@@ -2,12 +2,12 @@ package org.metricshub.extension.win.source;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -29,7 +29,6 @@ import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.common.FileOperations;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.FileSourceProcessingMode;
-import org.metricshub.engine.strategy.source.LogTable;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.ConnectorNamespace;
 import org.metricshub.engine.telemetry.HostProperties;
@@ -52,6 +51,12 @@ class FileSourceProcessorTest {
 			: value.replace("\r\n", NEW_LINE_ESCAPE).replace("\n", NEW_LINE_ESCAPE).replace("\r", NEW_LINE_ESCAPE);
 	}
 
+	private static String expectedMarkedLogCell(final String path, final String rawContent) {
+		final StringBuilder logBlock = new StringBuilder();
+		FileHelper.appendLogBlock(logBlock, path, FileHelper.escapeSemiColon(rawContent));
+		return logBlock.toString();
+	}
+
 	private final String WINDOWS_ABSOLUTE_PATH = "C:\\Program Files\\MetricsHub\\logs\\*.log";
 
 	private final String HOSTNAME = "hostname";
@@ -63,11 +68,6 @@ class FileSourceProcessorTest {
 
 	@Mock
 	private Function<TelemetryManager, IWinConfiguration> mockConfigurationRetriever;
-
-	private static Map<String, String> requireLogs(final SourceTable table) {
-		assertInstanceOf(LogTable.class, table);
-		return ((LogTable) table).getLogs();
-	}
 
 	/**
 	 * Test subclass that overrides createLocalFileOperations to inject a mock.
@@ -142,10 +142,7 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals(initialContent, logs1.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
 		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
@@ -154,10 +151,7 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 	}
 
 	@Test
@@ -215,10 +209,7 @@ class FileSourceProcessorTest {
 		SourceTable result1 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result1);
-		Map<String, String> logs1 = requireLogs(result1);
-		assertFalse(logs1.isEmpty());
-		assertEquals(1, logs1.size());
-		assertEquals("", logs1.get(resolvedPath));
+		assertTrue(result1.isEmpty());
 
 		Map<String, Long> cursors = telemetryManager
 			.getHostProperties()
@@ -230,10 +221,7 @@ class FileSourceProcessorTest {
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result2);
-		Map<String, String> logs2 = requireLogs(result2);
-		assertFalse(logs2.isEmpty());
-		assertEquals(1, logs2.size());
-		assertEquals(newContent, logs2.get(resolvedPath));
+		assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 		assertEquals(newFileSize, cursors.get(resolvedPath));
 	}
 
@@ -275,6 +263,10 @@ class FileSourceProcessorTest {
 			mockedFileHelper
 				.when(() -> FileHelper.escapeNewLines(any()))
 				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
 				mockWinRequestExecutor,
@@ -285,17 +277,11 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals(content, logs1.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result1.getRawData());
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(content, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, content), result2.getRawData());
 		}
 	}
 
@@ -337,9 +323,10 @@ class FileSourceProcessorTest {
 			mockedFileHelper
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(resolvedPath));
-			mockedFileHelper
-				.when(() -> FileHelper.escapeNewLines(any()))
-				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
 				mockWinRequestExecutor,
@@ -348,12 +335,10 @@ class FileSourceProcessorTest {
 				mockFileOps
 			);
 
+			// First Iteration, empty results are returned.
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+			assertTrue(result1.isEmpty());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -361,12 +346,10 @@ class FileSourceProcessorTest {
 				.getFileSourceCursors("sourceKey");
 			assertEquals(initialFileSize, cursors.get(resolvedPath));
 
+			// Second iteration, a log block is returned.
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -409,9 +392,10 @@ class FileSourceProcessorTest {
 			mockedFileHelper
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(resolvedPath));
-			mockedFileHelper
-				.when(() -> FileHelper.escapeNewLines(any()))
-				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
 				mockWinRequestExecutor,
@@ -422,10 +406,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result1 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result1);
-			Map<String, String> logs1 = requireLogs(result1);
-			assertFalse(logs1.isEmpty());
-			assertEquals(1, logs1.size());
-			assertEquals("", logs1.get(resolvedPath));
+			assertTrue(result1.isEmpty());
 
 			Map<String, Long> cursors = telemetryManager
 				.getHostProperties()
@@ -435,10 +416,7 @@ class FileSourceProcessorTest {
 
 			SourceTable result2 = processor.process(fileSource, telemetryManager);
 			assertNotNull(result2);
-			Map<String, String> logs2 = requireLogs(result2);
-			assertFalse(logs2.isEmpty());
-			assertEquals(1, logs2.size());
-			assertEquals(newContent, logs2.get(resolvedPath));
+			assertEquals(expectedMarkedLogCell(resolvedPath, newContent), result2.getRawData());
 			assertEquals(newFileSize, cursors.get(resolvedPath));
 		}
 	}
@@ -466,7 +444,7 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(null, telemetryManager);
 
 		assertNotNull(result);
-		assertTrue(result.getTable().isEmpty());
+		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -505,7 +483,7 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result);
-		assertTrue(result.getTable().isEmpty());
+		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -548,7 +526,7 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result);
-		assertTrue(result.getTable().isEmpty());
+		assertTrue(result.isEmpty());
 	}
 
 	@Test
@@ -602,10 +580,12 @@ class FileSourceProcessorTest {
 		SourceTable result = processor.process(fileSource, telemetryManager);
 
 		assertNotNull(result);
-		Map<String, String> logs = requireLogs(result);
-		assertEquals(2, logs.size());
-		assertEquals(Set.of(path1, path2), logs.keySet());
-		assertEquals(Set.of(content1, content2), Set.copyOf(logs.values()));
+		final String rawData = result.getRawData();
+		assertNotNull(rawData);
+		assertTrue(rawData.contains("<<<LOG:file=\"" + path1 + "\">>>"), rawData);
+		assertTrue(rawData.contains("<<<LOG:file=\"" + path2 + "\">>>"), rawData);
+		assertTrue(rawData.contains(FileHelper.escapeSemiColon(content1)), rawData);
+		assertTrue(rawData.contains(FileHelper.escapeSemiColon(content2)), rawData);
 	}
 
 	@Test
@@ -645,10 +625,10 @@ class FileSourceProcessorTest {
 			mockedFileHelper
 				.when(() -> FileHelper.findFilesByPattern(eq(HOSTNAME), any(), eq(DeviceKind.WINDOWS)))
 				.thenReturn(Set.of(path1, path2));
-			mockedFileHelper
-				.when(() -> FileHelper.escapeNewLines(any()))
-				.thenAnswer(inv -> escapeNewLines(inv.getArgument(0)));
-
+			mockedFileHelper.when(() -> FileHelper.buildLogBlock(anyList(), anySet(), anySet())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.isSingleAbsolutePath(anySet(), anySet(), anyList())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.escapeSemiColon(anyString())).thenCallRealMethod();
+			mockedFileHelper.when(() -> FileHelper.appendLogBlock(any(), anyString(), anyString())).thenCallRealMethod();
 			final FileSourceProcessor processor = new TestableFileSourceProcessorForLocalhost(
 				mockWinRequestExecutor,
 				mockConfigurationRetriever,
@@ -658,9 +638,7 @@ class FileSourceProcessorTest {
 
 			final SourceTable result = processor.process(fileSource, telemetryManager);
 			assertNotNull(result);
-			Map<String, String> logsResult = requireLogs(result);
-			assertEquals(1, logsResult.size());
-			assertEquals(content1, logsResult.get(path1));
+			assertEquals(expectedMarkedLogCell(path1, content1), result.getRawData());
 		}
 	}
 }

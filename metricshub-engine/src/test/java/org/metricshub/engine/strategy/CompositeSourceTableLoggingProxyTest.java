@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.strategy.source.SourceTable;
 
@@ -15,6 +16,11 @@ class CompositeSourceTableLoggingProxyTest {
 	private static final String HOSTNAME = "host-1";
 
 	private final CustomSourceTableLoggingProxy proxy = new CustomSourceTableLoggingProxy();
+
+	@AfterEach
+	void clearFileSourceLogEnableProperty() {
+		System.clearProperty("filesource.log.enable");
+	}
 
 	@Test
 	void formatForLogWhenNotFileSourceReturnsFullMessage() {
@@ -41,5 +47,18 @@ class CompositeSourceTableLoggingProxyTest {
 		assertFalse(result.contains("Table result:"));
 		assertFalse(result.contains("any content"));
 		assertFalse(result.contains("cell"));
+	}
+
+	@Test
+	void formatForLogWhenFileSourceAndLoggingEnabledReturnsFullMessage() {
+		System.setProperty("filesource.log.enable", "true");
+		SourceTable sourceTable = SourceTable.builder().rawData("any content").table(List.of(List.of("cell"))).build();
+
+		String result = proxy.formatForLog(OPERATION_TAG, "FileSource", "key1", CONNECTOR_ID, sourceTable, HOSTNAME);
+
+		assertNotNull(result);
+		assertTrue(result.contains("any content"));
+		assertTrue(result.contains("Raw result:"));
+		assertTrue(result.contains("cell"));
 	}
 }
