@@ -45,6 +45,7 @@ public class NetworkHelper {
 	 * <a href="https://www.ietf.org/rfc/rfc2732.txt">RFC 2732</a>
 	 */
 	private static final Pattern IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN = Pattern.compile("^\\[.*\\]$");
+	private static final Pattern IPV4_LITERAL_PATTERN = Pattern.compile("^\\d{1,3}(?:\\.\\d{1,3}){3}$");
 
 	/**
 	 * Typical localhost names, which we should figure out immediately
@@ -174,19 +175,18 @@ public class NetworkHelper {
 	 * @param portNumber   The port number
 	 * @return a URL object constructed from the provided parameters
 	 * @throws MalformedURLException if no protocol is specified, or an unknown protocol is found
-	 * @throws UnknownHostException  if the IP address or hostname cannot be resolved
+	 * @throws UnknownHostException  if the IP address is invalid
 	 * @throws URISyntaxException    if the URI string constructed from the input parameters is syntactically incorrect
 	 */
 	public static URL createUrl(@NonNull String protocol, @NonNull String hostnameOrIp, @NonNull Integer portNumber)
 		throws MalformedURLException, UnknownHostException, URISyntaxException {
-		// Detect if the host is an IPv6 address
-		final InetAddress address = InetAddress.getByName(hostnameOrIp);
+		// Detect if the host is an IPv6 literal (avoid resolving DNS for hostnames)
+		final boolean isIpv6Literal = isIpv6Literal(hostnameOrIp);
 
 		final String uriHost;
 		if (
 			// CHECKSTYLE:OFF
-			address instanceof java.net.Inet6Address &&
-			!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
+			isIpv6Literal && !IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
 			// CHECKSTYLE:ON
 		) {
 			uriHost = "[" + hostnameOrIp + "]";
@@ -196,5 +196,43 @@ public class NetworkHelper {
 
 		// Format the URI and convert to URL
 		return new URI(String.format("%s://%s:%d", protocol, uriHost, portNumber)).toURL();
+	}
+
+	private static boolean isIpv6Literal(@NonNull final String hostnameOrIp) throws UnknownHostException {
+		if (hostnameOrIp.contains(":")) {
+			final String unwrappedHostnameOrIp = IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
+				? hostnameOrIp.substring(1, hostnameOrIp.length() - 1)
+				: hostnameOrIp;
+
+			final InetAddress address = InetAddress.getByName(unwrappedHostnameOrIp);
+			return address instanceof java.net.Inet6Address;
+		}
+
+		// For IPv4 literals, validate the address without triggering DNS resolution.
+		if (IPV4_LITERAL_PATTERN.matcher(hostnameOrIp).matches()) {
+			validateIpv4Literal(hostnameOrIp);
+		}
+
+		return false;
+	}
+
+	private static void validateIpv4Literal(@NonNull final String hostnameOrIp) throws UnknownHostException {
+		final String[] parts = hostnameOrIp.split("\\.");
+		if (parts.length != 4) {
+			throw new UnknownHostException(hostnameOrIp);
+		}
+
+		for (final String part : parts) {
+			final int value;
+			try {
+				value = Integer.parseInt(part);
+			} catch (NumberFormatException e) {
+				throw new UnknownHostException(hostnameOrIp);
+			}
+
+			if (value < 0 || value > 255) {
+				throw new UnknownHostException(hostnameOrIp);
+			}
+		}
 	}
 }

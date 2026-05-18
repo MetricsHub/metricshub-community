@@ -13,7 +13,7 @@
 	<packaging>pom</packaging>
 
 	<properties>
-		<nssmUrl>https://nssm.cc/release/nssm-${nssm.version}.zip</nssmUrl>
+		<nssmUrl>https://github.com/HandSonic/nssm/releases/download/${nssm.version}/nssm-${nssm.version}.zip</nssmUrl>
 	</properties>
 
 	<dependencies>
