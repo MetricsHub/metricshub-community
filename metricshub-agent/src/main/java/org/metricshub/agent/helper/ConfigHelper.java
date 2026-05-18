@@ -563,6 +563,11 @@ public class ConfigHelper {
 			resourceConfig.setEnableSelfMonitoring(agentConfig.isEnableSelfMonitoring());
 		}
 
+		// Set global logFileSourceDetails flag in the resource configuration
+		if (resourceConfig.getLogFileSourceDetails() == null) {
+			resourceConfig.setLogFileSourceDetails(agentConfig.isLogFileSourceDetails());
+		}
+
 		// Set agent configuration's monitors filter in the resource configuration
 		if (resourceConfig.getMonitorFilters() == null) {
 			resourceConfig.setMonitorFilters(agentConfig.getMonitorFilters());
@@ -658,6 +663,11 @@ public class ConfigHelper {
 			resourceConfig.setEnableSelfMonitoring(resourceGroupConfig.getEnableSelfMonitoring());
 		}
 
+		// Set resource group configuration's logFileSourceDetails flag in the resource configuration
+		if (resourceConfig.getLogFileSourceDetails() == null) {
+			resourceConfig.setLogFileSourceDetails(resourceGroupConfig.getLogFileSourceDetails());
+		}
+
 		// Set resource group configuration's monitors filter in the resource configuration
 		if (resourceConfig.getMonitorFilters() == null) {
 			resourceConfig.setMonitorFilters(resourceGroupConfig.getMonitorFilters());
@@ -749,6 +759,11 @@ public class ConfigHelper {
 		// Set global enableSelfMonitoring flag in the resource group configuration
 		if (resourceGroupConfig.getEnableSelfMonitoring() == null) {
 			resourceGroupConfig.setEnableSelfMonitoring(agentConfig.isEnableSelfMonitoring());
+		}
+
+		// Set global logFileSourceDetails flag in the resource group configuration
+		if (resourceGroupConfig.getLogFileSourceDetails() == null) {
+			resourceGroupConfig.setLogFileSourceDetails(agentConfig.isLogFileSourceDetails());
 		}
 
 		// Set global configuration's monitors filter in the resource group configuration
@@ -1184,6 +1199,7 @@ public class ConfigHelper {
 			.hostType(hostType)
 			.sequential(Boolean.TRUE.equals(resourceConfig.getSequential()))
 			.enableSelfMonitoring(Boolean.TRUE.equals(resourceConfig.getEnableSelfMonitoring()))
+			.logFileSourceDetails(Boolean.TRUE.equals(resourceConfig.getLogFileSourceDetails()))
 			.includedMonitors(includedMonitors)
 			.excludedMonitors(excludedMonitors)
 			.configuredConnectorId(configuredConnectorId)

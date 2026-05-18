@@ -77,6 +77,7 @@ public class ResourceConfig {
 	private AlertingSystemConfig alertingSystemConfig;
 	private Boolean sequential;
 	private Boolean enableSelfMonitoring;
+	private Boolean logFileSourceDetails;
 	private Boolean resolveHostnameToFqdn;
 
 	@JsonSetter(nulls = SKIP)
@@ -137,6 +138,7 @@ public class ResourceConfig {
 			.alertingSystemConfig(alertingSystemConfig)
 			.sequential(sequential)
 			.enableSelfMonitoring(enableSelfMonitoring)
+			.logFileSourceDetails(logFileSourceDetails)
 			.monitorFilters(monitorFilters)
 			.resolveHostnameToFqdn(resolveHostnameToFqdn)
 			.jobTimeout(jobTimeout)

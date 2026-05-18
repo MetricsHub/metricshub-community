@@ -48,6 +48,7 @@ import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.monitor.SimpleMonitorJob;
 import org.metricshub.engine.connector.model.monitor.StandardMonitorJob;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Compute;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -95,9 +96,10 @@ public abstract class AbstractStrategy implements IStrategy {
 	private static final String SOURCE = "source";
 
 	/**
-	 * Default proxy for formatting source table logs. For FileSource only the header is displayed.
+	 * Stateless proxy for full source table log lines (used for non-file sources and for file sources when detail logging is on).
 	 */
-	private static final SourceTableLoggingProxy SOURCE_TABLE_LOGGING_PROXY = new CustomSourceTableLoggingProxy();
+	private static final SourceTableLoggingProxy DEFAULT_SOURCE_TABLE_LOGGING_PROXY =
+		new DefaultSourceTableLoggingProxy();
 
 	/**
 	 * Format for string value like: <em>connector_connector-id</em>
@@ -186,7 +188,15 @@ public abstract class AbstractStrategy implements IStrategy {
 			}
 
 			// log the source table
-			logSourceTable(SOURCE, source.getClass().getSimpleName(), sourceKey, connectorId, sourceTable, hostname);
+			logSourceTable(
+				resolveSourceTableLoggingProxy(source),
+				SOURCE,
+				source.getClass().getSimpleName(),
+				sourceKey,
+				connectorId,
+				sourceTable,
+				hostname
+			);
 
 			final List<Compute> computes = source.getComputes();
 
@@ -228,6 +238,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 				// log the updated source table
 				logSourceTable(
+					DEFAULT_SOURCE_TABLE_LOGGING_PROXY,
 					COMPUTE,
 					compute.getClass().getSimpleName(),
 					computeKey,
@@ -352,16 +363,36 @@ public abstract class AbstractStrategy implements IStrategy {
 	}
 
 	/**
+	 * Resolves the {@link SourceTableLoggingProxy} to use when logging a source result.
+	 *
+	 * @param source the executed source
+	 * @return the proxy (never null)
+	 */
+	private SourceTableLoggingProxy resolveSourceTableLoggingProxy(final Source source) {
+		if (source instanceof FileSource) {
+			return new FileSourceTableLoggingProxy(DEFAULT_SOURCE_TABLE_LOGGING_PROXY, isLogFileSourceDetails());
+		}
+		return DEFAULT_SOURCE_TABLE_LOGGING_PROXY;
+	}
+
+	private boolean isLogFileSourceDetails() {
+		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
+		return hostConfiguration != null && hostConfiguration.isLogFileSourceDetails();
+	}
+
+	/**
 	 * Log the {@link SourceTable} result.
 	 *
-	 * @param operationTag   the tag of the operation. E.g. source or compute
-	 * @param executionClassName the source or the compute class name we want to log
-	 * @param executionKey   the key of the source or the compute we want to log
-	 * @param connectorId    the compiled file name of the connector (identifier)
-	 * @param sourceTable    the source's result we wish to log
-	 * @param hostname       the hostname of the source we wish to log
+	 * @param loggingProxy         formats the table for the log line
+	 * @param operationTag         the tag of the operation. E.g. source or compute
+	 * @param executionClassName   the source or the compute class name we want to log
+	 * @param executionKey         the key of the source or the compute we want to log
+	 * @param connectorId          the compiled file name of the connector (identifier)
+	 * @param sourceTable          the source's result we wish to log
+	 * @param hostname             the hostname of the source we wish to log
 	 */
 	static void logSourceTable(
+		final SourceTableLoggingProxy loggingProxy,
 		final String operationTag,
 		final String executionClassName,
 		final String executionKey,
@@ -372,7 +403,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		if (!log.isInfoEnabled()) {
 			return;
 		}
-		final String message = SOURCE_TABLE_LOGGING_PROXY.formatForLog(
+		final String message = loggingProxy.formatForLog(
 			operationTag,
 			executionClassName,
 			executionKey,

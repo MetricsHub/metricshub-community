@@ -1,11 +1,16 @@
 package org.metricshub.engine.common.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.metricshub.engine.common.helpers.FileHelper.extractBasePath;
 import static org.metricshub.engine.common.helpers.FileHelper.extractFilename;
 import static org.metricshub.engine.common.helpers.FileHelper.parseResolvedPathsFromCommandResult;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.common.DeviceKind;
@@ -192,5 +197,76 @@ class FileHelperTest {
 			FileHelper.escapeNewLines("No newlines"),
 			"escapeNewLines() must preserve strings without newlines."
 		);
+	}
+
+	@Test
+	void escapeSemiColon_replacesSemicolons() {
+		assertEquals("a,b", FileHelper.escapeSemiColon("a;b"));
+		assertEquals("no change", FileHelper.escapeSemiColon("no change"));
+	}
+
+	@Test
+	void isSingleAbsolutePath_trueWhenSingleMatchingPathAndOneRow() {
+		final Set<String> paths = Set.of("/var/log/app.log");
+		final Set<String> resolved = Set.of("/var/log/app.log");
+		final List<List<String>> oneRow = List.of(List.of("/var/log/app.log", "content"));
+		assertTrue(FileHelper.isSinglePathMapping(paths, resolved, oneRow));
+	}
+
+	@Test
+	void isSingleAbsolutePath_falseWhenPatternsDiffer() {
+		final Set<String> paths = Set.of("/var/log/*.log");
+		final Set<String> resolved = Set.of("/var/log/app.log");
+		final List<List<String>> oneRow = List.of(List.of("/var/log/app.log", "content"));
+		assertFalse(FileHelper.isSinglePathMapping(paths, resolved, oneRow));
+	}
+
+	@Test
+	void isSingleAbsolutePath_falseWhenMultipleConfiguredOrResolved() {
+		final List<List<String>> oneRow = List.of(List.of("/a", "content"));
+		assertFalse(FileHelper.isSinglePathMapping(Set.of("/a", "/b"), Set.of("/a"), oneRow));
+		assertFalse(FileHelper.isSinglePathMapping(Set.of("/a"), Set.of("/a", "/b"), oneRow));
+	}
+
+	@Test
+	void isSingleAbsolutePath_falseWhenMonitoringResultsSizeIsNotOne() {
+		final Set<String> paths = Set.of("/var/log/app.log");
+		final Set<String> resolved = Set.of("/var/log/app.log");
+		assertFalse(FileHelper.isSinglePathMapping(paths, resolved, List.of()));
+		assertFalse(
+			FileHelper.isSinglePathMapping(
+				paths,
+				resolved,
+				List.of(List.of("/var/log/app.log", "a"), List.of("/var/log/app.log", "b"))
+			)
+		);
+	}
+
+	@Test
+	void buildLogBlock_singleAbsolutePath_emitsContentOnlyRows() {
+		final List<List<String>> rows = new ArrayList<>();
+		rows.add(List.of("/opt/a.log", "line1;part"));
+		final String out = FileHelper.buildLogBlock(rows, Set.of("/opt/a.log"), Set.of("/opt/a.log"));
+		assertEquals("line1,part", out);
+	}
+
+	@Test
+	void buildLogBlock_multipleResolution_emitsOneMarkedCell() {
+		final List<List<String>> rows = new ArrayList<>();
+		rows.add(List.of("/opt/a.log", FileHelper.escapeNewLines("A\n")));
+		rows.add(List.of("/opt/b.log", FileHelper.escapeNewLines("B")));
+		final String out = FileHelper.buildLogBlock(rows, Set.of("/opt/*.log"), Set.of("/opt/a.log", "/opt/b.log"));
+		assertNotNull(out);
+		assertTrue(out.contains("<<<LOG:file=\"/opt/a.log\">>>"));
+		assertTrue(out.contains("<<<LOG:file=\"/opt/b.log\">>>"));
+		assertTrue(out.contains("<<<END_LOG>>>"));
+		assertTrue(out.contains(FileHelper.escapeSemiColon(FileHelper.escapeNewLines("A\n"))));
+		assertTrue(out.contains(FileHelper.escapeSemiColon(FileHelper.escapeNewLines("B"))));
+	}
+
+	@Test
+	void buildLogBlock_emptyWhenNoRowsAndNotSingleAbsolute() {
+		final String out = FileHelper.buildLogBlock(new ArrayList<>(), Set.of("/opt/*.log"), Set.of("/opt/a.log"));
+		assertNull(out);
 	}
 }

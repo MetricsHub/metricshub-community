@@ -37,6 +37,7 @@ import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -50,7 +51,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 
 /**
- * Utility class for common file-related operations.
+ * Utility class for common file-related operations used by connectors and extensions (path parsing, local file discovery,
+ * formatting multi-path text into delimiter-bounded segments, and small string escapes for table transport).
  */
 @Slf4j
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -86,6 +88,16 @@ public class FileHelper {
 	private static final String NEW_LINE_ESCAPE_STRING = "@{newLine}@";
 
 	/**
+	 * Opening delimiter for one text segment in {@link #buildLogBlock}; includes the file path in the segment header.
+	 */
+	private static final String LOG_START_MARKER = "<<<LOG:file=\"%s\">>>";
+
+	/**
+	 * Closing delimiter for one text segment in {@link #buildLogBlock}, paired with {@link #LOG_START_MARKER}.
+	 */
+	private static final String LOG_END_MARKER = "<<<END_LOG>>>";
+
+	/**
 	 * Returns the time of last modification of the specified Path in milliseconds since EPOCH.
 	 *
 	 * @param path The path to the file.
@@ -102,8 +114,9 @@ public class FileHelper {
 
 	/**
 	 * Return the path to the connectors directory if the {@link Path} in parameter is a path containing a "connectors" folder.
+	 *
 	 * @param zipUri The path where to look for the connectors directory
-	 * @return The {@link Path}  of the connector directory
+	 * @return The {@link Path} of the connector directory, or {@code null} if no {@code /connectors/} segment is found in the URI string
 	 */
 	public static Path findConnectorsDirectory(final URI zipUri) {
 		final String strPath = zipUri.toString();
@@ -146,13 +159,13 @@ public class FileHelper {
 	 * This method creates a new file system based on the specified URI and the provided environment map. It then executes the
 	 * provided callable task within the context of this file system. The file system is automatically closed when the task
 	 * completes or if an exception is thrown.
-	 * @param <T>
 	 *
-	 * @param uri The non-null URI specifying the file system to be created.
-	 * @param env The non-null map of file system provider-specific properties and options.
+	 * @param <T>      the type of value returned by the callable
+	 * @param uri      The non-null URI specifying the file system to be created.
+	 * @param env      The non-null map of file system provider-specific properties and options.
 	 * @param callable The non-null task to be executed within the created file system.
-	 * @return
-	 * @throws IOException If an I/O error occurs while creating or operating on the file system.
+	 * @return the value returned by {@code callable.call()}
+	 * @throws Exception if {@code callable.call()} throws, or if the file system cannot be created
 	 */
 	public static <T> T fileSystemTask(
 		@NonNull final URI uri,
@@ -312,6 +325,16 @@ public class FileHelper {
 		return Files.readString(Path.of(path), StandardCharsets.UTF_8);
 	}
 
+	/**
+	 * Reads a byte range from a file starting at {@code offset} for at most {@code length} bytes, decoded as UTF-8.
+	 *
+	 * @param path   absolute path to the file
+	 * @param offset byte offset from the start of the file
+	 * @param length maximum number of bytes to read
+	 * @return the decoded text for the bytes actually read; empty string if end-of-file is reached immediately
+	 * @throws FileNotFoundException if the file does not exist
+	 * @throws IOException           if an I/O error occurs while reading
+	 */
 	public static String readOffset(final String path, final long offset, final int length)
 		throws FileNotFoundException, IOException {
 		try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
@@ -333,6 +356,13 @@ public class FileHelper {
 		}
 	}
 
+	/**
+	 * Returns the size of a regular file in bytes.
+	 *
+	 * @param path absolute path to the file
+	 * @return file size in bytes
+	 * @throws IOException if the file cannot be accessed or is not a regular file
+	 */
 	public static Long getFileSize(final String path) throws IOException {
 		return Files.size(Path.of(path));
 	}
@@ -380,7 +410,7 @@ public class FileHelper {
 	 * Handles Windows line endings (\r\n) and Unix line endings (\n).
 	 *
 	 * @param value the string to escape
-	 * @return the string with newlines replaced by {@value #NEW_LINE_ESCAPE_STRING}, or null if input is null
+	 * @return the string with newlines replaced by the configured placeholder, or null if input is null
 	 */
 	public static String escapeNewLines(final String value) {
 		if (value == null) {
@@ -393,5 +423,100 @@ public class FileHelper {
 			.replace("\r\n", NEW_LINE_ESCAPE_STRING)
 			.replace("\n", NEW_LINE_ESCAPE_STRING)
 			.replace("\r", NEW_LINE_ESCAPE_STRING);
+	}
+
+	/**
+	 * Normalizes {@code [path, text]} rows into a single raw payload for {@link org.metricshub.engine.strategy.source.SourceTable}.
+	 * <p>
+	 * When {@link #isSinglePathMapping(Set, Set, List)} is true, the sole row text is returned as-is (path and segment
+	 * markers are omitted).
+	 * Otherwise, each {@code [path, text]} pair is appended as a segment bounded by {@code LOG_START_MARKER} and
+	 * {@code LOG_END_MARKER}, with the path embedded in the opening marker.
+	 * </p>
+	 *
+	 * @param monitoringResults rows with at least two columns: absolute path and associated text
+	 * @param paths             configured path literals or patterns
+	 * @param resolvedPaths     paths after resolution on the host
+	 * @return formatted raw data, or {@code null} when there is nothing to emit
+	 */
+	public static String buildLogBlock(
+		final List<List<String>> monitoringResults,
+		final Set<String> paths,
+		final Set<String> resolvedPaths
+	) {
+		if (monitoringResults.isEmpty()) {
+			return null;
+		}
+
+		// One-to-one path resolution with a single read result: emit text only, without segment markers.
+		if (isSinglePathMapping(paths, resolvedPaths, monitoringResults)) {
+			return escapeSemiColon(monitoringResults.get(0).get(1));
+		}
+
+		final StringBuilder logBlocks = new StringBuilder();
+
+		monitoringResults.forEach(row -> {
+			final String path = row.get(0);
+			final String content = escapeSemiColon(row.get(1));
+
+			appendLogBlock(logBlocks, path, content);
+		});
+
+		return logBlocks.toString();
+	}
+
+	/**
+	 * Appends a formatted log block to the provided raw data buffer.
+	 * <p>
+	 * Each log block contains:
+	 * <ul>
+	 *   <li>a start marker containing the file path</li>
+	 *   <li>the file content, if not empty</li>
+	 *   <li>an end marker</li>
+	 * </ul>
+	 *
+	 * @param rawData the buffer that accumulates the formatted log blocks
+	 * @param path the path associated with the log content
+	 * @param content the escaped log content to append
+	 */
+	public static void appendLogBlock(final StringBuilder rawData, final String path, final String content) {
+		rawData.append(LOG_START_MARKER.formatted(path)).append("\n");
+
+		if (!content.isEmpty()) {
+			rawData.append(content).append("\n");
+		}
+
+		rawData.append(LOG_END_MARKER).append("\n\n");
+	}
+
+	/**
+	 * Escapes semicolons in a string so delimiter-sensitive downstream processing is not broken.
+	 *
+	 * @param value text to escape; must not be {@code null}
+	 * @return a new string with each {@code ';'} replaced by the configured escape token
+	 */
+	public static String escapeSemiColon(final String value) {
+		return value.replace(";", ",");
+	}
+
+	/**
+	 * Returns {@code true} when configured and resolved paths match one-to-one (same literal, no wildcard expansion) and
+	 * {@code monitoringResults} contains exactly one {@code [path, text]} row.
+	 *
+	 * @param paths             configured path literals or patterns
+	 * @param resolvedPaths     paths after resolution on the host
+	 * @param monitoringResults rows with at least two columns: absolute path and associated text
+	 * @return {@code true} when path sets match one-to-one and there is a single monitoring row
+	 */
+	public static boolean isSinglePathMapping(
+		final Set<String> paths,
+		final Set<String> resolvedPaths,
+		final List<List<String>> monitoringResults
+	) {
+		if (paths.size() != 1 || resolvedPaths.size() != 1 || monitoringResults.size() != 1) {
+			return false;
+		}
+
+		return paths.iterator().next().equals(resolvedPaths.iterator().next());
 	}
 }

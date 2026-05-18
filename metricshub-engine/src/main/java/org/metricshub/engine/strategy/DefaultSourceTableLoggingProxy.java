@@ -26,12 +26,10 @@ import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
- * {@link SourceTableLoggingProxy} that builds the full log message unless the source is FileSource,
- * in which case only the header is displayed to avoid OOM and log flooding.
+ * Default {@link SourceTableLoggingProxy}: logs the full raw data and/or table representation.
  */
-public class CustomSourceTableLoggingProxy implements SourceTableLoggingProxy {
+public class DefaultSourceTableLoggingProxy implements SourceTableLoggingProxy {
 
-	private static final String FILE_SOURCE_CLASS = "FileSource";
 	private static final String RAW_RESULT_LABEL = "Raw result:\n";
 	private static final String TABLE_RESULT_LABEL = "Table result:\n";
 
@@ -44,13 +42,10 @@ public class CustomSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final SourceTable sourceTable,
 		final String hostname
 	) {
-		if (FILE_SOURCE_CLASS.equals(executionClassName)) {
-			return buildHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
-		}
 		return buildFullMessage(operationTag, executionClassName, executionKey, connectorId, sourceTable, hostname);
 	}
 
-	private static String buildHeader(
+	static String buildLogHeader(
 		final String operationTag,
 		final String executionClassName,
 		final String executionKey,
@@ -75,7 +70,7 @@ public class CustomSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final SourceTable sourceTable,
 		final String hostname
 	) {
-		final String header = buildHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
+		final String header = buildLogHeader(operationTag, executionClassName, executionKey, connectorId, hostname) + "\n";
 		final String rawData = sourceTable.getRawData();
 		final List<List<String>> table = sourceTable.getTable();
 		final boolean hasRaw = rawData != null;

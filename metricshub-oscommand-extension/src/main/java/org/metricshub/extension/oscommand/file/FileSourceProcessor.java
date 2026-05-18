@@ -67,6 +67,9 @@ public class FileSourceProcessor {
 	// Linux find command template for resolving file paths.
 	public static final String RESOLVE_LINUX_FILES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -name \"%s\" -print";
 
+	// Linux find command template for resolving directory paths.
+	public static final String RESOLVE_LINUX_DIRECTORIES_COMMAND = "find -L \"%s\" -maxdepth 1 -type f -print";
+
 	// Line break sequence used in Windows (CRLF).
 	public static final String WINDOWS_LINE_BREAK_SEQUENCE = "\r\n";
 
@@ -107,8 +110,10 @@ public class FileSourceProcessor {
 		try (FileOperations ops = fileOperations) {
 			final Set<String> sourceResolvedPaths = new HashSet<>();
 
+			final Set<String> paths = fileSource.getPaths();
+
 			if (isLocalhost) {
-				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, fileSource.getPaths(), deviceKind));
+				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, paths, deviceKind));
 			} else {
 				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, fileSource, telemetryManager, deviceKind));
 			}
@@ -126,7 +131,9 @@ public class FileSourceProcessor {
 					log.debug("Hostname {} - Configuration Type: {}", hostname, sshConfig.getClass().getSimpleName());
 				}
 			}
+
 			final List<List<String>> pathsTable = sourceResolvedPaths.stream().map(List::of).collect(Collectors.toList());
+
 			log.debug(
 				"Hostname {} - Resolved paths:\n{}",
 				hostname,
@@ -136,7 +143,9 @@ public class FileSourceProcessor {
 			final FileSourceProcessingMode mode = fileSource.getMode();
 
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
-				return SourceTable.builder().table(processFilesInFlatMode(ops, sourceResolvedPaths, hostname)).build();
+				final List<List<String>> results = processFilesInFlatMode(ops, sourceResolvedPaths, hostname);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager
@@ -144,10 +153,15 @@ public class FileSourceProcessor {
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
-				return SourceTable
-					.builder()
-					.table(processFilesInLogMode(ops, sourceResolvedPaths, sourceCursors, fileSource, hostname))
-					.build();
+				final List<List<String>> results = processFilesInLogMode(
+					ops,
+					sourceResolvedPaths,
+					sourceCursors,
+					fileSource,
+					hostname
+				);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}
@@ -189,7 +203,7 @@ public class FileSourceProcessor {
 					log.debug("Hostname {} - Path [{}]: content fetched, size={} bytes", hostname, path, contentSizeBytes);
 					final List<String> row = new ArrayList<>();
 					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
+					row.add(content);
 					results.add(row);
 				}
 			} catch (Exception e) {
@@ -257,7 +271,7 @@ public class FileSourceProcessor {
 				if (content != null) {
 					final List<String> row = new ArrayList<>();
 					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
+					row.add(content);
 					resultedContent.add(row);
 				}
 			}
@@ -428,13 +442,20 @@ public class FileSourceProcessor {
 
 		for (final String path : rawPaths) {
 			// Extract filename pattern and base path from the path pattern
-			final String filename = FileHelper.extractFilename(path, deviceKind);
+			String filename = FileHelper.extractFilename(path, deviceKind);
 			final String basePath = FileHelper.extractBasePath(path, deviceKind);
 
 			// Build OS-specific command to find matching files
-			final String command = deviceKind.equals(DeviceKind.WINDOWS)
-				? RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename)
-				: RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
+			String command;
+
+			if (deviceKind.equals(DeviceKind.WINDOWS)) {
+				command = RESOLVE_WINDOWS_FILES_COMMAND.formatted(basePath, filename);
+			} else if (filename.equals("*") || filename.isBlank()) {
+				command = RESOLVE_LINUX_DIRECTORIES_COMMAND.formatted(basePath);
+			} else {
+				command = RESOLVE_LINUX_FILES_COMMAND.formatted(basePath, filename);
+			}
+
 			try {
 				// Execute SSH command to find matching files on remote host
 				final String result = osCommandService.runSshCommand(

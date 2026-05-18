@@ -103,7 +103,7 @@ public class FileSourceProcessor {
 		final boolean isLocalhost = telemetryManager.getHostProperties().isLocalhost();
 
 		if (fileSource == null) {
-			log.warn("Hostname {} - Malformed Log source {}. Returning an empty table.", hostname, fileSource);
+			log.warn("Hostname {} - Malformed file source {}. Returning an empty table.", hostname, fileSource);
 			return SourceTable.empty();
 		}
 
@@ -120,8 +120,10 @@ public class FileSourceProcessor {
 		try (FileOperations ops = fileOperations) {
 			final Set<String> sourceResolvedPaths = new HashSet<>();
 
+			final Set<String> paths = fileSource.getPaths();
+
 			if (isLocalhost) {
-				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, fileSource.getPaths(), DeviceKind.WINDOWS));
+				sourceResolvedPaths.addAll(FileHelper.findFilesByPattern(hostname, paths, DeviceKind.WINDOWS));
 			} else {
 				sourceResolvedPaths.addAll(resolveRemoteFiles(hostname, fileSource, telemetryManager));
 			}
@@ -147,7 +149,9 @@ public class FileSourceProcessor {
 			final FileSourceProcessingMode mode = fileSource.getMode();
 
 			if (mode.equals(FileSourceProcessingMode.FLAT)) {
-				return SourceTable.builder().table(processFilesInFlatMode(ops, sourceResolvedPaths, hostname)).build();
+				final List<List<String>> results = processFilesInFlatMode(ops, sourceResolvedPaths, hostname);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else if (mode.equals(FileSourceProcessingMode.LOG)) {
 				// Get the stored cursors from the connector namespace for tracking file read positions
 				Map<String, Long> sourceCursors = telemetryManager
@@ -155,10 +159,15 @@ public class FileSourceProcessor {
 					.getConnectorNamespace(connectorId)
 					.getFileSourceCursors(fileSource.getKey());
 
-				return SourceTable
-					.builder()
-					.table(processFilesInLogMode(ops, sourceResolvedPaths, sourceCursors, fileSource, hostname))
-					.build();
+				final List<List<String>> results = processFilesInLogMode(
+					ops,
+					sourceResolvedPaths,
+					sourceCursors,
+					fileSource,
+					hostname
+				);
+
+				return SourceTable.builder().rawData(FileHelper.buildLogBlock(results, paths, sourceResolvedPaths)).build();
 			} else {
 				throw new IllegalArgumentException("Unknown FileSource processing mode.");
 			}
@@ -200,7 +209,7 @@ public class FileSourceProcessor {
 					log.debug("Hostname {} - Path [{}]: content fetched, size={} bytes", hostname, path, contentSizeBytes);
 					final List<String> row = new ArrayList<>();
 					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
+					row.add(content);
 					results.add(row);
 				}
 			} catch (Exception e) {
@@ -265,10 +274,11 @@ public class FileSourceProcessor {
 					result.getCursor(),
 					remainingSize
 				);
+
 				if (content != null) {
 					final List<String> row = new ArrayList<>();
 					row.add(path);
-					row.add(FileHelper.escapeNewLines(content));
+					row.add(content);
 					resultedContent.add(row);
 				}
 			}
@@ -460,14 +470,13 @@ public class FileSourceProcessor {
 	}
 
 	/**
-	 * Resolves file paths remotely by executing SSH commands to find matching files.
-	 * Uses OS-specific commands (PowerShell for Windows, find for Linux) to locate files.
+	 * Resolves file path patterns on a remote Windows host over WMI or WinRM by running PowerShell
+	 * ({@link #RESOLVE_WINDOWS_FILES_COMMAND}) for each configured pattern.
 	 *
-	 * @param hostname The hostname for SSH connection
-	 * @param fileSource The file source containing path patterns to resolve
-	 * @param telemetryManager The telemetry manager providing SSH configuration
-	 * @param deviceKind The device kind (Windows/Linux) to determine the command format
-	 * @return A set of resolved absolute file paths matching the patterns
+	 * @param hostname          target host (for logging and remote command execution)
+	 * @param fileSource        file source whose {@link FileSource#getPaths()} entries are resolved
+	 * @param telemetryManager  used with {@link #configurationRetriever} to obtain Win (WMI/WinRM) configuration
+	 * @return absolute paths validated for Windows; empty if Win is not configured, patterns are empty, or resolution fails
 	 */
 	Set<String> resolveRemoteFiles(
 		final String hostname,

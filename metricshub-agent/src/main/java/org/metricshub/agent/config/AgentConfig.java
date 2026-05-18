@@ -104,6 +104,9 @@ public class AgentConfig {
 	@Default
 	private boolean enableSelfMonitoring = true;
 
+	@Default
+	private boolean logFileSourceDetails = false;
+
 	private boolean resolveHostnameToFqdn;
 
 	@JsonSetter(nulls = SKIP)
