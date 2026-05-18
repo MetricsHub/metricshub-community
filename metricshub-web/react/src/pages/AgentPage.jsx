@@ -1,6 +1,5 @@
 import * as React from "react";
-import { Box, Stack, Typography, Alert, Collapse, IconButton, Divider } from "@mui/material";
-import CloseIcon from "@mui/icons-material/Close";
+import { Box, Stack, Typography, Collapse, Divider, Link } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
 import { useSnackbar } from "../hooks/use-snackbar";
@@ -11,6 +10,9 @@ import AgentMetrics from "../components/agent/AgentMetrics";
 import KeyValueTable from "../components/agent/KeyValueTable";
 import LogFilesViewer from "../components/agent/LogFilesViewer";
 import { objectToRows, EXCLUDED_STATUS_KEYS } from "../components/agent/utils";
+import { SUPPORT_URL } from "../utils/constants";
+import { getLicenseWarning } from "../utils/license-warning";
+import AppAlert from "../components/common/AppAlert";
 
 /**
  * Agent page component showing agent information, metrics, and actions.
@@ -29,6 +31,7 @@ function AgentPage() {
 	const restarting = useAppSelector((s) => s.applicationStatus?.restarting);
 
 	const [showLicenseWarning, setShowLicenseWarning] = React.useState(true);
+	const [showStatusError, setShowStatusError] = React.useState(true);
 
 	// Destructure status values with defaults
 	const {
@@ -38,6 +41,7 @@ function AgentPage() {
 		memoryTotalBytes,
 		cpuUsage,
 		licenseDaysRemaining,
+		licenseType,
 		agentInfo,
 	} = status || {};
 
@@ -48,15 +52,22 @@ function AgentPage() {
 
 	// Memoized license warning computation
 	const licenseWarning = React.useMemo(() => {
-		if (licenseDaysRemaining == null) return null;
-		if (licenseDaysRemaining < 7) {
-			return { severity: "error", message: `License expires in ${licenseDaysRemaining} days!` };
-		}
-		if (licenseDaysRemaining < 30) {
-			return { severity: "warning", message: `License expires in ${licenseDaysRemaining} days.` };
-		}
-		return null;
-	}, [licenseDaysRemaining]);
+		const warning = getLicenseWarning({ licenseDaysRemaining, licenseType });
+		if (!warning) return null;
+
+		return {
+			severity: warning.severity,
+			message: (
+				<>
+					{warning.message}{" "}
+					<Link href={SUPPORT_URL} target="_blank" rel="noopener noreferrer">
+						support
+					</Link>
+					{warning.suffix}
+				</>
+			),
+		};
+	}, [licenseDaysRemaining, licenseType]);
 
 	// Memoized agent info rows
 	const agentInfoRows = React.useMemo(
@@ -95,6 +106,10 @@ function AgentPage() {
 		setShowLicenseWarning(false);
 	}, []);
 
+	React.useEffect(() => {
+		setShowStatusError(true);
+	}, [error]);
+
 	return (
 		<Box
 			sx={{
@@ -117,26 +132,22 @@ function AgentPage() {
 				{/* License Warning */}
 				{licenseWarning && (
 					<Collapse in={showLicenseWarning}>
-						<Alert
+						<AppAlert
 							severity={licenseWarning.severity}
-							action={
-								<IconButton
-									aria-label="close"
-									color="inherit"
-									size="small"
-									onClick={handleCloseLicenseWarning}
-								>
-									<CloseIcon fontSize="inherit" />
-								</IconButton>
-							}
+							closable
+							onClose={handleCloseLicenseWarning}
 						>
 							{licenseWarning.message}
-						</Alert>
+						</AppAlert>
 					</Collapse>
 				)}
 
 				{/* Error */}
-				{error && <Alert severity="error">{error}</Alert>}
+				{error && showStatusError && (
+					<AppAlert severity="error" closable onClose={() => setShowStatusError(false)}>
+						{error}
+					</AppAlert>
+				)}
 
 				{/* Stats Cards */}
 				<AgentMetrics
