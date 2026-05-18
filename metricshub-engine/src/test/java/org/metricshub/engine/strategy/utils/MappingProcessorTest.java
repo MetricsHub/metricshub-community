@@ -739,4 +739,73 @@ class MappingProcessorTest {
 			mappingProcessor.interpretNonContextMapping(keyValuePairsMonitorWithAttributeValueNotFound)
 		);
 	}
+
+	@Test
+	void testInterpretNonContextMappingAccumulate() {
+		Monitor monitor = Monitor.builder().build();
+
+		final TelemetryManager telemetryManager = TelemetryManager
+			.builder()
+			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
+			.build();
+
+		// First collect: no previous value, counter should equal the delta value
+		{
+			final MappingProcessor mappingProcessor = MappingProcessor
+				.builder()
+				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
+				.telemetryManager(telemetryManager)
+				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())
+				.row(List.of("5"))
+				.collectTime(120000L)
+				.build();
+
+			final Map<String, String> expected = Map.of("hw.errors", Double.valueOf(5.0).toString());
+
+			mappingProcessor.interpretNonContextMappingMetrics();
+
+			assertEquals(expected, mappingProcessor.interpretContextMappingMetrics(monitor));
+		}
+
+		// Save the metric so it becomes the "previous" value for the next collect
+		final MetricFactory metricFactory = new MetricFactory(Constants.HOSTNAME, new ConnectorStore());
+		metricFactory.collectNumberMetric(monitor, "hw.errors", 5.0, 120000L);
+		monitor.getMetric("hw.errors", NumberMetric.class).save();
+
+		// Second collect: previous value exists, counter should be previous + delta
+		{
+			final MappingProcessor mappingProcessor = MappingProcessor
+				.builder()
+				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
+				.telemetryManager(telemetryManager)
+				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())
+				.row(List.of("3"))
+				.collectTime(240000L)
+				.build();
+
+			final Map<String, String> expected = Map.of("hw.errors", Double.valueOf(8.0).toString());
+
+			mappingProcessor.interpretNonContextMappingMetrics();
+
+			assertEquals(expected, mappingProcessor.interpretContextMappingMetrics(monitor));
+		}
+
+		// Non-double value: should return empty
+		{
+			final MappingProcessor mappingProcessor = MappingProcessor
+				.builder()
+				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
+				.telemetryManager(telemetryManager)
+				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())
+				.row(List.of("notANumber"))
+				.collectTime(360000L)
+				.build();
+
+			final Map<String, String> expected = Map.of("hw.errors", "");
+
+			mappingProcessor.interpretNonContextMappingMetrics();
+
+			assertEquals(expected, mappingProcessor.interpretContextMappingMetrics(monitor));
+		}
+	}
 }

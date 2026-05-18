@@ -140,6 +140,7 @@ public class MappingProcessor {
 		"fakecounter\\((.+)\\)",
 		Pattern.CASE_INSENSITIVE
 	);
+	private static final Pattern ACCUMULATE_PATTERN = Pattern.compile("accumulate\\((.+)\\)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern RATE_PATTERN = Pattern.compile("rate\\((.+)\\)", Pattern.CASE_INSENSITIVE);
 	private static final Pattern COMPUTE_POWER_SHARE_RATIO_PATTERN = Pattern.compile(
 		"computepowershareratio\\((.+)\\)",
@@ -269,6 +270,8 @@ public class MappingProcessor {
 			computationFunctions.put(key, this::legacyPowerSupplyUtilization);
 		} else if (isFakeCounterFunction(value)) {
 			computationFunctions.put(key, this::fakeCounter);
+		} else if (isAccumulateFunction(value)) {
+			computationFunctions.put(key, this::accumulate);
 		} else if (isRateFunction(value)) {
 			computationFunctions.put(key, this::rate);
 		} else if (containsColumnReferences(value)) {
@@ -573,6 +576,60 @@ public class MappingProcessor {
 
 	private boolean isFakeCounterFunction(String value) {
 		return FAKE_COUNTER_PATTERN.matcher(value).find();
+	}
+
+	/**
+	 * Checks to see if the value contains an accumulate function "accumulate()"
+	 *
+	 * @param value		Value to be parsed
+	 * @return 			Returns true if the function is found
+	 */
+	private boolean isAccumulateFunction(String value) {
+		return ACCUMULATE_PATTERN.matcher(value).find();
+	}
+
+	/**
+	 * Accumulate delta values into a counter. On each collect cycle, the current delta value
+	 * is added to the previous counter value. If no previous value exists, the current delta
+	 * value is used as the initial counter value.
+	 *
+	 * @param keyValuePair key-value where the key is the metric name and the value is function call
+	 * @param monitor The monitor we currently collect.
+	 * @return String value representing the accumulated counter
+	 */
+	private String accumulate(final KeyValuePair keyValuePair, final Monitor monitor) {
+		final String hostname = jobInfo.getHostname();
+
+		// Get the metric name. E.g. hw.errors
+		final String metricName = keyValuePair.getKey();
+
+		// Extract the function argument. E.g. from accumulate($6) extract $6
+		final String functionArgument = FunctionArgumentsExtractor.extractArguments(keyValuePair.getValue()).get(0);
+
+		// Extract the double value from the current row
+		final Optional<Double> maybeDeltaValue = extractDoubleValue(functionArgument, metricName);
+
+		if (maybeDeltaValue.isEmpty()) {
+			log.warn(
+				"Hostname {} - Unable to extract the 1st argument value passed to the accumulate function." + RESULT_MESSAGE,
+				hostname,
+				metricName
+			);
+			return EMPTY;
+		}
+
+		// Start with the current delta value
+		Double counter = maybeDeltaValue.get();
+
+		// Get the previous counter value to accumulate
+		final Double previousCounter = CollectHelper.getNumberMetricValue(monitor, metricName, true);
+
+		// If a previous counter exists, add the current delta to it
+		if (previousCounter != null) {
+			counter += previousCounter;
+		}
+
+		return counter.toString();
 	}
 
 	/**

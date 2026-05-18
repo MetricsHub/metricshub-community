@@ -261,6 +261,7 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 			<Divider />
 			<MonitorsView
 				connectors={connectors}
+				failedConnectors={failedConnectors}
 				lastUpdatedAt={lastUpdatedAt}
 				resourceId={resourceId}
 				resourceName={decodedName}
