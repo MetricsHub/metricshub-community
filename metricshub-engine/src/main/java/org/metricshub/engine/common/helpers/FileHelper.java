@@ -428,7 +428,7 @@ public class FileHelper {
 	/**
 	 * Normalizes {@code [path, text]} rows into a single raw payload for {@link org.metricshub.engine.strategy.source.SourceTable}.
 	 * <p>
-	 * When {@link #isSingleAbsolutePath(Set, Set, List)} is true, the sole row text is returned as-is (path and segment
+	 * When {@link #isSinglePathMapping(Set, Set, List)} is true, the sole row text is returned as-is (path and segment
 	 * markers are omitted).
 	 * Otherwise, each {@code [path, text]} pair is appended as a segment bounded by {@code LOG_START_MARKER} and
 	 * {@code LOG_END_MARKER}, with the path embedded in the opening marker.
@@ -449,7 +449,7 @@ public class FileHelper {
 		}
 
 		// One-to-one path resolution with a single read result: emit text only, without segment markers.
-		if (isSingleAbsolutePath(paths, resolvedPaths, monitoringResults)) {
+		if (isSinglePathMapping(paths, resolvedPaths, monitoringResults)) {
 			return escapeSemiColon(monitoringResults.get(0).get(1));
 		}
 
@@ -508,7 +508,7 @@ public class FileHelper {
 	 * @param monitoringResults rows with at least two columns: absolute path and associated text
 	 * @return {@code true} when path sets match one-to-one and there is a single monitoring row
 	 */
-	public static boolean isSingleAbsolutePath(
+	public static boolean isSinglePathMapping(
 		final Set<String> paths,
 		final Set<String> resolvedPaths,
 		final List<List<String>> monitoringResults

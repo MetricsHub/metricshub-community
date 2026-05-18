@@ -66,6 +66,9 @@ public class HostConfiguration {
 	@Default
 	private boolean enableSelfMonitoring = true;
 
+	@Default
+	private boolean fileSourceDetailLoggingEnabled = false;
+
 	private Consumer<AlertInfo> alertTrigger;
 	private long retryDelay;
 
@@ -147,6 +150,7 @@ public class HostConfiguration {
 			.connectors(connectors)
 			.sequential(sequential)
 			.enableSelfMonitoring(enableSelfMonitoring)
+			.fileSourceDetailLoggingEnabled(fileSourceDetailLoggingEnabled)
 			.alertTrigger(alertTrigger)
 			.retryDelay(retryDelay)
 			.includedMonitors(includedMonitors)

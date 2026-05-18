@@ -188,6 +188,7 @@ public class ReloadService {
 			!Objects.equals(runningConf.getAlertingSystemConfig(), newConf.getAlertingSystemConfig()) ||
 			runningConf.isSequential() != newConf.isSequential() ||
 			runningConf.isEnableSelfMonitoring() != newConf.isEnableSelfMonitoring() ||
+			runningConf.isFileSourceDetailLoggingEnabled() != newConf.isFileSourceDetailLoggingEnabled() ||
 			runningConf.isResolveHostnameToFqdn() != newConf.isResolveHostnameToFqdn() ||
 			!Objects.equals(runningConf.getMonitorFilters(), newConf.getMonitorFilters()) ||
 			runningConf.getJobTimeout() != newConf.getJobTimeout() ||
@@ -478,6 +479,10 @@ public class ReloadService {
 			!Objects.equals(
 				runningResourceGroupConfig.getEnableSelfMonitoring(),
 				newResourceGroupConfig.getEnableSelfMonitoring()
+			) ||
+			!Objects.equals(
+				runningResourceGroupConfig.getFileSourceDetailLoggingEnabled(),
+				newResourceGroupConfig.getFileSourceDetailLoggingEnabled()
 			) ||
 			!Objects.equals(
 				runningResourceGroupConfig.getResolveHostnameToFqdn(),

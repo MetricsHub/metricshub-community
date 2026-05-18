@@ -210,7 +210,7 @@ class FileHelperTest {
 		final Set<String> paths = Set.of("/var/log/app.log");
 		final Set<String> resolved = Set.of("/var/log/app.log");
 		final List<List<String>> oneRow = List.of(List.of("/var/log/app.log", "content"));
-		assertTrue(FileHelper.isSingleAbsolutePath(paths, resolved, oneRow));
+		assertTrue(FileHelper.isSinglePathMapping(paths, resolved, oneRow));
 	}
 
 	@Test
@@ -218,23 +218,23 @@ class FileHelperTest {
 		final Set<String> paths = Set.of("/var/log/*.log");
 		final Set<String> resolved = Set.of("/var/log/app.log");
 		final List<List<String>> oneRow = List.of(List.of("/var/log/app.log", "content"));
-		assertFalse(FileHelper.isSingleAbsolutePath(paths, resolved, oneRow));
+		assertFalse(FileHelper.isSinglePathMapping(paths, resolved, oneRow));
 	}
 
 	@Test
 	void isSingleAbsolutePath_falseWhenMultipleConfiguredOrResolved() {
 		final List<List<String>> oneRow = List.of(List.of("/a", "content"));
-		assertFalse(FileHelper.isSingleAbsolutePath(Set.of("/a", "/b"), Set.of("/a"), oneRow));
-		assertFalse(FileHelper.isSingleAbsolutePath(Set.of("/a"), Set.of("/a", "/b"), oneRow));
+		assertFalse(FileHelper.isSinglePathMapping(Set.of("/a", "/b"), Set.of("/a"), oneRow));
+		assertFalse(FileHelper.isSinglePathMapping(Set.of("/a"), Set.of("/a", "/b"), oneRow));
 	}
 
 	@Test
 	void isSingleAbsolutePath_falseWhenMonitoringResultsSizeIsNotOne() {
 		final Set<String> paths = Set.of("/var/log/app.log");
 		final Set<String> resolved = Set.of("/var/log/app.log");
-		assertFalse(FileHelper.isSingleAbsolutePath(paths, resolved, List.of()));
+		assertFalse(FileHelper.isSinglePathMapping(paths, resolved, List.of()));
 		assertFalse(
-			FileHelper.isSingleAbsolutePath(
+			FileHelper.isSinglePathMapping(
 				paths,
 				resolved,
 				List.of(List.of("/var/log/app.log", "a"), List.of("/var/log/app.log", "b"))
