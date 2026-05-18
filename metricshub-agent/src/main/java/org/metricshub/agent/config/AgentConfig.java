@@ -105,7 +105,7 @@ public class AgentConfig {
 	private boolean enableSelfMonitoring = true;
 
 	@Default
-	private boolean fileSourceDetailLoggingEnabled = false;
+	private boolean logFileSourceDetails = false;
 
 	private boolean resolveHostnameToFqdn;
 

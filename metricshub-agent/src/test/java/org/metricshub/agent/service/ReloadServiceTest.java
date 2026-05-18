@@ -579,16 +579,16 @@ class ReloadServiceTest {
 					.build()
 			),
 			Arguments.of(
-				"fileSourceDetailLoggingEnabled",
+				"logFileSourceDetails",
 				AgentConfig
 					.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.fileSourceDetailLoggingEnabled(false)
+					.logFileSourceDetails(false)
 					.build(),
 				AgentConfig
 					.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
-					.fileSourceDetailLoggingEnabled(true)
+					.logFileSourceDetails(true)
 					.build()
 			),
 			Arguments.of(
@@ -792,9 +792,9 @@ class ReloadServiceTest {
 				ResourceGroupConfig.builder().enableSelfMonitoring(false).build()
 			),
 			Arguments.of(
-				"fileSourceDetailLoggingEnabled",
-				ResourceGroupConfig.builder().fileSourceDetailLoggingEnabled(false).build(),
-				ResourceGroupConfig.builder().fileSourceDetailLoggingEnabled(true).build()
+				"logFileSourceDetails",
+				ResourceGroupConfig.builder().logFileSourceDetails(false).build(),
+				ResourceGroupConfig.builder().logFileSourceDetails(true).build()
 			),
 			Arguments.of(
 				"resolveHostnameToFqdn",

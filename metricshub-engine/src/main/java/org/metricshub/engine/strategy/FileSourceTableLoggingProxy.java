@@ -32,7 +32,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
 public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
 
 	private final SourceTableLoggingProxy delegate;
-	private final boolean fileSourceDetailLoggingEnabled;
+	private final boolean logFileSourceDetails;
 
 	@Override
 	public String formatForLog(
@@ -43,7 +43,7 @@ public class FileSourceTableLoggingProxy implements SourceTableLoggingProxy {
 		final SourceTable sourceTable,
 		final String hostname
 	) {
-		if (!fileSourceDetailLoggingEnabled) {
+		if (!logFileSourceDetails) {
 			final String headerOnly =
 				DefaultSourceTableLoggingProxy.buildLogHeader(
 					operationTag,

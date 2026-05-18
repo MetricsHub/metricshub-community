@@ -63,7 +63,7 @@ public class ResourceGroupConfig {
 	private AlertingSystemConfig alertingSystemConfig;
 	private Boolean sequential;
 	private Boolean enableSelfMonitoring;
-	private Boolean fileSourceDetailLoggingEnabled;
+	private Boolean logFileSourceDetails;
 	private Boolean resolveHostnameToFqdn;
 
 	@JsonSetter(nulls = SKIP)

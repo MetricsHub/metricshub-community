@@ -370,14 +370,14 @@ public abstract class AbstractStrategy implements IStrategy {
 	 */
 	private SourceTableLoggingProxy resolveSourceTableLoggingProxy(final Source source) {
 		if (source instanceof FileSource) {
-			return new FileSourceTableLoggingProxy(DEFAULT_SOURCE_TABLE_LOGGING_PROXY, isFileSourceDetailLoggingEnabled());
+			return new FileSourceTableLoggingProxy(DEFAULT_SOURCE_TABLE_LOGGING_PROXY, isLogFileSourceDetails());
 		}
 		return DEFAULT_SOURCE_TABLE_LOGGING_PROXY;
 	}
 
-	private boolean isFileSourceDetailLoggingEnabled() {
+	private boolean isLogFileSourceDetails() {
 		final HostConfiguration hostConfiguration = telemetryManager.getHostConfiguration();
-		return hostConfiguration != null && hostConfiguration.isFileSourceDetailLoggingEnabled();
+		return hostConfiguration != null && hostConfiguration.isLogFileSourceDetails();
 	}
 
 	/**
