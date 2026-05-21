@@ -11,7 +11,7 @@
 	</parent>
 
 	<artifactId>metricshub-community</artifactId>
-	<version>3.9.04-SNAPSHOT</version>
+	<version>3.9.05-SNAPSHOT</version>
 
 	<packaging>pom</packaging>
 
@@ -79,10 +79,10 @@
 	</developers>
 
 	<properties>
-		<community-connectors.version>1.0.20</community-connectors.version>
+		<community-connectors.version>1.0.21</community-connectors.version>
 		<maven.compiler.release>17</maven.compiler.release>
 
-		<project.build.outputTimestamp>2026-03-30T16:52:14Z</project.build.outputTimestamp>
+		<project.build.outputTimestamp>2026-05-20T08:58:44Z</project.build.outputTimestamp>
 
 		<!-- Packaging Properties -->
 		<metricshub-jre.version>17.0.15_6</metricshub-jre.version>
@@ -201,7 +201,7 @@
 			<dependency>
 				<groupId>org.projectlombok</groupId>
 				<artifactId>lombok</artifactId>
-				<version>1.18.30</version>
+				<version>1.18.38</version>
 				<scope>compile</scope>
 				<optional>true</optional>
 			</dependency>
