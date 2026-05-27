@@ -162,9 +162,8 @@ class SizeDeserializerTest {
 		doReturn(JsonToken.VALUE_STRING).when(parser).currentToken();
 		doReturn("not a size").when(parser).getValueAsString();
 
-		InvalidFormatException ex = assertThrows(
-			InvalidFormatException.class,
-			() -> DESERIALIZER.deserialize(parser, null)
+		InvalidFormatException ex = assertThrows(InvalidFormatException.class, () ->
+			DESERIALIZER.deserialize(parser, null)
 		);
 		assertTrue(ex.getMessage().contains("Invalid size"));
 		assertTrue(ex.getMessage().contains("not a size"));
@@ -175,9 +174,8 @@ class SizeDeserializerTest {
 		doReturn(JsonToken.START_OBJECT).when(parser).currentToken();
 		doReturn(JsonToken.START_OBJECT).when(parser).getCurrentToken();
 
-		InvalidFormatException ex = assertThrows(
-			InvalidFormatException.class,
-			() -> DESERIALIZER.deserialize(parser, null)
+		InvalidFormatException ex = assertThrows(InvalidFormatException.class, () ->
+			DESERIALIZER.deserialize(parser, null)
 		);
 		assertTrue(ex.getMessage().contains("Invalid size"));
 	}

@@ -60,12 +60,10 @@ class ProtocolHealthCheckStrategyTest {
 	 */
 	private TelemetryManager createTelemetryManagerWithTestConfig() {
 		// Create a telemetry manager
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOSTNAME)
 					.hostname(HOSTNAME)
 					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
@@ -81,8 +79,7 @@ class ProtocolHealthCheckStrategyTest {
 		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
 
 		// Create the Extension Manager
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -126,8 +123,7 @@ class ProtocolHealthCheckStrategyTest {
 	@Test
 	void testCheckHealthCollectsObservedDownWhenAllProtocolsAreDown() {
 		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -163,8 +159,7 @@ class ProtocolHealthCheckStrategyTest {
 	@Test
 	void testCheckHealthCollectsObservedUpWhenAtLeastOneProtocolIsUp() {
 		final TelemetryManager telemetryManager = createTelemetryManagerWithTestConfig();
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock, additionalProtocolExtensionMock))
 			.build();
 

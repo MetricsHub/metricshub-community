@@ -257,15 +257,13 @@ class MonitorFactoryTest {
 	@Test
 	void testCreateEndpointHostMonitor() {
 		// Create a telemetry manager instance with necessary information in host configuration and host properties
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_ID)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.LINUX)
 			.resolveHostnameToFqdn(false)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(HostProperties.builder().isLocalhost(Boolean.TRUE).build())
 			.build();

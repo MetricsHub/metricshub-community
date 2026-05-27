@@ -26,8 +26,7 @@ class WbemSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testWbemSource",
-				WbemSource
-					.builder()
+				WbemSource.builder()
 					.key("${source::beforeAll.testWbemSource}")
 					.type("wbem")
 					.query("testQuery")

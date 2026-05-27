@@ -146,23 +146,22 @@ public class ComputeProcessor implements IComputeProcessor {
 	private static final Function<ComputeValue, String> GET_VALUE = ComputeValue::getValue;
 
 	static {
-		MATH_FUNCTIONS_MAP =
-			Map.of(
-				Add.class,
-				(op1, op2) -> Double.toString(Double.parseDouble(op1) + Double.parseDouble(op2)),
-				Subtract.class,
-				(op1, op2) -> Double.toString(Double.parseDouble(op1) - Double.parseDouble(op2)),
-				Multiply.class,
-				(op1, op2) -> Double.toString(Double.parseDouble(op1) * Double.parseDouble(op2)),
-				Divide.class,
-				(op1, op2) -> {
-					Double op2Value = Double.parseDouble(op2);
-					if (op2Value != 0) {
-						return Double.toString(Double.parseDouble(op1) / op2Value);
-					}
-					return null;
+		MATH_FUNCTIONS_MAP = Map.of(
+			Add.class,
+			(op1, op2) -> Double.toString(Double.parseDouble(op1) + Double.parseDouble(op2)),
+			Subtract.class,
+			(op1, op2) -> Double.toString(Double.parseDouble(op1) - Double.parseDouble(op2)),
+			Multiply.class,
+			(op1, op2) -> Double.toString(Double.parseDouble(op1) * Double.parseDouble(op2)),
+			Divide.class,
+			(op1, op2) -> {
+				Double op2Value = Double.parseDouble(op2);
+				if (op2Value != 0) {
+					return Double.toString(Double.parseDouble(op1) / op2Value);
 				}
-			);
+				return null;
+			}
+		);
 	}
 
 	@Override
@@ -239,8 +238,7 @@ public class ComputeProcessor implements IComputeProcessor {
 			if (arrayValue != null) {
 				final String[] splitArrayValue = arrayValue.split(arraySeparator);
 
-				final String translatedArrayValue = Arrays
-					.stream(splitArrayValue)
+				final String translatedArrayValue = Arrays.stream(splitArrayValue)
 					.map(value -> translations.getOrDefault(value.toLowerCase(), defaultTranslation))
 					.filter(value -> value != null && !value.isBlank())
 					.collect(Collectors.joining(resultSeparator));
@@ -296,8 +294,8 @@ public class ComputeProcessor implements IComputeProcessor {
 						columnIndex,
 						String.valueOf(
 							(long) Double.parseDouble(line.get(columnIndex)) &
-							// @formatter:off
-							(
+								// @formatter:off
+								(
 								colOperand2 == -1
 									? (long) Double.parseDouble(operand2)
 									: (long) Double.parseDouble(line.get(colOperand2))
@@ -361,13 +359,12 @@ public class ComputeProcessor implements IComputeProcessor {
 			maybeEmbeddedFile = Optional.of(EmbeddedFile.fromString(script));
 		} else {
 			try {
-				maybeEmbeddedFile =
-					EmbeddedFileHelper.findEmbeddedFile(
-						awk.getScript(),
-						telemetryManager.getEmbeddedFiles(connectorId),
-						hostname,
-						connectorId
-					);
+				maybeEmbeddedFile = EmbeddedFileHelper.findEmbeddedFile(
+					awk.getScript(),
+					telemetryManager.getEmbeddedFiles(connectorId),
+					hostname,
+					connectorId
+				);
 			} catch (Exception exception) {
 				log.warn(
 					"Hostname {} - Compute Operation (Awk) script {} has not been set correctly, the table remains unchanged.",
@@ -431,12 +428,11 @@ public class ComputeProcessor implements IComputeProcessor {
 				awk.getSeparators(),
 				awk.getSelectColumns() == null ? EMPTY : awk.getSelectColumns().replaceAll("\\s+", EMPTY)
 			);
-			awkResult =
-				awkResultLines
-					.stream()
-					// add the TABLE_SEP at the end of each lines.
-					.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
-					.collect(Collectors.joining(NEW_LINE));
+			awkResult = awkResultLines
+				.stream()
+				// add the TABLE_SEP at the end of each lines.
+				.map(line -> line.endsWith(TABLE_SEP) ? line : line + TABLE_SEP)
+				.collect(Collectors.joining(NEW_LINE));
 
 			sourceTable.setRawData(awkResult);
 			sourceTable.setTable(SourceTable.csvToTable(awkResult, TABLE_SEP));
@@ -744,22 +740,21 @@ public class ComputeProcessor implements IComputeProcessor {
 
 			final String pslRegexp = abstractMatchingLines.getRegExp();
 
-			final Predicate<String> pslPredicate = pslRegexp != null && !pslRegexp.isEmpty()
-				? getPredicate(pslRegexp, abstractMatchingLines)
-				: null;
+			final Predicate<String> pslPredicate =
+				pslRegexp != null && !pslRegexp.isEmpty() ? getPredicate(pslRegexp, abstractMatchingLines) : null;
 
-			final Predicate<String> valuePredicate = valueSet != null && !valueSet.isEmpty()
-				? getPredicate(valueSet, abstractMatchingLines)
-				: null;
+			final Predicate<String> valuePredicate =
+				valueSet != null && !valueSet.isEmpty() ? getPredicate(valueSet, abstractMatchingLines) : null;
 
 			// If there are both a regex and a valueList, both are applied, one after the other.
 			final List<List<String>> filteredTable = sourceTable
 				.getTable()
 				.stream()
-				.filter(line ->
-					columnIndex < line.size() &&
-					(pslPredicate == null || pslPredicate.test(line.get(columnIndex))) &&
-					(valuePredicate == null || valuePredicate.test(line.get(columnIndex)))
+				.filter(
+					line ->
+						columnIndex < line.size() &&
+						(pslPredicate == null || pslPredicate.test(line.get(columnIndex))) &&
+						(valuePredicate == null || valuePredicate.test(line.get(columnIndex)))
 				)
 				.collect(Collectors.toList());
 
@@ -781,9 +776,9 @@ public class ComputeProcessor implements IComputeProcessor {
 	 */
 	private Set<String> buildCaseInsensitiveValueSet(@NonNull final String value) {
 		if (value.indexOf(COMMA) >= 0) {
-			return Stream
-				.of(value.split(COMMA))
-				.collect(Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
+			return Stream.of(value.split(COMMA)).collect(
+				Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER))
+			);
 		}
 
 		final Set<String> singletonSet = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
@@ -1071,8 +1066,9 @@ public class ComputeProcessor implements IComputeProcessor {
 		List<Integer> columnNumbers = null;
 
 		try {
-			columnNumbers =
-				Stream.of(keepColumns.getColumnNumbers().split(COMMA)).map(Integer::parseInt).collect(Collectors.toList());
+			columnNumbers = Stream.of(keepColumns.getColumnNumbers().split(COMMA))
+				.map(Integer::parseInt)
+				.collect(Collectors.toList());
 		} catch (NumberFormatException numberFormatException) {
 			logComputeError(
 				connectorId,
@@ -1211,12 +1207,10 @@ public class ComputeProcessor implements IComputeProcessor {
 		final List<Integer> bitList;
 
 		try {
-			bitList =
-				Arrays
-					.asList(perBitTranslation.getBitList().split(COMMA))
-					.stream()
-					.map(Integer::parseInt)
-					.collect(Collectors.toList());
+			bitList = Arrays.asList(perBitTranslation.getBitList().split(COMMA))
+				.stream()
+				.map(Integer::parseInt)
+				.collect(Collectors.toList());
 		} catch (Exception exception) {
 			logComputeError(
 				connectorId,
@@ -1488,9 +1482,9 @@ public class ComputeProcessor implements IComputeProcessor {
 					}
 					log.warn(
 						"Hostname {} - Substring arguments are not valid: start={}, end={}," +
-						" startColumnIndex={}, endColumnIndex={}," +
-						" computed beginIndex={}, computed endIndex={}," +
-						" row={}, columnValue={}",
+							" startColumnIndex={}, endColumnIndex={}," +
+							" computed beginIndex={}, computed endIndex={}," +
+							" row={}, columnValue={}",
 						hostname,
 						start,
 						end,
@@ -1882,9 +1876,10 @@ public class ComputeProcessor implements IComputeProcessor {
 			return;
 		}
 
-		final String result = abstractConcat instanceof Prepend
-			? line.get(concatColumnIndex).concat(line.get(columnIndex))
-			: line.get(columnIndex).concat(line.get(concatColumnIndex));
+		final String result =
+			abstractConcat instanceof Prepend
+				? line.get(concatColumnIndex).concat(line.get(columnIndex))
+				: line.get(columnIndex).concat(line.get(concatColumnIndex));
 
 		line.set(columnIndex, result);
 	}
@@ -1919,9 +1914,10 @@ public class ComputeProcessor implements IComputeProcessor {
 			concatValue = concatValue.replace(matcher.group(0), line.get(concatColumnIndex));
 		}
 
-		final String result = abstractConcat instanceof Prepend
-			? concatValue.concat(line.get(columnIndex))
-			: line.get(columnIndex).concat(concatValue);
+		final String result =
+			abstractConcat instanceof Prepend
+				? concatValue.concat(line.get(columnIndex))
+				: line.get(columnIndex).concat(concatValue);
 
 		line.set(columnIndex, result);
 	}

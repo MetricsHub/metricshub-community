@@ -55,8 +55,7 @@ class ExtensionManagerTest {
 			}
 		};
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withConnectorStoreProviderExtensions(List.of(connectorStoreProviderExt1, connectorStoreProviderExt2))
 			.build();
 		final RawConnectorStore rawConnectorStore = extensionManager.aggregateExtensionRawConnectorStores();
@@ -69,5 +68,4 @@ class ExtensionManagerTest {
 		assertInstanceOf(TreeMap.class, rawConnectorStore.getStore());
 		assertEquals(rawConnectorStoreExpected.getStore(), rawConnectorStore.getStore());
 	}
-
 }

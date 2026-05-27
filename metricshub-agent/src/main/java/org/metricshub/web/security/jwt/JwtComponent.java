@@ -96,8 +96,7 @@ public class JwtComponent {
 	 */
 	public JwtBuilder createAuthorizationJwtBuilder(final User user, final long expirationTime) {
 		final var date = Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant());
-		return Jwts
-			.builder()
+		return Jwts.builder()
 			.issuer("MetricsHub")
 			.subject(user.getUsername())
 			.issuedAt(date)

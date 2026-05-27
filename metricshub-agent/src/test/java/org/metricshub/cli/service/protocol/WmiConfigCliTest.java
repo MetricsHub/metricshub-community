@@ -29,8 +29,7 @@ class WmiConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new WmiExtension()))
 				.build();
 
@@ -41,8 +40,7 @@ class WmiConfigCliTest {
 			// Create an WmiTestConfiguration and call method toProtocol
 			WmiConfiguration wmiConfiguration = (WmiConfiguration) wmiConfigCli.toConfiguration(null, null);
 
-			final WmiConfiguration expected = WmiConfiguration
-				.builder()
+			final WmiConfiguration expected = WmiConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(Long.valueOf(timeout))

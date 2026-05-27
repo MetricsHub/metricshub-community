@@ -109,8 +109,7 @@ class MacrosUpdaterTest {
 		);
 
 		final String result = MacrosUpdater.update(text, "user", "pwd".toCharArray(), "token", "hostname", false);
-		final String expected =
-			"""
+		final String expected = """
 			hostname
 			pwd
 			user

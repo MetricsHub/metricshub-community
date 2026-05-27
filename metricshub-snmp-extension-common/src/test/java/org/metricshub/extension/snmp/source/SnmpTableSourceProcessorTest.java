@@ -51,8 +51,7 @@ public class SnmpTableSourceProcessorTest {
 	// Test when snmpConfiguration is null
 	@Test
 	public void testProcess_WhenConfigurationIsNull_ReturnsEmptySourceTable() {
-		SnmpTableSource snmpTableSource = SnmpTableSource
-			.builder()
+		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
 			.build();
@@ -78,8 +77,7 @@ public class SnmpTableSourceProcessorTest {
 	// Test when the executor throws an exception
 	@Test
 	public void testProcess_WhenExecutorThrowsException_ReturnsEmptySourceTable() throws Exception {
-		SnmpTableSource snmpTableSource = SnmpTableSource
-			.builder()
+		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
 			.build();
@@ -106,8 +104,7 @@ public class SnmpTableSourceProcessorTest {
 	// Test when the executor returns a valid result
 	@Test
 	public void testProcess_WhenExecutorReturnsValidResult_ReturnsSourceTableWithResult() throws Exception {
-		SnmpTableSource snmpTableSource = SnmpTableSource
-			.builder()
+		SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid("test_oid")
 			.selectColumns("column1, column2")
 			.build();
@@ -127,8 +124,7 @@ public class SnmpTableSourceProcessorTest {
 				true,
 				"hostname"
 			)
-		)
-			.thenReturn(expectedResult);
+		).thenReturn(expectedResult);
 
 		SourceTable result = snmpTableSourceProcessor.process(snmpTableSource, "connectorId", telemetryManager);
 
@@ -141,8 +137,7 @@ public class SnmpTableSourceProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of())
 			.build();

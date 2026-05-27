@@ -41,8 +41,7 @@ public abstract class AbstractConnectorParserManagement extends DeserializerTest
 			connectorDirectory.resolve(testFile + ".yaml").getParent()
 		);
 		final RawConnector rawConnector = connectorParser.parseRaw(connectorDirectory.resolve(testFile + ".yaml").toFile());
-		return ConnectorStoreComposer
-			.builder()
+		return ConnectorStoreComposer.builder()
 			.withDeserializer(parser.getDeserializer())
 			.withUpdateChain(parser.getConnectorUpdateChain())
 			.build()

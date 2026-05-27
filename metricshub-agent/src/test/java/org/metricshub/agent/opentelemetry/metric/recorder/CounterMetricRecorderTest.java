@@ -29,13 +29,11 @@ class CounterMetricRecorderTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		counterMetricRecorder =
-			CounterMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withUnit("s")
-				.withDescription("Test counter metric")
-				.build();
+		counterMetricRecorder = CounterMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("s")
+			.withDescription("Test counter metric")
+			.build();
 	}
 
 	@Test
@@ -76,14 +74,12 @@ class CounterMetricRecorderTest {
 		when(mockMetric.getCollectTime()).thenReturn(System.currentTimeMillis());
 		when(mockMetric.getAttributes()).thenReturn(Map.of("key", "value"));
 
-		counterMetricRecorder =
-			CounterMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withUnit("s")
-				.withDescription("Test counter metric")
-				.withResourceAttributes(Map.of("resource", "resourceValue"))
-				.build();
+		counterMetricRecorder = CounterMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("s")
+			.withDescription("Test counter metric")
+			.withResourceAttributes(Map.of("resource", "resourceValue"))
+			.build();
 
 		// When
 		final Optional<Metric> result = counterMetricRecorder.doRecord();

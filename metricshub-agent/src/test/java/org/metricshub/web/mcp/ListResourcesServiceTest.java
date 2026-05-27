@@ -30,14 +30,12 @@ class ListResourcesServiceTest {
 		// Populate paris resource group resources
 		final Map<String, ResourceConfig> parisResources = Map.of(
 			"paris-host1",
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(Map.of("host.name", "attrib-paris-host1", "host.type", "linux"))
 				.protocols(Map.of("ssh", SshConfiguration.sshConfigurationBuilder().hostname("paris-config-host1").build()))
 				.build(),
 			"paris-host2",
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(Map.of("host.name", "attrib-paris-host2", "host.type", "windows"))
 				.protocols(Map.of("wmi", WmiConfiguration.builder().hostname("paris-config-host2").build()))
 				.build()
@@ -49,22 +47,19 @@ class ListResourcesServiceTest {
 		// Populate top level resources
 		final Map<String, ResourceConfig> topLevelResources = Map.of(
 			"topLevel-host1",
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(Map.of("host.name", "attrib-host1", "host.type", "linux"))
 				.protocols(Map.of("ssh", SshConfiguration.sshConfigurationBuilder().hostname("config-host1").build()))
 				.build(),
 			"topLevel-host2",
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(Map.of("host.name", "attrib-host2", "host.type", "windows"))
 				.protocols(Map.of("wmi", WmiConfiguration.builder().hostname("config-host2").build()))
 				.build()
 		);
 
 		// Create an agent config with top level resources and resource groups configurations
-		AgentConfig agentConfig = AgentConfig
-			.builder()
+		AgentConfig agentConfig = AgentConfig.builder()
 			.resourceGroups(Map.of("paris", paris))
 			.resources(topLevelResources)
 			.build();

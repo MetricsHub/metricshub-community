@@ -161,18 +161,18 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 		return !isHttpMethodPermitted(resolvedHttpMethod)
 			? MultiHostToolResponse.buildError("The HTTP %s method is disabled.".formatted(resolvedHttpMethod))
 			: agentContextHolder
-				.getAgentContext()
-				.getExtensionManager()
-				.findExtensionByType("http")
-				.map((IProtocolExtension extension) ->
-					executeForHosts(
-						urls,
-						ExecuteHttpQueryService::buildNullUrlResponse,
-						targetUrl -> executeForUrl(extension, targetUrl, resolvedHttpMethod, headers, body, timeout),
-						resolvedPoolSize
+					.getAgentContext()
+					.getExtensionManager()
+					.findExtensionByType("http")
+					.map((IProtocolExtension extension) ->
+						executeForHosts(
+							urls,
+							ExecuteHttpQueryService::buildNullUrlResponse,
+							targetUrl -> executeForUrl(extension, targetUrl, resolvedHttpMethod, headers, body, timeout),
+							resolvedPoolSize
+						)
 					)
-				)
-				.orElseGet(() -> MultiHostToolResponse.buildError("The HTTP extension is not available"));
+					.orElseGet(() -> MultiHostToolResponse.buildError("The HTTP extension is not available"));
 	}
 
 	/**
@@ -191,8 +191,7 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 	 * @return host response encapsulating the error message
 	 */
 	private static HostToolResponse<QueryResponse> buildUrlErrorResponse(final String errorMessage) {
-		return HostToolResponse
-			.<QueryResponse>builder()
+		return HostToolResponse.<QueryResponse>builder()
 			.response(QueryResponse.builder().error(errorMessage).build())
 			.build();
 	}
@@ -317,8 +316,7 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 		final Long timeout
 	) {
 		// Try to retrieve a HTTP configuration for the host
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
@@ -367,14 +365,13 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error(
 					"An error has occurred when executing the HTTP %s request on %s: %s.".formatted(
-							method,
-							hostname,
-							e.getMessage()
-						)
+						method,
+						hostname,
+						e.getMessage()
+					)
 				)
 				.build();
 		}

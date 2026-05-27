@@ -46,24 +46,20 @@ class HardwareStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-			ConnectorIdentity
-				.builder()
+			ConnectorIdentity.builder()
 				.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OOB)).tags(Set.of("hardware")).build())
 				.build()
 		);
 		connectorStore.setStore(new HashMap<>(Map.of(TEST_CONNECTOR, connector)));
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.strategyTime(STRATEGY_TIME)
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.strategyTime(STRATEGY_TIME)
+			.connectorStore(connectorStore)
+			.build();
 
 		// Set the status ok in the host properties
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().isStatusOk(true).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of(TEST_CONNECTOR, connectorNamespace)))
 			.build();
 		telemetryManager.setHostProperties(hostProperties);
@@ -72,8 +68,7 @@ class HardwareStrategyTest {
 	@Test
 	void testRun() {
 		// Create a fan monitor
-		final Monitor fanMonitor = Monitor
-			.builder()
+		final Monitor fanMonitor = Monitor.builder()
 			.type(FAN)
 			.metrics(new HashMap<>(Map.of(FAN_SPEED_METRIC, NumberMetric.builder().value(0.7).build())))
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, TEST_CONNECTOR)))

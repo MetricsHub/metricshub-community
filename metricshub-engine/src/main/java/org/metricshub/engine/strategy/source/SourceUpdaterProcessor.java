@@ -526,8 +526,7 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (sourceReferenceContent != null) {
 			// Remove last semicolon from the rows containing only one cell.
 			// For instance the last semicolon leads to HTTP Errors when the reference is defined in the Header attribute
-			return Stream
-				.of(sourceReferenceContent.split(NEW_LINE))
+			return Stream.of(sourceReferenceContent.split(NEW_LINE))
 				.map(val -> {
 					final int indexOfSemicolon = val.indexOf(SEMICOLON);
 					if (indexOfSemicolon == val.length() - 1) {
@@ -663,9 +662,8 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (iEntryConcatMethod instanceof CustomConcatMethod customConcatMethod) {
 			appendCustomEntryResult(customConcatMethod, currentResult, row, rawData);
 		} else {
-			final EntryConcatMethod entryConcatMethod = iEntryConcatMethod != null
-				? (EntryConcatMethod) iEntryConcatMethod
-				: EntryConcatMethod.LIST;
+			final EntryConcatMethod entryConcatMethod =
+				iEntryConcatMethod != null ? (EntryConcatMethod) iEntryConcatMethod : EntryConcatMethod.LIST;
 
 			switch (entryConcatMethod) {
 				case JSON_ARRAY:
@@ -684,7 +682,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 					if (table != null && !table.isEmpty()) {
 						currentResult
 							.getTable()
-							.addAll(table.stream().filter(line -> !line.isEmpty()).collect(Collectors.toCollection(ArrayList::new)));
+							.addAll(
+								table
+									.stream()
+									.filter(line -> !line.isEmpty())
+									.collect(Collectors.toCollection(ArrayList::new))
+							);
 					}
 					break;
 			}
@@ -708,12 +711,12 @@ public class SourceUpdaterProcessor implements ISourceProcessor {
 		if (rawData == null) {
 			return;
 		}
-		String entryConcatStart = customConcatMethod.getConcatStart() != null
-			? replaceDynamicEntry(customConcatMethod.getConcatStart(), row)
-			: EMPTY;
-		String entryConcatEnd = customConcatMethod.getConcatEnd() != null
-			? replaceDynamicEntry(customConcatMethod.getConcatEnd(), row)
-			: EMPTY;
+		String entryConcatStart =
+			customConcatMethod.getConcatStart() != null
+				? replaceDynamicEntry(customConcatMethod.getConcatStart(), row)
+				: EMPTY;
+		String entryConcatEnd =
+			customConcatMethod.getConcatEnd() != null ? replaceDynamicEntry(customConcatMethod.getConcatEnd(), row) : EMPTY;
 
 		currentResult.setRawData(
 			currentResult.getRawData().concat(entryConcatStart).concat(rawData).concat(entryConcatEnd)

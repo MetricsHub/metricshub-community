@@ -94,8 +94,7 @@ public class SnmpTableSource extends SnmpSource {
 	 * @return new {@link SnmpTableSource} instance
 	 */
 	public SnmpTableSource copy() {
-		return SnmpTableSource
-			.builder()
+		return SnmpTableSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

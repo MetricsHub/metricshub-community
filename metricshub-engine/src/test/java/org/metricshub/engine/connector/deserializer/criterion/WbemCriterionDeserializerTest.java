@@ -31,8 +31,7 @@ class WbemCriterionDeserializerTest extends DeserializerTest {
 
 		final List<Criterion> expected = new ArrayList<>();
 
-		final WbemCriterion wbem = WbemCriterion
-			.builder()
+		final WbemCriterion wbem = WbemCriterion.builder()
 			.type("wbem")
 			.query("testQuery")
 			.namespace("testNamespace")
@@ -52,7 +51,8 @@ class WbemCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws IOException
 	 */
-	void testWbemDefaultNamespace() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testWbemDefaultNamespace() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		final Connector connector = getConnector("wbemCriterionDefaultNamespace");
 
 		final List<Criterion> expected = new ArrayList<>();

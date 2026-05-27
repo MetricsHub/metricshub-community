@@ -112,8 +112,7 @@ public class ListResourcesService implements IMCPToolService {
 
 		resources.forEach((String resourceKey, ResourceConfig resourceConfig) -> {
 			// Create a resource details object for the host
-			final var resourceDetails = ResourceDetails
-				.builder()
+			final var resourceDetails = ResourceDetails.builder()
 				.resourceGroupKey(resourceGroupKey)
 				.protocols(resolveHostConfigurations(resourceConfig.getProtocols()))
 				.attributes(resourceConfig.getAttributes())

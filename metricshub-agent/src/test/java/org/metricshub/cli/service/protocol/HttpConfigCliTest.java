@@ -33,8 +33,7 @@ class HttpConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new HttpExtension()))
 				.build();
 
@@ -42,8 +41,7 @@ class HttpConfigCliTest {
 				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
 				.thenReturn(extensionManager);
 
-			HttpConfiguration expected = HttpConfiguration
-				.builder()
+			HttpConfiguration expected = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(120L)

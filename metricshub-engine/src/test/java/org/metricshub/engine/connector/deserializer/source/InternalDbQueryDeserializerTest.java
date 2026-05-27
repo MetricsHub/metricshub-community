@@ -45,8 +45,7 @@ class InternalDbQueryDeserializerTest extends DeserializerTest {
 		tables.add(table1);
 		tables.add(table2);
 
-		final InternalDbQuerySource expected = InternalDbQuerySource
-			.builder()
+		final InternalDbQuerySource expected = InternalDbQuerySource.builder()
 			.type("internalDbQuery")
 			.tables(tables)
 			.query("SELECT T1.COL1, T1.COL2, T2.COL1, T2.COL2 FROM T1 JOIN T2 ON T1.COL1 = T2.COL1;")

@@ -21,7 +21,8 @@ class ProductRequirementsCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws Exception
 	 */
-	void testDeserializeProductRequirementsDeserializer() throws Exception { // NOSONAR compareCriterion performs assertion
+	void testDeserializeProductRequirementsDeserializer() throws Exception {
+		// NOSONAR compareCriterion performs assertion
 		final Connector productRequirements = getConnector("productRequirementsCriterion");
 
 		List<Criterion> expected = new ArrayList<>();

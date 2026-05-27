@@ -66,8 +66,7 @@ public class SearchService {
 			final double jw = jaroWinkler(current.getName(), q);
 			if (jw >= MIN_JW_SCORE) {
 				matches.add(
-					SearchMatch
-						.builder()
+					SearchMatch.builder()
 						.name(current.getName())
 						.type(current.getType())
 						.path(tn.matchPath)

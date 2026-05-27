@@ -185,14 +185,12 @@ public class ResourceGroupScheduling extends AbstractScheduling {
 				final String metricName = MetricFactory.extractName(metricKey);
 
 				meter.registerRecorder(
-					MetricContext
-						.builder()
+					MetricContext.builder()
 						.withDescription("Reports metric %s".formatted(metricName))
 						.withType(MetricType.GAUGE)
 						.withUnit(KNOWN_METRIC_UNITS.get(metricName))
 						.build(),
-					NumberMetric
-						.builder()
+					NumberMetric.builder()
 						.value(metricEntry.getValue())
 						.name(metricName)
 						.attributes(MetricFactory.extractAttributesFromMetricName(metricKey))

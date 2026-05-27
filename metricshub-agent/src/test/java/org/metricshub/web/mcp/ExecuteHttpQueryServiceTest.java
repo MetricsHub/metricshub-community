@@ -48,8 +48,7 @@ class ExecuteHttpQueryServiceTest {
 	/**
 	 *  HTTP headers used for the request (newline-separated "key: value" pairs).
 	 */
-	private static final String HTTP_HEADER =
-		"""
+	private static final String HTTP_HEADER = """
 		Accept: Application/json
 		Authentication: Bearer q4sdf4sdf92qsd4wxc5
 		User-Agent: MetricsHub/1.0
@@ -103,8 +102,7 @@ class ExecuteHttpQueryServiceTest {
 	void testExecuteHttpGetRequestWithoutConfiguration() {
 		setup();
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -152,10 +150,8 @@ class ExecuteHttpQueryServiceTest {
 		);
 
 		assertTrue(result.getHosts().isEmpty(), () -> "No host response should be returned when extension is missing");
-		assertEquals(
-			"The HTTP extension is not available",
-			result.getErrorMessage(),
-			() -> "Unexpected error message when the HTTP extension isn't found"
+		assertEquals("The HTTP extension is not available", result.getErrorMessage(), () ->
+			"Unexpected error message when the HTTP extension isn't found"
 		);
 	}
 
@@ -163,16 +159,14 @@ class ExecuteHttpQueryServiceTest {
 	void testExecuteHttpGetRequest() throws Exception {
 		setup();
 		// Creating a HTTP Configuration for the host
-		HttpConfiguration httpConfiguration = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the HTTP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
 			.build();
@@ -184,8 +178,9 @@ class ExecuteHttpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeHttp query on HTTP request executor
-		when(httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class)))
-			.thenReturn(SUCCESS_RESPONSE);
+		when(
+			httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class))
+		).thenReturn(SUCCESS_RESPONSE);
 
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
@@ -199,10 +194,8 @@ class ExecuteHttpQueryServiceTest {
 		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
 		assertEquals(HOSTNAME, hostResponse.getHostname(), () -> "Hostname should be propagated");
-		assertEquals(
-			SUCCESS_RESPONSE,
-			hostResponse.getResponse().getResponse(),
-			() -> "HTTP GET response mismatch for mocked value `Success`"
+		assertEquals(SUCCESS_RESPONSE, hostResponse.getResponse().getResponse(), () ->
+			"HTTP GET response mismatch for mocked value `Success`"
 		);
 	}
 
@@ -210,16 +203,14 @@ class ExecuteHttpQueryServiceTest {
 	void testExecuteHttpPostRequest() throws Exception {
 		setup();
 		// Creating a HTTP Configuration for the host
-		HttpConfiguration httpConfiguration = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the HTTP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
 			.build();
@@ -231,8 +222,9 @@ class ExecuteHttpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeHttp query on HTTP request executor
-		when(httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class)))
-			.thenReturn(SUCCESS_RESPONSE);
+		when(
+			httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class))
+		).thenReturn(SUCCESS_RESPONSE);
 
 		MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
 			List.of(HTTP_URL),
@@ -244,10 +236,8 @@ class ExecuteHttpQueryServiceTest {
 		);
 
 		assertEquals(0, result.getHosts().size(), () -> "No host is expected to respond as HTTP POST is disabled.");
-		assertEquals(
-			"The HTTP POST method is disabled.",
-			result.getErrorMessage(),
-			() -> "Expected message `HTTP POST disabled`"
+		assertEquals("The HTTP POST method is disabled.", result.getErrorMessage(), () ->
+			"Expected message `HTTP POST disabled`"
 		);
 
 		System.setProperty("metricshub.mcp.tool.http.post.enabled", "true");
@@ -256,10 +246,8 @@ class ExecuteHttpQueryServiceTest {
 		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
 		assertEquals(HOSTNAME, hostResponse.getHostname(), () -> "Hostname should be propagated");
-		assertEquals(
-			SUCCESS_RESPONSE,
-			hostResponse.getResponse().getResponse(),
-			() -> "HTTP GET response mismatch for mocked value `Success`"
+		assertEquals(SUCCESS_RESPONSE, hostResponse.getResponse().getResponse(), () ->
+			"HTTP GET response mismatch for mocked value `Success`"
 		);
 	}
 
@@ -278,10 +266,8 @@ class ExecuteHttpQueryServiceTest {
 
 		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response for blank URL input");
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
-		assertEquals(
-			"URL must not be blank",
-			hostResponse.getResponse().getError(),
-			() -> "Expected blank URL error to be returned"
+		assertEquals("URL must not be blank", hostResponse.getResponse().getError(), () ->
+			"Expected blank URL error to be returned"
 		);
 	}
 
@@ -291,16 +277,14 @@ class ExecuteHttpQueryServiceTest {
 		setup();
 
 		// Creating a HTTP Configuration for the host
-		HttpConfiguration httpConfiguration = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the HTTP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
 			.build();
@@ -312,8 +296,9 @@ class ExecuteHttpQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Make the executor throw when the extension tries to execute
-		when(httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class)))
-			.thenThrow(new IllegalArgumentException("An error has occurred"));
+		when(
+			httpRequestExecutorMock.executeHttp(any(HttpRequest.class), anyBoolean(), any(TelemetryManager.class))
+		).thenThrow(new IllegalArgumentException("An error has occurred"));
 
 		// Call the execute query method
 		final MultiHostToolResponse<QueryResponse> result = httpQueryService.executeQuery(
@@ -327,9 +312,8 @@ class ExecuteHttpQueryServiceTest {
 
 		assertEquals(1, result.getHosts().size(), () -> "Expected a single host response");
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
-		assertTrue(
-			hostResponse.getResponse().getError().contains("An error has occurred when executing the HTTP"),
-			() -> "Error message should contain 'An error has occurred'"
+		assertTrue(hostResponse.getResponse().getError().contains("An error has occurred when executing the HTTP"), () ->
+			"Error message should contain 'An error has occurred'"
 		);
 	}
 
@@ -341,10 +325,8 @@ class ExecuteHttpQueryServiceTest {
 		assertEquals(HTTP_URL, queryNode.get("url").asText(), () -> "url must match");
 		assertNull(queryNode.get("header"), () -> "header field should be absent when null");
 		assertNull(queryNode.get("body"), () -> "body field should be absent when null");
-		assertEquals(
-			"all_with_status",
-			queryNode.get("resultContent").asText(),
-			() -> "resultContent should default to all_with_status"
+		assertEquals("all_with_status", queryNode.get("resultContent").asText(), () ->
+			"resultContent should default to all_with_status"
 		);
 
 		// Full input → all fields present and respected (method uppercased)
@@ -353,24 +335,18 @@ class ExecuteHttpQueryServiceTest {
 		assertEquals(HTTP_URL, queryNode.get("url").asText(), () -> "url must match");
 		assertEquals(HTTP_HEADER, queryNode.get("header").asText(), () -> "header should match input string");
 		assertEquals(HTTP_BODY, queryNode.get("body").asText(), () -> "body should match input string");
-		assertEquals(
-			"all_with_status",
-			queryNode.get("resultContent").asText(),
-			() -> "resultContent should default to all_with_status"
+		assertEquals("all_with_status", queryNode.get("resultContent").asText(), () ->
+			"resultContent should default to all_with_status"
 		);
 	}
 
 	@Test
 	void testResolveHttpMethod() {
-		assertEquals(
-			HTTP_GET,
-			ExecuteHttpQueryService.resolveHttpMethod(null),
-			() -> "Resolved method should be GET when method is null"
+		assertEquals(HTTP_GET, ExecuteHttpQueryService.resolveHttpMethod(null), () ->
+			"Resolved method should be GET when method is null"
 		);
-		assertEquals(
-			HTTP_GET,
-			ExecuteHttpQueryService.resolveHttpMethod(HTTP_GET),
-			() -> "Resolved method should be GET when method is GET"
+		assertEquals(HTTP_GET, ExecuteHttpQueryService.resolveHttpMethod(HTTP_GET), () ->
+			"Resolved method should be GET when method is GET"
 		);
 		assertEquals("POST", ExecuteHttpQueryService.resolveHttpMethod("post"), () -> "Resolved method should be POST");
 	}
@@ -379,15 +355,13 @@ class ExecuteHttpQueryServiceTest {
 	void testIsHttpMethodPermitted() {
 		System.clearProperty("metricshub.mcp.tool.http.post.enabled");
 		assertTrue(ExecuteHttpQueryService.isHttpMethodPermitted(HTTP_GET), () -> "HTTP GET is expected to be permitted");
-		assertFalse(
-			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
-			() -> "HTTP POST is not expected to be permitted when property isn't enabled"
+		assertFalse(ExecuteHttpQueryService.isHttpMethodPermitted("POST"), () ->
+			"HTTP POST is not expected to be permitted when property isn't enabled"
 		);
 
 		System.setProperty("metricshub.mcp.tool.http.post.enabled", "true");
-		assertTrue(
-			ExecuteHttpQueryService.isHttpMethodPermitted("POST"),
-			() -> "HTTP POST is expected to be permitted when property is enabled"
+		assertTrue(ExecuteHttpQueryService.isHttpMethodPermitted("POST"), () ->
+			"HTTP POST is expected to be permitted when property is enabled"
 		);
 	}
 }

@@ -20,8 +20,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when port is negative
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(-1)
 				.timeout(60L)
 				.authType(AuthType.NO_AUTH)
@@ -33,8 +32,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when port is greater than maximum allowed value
 		{
-			final SnmpV3Configuration snmpConfig = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpConfig = SnmpV3Configuration.builder()
 				.port(66666)
 				.timeout(60L)
 				.authType(AuthType.NO_AUTH)
@@ -46,8 +44,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when port is null
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(null)
 				.timeout(60L)
 				.authType(AuthType.NO_AUTH)
@@ -59,8 +56,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when timeout is negative
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(-60L)
 				.authType(AuthType.NO_AUTH)
@@ -72,8 +68,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when timeout is null
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(null)
 				.authType(AuthType.NO_AUTH)
@@ -85,8 +80,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when username is null
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(60L)
 				.authType(AuthType.NO_AUTH)
@@ -99,8 +93,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when timeout is zero
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(0L)
 				.authType(AuthType.NO_AUTH)
@@ -112,8 +105,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when username is empty
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(60L)
 				.authType(AuthType.SHA)
@@ -126,8 +118,7 @@ class SnmpV3ConfigurationTest {
 
 		// Test when authType is null
 		{
-			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration
-				.builder()
+			final SnmpV3Configuration snmpV3Config = SnmpV3Configuration.builder()
 				.port(1234)
 				.timeout(60L)
 				.authType(null)
@@ -201,9 +192,8 @@ class SnmpV3ConfigurationTest {
 
 	@Test
 	void testInterpretValueOfInvalidAuthType() {
-		IllegalArgumentException exception = assertThrows(
-			IllegalArgumentException.class,
-			() -> AuthType.interpretValueOf("invalidauth")
+		IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			AuthType.interpretValueOf("invalidauth")
 		);
 
 		assertTrue(exception.getMessage().contains("Invalid authentication type"));
@@ -218,8 +208,7 @@ class SnmpV3ConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final SnmpV3Configuration snmpV3Configuration = SnmpV3Configuration
-			.builder()
+		final SnmpV3Configuration snmpV3Configuration = SnmpV3Configuration.builder()
 			.authType(AuthType.MD5)
 			.contextName("context")
 			.password("password".toCharArray())
@@ -242,8 +231,7 @@ class SnmpV3ConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final SnmpV3Configuration snmpConfiguration = SnmpV3Configuration
-			.builder()
+		final SnmpV3Configuration snmpConfiguration = SnmpV3Configuration.builder()
 			.authType(AuthType.MD5)
 			.contextName("myContextname")
 			.password("myPassword".toCharArray())

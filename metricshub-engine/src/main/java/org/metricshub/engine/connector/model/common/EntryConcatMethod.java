@@ -64,8 +64,7 @@ public enum EntryConcatMethod implements IEntryConcatMethod {
 	 * @throws IllegalArgumentException if an invalid name is provided.
 	 */
 	public static EntryConcatMethod getByName(@NonNull final String name) {
-		return ENUM_VALUES
-			.stream()
+		return ENUM_VALUES.stream()
 			.filter(n -> n.name().equalsIgnoreCase(name) || n.getName().equalsIgnoreCase(name))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Invalid EntryConcatMethod name: " + name));

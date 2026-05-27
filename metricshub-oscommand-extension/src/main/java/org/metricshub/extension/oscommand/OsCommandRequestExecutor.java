@@ -82,7 +82,7 @@ public class OsCommandRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing Remote SSH command:\n- hostname: {}\n- username: {}\n- key-file-path: {}\n" + // NOSONAR
-				"- command: {}\n- timeout: {} s\n- local-files: {}\n",
+					"- command: {}\n- timeout: {} s\n- local-files: {}\n",
 				hostname,
 				username,
 				keyFilePath,
@@ -98,15 +98,15 @@ public class OsCommandRequestExecutor {
 		final long timeoutInMilliseconds = timeout * 1000;
 
 		// Choose the temporary directory according to the OS (Windows Temp or Unix temp)
-		final String remoteDirectory = hostType != null && hostType == DeviceKind.WINDOWS
-			? WINDOWS_SSH_REMOTE_DIRECTORY
-			: SSH_REMOTE_DIRECTORY;
+		final String remoteDirectory =
+			hostType != null && hostType == DeviceKind.WINDOWS ? WINDOWS_SSH_REMOTE_DIRECTORY : SSH_REMOTE_DIRECTORY;
 
 		final String updatedCommand = updateCommandWithLocalList(command, localFiles, remoteDirectory);
 
-		final String noPasswordUpdatedCommand = noPasswordCommand == null
-			? updatedCommand
-			: updateCommandWithLocalList(noPasswordCommand, localFiles, remoteDirectory);
+		final String noPasswordUpdatedCommand =
+			noPasswordCommand == null
+				? updatedCommand
+				: updateCommandWithLocalList(noPasswordCommand, localFiles, remoteDirectory);
 
 		// Create the collection that will store the paths of remote files that need to be removed
 		final List<String> remoteFilePaths = new ArrayList<>();
@@ -162,7 +162,7 @@ public class OsCommandRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed Remote SSH command:\n- Hostname: {}\n- Username: {}\n- Key-file-path: {}\n" + // NOSONAR
-					"- Command: {}\n- Timeout: {} s\n- Local-files: {}\n- Result:\n{}\n- response-time: {}\n",
+						"- Command: {}\n- Timeout: {} s\n- Local-files: {}\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
 					username,
 					keyFilePath,
@@ -318,16 +318,16 @@ public class OsCommandRequestExecutor {
 		return localFiles == null || localFiles.isEmpty()
 			? command
 			: localFiles
-				.stream()
-				.reduce(
-					command,
-					(updatedCommand, file) ->
-						updatedCommand.replaceAll(
-							protectCaseInsensitiveRegex(file.getAbsolutePath()),
-							Matcher.quoteReplacement(remoteDirectory + file.getName())
-						),
-					(_, s2) -> s2
-				);
+					.stream()
+					.reduce(
+						command,
+						(updatedCommand, file) ->
+							updatedCommand.replaceAll(
+								protectCaseInsensitiveRegex(file.getAbsolutePath()),
+								Matcher.quoteReplacement(remoteDirectory + file.getName())
+							),
+						(_, s2) -> s2
+					);
 	}
 
 	/**

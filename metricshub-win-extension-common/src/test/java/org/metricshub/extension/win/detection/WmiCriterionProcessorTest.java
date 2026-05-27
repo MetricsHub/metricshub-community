@@ -64,26 +64,27 @@ class WmiCriterionProcessorTest {
 
 	@BeforeEach
 	void setup() {
-		wmiCriterionProcessor =
-			new WmiCriterionProcessor(wmiDetectionServiceMock, configurationRetrieverMock, CONNECTOR_ID, true);
+		wmiCriterionProcessor = new WmiCriterionProcessor(
+			wmiDetectionServiceMock,
+			configurationRetrieverMock,
+			CONNECTOR_ID,
+			true
+		);
 	}
 
 	@Test
 	void testProcessWmiCriterionAutomaticNamespace() throws ClientException {
 		final IWinRequestExecutor winRequestExecutorMock = spy(IWinRequestExecutor.class);
 		doReturn(winRequestExecutorMock).when(wmiDetectionServiceMock).getWinRequestExecutor();
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.configurations(Map.of(WmiTestConfiguration.class, wmiConfiguration))
@@ -91,8 +92,7 @@ class WmiCriterionProcessorTest {
 			)
 			.build();
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		final WmiCriterion wmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion wmiCriterion = WmiCriterion.builder()
 			.query(WQL_CUSTOM)
 			.namespace(MetricsHubConstants.AUTOMATIC_NAMESPACE)
 			.build();
@@ -110,18 +110,15 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testProcessWmiCriterionNamespaceDefined() throws ClientException {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.configurations(Map.of(WmiTestConfiguration.class, wmiConfiguration))
@@ -145,18 +142,15 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testProcessWmiCriterionAutomaticNamespaceCached() throws ClientException {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.configurations(Map.of(WmiTestConfiguration.class, wmiConfiguration))
@@ -166,8 +160,7 @@ class WmiCriterionProcessorTest {
 		final String cachedNamespace = "root/" + FIRST_NAMESPACE;
 		telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID).setAutomaticWmiNamespace(cachedNamespace);
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
-		final WmiCriterion wmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion wmiCriterion = WmiCriterion.builder()
 			.query(WQL_CUSTOM)
 			.namespace(MetricsHubConstants.AUTOMATIC_NAMESPACE)
 			.build();
@@ -186,18 +179,15 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testProcessWmiCriterionMalformed() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.configurations(Map.of(WmiTestConfiguration.class, wmiConfiguration))
@@ -212,8 +202,7 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testProcessWmiCriterionWithNullWmiTestConfiguration() throws Exception {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(HOST_NAME).hostId(HOST_NAME).configurations(Map.of()).build()
 			)
@@ -243,8 +232,7 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testWmiFindPossibleNamespacesNoResponse() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
@@ -267,8 +255,7 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testWmiFindPossibleNamespacesEmpty() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
@@ -291,8 +278,7 @@ class WmiCriterionProcessorTest {
 
 	@Test
 	void testWmiFindPossibleNamespaces() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
@@ -322,8 +308,7 @@ class WmiCriterionProcessorTest {
 		doReturn(winRequestExecutorMock).when(wmiDetectionServiceMock).getWinRequestExecutor();
 
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().build();
-		final WmiCriterion wmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion wmiCriterion = WmiCriterion.builder()
 			.query(WQL_CUSTOM)
 			.expectedResult(NOT_MATCHING_EXPECTED_RESULT)
 			.build();
@@ -346,8 +331,14 @@ class WmiCriterionProcessorTest {
 		);
 		assertFalse(result.getResult().isSuccess());
 		assertTrue(result.getResult().getMessage().contains(TimeoutException.class.getSimpleName()));
-		verify(wmiDetectionServiceMock)
-			.performDetectionTest(any(), eq(wmiConfiguration), any(), anyString(), eq(true), isNull());
+		verify(wmiDetectionServiceMock).performDetectionTest(
+			any(),
+			eq(wmiConfiguration),
+			any(),
+			anyString(),
+			eq(true),
+			isNull()
+		);
 	}
 
 	@Test
@@ -358,8 +349,7 @@ class WmiCriterionProcessorTest {
 		doReturn(winRequestExecutorMock).when(wmiDetectionServiceMock).getWinRequestExecutor();
 
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().build();
-		final WmiCriterion wmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion wmiCriterion = WmiCriterion.builder()
 			.query(WQL_CUSTOM)
 			.expectedResult(NOT_MATCHING_EXPECTED_RESULT)
 			.build();
@@ -388,8 +378,14 @@ class WmiCriterionProcessorTest {
 		);
 		assertFalse(result.getResult().isSuccess());
 		assertNull(result.getResult().getException());
-		verify(wmiDetectionServiceMock, times(2))
-			.performDetectionTest(anyString(), any(), any(), anyString(), eq(true), isNull());
+		verify(wmiDetectionServiceMock, times(2)).performDetectionTest(
+			anyString(),
+			any(),
+			any(),
+			anyString(),
+			eq(true),
+			isNull()
+		);
 	}
 
 	@Test
@@ -412,8 +408,14 @@ class WmiCriterionProcessorTest {
 		assertTrue(result.getResult().isSuccess());
 		assertNull(result.getResult().getException());
 		assertEquals(FIRST_NAMESPACE, result.getNamespace());
-		verify(wmiDetectionServiceMock, times(2))
-			.performDetectionTest(any(), any(), any(), anyString(), eq(true), isNull());
+		verify(wmiDetectionServiceMock, times(2)).performDetectionTest(
+			any(),
+			any(),
+			any(),
+			anyString(),
+			eq(true),
+			isNull()
+		);
 	}
 
 	@Test

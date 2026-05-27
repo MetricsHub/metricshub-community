@@ -18,8 +18,7 @@ class TextTableHelperTest {
 			List.of("value7", "value8", "1")
 		);
 
-		String expected =
-			"""
+		String expected = """
 			+--------+--------+----+
 			| h1     | h2     | h3 |
 			+--------+--------+----+
@@ -30,8 +29,7 @@ class TextTableHelperTest {
 
 		assertEquals(expected, TextTableHelper.generateTextTable(List.of("h1", "h2", "h3"), table));
 
-		expected =
-			"""
+		expected = """
 			+----------+----------+----------+
 			| Column 1 | Column 2 | Column 3 |
 			+----------+----------+----------+
@@ -42,8 +40,7 @@ class TextTableHelperTest {
 		assertEquals(expected, TextTableHelper.generateTextTable(table));
 
 		table = List.of(Arrays.asList(null, null, null));
-		expected =
-			"""
+		expected = """
 			+----------+----------+----------+
 			| Column 1 | Column 2 | Column 3 |
 			+----------+----------+----------+
@@ -70,8 +67,7 @@ class TextTableHelperTest {
 			List.of("value7", "value8", "1")
 		);
 
-		String expected =
-			"""
+		String expected = """
 			+--------+--------+----+
 			| h1     | h2     | h3 |
 			+--------+--------+----+
@@ -82,8 +78,7 @@ class TextTableHelperTest {
 
 		assertEquals(expected, TextTableHelper.generateTextTable("h1;h2;h3", table));
 
-		expected =
-			"""
+		expected = """
 			+----------+----------+----------+
 			| Column 1 | Column 2 | Column 3 |
 			+----------+----------+----------+
@@ -105,8 +100,7 @@ class TextTableHelperTest {
 			List.of("value7", "value8", "1")
 		);
 
-		String expected =
-			"""
+		String expected = """
 			+--------+--------+----+
 			| h1     | h2     | h3 |
 			+--------+--------+----+
@@ -117,8 +111,7 @@ class TextTableHelperTest {
 
 		assertEquals(expected, TextTableHelper.generateTextTable(new String[] { "h1", "h2", "h3" }, table));
 
-		expected =
-			"""
+		expected = """
 			+----------+----------+----------+
 			| Column 1 | Column 2 | Column 3 |
 			+----------+----------+----------+

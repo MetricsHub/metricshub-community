@@ -144,8 +144,7 @@ public class TroubleshootHostService implements IMCPToolService {
 					agentContextHolder
 				);
 				if (telemetryManagers.isEmpty()) {
-					return HostToolResponse
-						.<List<TelemetryResult>>builder()
+					return HostToolResponse.<List<TelemetryResult>>builder()
 						.hostname(host)
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();
@@ -197,8 +196,7 @@ public class TroubleshootHostService implements IMCPToolService {
 					agentContextHolder
 				);
 				if (telemetryManagers.isEmpty()) {
-					return HostToolResponse
-						.<List<TelemetryResult>>builder()
+					return HostToolResponse.<List<TelemetryResult>>builder()
 						.hostname(host)
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();
@@ -255,8 +253,7 @@ public class TroubleshootHostService implements IMCPToolService {
 					agentContextHolder
 				);
 				if (telemetryManagers.isEmpty()) {
-					return HostToolResponse
-						.<List<TelemetryResult>>builder()
+					return HostToolResponse.<List<TelemetryResult>>builder()
 						.hostname(host)
 						.response(List.of(new TelemetryResult(HOSTNAME_NOT_CONFIGURED_MSG.formatted(host))))
 						.build();

@@ -109,10 +109,9 @@ public class MetricsExporter {
 					break;
 			}
 
-			isAppendResourceAttributes =
-				Boolean.parseBoolean(
-					configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_APPEND_RESOURCE_ATTRIBUTES)
-				);
+			isAppendResourceAttributes = Boolean.parseBoolean(
+				configuration.get(OtelConfigConstants.OTEL_EXPORTER_OTLP_METRICS_APPEND_RESOURCE_ATTRIBUTES)
+			);
 			return this;
 		}
 
@@ -196,15 +195,13 @@ public class MetricsExporter {
 			}
 
 			try {
-				client =
-					HttpProtobufClient
-						.builder()
-						.withEndpoint(endpoint)
-						.withHeaders(parseHeaders(headers))
-						.withCertificate(certificate)
-						.withTimeout(timeout)
-						.withPoolSize(poolSize)
-						.build();
+				client = HttpProtobufClient.builder()
+					.withEndpoint(endpoint)
+					.withHeaders(parseHeaders(headers))
+					.withCertificate(certificate)
+					.withTimeout(timeout)
+					.withPoolSize(poolSize)
+					.build();
 			} catch (Exception e) {
 				log.error("Failed to create HTTP client. Error Message: {}. Fall back to no-op client", e.getMessage());
 				log.debug("Failed to create HTTP client. Exception:", e);
@@ -238,15 +235,13 @@ public class MetricsExporter {
 			}
 
 			try {
-				client =
-					GrpcClient
-						.builder()
-						.withEndpoint(endpoint)
-						.withHeaders(parseHeaders(headers))
-						.withCertificate(certificate)
-						.withTimeout(timeout)
-						.withPoolSize(poolSize)
-						.build();
+				client = GrpcClient.builder()
+					.withEndpoint(endpoint)
+					.withHeaders(parseHeaders(headers))
+					.withCertificate(certificate)
+					.withTimeout(timeout)
+					.withPoolSize(poolSize)
+					.build();
 			} catch (Exception e) {
 				log.error("Failed to create gRPC client. Error Message: {}. Fall back to no-op client", e.getMessage());
 				log.debug("Failed to create gRPC client. Exception:", e);

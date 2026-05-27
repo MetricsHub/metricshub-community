@@ -139,8 +139,7 @@ public class HttpCriterionProcessor {
 
 		try {
 			final String result = httpRequestExecutor.executeHttp(
-				HttpRequest
-					.builder()
+				HttpRequest.builder()
 					.hostname(hostname)
 					.method(httpCriterion.getMethod().toString())
 					.url(httpCriterion.getUrl())
@@ -185,13 +184,12 @@ public class HttpCriterionProcessor {
 				message = String.format(HTTP_TEST_SUCCESS, hostname, result);
 				success = true;
 			} else {
-				message =
-					String.format(
-						"Hostname %s - HTTP test failed - The result (%s) returned by the HTTP test did not match the expected result (%s).",
-						hostname,
-						result,
-						expectedResult
-					);
+				message = String.format(
+					"Hostname %s - HTTP test failed - The result (%s) returned by the HTTP test did not match the expected result (%s).",
+					hostname,
+					result,
+					expectedResult
+				);
 				message += String.format("Expected value: %s - returned value %s.", expectedResult, result);
 			}
 		}

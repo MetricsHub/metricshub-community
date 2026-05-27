@@ -41,8 +41,7 @@ class IpmiConfigurationTest {
 	void testValidateConfiguration() {
 		final String resourceKey = "resourceKey";
 		{
-			final IpmiConfiguration ipmiConfig = IpmiConfiguration
-				.builder()
+			final IpmiConfiguration ipmiConfig = IpmiConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.bmcKey(BMC_KEY)
@@ -53,8 +52,7 @@ class IpmiConfigurationTest {
 		}
 
 		{
-			final IpmiConfiguration ipmiConfig = IpmiConfiguration
-				.builder()
+			final IpmiConfiguration ipmiConfig = IpmiConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.bmcKey(BMC_KEY)
@@ -67,8 +65,7 @@ class IpmiConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.bmcKey(BMC_KEY)
 			.password(PASSWORD.toCharArray())
 			.skipAuth(false)
@@ -87,8 +84,7 @@ class IpmiConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.username("myUsername")
 			.password("myPassword".toCharArray())
 			.bmcKey("myBmckey")

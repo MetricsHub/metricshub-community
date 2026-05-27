@@ -67,8 +67,7 @@ public class BmcHelixOtelAttributeMapper {
 			.stream()
 			.filter(entry -> entry.getKey() != null && entry.getValue() != null)
 			.map(entry ->
-				KeyValue
-					.newBuilder()
+				KeyValue.newBuilder()
 					.setKey(entry.getKey())
 					.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 					.build()

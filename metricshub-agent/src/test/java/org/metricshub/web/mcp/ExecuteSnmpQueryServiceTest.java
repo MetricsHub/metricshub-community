@@ -80,8 +80,7 @@ class ExecuteSnmpQueryServiceTest {
 	@Test
 	void testExecuteSNMPQueryWithoutConfiguration() {
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -98,10 +97,8 @@ class ExecuteSnmpQueryServiceTest {
 		assertEquals(1, resultWrapper.getHosts().size(), "One host response expected");
 		final QueryResponse result = resultWrapper.getHosts().get(0).getResponse();
 
-		assertEquals(
-			"No SNMP configuration found for %s.".formatted(HOSTNAME),
-			result.getError(),
-			() -> "Should return `missing SNMP configuration` message"
+		assertEquals("No SNMP configuration found for %s.".formatted(HOSTNAME), result.getError(), () ->
+			"Should return `missing SNMP configuration` message"
 		);
 	}
 
@@ -113,10 +110,8 @@ class ExecuteSnmpQueryServiceTest {
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = executeQuery("get", OID, null, TIMEOUT);
 
-		assertEquals(
-			"The SNMP extension is not available",
-			result.getErrorMessage(),
-			() -> "Should return `missing SNMP extension` message"
+		assertEquals("The SNMP extension is not available", result.getErrorMessage(), () ->
+			"Should return `missing SNMP extension` message"
 		);
 		assertTrue(result.getHosts().isEmpty(), () -> "No host responses expected when extension is missing");
 	}
@@ -127,8 +122,7 @@ class ExecuteSnmpQueryServiceTest {
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOSTNAME).build();
 
 		// creating a host configuration with the SNMP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SnmpConfiguration.class, snmpConfiguration))
 			.build();
@@ -142,8 +136,7 @@ class ExecuteSnmpQueryServiceTest {
 		// Mocking executeSNMPGet query on SNMP request executor
 		when(
 			snmpRequestExecutor.executeSNMPGet(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
-		)
-			.thenReturn("Success");
+		).thenReturn("Success");
 
 		// Calling execute query
 		QueryResponse result = executeQuery("get", OID, null, TIMEOUT).getHosts().get(0).getResponse();
@@ -154,9 +147,8 @@ class ExecuteSnmpQueryServiceTest {
 		// Test a wrong SNMP query type
 		result = executeQuery("aw", OID, null, TIMEOUT).getHosts().get(0).getResponse();
 
-		assertTrue(
-			result.getError().contains("Unknown SNMP query"),
-			() -> "Should return `unknown SNMP query type` message"
+		assertTrue(result.getError().contains("Unknown SNMP query"), () ->
+			"Should return `unknown SNMP query type` message"
 		);
 	}
 
@@ -166,8 +158,7 @@ class ExecuteSnmpQueryServiceTest {
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOSTNAME).build();
 
 		// creating a host configuration with the SNMP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SnmpConfiguration.class, snmpConfiguration))
 			.build();
@@ -187,8 +178,7 @@ class ExecuteSnmpQueryServiceTest {
 				anyBoolean(),
 				isNull()
 			)
-		)
-			.thenReturn("Success");
+		).thenReturn("Success");
 
 		// Calling execute query
 		final QueryResponse result = executeQuery("getNext", OID, null, TIMEOUT).getHosts().get(0).getResponse();
@@ -203,8 +193,7 @@ class ExecuteSnmpQueryServiceTest {
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOSTNAME).build();
 
 		// creating a host configuration with the SNMP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SnmpConfiguration.class, snmpConfiguration))
 			.build();
@@ -218,8 +207,7 @@ class ExecuteSnmpQueryServiceTest {
 		// Mocking executeSNMPWalk query on SNMP request executor
 		when(
 			snmpRequestExecutor.executeSNMPWalk(eq(OID), any(ISnmpConfiguration.class), eq(HOSTNAME), anyBoolean(), isNull())
-		)
-			.thenReturn("Success");
+		).thenReturn("Success");
 
 		// Calling execute query
 		final QueryResponse result = executeQuery("walk", OID, null, TIMEOUT).getHosts().get(0).getResponse();
@@ -234,8 +222,7 @@ class ExecuteSnmpQueryServiceTest {
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOSTNAME).build();
 
 		// creating a host configuration with the SNMP configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SnmpConfiguration.class, snmpConfiguration))
 			.build();
@@ -257,8 +244,7 @@ class ExecuteSnmpQueryServiceTest {
 				anyBoolean(),
 				isNull()
 			)
-		)
-			.thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
+		).thenReturn(List.of(List.of("Column1", "Column2", "Column3")));
 
 		// Calling execute query
 		QueryResponse result = executeQuery("table", OID, "1, 3, 5 ,", TIMEOUT).getHosts().get(0).getResponse();
@@ -281,8 +267,7 @@ class ExecuteSnmpQueryServiceTest {
 				anyBoolean(),
 				isNull()
 			)
-		)
-			.thenReturn(List.of(List.of("Column1", "Column3")));
+		).thenReturn(List.of(List.of("Column1", "Column3")));
 
 		// Wrong column value
 		result = executeQuery("table", OID, "1, 3, a", TIMEOUT).getHosts().get(0).getResponse();
@@ -321,15 +306,14 @@ class ExecuteSnmpQueryServiceTest {
 		// Expect only valid integers to be kept
 		assertEquals(3, resultNode.size(), "Should only include valid numeric tokens");
 
-		final List<Integer> result = JsonHelper
-			.buildObjectMapper()
-			.convertValue(resultNode, new TypeReference<List<Integer>>() {});
+		final List<Integer> result = JsonHelper.buildObjectMapper().convertValue(
+			resultNode,
+			new TypeReference<List<Integer>>() {}
+		);
 
 		// Validate parsed numbers sequence
-		assertIterableEquals(
-			List.of(1, 3, 5),
-			result,
-			() -> "Result should contain [1, 3, 5] after ignoring invalid tokens"
+		assertIterableEquals(List.of(1, 3, 5), result, () ->
+			"Result should contain [1, 3, 5] after ignoring invalid tokens"
 		);
 	}
 

@@ -59,15 +59,14 @@ public class TranslationTable implements ITranslationTable {
 	 * @return A new instance of {@link TranslationTable} with copied translations.
 	 */
 	public TranslationTable copy() {
-		return TranslationTable
-			.builder()
+		return TranslationTable.builder()
 			.translations(
 				translations == null
 					? null
 					: translations
-						.entrySet()
-						.stream()
-						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, k2) -> k2, HashMap::new))
+							.entrySet()
+							.stream()
+							.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, k2) -> k2, HashMap::new))
 			)
 			.build();
 	}

@@ -29,8 +29,7 @@ class ArrayTranslateComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(
-			ArrayTranslate
-				.builder()
+			ArrayTranslate.builder()
 				.type("arrayTranslate")
 				.column(1)
 				.arraySeparator("arraySeparatorTest")

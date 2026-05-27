@@ -102,8 +102,7 @@ public class StringHelper {
 			.append(throwable.getMessage())
 			.append("\n")
 			.append(
-				Stream
-					.iterate(throwable, Objects::nonNull, Throwable::getCause)
+				Stream.iterate(throwable, Objects::nonNull, Throwable::getCause)
 					.filter(th -> th != throwable)
 					.map(th -> String.format("Caused by %s: %s", th.getClass().getSimpleName(), th.getMessage()))
 					.collect(Collectors.joining("\n"))
@@ -234,8 +233,7 @@ public class StringHelper {
 				}
 				return builder.toString();
 			}
-			return Arrays
-				.stream((Object[]) value)
+			return Arrays.stream((Object[]) value)
 				.map(item -> item != null ? item.toString() : EMPTY)
 				.collect(Collectors.joining(separator));
 		} else {

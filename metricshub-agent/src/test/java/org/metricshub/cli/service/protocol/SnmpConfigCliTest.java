@@ -28,8 +28,7 @@ class SnmpConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new SnmpExtension()))
 				.build();
 

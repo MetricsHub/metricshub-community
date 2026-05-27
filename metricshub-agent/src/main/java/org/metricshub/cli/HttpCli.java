@@ -104,8 +104,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping HTTP CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Examples:
 
@@ -253,12 +252,11 @@ public class HttpCli implements IQuery, Callable<Integer> {
 	 */
 	public void populateHeaderContent() throws IOException {
 		if (headers != null) {
-			headerContent =
-				headers
-					.entrySet()
-					.stream()
-					.map(entry -> "%s: %s".formatted(entry.getKey(), entry.getValue()))
-					.collect(Collectors.joining("\n"));
+			headerContent = headers
+				.entrySet()
+				.stream()
+				.map(entry -> "%s: %s".formatted(entry.getKey(), entry.getValue()))
+				.collect(Collectors.joining("\n"));
 		} else if (headerFile != null) {
 			try (Stream<String> stream = Files.lines(Path.of(headerFile), StandardCharsets.UTF_8)) {
 				headerContent = stream.collect(Collectors.joining("\n"));
@@ -486,8 +484,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(HTTP)
 			.ifPresent(extension -> {
 				try {

@@ -35,12 +35,10 @@ class HostMonitorThermalCalculatorTest {
 
 	@BeforeEach
 	void setup() {
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(100L)
-				.hostConfiguration(HostConfiguration.builder().hostId(HOST_ID).hostname(HOST_ID).build())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(100L)
+			.hostConfiguration(HostConfiguration.builder().hostId(HOST_ID).hostname(HOST_ID).build())
+			.build();
 		hostMonitorThermalCalculator = new HostMonitorThermalCalculator(telemetryManager);
 	}
 
@@ -66,8 +64,7 @@ class HostMonitorThermalCalculatorTest {
 
 		// No CPU sensor
 
-		final Monitor temperatureMonitor = Monitor
-			.builder()
+		final Monitor temperatureMonitor = Monitor.builder()
 			.id(TEMPERATURE_MONITOR_ID)
 			.type(KnownMonitorType.TEMPERATURE.getKey())
 			.build();
@@ -104,8 +101,7 @@ class HostMonitorThermalCalculatorTest {
 		assertEquals(0.0, host.getMetric(HW_HOST_CPU_THERMAL_DISSIPATION_RATE, NumberMetric.class).getValue());
 
 		// Add another temperature monitor
-		final Monitor otherTemperatureMonitor = Monitor
-			.builder()
+		final Monitor otherTemperatureMonitor = Monitor.builder()
 			.id(TEMPERATURE_MONITOR_ID)
 			.type(KnownMonitorType.TEMPERATURE.getKey())
 			.build();

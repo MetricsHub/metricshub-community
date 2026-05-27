@@ -56,8 +56,8 @@ class ComputeUpdaterProcessorTest {
 	@BeforeEach
 	void setUp() {
 		this.computeUpdaterProcessor.setTelemetryManager(
-				TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().build()).build()
-			);
+			TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().build()).build()
+		);
 	}
 
 	@Test
@@ -213,8 +213,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessTranslate() {
-		final Translate translate = Translate
-			.builder()
+		final Translate translate = Translate.builder()
 			.column(-1)
 			.translationTable(TranslationTable.builder().build())
 			.build();
@@ -225,8 +224,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessExtractPropertyFromWbemPath() {
-		final ExtractPropertyFromWbemPath extractPropertyFromWbemPath = ExtractPropertyFromWbemPath
-			.builder()
+		final ExtractPropertyFromWbemPath extractPropertyFromWbemPath = ExtractPropertyFromWbemPath.builder()
 			.property("property")
 			.column(-1)
 			.build();
@@ -237,8 +235,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessPerBitTranslation() {
-		final PerBitTranslation perBitTranslation = PerBitTranslation
-			.builder()
+		final PerBitTranslation perBitTranslation = PerBitTranslation.builder()
 			.column(-1)
 			.bitList(EMPTY)
 			.translationTable(TranslationTable.builder().build())

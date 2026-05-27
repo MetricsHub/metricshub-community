@@ -147,7 +147,8 @@ public abstract class AbstractConnectorProcessor {
 		);
 
 		connectorList.forEach(connector ->
-			threadsPool.execute(() -> connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
+			threadsPool.execute(() ->
+				connectorTestResultsSynchronized.add(runConnectorDetectionCriteria(connector, hostname))
 			)
 		);
 
@@ -210,8 +211,9 @@ public abstract class AbstractConnectorProcessor {
 		// Extract the list of last resort connectors from the list of matching connectors
 		final List<ConnectorTestResult> lastResortConnectorTestResultList = matchingConnectorTestResultList
 			.stream()
-			.filter(connectorTestResult ->
-				connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() != null
+			.filter(
+				connectorTestResult ->
+					connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() != null
 			)
 			.collect(Collectors.toList());
 
@@ -222,8 +224,9 @@ public abstract class AbstractConnectorProcessor {
 		// Extract the list of regular connectors from the list of matching connectors
 		final List<ConnectorTestResult> regularConnectorTestResultList = matchingConnectorTestResultList
 			.stream()
-			.filter(connectorTestResult ->
-				connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() == null
+			.filter(
+				connectorTestResult ->
+					connectorTestResult.getConnector().getConnectorIdentity().getDetection().getOnLastResort() == null
 			)
 			.collect(Collectors.toList());
 

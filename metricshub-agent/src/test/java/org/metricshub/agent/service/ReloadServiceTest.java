@@ -39,8 +39,7 @@ class ReloadServiceTest {
 
 	private static String RESOURCES_PATH = "src/test/resources/service/reload/%s";
 
-	private ExtensionManager extensionManager = ExtensionManager
-		.builder()
+	private ExtensionManager extensionManager = ExtensionManager.builder()
 		.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
 		.build();
 
@@ -70,8 +69,7 @@ class ReloadServiceTest {
 	AgentContext loadAgentContext(final String fileName) throws IOException {
 		final AgentContext agentContext = new AgentContext(
 			RESOURCES_PATH.formatted(fileName),
-			ExtensionManager
-				.builder()
+			ExtensionManager.builder()
 				.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
 				.withProtocolExtensions(List.of(new HttpExtension()))
 				.build()
@@ -145,8 +143,7 @@ class ReloadServiceTest {
 		final AgentConfig newConfig = newContext.getAgentConfig();
 
 		// Create the ReloadService
-		final ReloadService reloadService = ReloadService
-			.builder()
+		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(defaultContext)
 			.withReloadedAgentContext(newContext)
 			.build();
@@ -212,8 +209,7 @@ class ReloadServiceTest {
 		final AgentConfig newConfig = newContext.getAgentConfig();
 
 		// Prepare ReloadService
-		final ReloadService reloadService = ReloadService
-			.builder()
+		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(defaultContext)
 			.withReloadedAgentContext(newContext)
 			.build();
@@ -294,8 +290,7 @@ class ReloadServiceTest {
 		assertEquals("storage", hostTypeBefore, "Initial host type should be 'storage'");
 
 		// Prepare ReloadService
-		final ReloadService reloadService = ReloadService
-			.builder()
+		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(defaultContext)
 			.withReloadedAgentContext(newContext)
 			.build();
@@ -375,8 +370,7 @@ class ReloadServiceTest {
 		assertTrue(newLyonGroup.getResources().containsKey("lyon-server-1"), "Expected 'lyon-server-1' to exist");
 
 		// Create ReloadService and compare groups
-		final ReloadService reloadService = ReloadService
-			.builder()
+		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(defaultContext)
 			.withReloadedAgentContext(newContext)
 			.build();
@@ -427,8 +421,7 @@ class ReloadServiceTest {
 		assertFalse(newConfig.getResourceGroups().containsKey("paris"));
 
 		// Prepare ReloadService
-		final ReloadService reloadService = ReloadService
-			.builder()
+		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(defaultContext)
 			.withReloadedAgentContext(newContext)
 			.build();
@@ -509,34 +502,29 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"loggerLevel",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.loggerLevel("INFO")
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.loggerLevel("DEBUG")
 					.build()
 			),
 			Arguments.of(
 				"outputDirectory",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.outputDirectory("/tmp/a")
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.outputDirectory("/tmp/b")
 					.build()
 			),
 			Arguments.of(
 				"collectPeriod",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.collectPeriod(30L)
 					.build(),
@@ -549,13 +537,11 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"alertingSystemConfig",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.alertingSystemConfig(AlertingSystemConfig.builder().problemTemplate("A").build())
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.alertingSystemConfig(AlertingSystemConfig.builder().problemTemplate("B").build())
 					.build()
@@ -567,52 +553,44 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"enableSelfMonitoring",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.enableSelfMonitoring(true)
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.enableSelfMonitoring(false)
 					.build()
 			),
 			Arguments.of(
 				"logFileSourceDetails",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.logFileSourceDetails(false)
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.logFileSourceDetails(true)
 					.build()
 			),
 			Arguments.of(
 				"resolveHostnameToFqdn",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.resolveHostnameToFqdn(true)
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.resolveHostnameToFqdn(false)
 					.build()
 			),
 			Arguments.of(
 				"monitorFilters",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.monitorFilters(Set.of("a"))
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.monitorFilters(Set.of("b"))
 					.build()
@@ -624,13 +602,11 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"otelCollector",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.otelCollector(OtelCollectorConfig.builder().build())
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.otelCollector(OtelCollectorConfig.builder().disabled(true).build())
 					.build()
@@ -642,52 +618,44 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"attributes",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.attributes(Map.of("env", "prod"))
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.attributes(Map.of("env", "dev"))
 					.build()
 			),
 			Arguments.of(
 				"metrics",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.metrics(Map.of("cpu", 0.1))
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.metrics(Map.of("cpu", 0.9))
 					.build()
 			),
 			Arguments.of(
 				"stateSetCompression",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.stateSetCompression("NONE")
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.stateSetCompression("ALL")
 					.build()
 			),
 			Arguments.of(
 				"patchDirectory",
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.patchDirectory("/a")
 					.build(),
-				AgentConfig
-					.builder()
+				AgentConfig.builder()
 					.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 					.patchDirectory("/b")
 					.build()
@@ -703,13 +671,11 @@ class ReloadServiceTest {
 		ResourceGroupConfig newGroup
 	) throws IOException, InterruptedException {
 		// Create two default configs with the injected resource groups
-		AgentConfig oldAgentConfig = AgentConfig
-			.builder()
+		AgentConfig oldAgentConfig = AgentConfig.builder()
 			.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 			.resourceGroups(Map.of("paris", oldGroup))
 			.build();
-		AgentConfig newAgentConfig = AgentConfig
-			.builder()
+		AgentConfig newAgentConfig = AgentConfig.builder()
 			.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 			.resourceGroups(Map.of("paris", oldGroup))
 			.build();
@@ -730,13 +696,11 @@ class ReloadServiceTest {
 		ResourceGroupConfig group = ResourceGroupConfig.builder().build();
 
 		// Create two default configs with the injected resource groups
-		AgentConfig oldAgentConfig = AgentConfig
-			.builder()
+		AgentConfig oldAgentConfig = AgentConfig.builder()
 			.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 			.resourceGroups(Map.of("paris", group))
 			.build();
-		AgentConfig newAgentConfig = AgentConfig
-			.builder()
+		AgentConfig newAgentConfig = AgentConfig.builder()
 			.otelConfig(Map.of(OTEL_EXPORTER_OTLP_METRICS_PROTOCOL, "noop"))
 			.resourceGroups(Map.of("paris", group))
 			.build();
@@ -772,12 +736,10 @@ class ReloadServiceTest {
 			),
 			Arguments.of(
 				"alertingSystemConfig",
-				ResourceGroupConfig
-					.builder()
+				ResourceGroupConfig.builder()
 					.alertingSystemConfig(AlertingSystemConfig.builder().problemTemplate("old").build())
 					.build(),
-				ResourceGroupConfig
-					.builder()
+				ResourceGroupConfig.builder()
 					.alertingSystemConfig(AlertingSystemConfig.builder().problemTemplate("new").build())
 					.build()
 			),

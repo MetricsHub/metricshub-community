@@ -59,8 +59,7 @@ class AbstractProcessTest {
 				final GobblerStreamProcessor errorProcessor = new GobblerStreamProcessor();
 
 				final TestProcess testProcess = new TestProcess(
-					ProcessConfig
-						.builder()
+					ProcessConfig.builder()
 						.commandLine(List.of("otelcol-contrib", "--config", "/opt/hws-otel-collector/config/otel-config.yaml"))
 						.output(ProcessOutput.builder().outputProcessor(outputProcessor).errorProcessor(errorProcessor).build())
 						.environment(Collections.emptyMap())
@@ -70,8 +69,7 @@ class AbstractProcessTest {
 
 				testProcess.start();
 
-				Awaitility
-					.await()
+				Awaitility.await()
 					.atMost(Durations.FIVE_SECONDS)
 					.untilAsserted(() -> {
 						assertEquals("Process started.", outputProcessor.getBlocks());
@@ -111,8 +109,7 @@ class AbstractProcessTest {
 				final GobblerStreamProcessor outputProcessor = new GobblerStreamProcessor();
 
 				final TestProcess testProcess = new TestProcess(
-					ProcessConfig
-						.builder()
+					ProcessConfig.builder()
 						.commandLine(List.of("otelcol-contrib", "--config", "/opt/hws-otel-collector/config/otel-config.yaml"))
 						.output(ProcessOutput.builder().outputProcessor(outputProcessor).build())
 						.environment(Collections.emptyMap())
@@ -122,8 +119,7 @@ class AbstractProcessTest {
 
 				testProcess.start();
 
-				Awaitility
-					.await()
+				Awaitility.await()
 					.atMost(Durations.FIVE_SECONDS)
 					.untilAsserted(() -> {
 						assertEquals("Process started.", outputProcessor.getBlocks());

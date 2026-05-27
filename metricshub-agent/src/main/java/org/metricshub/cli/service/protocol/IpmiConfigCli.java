@@ -118,8 +118,7 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 		configuration.set("skipAuth", BooleanNode.valueOf(skipAuth));
 		configuration.set("bmcKey", new TextNode(bmcKey));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ipmi", configuration, value -> value)
 			.orElseThrow();
 	}

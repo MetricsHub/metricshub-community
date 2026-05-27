@@ -26,8 +26,7 @@ class CommandLineSourceDeserializerTest extends DeserializerTest {
 		Map<String, Source> expected = new LinkedHashMap<>();
 		expected.put(
 			"commandLine1",
-			CommandLineSource
-				.builder()
+			CommandLineSource.builder()
 				.key("${source::beforeAll.commandLine1}")
 				.type("commandLine")
 				.timeout((long) 30)

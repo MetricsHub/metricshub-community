@@ -38,8 +38,7 @@ class LunMetricNormalizerTest {
 		// Available metric value is less than 1
 		{
 			// Create the hw.lun.paths{type="available"} metric
-			final NumberMetric availableMetric = NumberMetric
-				.builder()
+			final NumberMetric availableMetric = NumberMetric.builder()
 				.value(0.5) // Value less than 1.0
 				.name(HW_LUN_PATHS_AVAILABLE)
 				.attributes(Map.of("type", "available"))
@@ -48,8 +47,7 @@ class LunMetricNormalizerTest {
 			availableMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(new HashMap<>(Map.of(HW_LUN_PATHS_AVAILABLE, availableMetric)))
@@ -66,8 +64,7 @@ class LunMetricNormalizerTest {
 		// Available metric value is greater than 1
 		{
 			// Create the hw.lun.paths{type="available"} metric
-			final NumberMetric availableMetric = NumberMetric
-				.builder()
+			final NumberMetric availableMetric = NumberMetric.builder()
 				.value(1.5) // Value greater than 1.0
 				.name(HW_LUN_PATHS_AVAILABLE)
 				.attributes(Map.of("type", "available"))
@@ -76,8 +73,7 @@ class LunMetricNormalizerTest {
 			availableMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(new HashMap<>(Map.of(HW_LUN_PATHS_AVAILABLE, availableMetric)))
@@ -97,8 +93,7 @@ class LunMetricNormalizerTest {
 	@Test
 	void testNormalizeMaximumNotPresentDegradedPresentAvailableNotPresent() {
 		// Create the hw.lun.paths.limit{limit_type="low.degraded"} metric
-		final NumberMetric lowDegradedMetric = NumberMetric
-			.builder()
+		final NumberMetric lowDegradedMetric = NumberMetric.builder()
 			.value(1.0) // Existing low degraded metric
 			.name(HW_LUN_PATHS_LIMIT_LOW_DEGRADED)
 			.attributes(Map.of("limit_type", "low.degraded"))
@@ -107,8 +102,7 @@ class LunMetricNormalizerTest {
 		lowDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 		// Create the monitor with only the degraded metric
-		final Monitor monitor = Monitor
-			.builder()
+		final Monitor monitor = Monitor.builder()
 			.id("monitorOne")
 			.type("lun")
 			.metrics(new HashMap<>(Map.of(HW_LUN_PATHS_LIMIT_LOW_DEGRADED, lowDegradedMetric)))
@@ -128,8 +122,7 @@ class LunMetricNormalizerTest {
 		// Available metric value is less than maximum metric value and less than 1
 		{
 			// Create the hw.lun.paths{type="available"} metric
-			final NumberMetric availableMetric = NumberMetric
-				.builder()
+			final NumberMetric availableMetric = NumberMetric.builder()
 				.value(0.5) // Value less than or equal to 1.0
 				.name(HW_LUN_PATHS_AVAILABLE)
 				.attributes(Map.of("type", "available"))
@@ -138,8 +131,7 @@ class LunMetricNormalizerTest {
 			availableMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="maximum"} metric
-			final NumberMetric maximumMetric = NumberMetric
-				.builder()
+			final NumberMetric maximumMetric = NumberMetric.builder()
 				.value(0.7) // Value greater than available
 				.name(HW_LUN_PATHS_LIMIT_MAXIMUM)
 				.attributes(Map.of("limit_type", "maximum"))
@@ -148,8 +140,7 @@ class LunMetricNormalizerTest {
 			maximumMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="low.degraded"} metric
-			final NumberMetric lowDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric lowDegradedMetric = NumberMetric.builder()
 				.value(1.0) // Existing low degraded metric
 				.name(HW_LUN_PATHS_LIMIT_LOW_DEGRADED)
 				.attributes(Map.of("limit_type", "low.degraded"))
@@ -158,8 +149,7 @@ class LunMetricNormalizerTest {
 			lowDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(
@@ -187,8 +177,7 @@ class LunMetricNormalizerTest {
 		// Available metric value is greater than maximum metric value and less than 1
 		{
 			// Create the hw.lun.paths{type="available"} metric
-			final NumberMetric availableMetric = NumberMetric
-				.builder()
+			final NumberMetric availableMetric = NumberMetric.builder()
 				.value(0.8) // Value less than or equal to 1.0
 				.name(HW_LUN_PATHS_AVAILABLE)
 				.attributes(Map.of("type", "available"))
@@ -197,8 +186,7 @@ class LunMetricNormalizerTest {
 			availableMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="maximum"} metric
-			final NumberMetric maximumMetric = NumberMetric
-				.builder()
+			final NumberMetric maximumMetric = NumberMetric.builder()
 				.value(0.7) // Value greater than available
 				.name(HW_LUN_PATHS_LIMIT_MAXIMUM)
 				.attributes(Map.of("limit_type", "maximum"))
@@ -207,8 +195,7 @@ class LunMetricNormalizerTest {
 			maximumMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="low.degraded"} metric
-			final NumberMetric lowDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric lowDegradedMetric = NumberMetric.builder()
 				.value(1.0) // Existing low degraded metric
 				.name(HW_LUN_PATHS_LIMIT_LOW_DEGRADED)
 				.attributes(Map.of("limit_type", "low.degraded"))
@@ -217,8 +204,7 @@ class LunMetricNormalizerTest {
 			lowDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(
@@ -246,8 +232,7 @@ class LunMetricNormalizerTest {
 		// Available metric value is greater than 1 and available metric is greater that the maximum metric value
 		{
 			// Create the hw.lun.paths{type="available"} metric
-			final NumberMetric availableMetric = NumberMetric
-				.builder()
+			final NumberMetric availableMetric = NumberMetric.builder()
 				.value(3.0) // Value greater than maximum and greater than 1.0
 				.name(HW_LUN_PATHS_AVAILABLE)
 				.attributes(Map.of("type", "available"))
@@ -256,8 +241,7 @@ class LunMetricNormalizerTest {
 			availableMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="maximum"} metric
-			final NumberMetric maximumMetric = NumberMetric
-				.builder()
+			final NumberMetric maximumMetric = NumberMetric.builder()
 				.value(2.0) // Value less than available
 				.name(HW_LUN_PATHS_LIMIT_MAXIMUM)
 				.attributes(Map.of("limit_type", "maximum"))
@@ -266,8 +250,7 @@ class LunMetricNormalizerTest {
 			maximumMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="low.degraded"} metric
-			final NumberMetric lowDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric lowDegradedMetric = NumberMetric.builder()
 				.value(1.0) // Existing low degraded metric
 				.name(HW_LUN_PATHS_LIMIT_LOW_DEGRADED)
 				.attributes(Map.of("limit_type", "low.degraded"))
@@ -276,8 +259,7 @@ class LunMetricNormalizerTest {
 			lowDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths{type="expected"} metric
-			final NumberMetric expectedMetric = NumberMetric
-				.builder()
+			final NumberMetric expectedMetric = NumberMetric.builder()
 				.value(1.0) // Existing expected metric
 				.name(HW_LUN_PATHS_EXPECTED)
 				.attributes(Map.of("type", "expected"))
@@ -286,8 +268,7 @@ class LunMetricNormalizerTest {
 			expectedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(
@@ -318,8 +299,7 @@ class LunMetricNormalizerTest {
 		// Available metric is not present
 		{
 			// Create the hw.lun.paths.limit{limit_type="maximum"} metric
-			final NumberMetric maximumMetric = NumberMetric
-				.builder()
+			final NumberMetric maximumMetric = NumberMetric.builder()
 				.value(2.0) // Value of maximum metric
 				.name(HW_LUN_PATHS_LIMIT_MAXIMUM)
 				.attributes(Map.of("limit_type", "maximum"))
@@ -328,8 +308,7 @@ class LunMetricNormalizerTest {
 			maximumMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the hw.lun.paths.limit{limit_type="low.degraded"} metric
-			final NumberMetric lowDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric lowDegradedMetric = NumberMetric.builder()
 				.value(1.0) // Existing low degraded metric
 				.name(HW_LUN_PATHS_LIMIT_LOW_DEGRADED)
 				.attributes(Map.of("limit_type", "low.degraded"))
@@ -338,8 +317,7 @@ class LunMetricNormalizerTest {
 			lowDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create the monitor with the metrics
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.id("monitorOne")
 				.type("lun")
 				.metrics(

@@ -31,9 +31,8 @@ class ResourceHelperTest {
 
 	@Test
 	void testGetResourceAsStringFileNotFound() {
-		assertThrows(
-			IllegalStateException.class,
-			() -> ResourceHelper.getResourceAsString(DATA_FILE_NOT_FOUND_TXT, ResourceHelper.class)
+		assertThrows(IllegalStateException.class, () ->
+			ResourceHelper.getResourceAsString(DATA_FILE_NOT_FOUND_TXT, ResourceHelper.class)
 		);
 	}
 

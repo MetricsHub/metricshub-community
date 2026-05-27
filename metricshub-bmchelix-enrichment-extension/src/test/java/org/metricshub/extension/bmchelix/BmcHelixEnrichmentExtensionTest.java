@@ -67,15 +67,13 @@ class BmcHelixEnrichmentExtensionTest {
 	}
 
 	private static ResourceMetrics buildResourceMetrics(final Map<String, String> attributes, final String metricName) {
-		final Resource resource = Resource
-			.newBuilder()
+		final Resource resource = Resource.newBuilder()
 			.addAllAttributes(
 				attributes
 					.entrySet()
 					.stream()
 					.map(entry ->
-						KeyValue
-							.newBuilder()
+						KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()
@@ -83,8 +81,7 @@ class BmcHelixEnrichmentExtensionTest {
 					.toList()
 			)
 			.build();
-		final Metric metric = Metric
-			.newBuilder()
+		final Metric metric = Metric.newBuilder()
 			.setName(metricName)
 			.setGauge(Gauge.newBuilder().addDataPoints(NumberDataPoint.getDefaultInstance()).build())
 			.build();

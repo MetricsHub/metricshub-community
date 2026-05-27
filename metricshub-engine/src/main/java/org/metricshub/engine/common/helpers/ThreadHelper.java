@@ -214,8 +214,7 @@ public class ThreadHelper {
 	 */
 	public static Map<String, Stats> getStats(final String hostname) {
 		return Collections.unmodifiableMap(
-			STATS_MAP
-				.entrySet()
+			STATS_MAP.entrySet()
 				.stream()
 				.filter(entry -> entry.getKey().hostname().equals(hostname))
 				.collect(Collectors.toMap(entry -> entry.getKey().operationType(), entry -> entry.getValue().snapshot()))

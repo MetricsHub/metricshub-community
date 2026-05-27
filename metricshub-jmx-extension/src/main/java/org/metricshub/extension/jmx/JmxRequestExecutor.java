@@ -71,19 +71,17 @@ public class JmxRequestExecutor {
 	) throws Exception {
 		final List<List<String>> result;
 		if (resourceHostname != null) {
-			result =
-				ThreadHelper.execute(
-					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-					jmxConfiguration.getTimeout(),
-					resourceHostname,
-					"jmx"
-				);
+			result = ThreadHelper.execute(
+				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+				jmxConfiguration.getTimeout(),
+				resourceHostname,
+				"jmx"
+			);
 		} else {
-			result =
-				ThreadHelper.execute(
-					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-					jmxConfiguration.getTimeout()
-				);
+			result = ThreadHelper.execute(
+				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+				jmxConfiguration.getTimeout()
+			);
 		}
 
 		// Record the JMX exchange if recording is enabled

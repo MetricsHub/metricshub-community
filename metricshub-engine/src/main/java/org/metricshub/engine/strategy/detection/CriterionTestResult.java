@@ -87,13 +87,12 @@ public class CriterionTestResult {
 		if (criterion == null) {
 			message = "Error with a <null> Criterion: " + reason;
 		} else {
-			message =
-				String.format(
-					"Error in %s test:\n%s\n\n%s",
-					criterion.getClass().getSimpleName(),
-					criterion.toString(),
-					reason
-				);
+			message = String.format(
+				"Error in %s test:\n%s\n\n%s",
+				criterion.getClass().getSimpleName(),
+				criterion.toString(),
+				reason
+			);
 		}
 		return CriterionTestResult.builder().success(false).message(message).exception(t).criterion(criterion).build();
 	}
@@ -162,16 +161,16 @@ public class CriterionTestResult {
 	public String displayCriterionMessage() {
 		return String.format(
 			"Executed %s Criterion:\n" +
-			"%s\n" +
-			"\n" +
-			"Result:\n" +
-			"%s\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"%s\n" +
-			"====================================\n" +
-			"\n",
+				"%s\n" +
+				"\n" +
+				"Result:\n" +
+				"%s\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"%s\n" +
+				"====================================\n" +
+				"\n",
 			criterion.getClass().getSimpleName(),
 			criterion.toString(),
 			result != null ? result : "N/A",

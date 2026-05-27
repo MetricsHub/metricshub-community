@@ -109,8 +109,7 @@ public class PerBitTranslation extends Compute {
 
 	@Override
 	public PerBitTranslation copy() {
-		return PerBitTranslation
-			.builder()
+		return PerBitTranslation.builder()
 			.type(type)
 			.column(column)
 			.bitList(bitList)

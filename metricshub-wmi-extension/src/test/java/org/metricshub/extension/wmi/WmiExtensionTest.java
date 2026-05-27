@@ -108,8 +108,7 @@ class WmiExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.password("pass".toCharArray())
 			.username("user")
 			.timeout(120L)
@@ -122,22 +121,19 @@ class WmiExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.WINDOWS)
-						.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
-						.build()
-				)
-				.connectorStore(connectorStore)
-				.strategyTime(System.currentTimeMillis())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.WINDOWS)
+					.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.strategyTime(System.currentTimeMillis())
+			.build();
 	}
 
 	@Test
@@ -271,8 +267,7 @@ class WmiExtensionTest {
 
 	@Test
 	void testProcessCriterion() throws Exception {
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
@@ -285,11 +280,9 @@ class WmiExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -301,9 +294,8 @@ class WmiExtensionTest {
 
 		{
 			final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(
-				IllegalArgumentException.class,
-				() -> wmiExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
+			assertThrows(IllegalArgumentException.class, () ->
+				wmiExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
 			);
 		}
 		{
@@ -322,8 +314,7 @@ class WmiExtensionTest {
 			commandLineCriterion.setExpectedResult("result");
 			commandLineCriterion.setExecuteLocally(false);
 			commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
-			final HostConfiguration hostConfiguration = HostConfiguration
-				.builder()
+			final HostConfiguration hostConfiguration = HostConfiguration.builder()
 				.hostId(HOST_NAME)
 				.hostname(HOST_NAME)
 				.hostType(DeviceKind.WINDOWS)
@@ -379,8 +370,7 @@ class WmiExtensionTest {
 
 	@Test
 	void testProcessSource() throws Exception {
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
@@ -393,11 +383,9 @@ class WmiExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -408,9 +396,8 @@ class WmiExtensionTest {
 			.build();
 		{
 			final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(
-				IllegalArgumentException.class,
-				() -> wmiExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+			assertThrows(IllegalArgumentException.class, () ->
+				wmiExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
 		{
@@ -421,8 +408,7 @@ class WmiExtensionTest {
 			commandLineSource.setSelectColumns("2");
 			commandLineSource.setExecuteLocally(false);
 
-			final String expectedCommandLineResult =
-				"""
+			final String expectedCommandLineResult = """
 				Total Physical Memory:16384 MB
 				Available Physical Memory:8192 MB
 				""";
@@ -528,8 +514,7 @@ class WmiExtensionTest {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		queryNode.set("queryType", new TextNode(WMI));
-		WmiConfiguration configuration = WmiConfiguration
-			.builder()
+		WmiConfiguration configuration = WmiConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)
@@ -555,8 +540,7 @@ class WmiExtensionTest {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		queryNode.set("queryType", new TextNode("wmi"));
-		WmiConfiguration configuration = WmiConfiguration
-			.builder()
+		WmiConfiguration configuration = WmiConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)

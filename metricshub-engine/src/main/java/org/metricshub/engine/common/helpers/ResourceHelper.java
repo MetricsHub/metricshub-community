@@ -59,15 +59,13 @@ public class ResourceHelper {
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(clazz.getResourceAsStream(path)))) {
 			return reader.lines().collect(Collectors.joining("\n"));
 		} catch (Exception e) {
-			Assert.state(
-				false,
-				() ->
-					String.format(
-						"Cannot load resource file '%s' for class '%s'. Message: %s",
-						path,
-						clazz.getName(),
-						e.getMessage()
-					)
+			Assert.state(false, () ->
+				String.format(
+					"Cannot load resource file '%s' for class '%s'. Message: %s",
+					path,
+					clazz.getName(),
+					e.getMessage()
+				)
 			);
 		}
 

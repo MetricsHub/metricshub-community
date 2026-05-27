@@ -104,12 +104,10 @@ public class JmxSource extends Source {
 		final List<Compute> computesCopy = getComputes() != null ? new ArrayList<>(getComputes()) : null;
 		final List<String> attributesCopy = attributes != null ? new ArrayList<>(attributes) : null;
 		final List<String> keyPropertiesCopy = keyProperties != null ? new ArrayList<>(keyProperties) : null;
-		final ExecuteForEachEntryOf executeForEachEntryOfCopy = executeForEachEntryOf != null
-			? executeForEachEntryOf.copy()
-			: null;
+		final ExecuteForEachEntryOf executeForEachEntryOfCopy =
+			executeForEachEntryOf != null ? executeForEachEntryOf.copy() : null;
 
-		return JmxSource
-			.builder()
+		return JmxSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

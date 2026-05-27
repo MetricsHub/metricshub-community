@@ -40,8 +40,7 @@ class OsCommandConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration
-			.builder()
+		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration.builder()
 			.sudoCommand("sudoCommand")
 			.timeout(100L)
 			.useSudoCommands(Set.of("sudo"))
@@ -60,8 +59,7 @@ class OsCommandConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration
-			.builder()
+		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration.builder()
 			.sudoCommand("mySudocommand")
 			.useSudo(true)
 			.timeout(100L)

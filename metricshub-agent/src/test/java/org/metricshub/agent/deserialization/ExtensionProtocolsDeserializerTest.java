@@ -37,8 +37,7 @@ class ExtensionProtocolsDeserializerTest {
 
 	@Test
 	void testDeserialize() throws IOException {
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(Collections.singletonList(new PingExtension()))
 			.build();
 

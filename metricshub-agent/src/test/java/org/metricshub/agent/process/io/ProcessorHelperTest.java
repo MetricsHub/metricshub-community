@@ -44,8 +44,7 @@ class ProcessorHelperTest {
 		final Thread lineReaderProcessor = readerProcessorOpt.get();
 
 		// Wait a bit until the thread terminates
-		Awaitility
-			.await()
+		Awaitility.await()
 			.atMost(Durations.FIVE_HUNDRED_MILLISECONDS)
 			.untilAsserted(() -> assertFalse(lineReaderProcessor.isAlive()));
 
@@ -69,8 +68,7 @@ class ProcessorHelperTest {
 		final Thread lineReaderProcessor = readerProcessorOpt.get();
 
 		// Wait a bit until the thread terminates
-		Awaitility
-			.await()
+		Awaitility.await()
 			.atMost(Durations.FIVE_HUNDRED_MILLISECONDS)
 			.untilAsserted(() -> assertFalse(lineReaderProcessor.isAlive()));
 
@@ -94,8 +92,7 @@ class ProcessorHelperTest {
 		final Thread lineReaderProcessor = readerProcessorOpt.get();
 
 		// Wait a bit until the thread terminates
-		Awaitility
-			.await()
+		Awaitility.await()
 			.atMost(Durations.FIVE_HUNDRED_MILLISECONDS)
 			.untilAsserted(() -> assertFalse(lineReaderProcessor.isAlive()));
 

@@ -102,8 +102,9 @@ class JmxExtensionTest {
 		final TelemetryManager telemetryManager = mock(TelemetryManager.class);
 		when(telemetryManager.getHostConfiguration()).thenReturn(mock(HostConfiguration.class));
 		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder().hostname("localhost").port(1099).build();
-		when(telemetryManager.getHostConfiguration().getConfigurations())
-			.thenReturn(Map.of(JmxConfiguration.class, jmxConfiguration));
+		when(telemetryManager.getHostConfiguration().getConfigurations()).thenReturn(
+			Map.of(JmxConfiguration.class, jmxConfiguration)
+		);
 
 		when(jmxRequestExecutorMock.checkConnection(any(), any())).thenReturn(true);
 
@@ -168,8 +169,9 @@ class JmxExtensionTest {
 		when(telemetryManager.getHostConfiguration()).thenReturn(hostConfig);
 
 		// Mock response from fetchBeanInfo
-		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any(), any()))
-			.thenReturn(List.of(List.of("12345")));
+		when(jmxRequestExecutorMock.fetchMBean(any(), anyString(), anyList(), anyList(), any(), any())).thenReturn(
+			List.of(List.of("12345"))
+		);
 
 		final var result = jmxExtension.processCriterion(jmxCriterion, "connId", telemetryManager, true);
 
@@ -224,8 +226,9 @@ class JmxExtensionTest {
 		final List<List<String>> rows = List.of(List.of("Key1Val", "Attr1Val", "Attr2Val"));
 
 		// Mock fetchBeanInfo result
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any()))
-			.thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any())).thenReturn(
+			rows
+		);
 
 		// Run executeQuery
 		final String table = jmxExtension.executeQuery(config, query);
@@ -409,8 +412,9 @@ class JmxExtensionTest {
 		);
 
 		final List<List<String>> rows = List.of(List.of("G1YoungGen"));
-		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any()))
-			.thenReturn(rows);
+		when(jmxRequestExecutorMock.fetchMBean(eq(config), anyString(), anyList(), anyList(), any(), any())).thenReturn(
+			rows
+		);
 
 		final String table = jmxExtension.executeQuery(config, query);
 

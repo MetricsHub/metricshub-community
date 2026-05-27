@@ -59,8 +59,7 @@ public enum ConversionType {
 	 * @throws IllegalArgumentException if the provided name does not match any defined conversion type.
 	 */
 	public static ConversionType getByName(@NonNull final String name) {
-		return Arrays
-			.stream(ConversionType.values())
+		return Arrays.stream(ConversionType.values())
 			.filter(n -> name.equalsIgnoreCase(n.getName()))
 			.findFirst()
 			.orElseThrow(() -> new IllegalArgumentException("Undefined conversion type: " + name));

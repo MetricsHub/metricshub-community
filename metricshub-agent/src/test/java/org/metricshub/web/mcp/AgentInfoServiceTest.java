@@ -59,8 +59,7 @@ class AgentInfoServiceTest {
 		);
 
 		// Mock application status
-		final ApplicationStatus mockApplicationStatus = ApplicationStatus
-			.builder()
+		final ApplicationStatus mockApplicationStatus = ApplicationStatus.builder()
 			.status(ApplicationStatus.Status.UP)
 			.otelCollectorStatus("running")
 			.numberOfObservedResources(5L)
@@ -157,8 +156,7 @@ class AgentInfoServiceTest {
 			"2.0.0"
 		);
 
-		final ApplicationStatus mockApplicationStatus = ApplicationStatus
-			.builder()
+		final ApplicationStatus mockApplicationStatus = ApplicationStatus.builder()
 			.status(ApplicationStatus.Status.UP)
 			.otelCollectorStatus("running")
 			.numberOfObservedResources(0L)

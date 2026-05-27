@@ -27,8 +27,7 @@ class WmiSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testWmiSource",
-				WmiSource
-					.builder()
+				WmiSource.builder()
 					.key("${source::beforeAll.testWmiSource}")
 					.type("wmi")
 					.query("testQuery")

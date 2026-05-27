@@ -114,11 +114,10 @@ public class ProgrammableConfigurationProvider implements IConfigurationProvider
 					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
 				.forEach((Path path) ->
-					readVmFragment(path)
-						.ifPresent((JsonNode jsonNode) -> {
-							configurations.add(jsonNode);
-							log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
-						})
+					readVmFragment(path).ifPresent((JsonNode jsonNode) -> {
+						configurations.add(jsonNode);
+						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
+					})
 				);
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());

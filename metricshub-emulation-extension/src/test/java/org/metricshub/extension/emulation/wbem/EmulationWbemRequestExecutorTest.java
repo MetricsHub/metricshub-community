@@ -35,19 +35,16 @@ class EmulationWbemRequestExecutorTest {
 	);
 
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.WINDOWS)
 					.configurations(
 						Map.of(
 							EmulationConfiguration.class,
-							EmulationConfiguration
-								.builder()
+							EmulationConfiguration.builder()
 								.hostname(HOSTNAME)
 								.wbem(
 									new WbemEmulationConfig(WbemConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir)

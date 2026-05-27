@@ -59,8 +59,7 @@ class EventLogSourceProcessorTest {
 
 	void setupIT() {
 		connectorNamespace = ConnectorNamespace.builder().build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, connectorNamespace)))
 			.build();
 		wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
@@ -75,8 +74,7 @@ class EventLogSourceProcessorTest {
 	void processTest() throws ClientException {
 		setupIT();
 
-		final EventLogSource source = EventLogSource
-			.builder()
+		final EventLogSource source = EventLogSource.builder()
 			.key("sourceKey")
 			.logName("System")
 			.sources(Set.of("Security-Auditing"))
@@ -149,8 +147,9 @@ class EventLogSourceProcessorTest {
 			"SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
-			.thenReturn(wmiRequestResults);
+		when(
+			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
+		).thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
 		// WMI request result contains 4 records
@@ -219,8 +218,9 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
-			.thenReturn(wmiRequestResults);
+		when(
+			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
+		).thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
 		// WMI request result contains 3 records
@@ -247,8 +247,9 @@ class EventLogSourceProcessorTest {
 		// ITERATION 3:
 		// A ClientException is thrown, the client returns null
 		// Cursors are set, they remain unchanged
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
-			.thenThrow(ClientException.class);
+		when(
+			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
+		).thenThrow(ClientException.class);
 		results = processor.process(source, telemetryManagerMock);
 		assertEquals(
 			11,
@@ -262,8 +263,7 @@ class EventLogSourceProcessorTest {
 	void testProcessWithNegativeMax() throws ClientException {
 		setupIT();
 
-		final EventLogSource source = EventLogSource
-			.builder()
+		final EventLogSource source = EventLogSource.builder()
 			.key("sourceKey")
 			.logName("System")
 			.sources(Set.of("Security-Auditing"))
@@ -336,8 +336,9 @@ class EventLogSourceProcessorTest {
 			"SELECT RecordNumber FROM Win32_NTLogEvent " +
 			"WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing')";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
-			.thenReturn(wmiRequestResults);
+		when(
+			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
+		).thenReturn(wmiRequestResults);
 
 		// ITERATION 1:
 		// WMI request result contains 4 records
@@ -409,8 +410,9 @@ class EventLogSourceProcessorTest {
 			"EventIdentifier, SourceName, InsertionStrings, Message, LogFile " +
 			"FROM Win32_NTLogEvent WHERE LogFile = 'System' AND (EventCode = '4702') AND (SourceName = 'Security-Auditing') AND RecordNumber > 8";
 
-		when(executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull()))
-			.thenReturn(wmiRequestResults);
+		when(
+			executorMock.executeWmi(anyString(), any(IWinConfiguration.class), eq(query), anyString(), isNull())
+		).thenReturn(wmiRequestResults);
 
 		// ITERATION 2:
 		// WMI request result contains 3 records
@@ -491,8 +493,7 @@ class EventLogSourceProcessorTest {
 
 	@Test
 	void testBuildEventLogQuery_onlySources_firstIteration_selectsMinimalColumns() {
-		final EventLogSource source = EventLogSource
-			.builder()
+		final EventLogSource source = EventLogSource.builder()
 			.sources(Set.of("Winlogon", "Service Control Manager"))
 			.build();
 
@@ -513,8 +514,7 @@ class EventLogSourceProcessorTest {
 	@Test
 	void testBuildEventLogQuery_onlyLevels_firstIteration_selectsMinimalColumns() {
 		// Assumes mapLevelToEventType("Error") -> "1" and ("Warning") -> "2"
-		final EventLogSource source = EventLogSource
-			.builder()
+		final EventLogSource source = EventLogSource.builder()
 			.levels(Set.of(EventLogLevel.ERROR, EventLogLevel.WARNING))
 			.build();
 
@@ -531,8 +531,7 @@ class EventLogSourceProcessorTest {
 
 	@Test
 	void testBuildEventLogQuery_logNameSourcesLevels() {
-		final EventLogSource source = EventLogSource
-			.builder()
+		final EventLogSource source = EventLogSource.builder()
 			.logName("System")
 			.sources(Set.of("Winlogon"))
 			.levels(Set.of(EventLogLevel.INFORMATION))

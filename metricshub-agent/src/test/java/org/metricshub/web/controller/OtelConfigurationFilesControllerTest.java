@@ -46,8 +46,7 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldListConfigurationFiles() throws Exception {
-		final ConfigurationFile f1 = ConfigurationFile
-			.builder()
+		final ConfigurationFile f1 = ConfigurationFile.builder()
 			.name(OTEL_CONFIG_FILE)
 			.size(1024L)
 			.lastModificationTime("2025-09-01T10:15:30Z")
@@ -85,8 +84,7 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldSaveOrUpdateFile() throws Exception {
-		final ConfigurationFile saved = ConfigurationFile
-			.builder()
+		final ConfigurationFile saved = ConfigurationFile.builder()
 			.name(OTEL_CONFIG_FILE)
 			.size(100L)
 			.lastModificationTime("2025-09-03T12:00:00Z")
@@ -109,8 +107,9 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldValidateFile() throws Exception {
-		when(otelConfigurationFilesService.validate("receivers: {}", OTEL_CONFIG_FILE))
-			.thenReturn(OtelConfigurationFilesService.Validation.ok(OTEL_CONFIG_FILE));
+		when(otelConfigurationFilesService.validate("receivers: {}", OTEL_CONFIG_FILE)).thenReturn(
+			OtelConfigurationFilesService.Validation.ok(OTEL_CONFIG_FILE)
+		);
 
 		mockMvc
 			.perform(
@@ -135,8 +134,7 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldRenameFile() throws Exception {
-		final ConfigurationFile renamed = ConfigurationFile
-			.builder()
+		final ConfigurationFile renamed = ConfigurationFile.builder()
 			.name("new-otel.yaml")
 			.size(100L)
 			.lastModificationTime("2025-09-03T12:00:00Z")
@@ -156,8 +154,7 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldListBackupFiles() throws Exception {
-		final ConfigurationFile backup = ConfigurationFile
-			.builder()
+		final ConfigurationFile backup = ConfigurationFile.builder()
 			.name("backup-20250101-120000__otel-config.yaml")
 			.size(50L)
 			.lastModificationTime("2025-01-01T12:00:00Z")
@@ -185,8 +182,7 @@ class OtelConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldSaveDraftFile() throws Exception {
-		final ConfigurationFile draft = ConfigurationFile
-			.builder()
+		final ConfigurationFile draft = ConfigurationFile.builder()
 			.name("otel-config.yaml.draft")
 			.size(80L)
 			.lastModificationTime("2025-09-03T12:00:00Z")
@@ -205,7 +201,9 @@ class OtelConfigurationFilesControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("otel-config.yaml.draft"));
 
-		verify(otelConfigurationFilesService, Mockito.times(1))
-			.saveOrUpdateDraftFile("otel-config.yaml", "receivers:\n  otlp:\n");
+		verify(otelConfigurationFilesService, Mockito.times(1)).saveOrUpdateDraftFile(
+			"otel-config.yaml",
+			"receivers:\n  otlp:\n"
+		);
 	}
 }

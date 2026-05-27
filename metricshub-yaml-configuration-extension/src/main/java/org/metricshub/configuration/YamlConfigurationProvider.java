@@ -58,11 +58,10 @@ public class YamlConfigurationProvider implements IConfigurationProvider {
 					return getFileExtensions().stream().anyMatch(fileName::endsWith);
 				})
 				.forEach((Path path) ->
-					readFragment(path)
-						.ifPresent((JsonNode jsonNode) -> {
-							configurations.add(jsonNode);
-							log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
-						})
+					readFragment(path).ifPresent((JsonNode jsonNode) -> {
+						configurations.add(jsonNode);
+						log.debug("Successfully loaded YAML configuration fragment: '{}'", path);
+					})
 				);
 		} catch (IOException e) {
 			log.error("Failed to list configuration directory: '{}'. Error: {}", configDirectory, e.getMessage());

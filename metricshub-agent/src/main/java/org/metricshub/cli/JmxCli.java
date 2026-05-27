@@ -66,8 +66,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping JMX CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -256,8 +255,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 		MetricsHubCliService.setLogLevel(verbose);
 
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(this::runQuery);
 

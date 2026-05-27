@@ -67,8 +67,7 @@ public class IpmiSource extends Source {
 	}
 
 	public IpmiSource copy() {
-		return IpmiSource
-			.builder()
+		return IpmiSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

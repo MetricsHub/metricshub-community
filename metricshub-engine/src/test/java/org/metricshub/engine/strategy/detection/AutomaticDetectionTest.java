@@ -60,21 +60,17 @@ class AutomaticDetectionTest {
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
 		// The extension manager is empty because it is not involved in this test
 		final ExtensionManager extensionManager = ExtensionManager.empty();
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AutomaticDetection(null, clientsExecutor, emptySet, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new AutomaticDetection(null, clientsExecutor, emptySet, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AutomaticDetection(telemetryManager, null, emptySet, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new AutomaticDetection(telemetryManager, null, emptySet, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AutomaticDetection(telemetryManager, clientsExecutor, null, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new AutomaticDetection(telemetryManager, clientsExecutor, null, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new AutomaticDetection(telemetryManager, clientsExecutor, emptySet, null)
+		assertThrows(IllegalArgumentException.class, () ->
+			new AutomaticDetection(telemetryManager, clientsExecutor, emptySet, null)
 		);
 	}
 
@@ -97,8 +93,7 @@ class AutomaticDetectionTest {
 		final Set<String> connectors = new HashSet<>();
 		connectors.add("-" + CONNECTOR);
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId("hostId")
 			.hostType(DeviceKind.WINDOWS)
@@ -120,8 +115,10 @@ class AutomaticDetectionTest {
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
-		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
-			.stage(connectorStore, connectors);
+		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST).stage(
+			connectorStore,
+			connectors
+		);
 		assertEquals(
 			new ArrayList<>(),
 			new AutomaticDetection(
@@ -129,8 +126,7 @@ class AutomaticDetectionTest {
 				clientsExecutor,
 				stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 				ExtensionManager.empty()
-			)
-				.run()
+			).run()
 		);
 	}
 
@@ -144,8 +140,7 @@ class AutomaticDetectionTest {
 		connectors.add(CONNECTOR);
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(TestConfiguration.class, new TestConfiguration());
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId("hostId")
 			.hostType(DeviceKind.WINDOWS)
@@ -183,8 +178,10 @@ class AutomaticDetectionTest {
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
-		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
-			.stage(connectorStore, connectors);
+		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST).stage(
+			connectorStore,
+			connectors
+		);
 		assertEquals(
 			new ArrayList<>(),
 			new AutomaticDetection(
@@ -192,8 +189,7 @@ class AutomaticDetectionTest {
 				clientsExecutor,
 				stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 				ExtensionManager.empty()
-			)
-				.run()
+			).run()
 		);
 	}
 
@@ -207,8 +203,7 @@ class AutomaticDetectionTest {
 		connectors.add(CONNECTOR);
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(TestConfiguration.class, new TestConfiguration());
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId("hostId")
 			.hostType(DeviceKind.WINDOWS)
@@ -246,8 +241,10 @@ class AutomaticDetectionTest {
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
-		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
-			.stage(connectorStore, connectors);
+		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST).stage(
+			connectorStore,
+			connectors
+		);
 		assertEquals(
 			new ArrayList<>(),
 			new AutomaticDetection(
@@ -255,8 +252,7 @@ class AutomaticDetectionTest {
 				clientsExecutor,
 				stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 				ExtensionManager.empty()
-			)
-				.run()
+			).run()
 		);
 	}
 
@@ -270,8 +266,7 @@ class AutomaticDetectionTest {
 		connectors.add(CONNECTOR);
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(TestConfiguration.class, new TestConfiguration());
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId("hostId")
 			.hostType(DeviceKind.WINDOWS)
@@ -309,8 +304,10 @@ class AutomaticDetectionTest {
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
-		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
-			.stage(connectorStore, connectors);
+		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST).stage(
+			connectorStore,
+			connectors
+		);
 		assertEquals(
 			new ArrayList<>(),
 			new AutomaticDetection(
@@ -318,8 +315,7 @@ class AutomaticDetectionTest {
 				clientsExecutor,
 				stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 				ExtensionManager.empty()
-			)
-				.run()
+			).run()
 		);
 	}
 
@@ -333,8 +329,7 @@ class AutomaticDetectionTest {
 		connectors.add(CONNECTOR);
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(TestConfiguration.class, new TestConfiguration());
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId("hostId")
 			.hostType(DeviceKind.WINDOWS)
@@ -372,8 +367,10 @@ class AutomaticDetectionTest {
 			null
 		);
 		final ClientsExecutor clientsExecutor = new ClientsExecutor(telemetryManager);
-		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST)
-			.stage(connectorStore, connectors);
+		final StagedConnectorIdentifiers stagedConnectorIdentifiers = new ConnectorStagingManager(LOCALHOST).stage(
+			connectorStore,
+			connectors
+		);
 		assertEquals(
 			new ArrayList<>(),
 			new AutomaticDetection(
@@ -381,8 +378,7 @@ class AutomaticDetectionTest {
 				clientsExecutor,
 				stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 				ExtensionManager.empty()
-			)
-				.run()
+			).run()
 		);
 	}
 
@@ -393,15 +389,12 @@ class AutomaticDetectionTest {
 		{
 			// A single "last resort" connector discovering the same hardware monitor as a
 			// regular connector
-			final Connector lastResortConnector = Connector
-				.builder()
+			final Connector lastResortConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_ENCLOSURE_ID)
 						.detection(
-							Detection
-								.builder()
+							Detection.builder()
 								.appliesTo(Set.of(DeviceKind.LINUX))
 								.onLastResort(KnownMonitorType.ENCLOSURE.getKey())
 								.build()
@@ -410,15 +403,18 @@ class AutomaticDetectionTest {
 				)
 				.build();
 
-			final ConnectorTestResult lastResortConnectorTestResult = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResult = ConnectorTestResult.builder()
 				.connector(lastResortConnector)
 				.build();
 
 			final List<ConnectorTestResult> connectorTestResultList = new ArrayList<>(List.of(lastResortConnectorTestResult));
 
-			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
-				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(
+				telemetryManager,
+				clientsExecutor,
+				Collections.emptySet(),
+				ExtensionManager.empty()
+			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// The last resort connector should be kept
 			assertEquals(1, connectorTestResultList.size());
@@ -426,11 +422,9 @@ class AutomaticDetectionTest {
 
 			final Map<String, MonitorJob> enclosureMonitorJobs = Map.of(
 				KnownMonitorType.ENCLOSURE.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
@@ -439,11 +433,9 @@ class AutomaticDetectionTest {
 			);
 			// Test with two connectors: the last resort and a regular one with a matching
 			// monitor type
-			final Connector regularConnector = Connector
-				.builder()
+			final Connector regularConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_REGULAR_ENCLOSURE_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
@@ -451,14 +443,17 @@ class AutomaticDetectionTest {
 				.monitors(enclosureMonitorJobs)
 				.build();
 
-			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult.builder()
 				.connector(regularConnector)
 				.build();
 			connectorTestResultList.add(regularConnectorTestResult);
 
-			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
-				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(
+				telemetryManager,
+				clientsExecutor,
+				Collections.emptySet(),
+				ExtensionManager.empty()
+			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// We should only have the regular connector left
 			assertEquals(1, connectorTestResultList.size());
@@ -470,15 +465,12 @@ class AutomaticDetectionTest {
 			// connector
 			// Build a list of two connectors: a regular one and a last resort of Disk
 			// Controllers
-			final Connector lastResortConnector = Connector
-				.builder()
+			final Connector lastResortConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_DISK_CONTROLLER_ID)
 						.detection(
-							Detection
-								.builder()
+							Detection.builder()
 								.appliesTo(Set.of(DeviceKind.LINUX))
 								.onLastResort(KnownMonitorType.DISK_CONTROLLER.getKey())
 								.build()
@@ -486,29 +478,24 @@ class AutomaticDetectionTest {
 						.build()
 				)
 				.build();
-			final ConnectorTestResult lastResortConnectorTestResult = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResult = ConnectorTestResult.builder()
 				.connector(lastResortConnector)
 				.build();
 
 			final Map<String, MonitorJob> monitorJobs = Map.of(
 				KnownMonitorType.ENCLOSURE.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
 					.keys(DEFAULT_KEYS)
 					.build()
 			);
-			final Connector regularConnector = Connector
-				.builder()
+			final Connector regularConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_REGULAR_ENCLOSURE_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
@@ -516,8 +503,7 @@ class AutomaticDetectionTest {
 				.monitors(monitorJobs)
 				.build();
 
-			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult.builder()
 				.connector(regularConnector)
 				.build();
 
@@ -525,8 +511,12 @@ class AutomaticDetectionTest {
 				List.of(lastResortConnectorTestResult, regularConnectorTestResult)
 			);
 
-			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
-				.filterLastResortConnectors(connectorTestResultList, LOCALHOST);
+			new AutomaticDetection(
+				telemetryManager,
+				clientsExecutor,
+				Collections.emptySet(),
+				ExtensionManager.empty()
+			).filterLastResortConnectors(connectorTestResultList, LOCALHOST);
 
 			// Our two connectors should still be in the list as the regular connector does
 			// not discover disk controllers
@@ -542,56 +532,46 @@ class AutomaticDetectionTest {
 			// Regular connector with an enclosure job
 			final Map<String, MonitorJob> enclosureMonitorJobs = Map.of(
 				KnownMonitorType.ENCLOSURE.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
 					.keys(DEFAULT_KEYS)
 					.build()
 			);
-			final Connector regularConnector = Connector
-				.builder()
+			final Connector regularConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_REGULAR_ENCLOSURE_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
 				)
 				.monitors(enclosureMonitorJobs)
 				.build();
-			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult regularConnectorTestResult = ConnectorTestResult.builder()
 				.connector(regularConnector)
 				.build();
 
 			// Last resort connector 1 with a disk controller job
 			final Map<String, MonitorJob> diskControllerMonitorJobs = Map.of(
 				KnownMonitorType.DISK_CONTROLLER.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
 					.keys(DEFAULT_KEYS)
 					.build()
 			);
-			final Connector lastResortConnector1 = Connector
-				.builder()
+			final Connector lastResortConnector1 = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_DISK_CONTROLLER_1_ID)
 						.detection(
-							Detection
-								.builder()
+							Detection.builder()
 								.appliesTo(Set.of(DeviceKind.LINUX))
 								.onLastResort(KnownMonitorType.DISK_CONTROLLER.getKey())
 								.build()
@@ -600,22 +580,18 @@ class AutomaticDetectionTest {
 				)
 				.monitors(diskControllerMonitorJobs)
 				.build();
-			final ConnectorTestResult lastResortConnectorTestResult1 = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResult1 = ConnectorTestResult.builder()
 				.connector(lastResortConnector1)
 				.build();
 
 			// Last resort connector 2 with Disk controller monitor type, no discovery job
 			// (no need)
-			final Connector lastResortConnector2 = Connector
-				.builder()
+			final Connector lastResortConnector2 = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_DISK_CONTROLLER_2_ID)
 						.detection(
-							Detection
-								.builder()
+							Detection.builder()
 								.appliesTo(Set.of(DeviceKind.LINUX))
 								.onLastResort(KnownMonitorType.DISK_CONTROLLER.getKey())
 								.build()
@@ -623,8 +599,7 @@ class AutomaticDetectionTest {
 						.build()
 				)
 				.build();
-			final ConnectorTestResult lastResortConnectorTestResult2 = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResult2 = ConnectorTestResult.builder()
 				.connector(lastResortConnector2)
 				.build();
 
@@ -633,8 +608,12 @@ class AutomaticDetectionTest {
 				List.of(lastResortConnectorTestResult1, lastResortConnectorTestResult2, regularConnectorTestResult)
 			);
 
-			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
-				.filterLastResortConnectors(testedConnectors, LOCALHOST);
+			new AutomaticDetection(
+				telemetryManager,
+				clientsExecutor,
+				Collections.emptySet(),
+				ExtensionManager.empty()
+			).filterLastResortConnectors(testedConnectors, LOCALHOST);
 
 			// The regular connector and the first last resort connector should be in the
 			// list. The second last resort connector should
@@ -652,71 +631,59 @@ class AutomaticDetectionTest {
 			// Regular connector with an enclosure job
 			final Map<String, MonitorJob> enclosureMonitorJobs = Map.of(
 				KnownMonitorType.ENCLOSURE.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
 					.keys(DEFAULT_KEYS)
 					.build()
 			);
-			final Connector regularConnector = Connector
-				.builder()
+			final Connector regularConnector = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_REGULAR_ENCLOSURE_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
 				)
 				.monitors(enclosureMonitorJobs)
 				.build();
-			final ConnectorTestResult regularConnectorTestResultEnclosure = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult regularConnectorTestResultEnclosure = ConnectorTestResult.builder()
 				.connector(regularConnector)
 				.build();
 
 			// Last resort connector 1 with a disk controller monitor job
 			final Map<String, MonitorJob> diskControllerMonitorJobs = Map.of(
 				KnownMonitorType.DISK_CONTROLLER.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
 					.keys(DEFAULT_KEYS)
 					.build()
 			);
-			final Connector lastResortConnectorDiskController = Connector
-				.builder()
+			final Connector lastResortConnectorDiskController = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_DISK_CONTROLLER_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
 				)
 				.monitors(diskControllerMonitorJobs)
 				.build();
-			final ConnectorTestResult lastResortConnectorTestResultDiskController = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResultDiskController = ConnectorTestResult.builder()
 				.connector(lastResortConnectorDiskController)
 				.build();
 
 			// Last resort connector 2 with a GPU monitor job
 			final Map<String, MonitorJob> gpuMonitorJobs = Map.of(
 				KnownMonitorType.GPU.getKey(),
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(
-						Discovery
-							.builder()
+						Discovery.builder()
 							.mapping(Mapping.builder().attributes(Map.of(MONITOR_ATTRIBUTE_ID, COLUMN_1_REF)).build())
 							.build()
 					)
@@ -724,19 +691,16 @@ class AutomaticDetectionTest {
 					.build()
 			);
 
-			final Connector lastResortConnectorGpu = Connector
-				.builder()
+			final Connector lastResortConnectorGpu = Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.compiledFilename(CONNECTOR_LAST_RESORT_GPU_ID)
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.build()
 				)
 				.monitors(gpuMonitorJobs)
 				.build();
-			final ConnectorTestResult lastResortConnectorTestResultGpu = ConnectorTestResult
-				.builder()
+			final ConnectorTestResult lastResortConnectorTestResultGpu = ConnectorTestResult.builder()
 				.connector(lastResortConnectorGpu)
 				.build();
 
@@ -749,8 +713,12 @@ class AutomaticDetectionTest {
 				)
 			);
 
-			new AutomaticDetection(telemetryManager, clientsExecutor, Collections.emptySet(), ExtensionManager.empty())
-				.filterLastResortConnectors(testedConnectors, LOCALHOST);
+			new AutomaticDetection(
+				telemetryManager,
+				clientsExecutor,
+				Collections.emptySet(),
+				ExtensionManager.empty()
+			).filterLastResortConnectors(testedConnectors, LOCALHOST);
 
 			// All connectors should be kept
 			assertEquals(3, testedConnectors.size());

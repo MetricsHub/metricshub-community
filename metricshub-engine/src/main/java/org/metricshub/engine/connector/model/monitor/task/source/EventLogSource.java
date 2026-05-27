@@ -109,8 +109,7 @@ public class EventLogSource extends Source {
 
 	@Override
 	public Source copy() {
-		return EventLogSource
-			.builder()
+		return EventLogSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

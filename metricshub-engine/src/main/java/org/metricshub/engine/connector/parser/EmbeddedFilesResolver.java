@@ -101,22 +101,19 @@ public class EmbeddedFilesResolver {
 			while (fileMatcher.find()) {
 				final String fileName = fileMatcher.group(1);
 
-				processedEmbeddedFiles.computeIfAbsent(
-					fileName,
-					name -> {
-						try {
-							return processFile(name, connectorDirectory);
-						} catch (Exception e) {
-							final String errorMessage = String.format(
-								"Error while processing file: %s. Current Connector directory: %s .",
-								name,
-								connectorDirectory
-							);
-							log.error(errorMessage, e);
-							throw new EmbeddedFileProcessingException(errorMessage, e);
-						}
+				processedEmbeddedFiles.computeIfAbsent(fileName, name -> {
+					try {
+						return processFile(name, connectorDirectory);
+					} catch (Exception e) {
+						final String errorMessage = String.format(
+							"Error while processing file: %s. Current Connector directory: %s .",
+							name,
+							connectorDirectory
+						);
+						log.error(errorMessage, e);
+						throw new EmbeddedFileProcessingException(errorMessage, e);
 					}
-				);
+				});
 			}
 
 			token = jsonParser.nextToken();
@@ -143,31 +140,27 @@ public class EmbeddedFilesResolver {
 
 					// If we encounter a new embedded file we process it, add it to the map of processed files
 					// and add it to the temporary list to process in the next loop iteration.
-					processedEmbeddedFiles.computeIfAbsent(
-						fileName,
-						name -> {
-							try {
-								final EmbeddedFile newEmbeddedFile = processFile(name, connectorDirectory);
-								newEmbeddedFiles.add(newEmbeddedFile);
-								return newEmbeddedFile;
-							} catch (Exception e) {
-								final String errorMessage = String.format(
-									"Error while processing file: %s. Current Connector directory: %s .",
-									name,
-									connectorDirectory
-								);
-								log.error(errorMessage, e);
-								throw new EmbeddedFileProcessingException(errorMessage, e);
-							}
+					processedEmbeddedFiles.computeIfAbsent(fileName, name -> {
+						try {
+							final EmbeddedFile newEmbeddedFile = processFile(name, connectorDirectory);
+							newEmbeddedFiles.add(newEmbeddedFile);
+							return newEmbeddedFile;
+						} catch (Exception e) {
+							final String errorMessage = String.format(
+								"Error while processing file: %s. Current Connector directory: %s .",
+								name,
+								connectorDirectory
+							);
+							log.error(errorMessage, e);
+							throw new EmbeddedFileProcessingException(errorMessage, e);
 						}
-					);
+					});
 				}
 			}
 			temporaryEmbeddedFilesList = new ArrayList<>(newEmbeddedFiles);
 		}
 
-		JsonNodeUpdater
-			.jsonNodeUpdaterBuilder()
+		JsonNodeUpdater.jsonNodeUpdaterBuilder()
 			.withJsonNode(connector)
 			.withPredicate(value -> value.indexOf("${file::") != -1)
 			.withUpdater(this::performFileRefReplacements)
@@ -238,8 +231,7 @@ public class EmbeddedFilesResolver {
 	 *         or if there is an issue with file permissions.
 	 */
 	private EmbeddedFile createEmbeddedFile(final Path filePath) throws IOException {
-		return EmbeddedFile
-			.builder()
+		return EmbeddedFile.builder()
 			.id(processedEmbeddedFiles.size() + 1)
 			.filename(filePath.getFileName().toString())
 			.content(Files.readAllBytes(filePath))

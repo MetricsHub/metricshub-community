@@ -111,8 +111,7 @@ public class WmiConfigCli implements IProtocolConfigCli {
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("namespace", new TextNode(namespace));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("wmi", configuration, value -> value)
 			.orElseThrow();
 	}

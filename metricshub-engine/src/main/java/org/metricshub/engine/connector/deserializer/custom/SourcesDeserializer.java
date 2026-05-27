@@ -37,7 +37,10 @@ public class SourcesDeserializer extends AbstractLinkedHashMapDeserializer<Sourc
 
 	@Override
 	protected boolean isValidMap(Map<String, Source> map) {
-		return map.keySet().stream().noneMatch(key -> key == null || key.isBlank());
+		return map
+			.keySet()
+			.stream()
+			.noneMatch(key -> key == null || key.isBlank());
 	}
 
 	@Override

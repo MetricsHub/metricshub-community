@@ -35,8 +35,11 @@ public class SnmpGetNextCriterionProcessorTest {
 
 	@BeforeEach
 	public void setUp() {
-		snmpGetNextCriterionProcessor =
-			new SnmpGetNextCriterionProcessor(snmpRequestExecutor, configurationRetriever, true);
+		snmpGetNextCriterionProcessor = new SnmpGetNextCriterionProcessor(
+			snmpRequestExecutor,
+			configurationRetriever,
+			true
+		);
 	}
 
 	/**
@@ -45,8 +48,7 @@ public class SnmpGetNextCriterionProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of())
 			.build();
@@ -66,11 +68,11 @@ public class SnmpGetNextCriterionProcessorTest {
 		String expectedResult = "1.3.6.1.2.1.1.1.0 OID_TYPE TestValue";
 		String expectedHostname = "hostname";
 
-		when(snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, "hostname"))
-			.thenReturn(expectedResult);
+		when(
+			snmpRequestExecutor.executeSNMPGetNext(expectedOid, snmpConfiguration, expectedHostname, false, "hostname")
+		).thenReturn(expectedResult);
 
-		SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
-			.builder()
+		SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder()
 			.oid(expectedOid)
 			.expectedResult("TestValue")
 			.build();
@@ -129,8 +131,7 @@ public class SnmpGetNextCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenThrow((new RuntimeException("Test exception")));
+		).thenThrow((new RuntimeException("Test exception")));
 
 		SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
 
@@ -160,10 +161,10 @@ public class SnmpGetNextCriterionProcessorTest {
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"Hostname " +
-			hostname +
-			" - SNMP test failed - SNMP GetNext of " +
-			oid +
-			" was unsuccessful due to a null result.",
+				hostname +
+				" - SNMP test failed - SNMP GetNext of " +
+				oid +
+				" was unsuccessful due to a null result.",
 			criterionTestResult.getMessage()
 		);
 	}
@@ -183,10 +184,10 @@ public class SnmpGetNextCriterionProcessorTest {
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"Hostname " +
-			hostname +
-			" - SNMP test failed - SNMP GetNext of " +
-			oid +
-			" was unsuccessful due to an empty result.",
+				hostname +
+				" - SNMP test failed - SNMP GetNext of " +
+				oid +
+				" was unsuccessful due to an empty result.",
 			criterionTestResult.getMessage()
 		);
 	}
@@ -206,10 +207,10 @@ public class SnmpGetNextCriterionProcessorTest {
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"Hostname " +
-			hostname +
-			" - SNMP test failed - SNMP GetNext of " +
-			oid +
-			" was successful but the returned OID is not under the same tree. Returned OID: 1.4.6.1.0.0.1.2.0.",
+				hostname +
+				" - SNMP test failed - SNMP GetNext of " +
+				oid +
+				" was successful but the returned OID is not under the same tree. Returned OID: 1.4.6.1.0.0.1.2.0.",
 			criterionTestResult.getMessage()
 		);
 	}

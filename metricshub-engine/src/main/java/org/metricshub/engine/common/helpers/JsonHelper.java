@@ -119,8 +119,7 @@ public class JsonHelper {
 	 */
 	public static ObjectMapper buildObjectMapper() {
 		// Since 2.13 use JsonMapper.builder().enable(...)
-		return JsonMapper
-			.builder()
+		return JsonMapper.builder()
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
@@ -132,8 +131,7 @@ public class JsonHelper {
 	/**
 	 * User-friendly mapper to create simple objects from Map
 	 */
-	public static final ObjectMapper SMALL_USER_FRIENDLY_MAPPER = JsonMapper
-		.builder()
+	public static final ObjectMapper SMALL_USER_FRIENDLY_MAPPER = JsonMapper.builder()
 		.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
 		.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 		.disable(MapperFeature.REQUIRE_TYPE_ID_FOR_SUBTYPES)
@@ -147,8 +145,7 @@ public class JsonHelper {
 	 * @return new {@link ObjectMapper} instance.
 	 */
 	public static ObjectMapper buildYamlMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory().disable(Feature.SPLIT_LINES).enable(Feature.MINIMIZE_QUOTES))
+		return JsonMapper.builder(new YAMLFactory().disable(Feature.SPLIT_LINES).enable(Feature.MINIMIZE_QUOTES))
 			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)

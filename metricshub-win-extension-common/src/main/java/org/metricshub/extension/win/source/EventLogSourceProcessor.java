@@ -290,8 +290,7 @@ public class EventLogSourceProcessor {
 		// Compute next cursor
 		final int newCursor = resolveMarker(finalResults, eventLogSource, cursor);
 
-		return PostProcessingResult
-			.builder()
+		return PostProcessingResult.builder()
 			.cursor(newCursor)
 			.results(isFirstPoll(cursor) ? new ArrayList<>() : finalResults)
 			.build();

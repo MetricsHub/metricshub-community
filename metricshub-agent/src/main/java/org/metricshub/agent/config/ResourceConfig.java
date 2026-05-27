@@ -129,8 +129,7 @@ public class ResourceConfig {
 	 * @return A new ResourceConfig object with the same property values as this one.
 	 */
 	public ResourceConfig copy() {
-		return ResourceConfig
-			.builder()
+		return ResourceConfig.builder()
 			.loggerLevel(loggerLevel)
 			.outputDirectory(outputDirectory)
 			.collectPeriod(collectPeriod)
@@ -146,9 +145,7 @@ public class ResourceConfig {
 				attributes
 					.entrySet()
 					.stream()
-					.collect(
-						Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, HashMap::new)
-					)
+					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, HashMap::new))
 			)
 			.metrics(metrics)
 			// Deep copies the IConfigurations
@@ -168,8 +165,7 @@ public class ResourceConfig {
 	 * @return the map of connectorIds and their variables values.
 	 */
 	public Map<String, ConnectorVariables> getConnectorVariables() {
-		return Optional
-			.ofNullable(additionalConnectors)
+		return Optional.ofNullable(additionalConnectors)
 			.map(map ->
 				map
 					.entrySet()

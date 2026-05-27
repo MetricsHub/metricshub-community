@@ -24,24 +24,21 @@ class CpuMetricNormalizerTest {
 		final NumberMetric hwErrorsMetric = NumberMetric.builder().value(1.0).name("hw.errors").build();
 		hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 		hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-		final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-			.builder()
+		final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 			.value(1.0)
 			.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU)
 			.attributes(Map.of("limit_type", "critical", "hw.type", "cpu"))
 			.build();
 		hwErrorsLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 		hwErrorsLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-		final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-			.builder()
+		final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 			.value(2.0)
 			.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU)
 			.attributes(Map.of("limit_type", "degraded", "hw.type", "cpu"))
 			.build();
 		hwErrorsLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 		hwErrorsLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-		final Monitor monitorWithHwErrorsMetric = Monitor
-			.builder()
+		final Monitor monitorWithHwErrorsMetric = Monitor.builder()
 			.id("monitorOne")
 			.type("cpu")
 			.metrics(

@@ -63,8 +63,7 @@ public class PingCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping ICMP Ping CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -151,8 +150,7 @@ public class PingCli implements IQuery, Callable<Integer> {
 		// Gets the output writer from the command line spec.
 		printWriter = spec.commandLine().getOut();
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(extension -> {
 				try {

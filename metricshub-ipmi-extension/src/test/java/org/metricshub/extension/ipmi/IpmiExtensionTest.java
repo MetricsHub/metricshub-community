@@ -68,28 +68,24 @@ class IpmiExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.bmcKey(BMC_KEY)
 			.timeout(120L)
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
+					.build()
+			)
+			.build();
 	}
 
 	@Test
@@ -198,8 +194,7 @@ class IpmiExtensionTest {
 		configuration.set("skipAuth", BooleanNode.valueOf(false));
 
 		assertEquals(
-			IpmiConfiguration
-				.builder()
+			IpmiConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.bmcKey(BMC_KEY)
@@ -209,8 +204,7 @@ class IpmiExtensionTest {
 		);
 
 		assertEquals(
-			IpmiConfiguration
-				.builder()
+			IpmiConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.bmcKey(BMC_KEY)
@@ -382,8 +376,7 @@ class IpmiExtensionTest {
 		final String message = String.format("Successful IPMI query");
 		initIpmi();
 		doReturn(message).when(ipmiRequestExecutorMock).executeIpmiGetSensors(anyString(), any(IpmiConfiguration.class));
-		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
@@ -400,8 +393,7 @@ class IpmiExtensionTest {
 		doThrow(TimeoutException.class)
 			.when(ipmiRequestExecutorMock)
 			.executeIpmiGetSensors(anyString(), any(IpmiConfiguration.class));
-		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())

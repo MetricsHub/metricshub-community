@@ -54,17 +54,14 @@ public abstract class AbstractCollectionDeserializer<T> extends JsonDeserializer
 			if (parser.isExpectedStartArrayToken()) {
 				final Collection<String> strCollection = parser.readValueAs(new TypeReference<Collection<String>>() {});
 
-				return Optional
-					.ofNullable(strCollection)
+				return Optional.ofNullable(strCollection)
 					.map(collection -> collection.stream().map(valueExtractor()).filter(Objects::nonNull).collect(collector()))
 					.orElse(emptyCollection());
 			}
 
-			return Optional
-				.ofNullable(parser.getValueAsString())
+			return Optional.ofNullable(parser.getValueAsString())
 				.map(str ->
-					Arrays
-						.stream(str.split(","))
+					Arrays.stream(str.split(","))
 						.map(String::trim) // optional: trim spaces
 						.map(valueExtractor()) // apply the custom extractor
 						.filter(getFilterPredicate())

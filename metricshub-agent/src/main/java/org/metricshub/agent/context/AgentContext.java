@@ -153,20 +153,18 @@ public class AgentContext {
 		metricsExporter = MetricsExporter.builder().withConfiguration(otelConfiguration).build();
 
 		// Build the TaskScheduling Service
-		taskSchedulingService =
-			TaskSchedulingService
-				.builder()
-				.withConfigDirectory(configDirectory)
-				.withAgentConfig(agentConfig)
-				.withAgentInfo(agentInfo)
-				.withOtelCollectorProcessService(otelCollectorProcessService)
-				.withTaskScheduler(TaskSchedulingService.newScheduler(agentConfig.getJobPoolSize()))
-				.withTelemetryManagers(telemetryManagers)
-				.withSchedules(new HashMap<>())
-				.withMetricsExporter(metricsExporter)
-				.withHostMetricDefinitions(hostMetricDefinitions)
-				.withExtensionManager(extensionManager)
-				.build();
+		taskSchedulingService = TaskSchedulingService.builder()
+			.withConfigDirectory(configDirectory)
+			.withAgentConfig(agentConfig)
+			.withAgentInfo(agentInfo)
+			.withOtelCollectorProcessService(otelCollectorProcessService)
+			.withTaskScheduler(TaskSchedulingService.newScheduler(agentConfig.getJobPoolSize()))
+			.withTelemetryManagers(telemetryManagers)
+			.withSchedules(new HashMap<>())
+			.withMetricsExporter(metricsExporter)
+			.withHostMetricDefinitions(hostMetricDefinitions)
+			.withExtensionManager(extensionManager)
+			.build();
 
 		final var startupDuration = Duration.ofNanos(System.nanoTime() - startTime);
 
@@ -235,16 +233,16 @@ public class AgentContext {
 
 			log.info(
 				"Product information:" + // NOSONAR
-				"\nName: {}" +
-				"\nVersion: {}" +
-				"\nBuild number: {}" +
-				"\nBuild date: {}" +
-				"\nCommunity Connector Library version: {}" +
-				"\nJava version: {}" +
-				"\nJava Runtime Environment directory: {}" +
-				"\nOperating System: {} {}" +
-				"\nUser working directory: {}" +
-				"\nPID: {}",
+					"\nName: {}" +
+					"\nVersion: {}" +
+					"\nBuild number: {}" +
+					"\nBuild date: {}" +
+					"\nCommunity Connector Library version: {}" +
+					"\nJava version: {}" +
+					"\nJava Runtime Environment directory: {}" +
+					"\nOperating System: {} {}" +
+					"\nUser working directory: {}" +
+					"\nPID: {}",
 				project.name(),
 				project.version(),
 				applicationProperties.buildNumber(),
@@ -278,7 +276,8 @@ public class AgentContext {
 		try {
 			final String jvmName = ManagementFactory.getRuntimeMXBean().getName();
 			return jvmName.split("@")[0];
-		} catch (Throwable ex) { // NOSONAR
+		} catch (Throwable ex) {
+			// NOSONAR
 			return MetricsHubConstants.EMPTY;
 		}
 	}

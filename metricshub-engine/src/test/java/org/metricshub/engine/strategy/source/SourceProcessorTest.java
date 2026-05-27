@@ -115,8 +115,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessHttpSource() {
 		final TestConfiguration httpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -125,13 +124,11 @@ class SourceProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -156,8 +153,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessWmiSource() {
 		final TestConfiguration wmiConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.WINDOWS)
@@ -166,13 +162,11 @@ class SourceProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -198,17 +192,14 @@ class SourceProcessorTest {
 
 	@Test
 	void testProcessSnmpGetSource() throws Exception {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -216,8 +207,7 @@ class SourceProcessorTest {
 			.build();
 
 		// no snmp protocol
-		final HostConfiguration hostConfigurationNoProtocol = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfigurationNoProtocol = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -226,8 +216,7 @@ class SourceProcessorTest {
 
 		// classic case
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -250,18 +239,15 @@ class SourceProcessorTest {
 
 	@Test
 	void testProcessSnmpGetTable() throws Exception {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -269,8 +255,7 @@ class SourceProcessorTest {
 			.build();
 
 		// no snmp protocol
-		final HostConfiguration hostConfigurationNoProtocol = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfigurationNoProtocol = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -279,8 +264,7 @@ class SourceProcessorTest {
 		assertEquals(SourceTable.empty(), sourceProcessor.process(SnmpGetSource.builder().oid(OID).build()));
 
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -291,13 +275,11 @@ class SourceProcessorTest {
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfiguration);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
 
-		final SnmpTableSource snmpTableSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource snmpTableSource = SnmpTableSource.builder()
 			.oid(OID)
 			.selectColumns(SNMP_SELECTED_COLUMNS)
 			.build();
-		final SourceTable expected = SourceTable
-			.builder()
+		final SourceTable expected = SourceTable.builder()
 			.table(EXPECTED_SNMP_TABLE_DATA)
 			.headers(SNMP_SELECTED_COLUMNS_LIST)
 			.build();
@@ -311,8 +293,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessTableJoinSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -320,8 +301,7 @@ class SourceProcessorTest {
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		SourceTable tabl1 = SourceTable
-			.builder()
+		SourceTable tabl1 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1),
@@ -331,8 +311,7 @@ class SourceProcessorTest {
 				)
 			)
 			.build();
-		SourceTable tabl2 = SourceTable
-			.builder()
+		SourceTable tabl2 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
@@ -350,13 +329,11 @@ class SourceProcessorTest {
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, connectorNamespace);
 		HostProperties hostProperties = HostProperties.builder().connectorNamespaces(connectorNamespaces).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(MY_CONNECTOR_1_NAME)
@@ -389,8 +366,7 @@ class SourceProcessorTest {
 				true
 			);
 
-		TableJoinSource tableJoinExample = TableJoinSource
-			.builder()
+		TableJoinSource tableJoinExample = TableJoinSource.builder()
 			.keyType(CAMELCASE_NOT_WBEM)
 			.leftTable(TAB1_REF)
 			.rightTable(TAB2_REF)
@@ -401,38 +377,36 @@ class SourceProcessorTest {
 		assertEquals(expectedJoin, sourceProcessor.process(tableJoinExample).getTable());
 		assertTrue(
 			expectedJoin.size() == sourceProcessor.process(tableJoinExample).getTable().size() &&
-			expectedJoin.containsAll(sourceProcessor.process(tableJoinExample).getTable()) &&
-			sourceProcessor.process(tableJoinExample).getTable().containsAll(expectedJoin)
+				expectedJoin.containsAll(sourceProcessor.process(tableJoinExample).getTable()) &&
+				sourceProcessor.process(tableJoinExample).getTable().containsAll(expectedJoin)
 		);
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getHeaders(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
 		// no default right line
-		expectedJoin =
-			Arrays.asList(Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2));
+		expectedJoin = Arrays.asList(
+			Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)
+		);
 		expectedResult = SourceTable.builder().table(expectedJoin).build();
 		doReturn(expectedJoin)
 			.when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl2.getTable(), 1, 1, new ArrayList<>(), false, true);
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable(TAB2_REF)
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB2_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getHeaders(), sourceProcessor.process(tableJoinExample).getHeaders());
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
 		// no matches
-		SourceTable tabl3 = SourceTable
-			.builder()
+		SourceTable tabl3 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
@@ -446,88 +420,74 @@ class SourceProcessorTest {
 		doReturn(expectedJoin)
 			.when(clientsExecutorMock)
 			.executeTableJoin(tabl1.getTable(), tabl3.getTable(), 1, 1, new ArrayList<>(), false, true);
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable(TAB3_REF)
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB3_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(expectedResult.getTable(), sourceProcessor.process(tableJoinExample).getTable());
 
 		// wrong column key
-		tabl3 =
-			SourceTable
-				.builder()
-				.table(
-					Arrays.asList(
-						Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
-						Arrays.asList(LOWERCASE_V10, LOWERCASE_V20, LOWERCASE_V30)
-					)
+		tabl3 = SourceTable.builder()
+			.table(
+				Arrays.asList(
+					Arrays.asList(LOWERCASE_A, LOWERCASE_B, LOWERCASE_C),
+					Arrays.asList(LOWERCASE_V10, LOWERCASE_V20, LOWERCASE_V30)
 				)
-				.build();
+			)
+			.build();
 		mapSources.put(TAB3_REF, tabl3);
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable(TAB3_REF)
-				.leftKeyColumn(0)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB3_REF)
+			.leftKeyColumn(0)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(SourceTable.empty(), sourceProcessor.process(tableJoinExample));
 
 		// null args
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(null)
-				.rightTable(TAB3_REF)
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(null)
+			.rightTable(TAB3_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable(null)
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(null)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		// table not in sources
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable("blabla")
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable("blabla")
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(new ArrayList<>(), sourceProcessor.process(tableJoinExample).getTable());
 
-		tableJoinExample =
-			TableJoinSource
-				.builder()
-				.keyType(CAMELCASE_NOT_WBEM)
-				.leftTable(TAB1_REF)
-				.rightTable(TAB2_REF)
-				.leftKeyColumn(1)
-				.rightKeyColumn(1)
-				.defaultRightLine(null)
-				.build();
+		tableJoinExample = TableJoinSource.builder()
+			.keyType(CAMELCASE_NOT_WBEM)
+			.leftTable(TAB1_REF)
+			.rightTable(TAB2_REF)
+			.leftKeyColumn(1)
+			.rightKeyColumn(1)
+			.defaultRightLine(null)
+			.build();
 		assertEquals(
 			Arrays.asList(Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1, LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2)),
 			sourceProcessor.process(tableJoinExample).getTable()
@@ -536,8 +496,7 @@ class SourceProcessorTest {
 
 	@Test
 	void testProcessTableUnionSourceTest() {
-		SourceTable tabl1 = SourceTable
-			.builder()
+		SourceTable tabl1 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A1, LOWERCASE_B1, LOWERCASE_C1),
@@ -546,8 +505,7 @@ class SourceProcessorTest {
 			)
 			.rawData(LOWERCASE_A1)
 			.build();
-		SourceTable tabl2 = SourceTable
-			.builder()
+		SourceTable tabl2 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A1, LOWERCASE_B2, LOWERCASE_C2),
@@ -570,8 +528,7 @@ class SourceProcessorTest {
 		);
 
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -583,13 +540,11 @@ class SourceProcessorTest {
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, connectorNamespace);
 		HostProperties hostProperties = HostProperties.builder().connectorNamespaces(connectorNamespaces).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(MY_CONNECTOR_1_NAME)
@@ -607,8 +562,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessCopySource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -629,13 +583,11 @@ class SourceProcessorTest {
 		connectorNamespaces.put(MY_CONNECTOR_1_NAME, namespace);
 		HostProperties hostProperties = HostProperties.builder().connectorNamespaces(connectorNamespaces).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(MY_CONNECTOR_1_NAME)
@@ -669,16 +621,14 @@ class SourceProcessorTest {
 	@Test
 	void testProcessStaticSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
 			.configurations(Collections.singletonMap(TestConfiguration.class, snmpConfiguration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.build();
@@ -705,8 +655,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessWbemSource() throws ClientException {
 		final TestConfiguration wbemConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -715,13 +664,11 @@ class SourceProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -744,15 +691,13 @@ class SourceProcessorTest {
 	}
 
 	void testProcessIpmiSourceStorageHost() {
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.STORAGE)
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.build();
@@ -761,16 +706,14 @@ class SourceProcessorTest {
 
 	@Test
 	void testSqlQuery() {
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("localhost")
 			.hostId("localhost")
 			.hostType(DeviceKind.LINUX)
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		final SourceTable tabl1 = SourceTable
-			.builder()
+		final SourceTable tabl1 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
@@ -780,8 +723,7 @@ class SourceProcessorTest {
 				)
 			)
 			.build();
-		final SourceTable tabl2 = SourceTable
-			.builder()
+		final SourceTable tabl2 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
@@ -797,22 +739,18 @@ class SourceProcessorTest {
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(CONNECTOR_ID, connectorNamespace);
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(connectorNamespaces)
 			.isLocalhost(true)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withSourceComputationExtensions(List.of(sourceComputationExtensionMock))
 			.build();
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.connectorId(CONNECTOR_ID)
@@ -827,8 +765,7 @@ class SourceProcessorTest {
 			SqlTable.builder().alias("T1").columns(columnsTable1).source(TAB1_REF).build(),
 			SqlTable.builder().alias("T2").columns(columnsTable2).source(TAB2_REF).build()
 		);
-		final InternalDbQuerySource internalDbQuery = InternalDbQuerySource
-			.builder()
+		final InternalDbQuerySource internalDbQuery = InternalDbQuerySource.builder()
 			.tables(sqlTables)
 			.query("SQL QUERY;")
 			.build();
@@ -870,8 +807,7 @@ class SourceProcessorTest {
 	@Test
 	void testProcessJmxSource() {
 		final TestConfiguration jmxConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(ECS1_01)
 			.hostId(ECS1_01)
 			.hostType(DeviceKind.LINUX)
@@ -880,13 +816,11 @@ class SourceProcessorTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		final SourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final SourceProcessor sourceProcessor = SourceProcessor.builder()
 			.telemetryManager(telemetryManager)
 			.clientsExecutor(clientsExecutorMock)
 			.extensionManager(extensionManager)
@@ -899,8 +833,7 @@ class SourceProcessorTest {
 
 		final SourceTable expected = SourceTable.builder().rawData("data").build();
 
-		final JmxSource source = JmxSource
-			.builder()
+		final JmxSource source = JmxSource.builder()
 			.type("jmx")
 			.objectName("org.metricshub.extension.jmx:type=JmxMBean,scope=*")
 			.attributes(new LinkedList<>(List.of("Name")))

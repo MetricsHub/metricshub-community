@@ -411,22 +411,33 @@ public class EmulationExtension implements IProtocolExtension {
 		final TelemetryManager telemetryManager
 	) {
 		if (source instanceof HttpSource httpSource) {
-			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER)
-				.process(httpSource, connectorId, telemetryManager);
+			return new HttpSourceProcessor(httpRequestExecutor, EMULATION_HTTP_CONFIGURATION_PROVIDER).process(
+				httpSource,
+				connectorId,
+				telemetryManager
+			);
 		} else if (source instanceof WbemSource wbemSource) {
-			return new WbemSourceProcessor(wbemRequestExecutor, connectorId, EMULATION_WBEM_CONFIGURATION_PROVIDER)
-				.process(wbemSource, telemetryManager);
+			return new WbemSourceProcessor(wbemRequestExecutor, connectorId, EMULATION_WBEM_CONFIGURATION_PROVIDER).process(
+				wbemSource,
+				telemetryManager
+			);
 		} else if (source instanceof CommandLineSource commandLineSource) {
 			return new CommandLineSourceProcessor(osCommandService).process(commandLineSource, connectorId, telemetryManager);
 		} else if (source instanceof SqlSource sqlSource) {
-			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, EMULATION_JDBC_CONFIGURATION_PROVIDER)
-				.process(sqlSource, telemetryManager);
+			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, EMULATION_JDBC_CONFIGURATION_PROVIDER).process(
+				sqlSource,
+				telemetryManager
+			);
 		} else if (source instanceof JmxSource jmxSource) {
-			return new JmxSourceProcessor(jmxRequestExecutor, EMULATION_JMX_CONFIGURATION_PROVIDER)
-				.process(jmxSource, telemetryManager);
+			return new JmxSourceProcessor(jmxRequestExecutor, EMULATION_JMX_CONFIGURATION_PROVIDER).process(
+				jmxSource,
+				telemetryManager
+			);
 		} else if (source instanceof WmiSource wmiSource) {
-			return new WmiSourceProcessor(wmiRequestExecutor, EMULATION_WMI_CONFIGURATION_PROVIDER, connectorId)
-				.process(wmiSource, telemetryManager);
+			return new WmiSourceProcessor(wmiRequestExecutor, EMULATION_WMI_CONFIGURATION_PROVIDER, connectorId).process(
+				wmiSource,
+				telemetryManager
+			);
 		} else if (source instanceof IpmiSource) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -441,11 +452,17 @@ public class EmulationExtension implements IProtocolExtension {
 		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
 
 		if (source instanceof SnmpTableSource snmpTableSource) {
-			return new SnmpTableSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER)
-				.process(snmpTableSource, connectorId, telemetryManager);
+			return new SnmpTableSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER).process(
+				snmpTableSource,
+				connectorId,
+				telemetryManager
+			);
 		} else if (source instanceof SnmpGetSource snmpGetSource) {
-			return new SnmpGetSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER)
-				.process(snmpGetSource, connectorId, telemetryManager);
+			return new SnmpGetSourceProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER).process(
+				snmpGetSource,
+				connectorId,
+				telemetryManager
+			);
 		}
 
 		return SourceTable.empty();
@@ -459,33 +476,41 @@ public class EmulationExtension implements IProtocolExtension {
 		final boolean logMode
 	) {
 		if (criterion instanceof HttpCriterion httpCriterion) {
-			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER)
-				.process(httpCriterion, connectorId, telemetryManager);
+			return new HttpCriterionProcessor(httpRequestExecutor, logMode, EMULATION_HTTP_CONFIGURATION_PROVIDER).process(
+				httpCriterion,
+				connectorId,
+				telemetryManager
+			);
 		} else if (criterion instanceof WbemCriterion wbemCriterion) {
 			return new WbemCriterionProcessor(
 				wbemRequestExecutor,
 				connectorId,
 				logMode,
 				EMULATION_WBEM_CONFIGURATION_PROVIDER
-			)
-				.process(wbemCriterion, telemetryManager);
+			).process(wbemCriterion, telemetryManager);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
-			return new CommandLineCriterionProcessor(connectorId, osCommandService)
-				.process(commandLineCriterion, telemetryManager);
+			return new CommandLineCriterionProcessor(connectorId, osCommandService).process(
+				commandLineCriterion,
+				telemetryManager
+			);
 		} else if (criterion instanceof SqlCriterion sqlCriterion) {
-			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, EMULATION_JDBC_CONFIGURATION_PROVIDER)
-				.process(sqlCriterion, telemetryManager);
+			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, EMULATION_JDBC_CONFIGURATION_PROVIDER).process(
+				sqlCriterion,
+				telemetryManager
+			);
 		} else if (criterion instanceof JmxCriterion jmxCriterion) {
-			return new JmxCriterionProcessor(jmxRequestExecutor, logMode, EMULATION_JMX_CONFIGURATION_PROVIDER)
-				.process(jmxCriterion, connectorId, telemetryManager);
+			return new JmxCriterionProcessor(jmxRequestExecutor, logMode, EMULATION_JMX_CONFIGURATION_PROVIDER).process(
+				jmxCriterion,
+				connectorId,
+				telemetryManager
+			);
 		} else if (criterion instanceof WmiCriterion wmiCriterion) {
 			return new WmiCriterionProcessor(
 				new WmiDetectionService(wmiRequestExecutor),
 				EMULATION_WMI_CONFIGURATION_PROVIDER,
 				connectorId,
 				logMode
-			)
-				.process(wmiCriterion, telemetryManager);
+			).process(wmiCriterion, telemetryManager);
 		} else if (criterion instanceof IpmiCriterion) {
 			final EmulationConfiguration emulCfg = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
 			final String hostname = telemetryManager.getHostname();
@@ -494,8 +519,7 @@ public class EmulationExtension implements IProtocolExtension {
 			if (result == null) {
 				return CriterionTestResult.builder().message("IPMI emulation - No recorded detection result found.").build();
 			}
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.result(result)
 				.message("Successfully connected to the IPMI BMC chip with the IPMI-over-LAN interface.")
 				.success(true)
@@ -504,18 +528,23 @@ public class EmulationExtension implements IProtocolExtension {
 			return new WinServiceCriterionProcessor(
 				new WmiDetectionService(wmiRequestExecutor),
 				EMULATION_WMI_CONFIGURATION_PROVIDER
-			)
-				.process(serviceCriterion, telemetryManager, connectorId, logMode);
+			).process(serviceCriterion, telemetryManager, connectorId, logMode);
 		}
 
 		final EmulationSnmpRequestExecutor snmpExecutor = getSnmpRequestExecutor(telemetryManager);
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
-			return new SnmpGetCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode)
-				.process(snmpGetCriterion, connectorId, telemetryManager);
+			return new SnmpGetCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode).process(
+				snmpGetCriterion,
+				connectorId,
+				telemetryManager
+			);
 		} else if (criterion instanceof SnmpGetNextCriterion snmpGetNextCriterion) {
-			return new SnmpGetNextCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode)
-				.process(snmpGetNextCriterion, connectorId, telemetryManager);
+			return new SnmpGetNextCriterionProcessor(snmpExecutor, EMULATION_SNMP_CONFIGURATION_PROVIDER, logMode).process(
+				snmpGetNextCriterion,
+				connectorId,
+				telemetryManager
+			);
 		}
 
 		return CriterionTestResult.empty();
@@ -597,14 +626,12 @@ public class EmulationExtension implements IProtocolExtension {
 	 */
 	private EmulationSnmpRequestExecutor getSnmpRequestExecutor(final TelemetryManager telemetryManager) {
 		final EmulationConfiguration emulationConfiguration = EMULATION_CONFIGURATION_PROVIDER.apply(telemetryManager);
-		final String directory = emulationConfiguration != null && emulationConfiguration.getSnmp() != null
-			? emulationConfiguration.getSnmp().getDirectory()
-			: null;
+		final String directory =
+			emulationConfiguration != null && emulationConfiguration.getSnmp() != null
+				? emulationConfiguration.getSnmp().getDirectory()
+				: null;
 		final String cacheKey = directory == null ? "" : directory;
-		return snmpRequestExecutorsByDirectory.computeIfAbsent(
-			cacheKey,
-			_ -> new EmulationSnmpRequestExecutor(directory)
-		);
+		return snmpRequestExecutorsByDirectory.computeIfAbsent(cacheKey, _ -> new EmulationSnmpRequestExecutor(directory));
 	}
 
 	/**
@@ -624,8 +651,7 @@ public class EmulationExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

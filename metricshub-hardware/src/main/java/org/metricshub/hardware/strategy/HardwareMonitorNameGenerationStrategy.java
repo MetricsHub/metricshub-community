@@ -104,9 +104,8 @@ public class HardwareMonitorNameGenerationStrategy extends AbstractStrategy {
 
 				// Get or create the per-connector map<type, map<hash,monitor>>
 				if (connectorId != null) {
-					final Map<String, Map<String, Monitor>> hashesPerType = hashesByConnector.computeIfAbsent(
-						connectorId,
-						_ -> new HashMap<>()
+					final Map<String, Map<String, Monitor>> hashesPerType = hashesByConnector.computeIfAbsent(connectorId, _ ->
+						new HashMap<>()
 					);
 
 					// Get or create the per-type map<hash, monitor>
@@ -136,8 +135,9 @@ public class HardwareMonitorNameGenerationStrategy extends AbstractStrategy {
 						monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME) == null ||
 						monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME).isBlank()
 					) {
-						final String generatedName = new MonitorNameBuilder(telemetryManager.getHostname())
-							.buildMonitorNameUsingType(monitor, telemetryManager);
+						final String generatedName = new MonitorNameBuilder(
+							telemetryManager.getHostname()
+						).buildMonitorNameUsingType(monitor, telemetryManager);
 						monitor.addAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_NAME, generatedName);
 					}
 				}

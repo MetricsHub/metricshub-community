@@ -95,24 +95,20 @@ class FileSourceProcessorTest {
 	void testProcessWithWindowsHostFlatMode() throws Exception {
 		// Setup configuration for remote Windows host
 		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(false)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)
@@ -128,8 +124,9 @@ class FileSourceProcessorTest {
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		final String initialContentBase64 = Base64.getEncoder().encodeToString(initialContent.getBytes());
 		final String newContentBase64 = Base64.getEncoder().encodeToString(newContent.getBytes());
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(resolvedPath, initialContentBase64);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
+		).thenReturn(resolvedPath, initialContentBase64);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -144,8 +141,9 @@ class FileSourceProcessorTest {
 		assertEquals(expectedMarkedLogCell(resolvedPath, initialContent), result1.getRawData());
 
 		// Iteration 2: Second read with new content (mock again for next two calls)
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(resolvedPath, newContentBase64);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
+		).thenReturn(resolvedPath, newContentBase64);
 
 		SourceTable result2 = processor.process(fileSource, telemetryManager);
 
@@ -157,24 +155,20 @@ class FileSourceProcessorTest {
 	void testProcessWithWindowsHostLogMode() throws Exception {
 		// Setup configuration for remote Windows host
 		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(false)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.LOG)
@@ -189,14 +183,15 @@ class FileSourceProcessorTest {
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
 		// Call order: 1) path resolution, 2) getFileSize, 3) path resolution, 4) getFileSize, 5) readFromOffset
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(
-				resolvedPath,
-				String.valueOf(initialFileSize),
-				resolvedPath,
-				String.valueOf(newFileSize),
-				newContentBase64
-			);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
+		).thenReturn(
+			resolvedPath,
+			String.valueOf(initialFileSize),
+			resolvedPath,
+			String.valueOf(newFileSize),
+			newContentBase64
+		);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -229,23 +224,19 @@ class FileSourceProcessorTest {
 		final String resolvedPath = "C:\\temp\\test.log";
 		final String content = "Initial file content\nLine 2";
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)
@@ -291,23 +282,19 @@ class FileSourceProcessorTest {
 		final String newContent = "New log line added\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.LOG)
@@ -360,23 +347,19 @@ class FileSourceProcessorTest {
 		final String newContent = "New log line added\nMore lines when unlimited\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(FileSource.UNLIMITED_SIZE_PER_POLL)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.LOG)
@@ -423,13 +406,11 @@ class FileSourceProcessorTest {
 	@Test
 	void testProcessWithNullFileSource() {
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
@@ -448,23 +429,19 @@ class FileSourceProcessorTest {
 
 	@Test
 	void testProcessWithNoWinConfigurationReturnsEmptyTable() {
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(false)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)
@@ -488,24 +465,20 @@ class FileSourceProcessorTest {
 	@Test
 	void testProcessWithClientExceptionDuringPathResolutionReturnsEmptyTable() throws Exception {
 		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(false)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)
@@ -513,8 +486,9 @@ class FileSourceProcessorTest {
 			.build();
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenThrow(new ClientException("Remote command failed"));
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
+		).thenThrow(new ClientException("Remote command failed"));
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -531,24 +505,20 @@ class FileSourceProcessorTest {
 	@Test
 	void testProcessWithPathResolutionReturnsMultiplePathsFlatMode() throws Exception {
 		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder().hostname(HOSTNAME).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(false)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IWinConfiguration.class, wmiConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)
@@ -563,12 +533,13 @@ class FileSourceProcessorTest {
 		final String pathResolutionOutput = path1 + "\n" + path2;
 
 		when(mockConfigurationRetriever.apply(any(TelemetryManager.class))).thenReturn(wmiConfiguration);
-		when(mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList()))
-			.thenReturn(
-				pathResolutionOutput,
-				Base64.getEncoder().encodeToString(content1.getBytes()),
-				Base64.getEncoder().encodeToString(content2.getBytes())
-			);
+		when(
+			mockWinRequestExecutor.executeWinRemoteCommand(eq(HOSTNAME), eq(wmiConfiguration), anyString(), anyList())
+		).thenReturn(
+			pathResolutionOutput,
+			Base64.getEncoder().encodeToString(content1.getBytes()),
+			Base64.getEncoder().encodeToString(content2.getBytes())
+		);
 
 		final FileSourceProcessor processor = new FileSourceProcessor(
 			mockWinRequestExecutor,
@@ -593,23 +564,19 @@ class FileSourceProcessorTest {
 		final String path2 = "C:\\temp\\ko.log";
 		final String content1 = "Content one";
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key("sourceKey")
 			.mode(FileSourceProcessingMode.FLAT)

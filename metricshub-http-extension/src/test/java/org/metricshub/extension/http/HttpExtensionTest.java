@@ -83,21 +83,18 @@ class HttpExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.LINUX)
-						.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
-						.build()
-				)
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(HttpConfiguration.class, httpConfiguration))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.build();
 	}
 
 	@Test
@@ -202,8 +199,7 @@ class HttpExtensionTest {
 		configuration.set("timeout", new TextNode("120"));
 
 		assertEquals(
-			HttpConfiguration
-				.builder()
+			HttpConfiguration.builder()
 				.https(false)
 				.username("username")
 				.password("password".toCharArray())
@@ -214,8 +210,7 @@ class HttpExtensionTest {
 		);
 
 		assertEquals(
-			HttpConfiguration
-				.builder()
+			HttpConfiguration.builder()
 				.https(false)
 				.username("username")
 				.password("password".toCharArray())
@@ -232,9 +227,8 @@ class HttpExtensionTest {
 
 		final HttpCriterion httpCriterion = null;
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
+		assertThrows(IllegalArgumentException.class, () ->
+			httpExtension.processCriterion(httpCriterion, CONNECTOR_ID, telemetryManager, true)
 		);
 	}
 
@@ -244,8 +238,7 @@ class HttpExtensionTest {
 
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
-		final HttpCriterion httpCriterion = HttpCriterion
-			.builder()
+		final HttpCriterion httpCriterion = HttpCriterion.builder()
 			.type(HTTP_CRITERION_TYPE)
 			.method(HttpMethod.GET)
 			.url(TEST_URL)
@@ -267,8 +260,7 @@ class HttpExtensionTest {
 
 		telemetryManager.setHostConfiguration(null);
 
-		final HttpCriterion httpCriterion = HttpCriterion
-			.builder()
+		final HttpCriterion httpCriterion = HttpCriterion.builder()
 			.type(HTTP_CRITERION_TYPE)
 			.method(HttpMethod.GET)
 			.url(TEST_URL)
@@ -288,8 +280,7 @@ class HttpExtensionTest {
 	void testProcessCriterionRequestWrongResultTest() {
 		initHttp();
 
-		final HttpCriterion httpCriterion = HttpCriterion
-			.builder()
+		final HttpCriterion httpCriterion = HttpCriterion.builder()
 			.type(HTTP_CRITERION_TYPE)
 			.method(HttpMethod.GET)
 			.url(TEST_URL)
@@ -300,8 +291,7 @@ class HttpExtensionTest {
 			.build();
 
 		final String result = "Something went Wrong";
-		final HttpRequest httpRequest = HttpRequest
-			.builder()
+		final HttpRequest httpRequest = HttpRequest.builder()
 			.hostname(HOST_NAME)
 			.method(HTTP_GET)
 			.url(httpCriterion.getUrl())
@@ -317,8 +307,8 @@ class HttpExtensionTest {
 
 		final String message = String.format(
 			"Hostname %s - HTTP test failed - " +
-			"The result (%s) returned by the HTTP test did not match the expected result (%s)." +
-			"Expected value: %s - returned value %s.",
+				"The result (%s) returned by the HTTP test did not match the expected result (%s)." +
+				"Expected value: %s - returned value %s.",
 			HOST_NAME,
 			result,
 			RESULT,
@@ -345,8 +335,7 @@ class HttpExtensionTest {
 		{
 			initHttp();
 
-			final HttpCriterion httpCriterion = HttpCriterion
-				.builder()
+			final HttpCriterion httpCriterion = HttpCriterion.builder()
 				.type(HTTP_CRITERION_TYPE)
 				.method(HttpMethod.GET)
 				.url(TEST_URL)
@@ -356,8 +345,7 @@ class HttpExtensionTest {
 				.errorMessage(ERROR)
 				.build();
 
-			final HttpRequest httpRequest = HttpRequest
-				.builder()
+			final HttpRequest httpRequest = HttpRequest.builder()
 				.hostname(HOST_NAME)
 				.method(HTTP_GET)
 				.url(httpCriterion.getUrl())
@@ -388,8 +376,7 @@ class HttpExtensionTest {
 		{
 			initHttp();
 
-			final HttpCriterion httpCriterion = HttpCriterion
-				.builder()
+			final HttpCriterion httpCriterion = HttpCriterion.builder()
 				.type(HTTP_CRITERION_TYPE)
 				.method(HttpMethod.GET)
 				.url(TEST_URL)
@@ -399,8 +386,7 @@ class HttpExtensionTest {
 				.errorMessage(ERROR)
 				.build();
 
-			final HttpRequest httpRequest = HttpRequest
-				.builder()
+			final HttpRequest httpRequest = HttpRequest.builder()
 				.hostname(HOST_NAME)
 				.method(HTTP_GET)
 				.url(httpCriterion.getUrl())
@@ -433,8 +419,7 @@ class HttpExtensionTest {
 	void testProcessCriterionNullResultKo() {
 		initHttp();
 
-		final HttpCriterion httpCriterion = HttpCriterion
-			.builder()
+		final HttpCriterion httpCriterion = HttpCriterion.builder()
 			.type(HTTP_CRITERION_TYPE)
 			.method(HttpMethod.GET)
 			.url(TEST_URL)
@@ -444,8 +429,7 @@ class HttpExtensionTest {
 			.errorMessage(ERROR)
 			.build();
 
-		final HttpRequest httpRequest = HttpRequest
-			.builder()
+		final HttpRequest httpRequest = HttpRequest.builder()
 			.hostname(HOST_NAME)
 			.method(HTTP_GET)
 			.url(httpCriterion.getUrl())
@@ -566,8 +550,7 @@ class HttpExtensionTest {
 		httpQueryConfiguration.set("header", new TextNode(TEST_HEADER));
 		httpQueryConfiguration.set("body", new TextNode(TEST_BODY));
 
-		HttpRequest httpRequest = HttpRequest
-			.builder()
+		HttpRequest httpRequest = HttpRequest.builder()
 			.hostname(HOST_NAME)
 			.httpConfiguration(httpConfiguration)
 			.method(HTTP_GET)

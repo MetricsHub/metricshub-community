@@ -79,12 +79,10 @@ class SimpleStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId("host-01")
 					.hostname("ec-02")
 					.sequential(false)
@@ -100,18 +98,15 @@ class SimpleStrategyTest {
 		telemetryManager.setConnectorStore(connectorStore);
 
 		// Set simple strategy information
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
-		simpleStrategy =
-			SimpleStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		simpleStrategy = SimpleStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
@@ -120,8 +115,7 @@ class SimpleStrategyTest {
 			.getSupportedCriteria();
 
 		// Mock detection criteria result
-		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -130,16 +124,14 @@ class SimpleStrategyTest {
 			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
-		final SnmpTableSource enclosureSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource enclosureSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.simple.sources.source(1)}")
 			.build();
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -147,8 +139,7 @@ class SimpleStrategyTest {
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -183,21 +174,21 @@ class SimpleStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor (criterion processing success case)
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test succeeded:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on ec-02 SUCCEEDED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test succeeded:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on ec-02 SUCCEEDED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 
@@ -244,22 +235,22 @@ class SimpleStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor (criterion processing failure case)
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test ran but failed:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Actual result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on ec-02 FAILED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test ran but failed:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Actual result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on ec-02 FAILED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 	}

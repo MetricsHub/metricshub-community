@@ -29,8 +29,11 @@ class GaugeMetricRecorderTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		gaugeMetricRecorder =
-			GaugeMetricRecorder.builder().withMetric(mockMetric).withUnit("s").withDescription("Test gauge metric").build();
+		gaugeMetricRecorder = GaugeMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("s")
+			.withDescription("Test gauge metric")
+			.build();
 	}
 
 	@Test
@@ -71,14 +74,12 @@ class GaugeMetricRecorderTest {
 		when(mockMetric.getCollectTime()).thenReturn(System.currentTimeMillis());
 		when(mockMetric.getAttributes()).thenReturn(Map.of("key", "value"));
 
-		gaugeMetricRecorder =
-			GaugeMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withUnit("s")
-				.withDescription("Test gauge metric")
-				.withResourceAttributes(Map.of("resource", "resourceValue"))
-				.build();
+		gaugeMetricRecorder = GaugeMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("s")
+			.withDescription("Test gauge metric")
+			.withResourceAttributes(Map.of("resource", "resourceValue"))
+			.build();
 
 		// When
 		final Optional<Metric> result = gaugeMetricRecorder.doRecord();

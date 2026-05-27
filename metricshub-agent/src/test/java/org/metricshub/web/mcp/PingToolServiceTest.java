@@ -23,8 +23,7 @@ class PingToolServiceTest {
 	void setup() throws Exception {
 		final AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		final AgentContext agentContext = mock(AgentContext.class);
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(new PingExtension()))
 			.build();
 

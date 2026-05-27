@@ -153,17 +153,15 @@ public class ExtensionLoader {
 		);
 
 		// Build the extension manager
-		extensionManager =
-			ExtensionManager
-				.builder()
-				.withProtocolExtensions(loadedProtocolExtensions)
-				.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
-				.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
-				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
-				.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
-				.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
-				.withMetricEnrichmentExtensions(convertProviderStreamToList(metricEnrichmentExtensions.stream()))
-				.build();
+		extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(loadedProtocolExtensions)
+			.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
+			.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
+			.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
+			.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
+			.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
+			.withMetricEnrichmentExtensions(convertProviderStreamToList(metricEnrichmentExtensions.stream()))
+			.build();
 
 		return extensionManager;
 	}

@@ -64,9 +64,8 @@ public class EmulationRoundRobinManager {
 		if (matchCount < 1) {
 			throw new IllegalArgumentException("matchCount must be >= 1, got: " + matchCount);
 		}
-		final ConcurrentHashMap<String, AtomicInteger> imageState = state.computeIfAbsent(
-			imagePath,
-			_ -> new ConcurrentHashMap<>()
+		final ConcurrentHashMap<String, AtomicInteger> imageState = state.computeIfAbsent(imagePath, _ ->
+			new ConcurrentHashMap<>()
 		);
 		final AtomicInteger counter = imageState.computeIfAbsent(requestKey, _ -> new AtomicInteger(0));
 		final int index = counter.getAndIncrement();

@@ -140,8 +140,7 @@ public class HostConfiguration {
 	 * @return a new HostConfiguration instance with the same properties as this one
 	 */
 	public HostConfiguration copy() {
-		return HostConfiguration
-			.builder()
+		return HostConfiguration.builder()
 			.hostname(hostname)
 			.hostId(hostId)
 			.hostType(hostType)

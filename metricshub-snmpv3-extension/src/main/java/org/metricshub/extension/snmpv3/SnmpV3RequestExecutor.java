@@ -38,8 +38,7 @@ public class SnmpV3RequestExecutor extends AbstractSnmpRequestExecutor {
 	protected ISnmpClient createSnmpClient(ISnmpConfiguration protocol, String hostname) throws IOException {
 		final SnmpV3Configuration snmpConfig = (SnmpV3Configuration) protocol;
 		final String password = Optional.ofNullable(snmpConfig.getPassword()).map(String::valueOf).orElse(null);
-		final String privacyPassword = Optional
-			.ofNullable(snmpConfig.getPrivacyPassword())
+		final String privacyPassword = Optional.ofNullable(snmpConfig.getPrivacyPassword())
 			.map(String::valueOf)
 			.orElse(null);
 		return new SnmpClient(

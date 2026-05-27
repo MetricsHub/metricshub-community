@@ -35,8 +35,7 @@ class WinCommandServiceTest {
 
 	@Test
 	void testGetUsername() {
-		final IWinConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(120L)
@@ -48,8 +47,7 @@ class WinCommandServiceTest {
 
 	@Test
 	void testGetPassword() {
-		final IWinConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final IWinConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(120L)
@@ -61,8 +59,7 @@ class WinCommandServiceTest {
 
 	@Test
 	void testRunOsCommand() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
@@ -80,18 +77,14 @@ class WinCommandServiceTest {
 		// Null username case to trigger NoCredentialProvidedException
 		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder().password(PASSWORD).build();
 
-		assertThrows(
-			NoCredentialProvidedException.class,
-			() -> {
-				winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
-			}
-		);
+		assertThrows(NoCredentialProvidedException.class, () -> {
+			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+		});
 	}
 
 	@Test
 	void testRunOsCommandThrowsClientException() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
@@ -101,11 +94,8 @@ class WinCommandServiceTest {
 			.when(winRequestExecutorMock)
 			.executeWinRemoteCommand(HOST_NAME, wmiConfiguration, COMMAND_LINE, Collections.emptyList());
 
-		assertThrows(
-			ClientException.class,
-			() -> {
-				winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
-			}
-		);
+		assertThrows(ClientException.class, () -> {
+			winCommandService.runOsCommand(COMMAND_LINE, HOST_NAME, wmiConfiguration, Map.of());
+		});
 	}
 }

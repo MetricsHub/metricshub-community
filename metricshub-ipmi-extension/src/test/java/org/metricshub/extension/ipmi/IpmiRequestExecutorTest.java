@@ -13,8 +13,7 @@ import org.mockito.MockedStatic;
 
 class IpmiRequestExecutorTest {
 
-	final IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-		.builder()
+	final IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 		.username("username")
 		.password("password".toCharArray())
 		.timeout(120L)
@@ -77,9 +76,8 @@ class IpmiRequestExecutorTest {
 
 			final String hostname = "hostname";
 
-			assertThrows(
-				InterruptedException.class,
-				() -> new IpmiRequestExecutor().executeIpmiGetSensors(hostname, ipmiConfiguration)
+			assertThrows(InterruptedException.class, () ->
+				new IpmiRequestExecutor().executeIpmiGetSensors(hostname, ipmiConfiguration)
 			);
 		}
 	}

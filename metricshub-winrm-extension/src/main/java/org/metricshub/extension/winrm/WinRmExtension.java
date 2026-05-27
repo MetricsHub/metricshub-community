@@ -147,14 +147,13 @@ public class WinRmExtension implements IProtocolExtension {
 		);
 
 		try {
-			winRmResult =
-				winRmRequestExecutor.executeWmi(
-					hostname,
-					winRmConfiguration,
-					WINRM_TEST_QUERY,
-					WINRM_TEST_NAMESPACE,
-					telemetryManager.getRecordOutputDirectory()
-				);
+			winRmResult = winRmRequestExecutor.executeWmi(
+				hostname,
+				winRmConfiguration,
+				WINRM_TEST_QUERY,
+				WINRM_TEST_NAMESPACE,
+				telemetryManager.getRecordOutputDirectory()
+			);
 		} catch (Exception e) {
 			if (winRmRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -181,14 +180,22 @@ public class WinRmExtension implements IProtocolExtension {
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WinRmConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
-			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode)
-				.process(wmiCriterion, telemetryManager);
+			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode).process(
+				wmiCriterion,
+				telemetryManager
+			);
 		} else if (criterion instanceof ServiceCriterion serviceCriterion) {
-			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever)
-				.process(serviceCriterion, telemetryManager, connectorId, logMode);
+			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever).process(
+				serviceCriterion,
+				telemetryManager,
+				connectorId,
+				logMode
+			);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
-			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId)
-				.process(commandLineCriterion, telemetryManager);
+			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId).process(
+				commandLineCriterion,
+				telemetryManager
+			);
 		}
 
 		throw new IllegalArgumentException(
@@ -206,17 +213,25 @@ public class WinRmExtension implements IProtocolExtension {
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WinRmConfiguration.class);
 
 		if (source instanceof WmiSource wmiSource) {
-			return new WmiSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
-				.process(wmiSource, telemetryManager);
+			return new WmiSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId).process(
+				wmiSource,
+				telemetryManager
+			);
 		} else if (source instanceof CommandLineSource commandLineSource) {
-			return new WinCommandLineSourceProcessor(winCommandService, configurationRetriever, connectorId)
-				.process(commandLineSource, telemetryManager);
+			return new WinCommandLineSourceProcessor(winCommandService, configurationRetriever, connectorId).process(
+				commandLineSource,
+				telemetryManager
+			);
 		} else if (source instanceof EventLogSource eventLogSource) {
-			return new EventLogSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
-				.process(eventLogSource, telemetryManager);
+			return new EventLogSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId).process(
+				eventLogSource,
+				telemetryManager
+			);
 		} else if (source instanceof FileSource fileSource) {
-			return new FileSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId)
-				.process(fileSource, telemetryManager);
+			return new FileSourceProcessor(winRmRequestExecutor, configurationRetriever, connectorId).process(
+				fileSource,
+				telemetryManager
+			);
 		}
 
 		throw new IllegalArgumentException(
@@ -265,8 +280,7 @@ public class WinRmExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

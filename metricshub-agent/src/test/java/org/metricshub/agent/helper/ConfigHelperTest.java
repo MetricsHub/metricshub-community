@@ -65,8 +65,7 @@ class ConfigHelperTest {
 	static Path tempDir;
 
 	// Initialize the extension manager required by the agent context
-	final ExtensionManager extensionManager = ExtensionManager
-		.builder()
+	final ExtensionManager extensionManager = ExtensionManager.builder()
 		.withProtocolExtensions(List.of(new SnmpExtension()))
 		.build();
 
@@ -181,8 +180,7 @@ class ConfigHelperTest {
 	void testBuildTelemetryManagers() throws IOException {
 		final Path configDirectory = ConfigHelper.findConfigDirectory("src/test/resources/config/metricshub-server1");
 
-		final ConnectorStore connectorStore = ConnectorStoreComposer
-			.builder()
+		final ConnectorStore connectorStore = ConnectorStoreComposer.builder()
 			.withRawConnectorStore(new RawConnectorStore(Path.of("src/test/resources")))
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
@@ -238,8 +236,7 @@ class ConfigHelperTest {
 		final Path configDirectory = ConfigHelper.findConfigDirectory(TOP_LEVEL_RESOURCES_CONFIG_PATH);
 
 		// Create the connector store
-		final ConnectorStore connectorStore = ConnectorStoreComposer
-			.builder()
+		final ConnectorStore connectorStore = ConnectorStoreComposer.builder()
 			.withRawConnectorStore(new RawConnectorStore(Path.of("src/test/resources")))
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
@@ -562,8 +559,7 @@ class ConfigHelperTest {
 		when(monitorJob.getMetrics()).thenReturn(monitorMetrics);
 
 		// Create a connector with both connector metrics and a monitor
-		final Connector connector = Connector
-			.builder()
+		final Connector connector = Connector.builder()
 			.metrics(connectorMetrics)
 			.monitors(Map.of("testMonitor", monitorJob))
 			.build();
@@ -603,8 +599,7 @@ class ConfigHelperTest {
 		final MonitorJob monitorJob = mock(MonitorJob.class);
 		when(monitorJob.getMetrics()).thenReturn(monitorMetrics);
 
-		final Connector connector = Connector
-			.builder()
+		final Connector connector = Connector.builder()
 			.metrics(null) // No connector metrics
 			.monitors(Map.of("testMonitor", monitorJob))
 			.build();
@@ -635,8 +630,7 @@ class ConfigHelperTest {
 			MetricDefinition.builder().unit("connUnit").build()
 		);
 
-		final Connector connector = Connector
-			.builder()
+		final Connector connector = Connector.builder()
 			.metrics(connectorMetrics)
 			.monitors(Map.of()) // No monitor
 			.build();
@@ -684,8 +678,7 @@ class ConfigHelperTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 
 		// Connector-level definition: failure / success
-		final MetricDefinition connectorStatusMetric = MetricDefinition
-			.builder()
+		final MetricDefinition connectorStatusMetric = MetricDefinition.builder()
 			.description("Connector operational status (connector-level).")
 			.type(StateSet.builder().set(Set.of("failure", "success")).build())
 			.build();
@@ -696,19 +689,18 @@ class ConfigHelperTest {
 		);
 
 		// Monitor-level definition: ok / not ok
-		final MetricDefinition monitorStatusMetric = MetricDefinition
-			.builder()
+		final MetricDefinition monitorStatusMetric = MetricDefinition.builder()
 			.description("Connector operational status (monitor-level).")
 			.type(StateSet.builder().set(Set.of("ok", "not ok")).build())
 			.build();
 
 		final MonitorJob monitorJob = mock(MonitorJob.class);
-		when(monitorJob.getMetrics())
-			.thenReturn(Map.of(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY, monitorStatusMetric));
+		when(monitorJob.getMetrics()).thenReturn(
+			Map.of(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY, monitorStatusMetric)
+		);
 
 		// Connector with both connector and monitor metrics
-		final Connector connector = Connector
-			.builder()
+		final Connector connector = Connector.builder()
 			.metrics(connectorMetrics)
 			.monitors(Map.of("testMonitor", monitorJob))
 			.build();

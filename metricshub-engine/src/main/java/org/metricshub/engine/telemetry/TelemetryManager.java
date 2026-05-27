@@ -127,7 +127,8 @@ public class TelemetryManager {
 			log.debug("Hostname {} - Operation failed with InterruptedException: ", hostname, e);
 
 			Thread.currentThread().interrupt();
-		} catch (Throwable e) { // NOSONAR
+		} catch (Throwable e) {
+			// NOSONAR
 			log.error(
 				"Hostname {} - {} operation failed with {}.",
 				hostname,

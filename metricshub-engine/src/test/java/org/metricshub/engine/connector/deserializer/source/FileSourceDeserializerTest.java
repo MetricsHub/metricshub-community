@@ -42,8 +42,7 @@ class FileSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testFileSource",
-				FileSource
-					.builder()
+				FileSource.builder()
 					.key("${source::beforeAll.testFileSource}")
 					.type("file")
 					.paths(
@@ -65,8 +64,7 @@ class FileSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testFileSource",
-				FileSource
-					.builder()
+				FileSource.builder()
 					.key("${source::beforeAll.testFileSource}")
 					.type("file")
 					.paths(new LinkedHashSet<>(List.of(normalizePath("C:/temp/*.log"))))
@@ -87,8 +85,7 @@ class FileSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testFileSource",
-				FileSource
-					.builder()
+				FileSource.builder()
 					.key("${source::beforeAll.testFileSource}")
 					.type("file")
 					.paths(Set.of("/var/log/*.log"))
@@ -109,8 +106,7 @@ class FileSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testFileSource",
-				FileSource
-					.builder()
+				FileSource.builder()
 					.key("${source::beforeAll.testFileSource}")
 					.type("file")
 					.paths(Set.of("/var/log/*.log"))

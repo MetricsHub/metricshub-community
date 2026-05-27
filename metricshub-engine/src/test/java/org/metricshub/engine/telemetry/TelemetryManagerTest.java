@@ -83,17 +83,14 @@ class TelemetryManagerTest {
 			)
 		);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -114,8 +111,7 @@ class TelemetryManagerTest {
 			.when(protocolExtensionMock)
 			.getSupportedCriteria();
 
-		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -125,8 +121,7 @@ class TelemetryManagerTest {
 			.when(protocolExtensionMock)
 			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -134,16 +129,14 @@ class TelemetryManagerTest {
 			.build();
 		// Mock source table information for disk controller
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
 			.when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
-		final SnmpTableSource physicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
 			.selectColumns("ID,2,6,7,8,10,11")
 			.type("snmpTable")
@@ -157,8 +150,7 @@ class TelemetryManagerTest {
 			.build();
 		// Mock source table information for physical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -166,8 +158,7 @@ class TelemetryManagerTest {
 			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
-		final SnmpTableSource logicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.1")
 			.selectColumns("ID,2,4,6")
 			.type("snmpTable")
@@ -176,8 +167,7 @@ class TelemetryManagerTest {
 			.build();
 		// Mock source table information for logical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -214,14 +204,12 @@ class TelemetryManagerTest {
 	@Test
 	void testGetHostname() {
 		// Create two configurations, with a different hostname each.
-		OsCommandTestConfiguration osCommandConfiguration = OsCommandTestConfiguration
-			.builder()
+		OsCommandTestConfiguration osCommandConfiguration = OsCommandTestConfiguration.builder()
 			.hostname("OsCommandHostname")
 			.build();
 		SshTestConfiguration sshConfiguration = SshTestConfiguration.builder().hostname("SshHostname").build();
 		// Inject the configurations in the hostConfiguration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("TelemetryManagerHostname")
 			.configurations(
 				Map.of(OsCommandTestConfiguration.class, osCommandConfiguration, SshTestConfiguration.class, sshConfiguration)

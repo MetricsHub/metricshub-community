@@ -145,7 +145,7 @@ public class ClientsExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing JSON to CSV conversion:\n- Json-source:\n{}\n- Json-entry-key: {}\n" + // NOSONAR
-				"- Property-list: {}\n- Separator: {}\n",
+					"- Property-list: {}\n- Separator: {}\n",
 				jsonSource,
 				jsonEntryKey,
 				propertyList,
@@ -179,7 +179,7 @@ public class ClientsExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executed JSON to CSV conversion:\n- Json-source:\n{}\n- Json-entry-key: {}\n" + // NOSONAR
-				"- Property-list: {}\n- Separator: {}\n- Result:\n{}\n",
+					"- Property-list: {}\n- Separator: {}\n- Result:\n{}\n",
 				jsonSource,
 				jsonEntryKey,
 				propertyList,

@@ -14,8 +14,7 @@ class EmbeddedFileTest {
 	void testDescription() {
 		assertEquals(
 			"EmbeddedFile 1: script.bat",
-			EmbeddedFile
-				.builder()
+			EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script.bat")
 				.id(1)
@@ -30,8 +29,7 @@ class EmbeddedFileTest {
 
 	@Test
 	void testGetContentAsString() {
-		final EmbeddedFile embeddedFile = EmbeddedFile
-			.builder()
+		final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 			.content("value".getBytes(StandardCharsets.UTF_8))
 			.filename("script.bat")
 			.id(1)
@@ -41,8 +39,7 @@ class EmbeddedFileTest {
 
 	@Test
 	void testUpdate() {
-		final EmbeddedFile embeddedFile = EmbeddedFile
-			.builder()
+		final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 			.content("value".getBytes(StandardCharsets.UTF_8))
 			.filename("script.bat")
 			.id(1)
@@ -61,8 +58,7 @@ class EmbeddedFileTest {
 	@Test
 	void testGetFileExtension() {
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script.bat")
 				.id(1)
@@ -70,8 +66,7 @@ class EmbeddedFileTest {
 			assertEquals(".bat", embeddedFile.getFileExtension());
 		}
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script")
 				.id(1)
@@ -79,8 +74,7 @@ class EmbeddedFileTest {
 			assertEquals(MetricsHubConstants.EMPTY, embeddedFile.getFileExtension());
 		}
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.id(1)
 				.build();
@@ -91,8 +85,7 @@ class EmbeddedFileTest {
 	@Test
 	void testGetBaseName() {
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script.bat")
 				.id(1)
@@ -100,8 +93,7 @@ class EmbeddedFileTest {
 			assertEquals("script", embeddedFile.getBaseName());
 		}
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script")
 				.id(1)
@@ -109,8 +101,7 @@ class EmbeddedFileTest {
 			assertEquals("script", embeddedFile.getBaseName());
 		}
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.id(1)
 				.build();
@@ -121,8 +112,7 @@ class EmbeddedFileTest {
 	@Test
 	void testCopy() {
 		{
-			final EmbeddedFile embeddedFile = EmbeddedFile
-				.builder()
+			final EmbeddedFile embeddedFile = EmbeddedFile.builder()
 				.content("value".getBytes(StandardCharsets.UTF_8))
 				.filename("script.bat")
 				.id(1)

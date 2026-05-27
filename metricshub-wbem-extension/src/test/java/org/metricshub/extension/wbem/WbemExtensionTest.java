@@ -83,27 +83,23 @@ class WbemExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WbemConfiguration wbemConfiguration = WbemConfiguration
-			.builder()
+		final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.timeout(120L)
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+					.build()
+			)
+			.build();
 	}
 
 	@Test
@@ -226,8 +222,7 @@ class WbemExtensionTest {
 		configuration.set("skipAuth", BooleanNode.valueOf(false));
 
 		assertEquals(
-			WbemConfiguration
-				.builder()
+			WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.port(5989)
@@ -238,8 +233,7 @@ class WbemExtensionTest {
 		);
 
 		assertEquals(
-			WbemConfiguration
-				.builder()
+			WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.port(5989)
@@ -256,8 +250,7 @@ class WbemExtensionTest {
 
 		telemetryManager.getHostConfiguration().setConfigurations(Map.of());
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.type(WBEM_CRITERION_TYPE)
 			.query(WBEM_TEST_QUERY)
 			.build();
@@ -269,8 +262,7 @@ class WbemExtensionTest {
 	void testProcessCriterionNullResultTest() throws ClientException {
 		initWbem();
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.type(WBEM_CRITERION_TYPE)
 			.query(WBEM_TEST_QUERY)
 			.build();
@@ -300,30 +292,25 @@ class WbemExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WbemConfiguration wbemConfiguration = WbemConfiguration
-			.builder()
+		final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.timeout(120L)
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+					.build()
+			)
+			.build();
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.type(WBEM_CRITERION_TYPE)
 			.namespace("namespace")
 			.query(WBEM_TEST_QUERY)
@@ -355,31 +342,26 @@ class WbemExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WbemConfiguration wbemConfiguration = WbemConfiguration
-			.builder()
+		final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.timeout(120L)
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostProperties(HostProperties.builder().possibleWbemNamespaces(new HashSet<>()).build())
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostProperties(HostProperties.builder().possibleWbemNamespaces(new HashSet<>()).build())
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+					.build()
+			)
+			.build();
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.type(WBEM_CRITERION_TYPE)
 			.namespace(AUTOMATIC_NAMESPACE)
 			.query(WBEM_TEST_QUERY)
@@ -412,31 +394,26 @@ class WbemExtensionTest {
 				Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 			);
 
-			final WbemConfiguration wbemConfiguration = WbemConfiguration
-				.builder()
+			final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.vCenter("vcenter")
 				.timeout(120L)
 				.build();
 
-			telemetryManager =
-				TelemetryManager
-					.builder()
-					.monitors(monitors)
-					.hostConfiguration(
-						HostConfiguration
-							.builder()
-							.hostname(HOST_NAME)
-							.hostId(HOST_NAME)
-							.hostType(DeviceKind.OOB)
-							.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-							.build()
-					)
-					.build();
+			telemetryManager = TelemetryManager.builder()
+				.monitors(monitors)
+				.hostConfiguration(
+					HostConfiguration.builder()
+						.hostname(HOST_NAME)
+						.hostId(HOST_NAME)
+						.hostType(DeviceKind.OOB)
+						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+						.build()
+				)
+				.build();
 
-			final WbemCriterion wbemCriterion = WbemCriterion
-				.builder()
+			final WbemCriterion wbemCriterion = WbemCriterion.builder()
 				.type(WBEM_CRITERION_TYPE)
 				.query(WBEM_TEST_QUERY)
 				.build();
@@ -491,8 +468,7 @@ class WbemExtensionTest {
 				Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 			);
 
-			final WbemConfiguration wbemConfiguration = WbemConfiguration
-				.builder()
+			final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.vCenter("vcenter")
@@ -501,24 +477,20 @@ class WbemExtensionTest {
 
 			HostProperties hostProperties = HostProperties.builder().vCenterTicket("ticket").build();
 
-			telemetryManager =
-				TelemetryManager
-					.builder()
-					.monitors(monitors)
-					.hostProperties(hostProperties)
-					.hostConfiguration(
-						HostConfiguration
-							.builder()
-							.hostname(HOST_NAME)
-							.hostId(HOST_NAME)
-							.hostType(DeviceKind.OOB)
-							.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-							.build()
-					)
-					.build();
+			telemetryManager = TelemetryManager.builder()
+				.monitors(monitors)
+				.hostProperties(hostProperties)
+				.hostConfiguration(
+					HostConfiguration.builder()
+						.hostname(HOST_NAME)
+						.hostId(HOST_NAME)
+						.hostType(DeviceKind.OOB)
+						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+						.build()
+				)
+				.build();
 
-			final WbemCriterion wbemCriterion = WbemCriterion
-				.builder()
+			final WbemCriterion wbemCriterion = WbemCriterion.builder()
 				.type(WBEM_CRITERION_TYPE)
 				.query(WBEM_TEST_QUERY)
 				.build();
@@ -563,7 +535,8 @@ class WbemExtensionTest {
 				assertNull(criterionTestResult.getResult());
 			}
 
-			{}
+			{
+			}
 		}
 	}
 
@@ -575,31 +548,26 @@ class WbemExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WbemConfiguration wbemConfiguration = WbemConfiguration
-			.builder()
+		final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.namespace(AUTOMATIC_NAMESPACE)
 			.timeout(120L)
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(WbemConfiguration.class, wbemConfiguration))
+					.build()
+			)
+			.build();
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.type(WBEM_CRITERION_TYPE)
 			.query(WBEM_TEST_QUERY)
 			.namespace(AUTOMATIC_NAMESPACE)
@@ -745,8 +713,7 @@ class WbemExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WBEM_TEST_QUERY));
-		WbemConfiguration configuration = WbemConfiguration
-			.builder()
+		WbemConfiguration configuration = WbemConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
@@ -780,8 +747,7 @@ class WbemExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WBEM_TEST_QUERY));
-		WbemConfiguration configuration = WbemConfiguration
-			.builder()
+		WbemConfiguration configuration = WbemConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())

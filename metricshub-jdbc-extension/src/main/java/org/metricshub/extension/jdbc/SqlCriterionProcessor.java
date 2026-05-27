@@ -150,13 +150,12 @@ public class SqlCriterionProcessor {
 				message = String.format(SQL_TEST_SUCCESS, hostname, result);
 				success = true;
 			} else {
-				message =
-					String.format(
-						"Hostname %s - SQL test failed - The result (%s) returned by the SQL test did not match the expected result (%s).",
-						hostname,
-						result,
-						expectedResult
-					);
+				message = String.format(
+					"Hostname %s - SQL test failed - The result (%s) returned by the SQL test did not match the expected result (%s).",
+					hostname,
+					result,
+					expectedResult
+				);
 				message += String.format("Expected value: %s - returned value %s.", expectedResult, result);
 			}
 		}

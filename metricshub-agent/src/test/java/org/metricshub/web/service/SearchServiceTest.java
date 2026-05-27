@@ -28,7 +28,10 @@ class SearchServiceTest {
 		AgentTelemetry hierarchy = buildTelemetryHierarchy();
 
 		List<SearchMatch> matches = searchService.search("core", hierarchy);
-		List<SearchMatch> instanceMatches = matches.stream().filter(match -> "instance".equals(match.getType())).toList();
+		List<SearchMatch> instanceMatches = matches
+			.stream()
+			.filter(match -> "instance".equals(match.getType()))
+			.toList();
 
 		assertEquals(
 			List.of("core-0", "core-1"),
@@ -99,15 +102,13 @@ class SearchServiceTest {
 		ConnectorTelemetry snmp = ConnectorTelemetry.builder().name("snmp").monitors(List.of(cpu)).build();
 		ResourceTelemetry eastServer = ResourceTelemetry.builder().name("server-east").connectors(List.of(snmp)).build();
 
-		ResourceGroupTelemetry resourceGroupTelemetry = ResourceGroupTelemetry
-			.builder()
+		ResourceGroupTelemetry resourceGroupTelemetry = ResourceGroupTelemetry.builder()
 			.name("rg-alpha")
 			.resources(List.of(eastServer))
 			.build();
 		ResourceTelemetry westServer = ResourceTelemetry.builder().name("server-west").build();
 
-		return AgentTelemetry
-			.builder()
+		return AgentTelemetry.builder()
 			.name("EdgeAgent")
 			.resourceGroups(List.of(resourceGroupTelemetry))
 			.resources(List.of(westServer))
@@ -121,8 +122,7 @@ class SearchServiceTest {
 	 */
 	private AgentTelemetry buildOrderingTelemetryHierarchy() {
 		ResourceTelemetry nestedMatch = ResourceTelemetry.builder().name("match").build();
-		ResourceGroupTelemetry matchGroup = ResourceGroupTelemetry
-			.builder()
+		ResourceGroupTelemetry matchGroup = ResourceGroupTelemetry.builder()
 			.name("group-alpha")
 			.resources(List.of(nestedMatch))
 			.build();
@@ -130,8 +130,7 @@ class SearchServiceTest {
 		ResourceTelemetry topLevelMatch = ResourceTelemetry.builder().name("match").build();
 		ResourceTelemetry mashResource = ResourceTelemetry.builder().name("mash").build();
 
-		return AgentTelemetry
-			.builder()
+		return AgentTelemetry.builder()
 			.name("TopAgent")
 			.resourceGroups(List.of(matchGroup))
 			.resources(List.of(topLevelMatch, mashResource))

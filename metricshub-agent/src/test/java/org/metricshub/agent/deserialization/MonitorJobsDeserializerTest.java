@@ -61,9 +61,9 @@ class MonitorJobsDeserializerTest {
 	@Test
 	void testDeserialize() throws IOException {
 		doReturn(
-			ConfigHelper
-				.newObjectMapper()
-				.readTree(ResourceHelper.getResourceAsString("/data/monitors.yaml", MonitorJobsDeserializerTest.class))
+			ConfigHelper.newObjectMapper().readTree(
+				ResourceHelper.getResourceAsString("/data/monitors.yaml", MonitorJobsDeserializerTest.class)
+			)
 		)
 			.when(yamlParserMock)
 			.readValueAs(JsonNode.class);
@@ -82,8 +82,7 @@ class MonitorJobsDeserializerTest {
 
 		sources.put(
 			GRAFANA_HEALTH_SOURCE_KEY,
-			HttpSource
-				.builder()
+			HttpSource.builder()
 				.header(HTTP_ACCEPT_HEADER)
 				.method(HttpMethod.GET)
 				.resultContent(ResultContent.BODY)
@@ -93,8 +92,7 @@ class MonitorJobsDeserializerTest {
 				.build()
 		);
 
-		final CopySource copySource = CopySource
-			.builder()
+		final CopySource copySource = CopySource.builder()
 			.type(COPY_SOURCE_TYPE)
 			.from(GRAFANA_HEALTH_SOURCE_REF)
 			.key(COPY_SOURCE_REF)
@@ -102,12 +100,10 @@ class MonitorJobsDeserializerTest {
 		copySource.setReferences(Set.of(GRAFANA_HEALTH_SOURCE_REF));
 		sources.put(COPY_SOURCE_KEY, copySource);
 
-		final Simple simple = Simple
-			.builder()
+		final Simple simple = Simple.builder()
 			.sources(sources)
 			.mapping(
-				Mapping
-					.builder()
+				Mapping.builder()
 					.source(GRAFANA_HEALTH_SOURCE_REF)
 					.attributes(attributes)
 					.metrics(Map.of(GRAFANA_DB_STATE_METRIC, "$2"))
@@ -117,8 +113,7 @@ class MonitorJobsDeserializerTest {
 
 		simple.setSourceDep(List.of(Set.of(GRAFANA_HEALTH_SOURCE_KEY), Set.of(COPY_SOURCE_KEY)));
 
-		final SimpleMonitorJob simpleMonitorJobExpected = SimpleMonitorJob
-			.simpleBuilder()
+		final SimpleMonitorJob simpleMonitorJobExpected = SimpleMonitorJob.simpleBuilder()
 			.keys(DEFAULT_KEYS)
 			.simple(simple)
 			.metrics(new HashMap<>())

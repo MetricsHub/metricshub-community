@@ -70,8 +70,7 @@ public class ToolOutputFilePersistService {
 				dest.toAbsolutePath(),
 				bytes.length
 			);
-			return PersistedToolOutputFile
-				.builder()
+			return PersistedToolOutputFile.builder()
 				.resultId(resultId)
 				.absolutePath(dest.toAbsolutePath().toString())
 				.sizeBytes(bytes.length)

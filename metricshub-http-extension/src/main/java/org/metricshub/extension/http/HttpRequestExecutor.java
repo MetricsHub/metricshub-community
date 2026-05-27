@@ -103,29 +103,25 @@ public class HttpRequestExecutor {
 		final Header header = httpRequest.getHeader();
 
 		// This will get the header content as a new map by updating all the known macros
-		final Map<String, String> headerContent = header == null
-			? Collections.emptyMap()
-			: header.getContent(username, password, authenticationToken, hostname);
+		final Map<String, String> headerContent =
+			header == null ? Collections.emptyMap() : header.getContent(username, password, authenticationToken, hostname);
 
 		// This will get the header content as a new map by updating all the known macros
 		// except sensitive data such as password and authentication token
-		final Map<String, String> headerContentProtected = header == null
-			? Collections.emptyMap()
-			: header.getContent(username, CHAR_ARRAY_MASK, MASK, hostname);
+		final Map<String, String> headerContentProtected =
+			header == null ? Collections.emptyMap() : header.getContent(username, CHAR_ARRAY_MASK, MASK, hostname);
 
 		// Get the body to send
 		final Body body = httpRequest.getBody();
 
 		// This will get the body content as map by updating all the known macros
-		final String bodyContent = body == null
-			? EMPTY
-			: body.getContent(username, password, authenticationToken, hostname);
+		final String bodyContent =
+			body == null ? EMPTY : body.getContent(username, password, authenticationToken, hostname);
 
 		// This will get the body content as map by updating all the known macros
 		// except sensitive data such as password and authentication token
-		final String bodyContentProtected = body == null
-			? EMPTY
-			: body.getContent(username, CHAR_ARRAY_MASK, MASK, hostname);
+		final String bodyContentProtected =
+			body == null ? EMPTY : body.getContent(username, CHAR_ARRAY_MASK, MASK, hostname);
 
 		// Set the protocol http or https
 		final String protocol = Boolean.TRUE.equals(httpConfiguration.getHttps()) ? "https" : "http";
@@ -145,29 +141,26 @@ public class HttpRequestExecutor {
 		// Build the full URL
 		final String fullUrl = UrlHelper.format(protocol, hostname, httpConfiguration.getPort(), path, url);
 
-		LoggingHelper.logWithHiddenPassword(
-			Level.TRACE,
-			() ->
-				String.format(
-					"Executing HTTP request: %s %s\n- hostname: %s\n- url: %s\n- path: %s\n" + // NOSONAR
+		LoggingHelper.logWithHiddenPassword(Level.TRACE, () ->
+			String.format(
+				"Executing HTTP request: %s %s\n- hostname: %s\n- url: %s\n- path: %s\n" + // NOSONAR
 					"- Protocol: %s\n- Port: %d\n" +
 					"- Request-headers:\n%s\n- Request-body:\n%s\n- Timeout: %d s\n- Get-result-content: %s\n",
-					method,
-					fullUrl,
-					hostname,
-					url,
-					path,
-					protocol,
-					httpConfiguration.getPort(),
-					StringHelper.prettyHttpHeaders(headerContentProtected),
-					bodyContentProtected,
-					httpConfiguration.getTimeout().intValue(),
-					httpRequest.getResultContent()
-				)
+				method,
+				fullUrl,
+				hostname,
+				url,
+				path,
+				protocol,
+				httpConfiguration.getPort(),
+				StringHelper.prettyHttpHeaders(headerContentProtected),
+				bodyContentProtected,
+				httpConfiguration.getTimeout().intValue(),
+				httpRequest.getResultContent()
+			)
 		);
 
-		final String result = RetryOperation
-			.<String>builder()
+		final String result = RetryOperation.<String>builder()
 			.withDescription(String.format("%s %s", method, fullUrl))
 			.withWaitStrategy((int) telemetryManager.getHostConfiguration().getRetryDelay())
 			.withMaxRetries(1)
@@ -207,16 +200,23 @@ public class HttpRequestExecutor {
 				hostname,
 				false
 			);
-			final Map<String, String> recordHeaders = header == null
-				? Collections.emptyMap()
-				: header.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
-			final String recordBody = body == null
-				? EMPTY
-				: body.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
+			final Map<String, String> recordHeaders =
+				header == null
+					? Collections.emptyMap()
+					: header.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
+			final String recordBody =
+				body == null
+					? EMPTY
+					: body.getContent(HttpRecorder.DEFAULT_USERNAME, HttpRecorder.DEFAULT_PASSWORD, defaultAuthToken, hostname);
 
-			HttpRecorder
-				.getInstance(recordOutputDirectory)
-				.record(method, httpRequestPath, recordBody, recordHeaders, httpRequest.getResultContent(), result);
+			HttpRecorder.getInstance(recordOutputDirectory).record(
+				method,
+				httpRequestPath,
+				recordBody,
+				recordHeaders,
+				httpRequest.getResultContent(),
+				result
+			);
 		}
 
 		return result;
@@ -315,30 +315,28 @@ public class HttpRequestExecutor {
 					throw new IllegalArgumentException("Unsupported ResultContent: " + resultContent);
 			}
 
-			LoggingHelper.logWithHiddenPassword(
-				Level.TRACE,
-				() ->
-					String.format(
-						"Executed HTTP request: %s %s\n- Hostname: %s\n- Url: %s\n- Path: %s\n- Protocol: %s\n- Port: %d\n" + // NOSONAR
+			LoggingHelper.logWithHiddenPassword(Level.TRACE, () ->
+				String.format(
+					"Executed HTTP request: %s %s\n- Hostname: %s\n- Url: %s\n- Path: %s\n- Protocol: %s\n- Port: %d\n" + // NOSONAR
 						"- Request-headers:\n%s\n- Request-body:\n%s\n- Timeout: %d s\n" +
 						"- get-result-content: %s\n- response-status: %d\n- response-headers:\n%s\n" +
 						"- response-body:\n%s\n- response-time: %d%n\n",
-						method,
-						fullUrl,
-						hostname,
-						url,
-						path,
-						protocol,
-						httpConfiguration.getPort(),
-						StringHelper.prettyHttpHeaders(headerContentProtected),
-						bodyContentProtected,
-						httpConfiguration.getTimeout().intValue(),
-						resultContent,
-						statusCode,
-						httpResponse.getHeader(),
-						httpResponse.getBody(),
-						responseTime
-					)
+					method,
+					fullUrl,
+					hostname,
+					url,
+					path,
+					protocol,
+					httpConfiguration.getPort(),
+					StringHelper.prettyHttpHeaders(headerContentProtected),
+					bodyContentProtected,
+					httpConfiguration.getTimeout().intValue(),
+					resultContent,
+					statusCode,
+					httpResponse.getHeader(),
+					httpResponse.getBody(),
+					responseTime
+				)
 			);
 
 			return result;

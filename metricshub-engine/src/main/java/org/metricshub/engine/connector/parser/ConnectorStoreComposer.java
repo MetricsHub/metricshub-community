@@ -388,8 +388,7 @@ public class ConnectorStoreComposer {
 		// Replace the intermediate connector embedded files by the processed ones.
 		intermediateConnector.setEmbeddedFiles(processedEmbeddedFiles);
 
-		ConnectorVariableProcessor processor = ConnectorVariableProcessor
-			.builder()
+		ConnectorVariableProcessor processor = ConnectorVariableProcessor.builder()
 			.connectorVariables(connectorVariables)
 			.next(null)
 			.build();

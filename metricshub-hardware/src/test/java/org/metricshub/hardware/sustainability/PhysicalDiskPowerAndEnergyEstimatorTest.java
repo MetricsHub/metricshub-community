@@ -27,12 +27,10 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 	@BeforeEach
 	void init() {
 		monitor = Monitor.builder().build();
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(1696597422644L)
-				.hostConfiguration(HostConfiguration.builder().hostname("localhost").build())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(1696597422644L)
+			.hostConfiguration(HostConfiguration.builder().hostname("localhost").build())
+			.build();
 		physicalDiskPowerAndEnergyEstimator = new PhysicalDiskPowerAndEnergyEstimator(monitor, telemetryManager);
 	}
 
@@ -326,8 +324,7 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 
 	@Test
 	void testEstimatePowerWithParentMonitorData() {
-		final Monitor parentMonitor = Monitor
-			.builder()
+		final Monitor parentMonitor = Monitor.builder()
 			.id("monitorOne")
 			.type(KnownMonitorType.DISK_CONTROLLER.getKey())
 			.attributes(
@@ -361,8 +358,7 @@ class PhysicalDiskPowerAndEnergyEstimatorTest {
 
 	@Test
 	void testEstimateEnergyWithParentMonitorData() {
-		final Monitor parentMonitor = Monitor
-			.builder()
+		final Monitor parentMonitor = Monitor.builder()
 			.id("monitor1")
 			.type(KnownMonitorType.DISK_CONTROLLER.getKey())
 			.attributes(

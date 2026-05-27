@@ -113,8 +113,7 @@ public class HttpSourceProcessor {
 
 		try {
 			final String result = httpRequestExecutor.executeHttp(
-				HttpRequest
-					.builder()
+				HttpRequest.builder()
 					.hostname(hostname)
 					.method(httpSource.getMethod().toString())
 					.url(httpSource.getUrl())

@@ -51,21 +51,17 @@ class ConnectorStagingManagerTest {
 
 		final Connector connector1 = Connector.builder().connectorIdentity(ConnectorIdentity.builder().build()).build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -95,26 +91,21 @@ class ConnectorStagingManagerTest {
 		// We stage storage connectors for the automatic detection
 		final Set<String> connectorsConfig = Set.of("+connector1", "!storageConnector1", "#storage");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector storageConnector1 = Connector
-			.builder()
+		final Connector storageConnector1 = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
 			.build();
 
-		final Connector storageConnector2 = Connector
-			.builder()
+		final Connector storageConnector2 = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -144,26 +135,21 @@ class ConnectorStagingManagerTest {
 		// We stage hardware connectors for the automatic detection
 		final Set<String> connectorsConfig = Set.of("connector1", "!#storage", "#hardware");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -194,26 +180,21 @@ class ConnectorStagingManagerTest {
 		// The hardwareAndStorageConnector will be excluded
 		final Set<String> connectorsConfig = Set.of("connector1", "#hardware", "!#storage");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -221,11 +202,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -264,26 +243,21 @@ class ConnectorStagingManagerTest {
 		// We stage hardware connectors for the automatic detection
 		final Set<String> connectorsConfig = Set.of("connector1", "#hardware", "#storage");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -291,11 +265,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -335,26 +307,21 @@ class ConnectorStagingManagerTest {
 		// We stage all the connectors except the storage ones
 		final Set<String> connectorsConfig = Set.of("!#storage");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -362,11 +329,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -405,26 +370,21 @@ class ConnectorStagingManagerTest {
 		// it will be discarded as it doesn't belong to the connector store
 		final Set<String> connectorsConfig = Set.of("connector1", "unknownConnector");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -432,11 +392,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -489,26 +447,21 @@ class ConnectorStagingManagerTest {
 		// The staging manager will stage all the connectors
 		final Set<String> connectorsConfig = Collections.emptySet();
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -516,11 +469,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -561,26 +512,21 @@ class ConnectorStagingManagerTest {
 		// The staging manager will stage all the connectors
 		final Set<String> connectorsConfig = null;
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -588,11 +534,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -650,26 +594,21 @@ class ConnectorStagingManagerTest {
 		// We stage all the connectors except hardwareAndStorageConnector
 		final Set<String> connectorsConfig = Set.of("!hardwareAndStorageConnector");
 
-		final Connector connector1 = Connector
-			.builder()
+		final Connector connector1 = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().compiledFilename("connector1").build())
 			.build();
 
-		final Connector hardwareConnector = Connector
-			.builder()
+		final Connector hardwareConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware")).build())
 					.build()
 			)
 			.build();
 
-		final Connector hardwareAndStorageConnector = Connector
-			.builder()
+		final Connector hardwareAndStorageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(
 						Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("hardware", "storage")).build()
 					)
@@ -677,11 +616,9 @@ class ConnectorStagingManagerTest {
 			)
 			.build();
 
-		final Connector storageConnector = Connector
-			.builder()
+		final Connector storageConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).tags(Set.of("storage")).build())
 					.build()
 			)
@@ -724,12 +661,9 @@ class ConnectorStagingManagerTest {
 			final ConnectorStore connectorStore = null;
 			ConnectorStagingManager connectorStagingManager = new ConnectorStagingManager();
 
-			assertThrows(
-				IllegalArgumentException.class,
-				() -> {
-					connectorStagingManager.stage(connectorStore, connectorsConfig);
-				}
-			);
+			assertThrows(IllegalArgumentException.class, () -> {
+				connectorStagingManager.stage(connectorStore, connectorsConfig);
+			});
 		}
 		{
 			// Null connector store

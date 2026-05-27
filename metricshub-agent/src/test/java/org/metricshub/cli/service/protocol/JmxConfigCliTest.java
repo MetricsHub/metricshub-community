@@ -25,8 +25,7 @@ class JmxConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager with JMX protocol extension
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new JmxExtension()))
 				.build();
 

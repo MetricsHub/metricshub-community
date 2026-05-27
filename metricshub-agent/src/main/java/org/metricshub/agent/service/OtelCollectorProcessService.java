@@ -152,7 +152,8 @@ public class OtelCollectorProcessService extends AbstractProcess {
 
 		try {
 			singleThreadExecutor.awaitTermination(otelCollectorConfig.getStartupDelay(), TimeUnit.SECONDS);
-		} catch (Exception e) { // NOSONAR
+		} catch (Exception e) {
+			// NOSONAR
 			log.error(
 				"Startup process has been interrupted after {} seconds. Command line: {}.",
 				otelCollectorConfig.getStartupDelay(),

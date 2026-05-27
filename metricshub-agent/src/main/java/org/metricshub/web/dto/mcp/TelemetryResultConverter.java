@@ -144,8 +144,7 @@ public class TelemetryResultConverter {
 					.summaryStatistics();
 				numericMetrics.put(
 					entry.getKey(),
-					NumericMetricStatsVo
-						.builder()
+					NumericMetricStatsVo.builder()
 						.avg(stats.getAverage())
 						.min(stats.getMin())
 						.max(stats.getMax())
@@ -169,8 +168,7 @@ public class TelemetryResultConverter {
 			}
 		}
 
-		return MonitorTypeSummaryVo
-			.builder()
+		return MonitorTypeSummaryVo.builder()
 			.totalMonitors(totalMonitors)
 			.numericMetrics(numericMetrics)
 			.stateSetMetrics(stateSetMetrics)
@@ -184,8 +182,7 @@ public class TelemetryResultConverter {
 	 * @return the converted MonitorVo
 	 */
 	private static MonitorVo convertMonitor(final Monitor monitor) {
-		return MonitorVo
-			.builder()
+		return MonitorVo.builder()
 			.attributes(extractNonEmptyAttributes(monitor))
 			.metrics(extractNonEmptyMetrics(monitor))
 			.textParams(extractNonEmptyTextParams(monitor))

@@ -44,8 +44,7 @@ class DetectionDeserializerTest extends DeserializerTest {
 		assertNotNull(detection.getConnectorIdentity().getDetection());
 
 		// appliesTo
-		final Detection expected = Detection
-			.builder()
+		final Detection expected = Detection.builder()
 			.appliesTo(Set.of(DeviceKind.values()))
 			.connectionTypes(Set.of(ConnectionType.values()))
 			.build();

@@ -10,8 +10,7 @@ class MetricContextTest {
 
 	@Test
 	void shouldCreateMetricContextWithCorrectValues() {
-		final MetricContext context = MetricContext
-			.builder()
+		final MetricContext context = MetricContext.builder()
 			.withType(MetricType.GAUGE)
 			.withUnit("s")
 			.withDescription("Test description")

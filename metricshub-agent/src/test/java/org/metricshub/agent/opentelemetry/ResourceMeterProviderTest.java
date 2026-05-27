@@ -52,11 +52,10 @@ class ResourceMeterProviderTest {
 
 	@Test
 	void testExportMetricsExportsAllRegisteredMetersWithResourceAttributes() {
-		provider =
-			new ResourceMeterProvider(
-				MetricsExporter.builder().withClient(client).withIsAppendResourceAttributes(true).build(),
-				List.of()
-			);
+		provider = new ResourceMeterProvider(
+			MetricsExporter.builder().withClient(client).withIsAppendResourceAttributes(true).build(),
+			List.of()
+		);
 		provider.newResourceMeter("test.instrumentation1", Map.of("key1", "value1"));
 		provider.newResourceMeter("test.instrumentation2", Map.of("key2", "value2"));
 
@@ -79,23 +78,22 @@ class ResourceMeterProviderTest {
 		final List<ResourceMetrics> enriched = localProvider.enrichMetrics(List.of(resourceMetrics));
 
 		assertEquals(1, enriched.size(), "Should return a single ResourceMetrics");
-		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper()
-			.toMap(enriched.get(0).getResource().getAttributesList());
+		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper().toMap(
+			enriched.get(0).getResource().getAttributesList()
+		);
 		assertEquals("host-a", attributes.get(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY));
 		assertEquals("svc-a", attributes.get(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY));
 		assertEquals("agent", attributes.get(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY));
 	}
 
 	private static ResourceMetrics buildResourceMetrics(final Map<String, String> attributes, final String metricName) {
-		final Resource resource = Resource
-			.newBuilder()
+		final Resource resource = Resource.newBuilder()
 			.addAllAttributes(
 				attributes
 					.entrySet()
 					.stream()
 					.map(entry ->
-						KeyValue
-							.newBuilder()
+						KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()
@@ -103,8 +101,7 @@ class ResourceMeterProviderTest {
 					.collect(Collectors.toList())
 			)
 			.build();
-		final Metric metric = Metric
-			.newBuilder()
+		final Metric metric = Metric.newBuilder()
 			.setName(metricName)
 			.setGauge(Gauge.newBuilder().addDataPoints(NumberDataPoint.getDefaultInstance()).build())
 			.build();

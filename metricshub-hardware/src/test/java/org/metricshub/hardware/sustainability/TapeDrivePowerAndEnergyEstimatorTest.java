@@ -27,27 +27,23 @@ class TapeDrivePowerAndEnergyEstimatorTest {
 
 	@BeforeEach
 	void init() {
-		monitor =
-			Monitor
-				.builder()
-				.metrics(
-					new HashMap<>(
-						Map.of(
-							TAPE_DRIVE_MOUNT_COUNT_METRIC,
-							NumberMetric.builder().value(7.0).build(),
-							TAPE_DRIVE_UNMOUNT_COUNT_METRIC,
-							NumberMetric.builder().value(0.2).build()
-						)
+		monitor = Monitor.builder()
+			.metrics(
+				new HashMap<>(
+					Map.of(
+						TAPE_DRIVE_MOUNT_COUNT_METRIC,
+						NumberMetric.builder().value(7.0).build(),
+						TAPE_DRIVE_UNMOUNT_COUNT_METRIC,
+						NumberMetric.builder().value(0.2).build()
 					)
 				)
-				.attributes(new HashMap<>(Map.of("name", "lto123")))
-				.build();
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(1696597422644L)
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.build();
+			)
+			.attributes(new HashMap<>(Map.of("name", "lto123")))
+			.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(1696597422644L)
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
 		tapeDrivePowerAndEnergyEstimator = new TapeDrivePowerAndEnergyEstimator(monitor, telemetryManager);
 	}
 

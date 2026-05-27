@@ -30,6 +30,7 @@ import picocli.CommandLine;
  * ApiKeyCli is the entry point to manage API keys for MetricsHub.
  */
 public class ApiKeyCli {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}

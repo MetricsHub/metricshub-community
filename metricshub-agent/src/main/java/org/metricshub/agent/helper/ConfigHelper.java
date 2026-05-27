@@ -447,8 +447,7 @@ public class ConfigHelper {
 			final AclFileAttributeView view = Files.getFileAttributeView(configPath, AclFileAttributeView.class);
 
 			// create ACE to give "Users" access
-			final AclEntry entry = AclEntry
-				.newBuilder()
+			final AclEntry entry = AclEntry.newBuilder()
 				.setType(AclEntryType.ALLOW)
 				.setPrincipal(users)
 				.setPermissions(
@@ -485,8 +484,7 @@ public class ConfigHelper {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
@@ -975,8 +973,7 @@ public class ConfigHelper {
 			final RawConnectorStore rawConnectorStore = resourceConnectorStore.getRawConnectorStore();
 
 			// Read connectors with configuration variables safely
-			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
-				.builder()
+			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer.builder()
 				.withRawConnectorStore(rawConnectorStore)
 				.withUpdateChain(ConnectorParser.createUpdateChain())
 				.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
@@ -997,7 +994,7 @@ public class ConfigHelper {
 		} catch (Exception e) {
 			log.warn(
 				"Resource {} - Under the resource group configuration {}, the resource configuration {}" +
-				" has been staged as invalid. Reason: {}",
+					" has been staged as invalid. Reason: {}",
 				resourceKey,
 				resourceGroupKey,
 				resourceKey,
@@ -1127,13 +1124,14 @@ public class ConfigHelper {
 		final String resourceKey
 	) {
 		final Map<String, IConfiguration> protocols = resourceConfig.getProtocols();
-		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = protocols == null
-			? new HashMap<>()
-			: protocols
-				.values()
-				.stream()
-				.filter(Objects::nonNull)
-				.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
+		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations =
+			protocols == null
+				? new HashMap<>()
+				: protocols
+						.values()
+						.stream()
+						.filter(Objects::nonNull)
+						.collect(Collectors.toMap(IConfiguration::getClass, Function.identity()));
 
 		final Map<String, String> attributes = resourceConfig.getAttributes();
 
@@ -1189,8 +1187,7 @@ public class ConfigHelper {
 			}
 		}
 
-		return HostConfiguration
-			.builder()
+		return HostConfiguration.builder()
 			.strategyTimeout(resourceConfig.getJobTimeout())
 			.configurations(protocolConfigurations)
 			.connectors(connectorsConfiguration)
@@ -1286,9 +1283,8 @@ public class ConfigHelper {
 
 		// If the connector status metric is not already associated with a definition,
 		// attempt to compute its definition.
-		metricDefinitions.computeIfAbsent(
-			MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY,
-			_ -> MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
+		metricDefinitions.computeIfAbsent(MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY, _ ->
+			MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
 		);
 
 		return metricDefinitions;
@@ -1400,8 +1396,7 @@ public class ConfigHelper {
 		}
 
 		// Generate the connector store from the raw connector store.
-		final ConnectorStore connectorStore = ConnectorStoreComposer
-			.builder()
+		final ConnectorStore connectorStore = ConnectorStoreComposer.builder()
 			.withRawConnectorStore(rawConnectorStore)
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))

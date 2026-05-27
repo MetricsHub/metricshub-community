@@ -37,11 +37,9 @@ class MetricsHubCliServiceTest {
 		final String displayName = "Test Connector";
 		final Map<String, Connector> store = Map.of(
 			connectorId,
-			Connector
-				.builder()
+			Connector.builder()
 				.connectorIdentity(
-					ConnectorIdentity
-						.builder()
+					ConnectorIdentity.builder()
 						.detection(Detection.builder().appliesTo(Set.of(DeviceKind.LINUX)).build())
 						.compiledFilename(connectorId)
 						.displayName(displayName)
@@ -471,15 +469,13 @@ class MetricsHubCliServiceTest {
 		//
 		final Map<String, AdditionalConnector> expectedAdditionalConnectors = Map.of(
 			"id1",
-			AdditionalConnector
-				.builder()
+			AdditionalConnector.builder()
 				.force(true)
 				.uses("usedConnector1")
 				.variables(Map.of("var11", "val11", "var12", "val12"))
 				.build(),
 			"id2",
-			AdditionalConnector
-				.builder()
+			AdditionalConnector.builder()
 				.force(true)
 				.uses("usedConnector2")
 				.variables(Map.of("var21", "val21", "var22", "val22"))

@@ -53,8 +53,14 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "java.lang:type=Memory", List.of("HeapMemoryUsage"), List.of(), "host1", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"java.lang:type=Memory",
+			List.of("HeapMemoryUsage"),
+			List.of(),
+			"host1",
+			null
+		);
 
 		assertNotNull(result);
 		assertEquals(1, result.size());
@@ -83,8 +89,14 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "com.example:type=Ex,scope=*", List.of("Attr1"), List.of("scope"), "host2", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"com.example:type=Ex,scope=*",
+			List.of("Attr1"),
+			List.of("scope"),
+			"host2",
+			null
+		);
 
 		assertEquals(1, result.size());
 		assertEquals(List.of("scope1", "100"), result.get(0));
@@ -111,8 +123,14 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "nonexistent:type=Missing", List.of("Attr1"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"nonexistent:type=Missing",
+			List.of("Attr1"),
+			List.of(),
+			"host",
+			null
+		);
 
 		assertTrue(result.isEmpty());
 	}
@@ -166,16 +184,28 @@ class EmulationJmxRequestExecutorTest {
 	@Test
 	void testFetchMBeanNotEmulationConfig() throws Exception {
 		final JmxConfiguration config = JmxConfiguration.builder().hostname("host").build();
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			"host",
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
 	@Test
 	void testFetchMBeanNullDirectory() throws Exception {
 		final JmxEmulationConfig config = new JmxEmulationConfig(JmxConfiguration.builder().hostname("host").build(), null);
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			"host",
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
@@ -185,8 +215,14 @@ class EmulationJmxRequestExecutorTest {
 			JmxConfiguration.builder().hostname("host").build(),
 			tempDir.toString()
 		);
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			"host",
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
@@ -210,8 +246,14 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			"host",
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
@@ -235,8 +277,14 @@ class EmulationJmxRequestExecutorTest {
 			tempDir.toString()
 		);
 
-		final List<List<String>> result = createExecutor()
-			.fetchMBean(config, "obj:type=T", List.of("A"), List.of(), "host", null);
+		final List<List<String>> result = createExecutor().fetchMBean(
+			config,
+			"obj:type=T",
+			List.of("A"),
+			List.of(),
+			"host",
+			null
+		);
 		assertTrue(result.isEmpty());
 	}
 
@@ -259,8 +307,12 @@ class EmulationJmxRequestExecutorTest {
 
 	@Test
 	void testFindMatchingEntriesNullEntry() {
-		final List<JmxEmulationEntry> result = createExecutor()
-			.findMatchingEntries(List.of(new JmxEmulationEntry(null, "resp")), "obj", List.of(), List.of());
+		final List<JmxEmulationEntry> result = createExecutor().findMatchingEntries(
+			List.of(new JmxEmulationEntry(null, "resp")),
+			"obj",
+			List.of(),
+			List.of()
+		);
 		assertTrue(result.isEmpty());
 	}
 }

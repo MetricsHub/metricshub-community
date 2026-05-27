@@ -90,8 +90,7 @@ public class JmxConfigCli implements IProtocolConfigCli {
 			configuration.set("port", new IntNode(port));
 		}
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("jmx", configuration, value -> value)
 			.orElseThrow();
 	}

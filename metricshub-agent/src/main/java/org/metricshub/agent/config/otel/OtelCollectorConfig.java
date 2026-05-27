@@ -158,8 +158,7 @@ public class OtelCollectorConfig {
 	 * @return new {@link ProcessConfig} instance
 	 */
 	public ProcessConfig toProcessConfig() {
-		return ProcessConfig
-			.builder()
+		return ProcessConfig.builder()
 			.commandLine(getCommandLine())
 			.environment(getEnvironment())
 			.output(getOutput().getProcessOutputSupplier().get())

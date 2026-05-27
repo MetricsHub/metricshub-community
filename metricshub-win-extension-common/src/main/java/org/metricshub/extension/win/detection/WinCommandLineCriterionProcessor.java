@@ -104,9 +104,10 @@ public class WinCommandLineCriterionProcessor {
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
-		final String hostname = winConfiguration == null
-			? telemetryManager.getHostname()
-			: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
+		final String hostname =
+			winConfiguration == null
+				? telemetryManager.getHostname()
+				: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		try {
 			final OsCommandResult osCommandResult = winCommandService.runOsCommand(
@@ -116,27 +117,25 @@ public class WinCommandLineCriterionProcessor {
 				telemetryManager.getEmbeddedFiles(connectorId)
 			);
 
-			final CommandLineCriterion osCommandNoPassword = CommandLineCriterion
-				.builder()
+			final CommandLineCriterion osCommandNoPassword = CommandLineCriterion.builder()
 				.commandLine(osCommandResult.getNoPasswordCommand())
 				.executeLocally(commandLineCriterion.getExecuteLocally())
 				.timeout(commandLineCriterion.getTimeout())
 				.expectedResult(commandLineCriterion.getExpectedResult())
 				.build();
 
-			final Matcher matcher = Pattern
-				.compile(
-					PslUtils.psl2JavaRegex(commandLineCriterion.getExpectedResult()),
-					Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
-				)
-				.matcher(osCommandResult.getResult());
+			final Matcher matcher = Pattern.compile(
+				PslUtils.psl2JavaRegex(commandLineCriterion.getExpectedResult()),
+				Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+			).matcher(osCommandResult.getResult());
 
 			return matcher.find()
 				? CriterionTestResult.success(osCommandNoPassword, osCommandResult.getResult())
 				: CriterionTestResult.failure(osCommandNoPassword, osCommandResult.getResult());
 		} catch (NoCredentialProvidedException noCredentialProvidedException) {
 			return CriterionTestResult.error(commandLineCriterion, noCredentialProvidedException.getMessage());
-		} catch (Exception exception) { // NOSONAR on interruption
+		} catch (Exception exception) {
+			// NOSONAR on interruption
 			return CriterionTestResult.error(commandLineCriterion, exception);
 		}
 	}

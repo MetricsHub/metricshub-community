@@ -154,7 +154,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 					success(
 						String.format(
 							"One or more currently running processes match the following regular expression:\n- " +
-							"Regexp (should match with the command-line): %s",
+								"Regexp (should match with the command-line): %s",
 							processCriterion.getCommandLine()
 						)
 					),

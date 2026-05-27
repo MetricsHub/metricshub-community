@@ -53,29 +53,25 @@ class OsCommandRequestExecutorTest {
 		assertDoesNotThrow(() -> OsCommandRequestExecutor.authenticateSsh(sshClient, "hostname", "username", null, null));
 
 		doThrow(new IOException()).when(sshClient).authenticate(anyString(), any(File.class), any(char[].class));
-		assertThrows(
-			ClientException.class,
-			() ->
-				OsCommandRequestExecutor.authenticateSsh(
-					sshClient,
-					"hostname",
-					"username",
-					"password".toCharArray(),
-					new File("")
-				)
+		assertThrows(ClientException.class, () ->
+			OsCommandRequestExecutor.authenticateSsh(
+				sshClient,
+				"hostname",
+				"username",
+				"password".toCharArray(),
+				new File("")
+			)
 		);
 
 		doReturn(false).when(sshClient).authenticate(anyString(), any(File.class), any(char[].class));
-		assertThrows(
-			ClientException.class,
-			() ->
-				OsCommandRequestExecutor.authenticateSsh(
-					sshClient,
-					"hostname",
-					"username",
-					"password".toCharArray(),
-					new File("")
-				)
+		assertThrows(ClientException.class, () ->
+			OsCommandRequestExecutor.authenticateSsh(
+				sshClient,
+				"hostname",
+				"username",
+				"password".toCharArray(),
+				new File("")
+			)
 		);
 	}
 
@@ -123,12 +119,11 @@ class OsCommandRequestExecutorTest {
 		final String commandWithTwoEmbeddedFiles = "bash " + absolutePath5 + " && " + absolutePath6 + " && echo done";
 		final List<File> localFilesTwoEmbedded = List.of(tempFile5, tempFile6);
 
-		result =
-			OsCommandRequestExecutor.updateCommandWithLocalList(
-				commandWithTwoEmbeddedFiles,
-				localFilesTwoEmbedded,
-				remoteDirectory
-			);
+		result = OsCommandRequestExecutor.updateCommandWithLocalList(
+			commandWithTwoEmbeddedFiles,
+			localFilesTwoEmbedded,
+			remoteDirectory
+		);
 		final String expectedTwoEmbedded =
 			"bash " +
 			remoteDirectory +
@@ -162,8 +157,11 @@ class OsCommandRequestExecutorTest {
 		final String commandWindows = "cmd /c " + absolutePathWindows + " arg1";
 		final List<File> localFilesWindows = List.of(tempFileWindows);
 
-		result =
-			OsCommandRequestExecutor.updateCommandWithLocalList(commandWindows, localFilesWindows, windowsRemoteDirectory);
+		result = OsCommandRequestExecutor.updateCommandWithLocalList(
+			commandWindows,
+			localFilesWindows,
+			windowsRemoteDirectory
+		);
 		final String expectedWindows = "cmd /c " + windowsRemoteDirectory + tempFileWindows.getName() + " arg1";
 		assertEquals(
 			expectedWindows,

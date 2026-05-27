@@ -127,11 +127,10 @@ public class TelemetryResultTruncator {
 		// 4. Deep copy the response (working copy)
 		final MultiHostToolResponse<TelemetryResult> workingCopy;
 		try {
-			workingCopy =
-				objectMapper.readValue(
-					objectMapper.writeValueAsBytes(response),
-					new TypeReference<MultiHostToolResponse<TelemetryResult>>() {}
-				);
+			workingCopy = objectMapper.readValue(
+				objectMapper.writeValueAsBytes(response),
+				new TypeReference<MultiHostToolResponse<TelemetryResult>>() {}
+			);
 		} catch (Exception e) {
 			return new TruncationResult(response, "Failed to deep copy response", List.of(), false);
 		}

@@ -128,7 +128,8 @@ public class SnmpGetCriterionProcessor {
 				log.debug(message, e);
 			}
 			return CriterionTestResult.builder().message(message).build();
-		} catch (final Exception e) { // NOSONAR on interruption
+		} catch (final Exception e) {
+			// NOSONAR on interruption
 			final String message = String.format(
 				"Hostname %s - SNMP test failed - SNMP Get of %s was unsuccessful due to an exception. Message: %s. Connector ID: %s.",
 				hostname,
@@ -157,19 +158,17 @@ public class SnmpGetCriterionProcessor {
 		String message;
 		boolean success = false;
 		if (result == null) {
-			message =
-				String.format(
-					"Hostname %s - SNMP test failed - SNMP Get of %s was unsuccessful due to a null result",
-					hostname,
-					oid
-				);
+			message = String.format(
+				"Hostname %s - SNMP test failed - SNMP Get of %s was unsuccessful due to a null result",
+				hostname,
+				oid
+			);
 		} else if (result.isBlank()) {
-			message =
-				String.format(
-					"Hostname %s - SNMP test failed - SNMP Get of %s was unsuccessful due to an empty result.",
-					hostname,
-					oid
-				);
+			message = String.format(
+				"Hostname %s - SNMP test failed - SNMP Get of %s was unsuccessful due to an empty result.",
+				hostname,
+				oid
+			);
 		} else {
 			message = String.format("Hostname %s - Successful SNMP Get of %s. Returned result: %s.", hostname, oid, result);
 			success = true;
@@ -228,13 +227,12 @@ public class SnmpGetCriterionProcessor {
 			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
 		);
 		if (result == null || !pattern.matcher(result).find()) {
-			message =
-				String.format(
-					"Hostname %s - SNMP test failed - SNMP Get of %s was successful but the value of the returned OID did not match with the" +
+			message = String.format(
+				"Hostname %s - SNMP test failed - SNMP Get of %s was successful but the value of the returned OID did not match with the" +
 					" expected result. ",
-					hostname,
-					oid
-				);
+				hostname,
+				oid
+			);
 			message += String.format("Expected value: %s - returned value %s.", expected, result);
 		} else {
 			message = String.format("Hostname %s - Successful SNMP Get of %s. Returned result: %s", hostname, oid, result);

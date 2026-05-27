@@ -35,8 +35,7 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	 * @return {@link Monitor} instance
 	 */
 	private Monitor buildHostMonitor() {
-		return Monitor
-			.builder()
+		return Monitor.builder()
 			.id(KnownMonitorType.HOST.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.HOST.getKey())
@@ -47,15 +46,13 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	void testComputeMeasuredPowerNoData() {
 		// Create host and enclosure monitors
 		final Monitor host = buildHostMonitor();
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.HOST.getKey())
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.build();
 
 		// Initialize the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();
@@ -77,24 +74,21 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	void testComputeMeasuredPowerEnclosureHasPower() {
 		// Create host and enclosure monitors
 		final Monitor host = buildHostMonitor();
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.id(KnownMonitorType.ENCLOSURE.getKey())
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.build();
 
 		// Initialize the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();
 
 		// Set the status ok in the host properties
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().isStatusOk(true).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of(HW_CONNECTOR, connectorNamespace)))
 			.build();
 		telemetryManager.setHostProperties(hostProperties);
@@ -120,16 +114,14 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	@Test
 	void testComputeEstimatedPowerFirstCollect() {
 		// Initialize the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();
 
 		// Set the status ok in the host properties
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().isStatusOk(true).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of(HW_CONNECTOR, connectorNamespace)))
 			.build();
 		telemetryManager.setHostProperties(hostProperties);
@@ -142,23 +134,20 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 			telemetryManager.getConnectorStore()
 		);
 
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.ENCLOSURE.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.build();
 
-		final Monitor cpu = Monitor
-			.builder()
+		final Monitor cpu = Monitor.builder()
 			.id("cpu1")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.CPU.getKey())
 			.build();
 		metricFactory.collectNumberMetric(cpu, HW_CPU_POWER, 60.0, telemetryManager.getStrategyTime());
 
-		final Monitor memory = Monitor
-			.builder()
+		final Monitor memory = Monitor.builder()
 			.id("memory1")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.MEMORY.getKey())
@@ -166,8 +155,7 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 
 		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime());
 
-		final Monitor disk = Monitor
-			.builder()
+		final Monitor disk = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.id("disk_nvm_1")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
@@ -175,15 +163,13 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 
 		metricFactory.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime());
 
-		final Monitor diskNoPower = Monitor
-			.builder()
+		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.build();
 
-		final Monitor missingDisk = Monitor
-			.builder()
+		final Monitor missingDisk = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.id("disk_nvm_2")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
@@ -207,16 +193,14 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	@Test
 	void testComputeEstimatedPowerSecondCollect() {
 		// Initialize the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(new Date().getTime())
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();
 
 		// Set the status ok in the host properties
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().isStatusOk(true).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of(HW_CONNECTOR, connectorNamespace)))
 			.build();
 		telemetryManager.setHostProperties(hostProperties);
@@ -239,23 +223,20 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 
 		// Initialize the monitors
 
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.ENCLOSURE.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.build();
 
-		final Monitor cpu = Monitor
-			.builder()
+		final Monitor cpu = Monitor.builder()
 			.id("cpu1")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.CPU.getKey())
 			.build();
 		metricFactory.collectNumberMetric(cpu, HW_CPU_POWER, 60.0, telemetryManager.getStrategyTime());
 
-		final Monitor memory = Monitor
-			.builder()
+		final Monitor memory = Monitor.builder()
 			.id("memory1")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.MEMORY.getKey())
@@ -263,8 +244,7 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 
 		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime());
 
-		final Monitor disk = Monitor
-			.builder()
+		final Monitor disk = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.id("disk_nvm_1")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
@@ -272,15 +252,13 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 
 		metricFactory.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime());
 
-		final Monitor diskNoPower = Monitor
-			.builder()
+		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.build();
 
-		final Monitor missingDisk = Monitor
-			.builder()
+		final Monitor missingDisk = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, HW_CONNECTOR)))
 			.id("disk_nvm_2")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
@@ -306,15 +284,13 @@ class HostMonitorPowerAndEnergyEstimatorTest {
 	void testComputeMeasuredPowerHostHasEnergy() {
 		// Build host and enclosure monitors
 		final Monitor host = buildHostMonitor();
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.HOST.getKey())
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.build();
 
 		// Initialize the telemetry manager and add metrics to created monitors
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostId(LOCALHOST).build())
 			.build();

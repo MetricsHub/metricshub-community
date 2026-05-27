@@ -47,8 +47,7 @@ class OtelCollectorProcessServiceTest {
 
 			final GobblerStreamProcessor outputProcessor = new GobblerStreamProcessor();
 			final GobblerStreamProcessor errorProcessor = new GobblerStreamProcessor();
-			final ProcessConfig processConfig = ProcessConfig
-				.builder()
+			final ProcessConfig processConfig = ProcessConfig.builder()
 				.commandLine(List.of("otelcol-contrib", "--config", "/opt/metricshub/otel/otel-config.yaml"))
 				.output(ProcessOutput.builder().outputProcessor(outputProcessor).errorProcessor(errorProcessor).build())
 				.workingDir(new File("."))
@@ -62,8 +61,7 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.start();
 
-			Awaitility
-				.await()
+			Awaitility.await()
 				.atMost(Durations.FIVE_SECONDS)
 				.untilAsserted(() -> {
 					assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());
@@ -92,8 +90,7 @@ class OtelCollectorProcessServiceTest {
 			doReturn(new CustomInputStream("OpenTelemetry Collector started.")).when(process).getInputStream();
 			doReturn(new CustomInputStream("Error.")).when(process).getErrorStream();
 
-			final ProcessConfig processConfig = ProcessConfig
-				.builder()
+			final ProcessConfig processConfig = ProcessConfig.builder()
 				.commandLine(List.of("otelcol-contrib", "--config", "/opt/metricshub/otel/otel-config.yaml"))
 				.output(null) // No output
 				.workingDir(new File("."))
@@ -130,8 +127,7 @@ class OtelCollectorProcessServiceTest {
 			doReturn(new CustomInputStream("Error.")).when(process).getErrorStream();
 
 			final GobblerStreamProcessor outputProcessor = new GobblerStreamProcessor();
-			final ProcessConfig processConfig = ProcessConfig
-				.builder()
+			final ProcessConfig processConfig = ProcessConfig.builder()
 				.commandLine(List.of("otelcol-contrib", "--config", "/opt/metricshub/otel/otel-config.yaml"))
 				.output(ProcessOutput.builder().outputProcessor(outputProcessor).build())
 				.workingDir(new File("."))
@@ -145,8 +141,7 @@ class OtelCollectorProcessServiceTest {
 
 			otelProcess.start();
 
-			Awaitility
-				.await()
+			Awaitility.await()
 				.atMost(Durations.FIVE_SECONDS)
 				.untilAsserted(() -> {
 					assertEquals("OpenTelemetry Collector started.", outputProcessor.getBlocks());

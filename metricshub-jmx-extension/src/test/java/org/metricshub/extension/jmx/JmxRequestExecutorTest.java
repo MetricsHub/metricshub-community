@@ -139,8 +139,9 @@ class JmxRequestExecutorTest {
 
 		final ObjectName objectName = new ObjectName("java.lang:type=Memory");
 		when(mBeanServerConnectionMock.queryNames(any(ObjectName.class), eq(null))).thenReturn(Set.of(objectName));
-		when(mBeanServerConnectionMock.getAttribute(any(), eq("BadAttr")))
-			.thenThrow(new javax.management.AttributeNotFoundException("BadAttr"));
+		when(mBeanServerConnectionMock.getAttribute(any(), eq("BadAttr"))).thenThrow(
+			new javax.management.AttributeNotFoundException("BadAttr")
+		);
 
 		final List<List<String>> result = jmxRequestExecutor.fetchMBean(
 			config,
@@ -252,8 +253,7 @@ class JmxRequestExecutorTest {
 
 	@Test
 	void testCheckConnectionWithCredentials() throws Exception {
-		final JmxConfiguration config = JmxConfiguration
-			.builder()
+		final JmxConfiguration config = JmxConfiguration.builder()
 			.hostname("testhost")
 			.port(9999)
 			.username("admin")

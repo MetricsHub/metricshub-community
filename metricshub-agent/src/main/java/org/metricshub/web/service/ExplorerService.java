@@ -156,8 +156,7 @@ public class ExplorerService {
 		boolean deep
 	) {
 		final Map<String, String> groupAttributes = new HashMap<>();
-		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry
-			.builder()
+		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry.builder()
 			.name(groupName)
 			.attributes(groupAttributes)
 			.build();
@@ -318,8 +317,7 @@ public class ExplorerService {
 
 		final var topLevel = telemetryManagers == null ? null : telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY);
 
-		return Optional
-			.ofNullable(topLevel)
+		return Optional.ofNullable(topLevel)
 			.map(m -> m.get(resourceName))
 			.map(tm -> buildFullResourceNode(resourceName, tm))
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName));

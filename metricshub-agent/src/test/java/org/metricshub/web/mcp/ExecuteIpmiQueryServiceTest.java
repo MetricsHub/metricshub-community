@@ -66,8 +66,7 @@ class ExecuteIpmiQueryServiceTest {
 	@Test
 	void testExecuteIpmiQueryWithoutConfiguration() {
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -82,10 +81,8 @@ class ExecuteIpmiQueryServiceTest {
 		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null);
 
 		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
-		assertEquals(
-			"No IPMI configuration found for hostname.",
-			result.getHosts().get(0).getResponse().getError(),
-			() -> "Should report missing IPMI configuration"
+		assertEquals("No IPMI configuration found for hostname.", result.getHosts().get(0).getResponse().getError(), () ->
+			"Should report missing IPMI configuration"
 		);
 	}
 
@@ -104,16 +101,14 @@ class ExecuteIpmiQueryServiceTest {
 	@Test
 	void testExecuteIpmiQuery() throws Exception {
 		// Creating a IPMI Configuration for the host
-		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the IPMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
 			.build();
@@ -125,32 +120,29 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Mocking executeIpmi query on IPMI request executor
-		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class)))
-			.thenReturn("Success");
+		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class))).thenReturn(
+			"Success"
+		);
 
 		final MultiHostToolResponse<QueryResponse> result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, 8);
 
 		assertEquals(1, result.getHosts().size(), () -> "One host response expected");
-		assertEquals(
-			"Success",
-			result.getHosts().get(0).getResponse().getResponse(),
-			() -> "The query result should be equals to `Success`"
+		assertEquals("Success", result.getHosts().get(0).getResponse().getResponse(), () ->
+			"The query result should be equals to `Success`"
 		);
 	}
 
 	@Test
 	void testExecuteIpmiQueryExtensionThrows() throws Exception {
 		// Creating a IPMI Configuration for the host
-		IpmiConfiguration ipmiConfiguration = IpmiConfiguration
-			.builder()
+		IpmiConfiguration ipmiConfiguration = IpmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the IPMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(IpmiConfiguration.class, ipmiConfiguration))
 			.build();
@@ -162,17 +154,17 @@ class ExecuteIpmiQueryServiceTest {
 		when(agentContext.getTelemetryManagers()).thenReturn(Map.of("Paris", Map.of(HOSTNAME, telemetryManager)));
 
 		// Make the executor throw when the extension tries to execute
-		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class)))
-			.thenThrow(new RuntimeException("An error has occurred"));
+		when(ipmiRequestExecutorMock.executeIpmiGetSensors(eq(HOSTNAME), any(IpmiConfiguration.class))).thenThrow(
+			new RuntimeException("An error has occurred")
+		);
 
 		// Call the execute query method
 		QueryResponse result = ipmiQueryService.executeQuery(List.of(HOSTNAME), null, null).getHosts().get(0).getResponse();
 
 		// Assertions
 		assertNotNull(result.getError(), () -> "Error should be returned when executor throws");
-		assertTrue(
-			result.getError().contains("An error has occurred"),
-			() -> "Error message should include the thrown text"
+		assertTrue(result.getError().contains("An error has occurred"), () ->
+			"Error message should include the thrown text"
 		);
 	}
 }

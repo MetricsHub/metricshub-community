@@ -27,8 +27,7 @@ class TableJoinSourceDeserializerTest extends DeserializerTest {
 			Map<String, Source> expected = new LinkedHashMap<>();
 			expected.put(
 				"testTableJoinSource",
-				TableJoinSource
-					.builder()
+				TableJoinSource.builder()
 					.type("tableJoin")
 					.forceSerialization(false)
 					.leftTable("testLeft")

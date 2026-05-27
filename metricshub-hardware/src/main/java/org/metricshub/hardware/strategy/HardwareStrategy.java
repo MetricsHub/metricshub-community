@@ -54,8 +54,7 @@ public class HardwareStrategy implements IStrategy {
 	/**
 	 * Set of all the hardware monitor types as strings
 	 */
-	private static final Set<String> HARDWARE_MONITOR_TYPES = Stream
-		.of(KnownMonitorType.values())
+	private static final Set<String> HARDWARE_MONITOR_TYPES = Stream.of(KnownMonitorType.values())
 		.filter(monitorType -> !EXCLUDED_MONITOR_TYPES.contains(monitorType))
 		.map(KnownMonitorType::getKey)
 		.collect(Collectors.toSet());

@@ -36,8 +36,7 @@ class HttpCliTest {
 	private static final String BODY_FILE_PATH = "src/test/resources/cli/body.txt";
 	private static final String WRONG_BODY_FILE_PATH = "wrong/path/body.txt";
 	private static final String RESULT_CONTENT = "all_with_status";
-	private static final String FILE_HEADER =
-		"""
+	private static final String FILE_HEADER = """
 		Content-Type: application/xml
 		User-Agent: Mozilla/5.0
 		Accept: text/html
@@ -58,8 +57,7 @@ class HttpCliTest {
 		httpCli.setHeaders(HEADERS);
 		httpCli.setBody(BODY);
 
-		String header = HEADERS
-			.entrySet()
+		String header = HEADERS.entrySet()
 			.stream()
 			.map(entry -> "%s: %s".formatted(entry.getKey(), entry.getValue()))
 			.collect(Collectors.joining("\n"));
@@ -103,7 +101,7 @@ class HttpCliTest {
 		{
 			httpCli.setUrl("https://hostname:443/www.test.com/path 1/");
 			ParameterException exceptionMessage = assertThrows(ParameterException.class, () -> httpCli.validateUrl());
-			assertTrue(exceptionMessage.getMessage().contains("URL contains invalid characters:"));
+			assertTrue(exceptionMessage.getMessage().contains("Invalid URL: Illegal character in path at index 38"));
 			httpCli.setUrl(URL);
 			assertDoesNotThrow(() -> httpCli.validateUrl());
 		}

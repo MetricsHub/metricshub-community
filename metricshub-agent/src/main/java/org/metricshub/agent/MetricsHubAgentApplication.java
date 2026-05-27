@@ -91,8 +91,7 @@ public class MetricsHubAgentApplication implements Runnable {
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = agentContext.getConfigDirectory();
 
-			DirectoryWatcherTask
-				.builder()
+			DirectoryWatcherTask.builder()
 				.directory(configDirectory)
 				.filter((WatchEvent<?> event) -> {
 					final Object context = event.context();
@@ -114,8 +113,7 @@ public class MetricsHubAgentApplication implements Runnable {
 					final AgentContext newAgentContext = loadNewAgentContext();
 
 					// Reload the agent according to the new Agent Context
-					ReloadService
-						.builder()
+					ReloadService.builder()
 						.withRunningAgentContext(agentContext)
 						.withReloadedAgentContext(newAgentContext)
 						.build()
@@ -152,13 +150,11 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * @return The checksum of the configuration directory
 	 */
 	private static String buildChecksum(final ExtensionManager extensionManager, final Path configDirectory) {
-		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(
-			configDirectory,
-			path ->
-				extensionManager
-					.findConfigurationFileExtensions()
-					.stream()
-					.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
+		return ConfigHelper.calculateDirectoryMD5ChecksumSafe(configDirectory, path ->
+			extensionManager
+				.findConfigurationFileExtensions()
+				.stream()
+				.anyMatch(fileExtension -> path.toString().endsWith(fileExtension))
 		);
 	}
 

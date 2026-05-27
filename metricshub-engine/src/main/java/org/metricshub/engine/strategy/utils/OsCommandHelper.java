@@ -83,29 +83,23 @@ public class OsCommandHelper {
 				// Example: ${file::embedded-file-number} // NOSONAR on comment
 				final String fileNameRef = matcher.group();
 
-				embeddedTempFiles.computeIfAbsent(
-					fileNameRef,
-					_ -> {
-						// The embedded file is available in the connector
-						final EmbeddedFile embeddedFile = commandLineEmbeddedFiles.get(fileNumber);
+				embeddedTempFiles.computeIfAbsent(fileNameRef, _ -> {
+					// The embedded file is available in the connector
+					final EmbeddedFile embeddedFile = commandLineEmbeddedFiles.get(fileNumber);
 
-						// This means there is a design problem
-						state(
-							embeddedFile != null,
-							() -> "Cannot get the EmbeddedFile from the Connector. File name: " + fileNumber
-						);
-						final byte[] content = embeddedFile.getContent();
+					// This means there is a design problem
+					state(embeddedFile != null, () -> "Cannot get the EmbeddedFile from the Connector. File name: " + fileNumber);
+					final byte[] content = embeddedFile.getContent();
 
-						// This means there is a design problem, the content can never be null
-						state(content != null, () -> "EmbeddedFile content is null. File name: " + fileNumber);
+					// This means there is a design problem, the content can never be null
+					state(content != null, () -> "EmbeddedFile content is null. File name: " + fileNumber);
 
-						try {
-							return createTempFileWithEmbeddedFileContent(embeddedFile, sudoInformation, tempFileCreator);
-						} catch (final IOException e) {
-							throw new TempFileCreationException(e);
-						}
+					try {
+						return createTempFileWithEmbeddedFileContent(embeddedFile, sudoInformation, tempFileCreator);
+					} catch (final IOException e) {
+						throw new TempFileCreationException(e);
 					}
-				);
+				});
 			}
 			return Collections.unmodifiableMap(embeddedTempFiles);
 		} catch (final Exception e) {
@@ -185,15 +179,17 @@ public class OsCommandHelper {
 
 		final Optional<String> maybeSudoFile = getFileNameFromSudoCommand(text);
 
-		final String sudoReplace = maybeSudoFile.isPresent() &&
+		final String sudoReplace =
+			maybeSudoFile.isPresent() &&
 			sudoInformation != null &&
 			sudoInformation.isUseSudo() &&
 			sudoInformation.useSudoCommands().contains(maybeSudoFile.get())
-			? sudoInformation.sudoCommand()
-			: EMPTY;
+				? sudoInformation.sudoCommand()
+				: EMPTY;
 
 		return maybeSudoFile
-			.map(fileName -> text.replaceAll(protectCaseInsensitiveRegex(String.format("%%{SUDO:%s}", fileName)), sudoReplace)
+			.map(fileName ->
+				text.replaceAll(protectCaseInsensitiveRegex(String.format("%%{SUDO:%s}", fileName)), sudoReplace)
 			)
 			.orElse(text);
 	}

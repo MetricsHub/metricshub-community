@@ -31,13 +31,11 @@ class GaugeSuppressZerosStateMetricRecorderTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		recorder =
-			GaugeSuppressZerosStateMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withDescription("Test gauge suppress zeros state metric")
-				.withStateValue(TEST_STATE_VALUE)
-				.build();
+		recorder = GaugeSuppressZerosStateMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withDescription("Test gauge suppress zeros state metric")
+			.withStateValue(TEST_STATE_VALUE)
+			.build();
 	}
 
 	@Test
@@ -75,14 +73,12 @@ class GaugeSuppressZerosStateMetricRecorderTest {
 		when(mockMetric.getCollectTime()).thenReturn(System.currentTimeMillis());
 		when(mockMetric.getAttributes()).thenReturn(Map.of("state", "ok"));
 
-		recorder =
-			GaugeSuppressZerosStateMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withDescription("Test gauge suppress zeros state metric")
-				.withStateValue(TEST_STATE_VALUE)
-				.withResourceAttributes(Map.of("resource", "resourceValue"))
-				.build();
+		recorder = GaugeSuppressZerosStateMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withDescription("Test gauge suppress zeros state metric")
+			.withStateValue(TEST_STATE_VALUE)
+			.withResourceAttributes(Map.of("resource", "resourceValue"))
+			.build();
 
 		// When
 		final Optional<Metric> result = recorder.doRecord();

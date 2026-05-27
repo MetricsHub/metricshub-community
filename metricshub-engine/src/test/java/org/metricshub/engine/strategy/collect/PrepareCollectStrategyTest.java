@@ -34,11 +34,9 @@ class PrepareCollectStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(Map.of());
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(MetricsHubConstants.HOST_NAME)
 					.sequential(false)
@@ -53,8 +51,7 @@ class PrepareCollectStrategyTest {
 
 		final ClientsExecutor clientExecutor = new ClientsExecutor(telemetryManager);
 		final long collectTime = System.currentTimeMillis();
-		final MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		final MonitorFactory monitorFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "id", MONITOR_ATTRIBUTE_NAME, "name")))
 			.discoveryTime(collectTime - 30 * 60 * 1000)
 			.connectorId(CONNECTOR)

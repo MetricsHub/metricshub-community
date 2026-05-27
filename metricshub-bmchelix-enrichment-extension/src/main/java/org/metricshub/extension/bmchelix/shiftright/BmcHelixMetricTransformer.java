@@ -52,8 +52,7 @@ public class BmcHelixMetricTransformer {
 
 		applyRulesToResource(resourceAttributes, resourceMetrics);
 
-		final Resource updatedResource = Resource
-			.newBuilder(resourceMetrics.getResource())
+		final Resource updatedResource = Resource.newBuilder(resourceMetrics.getResource())
 			.clearAttributes()
 			.addAllAttributes(attributeMapper.toKeyValues(resourceAttributes))
 			.build();

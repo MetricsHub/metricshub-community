@@ -32,8 +32,7 @@ class MetricsHubAgentServerTest {
 
 	@Test
 	void shouldMergeDefaultAndUserWebConfiguration() {
-		final AgentConfig agentConfig = AgentConfig
-			.builder()
+		final AgentConfig agentConfig = AgentConfig.builder()
 			.webConfig(Map.of("server.port", "1234", "spring.ai.mcp.server.enabled", "false"))
 			.build();
 

@@ -28,8 +28,7 @@ class KeepOnlyMatchingLinesComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(
-			KeepOnlyMatchingLines
-				.builder()
+			KeepOnlyMatchingLines.builder()
 				.type("keepOnlyMatchingLines")
 				.column(1)
 				.regExp("regExpTest")
@@ -40,8 +39,7 @@ class KeepOnlyMatchingLinesComputeDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testCompute",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testCompute}")
 					.type("http")
 					.url("/testUrl/")

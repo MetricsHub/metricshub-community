@@ -75,8 +75,7 @@ public class SqlTable implements Serializable {
 	 * @return A new instance of {@link SqlTable} with the same source, alias and columns.
 	 */
 	public SqlTable copy() {
-		return SqlTable
-			.builder()
+		return SqlTable.builder()
 			.source(source)
 			.alias(alias)
 			.columns(columns.stream().map(SqlColumn::copy).collect(Collectors.toCollection(ArrayList::new)))

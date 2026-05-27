@@ -26,8 +26,7 @@ class SnmpTableSourceDeserializerTest extends DeserializerTest {
 		Map<String, Source> expected = new LinkedHashMap<>();
 		expected.put(
 			"snmpTable1",
-			SnmpTableSource
-				.builder()
+			SnmpTableSource.builder()
 				.key("${source::beforeAll.snmpTable1}")
 				.type("snmpTable")
 				.oid("1.3.6.1.4.1")

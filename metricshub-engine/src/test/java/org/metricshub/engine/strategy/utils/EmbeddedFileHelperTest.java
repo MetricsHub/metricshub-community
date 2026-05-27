@@ -10,14 +10,12 @@ import org.metricshub.engine.connector.model.common.EmbeddedFile;
 
 class EmbeddedFileHelperTest {
 
-	private static final EmbeddedFile EMBEDDED_FILE1 = EmbeddedFile
-		.builder()
+	private static final EmbeddedFile EMBEDDED_FILE1 = EmbeddedFile.builder()
 		.content("BEGIN { print \"welcome!\" }".getBytes())
 		.filename("script-welcome.awk")
 		.id(1)
 		.build();
-	private static final EmbeddedFile EMBEDDED_FILE2 = EmbeddedFile
-		.builder()
+	private static final EmbeddedFile EMBEDDED_FILE2 = EmbeddedFile.builder()
 		.content("BEGIN { print \"hello!\" }".getBytes())
 		.filename("script-hello.awk")
 		.id(2)

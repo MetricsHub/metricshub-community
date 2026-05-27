@@ -105,8 +105,7 @@ public class JawkSource extends Source {
 
 	@Override
 	public Source copy() {
-		return JawkSource
-			.builder()
+		return JawkSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

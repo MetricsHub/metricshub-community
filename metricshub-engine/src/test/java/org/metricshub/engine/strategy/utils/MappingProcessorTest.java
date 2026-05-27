@@ -38,8 +38,7 @@ class MappingProcessorTest {
 		final String vendorSource1Ref = "${source::monitors.cpu.discovery.sources.vendor}";
 		final String vendorIdSource1Ref = "${source::monitors.cpu.discovery.sources.id}";
 
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.telemetryManager(telemetryManager)
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -240,8 +239,7 @@ class MappingProcessorTest {
 	@Test
 	void testInterpretNonContextMappingReplaceColumnReferences() {
 		final List<String> row = Arrays.asList("cpu", "DellOpenManage", "1.1", "Dell $1", null);
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.telemetryManager(new TelemetryManager())
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -289,8 +287,7 @@ class MappingProcessorTest {
 			"4000"
 		);
 
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.telemetryManager(telemetryManager)
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -340,8 +337,7 @@ class MappingProcessorTest {
 	void testInterpretNonContextMappingRate() {
 		Monitor monitor = Monitor.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 			.build();
 
@@ -351,8 +347,7 @@ class MappingProcessorTest {
 
 		// Correct values
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -370,8 +365,7 @@ class MappingProcessorTest {
 
 		// Non Double value
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -389,8 +383,7 @@ class MappingProcessorTest {
 
 		// No collect time
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -410,8 +403,7 @@ class MappingProcessorTest {
 	void testInterpretNonContextMappingFakeCounter() {
 		Monitor monitor = Monitor.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 			.build();
 
@@ -421,8 +413,7 @@ class MappingProcessorTest {
 
 		// Correct values with no previous value
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -443,8 +434,7 @@ class MappingProcessorTest {
 
 		// Correct values with previous value
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -462,8 +452,7 @@ class MappingProcessorTest {
 
 		// Non Double value
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -481,8 +470,7 @@ class MappingProcessorTest {
 
 		// No collect time
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -504,8 +492,7 @@ class MappingProcessorTest {
 		{
 			Monitor monitor = Monitor.builder().build();
 
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 				.build();
 
@@ -513,8 +500,7 @@ class MappingProcessorTest {
 			metricFactory.collectNumberMetric(monitor, "hw.power_supply.limit", 1000.0, 120000L);
 			monitor.getMetric("hw.power_supply.limit", NumberMetric.class).save();
 
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -536,8 +522,7 @@ class MappingProcessorTest {
 		{
 			Monitor monitor = Monitor.builder().build();
 
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 				.build();
 
@@ -545,8 +530,7 @@ class MappingProcessorTest {
 			metricFactory.collectNumberMetric(monitor, "hw.power_supply.limit", 1000.0, 120000L);
 			monitor.getMetric("hw.power_supply.limit", NumberMetric.class).save();
 
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -568,13 +552,11 @@ class MappingProcessorTest {
 		{
 			Monitor monitor = Monitor.builder().build();
 
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 				.build();
 
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -595,8 +577,7 @@ class MappingProcessorTest {
 
 	@Test
 	void testInterpretContextMappingLegacyLedStatus() {
-		Monitor monitor = Monitor
-			.builder()
+		Monitor monitor = Monitor.builder()
 			.attributes(Map.of("__on_status", "ok", "__off_status", "failed", "__blinking_status", "degraded"))
 			.build();
 
@@ -611,8 +592,7 @@ class MappingProcessorTest {
 			"legacyLedStatus(broken)"
 		);
 
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).metrics(keyValuePairs).build())
 			.build();
@@ -627,13 +607,11 @@ class MappingProcessorTest {
 	void testInterpretNonContextMappingComputePowerShareRatio() {
 		final Monitor monitor = new Monitor();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(Map.of("vm", Map.of("monitor", monitor)))
 			.build();
 
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.telemetryManager(telemetryManager)
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -658,15 +636,13 @@ class MappingProcessorTest {
 	void testInterpretNonContextMappingLookup() {
 		Monitor monitor = Monitor.builder().attributes(Map.of("id", "3", "controller_number", "2")).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(Map.of("disk_controller", Map.of("monitor", monitor)))
 			.build();
 
 		final List<String> row = List.of("randomValue", "2");
 
-		final MappingProcessor mappingProcessor = MappingProcessor
-			.builder()
+		final MappingProcessor mappingProcessor = MappingProcessor.builder()
 			.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 			.telemetryManager(telemetryManager)
 			.mapping(Mapping.builder().source(HARDCODED_SOURCE).build())
@@ -744,15 +720,13 @@ class MappingProcessorTest {
 	void testInterpretNonContextMappingAccumulate() {
 		Monitor monitor = Monitor.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(Map.of("enclosure", Map.of("monitor", monitor)))
 			.build();
 
 		// First collect: no previous value, counter should equal the delta value
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())
@@ -774,8 +748,7 @@ class MappingProcessorTest {
 
 		// Second collect: previous value exists, counter should be previous + delta
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())
@@ -792,8 +765,7 @@ class MappingProcessorTest {
 
 		// Non-double value: should return empty
 		{
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.jobInfo(JobInfo.builder().connectorId(MY_CONNECTOR_1_NAME).build())
 				.telemetryManager(telemetryManager)
 				.mapping(Mapping.builder().metrics(Map.of("hw.errors", "accumulate($1)")).build())

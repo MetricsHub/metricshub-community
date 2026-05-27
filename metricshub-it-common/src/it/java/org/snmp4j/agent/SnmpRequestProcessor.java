@@ -124,17 +124,16 @@ public class SnmpRequestProcessor extends CommandProcessor {
 
 					// Create a new query in read only access
 					if (query == null) {
-						query =
-							new VACMQuery(
-								context,
-								scope.getLowerBound(),
-								scope.isLowerIncluded(),
-								scope.getUpperBound(),
-								scope.isUpperIncluded(),
-								request.getViewName(),
-								false,
-								request
-							);
+						query = new VACMQuery(
+							context,
+							scope.getLowerBound(),
+							scope.isLowerIncluded(),
+							scope.getUpperBound(),
+							scope.isUpperIncluded(),
+							request.getViewName(),
+							false,
+							request
+						);
 						sreq.setQuery(query);
 					}
 					final MOServerLookupEvent lookupEvent = new MOServerLookupEvent(

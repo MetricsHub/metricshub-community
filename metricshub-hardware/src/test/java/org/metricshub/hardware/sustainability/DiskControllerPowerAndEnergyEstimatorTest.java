@@ -24,12 +24,10 @@ class DiskControllerPowerAndEnergyEstimatorTest {
 	@BeforeEach
 	void init() {
 		monitor = Monitor.builder().build();
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(1696597422644L)
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(1696597422644L)
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
 		diskControllerPowerAndEnergyEstimator = new DiskControllerPowerAndEnergyEstimator(monitor, telemetryManager);
 	}
 

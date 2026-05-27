@@ -161,8 +161,7 @@ public class HostDetailsService implements IMCPToolService {
 	 */
 	private HostDetails getHostDetailsIfPresent(final TelemetryManager telemetryManager) {
 		// Collect connector IDs from the "connector" monitor group (empty if none present).
-		final Set<String> connectors = Optional
-			.ofNullable(telemetryManager.getMonitors())
+		final Set<String> connectors = Optional.ofNullable(telemetryManager.getMonitors())
 			.map(m -> m.get("connector"))
 			.orElse(Map.of())
 			.values()
@@ -171,8 +170,7 @@ public class HostDetailsService implements IMCPToolService {
 			.collect(Collectors.toSet());
 
 		// Collect metrics that represent "host up" status for this host.
-		final Set<NumberMetric> hostUpMetrics = Optional
-			.ofNullable(telemetryManager.getEndpointHostMonitor())
+		final Set<NumberMetric> hostUpMetrics = Optional.ofNullable(telemetryManager.getEndpointHostMonitor())
 			.map(Monitor::getMetrics)
 			.orElse(Collections.emptyMap())
 			.entrySet()
@@ -197,8 +195,7 @@ public class HostDetailsService implements IMCPToolService {
 			.collect(Collectors.toSet());
 
 		// Build and return the final HostDetails object.
-		return HostDetails
-			.builder()
+		return HostDetails.builder()
 			.configuredProtocols(protocols)
 			.workingConnectors(connectors)
 			.collectors(collectors)

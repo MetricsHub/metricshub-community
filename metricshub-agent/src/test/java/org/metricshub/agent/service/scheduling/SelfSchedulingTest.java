@@ -46,8 +46,7 @@ class SelfSchedulingTest {
 	void testSchedule() {
 		TestHelper.configureGlobalLogger();
 		final AgentInfo agentInfo = new AgentInfo();
-		final AgentConfig agentConfig = AgentConfig
-			.builder()
+		final AgentConfig agentConfig = AgentConfig.builder()
 			.attributes(Map.of(COMPANY_ATTRIBUTE_KEY, COMPANY_ATTRIBUTE_VALUE))
 			.build();
 		final TestHelper.TestOtelClient otelClient = new TestHelper.TestOtelClient();
@@ -58,8 +57,7 @@ class SelfSchedulingTest {
 
 		doReturn(scheduledFutureMock).when(taskSchedulerMock).schedule(any(Runnable.class), any(Trigger.class));
 
-		final SelfScheduling selfScheduling = SelfScheduling
-			.builder()
+		final SelfScheduling selfScheduling = SelfScheduling.builder()
 			.withAgentConfig(agentConfig)
 			.withAgentInfo(agentInfo)
 			.withExtensionManager(ExtensionManager.empty())

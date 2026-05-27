@@ -60,8 +60,7 @@ public class WinProcessCriterionProcessor {
 		final boolean logMode,
 		final String recordOutputDirectory
 	) {
-		final WmiCriterion criterion = WmiCriterion
-			.builder()
+		final WmiCriterion criterion = WmiCriterion.builder()
 			.query("SELECT ProcessId,Name,ParentProcessId,CommandLine FROM Win32_Process")
 			.namespace("root\\cimv2")
 			.expectedResult(processCriterion.getCommandLine())

@@ -132,8 +132,7 @@ public class TableJoinSource extends Source {
 
 	@Override
 	public TableJoinSource copy() {
-		return TableJoinSource
-			.builder()
+		return TableJoinSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

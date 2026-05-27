@@ -97,8 +97,7 @@ public class WmiSource extends Source {
 
 	@Override
 	public WmiSource copy() {
-		return WmiSource
-			.builder()
+		return WmiSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

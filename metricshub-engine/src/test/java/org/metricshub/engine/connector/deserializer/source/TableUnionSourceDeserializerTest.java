@@ -33,8 +33,7 @@ class TableUnionSourceDeserializerTest extends DeserializerTest {
 		Map<String, Source> expected = new LinkedHashMap<>();
 		expected.put(
 			"testTableUnionSource",
-			TableUnionSource
-				.builder()
+			TableUnionSource.builder()
 				.key("${source::beforeAll.testTableUnionSource}")
 				.type("tableUnion")
 				.tables(tables)

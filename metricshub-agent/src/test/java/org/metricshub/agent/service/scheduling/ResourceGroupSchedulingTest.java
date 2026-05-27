@@ -45,13 +45,11 @@ class ResourceGroupSchedulingTest {
 	@Test
 	void testSchedule() {
 		TestHelper.configureGlobalLogger();
-		final AgentConfig agentConfig = AgentConfig
-			.builder()
+		final AgentConfig agentConfig = AgentConfig.builder()
 			.attributes(Map.of(COMPANY_ATTRIBUTE_KEY, COMPANY_ATTRIBUTE_VALUE))
 			.build();
 
-		final ResourceGroupConfig resourceGroupConfig = ResourceGroupConfig
-			.builder()
+		final ResourceGroupConfig resourceGroupConfig = ResourceGroupConfig.builder()
 			.metrics(
 				Map.of(HW_SITE_CARBON_INTENSITY_METRIC, 350D, HW_SITE_ELECTRICITY_COST_METRIC, 0.12D, HW_SITE_PUE_METRIC, 1.8D)
 			)
@@ -66,8 +64,7 @@ class ResourceGroupSchedulingTest {
 
 		doReturn(scheduledFutureMock).when(taskSchedulerMock).schedule(any(Runnable.class), any(Trigger.class));
 
-		final ResourceGroupScheduling resourceGroupScheduling = ResourceGroupScheduling
-			.builder()
+		final ResourceGroupScheduling resourceGroupScheduling = ResourceGroupScheduling.builder()
 			.withAgentConfig(agentConfig)
 			.withExtensionManager(ExtensionManager.empty())
 			.withMetricsExporter(metricsExporter)

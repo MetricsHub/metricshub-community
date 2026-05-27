@@ -117,7 +117,7 @@ public class OrderedSources {
 			if (order.size() != sources.size()) {
 				final String message = String.format(
 					"Hostname %s - The %s size (%d) is not equals to the sources size (%d)." +
-					" The sources will not be processed. Context: connector %s, monitor type: %s, job: %s.",
+						" The sources will not be processed. Context: connector %s, monitor type: %s, job: %s.",
 					jobInfo.getHostname(),
 					orderDescription,
 					order.size(),
@@ -130,13 +130,12 @@ public class OrderedSources {
 				throw new IllegalStateException(message);
 			}
 
-			this.sources$value =
-				sources
-					.entrySet()
-					.stream()
-					.sorted(Comparator.comparing(entry -> findSourcePosition(entry.getKey(), order, orderDescription, jobInfo)))
-					.map(Entry::getValue)
-					.collect(Collectors.toList()); // NOSONAR
+			this.sources$value = sources
+				.entrySet()
+				.stream()
+				.sorted(Comparator.comparing(entry -> findSourcePosition(entry.getKey(), order, orderDescription, jobInfo)))
+				.map(Entry::getValue)
+				.collect(Collectors.toList()); // NOSONAR
 
 			this.sources$set = true;
 			return this;
@@ -162,7 +161,7 @@ public class OrderedSources {
 			if (index == -1) {
 				final String message = String.format(
 					"Hostname %s - The source (%s) listed in the %s is not defined." +
-					" The sources will not be processed. Context: connector %s, monitor type: %s, job: %s.",
+						" The sources will not be processed. Context: connector %s, monitor type: %s, job: %s.",
 					jobInfo.getHostname(),
 					sourceName,
 					orderDescription,

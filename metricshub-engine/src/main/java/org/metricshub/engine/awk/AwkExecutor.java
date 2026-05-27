@@ -70,18 +70,15 @@ public class AwkExecutor {
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
 		try {
-			return TUPLES_CACHE.computeIfAbsent(
-				awkScript,
-				code -> {
-					try {
-						return awkEngine.compile(code);
-					} catch (IOException e) {
-						// Throw a RuntimeException so the e.getMessage() can be passed
-						// through the call stack
-						throw new RuntimeException(e.getMessage());
-					}
+			return TUPLES_CACHE.computeIfAbsent(awkScript, code -> {
+				try {
+					return awkEngine.compile(code);
+				} catch (IOException e) {
+					// Throw a RuntimeException so the e.getMessage() can be passed
+					// through the call stack
+					throw new RuntimeException(e.getMessage());
 				}
-			);
+			});
 		} catch (Exception e) {
 			throw new AwkException("Failed to compile Awk script:\n" + awkScript, e);
 		}
@@ -103,18 +100,15 @@ public class AwkExecutor {
 		// code, so we don't "compile" it every time.
 		// This saves a lot of CPU.
 		try {
-			return TUPLES_CACHE.computeIfAbsent(
-				awkExpression,
-				code -> {
-					try {
-						return AWK_PLUS_UTILITY.compileForEval(code);
-					} catch (IOException e) {
-						// Throw a RuntimeException so the e.getMessage() can be passed
-						// through the call stack
-						throw new RuntimeException(e.getMessage());
-					}
+			return TUPLES_CACHE.computeIfAbsent(awkExpression, code -> {
+				try {
+					return AWK_PLUS_UTILITY.compileForEval(code);
+				} catch (IOException e) {
+					// Throw a RuntimeException so the e.getMessage() can be passed
+					// through the call stack
+					throw new RuntimeException(e.getMessage());
 				}
-			);
+			});
 		} catch (Exception e) {
 			throw new AwkException("Failed to compile Awk expression: " + awkExpression, e);
 		}

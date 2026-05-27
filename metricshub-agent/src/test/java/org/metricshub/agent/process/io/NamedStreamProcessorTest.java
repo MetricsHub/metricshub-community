@@ -9,7 +9,8 @@ class NamedStreamProcessorTest {
 	private static final String TAG = "tag";
 
 	@Test
-	void test() { // NOSONAR This method already performs assertions
+	void test() {
+		// NOSONAR This method already performs assertions
 		NamedStreamProcessor processor = new NamedStreamProcessor(TAG, new TestStreamProcessor());
 		processor.process("value");
 	}

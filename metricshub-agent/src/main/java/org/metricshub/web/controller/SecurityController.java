@@ -72,8 +72,8 @@ public class SecurityController {
 	@Operation(
 		summary = "Encrypt a password",
 		description = "JSON body must include passwordBase64: Base64 encoding of the UTF-8 password bytes (not ciphertext). " +
-		"The server decodes it, then encrypts with the MetricsHub keystore. " +
-		"Response JSON contains encryptedPassword (same format as the encrypt CLI).",
+			"The server decodes it, then encrypts with the MetricsHub keystore. " +
+			"Response JSON contains encryptedPassword (same format as the encrypt CLI).",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Encrypted password returned"),
 			@ApiResponse(responseCode = "400", description = "Invalid or missing body, bad Base64, or encryption failed")

@@ -130,9 +130,7 @@ public class SecurityConfig {
 	 */
 	@Bean
 	public AuthenticationEntryPoint jsonAuthEntryPoint() {
-		return (_, response, _) -> 
-			SecurityHelper.writeUnauthorizedResponse(response)
-		;
+		return (_, response, _) -> SecurityHelper.writeUnauthorizedResponse(response);
 	}
 
 	/**
@@ -142,9 +140,7 @@ public class SecurityConfig {
 	 */
 	@Bean
 	public AccessDeniedHandler jsonForbiddenHandler() {
-		return (_, response, _) -> 
-			SecurityHelper.writeForbiddenResponse(response);
-		
+		return (_, response, _) -> SecurityHelper.writeForbiddenResponse(response);
 	}
 
 	/**

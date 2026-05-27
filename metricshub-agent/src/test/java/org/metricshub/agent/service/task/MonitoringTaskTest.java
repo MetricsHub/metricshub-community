@@ -80,14 +80,12 @@ class MonitoringTaskTest {
 
 	@BeforeAll
 	static void beforeAll() {
-		hostConfiguration =
-			HostConfiguration
-				.builder()
-				.hostname(HOSTNAME)
-				.hostId(HOSTNAME)
-				.hostType(DeviceKind.LINUX)
-				.configurations(Map.of(SnmpConfiguration.class, SnmpConfiguration.builder().build()))
-				.build();
+		hostConfiguration = HostConfiguration.builder()
+			.hostname(HOSTNAME)
+			.hostId(HOSTNAME)
+			.hostType(DeviceKind.LINUX)
+			.configurations(Map.of(SnmpConfiguration.class, SnmpConfiguration.builder().build()))
+			.build();
 	}
 
 	@Test
@@ -115,8 +113,7 @@ class MonitoringTaskTest {
 		doReturn(telemetryManagerMock).when(monitoringTaskInfoMock).getTelemetryManager();
 		doReturn(host).when(telemetryManagerMock).getEndpointHostMonitor();
 		doReturn(
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.loggerLevel("OFF")
 				.attributes(Map.of(HOST_NAME, HOSTNAME, HOST_TYPE_ATTRIBUTE_KEY, OS_LINUX))
 				.discoveryCycle(4)
@@ -141,23 +138,21 @@ class MonitoringTaskTest {
 		monitoringTask.run(); // Collect
 		monitoringTask.run(); // Collect
 
-		verify(telemetryManagerMock, times(1))
-			.run(
-				any(DetectionStrategy.class),
-				any(DiscoveryStrategy.class),
-				any(SimpleStrategy.class),
-				any(HardwarePostDiscoveryStrategy.class),
-				any(HardwareMonitorNameGenerationStrategy.class)
-			);
-		verify(telemetryManagerMock, times(4))
-			.run(
-				any(PrepareCollectStrategy.class),
-				any(ProtocolHealthCheckStrategy.class),
-				any(CollectStrategy.class),
-				any(SimpleStrategy.class),
-				any(HardwarePostCollectStrategy.class),
-				any(HardwareMonitorNameGenerationStrategy.class)
-			);
+		verify(telemetryManagerMock, times(1)).run(
+			any(DetectionStrategy.class),
+			any(DiscoveryStrategy.class),
+			any(SimpleStrategy.class),
+			any(HardwarePostDiscoveryStrategy.class),
+			any(HardwareMonitorNameGenerationStrategy.class)
+		);
+		verify(telemetryManagerMock, times(4)).run(
+			any(PrepareCollectStrategy.class),
+			any(ProtocolHealthCheckStrategy.class),
+			any(CollectStrategy.class),
+			any(SimpleStrategy.class),
+			any(HardwarePostCollectStrategy.class),
+			any(HardwareMonitorNameGenerationStrategy.class)
+		);
 	}
 
 	@Test
@@ -176,8 +171,7 @@ class MonitoringTaskTest {
 		connectorStore.setStore(new HashMap<>());
 		connectorStore.addOne(
 			"connector",
-			Connector
-				.builder()
+			Connector.builder()
 				.metrics(
 					Map.of(
 						"hw.power",
@@ -189,8 +183,7 @@ class MonitoringTaskTest {
 		telemetryManager.setConnectorStore(connectorStore);
 		telemetryManager.setHostConfiguration(hostConfiguration);
 
-		final MonitorFactory hostFactory = MonitorFactory
-			.builder()
+		final MonitorFactory hostFactory = MonitorFactory.builder()
 			.attributes(hostAttributes)
 			.discoveryTime(System.currentTimeMillis())
 			.monitorType(KnownMonitorType.HOST.getKey())
@@ -213,8 +206,7 @@ class MonitoringTaskTest {
 		final Map<String, String> enclosureAttributes = new HashMap<>(
 			Map.of("name", "enclosure", "id", "enclosure", "serial_number", "SN12345")
 		);
-		final MonitorFactory enclosureFactory = MonitorFactory
-			.builder()
+		final MonitorFactory enclosureFactory = MonitorFactory.builder()
 			.attributes(enclosureAttributes)
 			.connectorId("connector")
 			.discoveryTime(System.currentTimeMillis())
