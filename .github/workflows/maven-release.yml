@@ -246,7 +246,7 @@ jobs:
           metricshub-community-linux-${{ inputs.releaseVersion }}-x86_64.tar.gz
 
     - name: Create Pull Request from ${{ needs.prepare.outputs.branchName }} to ${{ github.event.repository.default_branch }}
-      uses: devops-infra/action-pull-request@v1.1.2
+      uses: devops-infra/action-pull-request@v1.2.1
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ needs.prepare.outputs.branchName }}
@@ -263,7 +263,7 @@ jobs:
 
     - name: Configure AWS Credentials
       if: ${{ github.repository_owner == 'MetricsHub' }}
-      uses: aws-actions/configure-aws-credentials@v6.1.1
+      uses: aws-actions/configure-aws-credentials@v6.1.2
       with:
         role-to-assume: ${{ secrets.AWS_PUBLISH_ROLE_ARN }}
         role-session-name: ci
