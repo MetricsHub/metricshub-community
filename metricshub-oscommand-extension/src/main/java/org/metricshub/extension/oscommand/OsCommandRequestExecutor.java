@@ -326,7 +326,7 @@ public class OsCommandRequestExecutor {
 							protectCaseInsensitiveRegex(file.getAbsolutePath()),
 							Matcher.quoteReplacement(remoteDirectory + file.getName())
 						),
-					(s1, s2) -> s2
+					(_, s2) -> s2
 				);
 	}
 

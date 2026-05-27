@@ -288,7 +288,7 @@ public class ExtensionManager {
 			.stream()
 			.map(IProtocolExtension::getConfigurationToSourceMapping)
 			.flatMap(map -> map.entrySet().stream())
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue));
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue));
 	}
 
 	/**

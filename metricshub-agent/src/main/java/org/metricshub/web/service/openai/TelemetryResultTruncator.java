@@ -231,7 +231,7 @@ public class TelemetryResultTruncator {
 					.getResponse()
 					.getTelemetry()
 					.getMonitors()
-					.computeIfPresent(monitorType, (key, items) -> truncateTypeList(items, maxMonitors));
+					.computeIfPresent(monitorType, (_, items) -> truncateTypeList(items, maxMonitors));
 				break;
 			}
 		}

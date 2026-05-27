@@ -367,7 +367,8 @@ public class ReloadService {
 		// remove all the resource group resources from the task scheduling service
 		resourceGroupConfig
 			.getResources()
-			.forEach((resourceKey, resourceConfig) ->
+			.keySet()
+			.forEach(resourceKey ->
 				removeResourceFromTaskSchedulingService(
 					resourceGroupKey,
 					resourceKey,
@@ -524,7 +525,7 @@ public class ReloadService {
 
 		// Add the TelemetryManager to the resource
 		oldTelemetryManagers
-			.computeIfAbsent(resourceGroupKey, key -> new HashMap<>())
+			.computeIfAbsent(resourceGroupKey, _ -> new HashMap<>())
 			.put(resourceKey, newTelemetryManagers.get(resourceGroupKey).get(resourceKey));
 	}
 
@@ -567,7 +568,7 @@ public class ReloadService {
 			.getTelemetryManagers()
 			.computeIfPresent(
 				resourceGroupKey,
-				(key, resourceMap) -> {
+				(_, resourceMap) -> {
 					resourceMap.remove(resourceKey);
 					// Keep the group-level map unless empty
 					return resourceMap.isEmpty() ? null : resourceMap;
@@ -692,7 +693,7 @@ public class ReloadService {
 				log.warn("Maximum number of resources '{}' reached. Deleting '{}' resource configuration", quota, resourceKey);
 
 				// add the resource to the resourcesToRemove map.
-				resourcesToRemove.computeIfAbsent(resourceGroupKey, k -> new HashSet<>()).add(resourceKey);
+				resourcesToRemove.computeIfAbsent(resourceGroupKey, _ -> new HashSet<>()).add(resourceKey);
 			}
 		}
 

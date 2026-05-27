@@ -170,7 +170,7 @@ public class ExplorerService {
 			.forEach(resource ->
 				resource
 					.getMetrics()
-					.forEach((k, v) -> {
+					.forEach((_, _) -> {
 						// implement aggregation logic here
 					})
 			);
@@ -627,7 +627,7 @@ public class ExplorerService {
 				if (connectorId == null || connectorId.isBlank()) {
 					return;
 				}
-				result.computeIfAbsent(connectorId, k -> new HashSet<>()).add(monitor.getType());
+				result.computeIfAbsent(connectorId, _ -> new HashSet<>()).add(monitor.getType());
 			});
 
 		// Ensure that each listed connector-id exists, even if no non-connector/host
@@ -638,7 +638,7 @@ public class ExplorerService {
 				.stream()
 				.map(m -> m.getAttributes().get(MONITOR_ATTRIBUTE_ID))
 				.collect(Collectors.toSet());
-			connectorIds.forEach(id -> result.computeIfAbsent(id, k -> new HashSet<>()));
+			connectorIds.forEach(id -> result.computeIfAbsent(id, _ -> new HashSet<>()));
 		}
 
 		return result;

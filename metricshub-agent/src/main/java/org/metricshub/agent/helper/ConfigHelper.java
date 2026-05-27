@@ -402,7 +402,7 @@ public class ConfigHelper {
 		Process process = null;
 		try {
 			// Run the Windows "whoami /groups" command
-			process = Runtime.getRuntime().exec("whoami /groups");
+			process = new ProcessBuilder("whoami", "/groups").start();
 
 			try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 				// Filter for the "Users" group SID and extract the group name
@@ -1288,7 +1288,7 @@ public class ConfigHelper {
 		// attempt to compute its definition.
 		metricDefinitions.computeIfAbsent(
 			MetricsHubConstants.CONNECTOR_STATUS_METRIC_KEY,
-			key -> MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
+			_ -> MetricsHubConstants.CONNECTOR_STATUS_METRIC_DEFINITION
 		);
 
 		return metricDefinitions;

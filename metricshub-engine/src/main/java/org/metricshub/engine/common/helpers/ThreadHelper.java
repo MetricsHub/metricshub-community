@@ -201,7 +201,7 @@ public class ThreadHelper {
 	 * @return the mutable counter holder
 	 */
 	private static AtomicStats getOrCreateStats(final StatsKey key) {
-		return STATS_MAP.computeIfAbsent(key, k -> new AtomicStats());
+		return STATS_MAP.computeIfAbsent(key, _ -> new AtomicStats());
 	}
 
 	/**

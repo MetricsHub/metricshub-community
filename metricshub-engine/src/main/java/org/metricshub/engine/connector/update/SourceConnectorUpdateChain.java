@@ -79,7 +79,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 			.entrySet()
 			.stream()
 			.map(entry -> buildDependencyEntry(entry, context, sourceGroup))
-			.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (v1, v2) -> v1));
+			.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (v1, _) -> v1));
 
 		// All the source identifiers are pending
 		final Set<String> pendingSourceIds = sources.entrySet().stream().map(Entry::getKey).collect(Collectors.toSet());
@@ -92,7 +92,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 			.stream()
 			.filter(entry -> !entry.getValue().isEmpty())
 			.map(entry -> Map.entry(entry.getKey(), new HashMap<String, Integer>()))
-			.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (v1, v2) -> v1));
+			.collect(Collectors.toMap(Entry::getKey, Entry::getValue, (v1, _) -> v1));
 
 		// Loop until all the pending source identifiers are processed
 		do {
@@ -233,7 +233,7 @@ public abstract class SourceConnectorUpdateChain extends AbstractConnectorUpdate
 		final Set<String> processedSources
 	) {
 		// If the level is not yet available create it then add the key
-		mapLevels.computeIfAbsent(level, k -> new LinkedHashSet<>()).add(sourceId);
+		mapLevels.computeIfAbsent(level, _ -> new LinkedHashSet<>()).add(sourceId);
 
 		// Add the source in the processedSources
 		processedSources.add(sourceId);

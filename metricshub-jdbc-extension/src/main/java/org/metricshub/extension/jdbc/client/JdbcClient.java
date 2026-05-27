@@ -42,7 +42,7 @@ public class JdbcClient {
 
 	static {
 		// Set the default locale to US to ensure that the SQL query results are formatted correctly
-		Locale.setDefault(new Locale("en", "US"));
+		Locale.setDefault(Locale.of("en", "US"));
 	}
 
 	/**

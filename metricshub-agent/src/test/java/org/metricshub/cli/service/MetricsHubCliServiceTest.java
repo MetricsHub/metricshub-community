@@ -87,7 +87,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -134,7 +134,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -189,7 +189,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -244,7 +244,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -299,7 +299,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -354,7 +354,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -409,7 +409,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};
@@ -506,7 +506,7 @@ class MetricsHubCliServiceTest {
 		final StringBuilder builder = new StringBuilder();
 
 		// Define a CliPasswordReader that appends the password to the StringBuilder
-		final CliPasswordReader<char[]> cliPasswordReader = (format, args) -> {
+		final CliPasswordReader<char[]> cliPasswordReader = (_, _) -> {
 			builder.append(PASSWORD, 0, PASSWORD.length);
 			return PASSWORD;
 		};

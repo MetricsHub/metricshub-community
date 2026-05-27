@@ -66,7 +66,7 @@ class JmxExtensionTest {
 	@Test
 	void testShouldBuildConfigurationSuccessfully() throws Exception {
 		final JsonNode jsonNode = objectMapper.readTree("{\"hostname\": \"host\", \"port\": 1099, \"password\": \"enc\"}");
-		final UnaryOperator<char[]> decrypt = p -> "dec".toCharArray();
+		final UnaryOperator<char[]> decrypt = _ -> "dec".toCharArray();
 
 		final JmxConfiguration config = (JmxConfiguration) jmxExtension.buildConfiguration("jmx", jsonNode, decrypt);
 
@@ -381,7 +381,7 @@ class JmxExtensionTest {
 	@Test
 	void testShouldBuildConfigurationWithNullPassword() throws Exception {
 		final JsonNode jsonNode = objectMapper.readTree("{\"hostname\": \"host\", \"port\": 1099}");
-		final UnaryOperator<char[]> decrypt = p -> "decrypted".toCharArray();
+		final UnaryOperator<char[]> decrypt = _ -> "decrypted".toCharArray();
 
 		final JmxConfiguration config = (JmxConfiguration) jmxExtension.buildConfiguration("jmx", jsonNode, decrypt);
 

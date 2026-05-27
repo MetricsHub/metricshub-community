@@ -85,7 +85,7 @@ public abstract class AbstractOtelClient implements IOtelClient {
 
 		try {
 			// Performing a basic validation of the URL format
-			url = new URL(endpoint);
+			url = URI.create(endpoint).toURL();
 			uri = url.toURI();
 		} catch (MalformedURLException e) {
 			throw new IllegalStateException("Malformed endpoint: %s. Message: %s".formatted(endpoint, e.getMessage()), e);

@@ -291,7 +291,7 @@ public class EmbeddedFilesResolver {
 		return processedEmbeddedFiles
 			.values()
 			.stream()
-			.collect(Collectors.toMap(EmbeddedFile::getId, Function.identity(), (k1, k2) -> k1));
+			.collect(Collectors.toMap(EmbeddedFile::getId, Function.identity(), (k1, _) -> k1));
 	}
 
 	/**

@@ -67,7 +67,7 @@ public class TranslationTable implements ITranslationTable {
 					: translations
 						.entrySet()
 						.stream()
-						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (k1, k2) -> k2, HashMap::new))
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (_, k2) -> k2, HashMap::new))
 			)
 			.build();
 	}
@@ -80,7 +80,7 @@ public class TranslationTable implements ITranslationTable {
 	 */
 	public void update(UnaryOperator<String> updater) {
 		if (translations != null) {
-			translations.replaceAll((key, val) -> updater.apply(val));
+			translations.replaceAll((_, val) -> updater.apply(val));
 		}
 	}
 

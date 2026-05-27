@@ -106,11 +106,11 @@ public class HardwareMonitorNameGenerationStrategy extends AbstractStrategy {
 				if (connectorId != null) {
 					final Map<String, Map<String, Monitor>> hashesPerType = hashesByConnector.computeIfAbsent(
 						connectorId,
-						k -> new HashMap<>()
+						_ -> new HashMap<>()
 					);
 
 					// Get or create the per-type map<hash, monitor>
-					final Map<String, Monitor> hashMap = hashesPerType.computeIfAbsent(monitor.getType(), t -> new HashMap<>());
+					final Map<String, Monitor> hashMap = hashesPerType.computeIfAbsent(monitor.getType(), _ -> new HashMap<>());
 
 					// Compute & store
 					final String hash = computeIdCount(monitor);

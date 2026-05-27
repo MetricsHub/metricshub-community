@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,16 +120,16 @@ class HttpCliTest {
 
 	@Test
 	void testResolvePortFromUrl() throws MalformedURLException {
-		httpCli.parsedUrl = new java.net.URL(URL);
+		httpCli.parsedUrl = URI.create(URL).toURL();
 		assertEquals(443, httpCli.resolvePortFromUrl());
 
-		httpCli.parsedUrl = new java.net.URL("https://www.test.com");
+		httpCli.parsedUrl = URI.create("https://www.test.com").toURL();
 		assertEquals(443, httpCli.resolvePortFromUrl());
 
-		httpCli.parsedUrl = new java.net.URL("http://www.test.com");
+		httpCli.parsedUrl = URI.create("http://www.test.com").toURL();
 		assertEquals(80, httpCli.resolvePortFromUrl());
 
-		httpCli.parsedUrl = new java.net.URL("http://hostname:555/subdomain");
+		httpCli.parsedUrl = URI.create("http://hostname:555/subdomain").toURL();
 		assertEquals(555, httpCli.resolvePortFromUrl());
 	}
 

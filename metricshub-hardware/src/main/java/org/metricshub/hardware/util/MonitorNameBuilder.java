@@ -128,47 +128,47 @@ public class MonitorNameBuilder {
 	static {
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.CPU.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildCpuName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildCpuName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.MEMORY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildMemoryName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildMemoryName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.PHYSICAL_DISK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.LOGICAL_DISK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLogicalDiskName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildLogicalDiskName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.DISK_CONTROLLER.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildDiskControllerName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildDiskControllerName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.NETWORK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildNetworkCardName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildNetworkCardName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.FAN.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildFanName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildFanName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.POWER_SUPPLY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildPowerSupplyName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildPowerSupplyName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.TEMPERATURE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildTemperatureName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildTemperatureName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.TAPE_DRIVE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildTapeDriveName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildTapeDriveName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.ROBOTICS.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildRoboticsName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildRoboticsName(monitor)
 		);
 		// Note: 'enclosure' requires a telemetryManager, so we pass it into the method.
 		MONITOR_NAME_BUILDERS.put(
@@ -177,35 +177,35 @@ public class MonitorNameBuilder {
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.VM.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildVmName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildVmName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.VOLTAGE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildVoltageName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildVoltageName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.BLADE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildBladeName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildBladeName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.GPU.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildGpuName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildGpuName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.BATTERY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildBatteryName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildBatteryName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.LED.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLedName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildLedName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.LUN.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLunName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildLunName(monitor)
 		);
 		MONITOR_NAME_BUILDERS.put(
 			KnownMonitorType.OTHER_DEVICE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildOtherDeviceName(monitor)
+			(monitor, _) -> MonitorNameBuilder.buildOtherDeviceName(monitor)
 		);
 	}
 

@@ -92,7 +92,7 @@ class ConfigHelperTest {
 
 				mockedResourceHelper
 					.when(() -> ResourceHelper.findSourceDirectory(ConfigHelper.class))
-					.thenAnswer(invocation -> tempDir.resolve("metricshub/app/jar").toFile());
+					.thenAnswer(_ -> tempDir.resolve("metricshub/app/jar").toFile());
 
 				final Path configDirOnWindows = ConfigHelper.getDefaultConfigDirectoryPath();
 
@@ -515,11 +515,11 @@ class ConfigHelperTest {
 
 	@Test
 	void testCalculateDirectoryMD5ChecksumEmptyDirectory(@TempDir Path emptyDir) {
-		final String checksum1 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, path -> true);
+		final String checksum1 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, _ -> true);
 		assertNotNull(checksum1, "Checksum 1 should not be null");
 		assertFalse(checksum1.isEmpty(), "Checksum 1 should not be empty string");
 
-		final String checksum2 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, path -> true);
+		final String checksum2 = ConfigHelper.calculateDirectoryMD5ChecksumSafe(emptyDir, _ -> true);
 		assertNotNull(checksum2, "Checksum 2 should not be null");
 		assertFalse(checksum2.isEmpty(), "Checksum 2 should not be empty string");
 		assertEquals(checksum1, checksum2, "Checksums should match for the same empty directory");

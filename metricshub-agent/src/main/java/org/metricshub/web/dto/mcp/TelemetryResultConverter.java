@@ -80,7 +80,7 @@ public class TelemetryResultConverter {
 					.sorted(Map.Entry.comparingByKey())
 					.forEach(entry -> {
 						final MonitorVo monitorVo = convertMonitor(entry.getValue());
-						monitorsByType.computeIfAbsent(monitorType, k -> new ArrayList<>()).add(monitorVo);
+						monitorsByType.computeIfAbsent(monitorType, _ -> new ArrayList<>()).add(monitorVo);
 					});
 			});
 
@@ -125,9 +125,9 @@ public class TelemetryResultConverter {
 			}
 			metrics.forEach((key, value) -> {
 				if (value instanceof Double doubleValue) {
-					numericValues.computeIfAbsent(key, k -> new ArrayList<>()).add(doubleValue);
+					numericValues.computeIfAbsent(key, _ -> new ArrayList<>()).add(doubleValue);
 				} else if (value instanceof String stringValue) {
-					stateCounts.computeIfAbsent(key, k -> new LinkedHashMap<>()).merge(stringValue, 1, Integer::sum);
+					stateCounts.computeIfAbsent(key, _ -> new LinkedHashMap<>()).merge(stringValue, 1, Integer::sum);
 				}
 			});
 		}

@@ -25,8 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.TextNode;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -256,7 +256,7 @@ public class ExecuteHttpQueryService implements IMCPToolService {
 		final String normalizedUrl = normalizeUrl(trimmedUrl);
 
 		try {
-			final var parsedUrl = new URL(normalizedUrl);
+			final var parsedUrl = URI.create(normalizedUrl).toURL();
 			parsedUrl.toURI();
 
 			final String hostname = parsedUrl.getHost();

@@ -424,7 +424,7 @@ public class ConnectorStoreComposer {
 				Collectors.toMap(
 					Map.Entry::getKey,
 					Map.Entry::getValue,
-					(e1, e2) -> e1,
+					(e1, _) -> e1,
 					() -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)
 				)
 			);

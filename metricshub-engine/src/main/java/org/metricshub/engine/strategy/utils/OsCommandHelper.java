@@ -85,7 +85,7 @@ public class OsCommandHelper {
 
 				embeddedTempFiles.computeIfAbsent(
 					fileNameRef,
-					k -> {
+					_ -> {
 						// The embedded file is available in the connector
 						final EmbeddedFile embeddedFile = commandLineEmbeddedFiles.get(fileNumber);
 

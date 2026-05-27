@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -400,7 +401,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 
 		try {
 			// Performing a basic validation of the URL format
-			parsedUrl = new URL(url);
+			parsedUrl = URI.create(url).toURL();
 			// Enforces stricter compliance, catching invalid characters.
 			parsedUrl.toURI();
 		} catch (MalformedURLException e) {

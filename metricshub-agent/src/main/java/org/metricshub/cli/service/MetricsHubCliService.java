@@ -427,7 +427,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 			printWriter.print("Performing discovery with ");
 			printWriter.print(Ansi.ansi().bold().a(connectorCount).boldOff().toString());
 			printWriter.println(connectorCount > 1 ? " connectors..." : " connector...");
-			connectors.forEach((connectorId, monitor) ->
+			connectors.values().forEach(monitor ->
 				printWriter.println(
 					Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
 				)

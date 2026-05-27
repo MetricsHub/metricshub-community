@@ -66,9 +66,9 @@ public class EmulationRoundRobinManager {
 		}
 		final ConcurrentHashMap<String, AtomicInteger> imageState = state.computeIfAbsent(
 			imagePath,
-			key -> new ConcurrentHashMap<>()
+			_ -> new ConcurrentHashMap<>()
 		);
-		final AtomicInteger counter = imageState.computeIfAbsent(requestKey, key -> new AtomicInteger(0));
+		final AtomicInteger counter = imageState.computeIfAbsent(requestKey, _ -> new AtomicInteger(0));
 		final int index = counter.getAndIncrement();
 		return Math.floorMod(index, matchCount);
 	}

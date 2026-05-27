@@ -222,7 +222,7 @@ public class JmxRequestExecutor {
 
 		final var url = buildJmxRmiUrl(hostname, port);
 
-		try (var jmxConnector = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
+		try (var _ = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
 			return true;
 		} catch (Exception e) {
 			log.debug("Hostname {} - JMX health check failed. {} → ", hostname, url, e);

@@ -21,8 +21,6 @@ package org.metricshub.web.config;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.web.security.ApiKeyAuthFilter;
@@ -39,10 +37,8 @@ import org.springframework.boot.web.servlet.server.ConfigurableServletWebServerF
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -134,9 +130,9 @@ public class SecurityConfig {
 	 */
 	@Bean
 	public AuthenticationEntryPoint jsonAuthEntryPoint() {
-		return (HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) -> {
-			SecurityHelper.writeUnauthorizedResponse(response);
-		};
+		return (_, response, _) -> 
+			SecurityHelper.writeUnauthorizedResponse(response)
+		;
 	}
 
 	/**
@@ -146,9 +142,9 @@ public class SecurityConfig {
 	 */
 	@Bean
 	public AccessDeniedHandler jsonForbiddenHandler() {
-		return (HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) -> {
+		return (_, response, _) -> 
 			SecurityHelper.writeForbiddenResponse(response);
-		};
+		
 	}
 
 	/**

@@ -215,7 +215,7 @@ class OsCommandHelperTest {
 	 * @return Array of {@link File} instances
 	 */
 	private static File[] getTempEmbeddedFiles() {
-		return tempDir.listFiles((directory, fileName) -> fileName.startsWith(EMBEDDED_TEMP_FILE_PREFIX));
+		return tempDir.listFiles((_, fileName) -> fileName.startsWith(EMBEDDED_TEMP_FILE_PREFIX));
 	}
 
 	/**

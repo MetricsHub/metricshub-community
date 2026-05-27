@@ -150,7 +150,7 @@ public class CriterionProcessVisitor implements LocalOsHandler.ILocalOsVisitor {
 			.filter(line -> line.get(1).matches(processCriterion.getCommandLine()))
 			.findFirst()
 			.ifPresentOrElse(
-				line ->
+				_ ->
 					success(
 						String.format(
 							"One or more currently running processes match the following regular expression:\n- " +

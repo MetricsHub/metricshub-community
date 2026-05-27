@@ -603,7 +603,7 @@ public class EmulationExtension implements IProtocolExtension {
 		final String cacheKey = directory == null ? "" : directory;
 		return snmpRequestExecutorsByDirectory.computeIfAbsent(
 			cacheKey,
-			ignored -> new EmulationSnmpRequestExecutor(directory)
+			_ -> new EmulationSnmpRequestExecutor(directory)
 		);
 	}
 

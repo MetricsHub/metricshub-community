@@ -51,6 +51,6 @@ public class DeviceKindSetDeserializer extends AbstractCollectionDeserializer<De
 
 	@Override
 	protected Predicate<DeviceKind> getFilterPredicate() {
-		return kind -> true;
+		return _ -> true;
 	}
 }

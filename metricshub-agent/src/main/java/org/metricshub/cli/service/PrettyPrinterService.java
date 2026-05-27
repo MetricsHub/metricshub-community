@@ -485,7 +485,7 @@ public class PrettyPrinterService {
 		 * @param monitorChildren Monitor children instance
 		 */
 		private void addOne(final MonitorChildren monitorChildren) {
-			children.computeIfAbsent(monitorChildren.getMonitor().getType(), t -> new TreeSet<>()).add(monitorChildren);
+			children.computeIfAbsent(monitorChildren.getMonitor().getType(), _ -> new TreeSet<>()).add(monitorChildren);
 		}
 
 		/**

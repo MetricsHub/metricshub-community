@@ -221,7 +221,7 @@ public class TelemetryManager {
 		@NonNull final String id
 	) {
 		synchronized (monitors) {
-			monitors.computeIfAbsent(monitorType, t -> new HashMap<>()).put(id, monitor);
+			monitors.computeIfAbsent(monitorType, _ -> new HashMap<>()).put(id, monitor);
 			return monitor;
 		}
 	}

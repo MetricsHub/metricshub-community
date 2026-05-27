@@ -142,7 +142,7 @@ public class WinCommandService {
 						protectCaseInsensitiveRegex(entry.getKey()),
 						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
 					),
-				(s1, s2) -> null
+				(_, _) -> null
 			);
 
 		final String commandNoPassword = embeddedTempFiles
@@ -155,7 +155,7 @@ public class WinCommandService {
 						protectCaseInsensitiveRegex(entry.getKey()),
 						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
 					),
-				(s1, s2) -> null
+				(_, _) -> null
 			);
 
 		try {

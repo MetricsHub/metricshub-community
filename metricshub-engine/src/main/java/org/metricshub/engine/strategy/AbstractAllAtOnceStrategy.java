@@ -141,7 +141,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 				)
 			)
 			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
+				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new)
 			);
 
 		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs
@@ -149,7 +149,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.stream()
 			.filter(entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
+				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new)
 			);
 
 		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs
@@ -157,7 +157,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.stream()
 			.filter(entry -> !MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
 			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
+				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new)
 			);
 
 		// Run monitor jobs defined in monitor jobs priority map (host, enclosure, blade, disk_controller and cpu)  in sequential mode

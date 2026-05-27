@@ -147,7 +147,7 @@ public class ResourceConfig {
 					.entrySet()
 					.stream()
 					.collect(
-						Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, HashMap::new)
+						Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, HashMap::new)
 					)
 			)
 			.metrics(metrics)
