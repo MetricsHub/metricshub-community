@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import lombok.Data;
 import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.CliExtensionManager;
 import org.metricshub.cli.service.ConsoleService;
 import org.metricshub.cli.service.MetricsHubCliService;
@@ -224,9 +223,8 @@ public class JmxCli implements IQuery, Callable<Integer> {
 		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
 
 		// Enable colors on Windows terminal
-		AnsiConsole.systemInstall();
-
 		final var cli = new CommandLine(new JmxCli());
+		CliAnsiSupport.install(cli);
 
 		// Set the exception handler
 		cli.setExecutionExceptionHandler(new PrintExceptionMessageHandlerService());
@@ -241,7 +239,7 @@ public class JmxCli implements IQuery, Callable<Integer> {
 		final int exitCode = cli.execute(args);
 
 		// Cleanup Windows terminal settings
-		AnsiConsole.systemUninstall();
+		CliAnsiSupport.uninstall();
 
 		System.exit(exitCode);
 	}

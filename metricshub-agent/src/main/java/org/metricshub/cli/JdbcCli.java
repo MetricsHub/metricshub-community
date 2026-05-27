@@ -8,7 +8,6 @@ import java.io.PrintWriter;
 import java.util.concurrent.Callable;
 import lombok.Data;
 import org.fusesource.jansi.Ansi;
-import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.CliExtensionManager;
 import org.metricshub.cli.service.ConsoleService;
 import org.metricshub.cli.service.MetricsHubCliService;
@@ -183,9 +182,8 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
 
 		// Enable colors on Windows terminal
-		AnsiConsole.systemInstall();
-
 		final CommandLine cli = new CommandLine(new JdbcCli());
+		CliAnsiSupport.install(cli);
 
 		// Keep the below line commented for future reference
 		// Using JAnsi on Windows breaks the output of Unicode (UTF-8) chars
@@ -207,7 +205,7 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 		final int exitCode = cli.execute(args);
 
 		// Cleanup Windows terminal settings
-		AnsiConsole.systemUninstall();
+		CliAnsiSupport.uninstall();
 
 		System.exit(exitCode);
 	}
