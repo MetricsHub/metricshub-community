@@ -4,7 +4,7 @@ package org.metricshub.cli;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
