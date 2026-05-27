@@ -22,6 +22,7 @@ package org.metricshub.cli;
  */
 
 import java.util.Locale;
+import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
 import org.metricshub.cli.service.UserCliService;
 import picocli.CommandLine;
@@ -44,8 +45,9 @@ public class UserCli {
 		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
 
 		// Enable colors on Windows terminal
+		AnsiConsole.systemInstall();
+
 		final var cli = new CommandLine(new UserCliService());
-		CliAnsiSupport.install(cli);
 
 		// Set the exception handler
 		cli.setExecutionExceptionHandler(new PrintExceptionMessageHandlerService());
@@ -57,7 +59,7 @@ public class UserCli {
 		final int exitCode = cli.execute(args);
 
 		// Cleanup Windows terminal settings
-		CliAnsiSupport.uninstall();
+		AnsiConsole.systemUninstall();
 
 		System.exit(exitCode);
 	}

@@ -22,6 +22,7 @@ package org.metricshub.cli;
  */
 
 import java.util.Locale;
+import org.fusesource.jansi.AnsiConsole;
 import org.metricshub.cli.service.MetricsHubCliService;
 import org.metricshub.cli.service.PrintExceptionMessageHandlerService;
 import org.metricshub.cli.service.PrintParameterExceptionHandlerService;
@@ -47,8 +48,9 @@ public class MetricsHubCliApplication {
 		System.setProperty("log4j2.configurationFile", "log4j2-cli.xml");
 
 		// Enable colors on Windows terminal
+		AnsiConsole.systemInstall();
+
 		final CommandLine cli = new CommandLine(new MetricsHubCliService());
-		CliAnsiSupport.install(cli);
 
 		// Keep the below line commented for future reference
 		// Using JAnsi on Windows breaks the output of Unicode (UTF-8) chars
@@ -68,7 +70,7 @@ public class MetricsHubCliApplication {
 		final int exitCode = cli.execute(args);
 
 		// Cleanup Windows terminal settings
-		CliAnsiSupport.uninstall();
+		AnsiConsole.systemUninstall();
 
 		System.exit(exitCode);
 	}
