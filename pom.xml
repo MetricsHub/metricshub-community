@@ -547,7 +547,7 @@
 							<items>
 								<item>scmVersion</item>
 							</items>
-							<timestampFormat>{0,date,medium} at {0,time,medium}</timestampFormat>
+							<timestampFormat>{0,date,MMM d, yyyy 'at' h:mm:ss a}</timestampFormat>
 						</configuration>
 					</execution>
 
