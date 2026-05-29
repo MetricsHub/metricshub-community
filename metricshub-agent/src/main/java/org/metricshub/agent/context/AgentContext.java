@@ -232,17 +232,18 @@ public class AgentContext {
 			final Project project = applicationProperties.project();
 
 			log.info(
-				"Product information:" + // NOSONAR
-					"\nName: {}" +
-					"\nVersion: {}" +
-					"\nBuild number: {}" +
-					"\nBuild date: {}" +
-					"\nCommunity Connector Library version: {}" +
-					"\nJava version: {}" +
-					"\nJava Runtime Environment directory: {}" +
-					"\nOperating System: {} {}" +
-					"\nUser working directory: {}" +
-					"\nPID: {}",
+				"""
+				Product information:
+				Name: {}
+				Version: {}
+				Build number: {}
+				Build date: {}
+				Community Connector Library version: {}
+				Java version: {}
+				Java Runtime Environment directory: {}
+				Operating System: {} {}
+				User working directory: {}
+				PID: {}""",
 				project.name(),
 				project.version(),
 				applicationProperties.buildNumber(),
