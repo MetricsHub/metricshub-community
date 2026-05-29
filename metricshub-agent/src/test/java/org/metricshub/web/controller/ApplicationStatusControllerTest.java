@@ -28,8 +28,7 @@ class ApplicationStatusControllerTest {
 
 	@Test
 	void testShouldReportApplicationStatus() throws Exception {
-		final ApplicationStatus mockStatus = ApplicationStatus
-			.builder()
+		final ApplicationStatus mockStatus = ApplicationStatus.builder()
 			.status(ApplicationStatus.Status.UP)
 			.agentInfo(Map.of("version", "1.0.0"))
 			.build();

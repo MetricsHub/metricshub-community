@@ -92,8 +92,7 @@ class JmxConfigurationTest {
 	@Test
 	void testShouldCopyConfigurationCorrectly() {
 		char[] password = { 's', 'e', 'c', 'r', 'e', 't' };
-		final JmxConfiguration original = JmxConfiguration
-			.builder()
+		final JmxConfiguration original = JmxConfiguration.builder()
 			.hostname("myhost")
 			.port(2020)
 			.username("admin")
@@ -125,8 +124,7 @@ class JmxConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final JmxConfiguration jmxConfiguration = JmxConfiguration
-			.builder()
+		final JmxConfiguration jmxConfiguration = JmxConfiguration.builder()
 			.username("myUsername")
 			.password("myPassword".toCharArray())
 			.port(443)

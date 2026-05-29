@@ -27,17 +27,13 @@ class RoboticsPowerAndEnergyEstimatorTest {
 
 	@BeforeEach
 	void init() {
-		monitor =
-			Monitor
-				.builder()
-				.metrics(new HashMap<>(Map.of(ROBOTICS_MOVE_COUNT_METRIC, NumberMetric.builder().value(7.0).build())))
-				.build();
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(1696597422644L)
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.build();
+		monitor = Monitor.builder()
+			.metrics(new HashMap<>(Map.of(ROBOTICS_MOVE_COUNT_METRIC, NumberMetric.builder().value(7.0).build())))
+			.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(1696597422644L)
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
 		roboticsPowerAndEnergyEstimator = new RoboticsPowerAndEnergyEstimator(monitor, telemetryManager);
 	}
 

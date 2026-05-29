@@ -131,8 +131,11 @@ public class JmxExtension implements IProtocolExtension {
 		final boolean logMode
 	) {
 		if (criterion instanceof JmxCriterion jmxCriterion) {
-			return new JmxCriterionProcessor(jmxRequestExecutor, logMode)
-				.process(jmxCriterion, connectorId, telemetryManager);
+			return new JmxCriterionProcessor(jmxRequestExecutor, logMode).process(
+				jmxCriterion,
+				connectorId,
+				telemetryManager
+			);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -178,8 +181,7 @@ public class JmxExtension implements IProtocolExtension {
 	 * @return a configured JsonMapper instance
 	 */
 	public JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

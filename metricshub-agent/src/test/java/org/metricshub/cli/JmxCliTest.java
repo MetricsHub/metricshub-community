@@ -94,7 +94,7 @@ class JmxCliTest {
 		jmxCli.setUsername("admin");
 		jmxCli.setPassword(null);
 
-		jmxCli.tryInteractivePassword((fmt, args) -> "secret".toCharArray());
+		jmxCli.tryInteractivePassword((_, _) -> "secret".toCharArray());
 
 		assertArrayEquals("secret".toCharArray(), jmxCli.getPassword(), "Password should be set interactively when null");
 	}

@@ -47,8 +47,7 @@ class EmulationSnmpRequestExecutorTest {
 	/**
 	 * Standard walk file content with a few OIDs under 1.3.6.1.4.1.
 	 */
-	private static final String WALK_CONTENT =
-		"""
+	private static final String WALK_CONTENT = """
 		1.3.6.1.2.1.1.1.0\tOctetString\tLinux server 5.4.0
 		1.3.6.1.2.1.1.3.0\tTimeTicks\t123456
 		1.3.6.1.2.1.1.5.0\tOctetString\ttest-host
@@ -151,9 +150,8 @@ class EmulationSnmpRequestExecutorTest {
 		);
 
 		// Configured directory does not exist -> should throw
-		assertThrows(
-			Exception.class,
-			() -> executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
+		assertThrows(Exception.class, () ->
+			executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
 		);
 	}
 
@@ -161,9 +159,8 @@ class EmulationSnmpRequestExecutorTest {
 	void testCreateSnmpClientNullDirectory() {
 		final EmulationSnmpRequestExecutor executor = new EmulationSnmpRequestExecutor(null);
 
-		assertThrows(
-			Exception.class,
-			() -> executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
+		assertThrows(Exception.class, () ->
+			executor.executeSNMPGet("1.3.6.1.2.1.1.1.0", SNMP_CONFIG, HOSTNAME, false, null)
 		);
 	}
 

@@ -10,7 +10,7 @@ jobs:
     name: Deploy Community Artifacts
     uses: ./.github/workflows/maven-build.yml
     with:
-      jdkVersion: "21"
+      jdkVersion: "25"
       debug: ${{ github.event_name == 'workflow_dispatch' && inputs.debug }}
       ssh: ${{ github.event_name == 'workflow_dispatch' && inputs.ssh }}
       mavenPhases: "clean deploy"
@@ -21,7 +21,7 @@ jobs:
     needs: deploy-community-artifacts
     uses: ./.github/workflows/packaging.yml
     with:
-      jdkVersion: "21"
+      jdkVersion: "25"
       assetPackage: ${{ needs.deploy-community-artifacts.outputs.packageArtifact }}
       version: ${{ needs.deploy-community-artifacts.outputs.version }}
       deploy: true

@@ -80,15 +80,18 @@
 
 	<properties>
 		<community-connectors.version>1.0.21</community-connectors.version>
-		<maven.compiler.release>17</maven.compiler.release>
+		<maven.compiler.release>25</maven.compiler.release>
 
 		<project.build.outputTimestamp>2026-05-20T08:58:44Z</project.build.outputTimestamp>
 
 		<!-- Packaging Properties -->
-		<metricshub-jre.version>17.0.19_10</metricshub-jre.version>
+		<metricshub-jre.version>25.0.3_9</metricshub-jre.version>
 		<nssm.version>2.24</nssm.version>
 		<nssm.checksum>be7b3577c6e3a280e5106a9e9db5b3775931cefc</nssm.checksum>
-		<jdkBuildVersion>21</jdkBuildVersion>
+		<jdkBuildVersion>25</jdkBuildVersion>
+		<lombok.version>1.18.46</lombok.version>
+		<jacoco.version>0.8.14</jacoco.version>
+		<groovy.version>4.0.31</groovy.version>
 		<debianTagName>trixie</debianTagName>
 		<fedoraTagName>43</fedoraTagName>
 
@@ -201,14 +204,14 @@
 			<dependency>
 				<groupId>org.projectlombok</groupId>
 				<artifactId>lombok</artifactId>
-				<version>1.18.38</version>
+				<version>${lombok.version}</version>
 				<scope>compile</scope>
 				<optional>true</optional>
 			</dependency>
 			<dependency>
-				<groupId>org.codehaus.groovy</groupId>
+				<groupId>org.apache.groovy</groupId>
 				<artifactId>groovy</artifactId>
-				<version>3.0.13</version>
+				<version>${groovy.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
@@ -361,7 +364,7 @@
 			<dependency>
 				<groupId>org.fusesource.jansi</groupId>
 				<artifactId>jansi</artifactId>
-				<version>2.4.2</version>
+				<version>2.4.3</version>
 			</dependency>
 			<dependency>
 				<groupId>io.grpc</groupId>
@@ -402,10 +405,50 @@
 		<pluginManagement>
 			<plugins>
 				<plugin>
+					<groupId>org.jacoco</groupId>
+					<artifactId>jacoco-maven-plugin</artifactId>
+					<version>${jacoco.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<configuration>
+						<annotationProcessorPaths>
+							<path>
+								<groupId>org.projectlombok</groupId>
+								<artifactId>lombok</artifactId>
+								<version>${lombok.version}</version>
+							</path>
+						</annotationProcessorPaths>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-invoker-plugin</artifactId>
+					<version>3.10.1</version>
+					<dependencies>
+						<dependency>
+							<groupId>org.apache.groovy</groupId>
+							<artifactId>groovy</artifactId>
+							<version>${groovy.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>org.apache.groovy</groupId>
+							<artifactId>groovy-json</artifactId>
+							<version>${groovy.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>org.apache.groovy</groupId>
+							<artifactId>groovy-xml</artifactId>
+							<version>${groovy.version}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<plugin>
 					<groupId>com.hubspot.maven.plugins</groupId>
 					<artifactId>prettier-maven-plugin</artifactId>
 					<configuration>
-						<prettierJavaVersion>2.5.0</prettierJavaVersion>
+						<prettierJavaVersion>2.8.1</prettierJavaVersion>
 						<ignoreConfigFile>false</ignoreConfigFile>
 						<ignoreEditorConfig>false</ignoreEditorConfig>
 						<inputGlobs>
@@ -504,7 +547,7 @@
 							<items>
 								<item>scmVersion</item>
 							</items>
-							<timestampFormat>{0,date,medium} at {0,time,medium}</timestampFormat>
+							<timestampFormat>{0,date,MMM d, yyyy 'at' h:mm:ss a}</timestampFormat>
 						</configuration>
 					</execution>
 

@@ -58,8 +58,7 @@ class AgentContextTest {
 	}
 
 	// Initialize the extension manager required by the agent context
-	final ExtensionManager extensionManager = ExtensionManager
-		.builder()
+	final ExtensionManager extensionManager = ExtensionManager.builder()
 		.withProtocolExtensions(List.of(new SnmpExtension()))
 		.withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider()))
 		.build();
@@ -94,13 +93,11 @@ class AgentContextTest {
 		attributes.put(ID_ATTRIBUTE_KEY, "$1");
 		attributes.put(SERVICE_VERSION_ATTRIBUTE_KEY, "$3");
 
-		final Simple simple = Simple
-			.builder()
+		final Simple simple = Simple.builder()
 			.sources(
 				Map.of(
 					GRAFANA_HEALTH_SOURCE_KEY,
-					HttpSource
-						.builder()
+					HttpSource.builder()
 						.header(HTTP_ACCEPT_HEADER)
 						.method(HttpMethod.GET)
 						.resultContent(ResultContent.BODY)
@@ -111,8 +108,7 @@ class AgentContextTest {
 				)
 			)
 			.mapping(
-				Mapping
-					.builder()
+				Mapping.builder()
 					.source(GRAFANA_HEALTH_SOURCE_REF)
 					.attributes(attributes)
 					.metrics(Map.of(GRAFANA_DB_STATE_METRIC, "$2"))
@@ -122,8 +118,7 @@ class AgentContextTest {
 
 		simple.setSourceDep(List.of(Set.of(GRAFANA_HEALTH_SOURCE_KEY)));
 
-		final SimpleMonitorJob simpleMonitorJobExpected = SimpleMonitorJob
-			.simpleBuilder()
+		final SimpleMonitorJob simpleMonitorJobExpected = SimpleMonitorJob.simpleBuilder()
 			.keys(DEFAULT_KEYS)
 			.simple(simple)
 			.metrics(new HashMap<>())
@@ -154,9 +149,8 @@ class AgentContextTest {
 
 		final Map<String, String> otelConfiguration = agentContext.getOtelConfiguration();
 
-		assertTrue(
-			MapHelper.areEqual(expectedOtelConfiguration, otelConfiguration),
-			() -> String.format("expected %s but was: %s", expectedOtelConfiguration, otelConfiguration)
+		assertTrue(MapHelper.areEqual(expectedOtelConfiguration, otelConfiguration), () ->
+			String.format("expected %s but was: %s", expectedOtelConfiguration, otelConfiguration)
 		);
 
 		// Make sure the engine is notified with configuredConnectorId
@@ -225,15 +219,13 @@ class AgentContextTest {
 		// Check the number of configured ConnectorVariables
 		assertEquals(4, variables.size(), "ConnectorVariables size should be 4");
 
-		AdditionalConnector pureStorageREST = AdditionalConnector
-			.builder()
+		AdditionalConnector pureStorageREST = AdditionalConnector.builder()
 			.uses("PureStorageREST")
 			.variables(Map.of("restQueryPath", "/pure/api/v2"))
 			.force(false)
 			.build();
 		assertEquals(pureStorageREST, additionalConnectors.get("PureStorageREST"), "PureStorageREST should match");
-		AdditionalConnector windows = AdditionalConnector
-			.builder()
+		AdditionalConnector windows = AdditionalConnector.builder()
 			.uses("Windows")
 			.variables(Map.of("osType", "windows"))
 			.build();

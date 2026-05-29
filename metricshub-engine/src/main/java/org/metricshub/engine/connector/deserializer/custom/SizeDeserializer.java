@@ -172,11 +172,11 @@ public class SizeDeserializer extends JsonDeserializer<Long> {
 			default:
 				throw new IllegalArgumentException(
 					"Unsupported size unit: '" +
-					unit +
-					"'. Supported units include: b/byte/bytes, " +
-					"k/kb/ko/kib/kilo/kilobyte/kilobytes, " +
-					"m/mb/mo/mib/mega/megabyte/megabytes, " +
-					"g/gb/go/gib/gbyte/gbytes/giga/gigabyte/gigabytes."
+						unit +
+						"'. Supported units include: b/byte/bytes, " +
+						"k/kb/ko/kib/kilo/kilobyte/kilobytes, " +
+						"m/mb/mo/mib/mega/megabyte/megabytes, " +
+						"g/gb/go/gib/gbyte/gbytes/giga/gigabyte/gigabytes."
 				);
 		}
 	}

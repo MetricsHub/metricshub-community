@@ -21,8 +21,7 @@ class HttpEmulationEntryTest {
 	@Test
 	void testBuilderWithFields() {
 		final HttpEmulationRequest request = HttpEmulationRequest.builder().method("GET").path("/api").build();
-		final HttpEmulationResponse response = HttpEmulationResponse
-			.builder()
+		final HttpEmulationResponse response = HttpEmulationResponse.builder()
 			.file("response.txt")
 			.resultContent(ResultContent.BODY)
 			.build();

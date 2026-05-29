@@ -33,21 +33,17 @@ class ConnectorSelectionTest {
 		// The extension manager is empty because it is not involved in this test
 		final ExtensionManager extensionManager = ExtensionManager.empty();
 		final Set<String> emptySet = Collections.emptySet();
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new ConnectorSelection(null, clientsExecutor, emptySet, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new ConnectorSelection(null, clientsExecutor, emptySet, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new ConnectorSelection(telemetryManager, null, emptySet, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new ConnectorSelection(telemetryManager, null, emptySet, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new ConnectorSelection(telemetryManager, clientsExecutor, null, extensionManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			new ConnectorSelection(telemetryManager, clientsExecutor, null, extensionManager)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new ConnectorSelection(telemetryManager, clientsExecutor, emptySet, null)
+		assertThrows(IllegalArgumentException.class, () ->
+			new ConnectorSelection(telemetryManager, clientsExecutor, emptySet, null)
 		);
 	}
 

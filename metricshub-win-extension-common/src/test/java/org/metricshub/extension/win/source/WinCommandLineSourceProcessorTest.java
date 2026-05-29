@@ -46,22 +46,22 @@ class WinCommandLineSourceProcessorTest {
 
 	@BeforeEach
 	void setup() {
-		winCommandLineSourceProcessor =
-			new WinCommandLineSourceProcessor(winCommandServiceMock, configurationRetrieverMock, CONNECTOR_ID);
+		winCommandLineSourceProcessor = new WinCommandLineSourceProcessor(
+			winCommandServiceMock,
+			configurationRetrieverMock,
+			CONNECTOR_ID
+		);
 	}
 
 	@Test
 	void testProcessCommandLineMalformed() throws Exception {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -105,16 +105,13 @@ class WinCommandLineSourceProcessorTest {
 		commandLineSource.setSelectColumns("2");
 		commandLineSource.setExecuteLocally(false);
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -125,8 +122,7 @@ class WinCommandLineSourceProcessorTest {
 			.build();
 		doReturn(wmiConfiguration).when(configurationRetrieverMock).apply(telemetryManager);
 
-		final String expectedCommandLineResult =
-			"""
+		final String expectedCommandLineResult = """
 			Total Physical Memory:16384 MB
 			Available Physical Memory:8192 MB
 			""";
@@ -157,16 +153,13 @@ class WinCommandLineSourceProcessorTest {
 		commandLineSource.setSelectColumns("2");
 		commandLineSource.setExecuteLocally(false);
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)

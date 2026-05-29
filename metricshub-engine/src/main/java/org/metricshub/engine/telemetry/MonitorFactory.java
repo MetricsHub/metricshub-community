@@ -148,8 +148,7 @@ public class MonitorFactory {
 
 			return foundMonitor;
 		} else {
-			final Monitor newMonitor = Monitor
-				.builder()
+			final Monitor newMonitor = Monitor.builder()
 				.attributes(attributes)
 				.type(monitorType)
 				.id(id)

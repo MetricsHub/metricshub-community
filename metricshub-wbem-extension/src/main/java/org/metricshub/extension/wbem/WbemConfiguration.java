@@ -92,7 +92,7 @@ public class WbemConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					"WBEM",
 					timeout
@@ -105,7 +105,7 @@ public class WbemConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-					" This resource will not be monitored. Please verify the configured port value.",
+						" This resource will not be monitored. Please verify the configured port value.",
 					resourceKey,
 					"WBEM",
 					port
@@ -118,7 +118,7 @@ public class WbemConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - No username configured for protocol %s." +
-					" This resource will not be monitored. Please verify the configured username.",
+						" This resource will not be monitored. Please verify the configured username.",
 					resourceKey,
 					"WBEM"
 				)
@@ -130,7 +130,7 @@ public class WbemConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - vCenter value is invalid for protocol %s." +
-					" This resource will not be monitored. Please verify the configured vCenter value.",
+						" This resource will not be monitored. Please verify the configured vCenter value.",
 					resourceKey,
 					"WBEM"
 				)
@@ -139,8 +139,7 @@ public class WbemConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return WbemConfiguration
-			.builder()
+		return WbemConfiguration.builder()
 			.namespace(namespace)
 			.password(password)
 			.port(port)

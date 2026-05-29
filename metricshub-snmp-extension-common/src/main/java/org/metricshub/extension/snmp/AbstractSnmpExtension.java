@@ -117,9 +117,13 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 
 		// Execute SNMP test command
 		try {
-			result =
-				getRequestExecutor()
-					.executeSNMPGetNext(SNMP_OID, configuration, hostname, true, telemetryManager.getHostname());
+			result = getRequestExecutor().executeSNMPGetNext(
+				SNMP_OID,
+				configuration,
+				hostname,
+				true,
+				telemetryManager.getHostname()
+			);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking SNMP protocol status. SNMP exception when performing a SNMP Get Next query on {}: ",
@@ -137,11 +141,17 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
 
 		if (source instanceof SnmpTableSource snmpTableSource) {
-			return new SnmpTableSourceProcessor(getRequestExecutor(), configurationRetriever)
-				.process(snmpTableSource, connectorId, telemetryManager);
+			return new SnmpTableSourceProcessor(getRequestExecutor(), configurationRetriever).process(
+				snmpTableSource,
+				connectorId,
+				telemetryManager
+			);
 		} else if (source instanceof SnmpGetSource snmpGetSource) {
-			return new SnmpGetSourceProcessor(getRequestExecutor(), configurationRetriever)
-				.process(snmpGetSource, connectorId, telemetryManager);
+			return new SnmpGetSourceProcessor(getRequestExecutor(), configurationRetriever).process(
+				snmpGetSource,
+				connectorId,
+				telemetryManager
+			);
 		}
 
 		throw new IllegalArgumentException(
@@ -164,11 +174,17 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 			(ISnmpConfiguration) manager.getHostConfiguration().getConfigurations().get(getConfigurationClass());
 
 		if (criterion instanceof SnmpGetCriterion snmpGetCriterion) {
-			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
-				.process(snmpGetCriterion, connectorId, telemetryManager);
+			return new SnmpGetCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode).process(
+				snmpGetCriterion,
+				connectorId,
+				telemetryManager
+			);
 		} else if (criterion instanceof SnmpGetNextCriterion snmpGetNextCriterion) {
-			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode)
-				.process(snmpGetNextCriterion, connectorId, telemetryManager);
+			return new SnmpGetNextCriterionProcessor(getRequestExecutor(), configurationRetriever, logMode).process(
+				snmpGetNextCriterion,
+				connectorId,
+				telemetryManager
+			);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -236,8 +252,7 @@ public abstract class AbstractSnmpExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

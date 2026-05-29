@@ -72,9 +72,10 @@ public class WinCommandLineSourceProcessor {
 		final IWinConfiguration winConfiguration = configurationRetriever.apply(telemetryManager);
 
 		// Retrieve the hostname from the IWinConfiguration, otherwise from the telemetryManager
-		final String hostname = winConfiguration == null
-			? telemetryManager.getHostname()
-			: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
+		final String hostname =
+			winConfiguration == null
+				? telemetryManager.getHostname()
+				: telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		if (commandLineSource == null || commandLineSource.getCommandLine().isEmpty()) {
 			log.error("Hostname {} - Malformed OS command source.", hostname);
@@ -106,8 +107,7 @@ public class WinCommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable
-				.builder()
+			return SourceTable.builder()
 				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
 				.table(
 					selectedColumnsLines

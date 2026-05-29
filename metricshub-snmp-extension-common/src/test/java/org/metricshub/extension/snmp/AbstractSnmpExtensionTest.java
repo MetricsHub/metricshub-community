@@ -49,45 +49,42 @@ class AbstractSnmpExtensionTest {
 
 	@BeforeEach
 	void setUp() {
-		extension =
-			new AbstractSnmpExtension() {
-				@Override
-				protected AbstractSnmpRequestExecutor getRequestExecutor() {
-					return requestExecutor;
-				}
+		extension = new AbstractSnmpExtension() {
+			@Override
+			protected AbstractSnmpRequestExecutor getRequestExecutor() {
+				return requestExecutor;
+			}
 
-				@Override
-				protected Class<? extends ISnmpConfiguration> getConfigurationClass() {
-					return ISnmpConfiguration.class;
-				}
+			@Override
+			protected Class<? extends ISnmpConfiguration> getConfigurationClass() {
+				return ISnmpConfiguration.class;
+			}
 
-				@Override
-				public String getIdentifier() {
-					return IDENTIFIER;
-				}
+			@Override
+			public String getIdentifier() {
+				return IDENTIFIER;
+			}
 
-				@Override
-				public IConfiguration buildConfiguration(
-					String configurationType,
-					JsonNode jsonNode,
-					UnaryOperator<char[]> decrypt
-				) throws InvalidConfigurationException {
-					return null;
-				}
+			@Override
+			public IConfiguration buildConfiguration(
+				String configurationType,
+				JsonNode jsonNode,
+				UnaryOperator<char[]> decrypt
+			) throws InvalidConfigurationException {
+				return null;
+			}
 
-				@Override
-				public boolean isValidConfiguration(IConfiguration configuration) {
-					return configuration instanceof ISnmpConfiguration;
-				}
-			};
+			@Override
+			public boolean isValidConfiguration(IConfiguration configuration) {
+				return configuration instanceof ISnmpConfiguration;
+			}
+		};
 	}
 
 	private TelemetryManager createTelemetryManager(final ISnmpConfiguration config) {
-		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = config != null
-			? Map.of(ISnmpConfiguration.class, config)
-			: Map.of();
-		return TelemetryManager
-			.builder()
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations =
+			config != null ? Map.of(ISnmpConfiguration.class, config) : Map.of();
+		return TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostname(HOSTNAME).configurations(configurations).build())
 			.build();
 	}
@@ -128,8 +125,9 @@ class AbstractSnmpExtensionTest {
 	void testCheckProtocolFailure() throws Exception {
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
-		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any()))
-			.thenThrow(new TimeoutException("timeout"));
+		when(requestExecutor.executeSNMPGetNext(anyString(), any(), anyString(), anyBoolean(), any())).thenThrow(
+			new TimeoutException("timeout")
+		);
 		final Optional<Boolean> result = extension.checkProtocol(telemetryManager);
 		assertTrue(result.isPresent());
 		assertFalse(result.get());
@@ -139,8 +137,9 @@ class AbstractSnmpExtensionTest {
 	void testProcessSourceSnmpTable() throws Exception {
 		final TelemetryManager telemetryManager = createTelemetryManager(snmpConfiguration);
 		final SnmpTableSource source = SnmpTableSource.builder().oid(TEST_OID).selectColumns("1,2").build();
-		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
-			.thenReturn(List.of(List.of("a", "b")));
+		when(
+			requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any())
+		).thenReturn(List.of(List.of("a", "b")));
 		final SourceTable result = extension.processSource(source, "connector1", telemetryManager);
 		assertNotNull(result);
 	}
@@ -212,8 +211,9 @@ class AbstractSnmpExtensionTest {
 		final ObjectMapper mapper = new ObjectMapper();
 		final JsonNode queryNode = mapper.readTree("{\"action\": \"walk\", \"oid\": \"1.3.6.1\"}");
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPWalk(anyString(), any(), anyString(), anyBoolean(), any()))
-			.thenReturn("walk-result");
+		when(requestExecutor.executeSNMPWalk(anyString(), any(), anyString(), anyBoolean(), any())).thenReturn(
+			"walk-result"
+		);
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertEquals("walk-result", result);
 	}
@@ -225,8 +225,9 @@ class AbstractSnmpExtensionTest {
 			"{\"action\": \"table\", \"oid\": \"1.3.6.1\", \"columns\": [\"1\", \"2\"]}"
 		);
 		when(snmpConfiguration.getHostname()).thenReturn(HOSTNAME);
-		when(requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any()))
-			.thenReturn(List.of(List.of("a", "b")));
+		when(
+			requestExecutor.executeSNMPTable(anyString(), any(String[].class), any(), anyString(), anyBoolean(), any())
+		).thenReturn(List.of(List.of("a", "b")));
 		final String result = extension.executeQuery(snmpConfiguration, queryNode);
 		assertNotNull(result);
 	}

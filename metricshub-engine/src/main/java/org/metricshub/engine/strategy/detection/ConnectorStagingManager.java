@@ -104,7 +104,8 @@ public class ConnectorStagingManager {
 	) {
 		final Map<String, Connector> store = connectorStore.getStore();
 		if (store == null || store.isEmpty()) {
-			logIfEnabled(() -> log.error("Hostname {} - No connector available in the store. Detection will stop.", hostname)
+			logIfEnabled(() ->
+				log.error("Hostname {} - No connector available in the store. Detection will stop.", hostname)
 			);
 			return StagedConnectorIdentifiers.empty();
 		}
@@ -181,9 +182,8 @@ public class ConnectorStagingManager {
 			// For each connector check if it defines the configured tag
 			// If yes, add its identifier to the automatic detection connector identifiers set
 			autoDetectionConnectorIds.addAll(
-				fetchConnectorIdsUsingPredicate(
-					store,
-					connectorEntry -> connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
+				fetchConnectorIdsUsingPredicate(store, connectorEntry ->
+					connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
 				)
 			);
 		} else if ("!#".equals(prefix)) {
@@ -191,18 +191,16 @@ public class ConnectorStagingManager {
 			if (!isIncludedConnectors) {
 				// Keep all the connectors except those having the current tag
 				autoDetectionConnectorIds.addAll(
-					fetchConnectorIdsUsingPredicate(
-						store,
-						connectorEntry -> !connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
+					fetchConnectorIdsUsingPredicate(store, connectorEntry ->
+						!connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
 					)
 				);
 			}
 
 			// Return the connector identifiers to remove
 			// Make sure the connectors having the current tag will be removed
-			return fetchConnectorIdsUsingPredicate(
-				store,
-				connectorEntry -> connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
+			return fetchConnectorIdsUsingPredicate(store, connectorEntry ->
+				connectorEntry.getValue().hasTag(configuredConnectorIdOrTag)
 			);
 		} else if ("+".equals(prefix)) {
 			// Add the connector to the set of forced connectors
@@ -215,9 +213,8 @@ public class ConnectorStagingManager {
 			if (!isIncludedConnectors) {
 				// Keep all the connectors except the excluded connector
 				autoDetectionConnectorIds.addAll(
-					fetchConnectorIdsUsingPredicate(
-						store,
-						connectorEntry -> !connectorEntry.getKey().equalsIgnoreCase(configuredConnectorIdOrTag)
+					fetchConnectorIdsUsingPredicate(store, connectorEntry ->
+						!connectorEntry.getKey().equalsIgnoreCase(configuredConnectorIdOrTag)
 					)
 				);
 			}

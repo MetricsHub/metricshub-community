@@ -114,7 +114,8 @@ public class SnmpTableSourceProcessor {
 			sourceTable.setTable(result);
 
 			return sourceTable;
-		} catch (Exception e) { // NOSONAR on interruption
+		} catch (Exception e) {
+			// NOSONAR on interruption
 			LoggingHelper.logSourceError(
 				connectorId,
 				snmpTableSource.getKey(),

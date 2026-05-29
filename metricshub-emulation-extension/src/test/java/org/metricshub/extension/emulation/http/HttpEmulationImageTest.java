@@ -23,8 +23,7 @@ class HttpEmulationImageTest {
 
 	@Test
 	void testBuilderWithEntries() {
-		final HttpEmulationEntry entry = HttpEmulationEntry
-			.builder()
+		final HttpEmulationEntry entry = HttpEmulationEntry.builder()
 			.request(HttpEmulationRequest.builder().method("GET").path("/test").build())
 			.response(HttpEmulationResponse.builder().file("response.txt").resultContent(ResultContent.BODY).build())
 			.build();
@@ -46,15 +45,13 @@ class HttpEmulationImageTest {
 	void testAllArgsConstructor() {
 		final List<HttpEmulationEntry> entries = new ArrayList<>();
 		entries.add(
-			HttpEmulationEntry
-				.builder()
+			HttpEmulationEntry.builder()
 				.request(HttpEmulationRequest.builder().method("GET").path("/one").build())
 				.response(HttpEmulationResponse.builder().file("one.txt").build())
 				.build()
 		);
 		entries.add(
-			HttpEmulationEntry
-				.builder()
+			HttpEmulationEntry.builder()
 				.request(HttpEmulationRequest.builder().method("POST").path("/two").build())
 				.response(HttpEmulationResponse.builder().file("two.txt").build())
 				.build()
@@ -68,8 +65,7 @@ class HttpEmulationImageTest {
 	void testSettersAndGetters() {
 		final HttpEmulationImage image = new HttpEmulationImage();
 		final List<HttpEmulationEntry> entries = List.of(
-			HttpEmulationEntry
-				.builder()
+			HttpEmulationEntry.builder()
 				.request(HttpEmulationRequest.builder().method("GET").path("/api").build())
 				.response(HttpEmulationResponse.builder().file("api.txt").build())
 				.build()
@@ -90,8 +86,7 @@ class HttpEmulationImageTest {
 	@Test
 	void testEqualsAndHashCode() {
 		final List<HttpEmulationEntry> entries = List.of(
-			HttpEmulationEntry
-				.builder()
+			HttpEmulationEntry.builder()
 				.request(HttpEmulationRequest.builder().method("GET").path("/test").build())
 				.response(HttpEmulationResponse.builder().file("test.txt").build())
 				.build()

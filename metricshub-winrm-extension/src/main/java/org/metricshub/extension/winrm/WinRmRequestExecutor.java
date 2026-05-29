@@ -83,7 +83,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing WinRM WQL request:\n- hostname: {}\n- username: {}\n- query: {}\n" + // NOSONAR
-				"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n",
+					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n",
 				hostname,
 				username,
 				query,
@@ -119,7 +119,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed WinRM WQL request:\n- hostname: {}\n- username: {}\n- query: {}\n" + // NOSONAR
-					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n- Result:\n{}\n- response-time: {}\n",
+						"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- namespace: {}\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
 					username,
 					query,
@@ -201,7 +201,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing WinRM remote command:\n- hostname: {}\n- username: {}\n- command: {}\n" + // NOSONAR
-				"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n",
+					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n",
 				hostname,
 				username,
 				command,
@@ -242,7 +242,7 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed WinRM remote command:\n- hostname: {}\n- username: {}\n- command: {}\n" + // NOSONAR
-					"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- Result:\n{}\n- response-time: {}\n",
+						"- protocol: {}\n- port: {}\n- authentications: {}\n- timeout: {}\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
 					username,
 					command,

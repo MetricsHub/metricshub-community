@@ -96,7 +96,7 @@ public class OsCommandConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					"OSCommand",
 					timeout
@@ -111,8 +111,7 @@ public class OsCommandConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return OsCommandConfiguration
-			.builder()
+		return OsCommandConfiguration.builder()
 			.sudoCommand(sudoCommand)
 			.timeout(timeout)
 			.useSudo(useSudo)

@@ -99,18 +99,16 @@ public class SnmpGetSourceProcessor {
 			);
 
 			if (result != null) {
-				return SourceTable
-					.builder()
+				return SourceTable.builder()
 					.table(
-						Stream
-							.of(
-								Stream.of(result).collect(Collectors.toList()) // NOSONAR
-							)
-							.collect(Collectors.toList()) // NOSONAR
+						Stream.of(
+							Stream.of(result).collect(Collectors.toList()) // NOSONAR
+						).collect(Collectors.toList()) // NOSONAR
 					)
 					.build();
 			}
-		} catch (Exception e) { // NOSONAR on interruption
+		} catch (Exception e) {
+			// NOSONAR on interruption
 			LoggingHelper.logSourceError(
 				connectorId,
 				snmpGetSource.getKey(),

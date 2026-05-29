@@ -29,8 +29,7 @@ class EmulationIpmiRequestExecutorTest {
 	);
 
 	private EmulationConfiguration buildEmulationConfiguration(final String emulationInputDir) {
-		return EmulationConfiguration
-			.builder()
+		return EmulationConfiguration.builder()
 			.hostname(HOSTNAME)
 			.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir))
 			.build();
@@ -156,8 +155,7 @@ class EmulationIpmiRequestExecutorTest {
 
 	@Test
 	void testReturnsNullWhenDirectoryIsNull() {
-		final EmulationConfiguration emulCfg = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration emulCfg = EmulationConfiguration.builder()
 			.hostname(HOSTNAME)
 			.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), null))
 			.build();

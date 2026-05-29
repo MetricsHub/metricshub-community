@@ -20,8 +20,7 @@ class HttpEmulationResponseTest {
 
 	@Test
 	void testBuilderWithAllFields() {
-		final HttpEmulationResponse response = HttpEmulationResponse
-			.builder()
+		final HttpEmulationResponse response = HttpEmulationResponse.builder()
 			.file("response-body.txt")
 			.resultContent(ResultContent.BODY)
 			.build();
@@ -56,13 +55,11 @@ class HttpEmulationResponseTest {
 
 	@Test
 	void testEqualsAndHashCode() {
-		final HttpEmulationResponse response1 = HttpEmulationResponse
-			.builder()
+		final HttpEmulationResponse response1 = HttpEmulationResponse.builder()
 			.file("response.txt")
 			.resultContent(ResultContent.ALL)
 			.build();
-		final HttpEmulationResponse response2 = HttpEmulationResponse
-			.builder()
+		final HttpEmulationResponse response2 = HttpEmulationResponse.builder()
 			.file("response.txt")
 			.resultContent(ResultContent.ALL)
 			.build();

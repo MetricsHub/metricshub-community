@@ -241,12 +241,11 @@ public class PrettyPrinterService {
 			metricDefinitions = hostMetricDefinitions.metrics();
 		} else {
 			// Retrieves the metric definitions for any other monitor
-			metricDefinitions =
-				ConfigHelper.fetchMetricDefinitions(
-					telemetryManager.getConnectorStore(),
-					monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID),
-					monitor.getType()
-				);
+			metricDefinitions = ConfigHelper.fetchMetricDefinitions(
+				telemetryManager.getConnectorStore(),
+				monitor.getAttribute(MONITOR_ATTRIBUTE_CONNECTOR_ID),
+				monitor.getType()
+			);
 		}
 
 		// Iterate through the metrics, printing each metric name along with its corresponding value
@@ -330,8 +329,7 @@ public class PrettyPrinterService {
 		}
 
 		// Construct ANSI formatting for the metric name and value
-		Ansi ansi = Ansi
-			.ansi()
+		Ansi ansi = Ansi.ansi()
 			.a(Attribute.INTENSITY_FAINT)
 			.a(formattedMetricName)
 			.bold()
@@ -420,8 +418,7 @@ public class PrettyPrinterService {
 			.forEach(e -> {
 				addMargin(indentation + 2);
 				printWriter.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.a(Attribute.INTENSITY_FAINT)
 						.a(e.getKey())
 						.a(": ")
@@ -461,8 +458,7 @@ public class PrettyPrinterService {
 	 *         an empty optional if the metric definition is absent, the metric is not found, or the unit is blank.
 	 */
 	static Optional<String> fetchUnit(final String metricName, final Map<String, MetricDefinition> metricDefinitionMap) {
-		return Optional
-			.ofNullable(metricDefinitionMap.get(metricName))
+		return Optional.ofNullable(metricDefinitionMap.get(metricName))
 			.map(MetricDefinition::getUnit)
 			.filter(unit -> Objects.nonNull(unit) && !unit.isBlank());
 	}
@@ -485,7 +481,7 @@ public class PrettyPrinterService {
 		 * @param monitorChildren Monitor children instance
 		 */
 		private void addOne(final MonitorChildren monitorChildren) {
-			children.computeIfAbsent(monitorChildren.getMonitor().getType(), t -> new TreeSet<>()).add(monitorChildren);
+			children.computeIfAbsent(monitorChildren.getMonitor().getType(), _ -> new TreeSet<>()).add(monitorChildren);
 		}
 
 		/**
@@ -531,31 +527,29 @@ public class PrettyPrinterService {
 			String parentId = monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_PARENT_ID);
 			if (parentId == null) {
 				// Search any other attribute containing "parent.id" in the key
-				parentId =
-					monitorChildren
-						.getMonitor()
-						.getAttributes()
-						.entrySet()
-						.stream()
-						.filter(attribute -> attribute.getKey().contains(MONITOR_ATTRIBUTE_PARENT_ID))
-						.findFirst()
-						.map(Entry::getValue)
-						.orElse(null);
+				parentId = monitorChildren
+					.getMonitor()
+					.getAttributes()
+					.entrySet()
+					.stream()
+					.filter(attribute -> attribute.getKey().contains(MONITOR_ATTRIBUTE_PARENT_ID))
+					.findFirst()
+					.map(Entry::getValue)
+					.orElse(null);
 			}
 
 			String parentType = monitorChildren.getMonitor().getAttribute(MONITOR_ATTRIBUTE_PARENT_TYPE);
 			if (parentType == null) {
 				// Search any other attribute containing "parent.type" in the key
-				parentType =
-					monitorChildren
-						.getMonitor()
-						.getAttributes()
-						.entrySet()
-						.stream()
-						.filter(attribute -> attribute.getKey().contains(MONITOR_ATTRIBUTE_PARENT_TYPE))
-						.findFirst()
-						.map(Entry::getValue)
-						.orElse(null);
+				parentType = monitorChildren
+					.getMonitor()
+					.getAttributes()
+					.entrySet()
+					.stream()
+					.filter(attribute -> attribute.getKey().contains(MONITOR_ATTRIBUTE_PARENT_TYPE))
+					.findFirst()
+					.map(Entry::getValue)
+					.orElse(null);
 			}
 
 			return parentId != null && parentType != null

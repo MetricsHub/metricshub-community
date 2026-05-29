@@ -110,8 +110,7 @@ public class ConnectorParser {
 
 		PostDeserializeHelper.addPostDeserializeSupport(mapper);
 
-		return ConnectorParser
-			.builder()
+		return ConnectorParser.builder()
 			.deserializer(new ConnectorDeserializer(mapper))
 			.processor(NodeProcessorHelper.withExtendsAndConstantsProcessor(connectorDirectory, mapper))
 			.build();
@@ -133,8 +132,7 @@ public class ConnectorParser {
 
 		PostDeserializeHelper.addPostDeserializeSupport(mapper);
 
-		return ConnectorParser
-			.builder()
+		return ConnectorParser.builder()
 			.deserializer(new ConnectorDeserializer(mapper))
 			.processor(
 				NodeProcessorHelper.withExtendsAndConnectorVariableProcessor(connectorDirectory, mapper, connectorVariables)

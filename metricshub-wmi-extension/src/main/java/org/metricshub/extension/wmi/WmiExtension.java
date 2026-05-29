@@ -149,14 +149,13 @@ public class WmiExtension implements IProtocolExtension {
 		);
 
 		try {
-			wmiResult =
-				wmiRequestExecutor.executeWmi(
-					hostname,
-					wmiConfiguration,
-					WMI_TEST_QUERY,
-					WMI_TEST_NAMESPACE,
-					telemetryManager.getRecordOutputDirectory()
-				);
+			wmiResult = wmiRequestExecutor.executeWmi(
+				hostname,
+				wmiConfiguration,
+				WMI_TEST_QUERY,
+				WMI_TEST_NAMESPACE,
+				telemetryManager.getRecordOutputDirectory()
+			);
 		} catch (Exception e) {
 			if (wmiRequestExecutor.isAcceptableException(e)) {
 				return Optional.of(true);
@@ -182,23 +181,30 @@ public class WmiExtension implements IProtocolExtension {
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WmiConfiguration.class);
 
 		if (criterion instanceof WmiCriterion wmiCriterion) {
-			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode)
-				.process(wmiCriterion, telemetryManager);
+			return new WmiCriterionProcessor(wmiDetectionService, configurationRetriever, connectorId, logMode).process(
+				wmiCriterion,
+				telemetryManager
+			);
 		} else if (criterion instanceof ServiceCriterion serviceCriterion) {
-			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever)
-				.process(serviceCriterion, telemetryManager, connectorId, logMode);
+			return new WinServiceCriterionProcessor(wmiDetectionService, configurationRetriever).process(
+				serviceCriterion,
+				telemetryManager,
+				connectorId,
+				logMode
+			);
 		} else if (criterion instanceof CommandLineCriterion commandLineCriterion) {
-			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId)
-				.process(commandLineCriterion, telemetryManager);
+			return new WinCommandLineCriterionProcessor(winCommandService, configurationRetriever, connectorId).process(
+				commandLineCriterion,
+				telemetryManager
+			);
 		} else if (criterion instanceof ProcessCriterion processCriterion) {
-			return new WinProcessCriterionProcessor(wmiDetectionService)
-				.process(
-					processCriterion,
-					WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
-					connectorId,
-					logMode,
-					telemetryManager.getRecordOutputDirectory()
-				);
+			return new WinProcessCriterionProcessor(wmiDetectionService).process(
+				processCriterion,
+				WmiConfiguration.builder().username(null).password(null).timeout(30L).build(),
+				connectorId,
+				logMode,
+				telemetryManager.getRecordOutputDirectory()
+			);
 		}
 
 		throw new IllegalArgumentException(
@@ -216,17 +222,25 @@ public class WmiExtension implements IProtocolExtension {
 			(IWinConfiguration) manager.getHostConfiguration().getConfigurations().get(WmiConfiguration.class);
 
 		if (source instanceof WmiSource wmiSource) {
-			return new WmiSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId)
-				.process(wmiSource, telemetryManager);
+			return new WmiSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId).process(
+				wmiSource,
+				telemetryManager
+			);
 		} else if (source instanceof CommandLineSource commandLineSource) {
-			return new WinCommandLineSourceProcessor(winCommandService, configurationRetriever, connectorId)
-				.process(commandLineSource, telemetryManager);
+			return new WinCommandLineSourceProcessor(winCommandService, configurationRetriever, connectorId).process(
+				commandLineSource,
+				telemetryManager
+			);
 		} else if (source instanceof EventLogSource eventLogSource) {
-			return new EventLogSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId)
-				.process(eventLogSource, telemetryManager);
+			return new EventLogSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId).process(
+				eventLogSource,
+				telemetryManager
+			);
 		} else if (source instanceof FileSource fileSource) {
-			return new FileSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId)
-				.process(fileSource, telemetryManager);
+			return new FileSourceProcessor(wmiRequestExecutor, configurationRetriever, connectorId).process(
+				fileSource,
+				telemetryManager
+			);
 		}
 
 		throw new IllegalArgumentException(
@@ -275,8 +289,7 @@ public class WmiExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

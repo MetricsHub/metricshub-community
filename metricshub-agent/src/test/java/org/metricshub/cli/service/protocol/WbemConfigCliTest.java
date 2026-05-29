@@ -34,8 +34,7 @@ class WbemConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new WbemExtension()))
 				.build();
 
@@ -48,8 +47,7 @@ class WbemConfigCliTest {
 
 			assertNotNull(wbemConfiguration);
 
-			final WbemConfiguration wbemConfigurationExpected = WbemConfiguration
-				.builder()
+			final WbemConfiguration wbemConfigurationExpected = WbemConfiguration.builder()
 				.username(username)
 				.password(password)
 				.namespace(namespace)

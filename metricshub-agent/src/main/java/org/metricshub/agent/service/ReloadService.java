@@ -222,9 +222,10 @@ public class ReloadService {
 		final Map<String, ResourceConfig> runningResources,
 		final Map<String, ResourceConfig> newResources
 	) {
-		final Set<String> allResources = Stream
-			.concat(runningResources.keySet().stream(), newResources.keySet().stream())
-			.collect(Collectors.toSet());
+		final Set<String> allResources = Stream.concat(
+			runningResources.keySet().stream(),
+			newResources.keySet().stream()
+		).collect(Collectors.toSet());
 
 		// Creating the map that will contain all the resources to schedule
 		final Map<String, ResourceConfig> resourcesToSchedule = new HashMap<>();
@@ -292,9 +293,10 @@ public class ReloadService {
 		final Map<String, ResourceGroupConfig> runningResourceGroups,
 		final Map<String, ResourceGroupConfig> newResourceGroups
 	) {
-		final Set<String> allResourceGroups = Stream
-			.concat(runningResourceGroups.keySet().stream(), newResourceGroups.keySet().stream())
-			.collect(Collectors.toSet());
+		final Set<String> allResourceGroups = Stream.concat(
+			runningResourceGroups.keySet().stream(),
+			newResourceGroups.keySet().stream()
+		).collect(Collectors.toSet());
 
 		// Create a map of resources to schedule
 		final Map<String, Map<String, ResourceConfig>> resourcesToSchedule = new HashMap<>();
@@ -355,19 +357,18 @@ public class ReloadService {
 		runningAgentContext.getAgentConfig().getResourceGroups().remove(resourceGroupKey);
 
 		// cancel and remove the resource group schedule
-		Optional
-			.ofNullable(
-				runningAgentContext
-					.getTaskSchedulingService()
-					.getSchedules()
-					.remove(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey))
-			)
-			.ifPresent(s -> s.cancel(true));
+		Optional.ofNullable(
+			runningAgentContext
+				.getTaskSchedulingService()
+				.getSchedules()
+				.remove(METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey))
+		).ifPresent(s -> s.cancel(true));
 
 		// remove all the resource group resources from the task scheduling service
 		resourceGroupConfig
 			.getResources()
-			.forEach((resourceKey, resourceConfig) ->
+			.keySet()
+			.forEach(resourceKey ->
 				removeResourceFromTaskSchedulingService(
 					resourceGroupKey,
 					resourceKey,
@@ -428,12 +429,12 @@ public class ReloadService {
 
 		// cancel and remove the resource group schedule
 		final String resourceGroupSchedulingName = METRICSHUB_RESOURCE_GROUP_KEY_FORMAT.formatted(resourceGroupKey);
-		Optional
-			.ofNullable(runningAgentContext.getTaskSchedulingService().getSchedules().remove(resourceGroupSchedulingName))
-			.ifPresent(s -> {
-				s.cancel(true);
-				log.info("Stopping and removing scheduled resource group '{}'.", resourceGroupSchedulingName);
-			});
+		Optional.ofNullable(
+			runningAgentContext.getTaskSchedulingService().getSchedules().remove(resourceGroupSchedulingName)
+		).ifPresent(s -> {
+			s.cancel(true);
+			log.info("Stopping and removing scheduled resource group '{}'.", resourceGroupSchedulingName);
+		});
 
 		// remove all the resource group resources from the task scheduling service
 		oldGroup
@@ -524,7 +525,7 @@ public class ReloadService {
 
 		// Add the TelemetryManager to the resource
 		oldTelemetryManagers
-			.computeIfAbsent(resourceGroupKey, key -> new HashMap<>())
+			.computeIfAbsent(resourceGroupKey, _ -> new HashMap<>())
 			.put(resourceKey, newTelemetryManagers.get(resourceGroupKey).get(resourceKey));
 	}
 
@@ -565,14 +566,11 @@ public class ReloadService {
 		runningAgentContext
 			.getTaskSchedulingService()
 			.getTelemetryManagers()
-			.computeIfPresent(
-				resourceGroupKey,
-				(key, resourceMap) -> {
-					resourceMap.remove(resourceKey);
-					// Keep the group-level map unless empty
-					return resourceMap.isEmpty() ? null : resourceMap;
-				}
-			);
+			.computeIfPresent(resourceGroupKey, (_, resourceMap) -> {
+				resourceMap.remove(resourceKey);
+				// Keep the group-level map unless empty
+				return resourceMap.isEmpty() ? null : resourceMap;
+			});
 	}
 
 	/**
@@ -607,15 +605,14 @@ public class ReloadService {
 
 		for (Map.Entry<String, Map<String, ResourceConfig>> groupEntry : resourcesToSchedule.entrySet()) {
 			// Loop over each group and delegate scheduling
-			currentQuota =
-				processResourceGroup(
-					groupEntry.getKey(),
-					groupEntry.getValue(),
-					quota,
-					currentQuota,
-					resourcesToRemove,
-					scheduledResourceGroups
-				);
+			currentQuota = processResourceGroup(
+				groupEntry.getKey(),
+				groupEntry.getValue(),
+				quota,
+				currentQuota,
+				resourcesToRemove,
+				scheduledResourceGroups
+			);
 		}
 
 		// Schedule resource groups
@@ -692,7 +689,7 @@ public class ReloadService {
 				log.warn("Maximum number of resources '{}' reached. Deleting '{}' resource configuration", quota, resourceKey);
 
 				// add the resource to the resourcesToRemove map.
-				resourcesToRemove.computeIfAbsent(resourceGroupKey, k -> new HashSet<>()).add(resourceKey);
+				resourcesToRemove.computeIfAbsent(resourceGroupKey, _ -> new HashSet<>()).add(resourceKey);
 			}
 		}
 

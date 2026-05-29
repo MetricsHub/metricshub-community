@@ -166,8 +166,7 @@ public class CommandLineSource extends Source {
 	 * @return new {@link CommandLineSource} instance
 	 */
 	public CommandLineSource copy() {
-		return CommandLineSource
-			.builder()
+		return CommandLineSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

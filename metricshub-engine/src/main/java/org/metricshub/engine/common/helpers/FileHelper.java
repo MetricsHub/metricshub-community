@@ -148,7 +148,7 @@ public class FileHelper {
 		@NonNull final Map<String, ?> env,
 		@NonNull final Runnable runnable
 	) throws IOException {
-		try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+		try (FileSystem _ = FileSystems.newFileSystem(uri, env)) {
 			runnable.run();
 		}
 	}
@@ -172,7 +172,7 @@ public class FileHelper {
 		@NonNull final Map<String, ?> env,
 		@NonNull final Callable<T> callable
 	) throws Exception {
-		try (FileSystem fs = FileSystems.newFileSystem(uri, env)) {
+		try (FileSystem _ = FileSystems.newFileSystem(uri, env)) {
 			return callable.call();
 		}
 	}

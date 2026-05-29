@@ -63,7 +63,7 @@ public class AttributesDeserializer extends JsonDeserializer<Map<String, String>
 				Collectors.toMap(
 					Map.Entry::getKey,
 					value -> StringHelper.stringify(value.getValue(), MULTI_VALUE_SEPARATOR),
-					(oldValue, newValue) -> oldValue,
+					(oldValue, _) -> oldValue,
 					LinkedHashMap::new
 				)
 			);

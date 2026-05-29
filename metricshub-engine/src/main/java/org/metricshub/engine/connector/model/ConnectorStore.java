@@ -69,8 +69,7 @@ public class ConnectorStore implements Serializable {
 		this.connectorDirectory = connectorDirectory;
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore(connectorDirectory);
 		this.rawConnectorStore = rawConnectorStore;
-		final Map<String, Connector> store = ConnectorStoreComposer
-			.builder()
+		final Map<String, Connector> store = ConnectorStoreComposer.builder()
 			.withRawConnectorStore(rawConnectorStore)
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))

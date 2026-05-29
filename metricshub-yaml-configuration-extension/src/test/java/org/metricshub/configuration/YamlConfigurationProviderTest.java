@@ -45,8 +45,9 @@ class YamlConfigurationProviderTest {
 			.anyMatch(node -> "value1".equals(getJsonNodeAsText(node, "key1")));
 		final boolean config2Found = configurations
 			.stream()
-			.anyMatch(node ->
-				"value2".equals(getJsonNodeAsText(node, "key2")) && Integer.valueOf(3).equals(getJsonNodeAsInt(node, "key3"))
+			.anyMatch(
+				node ->
+					"value2".equals(getJsonNodeAsText(node, "key2")) && Integer.valueOf(3).equals(getJsonNodeAsInt(node, "key3"))
 			);
 
 		assertTrue(config1Found, "config1.yaml should be correctly loaded");

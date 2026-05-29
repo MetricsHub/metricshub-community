@@ -16,8 +16,7 @@ class MonitorTest {
 		}
 
 		{
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.identifyingAttributeKeys(Set.of("id", "name"))
 				.attributes(Map.of("id", "1", "name", "test"))
 				.build();
@@ -25,8 +24,7 @@ class MonitorTest {
 		}
 
 		{
-			final Monitor monitor = Monitor
-				.builder()
+			final Monitor monitor = Monitor.builder()
 				.identifyingAttributeKeys(Set.of("id", "name"))
 				.attributes(Map.of("id", "1"))
 				.build();

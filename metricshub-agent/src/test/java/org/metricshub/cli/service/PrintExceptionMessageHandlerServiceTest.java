@@ -11,8 +11,11 @@ class PrintExceptionMessageHandlerServiceTest {
 	void testHandleExecutionException() {
 		final CommandLine commandLine = new CommandLine(new MetricsHubCliService());
 		assertDoesNotThrow(() -> {
-			return new PrintExceptionMessageHandlerService()
-				.handleExecutionException(new Exception("message 2", new Exception("message 1")), commandLine, null);
+			return new PrintExceptionMessageHandlerService().handleExecutionException(
+				new Exception("message 2", new Exception("message 1")),
+				commandLine,
+				null
+			);
 		});
 	}
 }

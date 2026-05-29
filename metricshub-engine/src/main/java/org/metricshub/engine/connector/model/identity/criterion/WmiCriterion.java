@@ -65,8 +65,7 @@ public class WmiCriterion extends WqlCriterion {
 
 	@Override
 	public WmiCriterion copy() {
-		return WmiCriterion
-			.builder()
+		return WmiCriterion.builder()
 			.query(getQuery())
 			.namespace(getNamespace())
 			.expectedResult(getExpectedResult())

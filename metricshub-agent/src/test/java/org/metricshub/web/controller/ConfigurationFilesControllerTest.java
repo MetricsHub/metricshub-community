@@ -56,15 +56,13 @@ class ConfigurationFilesControllerTest {
 
 	@Test
 	void testShouldListConfigurationFiles() throws Exception {
-		final ConfigurationFile f1 = ConfigurationFile
-			.builder()
+		final ConfigurationFile f1 = ConfigurationFile.builder()
 			.name(METRICSHUB_YAML_FILE_NAME)
 			.size(1024L)
 			.lastModificationTime("2025-09-01T10:15:30Z")
 			.build();
 
-		final ConfigurationFile f2 = ConfigurationFile
-			.builder()
+		final ConfigurationFile f2 = ConfigurationFile.builder()
 			.name("general-settings.yaml")
 			.size(256L)
 			.lastModificationTime("2025-09-02T08:00:00Z")
@@ -109,8 +107,9 @@ class ConfigurationFilesControllerTest {
 
 	@Test
 	void testGetFileContentNotFound() throws Exception {
-		when(configurationFilesService.getFileContent("missing.yaml"))
-			.thenThrow(new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Not Found"));
+		when(configurationFilesService.getFileContent("missing.yaml")).thenThrow(
+			new ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Not Found")
+		);
 
 		mockMvc.perform(get("/api/config-files/missing.yaml")).andExpect(status().isNotFound());
 	}
@@ -119,8 +118,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldSaveOrUpdateFile() throws Exception {
 		final String lastModificationTime = "2025-09-03T12:00:00Z";
 		final long size = 1000L;
-		final ConfigurationFile configurationFile = ConfigurationFile
-			.builder()
+		final ConfigurationFile configurationFile = ConfigurationFile.builder()
 			.lastModificationTime(lastModificationTime)
 			.name(METRICSHUB_YAML_FILE_NAME)
 			.size(size)
@@ -148,8 +146,9 @@ class ConfigurationFilesControllerTest {
 		ObjectNode result = JsonNodeFactory.instance.objectNode();
 		result.put("valid", true).putArray("errors");
 
-		when(configurationFilesService.validate("a: 1\n", METRICSHUB_YAML_FILE_NAME))
-			.thenReturn(ConfigurationFilesService.Validation.ok(METRICSHUB_YAML_FILE_NAME));
+		when(configurationFilesService.validate("a: 1\n", METRICSHUB_YAML_FILE_NAME)).thenReturn(
+			ConfigurationFilesService.Validation.ok(METRICSHUB_YAML_FILE_NAME)
+		);
 
 		mockMvc
 			.perform(
@@ -175,8 +174,9 @@ class ConfigurationFilesControllerTest {
 		when(configurationFilesService.getFileContent(METRICSHUB_YAML_FILE_NAME)).thenReturn("x: 2\n");
 		final DeserializationFailure failure = new DeserializationFailure();
 		failure.addError("Invalid YAML");
-		when(configurationFilesService.validate("x: 2\n", METRICSHUB_YAML_FILE_NAME))
-			.thenReturn(ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, failure));
+		when(configurationFilesService.validate("x: 2\n", METRICSHUB_YAML_FILE_NAME)).thenReturn(
+			ConfigurationFilesService.Validation.fail(METRICSHUB_YAML_FILE_NAME, failure)
+		);
 
 		mockMvc
 			.perform(post("/api/config-files/metricshub.yaml").accept(MediaType.APPLICATION_JSON))
@@ -200,8 +200,7 @@ class ConfigurationFilesControllerTest {
 	void testShouldRenameFile() throws Exception {
 		final String lastModificationTime = "2025-09-03T12:00:00Z";
 		final long size = 1000L;
-		final ConfigurationFile configurationFile = ConfigurationFile
-			.builder()
+		final ConfigurationFile configurationFile = ConfigurationFile.builder()
 			.lastModificationTime(lastModificationTime)
 			.name(METRICSHUB_YAML_FILE_NAME)
 			.size(size)
@@ -237,11 +236,11 @@ class ConfigurationFilesControllerTest {
 		final String vmFileName = "config.vm";
 
 		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
-		when(configurationFilesService.validate(generatedYaml, vmFileName))
-			.thenReturn(ConfigurationFilesService.Validation.ok(vmFileName));
+		when(configurationFilesService.validate(generatedYaml, vmFileName)).thenReturn(
+			ConfigurationFilesService.Validation.ok(vmFileName)
+		);
 
-		final ConfigurationFile savedFile = ConfigurationFile
-			.builder()
+		final ConfigurationFile savedFile = ConfigurationFile.builder()
 			.name(vmFileName)
 			.size(100L)
 			.lastModificationTime("2025-09-01T10:00:00Z")
@@ -267,13 +266,12 @@ class ConfigurationFilesControllerTest {
 		final String vmContent = "#set($x = )";
 		final String vmFileName = "bad-syntax.vm";
 
-		when(velocityTemplateService.evaluate(vmFileName, vmContent))
-			.thenThrow(
-				new ConfigFilesException(
-					ConfigFilesException.Code.VALIDATION_FAILED,
-					"Velocity template evaluation failed: Encountered unexpected token"
-				)
-			);
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenThrow(
+			new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"Velocity template evaluation failed: Encountered unexpected token"
+			)
+		);
 
 		mockMvc
 			.perform(
@@ -293,8 +291,9 @@ class ConfigurationFilesControllerTest {
 		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
 		final DeserializationFailure failure = new DeserializationFailure();
 		failure.addError("Invalid YAML structure");
-		when(configurationFilesService.validate(generatedYaml, vmFileName))
-			.thenReturn(ConfigurationFilesService.Validation.fail(vmFileName, failure));
+		when(configurationFilesService.validate(generatedYaml, vmFileName)).thenReturn(
+			ConfigurationFilesService.Validation.fail(vmFileName, failure)
+		);
 
 		mockMvc
 			.perform(
@@ -312,8 +311,9 @@ class ConfigurationFilesControllerTest {
 		final String vmFileName = "config.vm";
 
 		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenReturn(generatedYaml);
-		when(configurationFilesService.validate(generatedYaml, vmFileName))
-			.thenReturn(ConfigurationFilesService.Validation.ok(vmFileName));
+		when(configurationFilesService.validate(generatedYaml, vmFileName)).thenReturn(
+			ConfigurationFilesService.Validation.ok(vmFileName)
+		);
 
 		mockMvc
 			.perform(
@@ -332,13 +332,12 @@ class ConfigurationFilesControllerTest {
 		final String vmContent = "#set($x = )";
 		final String vmFileName = "bad-template.vm";
 
-		when(velocityTemplateService.evaluate(vmFileName, vmContent))
-			.thenThrow(
-				new ConfigFilesException(
-					ConfigFilesException.Code.VALIDATION_FAILED,
-					"Velocity template evaluation failed: syntax error"
-				)
-			);
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenThrow(
+			new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"Velocity template evaluation failed: syntax error"
+			)
+		);
 
 		mockMvc
 			.perform(
@@ -408,13 +407,12 @@ class ConfigurationFilesControllerTest {
 		final String vmContent = "#set($x = )";
 		final String vmFileName = "bad.vm";
 
-		when(velocityTemplateService.evaluate(vmFileName, vmContent))
-			.thenThrow(
-				new ConfigFilesException(
-					ConfigFilesException.Code.VALIDATION_FAILED,
-					"Velocity template evaluation failed: Encountered unexpected token"
-				)
-			);
+		when(velocityTemplateService.evaluate(vmFileName, vmContent)).thenThrow(
+			new ConfigFilesException(
+				ConfigFilesException.Code.VALIDATION_FAILED,
+				"Velocity template evaluation failed: Encountered unexpected token"
+			)
+		);
 
 		mockMvc
 			.perform(

@@ -127,8 +127,7 @@ public class FileSource extends Source {
 
 	@Override
 	public Source copy() {
-		return FileSource
-			.builder()
+		return FileSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

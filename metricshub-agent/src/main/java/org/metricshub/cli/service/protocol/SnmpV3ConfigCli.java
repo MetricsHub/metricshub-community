@@ -163,8 +163,7 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 			Arrays.stream(retryIntervals).mapToObj(IntNode::valueOf).forEach(retryIntervalsNode::add);
 			configuration.set("retryIntervals", retryIntervalsNode);
 		}
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("snmpv3", configuration, value -> value)
 			.orElseThrow();
 	}

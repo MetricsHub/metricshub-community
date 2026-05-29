@@ -25,6 +25,7 @@ import org.metricshub.extension.snmp.SnmpExtension;
 import org.metricshub.it.job.snmp.SnmpITJob;
 
 class DellOpenManageIT {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -46,15 +47,13 @@ class DellOpenManageIT {
 
 	@BeforeAll
 	static void setUp() {
-		final SnmpConfiguration snmpConfiguration = SnmpConfiguration
-			.builder()
+		final SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder()
 			.community("public".toCharArray())
 			.version(SnmpVersion.V1)
 			.timeout(120L)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(LOCALHOST)
 			.hostname(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -64,8 +63,10 @@ class DellOpenManageIT {
 
 		final ConnectorStore connectorStore = new ConnectorStore(CONNECTOR_DIRECTORY);
 
-		telemetryManager =
-			TelemetryManager.builder().connectorStore(connectorStore).hostConfiguration(hostConfiguration).build();
+		telemetryManager = TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(hostConfiguration)
+			.build();
 
 		clientsExecutor = new ClientsExecutor(telemetryManager);
 

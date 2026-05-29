@@ -79,8 +79,7 @@ class TelemetryResultConverterTest {
 		final Monitor monitor = Monitor.builder().build();
 		monitor.setType("enclosure");
 
-		final NumberMetric counterMetric = NumberMetric
-			.builder()
+		final NumberMetric counterMetric = NumberMetric.builder()
 			.name("hw.enclosure.energy")
 			.value(5000.0)
 			.metricType("Counter")
@@ -105,8 +104,7 @@ class TelemetryResultConverterTest {
 		monitor.setType("enclosure");
 
 		// Counter with null rate (first collect cycle)
-		final NumberMetric counterMetric = NumberMetric
-			.builder()
+		final NumberMetric counterMetric = NumberMetric.builder()
 			.name("hw.enclosure.energy")
 			.value(5000.0)
 			.metricType("Counter")
@@ -115,8 +113,7 @@ class TelemetryResultConverterTest {
 		monitor.addMetric("hw.enclosure.energy", counterMetric);
 
 		// Also add a Gauge metric
-		final NumberMetric gaugeMetric = NumberMetric
-			.builder()
+		final NumberMetric gaugeMetric = NumberMetric.builder()
 			.name("hw.enclosure.power")
 			.value(200.0)
 			.metricType("Gauge")
@@ -166,8 +163,7 @@ class TelemetryResultConverterTest {
 		final Monitor monitor = Monitor.builder().build();
 		monitor.setType("disk");
 
-		final StateSetMetric status = StateSetMetric
-			.builder()
+		final StateSetMetric status = StateSetMetric.builder()
 			.name("hw.status")
 			.value("ok")
 			.stateSet(new String[] { "ok", "degraded", "failed" })
@@ -192,8 +188,7 @@ class TelemetryResultConverterTest {
 		disk1.addMetric("disk.utilization", NumberMetric.builder().name("disk.utilization").value(45.5).build());
 		disk1.addMetric(
 			"hw.status",
-			StateSetMetric
-				.builder()
+			StateSetMetric.builder()
 				.name("hw.status")
 				.value("ok")
 				.stateSet(new String[] { "ok", "degraded", "failed" })
@@ -206,8 +201,7 @@ class TelemetryResultConverterTest {
 		disk2.addMetric("disk.utilization", NumberMetric.builder().name("disk.utilization").value(78.2).build());
 		disk2.addMetric(
 			"hw.status",
-			StateSetMetric
-				.builder()
+			StateSetMetric.builder()
 				.name("hw.status")
 				.value("degraded")
 				.stateSet(new String[] { "ok", "degraded", "failed" })
@@ -252,8 +246,7 @@ class TelemetryResultConverterTest {
 	void testCounterRateInSummary() {
 		final Monitor enc1 = Monitor.builder().build();
 		enc1.setType("enclosure");
-		final NumberMetric energy1 = NumberMetric
-			.builder()
+		final NumberMetric energy1 = NumberMetric.builder()
 			.name("hw.enclosure.energy")
 			.value(5000.0)
 			.metricType("Counter")
@@ -263,8 +256,7 @@ class TelemetryResultConverterTest {
 
 		final Monitor enc2 = Monitor.builder().build();
 		enc2.setType("enclosure");
-		final NumberMetric energy2 = NumberMetric
-			.builder()
+		final NumberMetric energy2 = NumberMetric.builder()
 			.name("hw.enclosure.energy")
 			.value(8000.0)
 			.metricType("Counter")
@@ -295,8 +287,7 @@ class TelemetryResultConverterTest {
 		final Monitor enc = Monitor.builder().build();
 		enc.setType("enclosure");
 
-		final NumberMetric energy = NumberMetric
-			.builder()
+		final NumberMetric energy = NumberMetric.builder()
 			.name("hw.enclosure.energy")
 			.value(5000.0)
 			.metricType("Counter")
@@ -304,8 +295,7 @@ class TelemetryResultConverterTest {
 		// rate is null (first collect)
 		enc.addMetric("hw.enclosure.energy", energy);
 
-		final StateSetMetric status = StateSetMetric
-			.builder()
+		final StateSetMetric status = StateSetMetric.builder()
 			.name("hw.status")
 			.value("ok")
 			.stateSet(new String[] { "ok" })
@@ -376,8 +366,7 @@ class TelemetryResultConverterTest {
 		monitor.addMetric("cpu.utilization", NumberMetric.builder().name("cpu.utilization").value(23.4).build());
 		monitor.addMetric(
 			"hw.status",
-			StateSetMetric
-				.builder()
+			StateSetMetric.builder()
 				.name("hw.status")
 				.value("ok")
 				.stateSet(new String[] { "ok", "degraded", "failed" })

@@ -56,6 +56,7 @@ import org.snmp4j.transport.TransportMappings;
 import org.snmp4j.util.ThreadPool;
 
 public class SnmpAgent implements VariableProvider {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -64,10 +65,10 @@ public class SnmpAgent implements VariableProvider {
 
 	private static final Pattern SNMP_LINE_REGEX = Pattern.compile(
 		"(.*)\\s+(ASN_INTEGER|ASN_OCTET_STR|" +
-		"ASN_NULL|ASN_OBJECT_ID|" +
-		"IPADDRESS|COUNTER|" +
-		"COUNTER64|GAUGE|" +
-		"TIMETICKS|OPAQUE)\\s+(.*)",
+			"ASN_NULL|ASN_OBJECT_ID|" +
+			"IPADDRESS|COUNTER|" +
+			"COUNTER64|GAUGE|" +
+			"TIMETICKS|OPAQUE)\\s+(.*)",
 		Pattern.MULTILINE
 	);
 
@@ -138,17 +139,16 @@ public class SnmpAgent implements VariableProvider {
 		threadPool = ThreadPool.create("snmp4JAgent", 3);
 
 		// Create the AgentConfigManager, this is the overridden default instance
-		agent =
-			new AgentConfigurationManager(
-				new OctetString(MPv3.createLocalEngineID()),
-				messageDispatcher,
-				null,
-				moServers,
-				threadPool,
-				configurationFactory,
-				new DefaultMOPersistenceProvider(moServers, configFile.getAbsolutePath()),
-				new EngineBootsCounterFile(bootCounterFile)
-			);
+		agent = new AgentConfigurationManager(
+			new OctetString(MPv3.createLocalEngineID()),
+			messageDispatcher,
+			null,
+			moServers,
+			threadPool,
+			configurationFactory,
+			new DefaultMOPersistenceProvider(moServers, configFile.getAbsolutePath()),
+			new EngineBootsCounterFile(bootCounterFile)
+		);
 	}
 
 	@SuppressWarnings("unchecked")

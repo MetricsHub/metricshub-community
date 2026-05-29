@@ -92,8 +92,7 @@ public class PslUtils {
 				c == CLOSING_PARENTHESIS_CHAR ||
 				c == PIPE_CHAR ||
 				c == OPENING_CURLY_BRACKET_CHAR ||
-				c == CLOSING_CURLY_BRACKET_CHAR
-				// CHECKSTYLE:ON
+				c == CLOSING_CURLY_BRACKET_CHAR // CHECKSTYLE:ON
 			) {
 				javaRegex.append(BACKSLASH_CHAR).append(c);
 			} else if (c == OPENING_SQUARE_BRACKET_CHAR) {
@@ -336,11 +335,9 @@ public class PslUtils {
 			// If we have valid fromColumnNumber and toColumnNumber, then retrieve these columns
 			// which are actually items in the splitText array
 			if (fromColumnNumber > 0 && fromColumnNumber <= toColumnNumber) {
-				result =
-					Arrays
-						.stream(splitText, fromColumnNumber - 1, toColumnNumber)
-						.filter(value -> !isNthArg || !value.trim().isEmpty())
-						.collect(Collectors.joining(resultSeparator));
+				result = Arrays.stream(splitText, fromColumnNumber - 1, toColumnNumber)
+					.filter(value -> !isNthArg || !value.trim().isEmpty())
+					.collect(Collectors.joining(resultSeparator));
 
 				finalResult.add(result);
 			}

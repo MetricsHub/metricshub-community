@@ -23,8 +23,7 @@ class NetworkPowerAndEnergyEstimatorTest {
 	@Test
 	void testEstimatePower() {
 		Monitor monitor = Monitor.builder().attributes(new HashMap<>(Map.of("name", "prefix_wan_suffix"))).build();
-		TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(1696597422644L)
 			.hostConfiguration(HostConfiguration.builder().hostname("localhost").build())
 			.build();
@@ -82,8 +81,7 @@ class NetworkPowerAndEnergyEstimatorTest {
 
 	@Test
 	void testEstimateEnergy() {
-		Monitor monitor = Monitor
-			.builder()
+		Monitor monitor = Monitor.builder()
 			.attributes(new HashMap<>(Map.of("name", "real_network_card")))
 			.metrics(
 				new HashMap<>(
@@ -96,8 +94,7 @@ class NetworkPowerAndEnergyEstimatorTest {
 				)
 			)
 			.build();
-		TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(1696597422644L)
 			.hostConfiguration(HostConfiguration.builder().hostname("localhost").build())
 			.build();

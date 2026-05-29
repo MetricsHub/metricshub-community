@@ -9,27 +9,24 @@ class FileSourceProcessingModeTest {
 
 	@Test
 	void interpretValueOfNullThrows() {
-		IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> FileSourceProcessingMode.interpretValueOf(null)
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			FileSourceProcessingMode.interpretValueOf(null)
 		);
 		assertEquals("FileSourceMode value cannot be null or blank.", ex.getMessage());
 	}
 
 	@Test
 	void interpretValueOfBlankThrows() {
-		IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> FileSourceProcessingMode.interpretValueOf("   ")
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			FileSourceProcessingMode.interpretValueOf("   ")
 		);
 		assertEquals("FileSourceMode value cannot be null or blank.", ex.getMessage());
 	}
 
 	@Test
 	void interpretValueOfEmptyStringThrows() {
-		IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> FileSourceProcessingMode.interpretValueOf("")
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			FileSourceProcessingMode.interpretValueOf("")
 		);
 		assertEquals("FileSourceMode value cannot be null or blank.", ex.getMessage());
 	}
@@ -52,18 +49,16 @@ class FileSourceProcessingModeTest {
 
 	@Test
 	void interpretValueOfUnsupportedThrows() {
-		IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> FileSourceProcessingMode.interpretValueOf("other")
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			FileSourceProcessingMode.interpretValueOf("other")
 		);
 		assertEquals("'other' is not a supported FileSourceMode. Supported values: 'Flat', 'Log'.", ex.getMessage());
 	}
 
 	@Test
 	void interpretValueOfInvalidThrowsWithValueInMessage() {
-		IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> FileSourceProcessingMode.interpretValueOf("stream")
+		IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			FileSourceProcessingMode.interpretValueOf("stream")
 		);
 		assertEquals("'stream' is not a supported FileSourceMode. Supported values: 'Flat', 'Log'.", ex.getMessage());
 	}

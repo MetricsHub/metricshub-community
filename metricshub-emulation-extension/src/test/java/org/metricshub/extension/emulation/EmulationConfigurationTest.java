@@ -62,14 +62,12 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testCopyWithJdbc() {
-		final JdbcConfiguration jdbcConfig = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfig = JdbcConfiguration.builder()
 			.hostname("test-host")
 			.username("user")
 			.password("pass".toCharArray())
 			.build();
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.hostname("test-host")
 			.jdbc(new JdbcEmulationConfig(jdbcConfig, "/jdbc/dir"))
 			.build();
@@ -85,8 +83,7 @@ class EmulationConfigurationTest {
 	@Test
 	void testCopyWithIpmi() {
 		final IpmiConfiguration ipmiConfig = IpmiConfiguration.builder().hostname("test-host").username("admin").build();
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.hostname("test-host")
 			.ipmi(new IpmiEmulationConfig(ipmiConfig, "/ipmi/dir"))
 			.build();
@@ -102,8 +99,7 @@ class EmulationConfigurationTest {
 	@Test
 	void testCopyWithJmx() {
 		final JmxConfiguration jmxConfig = JmxConfiguration.builder().hostname("test-host").username("admin").build();
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.hostname("test-host")
 			.jmx(new JmxEmulationConfig(jmxConfig, "/jmx/dir"))
 			.build();
@@ -119,8 +115,7 @@ class EmulationConfigurationTest {
 	@Test
 	void testCopyWithWmi() {
 		final WmiConfiguration wmiConfig = WmiConfiguration.builder().hostname("test-host").username("admin").build();
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.hostname("test-host")
 			.wmi(new WmiEmulationConfig(wmiConfig, "/wmi/dir"))
 			.build();
@@ -145,8 +140,7 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().timeout(10L).build(), null))
 			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().timeout(42L).build(), null))
 			.wbem(new WbemEmulationConfig(WbemConfiguration.builder().timeout(12L).build(), null))
@@ -172,27 +166,28 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testBuildConfigurationWithNestedProtocolConfigurationNode() throws Exception {
-		final JsonNode jsonNode = EmulationExtension
-			.newObjectMapper()
-			.readTree(
-				"""
-				http:
-				  directory: http-recordings
-				  configuration:
-				    username: http-user
-				    password: http-password
-				    port: 8443
-				ssh:
-				  directory: ssh-recordings
-				  configuration:
-				    username: ssh-user
-				    password: ssh-password
-				    port: 2222
-				"""
-			);
+		final JsonNode jsonNode = EmulationExtension.newObjectMapper().readTree(
+			"""
+			http:
+			  directory: http-recordings
+			  configuration:
+			    username: http-user
+			    password: http-password
+			    port: 8443
+			ssh:
+			  directory: ssh-recordings
+			  configuration:
+			    username: ssh-user
+			    password: ssh-password
+			    port: 2222
+			"""
+		);
 
-		final EmulationConfiguration configuration = (EmulationConfiguration) new EmulationExtension()
-			.buildConfiguration(EmulationExtension.IDENTIFIER, jsonNode, value -> value);
+		final EmulationConfiguration configuration = (EmulationConfiguration) new EmulationExtension().buildConfiguration(
+			EmulationExtension.IDENTIFIER,
+			jsonNode,
+			value -> value
+		);
 
 		assertNotNull(configuration.getHttp());
 		assertEquals("http-recordings", configuration.getHttp().getDirectory());
@@ -225,8 +220,7 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testToStringSingleProtocol() {
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.wmi(new WmiEmulationConfig(WmiConfiguration.builder().build(), "/wmi/dir"))
 			.build();
 		assertEquals("Emulation(WMI)", configuration.toString());
@@ -234,8 +228,7 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testToStringMultipleProtocols() {
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().build(), "/http/dir"))
 			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().build(), "/snmp/dir"))
 			.wmi(new WmiEmulationConfig(WmiConfiguration.builder().build(), "/wmi/dir"))
@@ -245,8 +238,7 @@ class EmulationConfigurationTest {
 
 	@Test
 	void testToStringAllProtocols() {
-		final EmulationConfiguration configuration = EmulationConfiguration
-			.builder()
+		final EmulationConfiguration configuration = EmulationConfiguration.builder()
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().build(), null))
 			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().build(), null))
 			.oscommand(new OsCommandEmulationConfig(OsCommandConfiguration.builder().build(), null))

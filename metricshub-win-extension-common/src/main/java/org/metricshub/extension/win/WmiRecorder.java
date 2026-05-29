@@ -32,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.extension.recorder.AbstractRecorder;
 import org.metricshub.engine.strategy.source.SourceTable;
 
 /**
@@ -48,8 +49,7 @@ import org.metricshub.engine.strategy.source.SourceTable;
  * </pre>
  */
 @Slf4j
-public class WmiRecorder
-	extends org.metricshub.engine.extension.recorder.AbstractRecorder<WmiRecorder.WmiRecordRequest> {
+public class WmiRecorder extends AbstractRecorder<WmiRecorder.WmiRecordRequest> {
 
 	static final String WMI_SUBDIR = "wmi";
 	static final String IMAGE_YAML = "image.yaml";

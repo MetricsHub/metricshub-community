@@ -76,8 +76,7 @@ public class TextTableHelper {
 			return "<empty>";
 		}
 
-		List<TableHeader> headers = IntStream
-			.range(1, longestRow.size() + 1)
+		List<TableHeader> headers = IntStream.range(1, longestRow.size() + 1)
 			.mapToObj(index -> new TableHeader(String.format("Column %d", index), TextDataType.STRING))
 			.collect(Collectors.toList()); //NOSONAR
 
@@ -117,8 +116,7 @@ public class TextTableHelper {
 			return generateTextTable(rows);
 		}
 
-		List<TableHeader> headers = Arrays
-			.stream(columns)
+		List<TableHeader> headers = Arrays.stream(columns)
 			.map(columnName -> new TableHeader(columnName, TextDataType.STRING))
 			.collect(Collectors.toList()); //NOSONAR
 
@@ -218,7 +216,11 @@ public class TextTableHelper {
 	 * @return new cleaned rows
 	 */
 	private static List<List<String>> cleanRows(final List<List<String>> rows, final int headersSize) {
-		return rows.stream().filter(Objects::nonNull).map(row -> cleanRow(row, headersSize)).collect(Collectors.toList()); //NOSONAR
+		return rows
+			.stream()
+			.filter(Objects::nonNull)
+			.map(row -> cleanRow(row, headersSize))
+			.collect(Collectors.toList()); //NOSONAR
 	}
 
 	/**
@@ -242,9 +244,10 @@ public class TextTableHelper {
 
 		// Creating missing cells
 		if (result.size() < headersSize) {
-			return Stream
-				.concat(result.stream(), Stream.generate(() -> N_A).limit((long) headersSize - result.size()))
-				.collect(Collectors.toList()); //NOSONAR
+			return Stream.concat(
+				result.stream(),
+				Stream.generate(() -> N_A).limit((long) headersSize - result.size())
+			).collect(Collectors.toList()); //NOSONAR
 		} else if (result.size() > headersSize) {
 			// Removing extra cells
 			return result.stream().limit(headersSize).collect(Collectors.toList()); //NOSONAR

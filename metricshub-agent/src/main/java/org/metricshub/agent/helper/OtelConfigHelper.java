@@ -66,10 +66,9 @@ public class OtelConfigHelper {
 		final Path securityFilePath;
 		// No security file path? we will use the default one
 		if (securityFile == null || securityFile.isBlank()) {
-			securityFilePath =
-				ConfigHelper.getSubPath(
-					String.format(AgentConstants.FILE_PATH_FORMAT, securityFileDir, defaultSecurityFilename)
-				);
+			securityFilePath = ConfigHelper.getSubPath(
+				String.format(AgentConstants.FILE_PATH_FORMAT, securityFileDir, defaultSecurityFilename)
+			);
 		} else {
 			securityFilePath = Path.of(securityFile);
 		}
@@ -148,8 +147,7 @@ public class OtelConfigHelper {
 				DEFAULT_OTEL_CRT_FILENAME,
 				properties.get(otlpCertificatePropertyKey),
 				otlpEndpoint
-			)
-				.ifPresent(trustedCertificatesFile -> properties.put(otlpCertificatePropertyKey, trustedCertificatesFile));
+			).ifPresent(trustedCertificatesFile -> properties.put(otlpCertificatePropertyKey, trustedCertificatesFile));
 		}
 	}
 
@@ -174,13 +172,11 @@ public class OtelConfigHelper {
 	 * @return new {@link Path} instance
 	 */
 	static Path getProgramDataOtelConfigFile() {
-		return ConfigHelper
-			.getProgramDataPath()
+		return ConfigHelper.getProgramDataPath()
 			.stream()
 			.map(path ->
 				Paths.get(
-					ConfigHelper
-						.createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, OTEL_DIRECTORY_NAME))
+					ConfigHelper.createDirectories(Paths.get(path, PRODUCT_WIN_DIR_NAME, OTEL_DIRECTORY_NAME))
 						.toAbsolutePath()
 						.toString(),
 					DEFAULT_OTEL_CONFIG_FILENAME

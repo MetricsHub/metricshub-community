@@ -77,9 +77,10 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
 
-		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getJdbc() != null
-			? emulationConfiguration.getJdbc().getDirectory()
-			: null;
+		final String emulationInputDirectory =
+			emulationConfiguration != null && emulationConfiguration.getJdbc() != null
+				? emulationConfiguration.getJdbc().getDirectory()
+				: null;
 
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - JDBC emulation input directory is not configured.", hostname);

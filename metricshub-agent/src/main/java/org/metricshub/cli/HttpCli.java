@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -104,8 +105,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping HTTP CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Examples:
 
@@ -253,12 +253,11 @@ public class HttpCli implements IQuery, Callable<Integer> {
 	 */
 	public void populateHeaderContent() throws IOException {
 		if (headers != null) {
-			headerContent =
-				headers
-					.entrySet()
-					.stream()
-					.map(entry -> "%s: %s".formatted(entry.getKey(), entry.getValue()))
-					.collect(Collectors.joining("\n"));
+			headerContent = headers
+				.entrySet()
+				.stream()
+				.map(entry -> "%s: %s".formatted(entry.getKey(), entry.getValue()))
+				.collect(Collectors.joining("\n"));
 		} else if (headerFile != null) {
 			try (Stream<String> stream = Files.lines(Path.of(headerFile), StandardCharsets.UTF_8)) {
 				headerContent = stream.collect(Collectors.joining("\n"));
@@ -401,7 +400,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 
 		try {
 			// Performing a basic validation of the URL format
-			parsedUrl = new URL(url);
+			parsedUrl = URI.create(url).toURL();
 			// Enforces stricter compliance, catching invalid characters.
 			parsedUrl.toURI();
 		} catch (MalformedURLException e) {
@@ -487,8 +486,7 @@ public class HttpCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(HTTP)
 			.ifPresent(extension -> {
 				try {

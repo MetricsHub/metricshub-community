@@ -42,7 +42,10 @@ class HttpRecorderTest {
 
 	private Path findSingleTxtFile(final Path dir) throws IOException {
 		try (Stream<Path> stream = Files.list(dir)) {
-			return stream.filter(p -> p.toString().endsWith(".txt")).findFirst().orElse(null);
+			return stream
+				.filter(p -> p.toString().endsWith(".txt"))
+				.findFirst()
+				.orElse(null);
 		}
 	}
 
@@ -279,8 +282,7 @@ class HttpRecorderTest {
 	void testLoadExistingEntriesWithValidFile() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		final String yaml =
-			"""
+		final String yaml = """
 			image:
 			  - request:
 			      method: GET

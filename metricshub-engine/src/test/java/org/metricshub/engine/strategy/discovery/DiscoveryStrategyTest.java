@@ -87,17 +87,14 @@ class DiscoveryStrategyTest {
 			)
 		);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -111,14 +108,12 @@ class DiscoveryStrategyTest {
 		// Create the connector store
 		final ConnectorStore connectorStore = new ConnectorStore(YAML_TEST_PATH);
 		telemetryManager.setConnectorStore(connectorStore);
-		discoveryStrategy =
-			DiscoveryStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		discoveryStrategy = DiscoveryStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
@@ -126,8 +121,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedCriteria();
 
-		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -137,8 +131,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -146,16 +139,14 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for disk controller
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
 			.when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 		// Mock Physical Disk Source
-		final SnmpTableSource physicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
 			.selectColumns("ID,2,6,7,8,10,11")
 			.type("snmpTable")
@@ -169,8 +160,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for physical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -178,8 +168,7 @@ class DiscoveryStrategyTest {
 			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
-		final SnmpTableSource logicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.1")
 			.selectColumns("ID,2,4,6")
 			.type("snmpTable")
@@ -188,8 +177,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for logical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -218,21 +206,21 @@ class DiscoveryStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor (criterion processing success case)
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test succeeded:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on host.name SUCCEEDED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test succeeded:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on host.name SUCCEEDED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 
@@ -247,22 +235,22 @@ class DiscoveryStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor (criterion processing failure case)
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test ran but failed:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Actual result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on host.name FAILED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test ran but failed:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Actual result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on host.name FAILED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 
@@ -323,17 +311,14 @@ class DiscoveryStrategyTest {
 			)
 		);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -348,14 +333,12 @@ class DiscoveryStrategyTest {
 		// Create the connector store
 		final ConnectorStore connectorStore = new ConnectorStore(YAML_TEST_PATH);
 		telemetryManager.setConnectorStore(connectorStore);
-		discoveryStrategy =
-			DiscoveryStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		discoveryStrategy = DiscoveryStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
@@ -363,8 +346,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedCriteria();
 
-		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -374,8 +356,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Disk Controller Source
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -383,8 +364,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for disk controller
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("controller-1;1;Adaptec1;bios53v2;firmware32", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -417,17 +397,14 @@ class DiscoveryStrategyTest {
 			)
 		);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -442,14 +419,12 @@ class DiscoveryStrategyTest {
 		// Create the connector store
 		final ConnectorStore connectorStore = new ConnectorStore(YAML_TEST_PATH);
 		telemetryManager.setConnectorStore(connectorStore);
-		discoveryStrategy =
-			DiscoveryStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		discoveryStrategy = DiscoveryStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		doReturn(true).when(protocolExtensionMock).isValidConfiguration(snmpConfig);
 		doReturn(Set.of(SnmpGetSource.class, SnmpTableSource.class)).when(protocolExtensionMock).getSupportedSources();
@@ -457,8 +432,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedCriteria();
 
-		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpCriterion snmpCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -468,8 +442,7 @@ class DiscoveryStrategyTest {
 			.when(protocolExtensionMock)
 			.processCriterion(eq(snmpCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 		// Mock Physical Disk Source
-		final SnmpTableSource physicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource physicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.5.1")
 			.selectColumns("ID,2,6,7,8,10,11")
 			.type("snmpTable")
@@ -483,8 +456,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for physical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("disk-1;1;0;vendor-1;5;500000;512", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -492,8 +464,7 @@ class DiscoveryStrategyTest {
 			.processSource(eq(physicalDiskSource), anyString(), any(TelemetryManager.class));
 
 		// Mock Logical Disk Source
-		final SnmpTableSource logicalDiskSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource logicalDiskSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.1")
 			.selectColumns("ID,2,4,6")
 			.type("snmpTable")
@@ -502,8 +473,7 @@ class DiscoveryStrategyTest {
 			.build();
 		// Mock source table information for logical_disk
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("logical-disk-1;1;500;RAID-5", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -544,18 +514,15 @@ class DiscoveryStrategyTest {
 
 	@Test
 	void testHasAllIdentifyingAttributes() {
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
-		discoveryStrategy =
-			DiscoveryStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(new TelemetryManager())
-				.extensionManager(extensionManager)
-				.build();
+		discoveryStrategy = DiscoveryStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(new TelemetryManager())
+			.extensionManager(extensionManager)
+			.build();
 		assertTrue(discoveryStrategy.hasAllIdentifyingAttributes(Set.of("id1", "id2"), Map.of("id1", "1", "id2", "2")));
 		assertFalse(discoveryStrategy.hasAllIdentifyingAttributes(Set.of("id1", "id2"), Map.of("id1", "1")));
 	}

@@ -87,8 +87,7 @@ public class CopySource extends Source {
 	}
 
 	public CopySource copy() {
-		return CopySource
-			.builder()
+		return CopySource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

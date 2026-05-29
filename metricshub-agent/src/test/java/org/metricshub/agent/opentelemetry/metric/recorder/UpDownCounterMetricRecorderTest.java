@@ -29,13 +29,11 @@ class UpDownCounterMetricRecorderTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		upDownCounterMetricRecorder =
-			UpDownCounterMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withUnit("errors")
-				.withDescription("Test up-down counter metric")
-				.build();
+		upDownCounterMetricRecorder = UpDownCounterMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("errors")
+			.withDescription("Test up-down counter metric")
+			.build();
 	}
 
 	@Test
@@ -76,14 +74,12 @@ class UpDownCounterMetricRecorderTest {
 		when(mockMetric.getCollectTime()).thenReturn(System.currentTimeMillis());
 		when(mockMetric.getAttributes()).thenReturn(Map.of("key", "value"));
 
-		upDownCounterMetricRecorder =
-			UpDownCounterMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withUnit("errors")
-				.withDescription("Test up-down counter metric")
-				.withResourceAttributes(Map.of("resource", "resourceValue"))
-				.build();
+		upDownCounterMetricRecorder = UpDownCounterMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withUnit("errors")
+			.withDescription("Test up-down counter metric")
+			.withResourceAttributes(Map.of("resource", "resourceValue"))
+			.build();
 
 		// When
 		final Optional<Metric> result = upDownCounterMetricRecorder.doRecord();

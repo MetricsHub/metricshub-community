@@ -197,7 +197,8 @@ public class MappingProcessor {
 	 * @param keyValuePairs pairs of key values (for example: attribute key and attribute value)
 	 * @return Map&lt;String, String&gt;
 	 */
-	public Map<String, String> interpretNonContextMapping(final Map<String, String> keyValuePairs) { // NOSONAR on cognitive complexity of 16
+	public Map<String, String> interpretNonContextMapping(final Map<String, String> keyValuePairs) {
+		// NOSONAR on cognitive complexity of 16
 		if (keyValuePairs == null) {
 			return Collections.emptyMap();
 		}
@@ -296,7 +297,7 @@ public class MappingProcessor {
 		if (functionArguments.size() != 4) {
 			log.error(
 				"Hostname {} - Lookup should contain exactly 4 arguments (detected {}) in lookup function {}. " +
-				RESULT_MESSAGE,
+					RESULT_MESSAGE,
 				jobInfo.getHostname(),
 				functionArguments.size(),
 				functionCode,
@@ -807,7 +808,7 @@ public class MappingProcessor {
 		if (maybeRawPowerRatioValue.isEmpty()) {
 			log.warn(
 				"Hostname {} - Unable to extract the 1st argument value passed to the computePowerRatio function." +
-				RESULT_MESSAGE,
+					RESULT_MESSAGE,
 				jobInfo.getHostname(),
 				key
 			);
@@ -1187,7 +1188,7 @@ public class MappingProcessor {
 			} else {
 				log.warn(
 					"Hostname {} - Extract Column Value: value is null for column number {} in the row. " +
-					"Unable to fetch the value for attribute key {}. Source: {} - Row: {} - Monitor type: {}.",
+						"Unable to fetch the value for attribute key {}. Source: {} - Row: {} - Monitor type: {}.",
 					jobInfo.getHostname(),
 					columnIndex,
 					key,
@@ -1199,7 +1200,7 @@ public class MappingProcessor {
 		} else {
 			log.warn(
 				"Hostname {} - Extract Column Value: column number {} is out of bounds for source {} with row size {}. " +
-				"Unable to fetch the value for attribute key {}. Row: {}, Monitor type: {}.",
+					"Unable to fetch the value for attribute key {}. Row: {}, Monitor type: {}.",
 				jobInfo.getHostname(),
 				columnIndex,
 				mapping.getSource(),
@@ -1257,7 +1258,7 @@ public class MappingProcessor {
 			} else {
 				log.warn(
 					"Hostname {} - Get Column Value: value is null for column number {} in the row. " +
-					"Unable to fetch the value for attribute key {}. Source: {} - Row: {} - Monitor type: {}.",
+						"Unable to fetch the value for attribute key {}. Source: {} - Row: {} - Monitor type: {}.",
 					jobInfo.getHostname(),
 					columnIndex,
 					key,
@@ -1269,7 +1270,7 @@ public class MappingProcessor {
 		} else {
 			log.warn(
 				"Hostname {} - Get Column Value: column number {} is out of bounds for source {} with row size {}. " +
-				"Unable to fetch the value for attribute key {}. Row: {}, Monitor type: {}.",
+					"Unable to fetch the value for attribute key {}. Row: {}, Monitor type: {}.",
 				jobInfo.getHostname(),
 				columnIndex,
 				mapping.getSource(),

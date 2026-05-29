@@ -142,7 +142,11 @@ class LoginAuthenticationProviderTest {
 			() ->
 				assertEquals(
 					Collections.singleton(SecurityHelper.ROLE_APP_USER),
-					out.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toSet()),
+					out
+						.getAuthorities()
+						.stream()
+						.map(a -> a.getAuthority())
+						.collect(Collectors.toSet()),
 					"Should have ROLE_APP_USER authority only"
 				)
 		);
@@ -189,7 +193,11 @@ class LoginAuthenticationProviderTest {
 			() ->
 				assertEquals(
 					Collections.singleton(SecurityHelper.ROLE_APP_USER),
-					out.getAuthorities().stream().map(a -> a.getAuthority()).collect(Collectors.toSet()),
+					out
+						.getAuthorities()
+						.stream()
+						.map(a -> a.getAuthority())
+						.collect(Collectors.toSet()),
 					"Should have ROLE_APP_USER authority only"
 				)
 		);

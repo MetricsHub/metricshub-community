@@ -104,8 +104,7 @@ public class InternalDbQuerySource extends Source {
 
 	@Override
 	public InternalDbQuerySource copy() {
-		return InternalDbQuerySource
-			.builder()
+		return InternalDbQuerySource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

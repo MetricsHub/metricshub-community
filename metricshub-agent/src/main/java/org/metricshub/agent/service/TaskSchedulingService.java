@@ -83,8 +83,7 @@ public class TaskSchedulingService {
 	 */
 	void scheduleSelfRecorder() {
 		final ExtensionManager safeExtensionManager = getExtensionManagerOrEmpty();
-		SelfScheduling
-			.builder()
+		SelfScheduling.builder()
 			.withAgentConfig(agentConfig)
 			.withAgentInfo(agentInfo)
 			.withExtensionManager(safeExtensionManager)
@@ -136,8 +135,7 @@ public class TaskSchedulingService {
 	 */
 	void scheduleResourceGroup(final String resourceGroupKey, final ResourceGroupConfig resourceGroupConfig) {
 		final ExtensionManager safeExtensionManager = getExtensionManagerOrEmpty();
-		ResourceGroupScheduling
-			.builder()
+		ResourceGroupScheduling.builder()
 			.withAgentConfig(agentConfig)
 			.withExtensionManager(safeExtensionManager)
 			.withMetricsExporter(metricsExporter)
@@ -191,8 +189,7 @@ public class TaskSchedulingService {
 		}
 
 		// Schedule monitoring of the current resource configuration
-		ResourceScheduling
-			.builder()
+		ResourceScheduling.builder()
 			.withMetricsExporter(metricsExporter)
 			.withSchedules(schedules)
 			.withTaskScheduler(taskScheduler)

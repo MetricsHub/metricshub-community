@@ -30,8 +30,10 @@ class ResourceMeterTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		resourceMeter =
-			ResourceMeter.builder().withInstrumentation(TEST_INSTRUMENTATION).withAttributes(Map.of("key", "value")).build();
+		resourceMeter = ResourceMeter.builder()
+			.withInstrumentation(TEST_INSTRUMENTATION)
+			.withAttributes(Map.of("key", "value"))
+			.build();
 	}
 
 	@Test
@@ -45,14 +47,12 @@ class ResourceMeterTest {
 
 	@Test
 	void testRecordSafeReturnsResourceMetricsWhenMetricsAreRecorded() {
-		final NumberMetric numberMetric = NumberMetric
-			.builder()
+		final NumberMetric numberMetric = NumberMetric.builder()
 			.name("test.metric")
 			.value(10.0)
 			.collectTime(System.currentTimeMillis())
 			.build();
-		final MetricContext context = MetricContext
-			.builder()
+		final MetricContext context = MetricContext.builder()
 			.withDescription("Test description")
 			.withUnit("s")
 			.withType(MetricType.GAUGE)
@@ -68,14 +68,12 @@ class ResourceMeterTest {
 
 	@Test
 	void testRegisterRecorderAddsMetricRecorders() {
-		final NumberMetric numberMetric = NumberMetric
-			.builder()
+		final NumberMetric numberMetric = NumberMetric.builder()
 			.name("test.metric")
 			.value(10.0)
 			.collectTime(System.currentTimeMillis())
 			.build();
-		final MetricContext context = MetricContext
-			.builder()
+		final MetricContext context = MetricContext.builder()
 			.withDescription("Test description")
 			.withUnit("s")
 			.withType(MetricType.GAUGE)
@@ -91,15 +89,13 @@ class ResourceMeterTest {
 
 	@Test
 	void testRecordSafeGroupsStateSetMetricsUnderSingleOtelMetric() {
-		final StateSetMetric stateSetMetric = StateSetMetric
-			.builder()
+		final StateSetMetric stateSetMetric = StateSetMetric.builder()
 			.name("hw.status")
 			.collectTime(System.currentTimeMillis())
 			.stateSet(new String[] { "ok", "degraded", "failed" })
 			.value("ok")
 			.build();
-		final MetricContext context = MetricContext
-			.builder()
+		final MetricContext context = MetricContext.builder()
 			.withDescription("Hardware status")
 			.withType(MetricType.GAUGE)
 			.withUnit("1")

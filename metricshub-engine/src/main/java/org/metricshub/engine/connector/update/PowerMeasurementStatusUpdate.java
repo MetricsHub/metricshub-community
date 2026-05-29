@@ -55,12 +55,10 @@ public class PowerMeasurementStatusUpdate extends AbstractConnectorUpdateChain {
 			return;
 		}
 
-		Optional
-			.ofNullable(monitors.get(KnownMonitorType.ENCLOSURE.getKey()))
-			.ifPresentOrElse(
-				(MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure),
-				() -> connector.setPowerMeasurement(PowerMeasurement.ESTIMATED)
-			);
+		Optional.ofNullable(monitors.get(KnownMonitorType.ENCLOSURE.getKey())).ifPresentOrElse(
+			(MonitorJob enclosure) -> updatePowerMeasurementStatus(connector, enclosure),
+			() -> connector.setPowerMeasurement(PowerMeasurement.ESTIMATED)
+		);
 	}
 
 	/**

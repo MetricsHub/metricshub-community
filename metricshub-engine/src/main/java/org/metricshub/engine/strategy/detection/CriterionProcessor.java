@@ -129,8 +129,7 @@ public class CriterionProcessor {
 		final DeviceKind deviceKind = telemetryManager.getHostConfiguration().getHostType();
 
 		if (!isDeviceKindIncluded(Collections.singletonList(deviceKind), deviceTypeCriterion)) {
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.message("Failed OS detection operation")
 				.result(CONFIGURE_OS_TYPE_MESSAGE + deviceKind.name())
 				.success(false)
@@ -138,8 +137,7 @@ public class CriterionProcessor {
 				.build();
 		}
 
-		return CriterionTestResult
-			.builder()
+		return CriterionTestResult.builder()
 			.message(SUCCESSFUL_OS_DETECTION_MESSAGE)
 			.result(CONFIGURE_OS_TYPE_MESSAGE + deviceKind.name())
 			.success(true)
@@ -203,8 +201,7 @@ public class CriterionProcessor {
 			return processCriterionThroughExtension(ipmiCriterion);
 		}
 
-		return CriterionTestResult
-			.builder()
+		return CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - Failed to perform IPMI detection. %s is an unsupported OS for IPMI.",
@@ -248,8 +245,7 @@ public class CriterionProcessor {
 
 		if (processCriterion.getCommandLine().isEmpty()) {
 			log.debug("Hostname {} - Process Criterion, Process Command Line is empty.", hostname);
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.success(true)
 				.message("Process presence check: No test will be performed.")
 				.result(null)
@@ -259,8 +255,7 @@ public class CriterionProcessor {
 
 		if (!telemetryManager.getHostProperties().isLocalhost()) {
 			log.debug("Hostname {} - Process criterion, not localhost.", hostname);
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.success(true)
 				.message("Process presence check: No test will be performed remotely.")
 				.result(null)
@@ -271,8 +266,7 @@ public class CriterionProcessor {
 		final Optional<LocalOsHandler.ILocalOs> maybeLocalOS = LocalOsHandler.getOS();
 		if (maybeLocalOS.isEmpty()) {
 			log.debug("Hostname {} - Process criterion, unknown local OS.", hostname);
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.success(true)
 				.message("Process presence check: OS unknown, no test will be performed.")
 				.result(null)
@@ -320,8 +314,7 @@ public class CriterionProcessor {
 			return CriterionTestResult.builder().success(true).criterion(productRequirementsCriterion).build();
 		}
 
-		return CriterionTestResult
-			.builder()
+		return CriterionTestResult.builder()
 			.success(
 				VersionHelper.isVersionLessThanOtherVersion(
 					productRequirementsCriterion.getEngineVersion(),

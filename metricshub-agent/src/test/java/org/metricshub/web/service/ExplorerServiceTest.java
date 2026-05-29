@@ -86,7 +86,9 @@ class ExplorerServiceTest {
 		tm.addNewMonitor(connectorMonitor, "connector", connectorId);
 
 		typeToMonitors.forEach((type, list) ->
-			IntStream.range(0, list.size()).boxed().forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1)))
+			IntStream.range(0, list.size())
+				.boxed()
+				.forEach(i -> tm.addNewMonitor(list.get(i), type, type + "-" + (i + 1)))
 		);
 
 		// Initialize ConnectorStore to avoid NPE in ExplorerService

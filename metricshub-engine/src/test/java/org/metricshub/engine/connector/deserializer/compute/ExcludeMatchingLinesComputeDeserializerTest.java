@@ -34,8 +34,7 @@ class ExcludeMatchingLinesComputeDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testCompute",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testCompute}")
 					.type("http")
 					.url("/testUrl/")

@@ -73,8 +73,7 @@ public class SnmpGetSource extends SnmpSource {
 	 * @return new {@link SnmpGetSource} instance
 	 */
 	public SnmpGetSource copy() {
-		return SnmpGetSource
-			.builder()
+		return SnmpGetSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

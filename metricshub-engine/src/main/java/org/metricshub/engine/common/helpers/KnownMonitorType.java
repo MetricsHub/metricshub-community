@@ -129,8 +129,7 @@ public enum KnownMonitorType {
 	/**
 	 * Set of all known monitor type keys.
 	 */
-	public static final Set<String> KEYS = Stream
-		.of(KnownMonitorType.values())
+	public static final Set<String> KEYS = Stream.of(KnownMonitorType.values())
 		.map(KnownMonitorType::getKey)
 		.collect(Collectors.toSet());
 
@@ -142,7 +141,9 @@ public enum KnownMonitorType {
 	 * @return the matching value which is an Optional of {@code KnownMonitorType}.
 	 */
 	public static Optional<KnownMonitorType> fromString(final String monitorType) {
-		return Stream.of(KnownMonitorType.values()).filter(type -> type.key.equalsIgnoreCase(monitorType)).findFirst();
+		return Stream.of(KnownMonitorType.values())
+			.filter(type -> type.key.equalsIgnoreCase(monitorType))
+			.findFirst();
 	}
 
 	/**

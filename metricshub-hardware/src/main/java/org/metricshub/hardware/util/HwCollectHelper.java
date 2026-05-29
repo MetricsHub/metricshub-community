@@ -150,10 +150,9 @@ public class HwCollectHelper {
 		final Double collectTime = CollectHelper.getNumberMetricCollectTime(monitor, counterMetricName, false);
 		final Double previousCollectTime = CollectHelper.getNumberMetricCollectTime(monitor, counterMetricName, true);
 
-		return Optional
-			.ofNullable(
-				MathOperationsHelper.rate(rateMetricName, value, previousValue, collectTime, previousCollectTime, hostname)
-			)
+		return Optional.ofNullable(
+			MathOperationsHelper.rate(rateMetricName, value, previousValue, collectTime, previousCollectTime, hostname)
+		)
 			.map(rate -> rate * 1000.0) // Convert rate from per millisecond to per second
 			.orElse(null);
 	}

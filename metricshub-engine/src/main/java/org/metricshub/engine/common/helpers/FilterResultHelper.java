@@ -71,22 +71,22 @@ public class FilterResultHelper {
 		// Remove footer : remove number of lines from the end.
 		final int end = removeFooter != null ? lines.size() - removeFooter : lines.size();
 
-		final Pattern excludePattern = excludeRegExp == null || excludeRegExp.isEmpty()
-			? null
-			: Pattern.compile(PslUtils.psl2JavaRegex(excludeRegExp));
+		final Pattern excludePattern =
+			excludeRegExp == null || excludeRegExp.isEmpty() ? null : Pattern.compile(PslUtils.psl2JavaRegex(excludeRegExp));
 
-		final Pattern keepOnlyPattern = keepOnlyRegExp == null || keepOnlyRegExp.isEmpty()
-			? null
-			: Pattern.compile(PslUtils.psl2JavaRegex(keepOnlyRegExp));
+		final Pattern keepOnlyPattern =
+			keepOnlyRegExp == null || keepOnlyRegExp.isEmpty()
+				? null
+				: Pattern.compile(PslUtils.psl2JavaRegex(keepOnlyRegExp));
 
 		// Remove lines containing a given regular expression excludeRegExp
 		// Keep only the lines containing a given regular expression
-		return IntStream
-			.range(begin, end)
+		return IntStream.range(begin, end)
 			.mapToObj(lines::get)
-			.filter(line ->
-				(excludePattern == null || !excludePattern.matcher(line).find()) &&
-				(keepOnlyPattern == null || keepOnlyPattern.matcher(line).find())
+			.filter(
+				line ->
+					(excludePattern == null || !excludePattern.matcher(line).find()) &&
+					(keepOnlyPattern == null || keepOnlyPattern.matcher(line).find())
 			)
 			.collect(Collectors.toList());
 	}

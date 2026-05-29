@@ -78,8 +78,7 @@ class SourceUpdaterProcessorTest {
 	@Test
 	void testProcessHttpPSource() {
 		final TestConfiguration httpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -96,15 +95,13 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(HttpSource.builder().url(URL).method(HttpMethod.GET).build())
+			).process(HttpSource.builder().url(URL).method(HttpMethod.GET).build())
 		);
 
 		final HttpSource httpSource = HttpSource.builder().url(URL).build();
 		httpSource.setExecuteForEachEntryOf(ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).build());
 
-		final SourceTable sourceTable = SourceTable
-			.builder()
+		final SourceTable sourceTable = SourceTable.builder()
 			.table(
 				Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
 			)
@@ -125,61 +122,52 @@ class SourceUpdaterProcessorTest {
 			MY_CONNECTOR_1_NAME,
 			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 			extensionManager
-		)
-			.process(httpSource);
+		).process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
 
 		httpSource.setExecuteForEachEntryOf(
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(EntryConcatMethod.LIST).build()
 		);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
-		result =
-			new SourceUpdaterProcessor(
-				sourceProcessor,
-				telemetryManager,
-				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
-				extensionManager
-			)
-				.process(httpSource);
+		result = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		).process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2, result.getRawData());
 
 		httpSource.setExecuteForEachEntryOf(
-			ExecuteForEachEntryOf
-				.builder()
+			ExecuteForEachEntryOf.builder()
 				.source(ENCLOSURE_COLLECT_SOURCE_1)
 				.concatMethod(EntryConcatMethod.JSON_ARRAY)
 				.build()
 		);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
-		result =
-			new SourceUpdaterProcessor(
-				sourceProcessor,
-				telemetryManager,
-				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
-				extensionManager
-			)
-				.process(httpSource);
+		result = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		).process(httpSource);
 		assertEquals(EXPECTED_VAL_1_AND_2_ARRAY, result.getRawData());
 
 		httpSource.setExecuteForEachEntryOf(
-			ExecuteForEachEntryOf
-				.builder()
+			ExecuteForEachEntryOf.builder()
 				.source(ENCLOSURE_COLLECT_SOURCE_1)
 				.concatMethod(EntryConcatMethod.JSON_ARRAY_EXTENDED)
 				.build()
 		);
 		doReturn(expected1, expected2).when(sourceProcessor).process(any(HttpSource.class));
-		result =
-			new SourceUpdaterProcessor(
-				sourceProcessor,
-				telemetryManager,
-				MY_CONNECTOR_1_NAME,
-				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
-				extensionManager
-			)
-				.process(httpSource);
+		result = new SourceUpdaterProcessor(
+			sourceProcessor,
+			telemetryManager,
+			MY_CONNECTOR_1_NAME,
+			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
+			extensionManager
+		).process(httpSource);
 
 		assertEquals(EXPECTED_RESULT, result.getRawData());
 	}
@@ -187,8 +175,7 @@ class SourceUpdaterProcessorTest {
 	@Test
 	void testProcessHttpSourceCustomExecuteForEachEntry() {
 		final TestConfiguration httpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -197,8 +184,7 @@ class SourceUpdaterProcessorTest {
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
 		final HttpSource httpSource = HttpSource.builder().url(URL).build();
-		final CustomConcatMethod customConcatMethod = CustomConcatMethod
-			.builder()
+		final CustomConcatMethod customConcatMethod = CustomConcatMethod.builder()
 			.concatStart("concatStart:{")
 			.concatEnd("}concatEnd;")
 			.build();
@@ -206,8 +192,7 @@ class SourceUpdaterProcessorTest {
 			ExecuteForEachEntryOf.builder().source(ENCLOSURE_COLLECT_SOURCE_1).concatMethod(customConcatMethod).build()
 		);
 
-		final SourceTable sourceTable = SourceTable
-			.builder()
+		final SourceTable sourceTable = SourceTable.builder()
 			.table(
 				Arrays.asList(Arrays.asList(VALUE_VAL1, VALUE_VAL2, VALUE_VAL3), Arrays.asList(VALUE_A1, VALUE_B1, VALUE_C1))
 			)
@@ -229,8 +214,7 @@ class SourceUpdaterProcessorTest {
 			MY_CONNECTOR_1_NAME,
 			Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 			extensionManager
-		)
-			.process(httpSource);
+		).process(httpSource);
 		final String expectedResult = "concatStart:{expectedVal1}concatEnd;concatStart:{expectedVal2}concatEnd;";
 		assertEquals(expectedResult, result.getRawData());
 	}
@@ -247,8 +231,7 @@ class SourceUpdaterProcessorTest {
 		assertEquals(null, httpSource.getSleepExecuteForEachEntryOf());
 
 		httpSource.setExecuteForEachEntryOf(
-			ExecuteForEachEntryOf
-				.builder()
+			ExecuteForEachEntryOf.builder()
 				.source(ENCLOSURE_COLLECT_SOURCE_1)
 				.concatMethod(EntryConcatMethod.LIST)
 				.sleep(200)
@@ -257,15 +240,13 @@ class SourceUpdaterProcessorTest {
 
 		assertEquals(200, httpSource.getSleepExecuteForEachEntryOf());
 
-		final CustomConcatMethod customConcatMethod = CustomConcatMethod
-			.builder()
+		final CustomConcatMethod customConcatMethod = CustomConcatMethod.builder()
 			.concatStart("concatStart:{")
 			.concatEnd("}concatEnd;")
 			.build();
 
 		httpSource.setExecuteForEachEntryOf(
-			ExecuteForEachEntryOf
-				.builder()
+			ExecuteForEachEntryOf.builder()
 				.source(ENCLOSURE_COLLECT_SOURCE_1)
 				.concatMethod(customConcatMethod)
 				.sleep(400)
@@ -277,8 +258,7 @@ class SourceUpdaterProcessorTest {
 	@Test
 	void testProcessSNMPGetSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -295,8 +275,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(SnmpGetSource.builder().oid(OID).build())
+			).process(SnmpGetSource.builder().oid(OID).build())
 		);
 
 		final SourceTable expected1 = SourceTable.builder().rawData(EXPECTED_VAL_1).build();
@@ -310,16 +289,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(SnmpGetSource.builder().oid(OID).build())
+			).process(SnmpGetSource.builder().oid(OID).build())
 		);
 	}
 
 	@Test
 	void testProcessSNMPGetTableSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -335,12 +312,10 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
+			).process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
 
-		SourceTable expected = SourceTable
-			.builder()
+		SourceTable expected = SourceTable.builder()
 			.table(EXPECTED_SNMP_TABLE_DATA)
 			.headers(SNMP_SELECTED_COLUMNS_LIST)
 			.build();
@@ -353,16 +328,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
+			).process(SnmpTableSource.builder().oid(OID).selectColumns(SNMP_SELECTED_COLUMNS).build())
 		);
 	}
 
 	@Test
 	void testProcessTableJoinSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -378,16 +351,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(TableJoinSource.builder().build())
+			).process(TableJoinSource.builder().build())
 		);
 	}
 
 	@Test
 	void testProcessTableUnionSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -403,16 +374,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(TableUnionSource.builder().tables(new ArrayList<>()).build())
+			).process(TableUnionSource.builder().tables(new ArrayList<>()).build())
 		);
 	}
 
 	@Test
 	void testProcessCopySource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -428,8 +397,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(CopySource.builder().from(TAB1_REF).build())
+			).process(CopySource.builder().from(TAB1_REF).build())
 		);
 
 		CopySource copySource = CopySource.builder().from(TAB1_REF).build();
@@ -449,8 +417,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(snmpGetSource)
+			).process(snmpGetSource)
 		);
 
 		doReturn(expected).when(sourceProcessor).process(any(CopySource.class));
@@ -462,16 +429,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(copySource)
+			).process(copySource)
 		);
 	}
 
 	@Test
 	void testProcessStaticSource() {
 		final TestConfiguration snmpConfiguration = TestConfiguration.builder().build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(LOCALHOST)
 			.hostId(LOCALHOST)
 			.hostType(DeviceKind.LINUX)
@@ -491,8 +456,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(staticSource)
+			).process(staticSource)
 		);
 	}
 
@@ -532,8 +496,7 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessWbemSource() {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(WbemSource.class));
@@ -545,16 +508,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(WbemSource.builder().query(EMPTY).build())
+			).process(WbemSource.builder().query(EMPTY).build())
 		);
 	}
 
 	@Test
 	void testProcessWmiSource() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(WmiSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
@@ -565,16 +526,14 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(WmiSource.builder().query(EMPTY).build())
+			).process(WmiSource.builder().query(EMPTY).build())
 		);
 	}
 
 	@Test
 	void testProcessCommandLineSource() {
 		doReturn(SourceTable.empty()).when(sourceProcessor).process(any(CommandLineSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
@@ -585,13 +544,9 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
+			).process(
+				CommandLineSource.builder().commandLine("/usr/sbin/pvdisplay /dev/dsk/%PhysicalDisk.Collect.DeviceID%").build()
 			)
-				.process(
-					CommandLineSource
-						.builder()
-						.commandLine("/usr/sbin/pvdisplay /dev/dsk/%PhysicalDisk.Collect.DeviceID%")
-						.build()
-				)
 		);
 	}
 
@@ -606,8 +561,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(IpmiSource.builder().build())
+			).process(IpmiSource.builder().build())
 		);
 	}
 
@@ -680,8 +634,7 @@ class SourceUpdaterProcessorTest {
 
 	@Test
 	void testProcessJmxSource() {
-		final JmxSource source = JmxSource
-			.builder()
+		final JmxSource source = JmxSource.builder()
 			.type("jmx")
 			.objectName("org.metricshub.extension.jmx:type=JmxMBean,scope=*")
 			.attributes(new LinkedList<>(List.of("Name")))
@@ -692,8 +645,7 @@ class SourceUpdaterProcessorTest {
 
 		final SourceTable sourceTable = SourceTable.builder().table(List.of(List.of("12345"))).build();
 		doReturn(sourceTable).when(sourceProcessor).process(any(JmxSource.class));
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().build())
 			.build();
 		assertEquals(
@@ -704,8 +656,7 @@ class SourceUpdaterProcessorTest {
 				MY_CONNECTOR_1_NAME,
 				Map.of(MONITOR_ATTRIBUTE_ID, MONITOR_ID_ATTRIBUTE_VALUE),
 				extensionManager
-			)
-				.process(source),
+			).process(source),
 			"Processing JMX source did not return expected result."
 		);
 	}

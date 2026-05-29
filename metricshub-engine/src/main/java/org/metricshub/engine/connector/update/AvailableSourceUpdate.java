@@ -39,7 +39,8 @@ import org.metricshub.engine.connector.model.monitor.task.source.Source;
 public class AvailableSourceUpdate extends AbstractConnectorUpdateChain {
 
 	@Override
-	void doUpdate(Connector connector) { // NOSONAR
+	void doUpdate(Connector connector) {
+		// NOSONAR
 		Set<Class<? extends Source>> sourceTypes = new HashSet<>();
 
 		for (MonitorJob monitor : connector.getMonitors().values()) {
@@ -78,7 +79,10 @@ public class AvailableSourceUpdate extends AbstractConnectorUpdateChain {
 	 */
 	private void processSimpleSources(final Set<Class<? extends Source>> sourceTypes, final Simple simple) {
 		if (simple != null) {
-			simple.getSources().values().forEach(source -> sourceTypes.add(source.getClass()));
+			simple
+				.getSources()
+				.values()
+				.forEach(source -> sourceTypes.add(source.getClass()));
 		}
 	}
 
@@ -90,7 +94,10 @@ public class AvailableSourceUpdate extends AbstractConnectorUpdateChain {
 	 */
 	private void processCollectSources(final Set<Class<? extends Source>> sourceTypes, final AbstractCollect collect) {
 		if (collect != null) {
-			collect.getSources().values().forEach(source -> sourceTypes.add(source.getClass()));
+			collect
+				.getSources()
+				.values()
+				.forEach(source -> sourceTypes.add(source.getClass()));
 		}
 	}
 
@@ -102,7 +109,10 @@ public class AvailableSourceUpdate extends AbstractConnectorUpdateChain {
 	 */
 	private void processDiscoverySources(final Set<Class<? extends Source>> sourceTypes, final Discovery discovery) {
 		if (discovery != null) {
-			discovery.getSources().values().forEach(source -> sourceTypes.add(source.getClass()));
+			discovery
+				.getSources()
+				.values()
+				.forEach(source -> sourceTypes.add(source.getClass()));
 		}
 	}
 }

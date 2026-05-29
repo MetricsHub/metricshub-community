@@ -27,8 +27,7 @@ class HttpEmulationRequestTest {
 		headers.put("Content-Type", "application/json");
 		headers.put("Accept", "text/plain");
 
-		final HttpEmulationRequest request = HttpEmulationRequest
-			.builder()
+		final HttpEmulationRequest request = HttpEmulationRequest.builder()
 			.method("POST")
 			.path("/api/v1/data")
 			.body("{\"key\": \"value\"}")

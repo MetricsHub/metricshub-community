@@ -143,8 +143,7 @@ public class SourceTable {
 	 */
 	public static List<List<String>> csvToTable(final String csvTable, final String separator) {
 		if (csvTable != null) {
-			return Stream
-				.of(csvTable.split("\n"))
+			return Stream.of(csvTable.split("\n"))
 				.map(line -> lineToList(line, separator))
 				.filter(line -> !line.isEmpty())
 				.collect(Collectors.toList()); //NOSONAR
@@ -216,8 +215,7 @@ public class SourceTable {
 
 		// Hard-coded source
 		return Optional.of(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable(sourceKey, MetricsHubConstants.TABLE_SEP))
 				.rawData(sourceKey)
 				.build()

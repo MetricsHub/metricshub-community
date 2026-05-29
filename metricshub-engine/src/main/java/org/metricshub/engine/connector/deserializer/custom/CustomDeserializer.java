@@ -90,10 +90,8 @@ public class CustomDeserializer extends DelegatingDeserializer {
 
 			final Set<String> refs = new HashSet<>();
 
-			references(
-				OBJECT_MAPPER.convertValue(deserializedObject, JsonNode.class),
-				refs,
-				val -> REFERENCE_PATTERN.matcher(val).find()
+			references(OBJECT_MAPPER.convertValue(deserializedObject, JsonNode.class), refs, val ->
+				REFERENCE_PATTERN.matcher(val).find()
 			);
 
 			// Set the source key

@@ -109,8 +109,7 @@ class WinRmExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final WinRmConfiguration winRmConfiguration = WinRmConfiguration
-			.builder()
+		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.password(PASSWORD)
 			.username(USERNAME)
 			.namespace(NAMESPACE)
@@ -126,22 +125,19 @@ class WinRmExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.WINDOWS)
-						.configurations(Map.of(WinRmConfiguration.class, winRmConfiguration))
-						.build()
-				)
-				.connectorStore(connectorStore)
-				.strategyTime(System.currentTimeMillis())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.WINDOWS)
+					.configurations(Map.of(WinRmConfiguration.class, winRmConfiguration))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.strategyTime(System.currentTimeMillis())
+			.build();
 	}
 
 	@Test
@@ -269,8 +265,7 @@ class WinRmExtensionTest {
 
 	@Test
 	void testProcessCriterion() throws Exception {
-		final WinRmConfiguration winRmConfiguration = WinRmConfiguration
-			.builder()
+		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.namespace(NAMESPACE)
@@ -285,11 +280,9 @@ class WinRmExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -301,9 +294,8 @@ class WinRmExtensionTest {
 
 		{
 			final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(
-				IllegalArgumentException.class,
-				() -> winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
+			assertThrows(IllegalArgumentException.class, () ->
+				winRmExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true)
 			);
 		}
 		{
@@ -322,8 +314,7 @@ class WinRmExtensionTest {
 			commandLineCriterion.setExpectedResult("result");
 			commandLineCriterion.setExecuteLocally(false);
 			commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
-			final HostConfiguration hostConfiguration = HostConfiguration
-				.builder()
+			final HostConfiguration hostConfiguration = HostConfiguration.builder()
 				.hostId(HOST_NAME)
 				.hostname(HOST_NAME)
 				.hostType(DeviceKind.WINDOWS)
@@ -365,8 +356,7 @@ class WinRmExtensionTest {
 
 	@Test
 	void testProcessSource() throws Exception {
-		final WinRmConfiguration winRmConfiguration = WinRmConfiguration
-			.builder()
+		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
@@ -379,11 +369,9 @@ class WinRmExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -394,9 +382,8 @@ class WinRmExtensionTest {
 			.build();
 		{
 			final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM CIM_StorageSystem").build();
-			assertThrows(
-				IllegalArgumentException.class,
-				() -> winRmExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+			assertThrows(IllegalArgumentException.class, () ->
+				winRmExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 			);
 		}
 		{
@@ -407,8 +394,7 @@ class WinRmExtensionTest {
 			commandLineSource.setSelectColumns("2");
 			commandLineSource.setExecuteLocally(false);
 
-			final String expectedCommandLineResult =
-				"""
+			final String expectedCommandLineResult = """
 				Total Physical Memory:16384 MB
 				Available Physical Memory:8192 MB
 				""";
@@ -455,8 +441,7 @@ class WinRmExtensionTest {
 		configuration.set("namespace", new TextNode(namespace));
 
 		assertEquals(
-			WinRmConfiguration
-				.builder()
+			WinRmConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD)
 				.port(443)
@@ -468,8 +453,7 @@ class WinRmExtensionTest {
 			winRmExtension.buildConfiguration("winrm", configuration, value -> value)
 		);
 		assertEquals(
-			WinRmConfiguration
-				.builder()
+			WinRmConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD)
 				.port(443)
@@ -500,8 +484,7 @@ class WinRmExtensionTest {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		queryNode.set("queryType", new TextNode("wmi"));
-		WinRmConfiguration configuration = WinRmConfiguration
-			.builder()
+		WinRmConfiguration configuration = WinRmConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)
@@ -527,8 +510,7 @@ class WinRmExtensionTest {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(WQL));
 		queryNode.set("queryType", new TextNode("wmi"));
-		WinRmConfiguration configuration = WinRmConfiguration
-			.builder()
+		WinRmConfiguration configuration = WinRmConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)

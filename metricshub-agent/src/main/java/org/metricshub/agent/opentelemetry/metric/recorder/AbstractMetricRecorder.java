@@ -145,8 +145,7 @@ public abstract class AbstractMetricRecorder {
 	 * @return The metric builder.
 	 */
 	private Builder newMetricBuilder() {
-		return Metric
-			.newBuilder()
+		return Metric.newBuilder()
 			.setName(MetricFactory.extractName(metric.getName()))
 			.setDescription(description)
 			.setUnit(unit != null ? unit : "");
@@ -239,8 +238,7 @@ public abstract class AbstractMetricRecorder {
 	private Metric buildCounterMetric(final Double value, final boolean isMonotonic, final String stateValue) {
 		return newMetricBuilder()
 			.setSum(
-				Sum
-					.newBuilder()
+				Sum.newBuilder()
 					.setIsMonotonic(isMonotonic)
 					.setAggregationTemporality(AggregationTemporality.AGGREGATION_TEMPORALITY_CUMULATIVE)
 					.addDataPoints(buildDataPoint(value, stateValue))
@@ -272,8 +270,7 @@ public abstract class AbstractMetricRecorder {
 			attributes.put(STATE_ATTRIBUTE_KEY, stateValue);
 		}
 
-		return NumberDataPoint
-			.newBuilder()
+		return NumberDataPoint.newBuilder()
 			.setAsDouble(value)
 			.setTimeUnixNano(metric.getCollectTime() * 1_000_000L)
 			.addAllAttributes(
@@ -283,8 +280,7 @@ public abstract class AbstractMetricRecorder {
 					.filter(entry -> entry.getValue() != null)
 					.filter(entry -> OtelHelper.isAcceptedKey(entry.getKey()))
 					.map(entry ->
-						KeyValue
-							.newBuilder()
+						KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()

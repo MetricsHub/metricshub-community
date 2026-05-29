@@ -70,21 +70,18 @@ class PingExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.LINUX)
-						.configurations(Map.of(PingConfiguration.class, pingConfiguration))
-						.build()
-				)
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(PingConfiguration.class, pingConfiguration))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.build();
 	}
 
 	@Test

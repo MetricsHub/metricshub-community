@@ -26,8 +26,7 @@ class RetryOperationTest {
 		// Simulate a stale interrupt left by a previous operation
 		Thread.currentThread().interrupt();
 
-		final RetryOperation<String> retryOperation = RetryOperation
-			.<String>builder()
+		final RetryOperation<String> retryOperation = RetryOperation.<String>builder()
 			.withHostname("hostname")
 			.withDescription("description")
 			.withDefaultValue("default")

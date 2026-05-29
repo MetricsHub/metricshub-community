@@ -105,19 +105,19 @@ import picocli.CommandLine.Spec;
 	synopsisHeading = "%n@|bold,underline Usage|@:%n%n",
 	descriptionHeading = "%n@|bold,underline Description|@:%n%n",
 	description = "This tool is the CLI version of the @|italic MetricsHub|@ engine. " +
-	"MetricsHub monitors diverse technologies, encompassing applications, servers, and devices, particularly those without readily available monitoring solutions.%n%n" +
-	"It natively leverages various system management protocols to discover the hardware components of a system " +
-	"and report their operational status.%n%n" +
-	"Additionally, MetricsHub measures the power consumption of the system, or makes an estimation if no power sensor is detected.",
+		"MetricsHub monitors diverse technologies, encompassing applications, servers, and devices, particularly those without readily available monitoring solutions.%n%n" +
+		"It natively leverages various system management protocols to discover the hardware components of a system " +
+		"and report their operational status.%n%n" +
+		"Additionally, MetricsHub measures the power consumption of the system, or makes an estimation if no power sensor is detected.",
 	parameterListHeading = "%n@|bold,underline Parameters|@:%n",
 	optionListHeading = "%n@|bold,underline Options|@:%n",
 	customSynopsis = {
 		"@|bold ${ROOT-COMMAND-NAME}|@ " +
-		"@|yellow HOSTNAME|@ " +
-		"@|yellow -t|@=@|italic TYPE|@ " +
-		"<@|yellow --http|@|@|yellow --https|@|@|yellow --ipmi|@|@|yellow --jdbc|@|@|yellow " +
-		"--snmp|@=@|italic VERSION|@|@|yellow --ssh|@|@|yellow --wbem|@|@|yellow --wmi|@|@|yellow --winrm|@> " +
-		"[@|yellow -u|@=@|italic USER|@ [@|yellow -p|@=@|italic P4SSW0RD|@]] [OPTIONS]..."
+			"@|yellow HOSTNAME|@ " +
+			"@|yellow -t|@=@|italic TYPE|@ " +
+			"<@|yellow --http|@|@|yellow --https|@|@|yellow --ipmi|@|@|yellow --jdbc|@|@|yellow " +
+			"--snmp|@=@|italic VERSION|@|@|yellow --ssh|@|@|yellow --wbem|@|@|yellow --wmi|@|@|yellow --winrm|@> " +
+			"[@|yellow -u|@=@|italic USER|@ [@|yellow -p|@=@|italic P4SSW0RD|@]] [OPTIONS]..."
 	}
 )
 //CHECKSTYLE:ON
@@ -211,12 +211,12 @@ public class MetricsHubCliService implements Callable<Integer> {
 		split = ",",
 		paramLabel = "CONNECTOR",
 		description = "Specifies the setup of connectors to connect to the host.%n" +
-		" To force a connector, precede the connector identifier with a plus sign (+), as in +MIB2%n." +
-		" To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (!), like !MIB2.%n" +
-		" To stage a connector for processing by automatic detection, configure the connector identifier, for instance, MIB2.%n" +
-		" To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (#), such as #hardware.%n" +
-		" To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (!#), such as !#system.%n" +
-		" Use @|bold ${ROOT-COMMAND-NAME} -l|@ to get the list of connectors)."
+			" To force a connector, precede the connector identifier with a plus sign (+), as in +MIB2%n." +
+			" To exclude a connector from automatic detection, precede the connector identifier with an exclamation mark (!), like !MIB2.%n" +
+			" To stage a connector for processing by automatic detection, configure the connector identifier, for instance, MIB2.%n" +
+			" To stage a category of connectors for processing by automatic detection, precede the category tag with a hash (#), such as #hardware.%n" +
+			" To exclude a category of connectors from automatic detection, precede the category tag to be excluded with an exclamation mark and a hash sign (!#), such as !#system.%n" +
+			" Use @|bold ${ROOT-COMMAND-NAME} -l|@ to get the list of connectors)."
 	)
 	Set<String> connectors;
 
@@ -319,8 +319,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		// Setup Log4j
 		setLogLevel(verbose);
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(hostname)
 			.hostname(hostname)
 			.hostType(deviceType)
@@ -361,8 +360,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		hostConnectors.addAll(connectorsParsingResult.getResourceConnectors());
 
 		// Create the TelemetryManager using the connector store and the host configuration created above.
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.connectorStore(connectorStore)
 			.hostConfiguration(hostConfiguration)
 			.recordOutputDirectory(record ? ConfigHelper.getDefaultOutputDirectory().toString() : null)
@@ -407,12 +405,11 @@ public class MetricsHubCliService implements Callable<Integer> {
 			if (connectorMonitors == null || connectorMonitors.isEmpty()) {
 				printWriter.println(Ansi.ansi().fgBrightRed().a("No connector detected. Stopping.").reset().toString());
 				printWriter.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.fgYellow()
 						.a(
 							"Please verify that your credentials are correct and that your network connection is stable and not blocking the communication. " +
-							"For detailed troubleshooting steps, use the -vvvv option to display more diagnostic logs."
+								"For detailed troubleshooting steps, use the -vvvv option to display more diagnostic logs."
 						)
 						.reset()
 						.toString()
@@ -427,11 +424,13 @@ public class MetricsHubCliService implements Callable<Integer> {
 			printWriter.print("Performing discovery with ");
 			printWriter.print(Ansi.ansi().bold().a(connectorCount).boldOff().toString());
 			printWriter.println(connectorCount > 1 ? " connectors..." : " connector...");
-			connectors.forEach((connectorId, monitor) ->
-				printWriter.println(
-					Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
-				)
-			);
+			connectors
+				.values()
+				.forEach(monitor ->
+					printWriter.println(
+						Ansi.ansi().a("- ").fgCyan().a(new PrettyPrinterService().getMonitorDisplayName(monitor)).reset()
+					)
+				);
 			printWriter.flush();
 		}
 		telemetryManager.run(
@@ -574,13 +573,12 @@ public class MetricsHubCliService implements Callable<Integer> {
 				final String uses = additionalConnector.getUses();
 				if (!rawConnectors.containsKey(uses)) {
 					printWriter.println(
-						Ansi
-							.ansi()
+						Ansi.ansi()
 							.fgRed()
 							.a(
 								String.format(
 									"Error: Connector '%s' specified in --uses does not exist in the connector store.%n" +
-									"You can view the list of available connectors using: metricshub --list%n",
+										"You can view the list of available connectors using: metricshub --list%n",
 									uses
 								)
 							)
@@ -594,8 +592,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 			});
 
 		printWriter.flush();
-		return ConnectorStoreComposer
-			.builder()
+		return ConnectorStoreComposer.builder()
 			.withRawConnectorStore(rawConnectorStore)
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
@@ -617,20 +614,19 @@ public class MetricsHubCliService implements Callable<Integer> {
 	 * @return A {@link Map} associating the input protocol type to its input credentials.
 	 */
 	private Map<Class<? extends IConfiguration>, IConfiguration> buildConfigurations() {
-		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = Stream
-			.of(
-				ipmiConfigCli,
-				snmpConfigCli,
-				snmpV3ConfigCli,
-				sshConfigCli,
-				httpConfigCli,
-				wmiConfigCli,
-				winRmConfigCli,
-				wbemConfigCli,
-				jdbcConfigCli,
-				jmxConfigCli,
-				emulationConfigCli
-			)
+		final Map<Class<? extends IConfiguration>, IConfiguration> protocolConfigurations = Stream.of(
+			ipmiConfigCli,
+			snmpConfigCli,
+			snmpV3ConfigCli,
+			sshConfigCli,
+			httpConfigCli,
+			wmiConfigCli,
+			winRmConfigCli,
+			wbemConfigCli,
+			jdbcConfigCli,
+			jmxConfigCli,
+			emulationConfigCli
+		)
 			.filter(Objects::nonNull)
 			.map(protocolConfig -> {
 				try {
@@ -663,21 +659,19 @@ public class MetricsHubCliService implements Callable<Integer> {
 		}
 
 		// No protocol at all?
-		final boolean protocolsNotConfigured = Stream
-			.of(
-				ipmiConfigCli,
-				snmpConfigCli,
-				snmpV3ConfigCli,
-				sshConfigCli,
-				httpConfigCli,
-				wmiConfigCli,
-				winRmConfigCli,
-				wbemConfigCli,
-				jdbcConfigCli,
-				jmxConfigCli,
-				emulationConfigCli
-			)
-			.allMatch(Objects::isNull);
+		final boolean protocolsNotConfigured = Stream.of(
+			ipmiConfigCli,
+			snmpConfigCli,
+			snmpV3ConfigCli,
+			sshConfigCli,
+			httpConfigCli,
+			wmiConfigCli,
+			winRmConfigCli,
+			wbemConfigCli,
+			jdbcConfigCli,
+			jmxConfigCli,
+			emulationConfigCli
+		).allMatch(Objects::isNull);
 
 		if (protocolsNotConfigured) {
 			throw new ParameterException(
@@ -911,8 +905,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 
 		if (!connectorStore.getStore().isEmpty()) {
 			printWriter.println(
-				Ansi
-					.ansi()
+				Ansi.ansi()
 					.fgYellow()
 					.a(Attribute.INTENSITY_BOLD)
 					.a(String.format("%-40s ", "ID"))
@@ -954,8 +947,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 					.collect(Collectors.joining(", "));
 
 				printWriter.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.fgYellow()
 						.a(String.format("%-40s ", connectorName))
 						.fgMagenta()

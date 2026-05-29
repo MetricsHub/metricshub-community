@@ -100,19 +100,16 @@ class CriterionProcessorTest {
 	private void initLinuxTestConfiguration() {
 		final TestConfiguration testConfiguration = new TestConfiguration();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(LOCALHOST)
-						.hostId(LOCALHOST)
-						.hostType(DeviceKind.LINUX)
-						.configurations(Map.of(TestConfiguration.class, testConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(LOCALHOST)
+					.hostId(LOCALHOST)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(TestConfiguration.class, testConfiguration))
+					.build()
+			)
+			.build();
 	}
 
 	/**
@@ -121,19 +118,16 @@ class CriterionProcessorTest {
 	private void initWindowsTestConfiguration() {
 		final TestConfiguration testConfiguration = new TestConfiguration();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(LOCALHOST)
-						.hostId(LOCALHOST)
-						.hostType(DeviceKind.WINDOWS)
-						.configurations(Map.of(TestConfiguration.class, testConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(LOCALHOST)
+					.hostId(LOCALHOST)
+					.hostType(DeviceKind.WINDOWS)
+					.configurations(Map.of(TestConfiguration.class, testConfiguration))
+					.build()
+			)
+			.build();
 	}
 
 	/**
@@ -142,19 +136,16 @@ class CriterionProcessorTest {
 	private void initIpmi() {
 		final TestConfiguration ipmiConfiguration = new TestConfiguration();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(LOCALHOST)
-						.hostId(LOCALHOST)
-						.hostType(DeviceKind.OOB)
-						.configurations(Map.of(TestConfiguration.class, ipmiConfiguration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(LOCALHOST)
+					.hostId(LOCALHOST)
+					.hostType(DeviceKind.OOB)
+					.configurations(Map.of(TestConfiguration.class, ipmiConfiguration))
+					.build()
+			)
+			.build();
 	}
 
 	@Test
@@ -163,8 +154,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -200,8 +190,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -211,8 +200,7 @@ class CriterionProcessorTest {
 
 		doReturn(Set.of(WmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
 
-		final WmiCriterion wmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion wmiCriterion = WmiCriterion.builder()
 			.query(WBEM_QUERY)
 			.expectedResult(WEBM_CRITERION_SUCCESS_EXPECTED_RESULT)
 			.build();
@@ -239,8 +227,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -250,8 +237,7 @@ class CriterionProcessorTest {
 
 		doReturn(Set.of(WbemCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
 
-		final WbemCriterion wbemCriterion = WbemCriterion
-			.builder()
+		final WbemCriterion wbemCriterion = WbemCriterion.builder()
 			.query(WBEM_QUERY)
 			.expectedResult(WEBM_CRITERION_SUCCESS_EXPECTED_RESULT)
 			.build();
@@ -278,8 +264,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -313,8 +298,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -348,8 +332,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -417,8 +400,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -472,8 +454,7 @@ class CriterionProcessorTest {
 	void testProcessProcessNotLocalHost() {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine(PROCESS_CRITERION_COMMAND_LINE);
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(HostProperties.builder().build())
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
@@ -494,8 +475,7 @@ class CriterionProcessorTest {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine(PROCESS_CRITERION_COMMAND_LINE);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
 			)
@@ -520,8 +500,7 @@ class CriterionProcessorTest {
 		final ProcessCriterion process = new ProcessCriterion();
 		process.setCommandLine(PROCESS_CRITERION_COMMAND_LINE);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
 			)
@@ -555,8 +534,7 @@ class CriterionProcessorTest {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine(PROCESS_CRITERION_COMMAND_LINE);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
 			)
@@ -590,8 +568,7 @@ class CriterionProcessorTest {
 		final ProcessCriterion processCriterion = new ProcessCriterion();
 		processCriterion.setCommandLine(PROCESS_CRITERION_COMMAND_LINE);
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.LINUX).build()
 			)
@@ -615,8 +592,7 @@ class CriterionProcessorTest {
 	@Test
 	void testProcessDeviceTypeCriterion() {
 		// Init configurations
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(LOCALHOST).hostId(LOCALHOST).hostType(DeviceKind.NETWORK).build()
 			)
@@ -625,16 +601,14 @@ class CriterionProcessorTest {
 
 		final DeviceTypeCriterion deviceTypeCriterion = DeviceTypeCriterion.builder().build();
 		// Init CriterionTestResult success and failure instances
-		final CriterionTestResult successfulTestResult = CriterionTestResult
-			.builder()
+		final CriterionTestResult successfulTestResult = CriterionTestResult.builder()
 			.message(SUCCESSFUL_OS_DETECTION)
 			.result(CONFIGURED_OS_NT_MESSAGE)
 			.success(true)
 			.criterion(deviceTypeCriterion)
 			.build();
 
-		final CriterionTestResult failedTestResult = CriterionTestResult
-			.builder()
+		final CriterionTestResult failedTestResult = CriterionTestResult.builder()
 			.message(FAILED_OS_DETECTION)
 			.result(CONFIGURED_OS_NT_MESSAGE)
 			.success(false)
@@ -727,8 +701,7 @@ class CriterionProcessorTest {
 
 	@Test
 	void testProcessHttpCriterion() throws IOException {
-		final HttpCriterion httpCriterion = HttpCriterion
-			.builder()
+		final HttpCriterion httpCriterion = HttpCriterion.builder()
 			.type(HTTP)
 			.method(HttpMethod.GET)
 			.url(TEST)
@@ -738,8 +711,7 @@ class CriterionProcessorTest {
 			.errorMessage(ERROR)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOST_ID)
 			.hostId(HOST_ID)
 			.hostType(DeviceKind.LINUX)
@@ -748,8 +720,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -788,8 +759,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -799,11 +769,9 @@ class CriterionProcessorTest {
 
 		doReturn(Set.of(IpmiCriterion.class)).when(protocolExtensionMock).getSupportedCriteria();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(MANAGEMENT_CARD_HOST)
 					.hostType(DeviceKind.OOB)
 					.hostname(MANAGEMENT_CARD_HOST)
@@ -814,8 +782,7 @@ class CriterionProcessorTest {
 
 		final IpmiCriterion ipmiCriterion = IpmiCriterion.builder().build();
 
-		CriterionTestResult result = CriterionTestResult
-			.builder()
+		CriterionTestResult result = CriterionTestResult.builder()
 			.result(SYSTEM_POWER_UP_MESSAGE)
 			.message(IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE)
 			.success(true)
@@ -834,8 +801,7 @@ class CriterionProcessorTest {
 		);
 
 		assertEquals(
-			CriterionTestResult
-				.builder()
+			CriterionTestResult.builder()
 				.result(SYSTEM_POWER_UP_MESSAGE)
 				.message(IPMI_CONNECTION_SUCCESS_WITH_IPMI_OVER_LAN_MESSAGE)
 				.success(true)
@@ -851,8 +817,7 @@ class CriterionProcessorTest {
 
 		final IProtocolExtension protocolExtensionMock = spy(IProtocolExtension.class);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -920,8 +885,7 @@ class CriterionProcessorTest {
 
 	@Test
 	void testProductRequirementsCriterionProcessCriterionEmptyVersion() {
-		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion
-			.builder()
+		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion.builder()
 			.engineVersion("")
 			.build();
 
@@ -930,8 +894,7 @@ class CriterionProcessorTest {
 
 	@Test
 	void testProductRequirementsCriterionProcessCriterionOK() {
-		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion
-			.builder()
+		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion.builder()
 			.engineVersion(LOW_VERSION_NUMBER)
 			.build();
 		assertTrue(new CriterionProcessor().process(productRequirementsCriterion).isSuccess());
@@ -939,8 +902,7 @@ class CriterionProcessorTest {
 
 	@Test
 	void testProductRequirementsCriterionProcessCriterionNOK() {
-		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion
-			.builder()
+		final ProductRequirementsCriterion productRequirementsCriterion = ProductRequirementsCriterion.builder()
 			.engineVersion(HIGH_VERSION_NUMBER) // We will need to update the test once we reach metricshub-engine version 1000
 			.build();
 

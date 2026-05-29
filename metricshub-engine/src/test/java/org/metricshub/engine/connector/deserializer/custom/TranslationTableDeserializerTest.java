@@ -34,9 +34,8 @@ class TranslationTableDeserializerTest {
 		{
 			doReturn("translationTable").when(yamlParser).currentName();
 			doReturn(null).when(yamlParser).readValueAsTree();
-			assertThrows(
-				InvalidFormatException.class,
-				() -> new TranslationTableDeserializer().deserialize(yamlParser, null)
+			assertThrows(InvalidFormatException.class, () ->
+				new TranslationTableDeserializer().deserialize(yamlParser, null)
 			);
 		}
 	}

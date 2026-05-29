@@ -119,8 +119,7 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		configuration.set("database", new TextNode(database));
 		configuration.set("type", new TextNode(type));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("jdbc", configuration, value -> value)
 			.orElseThrow();
 	}

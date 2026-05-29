@@ -97,9 +97,9 @@ public class AgentController {
 			return ResponseEntity.ok("{\"message\": \"MetricsHub Agent restarted successfully.\"}");
 		} catch (Exception e) {
 			log.error("Failed to restart MetricsHub Agent.", e);
-			return ResponseEntity
-				.status(HttpStatus.INTERNAL_SERVER_ERROR)
-				.body("{\"error\": \"Failed to restart MetricsHub Agent: " + e.getMessage() + "\"}");
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+				"{\"error\": \"Failed to restart MetricsHub Agent: " + e.getMessage() + "\"}"
+			);
 		}
 	}
 }

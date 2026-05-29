@@ -269,25 +269,23 @@ public class PowerAndEnergyCollectHelper {
 					KnownMonitorType.ENCLOSURE.getKey()
 				);
 
-				isPowerMeasured =
-					Optional
-						.ofNullable(enclosures)
-						.stream()
-						.map(Map::values)
-						.flatMap(Collection::stream)
-						.anyMatch((Monitor monitor) -> {
-							var isPowerMetricNotDeactivated = isPowerMetricNotDeactivated(monitor);
-							log.debug(
-								"Hostname {} - Power metric {} on enclosure." +
+				isPowerMeasured = Optional.ofNullable(enclosures)
+					.stream()
+					.map(Map::values)
+					.flatMap(Collection::stream)
+					.anyMatch((Monitor monitor) -> {
+						var isPowerMetricNotDeactivated = isPowerMetricNotDeactivated(monitor);
+						log.debug(
+							"Hostname {} - Power metric {} on enclosure." +
 								" Additional information: enclosure monitor identified with attributes: {}" +
 								" - conditional collection: {}",
-								telemetryManager.getHostname(),
-								isPowerMetricNotDeactivated ? "not deactivated" : "deactivated",
-								monitor.getAttributes(),
-								monitor.getConditionalCollection()
-							);
-							return isPowerMetricNotDeactivated;
-						});
+							telemetryManager.getHostname(),
+							isPowerMetricNotDeactivated ? "not deactivated" : "deactivated",
+							monitor.getAttributes(),
+							monitor.getConditionalCollection()
+						);
+						return isPowerMetricNotDeactivated;
+					});
 			}
 		}
 

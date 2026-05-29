@@ -56,8 +56,7 @@ class WbemRequestExecutorTest {
 	@Test
 	void testDoWbemQuery() throws ClientException {
 		try (MockedStatic<WbemExecutor> wbemExecutorMock = mockStatic(WbemExecutor.class)) {
-			final WbemConfiguration wbemConfiguration = WbemConfiguration
-				.builder()
+			final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.timeout(120L)
@@ -70,9 +69,8 @@ class WbemRequestExecutorTest {
 				Arrays.asList("value1b", "value2b", "value3b")
 			);
 
-			assertThrows(
-				ClientException.class,
-				() -> wbemRequestExecutor.doWbemQuery(HOST_NAME, wbemConfiguration, QUERY, NAMESPACE)
+			assertThrows(ClientException.class, () ->
+				wbemRequestExecutor.doWbemQuery(HOST_NAME, wbemConfiguration, QUERY, NAMESPACE)
 			);
 
 			WbemQueryResult wbemQueryResult = new WbemQueryResult(properties, values);
@@ -99,8 +97,7 @@ class WbemRequestExecutorTest {
 	void testExecuteWbemRecordEnabled(@TempDir final Path tempDir) throws Exception {
 		WbemRecorder.clearInstances();
 		try (MockedStatic<WbemExecutor> wbemExecutorMock = mockStatic(WbemExecutor.class)) {
-			final WbemConfiguration wbemConfiguration = WbemConfiguration
-				.builder()
+			final WbemConfiguration wbemConfiguration = WbemConfiguration.builder()
 				.username(USERNAME)
 				.password(PASSWORD.toCharArray())
 				.timeout(120L)
@@ -124,8 +121,7 @@ class WbemRequestExecutorTest {
 				)
 				.thenReturn(wbemQueryResult);
 
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.recordOutputDirectory(tempDir.toString())
 				.build();
 

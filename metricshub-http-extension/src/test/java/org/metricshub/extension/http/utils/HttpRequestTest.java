@@ -17,8 +17,7 @@ import org.metricshub.extension.http.utils.HttpRequest.HttpRequestBuilder;
 class HttpRequestTest {
 
 	private static final String CONNECTION_KEEP_ALIVE_HEADER = "Connection: keep-alive";
-	private static final String BODY =
-		"""
+	private static final String BODY = """
 		{ "key" : "value" }
 		""";
 	private static final HttpConfiguration HTTP_CONFIG = HttpConfiguration.builder().build();
@@ -47,8 +46,7 @@ class HttpRequestTest {
 	@Test
 	void testHeaderBuilder() throws IOException {
 		{
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.header(CONNECTION_KEEP_ALIVE_HEADER, Map.of(), MY_CONNECTOR_1_NAME, HOST)
@@ -58,8 +56,7 @@ class HttpRequestTest {
 		}
 
 		{
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.header(null, Map.of(), MY_CONNECTOR_1_NAME, HOST)
@@ -76,8 +73,7 @@ class HttpRequestTest {
 			);
 			httpEmbeddedFiles.put(EMBEDDED_FILE_1_ID, expectedEmbeddedFile);
 
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.header(EMBEDDED_FILE_1_REF, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
@@ -90,8 +86,7 @@ class HttpRequestTest {
 	@Test
 	void testBodyBuilder() throws IOException {
 		{
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.body(BODY, Map.of(), MY_CONNECTOR_1_NAME, HOST)
@@ -101,8 +96,7 @@ class HttpRequestTest {
 		}
 
 		{
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.body(null, Map.of(), MY_CONNECTOR_1_NAME, HOST)
@@ -115,8 +109,7 @@ class HttpRequestTest {
 			final EmbeddedFile expectedEmbeddedFile = new EmbeddedFile(BODY.getBytes(), "body", EMBEDDED_FILE_1_ID);
 			httpEmbeddedFiles.put(EMBEDDED_FILE_1_ID, expectedEmbeddedFile);
 
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(HOST)
 				.httpConfiguration(HTTP_CONFIG)
 				.body(EMBEDDED_FILE_1_REF, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
@@ -141,9 +134,8 @@ class HttpRequestTest {
 		final String headerValue = EMBEDDED_FILE_1_REF + " " + EMBEDDED_FILE_2_REF;
 
 		final HttpRequestBuilder httpRequestBuilder = HttpRequest.builder();
-		assertThrows(
-			IllegalStateException.class,
-			() -> httpRequestBuilder.header(headerValue, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
+		assertThrows(IllegalStateException.class, () ->
+			httpRequestBuilder.header(headerValue, httpEmbeddedFiles, MY_CONNECTOR_1_NAME, HOST)
 		);
 	}
 }

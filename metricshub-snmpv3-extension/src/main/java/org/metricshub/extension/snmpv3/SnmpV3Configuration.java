@@ -102,7 +102,7 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-					" This resource will not be monitored. Please verify the configured port value.",
+						" This resource will not be monitored. Please verify the configured port value.",
 					resourceKey,
 					SNMP_V3_DESCRIPTION,
 					port
@@ -115,7 +115,7 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					SNMP_V3_DESCRIPTION,
 					timeout
@@ -128,7 +128,7 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - No username configured for protocol %s." +
-					" This resource will not be monitored. Please verify the configured username.",
+						" This resource will not be monitored. Please verify the configured username.",
 					resourceKey,
 					"SNNP V3"
 				)
@@ -140,7 +140,7 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - No username configured for protocol %s." +
-					" This resource will not be monitored. Please verify the configured authtype.",
+						" This resource will not be monitored. Please verify the configured authtype.",
 					resourceKey,
 					"SNNP V3"
 				)
@@ -233,8 +233,7 @@ public class SnmpV3Configuration implements ISnmpConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return SnmpV3Configuration
-			.builder()
+		return SnmpV3Configuration.builder()
 			.authType(authType)
 			.contextName(contextName)
 			.password(password)

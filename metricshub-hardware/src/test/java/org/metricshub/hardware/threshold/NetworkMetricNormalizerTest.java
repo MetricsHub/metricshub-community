@@ -25,8 +25,7 @@ class NetworkMetricNormalizerTest {
 		// Critical metric value is less than degraded metric value
 		{
 			// Create a metric representing network error ratio
-			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.network.error_ratio")
 				.build();
@@ -34,8 +33,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a critical limit metric for network error ratio
-			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "network"))
@@ -44,8 +42,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a degraded limit metric for network error ratio
-			final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "network"))
@@ -54,8 +51,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a monitor with the above metrics
-			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("network")
 				.metrics(
@@ -73,8 +69,9 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwNetworkErrorRatioMetric
+			);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -93,8 +90,7 @@ class NetworkMetricNormalizerTest {
 		// Critical metric value is greater than degraded metric value
 		{
 			// Create a metric representing network error ratio
-			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.network.error_ratio")
 				.build();
@@ -102,8 +98,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a critical limit metric for network error ratio
-			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric.builder()
 				.value(3.0)
 				.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "network"))
@@ -112,8 +107,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a degraded limit metric for network error ratio
-			final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "network"))
@@ -122,8 +116,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a monitor with the above metrics
-			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("network")
 				.metrics(
@@ -141,8 +134,9 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwNetworkErrorRatioMetric
+			);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -162,8 +156,7 @@ class NetworkMetricNormalizerTest {
 			// Critical metric is absent, degraded metric is present
 			{
 				// Create a metric representing network error ratio
-				final NumberMetric hwNetworkErrorRatioMetric = NumberMetric
-					.builder()
+				final NumberMetric hwNetworkErrorRatioMetric = NumberMetric.builder()
 					.value(1.0)
 					.name("hw.network.error_ratio")
 					.build();
@@ -171,8 +164,7 @@ class NetworkMetricNormalizerTest {
 				hwNetworkErrorRatioMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 				// Create a degraded limit metric for network error ratio
-				final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric
-					.builder()
+				final NumberMetric hwNetworkErrorRatioLimitDegradedMetric = NumberMetric.builder()
 					.value(2.0)
 					.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_NETWORK)
 					.attributes(Map.of("limit_type", "degraded", "hw.type", "network"))
@@ -181,8 +173,7 @@ class NetworkMetricNormalizerTest {
 				hwNetworkErrorRatioLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 				// Create a monitor with the above metrics
-				final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor
-					.builder()
+				final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor.builder()
 					.id("monitorOne")
 					.type("network")
 					.metrics(
@@ -198,8 +189,9 @@ class NetworkMetricNormalizerTest {
 					.build();
 
 				// Normalize the metrics using NetworkMetricNormalizer
-				new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-					.normalize(monitorWithHwNetworkErrorRatioMetric);
+				new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+					monitorWithHwNetworkErrorRatioMetric
+				);
 
 				// Validate the normalized metrics
 
@@ -214,8 +206,7 @@ class NetworkMetricNormalizerTest {
 		// Degraded metric is absent, critical metric is present
 		{
 			// Create a metric representing network error ratio
-			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.network.error_ratio")
 				.build();
@@ -223,8 +214,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a critical limit metric for network error ratio
-			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_NETWORK_ERROR_RATIO_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_NETWORK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "network"))
@@ -233,8 +223,7 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a monitor with the above metrics
-			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwNetworkErrorRatioMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("network")
 				.metrics(
@@ -250,8 +239,9 @@ class NetworkMetricNormalizerTest {
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwNetworkErrorRatioMetric);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwNetworkErrorRatioMetric
+			);
 
 			// Validate the normalized metrics
 			assertEquals(
@@ -264,8 +254,7 @@ class NetworkMetricNormalizerTest {
 		// Absent network limit metrics: both critical and degraded are absent
 		{
 			// Create a metric representing network error ratio
-			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric
-				.builder()
+			final NumberMetric hwNetworkErrorRatioMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.network.error_ratio")
 				.build();
@@ -273,16 +262,16 @@ class NetworkMetricNormalizerTest {
 			hwNetworkErrorRatioMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
 			// Create a monitor without critical and degraded limit metrics
-			final Monitor monitorWithoutHwNetworkErrorRatioMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutHwNetworkErrorRatioMetrics = Monitor.builder()
 				.id("monitorTwo")
 				.type("network")
 				.metrics(new HashMap<>(Map.of("hw.network.error_ratio", hwNetworkErrorRatioMetric)))
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithoutHwNetworkErrorRatioMetrics);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithoutHwNetworkErrorRatioMetrics
+			);
 
 			// Validate the default normalized metrics
 			assertEquals(
@@ -301,16 +290,16 @@ class NetworkMetricNormalizerTest {
 		{
 			// Absent hw.network.error_ratio metric
 			// Create a monitor without critical and degraded limit metrics
-			final Monitor monitorWithoutHwNetworkErrorRatioMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutHwNetworkErrorRatioMetrics = Monitor.builder()
 				.id("monitorTwo")
 				.type("network")
 				.metrics(new HashMap<>())
 				.build();
 
 			// Normalize the metrics using NetworkMetricNormalizer
-			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithoutHwNetworkErrorRatioMetrics);
+			new NetworkMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithoutHwNetworkErrorRatioMetrics
+			);
 
 			// Validate the default normalized metrics
 			assertNull(

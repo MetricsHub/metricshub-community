@@ -114,8 +114,7 @@ public class ProtocolCheckService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<ProtocolCheckResponse>builder()
+						HostToolResponse.<ProtocolCheckResponse>builder()
 							.hostname(host)
 							.response(checkWithExtension(host, timeout, extension))
 							.build(),
@@ -142,8 +141,7 @@ public class ProtocolCheckService implements IMCPToolService {
 			return checkProtocolWithExtensionSafe(hostname, extension.getIdentifier(), timeout, extension);
 		} catch (Exception e) {
 			// Error
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.errorMessage("Error detected during protocol check: " + e.getMessage())
 				.build();
@@ -186,11 +184,9 @@ public class ProtocolCheckService implements IMCPToolService {
 				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
 			);
 
-			final var telemetryManager = TelemetryManager
-				.builder()
+			final var telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.configurations(Map.of(validConfiguration.getClass(), validConfiguration))
 						.hostname(hostname)
 						.build()
@@ -205,8 +201,7 @@ public class ProtocolCheckService implements IMCPToolService {
 				final boolean isUp = response.get();
 				if (isUp) {
 					final double responseTime = (System.currentTimeMillis() - startTime);
-					return ProtocolCheckResponse
-						.builder()
+					return ProtocolCheckResponse.builder()
 						.hostname(hostname)
 						.isReachable(true)
 						.responseTime(responseTime)

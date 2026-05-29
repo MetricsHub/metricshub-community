@@ -100,8 +100,7 @@ public class WinServiceCriterionProcessor {
 		final String hostname = telemetryManager.getHostname(List.of(winConfiguration.getClass()));
 
 		// Build a new WMI criterion to check the service existence
-		final WmiCriterion serviceWmiCriterion = WmiCriterion
-			.builder()
+		final WmiCriterion serviceWmiCriterion = WmiCriterion.builder()
 			.query(String.format("SELECT Name, State FROM Win32_Service WHERE Name = '%s'", serviceName))
 			.namespace("root\\cimv2")
 			.build();

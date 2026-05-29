@@ -61,9 +61,9 @@ class HostMetricsDefinitionLoaderTest {
 
 	@Test
 	void testConfiguredIsUpDownCounter() {
-		final MetricDefinition configuredDef = HostMetricsDefinitionLoader
-			.getInstance()
-			.getMetricDefinition("metricshub.host.configured");
+		final MetricDefinition configuredDef = HostMetricsDefinitionLoader.getInstance().getMetricDefinition(
+			"metricshub.host.configured"
+		);
 		assertNotNull(configuredDef, "metricshub.host.configured definition should not be null");
 		final IMetricType type = configuredDef.getType();
 		assertNotNull(type, "metricshub.host.configured type should not be null");
@@ -76,9 +76,9 @@ class HostMetricsDefinitionLoaderTest {
 
 	@Test
 	void testObservedIsUpDownCounter() {
-		final MetricDefinition observedDef = HostMetricsDefinitionLoader
-			.getInstance()
-			.getMetricDefinition("metricshub.host.observed");
+		final MetricDefinition observedDef = HostMetricsDefinitionLoader.getInstance().getMetricDefinition(
+			"metricshub.host.observed"
+		);
 		assertNotNull(observedDef, "metricshub.host.observed definition should not be null");
 		final IMetricType type = observedDef.getType();
 		assertNotNull(type, "metricshub.host.observed type should not be null");

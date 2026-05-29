@@ -19,7 +19,8 @@ class ServiceCriterionDeserializerTest extends DeserializerTest {
 	}
 
 	@Test
-	void testDeserializeService() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testDeserializeService() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		final Connector service = getConnector("serviceCriterion");
 		List<Criterion> expected = new ArrayList<>();
 		expected.add(new ServiceCriterion("service", false, "TWGIPC"));

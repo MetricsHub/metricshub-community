@@ -110,8 +110,11 @@ public class AgentInfo {
 		// Read the application.yaml file
 		final ClassPathResource classPathResource = new ClassPathResource(APPLICATION_YAML_FILE_NAME);
 		try {
-			applicationProperties =
-				JsonHelper.deserialize(OBJECT_MAPPER, classPathResource.getInputStream(), ApplicationProperties.class);
+			applicationProperties = JsonHelper.deserialize(
+				OBJECT_MAPPER,
+				classPathResource.getInputStream(),
+				ApplicationProperties.class
+			);
 		} catch (IOException e) {
 			log.error("Cannot read internal application configuration file: {}", classPathResource.getPath());
 			log.debug("Exception: ", e);

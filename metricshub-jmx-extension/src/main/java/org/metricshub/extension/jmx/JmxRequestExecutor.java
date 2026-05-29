@@ -71,19 +71,17 @@ public class JmxRequestExecutor {
 	) throws Exception {
 		final List<List<String>> result;
 		if (resourceHostname != null) {
-			result =
-				ThreadHelper.execute(
-					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-					jmxConfiguration.getTimeout(),
-					resourceHostname,
-					"jmx"
-				);
+			result = ThreadHelper.execute(
+				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+				jmxConfiguration.getTimeout(),
+				resourceHostname,
+				"jmx"
+			);
 		} else {
-			result =
-				ThreadHelper.execute(
-					() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
-					jmxConfiguration.getTimeout()
-				);
+			result = ThreadHelper.execute(
+				() -> runJmxRequest(jmxConfiguration, objectNamePattern, attributes, keyProperties),
+				jmxConfiguration.getTimeout()
+			);
 		}
 
 		// Record the JMX exchange if recording is enabled
@@ -222,7 +220,7 @@ public class JmxRequestExecutor {
 
 		final var url = buildJmxRmiUrl(hostname, port);
 
-		try (var jmxConnector = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
+		try (var _ = connect(hostname, url, configuration.getUsername(), configuration.getPassword())) {
 			return true;
 		} catch (Exception e) {
 			log.debug("Hostname {} - JMX health check failed. {} → ", hostname, url, e);

@@ -56,7 +56,7 @@ public class LoggingHelper {
 		if (log.isErrorEnabled()) {
 			log.error(
 				"Hostname {} - Source [{}] was unsuccessful due to an exception." +
-				" Context [{}]. Connector: [{}]. Returning an empty table. Errors:\n{}\n",
+					" Context [{}]. Connector: [{}]. Returning an empty table. Errors:\n{}\n",
 				hostname,
 				sourceKey,
 				context,

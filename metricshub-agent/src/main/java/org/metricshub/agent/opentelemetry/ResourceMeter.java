@@ -90,8 +90,7 @@ public class ResourceMeter {
 	 * @return a new {@link ResourceMetrics} instance.
 	 */
 	private ResourceMetrics doRecord() {
-		final Resource resource = Resource
-			.newBuilder()
+		final Resource resource = Resource.newBuilder()
 			.addAllAttributes(
 				attributes
 					.entrySet()
@@ -99,8 +98,7 @@ public class ResourceMeter {
 					.filter(entry -> entry.getValue() != null)
 					.filter(entry -> OtelHelper.isAcceptedKey(entry.getKey()))
 					.map(entry ->
-						KeyValue
-							.newBuilder()
+						KeyValue.newBuilder()
 							.setKey(entry.getKey())
 							.setValue(AnyValue.newBuilder().setStringValue(entry.getValue()).build())
 							.build()
@@ -112,8 +110,7 @@ public class ResourceMeter {
 		metricRecorders.forEach(AbstractMetricRecorder::doRecord);
 		final List<Metric> metrics = new ArrayList<>(metricsCache.values());
 
-		final ScopeMetrics scopeMetrics = ScopeMetrics
-			.newBuilder()
+		final ScopeMetrics scopeMetrics = ScopeMetrics.newBuilder()
 			.setScope(InstrumentationScope.newBuilder().setName(instrumentation).build())
 			.addAllMetrics(metrics)
 			.build();

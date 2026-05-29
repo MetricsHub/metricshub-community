@@ -89,8 +89,7 @@ class ExecuteJmxQueryServiceTest {
 	void testExecuteJmxRequestWithoutConfiguration() {
 		setup();
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -116,10 +115,8 @@ class ExecuteJmxQueryServiceTest {
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
-		assertEquals(
-			"No valid configuration found for JMX on %s.".formatted(HOSTNAME),
-			result.getError(),
-			() -> "Unexpected error message when host has no configurations. "
+		assertEquals("No valid configuration found for JMX on %s.".formatted(HOSTNAME), result.getError(), () ->
+			"Unexpected error message when host has no configurations. "
 		);
 	}
 
@@ -147,16 +144,14 @@ class ExecuteJmxQueryServiceTest {
 	void testExecuteJmxRequest() throws Exception {
 		setup();
 		// Creating a JMX Configuration for the host
-		JmxConfiguration jmxConfiguration = JmxConfiguration
-			.builder()
+		JmxConfiguration jmxConfiguration = JmxConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the JMX configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(JmxConfiguration.class, jmxConfiguration))
 			.build();
@@ -180,8 +175,7 @@ class ExecuteJmxQueryServiceTest {
 				any(),
 				any()
 			)
-		)
-			.thenReturn(List.of(values));
+		).thenReturn(List.of(values));
 
 		final QueryResponse result = jmxQueryService
 			.executeQuery(List.of(HOSTNAME), OBJECT_NAME, OBJECT_ATTRIBUTES, KEY_PROPERTIES, TIMEOUT, 9)
@@ -202,16 +196,14 @@ class ExecuteJmxQueryServiceTest {
 		setup();
 
 		// Creating a JMX Configuration for the host
-		JmxConfiguration jmxConfiguration = JmxConfiguration
-			.builder()
+		JmxConfiguration jmxConfiguration = JmxConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the JMX configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(JmxConfiguration.class, jmxConfiguration))
 			.build();
@@ -232,8 +224,7 @@ class ExecuteJmxQueryServiceTest {
 				any(),
 				any()
 			)
-		)
-			.thenThrow(new IllegalArgumentException("An error has occurred"));
+		).thenThrow(new IllegalArgumentException("An error has occurred"));
 
 		// Call the execute query method
 		QueryResponse result = jmxQueryService
@@ -244,9 +235,8 @@ class ExecuteJmxQueryServiceTest {
 
 		// Assertions
 		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
-		assertTrue(
-			result.getError().contains("An error has occurred"),
-			() -> "Error message should contain 'An error has occurred'"
+		assertTrue(result.getError().contains("An error has occurred"), () ->
+			"Error message should contain 'An error has occurred'"
 		);
 	}
 
@@ -260,10 +250,8 @@ class ExecuteJmxQueryServiceTest {
 		assertEquals("C", array.get(2).asText(), () -> "Third token should be 'C'");
 
 		// empty string -> empty array
-		assertEquals(
-			0,
-			ExecuteJmxQueryService.normalizeElements("").size(),
-			() -> "Empty input should produce empty array"
+		assertEquals(0, ExecuteJmxQueryService.normalizeElements("").size(), () ->
+			"Empty input should produce empty array"
 		);
 
 		assertThrows(

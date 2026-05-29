@@ -296,8 +296,7 @@ public class MetricsHubConstants {
 	/**
 	 * Connector Status Metric Definition
 	 **/
-	public static final MetricDefinition CONNECTOR_STATUS_METRIC_DEFINITION = MetricDefinition
-		.builder()
+	public static final MetricDefinition CONNECTOR_STATUS_METRIC_DEFINITION = MetricDefinition.builder()
 		.description("Connector operational status.")
 		.type(StateSet.builder().set(Set.of(STATE_SET_METRIC_OK, STATE_SET_METRIC_FAILED)).build())
 		.build();

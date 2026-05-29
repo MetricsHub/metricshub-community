@@ -27,50 +27,63 @@ class OtelConfigHelperTest {
 	void testGetSecurityFilePath() {
 		// Null certificate file configured, the default is loaded
 		assertTrue(
-			OtelConfigHelper
-				.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, null, HTTPS_GRPC_ENDPOINT)
-				.isPresent()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				null,
+				HTTPS_GRPC_ENDPOINT
+			).isPresent()
 		);
 
 		// Empty certificate file configured, the default is loaded
 		assertTrue(
-			OtelConfigHelper
-				.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, "", HTTPS_GRPC_ENDPOINT)
-				.isPresent()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				"",
+				HTTPS_GRPC_ENDPOINT
+			).isPresent()
 		);
 
 		// Blank certificate file, the default is loaded
 		assertTrue(
-			OtelConfigHelper
-				.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, " ", HTTPS_GRPC_ENDPOINT)
-				.isPresent()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				" ",
+				HTTPS_GRPC_ENDPOINT
+			).isPresent()
 		);
 
 		// Certificate file not found, it cannot be loaded
 		final String randomFilename = UUID.randomUUID().toString();
 		assertFalse(
-			OtelConfigHelper
-				.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, randomFilename, HTTPS_GRPC_ENDPOINT)
-				.isPresent()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				randomFilename,
+				HTTPS_GRPC_ENDPOINT
+			).isPresent()
 		);
 
 		// HTTP instead of HTTPS, no certificate to load
 		assertTrue(
-			OtelConfigHelper
-				.getSecurityFilePath(TEST_SECURITY_PATH, DEFAULT_OTEL_CRT_FILENAME, null, HTTP_GRPC_ENDPOINT)
-				.isEmpty()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				null,
+				HTTP_GRPC_ENDPOINT
+			).isEmpty()
 		);
 
 		// The certificate file is found
 		assertFalse(
-			OtelConfigHelper
-				.getSecurityFilePath(
-					TEST_SECURITY_PATH,
-					DEFAULT_OTEL_CRT_FILENAME,
-					TEST_SECURITY_PATH + "/" + DEFAULT_OTEL_CRT_FILENAME,
-					HTTPS_GRPC_ENDPOINT
-				)
-				.isEmpty()
+			OtelConfigHelper.getSecurityFilePath(
+				TEST_SECURITY_PATH,
+				DEFAULT_OTEL_CRT_FILENAME,
+				TEST_SECURITY_PATH + "/" + DEFAULT_OTEL_CRT_FILENAME,
+				HTTPS_GRPC_ENDPOINT
+			).isEmpty()
 		);
 	}
 
@@ -88,8 +101,7 @@ class OtelConfigHelperTest {
 		}
 
 		{
-			final AgentConfig agentConfig = AgentConfig
-				.builder()
+			final AgentConfig agentConfig = AgentConfig.builder()
 				.otelConfig(OtelConfigConstants.DEFAULT_CONFIGURATION)
 				.build();
 			final Map<String, String> otelConfig = OtelConfigHelper.buildOtelConfiguration(agentConfig);

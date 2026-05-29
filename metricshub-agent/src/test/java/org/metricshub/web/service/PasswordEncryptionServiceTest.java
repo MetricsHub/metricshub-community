@@ -41,9 +41,8 @@ class PasswordEncryptionServiceTest {
 
 	@Test
 	void encryptPassword_invalidBase64ThrowsIllegalArgumentExceptionWithCause() {
-		final IllegalArgumentException ex = assertThrows(
-			IllegalArgumentException.class,
-			() -> service.encryptPassword("not-valid-base64!!!")
+		final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
+			service.encryptPassword("not-valid-base64!!!")
 		);
 		assertEquals("Invalid Base64 in request body.", ex.getMessage());
 		assertInstanceOf(IllegalArgumentException.class, ex.getCause());
@@ -102,9 +101,8 @@ class PasswordEncryptionServiceTest {
 				.when(() -> SecurityManager.encrypt(any(char[].class), eq(keystoreFile)))
 				.thenThrow(new MetricsHubSecurityException("keystore failed"));
 
-			final MetricsHubSecurityException ex = assertThrows(
-				MetricsHubSecurityException.class,
-				() -> service.encryptPassword(transport)
+			final MetricsHubSecurityException ex = assertThrows(MetricsHubSecurityException.class, () ->
+				service.encryptPassword(transport)
 			);
 			assertEquals("keystore failed", ex.getMessage());
 		}

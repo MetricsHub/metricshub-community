@@ -115,8 +115,7 @@ public class HttpExtension implements IProtocolExtension {
 		// Execute HTTP test request
 		try {
 			// Create an Http request
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.hostname(hostname)
 				.path("/")
 				.httpConfiguration(httpConfiguration)
@@ -158,8 +157,11 @@ public class HttpExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof HttpCriterion httpCriterion) {
-			return new HttpCriterionProcessor(httpRequestExecutor, logMode)
-				.process(httpCriterion, connectorId, telemetryManager);
+			return new HttpCriterionProcessor(httpRequestExecutor, logMode).process(
+				httpCriterion,
+				connectorId,
+				telemetryManager
+			);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -204,8 +206,7 @@ public class HttpExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)
@@ -241,14 +242,12 @@ public class HttpExtension implements IProtocolExtension {
 		final JsonNode body = query.get("body");
 		final JsonNode resultContent = query.get("resultContent");
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.configurations(Map.of(HttpConfiguration.class, configuration))
 			.build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		final HttpRequest httpRequest = HttpRequest
-			.builder()
+		final HttpRequest httpRequest = HttpRequest.builder()
 			.hostname(hostname)
 			.httpConfiguration((HttpConfiguration) configuration)
 			.method(method)

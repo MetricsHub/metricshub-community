@@ -56,12 +56,10 @@ class AbstractStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -69,8 +67,7 @@ class AbstractStrategyTest {
 					.build()
 			)
 			.build();
-		final CollectStrategy collectStrategy = CollectStrategy
-			.builder()
+		final CollectStrategy collectStrategy = CollectStrategy.builder()
 			.telemetryManager(telemetryManager)
 			.strategyTime(new Date().getTime())
 			.clientsExecutor(new ClientsExecutor())
@@ -117,12 +114,10 @@ class AbstractStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -131,8 +126,7 @@ class AbstractStrategyTest {
 					.build()
 			)
 			.build();
-		final CollectStrategy collectStrategy = CollectStrategy
-			.builder()
+		final CollectStrategy collectStrategy = CollectStrategy.builder()
 			.telemetryManager(telemetryManager)
 			.strategyTime(new Date().getTime())
 			.clientsExecutor(new ClientsExecutor())
@@ -179,12 +173,10 @@ class AbstractStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -193,8 +185,7 @@ class AbstractStrategyTest {
 					.build()
 			)
 			.build();
-		final CollectStrategy collectStrategy = CollectStrategy
-			.builder()
+		final CollectStrategy collectStrategy = CollectStrategy.builder()
 			.telemetryManager(telemetryManager)
 			.strategyTime(new Date().getTime())
 			.clientsExecutor(new ClientsExecutor())
@@ -240,12 +231,10 @@ class AbstractStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -254,8 +243,7 @@ class AbstractStrategyTest {
 					.build()
 			)
 			.build();
-		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy
-			.builder()
+		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy.builder()
 			.telemetryManager(telemetryManager)
 			.strategyTime(new Date().getTime())
 			.clientsExecutor(new ClientsExecutor())
@@ -288,8 +276,7 @@ class AbstractStrategyTest {
 		connector.setMonitors(monitors);
 
 		// Check whether there is a connector monitor job that matches the strategy job name
-		final SimpleStrategy simpleStrategy = SimpleStrategy
-			.builder()
+		final SimpleStrategy simpleStrategy = SimpleStrategy.builder()
 			.strategyTime(120L)
 			.telemetryManager(TelemetryManager.builder().build())
 			.clientsExecutor(new ClientsExecutor())
@@ -307,8 +294,7 @@ class AbstractStrategyTest {
 		connector.setMonitors(monitors);
 
 		// Check whether there is a connector monitor job that matches the strategy job name
-		final SimpleStrategy simpleStrategy = SimpleStrategy
-			.builder()
+		final SimpleStrategy simpleStrategy = SimpleStrategy.builder()
 			.strategyTime(120L)
 			.telemetryManager(TelemetryManager.builder().build())
 			.clientsExecutor(new ClientsExecutor())
@@ -326,16 +312,14 @@ class AbstractStrategyTest {
 		connector.setMonitors(monitors);
 
 		// Check whether an IllegalArgumentException is thrown when the strategy job name is invalid
-		final SimpleStrategy simpleStrategy = SimpleStrategy
-			.builder()
+		final SimpleStrategy simpleStrategy = SimpleStrategy.builder()
 			.strategyTime(120L)
 			.telemetryManager(TelemetryManager.builder().build())
 			.clientsExecutor(new ClientsExecutor())
 			.extensionManager(new ExtensionManager())
 			.build();
-		final IllegalArgumentException exception = assertThrows(
-			IllegalArgumentException.class,
-			() -> simpleStrategy.hasExpectedJobTypes(connector, "unknown")
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			simpleStrategy.hasExpectedJobTypes(connector, "unknown")
 		);
 		assertEquals("Unknown strategy job name: unknown", exception.getMessage());
 	}

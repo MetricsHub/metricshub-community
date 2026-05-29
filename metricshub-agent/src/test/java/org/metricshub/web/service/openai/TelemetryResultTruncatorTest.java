@@ -58,12 +58,10 @@ class TelemetryResultTruncatorTest {
 		final String hostname,
 		final Map<String, Integer> typeToCounts
 	) {
-		return MultiHostToolResponse
-			.<TelemetryResult>builder()
+		return MultiHostToolResponse.<TelemetryResult>builder()
 			.hosts(
 				List.of(
-					HostToolResponse
-						.<TelemetryResult>builder()
+					HostToolResponse.<TelemetryResult>builder()
 						.hostname(hostname)
 						.response(TelemetryResult.builder().telemetry(buildMonitorsVo(typeToCounts)).build())
 						.build()
@@ -81,8 +79,7 @@ class TelemetryResultTruncatorTest {
 		final List<HostToolResponse<TelemetryResult>> hosts = new ArrayList<>();
 		for (final var hostEntry : hostToTypeCounts.entrySet()) {
 			hosts.add(
-				HostToolResponse
-					.<TelemetryResult>builder()
+				HostToolResponse.<TelemetryResult>builder()
 					.hostname(hostEntry.getKey())
 					.response(TelemetryResult.builder().telemetry(buildMonitorsVo(hostEntry.getValue())).build())
 					.build()
@@ -185,7 +182,12 @@ class TelemetryResultTruncatorTest {
 		assertTrue(hasSummary(monitors.get("fan")));
 
 		// Verify truncatedEntries only contains disk
-		assertTrue(result.truncatedEntries().stream().allMatch(e -> e.monitorType().equals("disk")));
+		assertTrue(
+			result
+				.truncatedEntries()
+				.stream()
+				.allMatch(e -> e.monitorType().equals("disk"))
+		);
 	}
 
 	// ---- Truncation: multiple types ----
@@ -281,8 +283,7 @@ class TelemetryResultTruncatorTest {
 	void testErrorOnlyTelemetryResult() {
 		final var hosts = new ArrayList<HostToolResponse<TelemetryResult>>();
 		hosts.add(
-			HostToolResponse
-				.<TelemetryResult>builder()
+			HostToolResponse.<TelemetryResult>builder()
 				.hostname("error-host")
 				.response(new TelemetryResult("Connection refused"))
 				.build()
@@ -523,8 +524,7 @@ class TelemetryResultTruncatorTest {
 		final var hosts = new ArrayList<HostToolResponse<TelemetryResult>>();
 		// Host with telemetry
 		hosts.add(
-			HostToolResponse
-				.<TelemetryResult>builder()
+			HostToolResponse.<TelemetryResult>builder()
 				.hostname("good-host")
 				.response(TelemetryResult.builder().telemetry(buildMonitorsVo(Map.of("disk", 50))).build())
 				.build()

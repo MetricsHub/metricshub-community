@@ -25,30 +25,28 @@ class DetectionTest {
 		assertEquals(Set.of(ConnectionType.LOCAL, ConnectionType.REMOTE), detection.getConnectionTypes());
 
 		// LOCAL connectionType value
-		detection =
-			new Detection(
-				Set.of(ConnectionType.LOCAL),
-				false,
-				"onLastResort",
-				Collections.singleton(DeviceKind.WINDOWS),
-				Collections.emptySet(),
-				Collections.emptyList(),
-				Collections.emptySet()
-			);
+		detection = new Detection(
+			Set.of(ConnectionType.LOCAL),
+			false,
+			"onLastResort",
+			Collections.singleton(DeviceKind.WINDOWS),
+			Collections.emptySet(),
+			Collections.emptyList(),
+			Collections.emptySet()
+		);
 
 		assertEquals(Set.of(ConnectionType.LOCAL), detection.getConnectionTypes());
 
 		// REMOTE connectionType value
-		detection =
-			new Detection(
-				Set.of(ConnectionType.REMOTE),
-				false,
-				"onLastResort",
-				Collections.singleton(DeviceKind.WINDOWS),
-				Collections.emptySet(),
-				Collections.emptyList(),
-				Collections.emptySet()
-			);
+		detection = new Detection(
+			Set.of(ConnectionType.REMOTE),
+			false,
+			"onLastResort",
+			Collections.singleton(DeviceKind.WINDOWS),
+			Collections.emptySet(),
+			Collections.emptyList(),
+			Collections.emptySet()
+		);
 
 		assertEquals(Set.of(ConnectionType.REMOTE), detection.getConnectionTypes());
 	}

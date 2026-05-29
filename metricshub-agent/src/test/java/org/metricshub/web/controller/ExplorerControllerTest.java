@@ -110,15 +110,13 @@ class ExplorerControllerTest {
 
 	@Test
 	void testShouldSearch() throws Exception {
-		final SearchMatch match1 = SearchMatch
-			.builder()
+		final SearchMatch match1 = SearchMatch.builder()
 			.name("serverA")
 			.type("resource")
 			.path("Agent/serverA")
 			.jaroWinklerScore(1.0)
 			.build();
-		final SearchMatch match2 = SearchMatch
-			.builder()
+		final SearchMatch match2 = SearchMatch.builder()
 			.name("cpu")
 			.type("monitor")
 			.path("Agent/serverA/SNMP/cpu")

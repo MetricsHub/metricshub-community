@@ -58,8 +58,7 @@ class HostDetailsServiceTest {
 		SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder().hostname(HOSTNAME).build();
 		SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder().hostname(HOSTNAME).build();
 
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SnmpConfiguration.class, snmpConfiguration, SshConfiguration.class, sshConfiguration))
 			.build();
@@ -83,14 +82,12 @@ class HostDetailsServiceTest {
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 
 		// Populating the telemetry managers
-		final HostConfiguration snmpHostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration snmpHostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
 
-		final HostConfiguration sshHostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration sshHostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -124,8 +121,9 @@ class HostDetailsServiceTest {
 		);
 
 		// Mock TelemetryManagers in the Agent Context
-		when(agentContext.getTelemetryManagers())
-			.thenReturn(Map.of("Paris", Map.of("HostId1", snmpTelemetryManager, "HostId2", sshTelemetryManager)));
+		when(agentContext.getTelemetryManagers()).thenReturn(
+			Map.of("Paris", Map.of("HostId1", snmpTelemetryManager, "HostId2", sshTelemetryManager))
+		);
 
 		// call the getHostDetails() method to test
 		List<HostToolResponse<HostDetails>> results = hostDetailsService.getHostDetails(List.of(HOSTNAME), null).getHosts();

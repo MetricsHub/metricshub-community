@@ -126,8 +126,7 @@ public class HttpConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("port", new IntNode(getOrDeducePortNumber()));
 		configuration.set("timeout", new TextNode(timeout));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("http", configuration, value -> value)
 			.orElseThrow();
 	}

@@ -99,8 +99,7 @@ class ExecuteWinRemoteCommandServiceTest {
 		when(wmiExtension.isSupportedConfigurationType(WMI_PROTOCOL)).thenReturn(true);
 
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -156,9 +155,8 @@ class ExecuteWinRemoteCommandServiceTest {
 		);
 
 		assertEquals(0, result.getHosts().size(), () -> "No host should respond");
-		assertTrue(
-			result.getErrorMessage().contains("No Extension found for remote Windows commands"),
-			() -> "Unexpected error message when the Windows remote extension isn't found"
+		assertTrue(result.getErrorMessage().contains("No Extension found for remote Windows commands"), () ->
+			"Unexpected error message when the Windows remote extension isn't found"
 		);
 	}
 
@@ -173,16 +171,14 @@ class ExecuteWinRemoteCommandServiceTest {
 		when(wmiExtension.isSupportedConfigurationType(WMI_PROTOCOL)).thenReturn(true);
 
 		// Creating a WMI Configuration for the host
-		WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the WMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
 			.build();
@@ -209,10 +205,8 @@ class ExecuteWinRemoteCommandServiceTest {
 		assertEquals(1, result.getHosts().size(), "Result should not be null when executing a query");
 
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
-		assertEquals(
-			SUCCESS_RESPONSE,
-			hostResponse.getResponse().getResponse(),
-			() -> "Windows remote command response mismatch for mocked value `Success`"
+		assertEquals(SUCCESS_RESPONSE, hostResponse.getResponse().getResponse(), () ->
+			"Windows remote command response mismatch for mocked value `Success`"
 		);
 	}
 
@@ -227,16 +221,14 @@ class ExecuteWinRemoteCommandServiceTest {
 		when(wmiExtension.isSupportedConfigurationType(WMI_PROTOCOL)).thenReturn(true);
 
 		// Creating a WMI Configuration for the host
-		WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the WMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
 			.build();
@@ -250,8 +242,9 @@ class ExecuteWinRemoteCommandServiceTest {
 		// Enable Windows remote on MCP tools
 		System.setProperty("metricshub.mcp.tool.win.remote.enabled", "true");
 
-		when(wmiExtension.executeQuery(any(WmiConfiguration.class), any(ObjectNode.class)))
-			.thenThrow(new IllegalArgumentException("An error has occurred"));
+		when(wmiExtension.executeQuery(any(WmiConfiguration.class), any(ObjectNode.class))).thenThrow(
+			new IllegalArgumentException("An error has occurred")
+		);
 
 		final MultiHostToolResponse<QueryResponse> result = winRemoteCommandService.executeQuery(
 			List.of(HOSTNAME),
@@ -265,9 +258,8 @@ class ExecuteWinRemoteCommandServiceTest {
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
 		final String errorMessage = hostResponse.getResponse().getError();
 		assertNotNull(errorMessage, () -> "Error message should be returned when an exception is throws");
-		assertTrue(
-			errorMessage.contains("An error has occurred when executing the commandline"),
-			() -> "Error message should contain 'An error has occurred'"
+		assertTrue(errorMessage.contains("An error has occurred when executing the commandline"), () ->
+			"Error message should contain 'An error has occurred'"
 		);
 	}
 
@@ -287,31 +279,26 @@ class ExecuteWinRemoteCommandServiceTest {
 		);
 		assertEquals(0, result.getHosts().size(), "Result should not be null when executing a query");
 
-		assertEquals(
-			"The remote Windows connections are disabled for MCP.",
-			result.getErrorMessage(),
-			() -> "Windows remote command shouldn't be executed as Windows remote is disabled."
+		assertEquals("The remote Windows connections are disabled for MCP.", result.getErrorMessage(), () ->
+			"Windows remote command shouldn't be executed as Windows remote is disabled."
 		);
 	}
 
 	@Test
 	void testIsWinRemoteEnabledForMCP() {
 		System.clearProperty("metricshub.mcp.tool.win.remote.enabled");
-		assertFalse(
-			ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(),
-			() -> "Windows remote is disabled, the response should be false"
+		assertFalse(ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(), () ->
+			"Windows remote is disabled, the response should be false"
 		);
 
 		System.setProperty("metricshub.mcp.tool.win.remote.enabled", "true");
-		assertTrue(
-			ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(),
-			() -> "Windows remote is enabled, the response should be true"
+		assertTrue(ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(), () ->
+			"Windows remote is enabled, the response should be true"
 		);
 
 		System.setProperty("metricshub.mcp.tool.win.remote.enabled", "false");
-		assertFalse(
-			ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(),
-			() -> "Windows remote is disabled, the response should be false"
+		assertFalse(ExecuteWinRemoteCommandService.isWinRemoteEnabledForMCP(), () ->
+			"Windows remote is disabled, the response should be false"
 		);
 	}
 }

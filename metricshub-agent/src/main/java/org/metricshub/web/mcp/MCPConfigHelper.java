@@ -98,8 +98,7 @@ public class MCPConfigHelper {
 			return Stream.empty();
 		}
 
-		return Optional
-			.ofNullable(hostConfiguration.getConfigurations())
+		return Optional.ofNullable(hostConfiguration.getConfigurations())
 			.map(Map::values)
 			.map(Collection::stream)
 			.orElseGet(Stream::empty);
@@ -141,8 +140,7 @@ public class MCPConfigHelper {
 			hostConfiguration.setConnectors(new HashSet<>(Set.of("+" + connectorId)));
 		}
 
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.connectorStore(telemetryManager.getConnectorStore())
 			.hostConfiguration(hostConfiguration)
 			.build();
@@ -204,8 +202,7 @@ public class MCPConfigHelper {
 			})
 			.toList();
 
-		return MultiHostToolResponse
-			.<T>builder()
+		return MultiHostToolResponse.<T>builder()
 			.errorMessage(hostsExecutionResults.getErrorMessage())
 			.hosts(flatHosts)
 			.build();

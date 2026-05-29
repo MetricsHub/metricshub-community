@@ -27,8 +27,7 @@ class SnmpGetSourceDeserializerTest extends DeserializerTest {
 		Map<String, Source> expected = new LinkedHashMap<>();
 		expected.put(
 			"testSnmpGetSource",
-			SnmpGetSource
-				.builder()
+			SnmpGetSource.builder()
 				.key("${source::beforeAll.testSnmpGetSource}")
 				.type("snmpGet")
 				.oid("testOidString")

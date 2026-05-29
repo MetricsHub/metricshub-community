@@ -134,9 +134,8 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 		final String responseContent
 	) {
 		final String normalizedBody = bodyContent == null || bodyContent.isEmpty() ? null : bodyContent;
-		final Map<String, String> normalizedHeaders = headerContent == null || headerContent.isEmpty()
-			? null
-			: headerContent;
+		final Map<String, String> normalizedHeaders =
+			headerContent == null || headerContent.isEmpty() ? null : headerContent;
 		recordInternal(
 			new HttpRecordRequest(method, path, normalizedBody, normalizedHeaders, resultContent, responseContent)
 		);
@@ -185,9 +184,10 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	List<Map<String, Object>> loadExistingEntries(final Path indexFile) throws IOException {
 		if (Files.isRegularFile(indexFile)) {
 			final TypeReference<Map<String, List<Map<String, Object>>>> typeRef = new TypeReference<>() {};
-			final Map<String, List<Map<String, Object>>> existing = JsonHelper
-				.buildYamlMapper()
-				.readValue(indexFile.toFile(), typeRef);
+			final Map<String, List<Map<String, Object>>> existing = JsonHelper.buildYamlMapper().readValue(
+				indexFile.toFile(),
+				typeRef
+			);
 			final List<Map<String, Object>> imageList = existing.get("image");
 			if (imageList != null) {
 				return new ArrayList<>(imageList);

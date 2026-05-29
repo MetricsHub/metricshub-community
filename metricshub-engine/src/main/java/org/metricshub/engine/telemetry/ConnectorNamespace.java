@@ -135,6 +135,6 @@ public class ConnectorNamespace {
 	 * @return a mutable map of file path to cursor (byte offset); never null
 	 */
 	public Map<String, Long> getFileSourceCursors(@NonNull String sourceKey) {
-		return fileSourceCursors.computeIfAbsent(sourceKey, k -> new ConcurrentHashMap<>());
+		return fileSourceCursors.computeIfAbsent(sourceKey, _ -> new ConcurrentHashMap<>());
 	}
 }

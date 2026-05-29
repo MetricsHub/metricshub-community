@@ -12,8 +12,7 @@ class ReferenceResolverProcessorTest {
 
 	@Test
 	void testProcessNode() throws IOException {
-		final String json =
-			"""
+		final String json = """
 			beforeAll:
 			  source1:
 			    type: http
@@ -90,8 +89,7 @@ class ReferenceResolverProcessorTest {
 		final ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
 		final JsonNode rootNode = objectMapper.readTree(json);
 
-		JsonNode processedNode = ReferenceResolverProcessor
-			.builder()
+		JsonNode processedNode = ReferenceResolverProcessor.builder()
 			.next(new ConstantsProcessor(new SourceKeyProcessor()))
 			.build()
 			.processNode(rootNode);

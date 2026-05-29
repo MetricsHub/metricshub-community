@@ -43,8 +43,7 @@ class AbstractMetricNormalizerTest {
 	void testNormalizeErrorsLimitMetric() {
 		{
 			// When the degraded and the critical metrics are both absent
-			final Monitor monitorWithoutHwErrorsMetric = Monitor
-				.builder()
+			final Monitor monitorWithoutHwErrorsMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(
@@ -57,44 +56,42 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithoutHwErrorsMetric
+			);
 			assertNull(
 				monitorWithoutHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
 		}
 
 		{
-			final NumberMetric hwErrorsMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.errors{hw.type=\"cpu\"}")
 				.attributes(Map.of("hw.type", "cpu"))
 				.build();
 
-			final Monitor monitorWithoutHwErrorsLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithoutHwErrorsLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(new HashMap<>(Map.of("hw.errors{hw.type=\"cpu\"}", hwErrorsMetric)))
 				.build();
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithoutHwErrorsLimitMetric
+			);
 			assertNull(
 				monitorWithoutHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
 		}
 
 		{
-			final NumberMetric hwErrorsMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsMetric = NumberMetric.builder()
 				.value(1.0)
 				.name("hw.errors{hw.type=\"cpu\"}")
 				.attributes(Map.of("hw.type", "cpu"))
 				.build();
 
-			final Monitor diskMonitor = Monitor
-				.builder()
+			final Monitor diskMonitor = Monitor.builder()
 				.id("monitorOne")
 				.type("disk")
 				.metrics(new HashMap<>(Map.of("hw.errors{hw.type=\"cpu\"}", hwErrorsMetric)))
@@ -109,15 +106,15 @@ class AbstractMetricNormalizerTest {
 			hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
 
-			final Monitor monitorWithoutHwErrorsLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithoutHwErrorsLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(new HashMap<>(Map.of("hw.errors", hwErrorsMetric)))
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithoutHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithoutHwErrorsLimitMetric
+			);
 			assertNotNull(
 				monitorWithoutHwErrorsLimitMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -127,14 +124,12 @@ class AbstractMetricNormalizerTest {
 			final NumberMetric hwErrorsMetric = NumberMetric.builder().value(1.0).name("hw.errors").build();
 			hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "cpu"))
 				.build();
-			final Monitor monitorWithHwErrorsMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwErrorsMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(
@@ -144,8 +139,9 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithHwErrorsMetric
+			);
 			assertNotNull(
 				monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -158,16 +154,14 @@ class AbstractMetricNormalizerTest {
 			final NumberMetric hwErrorsMetric = NumberMetric.builder().value(1.0).name("hw.errors").build();
 			hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "cpu"))
 				.build();
 			hwErrorsLimitMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsLimitMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwErrorsMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwErrorsMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(
@@ -177,8 +171,9 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithHwErrorsMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithHwErrorsMetric
+			);
 			assertNull(
 				monitorWithHwErrorsMetric.getMetric(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU, NumberMetric.class)
 			);
@@ -191,24 +186,21 @@ class AbstractMetricNormalizerTest {
 			final NumberMetric hwErrorsMetric = NumberMetric.builder().value(1.0).name("hw.errors").build();
 			hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "cpu"))
 				.build();
 			hwErrorsLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "cpu"))
 				.build();
 			hwErrorsLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwErrorsLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwErrorsLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(
@@ -225,8 +217,9 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithHwErrorsLimitMetric
+			);
 			assertEquals(
 				2.0,
 				monitorWithHwErrorsLimitMetric
@@ -245,24 +238,21 @@ class AbstractMetricNormalizerTest {
 			final NumberMetric hwErrorsMetric = NumberMetric.builder().value(1.0).name("hw.errors").build();
 			hwErrorsMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "cpu"))
 				.build();
 			hwErrorsLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_CPU)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "cpu"))
 				.build();
 			hwErrorsLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 			hwErrorsLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwErrorsLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwErrorsLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("cpu")
 				.metrics(
@@ -279,8 +269,9 @@ class AbstractMetricNormalizerTest {
 				)
 				.build();
 
-			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalizeErrorsLimitMetric(monitorWithHwErrorsLimitMetric);
+			new CpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalizeErrorsLimitMetric(
+				monitorWithHwErrorsLimitMetric
+			);
 			assertEquals(
 				2.0,
 				monitorWithHwErrorsLimitMetric
@@ -302,8 +293,10 @@ class AbstractMetricNormalizerTest {
 		final String metricName = "hw.fan.speed.limit{limit_type=\"low.oldLimitType\", low=\"some_state\"}";
 		final String newLimitType = "limit_type=\"high.newLimitType\"";
 		final String expected = "hw.fan.speed.limit{limit_type=\"high.newLimitType\", low=\"some_state\"}";
-		final String result = new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-			.replaceLimitType(metricName, newLimitType);
+		final String result = new FanMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).replaceLimitType(
+			metricName,
+			newLimitType
+		);
 		assertEquals(expected, result);
 	}
 }

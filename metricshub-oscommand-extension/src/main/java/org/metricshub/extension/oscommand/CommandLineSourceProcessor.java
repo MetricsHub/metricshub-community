@@ -99,8 +99,7 @@ public class CommandLineSourceProcessor {
 				commandLineSource.getSelectColumns()
 			);
 
-			return SourceTable
-				.builder()
+			return SourceTable.builder()
 				.rawData(selectedColumnsLines.stream().collect(Collectors.joining(NEW_LINE)))
 				.table(
 					selectedColumnsLines

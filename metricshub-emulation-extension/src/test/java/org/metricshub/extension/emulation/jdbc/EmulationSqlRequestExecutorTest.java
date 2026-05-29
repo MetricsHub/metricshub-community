@@ -35,19 +35,16 @@ class EmulationSqlRequestExecutorTest {
 	);
 
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.WINDOWS)
 					.configurations(
 						Map.of(
 							EmulationConfiguration.class,
-							EmulationConfiguration
-								.builder()
+							EmulationConfiguration.builder()
 								.hostname(HOSTNAME)
 								.jdbc(
 									new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir)
@@ -274,19 +271,16 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlReturnsEmptyWhenDirectoryIsNull() throws ClientException {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.WINDOWS)
 					.configurations(
 						Map.of(
 							EmulationConfiguration.class,
-							EmulationConfiguration
-								.builder()
+							EmulationConfiguration.builder()
 								.hostname(HOSTNAME)
 								.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), null))
 								.build()
@@ -309,11 +303,9 @@ class EmulationSqlRequestExecutorTest {
 
 	@Test
 	void testExecuteSqlReturnsEmptyWhenJdbcConfigIsNull() throws ClientException {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.WINDOWS)

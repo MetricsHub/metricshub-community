@@ -32,14 +32,12 @@ class GpuMetricNormalizerTest {
 		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore());
 
 		// Scenario 1: Both degraded and critical metrics are present and critical < degraded
-		NumberMetric criticalMetric = NumberMetric
-			.builder()
+		NumberMetric criticalMetric = NumberMetric.builder()
 			.value(1.0)
 			.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL)
 			.attributes(Map.of("limit_type", "critical"))
 			.build();
-		NumberMetric degradedMetric = NumberMetric
-			.builder()
+		NumberMetric degradedMetric = NumberMetric.builder()
 			.value(2.0)
 			.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED)
 			.attributes(Map.of("limit_type", "degraded", "otherAttribute", "otherAttributeValue"))
@@ -61,31 +59,26 @@ class GpuMetricNormalizerTest {
 		assertEquals(2.0, monitor.getMetric(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL, NumberMetric.class).getValue());
 
 		// Scenario 2: Both degraded and critical metrics are present and critical >= degraded
-		criticalMetric =
-			NumberMetric
-				.builder()
-				.value(2.0)
-				.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL)
-				.attributes(Map.of("limit_type", "critical"))
-				.build();
-		degradedMetric =
-			NumberMetric
-				.builder()
-				.value(1.0)
-				.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED)
-				.attributes(Map.of("limit_type", "degraded", "otherAttribute", "otherAttributeValue"))
-				.build();
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_MEMORY_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
-					GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL,
-					criticalMetric,
-					GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED,
-					degradedMetric
-				)
-			);
+		criticalMetric = NumberMetric.builder()
+			.value(2.0)
+			.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL)
+			.attributes(Map.of("limit_type", "critical"))
+			.build();
+		degradedMetric = NumberMetric.builder()
+			.value(1.0)
+			.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED)
+			.attributes(Map.of("limit_type", "degraded", "otherAttribute", "otherAttributeValue"))
+			.build();
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_MEMORY_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
+				GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL,
+				criticalMetric,
+				GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED,
+				degradedMetric
+			)
+		);
 		setCollectTimes(degradedMetric);
 		setCollectTimes(criticalMetric);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_MEMORY_UTILIZATION, 0.95, 0.9);
@@ -97,15 +90,14 @@ class GpuMetricNormalizerTest {
 		degradedMetric.setName(
 			"hw.gpu.memory.utilization.limit{limit_type=\"degraded\", otherAttribute=\"otherAttributeValue\"}"
 		);
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_MEMORY_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
-					degradedMetric.getName(),
-					degradedMetric
-				)
-			);
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_MEMORY_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
+				degradedMetric.getName(),
+				degradedMetric
+			)
+		);
 		setCollectTimes(degradedMetric);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_MEMORY_UTILIZATION, 0.95, 0.9);
 		criticalMetric = monitor.getMetric(degradedMetric.getName().replace("degraded", "critical"), NumberMetric.class);
@@ -116,22 +108,19 @@ class GpuMetricNormalizerTest {
 		assertEquals(100 - ((100 - degradedMetric.getValue()) * 0.5), criticalMetric.getValue());
 
 		// Scenario 4: Only the critical metric is present
-		criticalMetric =
-			NumberMetric
-				.builder()
-				.value(1.0)
-				.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL)
-				.attributes(Map.of("limit_type", "critical"))
-				.build();
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_MEMORY_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
-					GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL,
-					criticalMetric
-				)
-			);
+		criticalMetric = NumberMetric.builder()
+			.value(1.0)
+			.name(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL)
+			.attributes(Map.of("limit_type", "critical"))
+			.build();
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_MEMORY_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_MEMORY_UTILIZATION),
+				GPU_MEMORY_UTILIZATION_LIMIT_TYPE_CRITICAL,
+				criticalMetric
+			)
+		);
 		setCollectTimes(criticalMetric);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_MEMORY_UTILIZATION, 0.95, 0.9);
 		degradedMetric = monitor.getMetric(GPU_MEMORY_UTILIZATION_LIMIT_TYPE_DEGRADED, NumberMetric.class);
@@ -154,14 +143,12 @@ class GpuMetricNormalizerTest {
 		GpuMetricNormalizer normalizer = new GpuMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore());
 
 		// Scenario 1: Both degraded and critical metrics are present and critical < degraded
-		NumberMetric criticalMetric = NumberMetric
-			.builder()
+		NumberMetric criticalMetric = NumberMetric.builder()
 			.value(1.0)
 			.name(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL)
 			.attributes(Map.of("limit_type", "critical"))
 			.build();
-		NumberMetric degradedMetric = NumberMetric
-			.builder()
+		NumberMetric degradedMetric = NumberMetric.builder()
 			.value(2.0)
 			.name(GPU_UTILIZATION_LIMIT_TYPE_DEGRADED)
 			.attributes(Map.of("limit_type", "degraded"))
@@ -183,31 +170,26 @@ class GpuMetricNormalizerTest {
 		assertEquals(2.0, monitor.getMetric(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL, NumberMetric.class).getValue());
 
 		// Scenario 2: Both degraded and critical metrics are present and critical >= degraded
-		criticalMetric =
-			NumberMetric
-				.builder()
-				.value(2.0)
-				.name(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL)
-				.attributes(Map.of("limit_type", "critical"))
-				.build();
-		degradedMetric =
-			NumberMetric
-				.builder()
-				.value(1.0)
-				.name(GPU_UTILIZATION_LIMIT_TYPE_DEGRADED)
-				.attributes(Map.of("limit_type", "degraded"))
-				.build();
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_UTILIZATION),
-					GPU_UTILIZATION_LIMIT_TYPE_CRITICAL,
-					criticalMetric,
-					GPU_UTILIZATION_LIMIT_TYPE_DEGRADED,
-					degradedMetric
-				)
-			);
+		criticalMetric = NumberMetric.builder()
+			.value(2.0)
+			.name(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL)
+			.attributes(Map.of("limit_type", "critical"))
+			.build();
+		degradedMetric = NumberMetric.builder()
+			.value(1.0)
+			.name(GPU_UTILIZATION_LIMIT_TYPE_DEGRADED)
+			.attributes(Map.of("limit_type", "degraded"))
+			.build();
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_UTILIZATION),
+				GPU_UTILIZATION_LIMIT_TYPE_CRITICAL,
+				criticalMetric,
+				GPU_UTILIZATION_LIMIT_TYPE_DEGRADED,
+				degradedMetric
+			)
+		);
 		setCollectTimes(criticalMetric);
 		setCollectTimes(degradedMetric);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_UTILIZATION, 0.9, 0.8);
@@ -215,15 +197,14 @@ class GpuMetricNormalizerTest {
 		assertEquals(2.0, monitor.getMetric(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL, NumberMetric.class).getValue());
 
 		// Scenario 3: Only the degraded metric is present
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_UTILIZATION),
-					GPU_UTILIZATION_LIMIT_TYPE_DEGRADED,
-					degradedMetric
-				)
-			);
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_UTILIZATION),
+				GPU_UTILIZATION_LIMIT_TYPE_DEGRADED,
+				degradedMetric
+			)
+		);
 		setCollectTimes(degradedMetric);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_UTILIZATION, 0.9, 0.8);
 		criticalMetric = monitor.getMetric(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL, NumberMetric.class);
@@ -231,15 +212,14 @@ class GpuMetricNormalizerTest {
 		assertEquals(100 - ((100 - degradedMetric.getValue()) * 0.5), criticalMetric.getValue());
 
 		// Scenario 4: Only the critical metric is present
-		monitor =
-			createMonitor(
-				Map.of(
-					HW_GPU_UTILIZATION,
-					createGpuLimitMetric(HW_GPU_UTILIZATION),
-					GPU_UTILIZATION_LIMIT_TYPE_CRITICAL,
-					criticalMetric
-				)
-			);
+		monitor = createMonitor(
+			Map.of(
+				HW_GPU_UTILIZATION,
+				createGpuLimitMetric(HW_GPU_UTILIZATION),
+				GPU_UTILIZATION_LIMIT_TYPE_CRITICAL,
+				criticalMetric
+			)
+		);
 		normalizer.normalizeGpuLimitMetric(monitor, HW_GPU_UTILIZATION, 0.9, 0.8);
 		degradedMetric = monitor.getMetric(GPU_UTILIZATION_LIMIT_TYPE_DEGRADED, NumberMetric.class);
 		assertNotNull(degradedMetric);
@@ -260,20 +240,17 @@ class GpuMetricNormalizerTest {
 	void testNormalize() {
 		// Scenario: Both degraded and critical metrics are present and critical >= degraded for gpu.utilization prefix, hw.errors is present
 		// Both degraded and critical metrics are absent for hw.errors prefix
-		final NumberMetric criticalGpuUtilizationMetric = NumberMetric
-			.builder()
+		final NumberMetric criticalGpuUtilizationMetric = NumberMetric.builder()
 			.value(2.0)
 			.name(GPU_UTILIZATION_LIMIT_TYPE_CRITICAL)
 			.attributes(Map.of("limit_type", "critical"))
 			.build();
-		final NumberMetric degradedGpuUtilizationMetric = NumberMetric
-			.builder()
+		final NumberMetric degradedGpuUtilizationMetric = NumberMetric.builder()
 			.value(1.0)
 			.name(GPU_UTILIZATION_LIMIT_TYPE_DEGRADED)
 			.attributes(Map.of("limit_type", "degraded"))
 			.build();
-		final NumberMetric hwErrorsMetric = NumberMetric
-			.builder()
+		final NumberMetric hwErrorsMetric = NumberMetric.builder()
 			.value(1.0)
 			.name("hw.errors")
 			.collectTime(STRATEGY_TIME)

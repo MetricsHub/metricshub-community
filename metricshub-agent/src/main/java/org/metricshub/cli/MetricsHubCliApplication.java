@@ -33,6 +33,7 @@ import picocli.CommandLine;
  * {@link #main(String[]) main} to launch the MetricsHub CLI.
  */
 public class MetricsHubCliApplication {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}

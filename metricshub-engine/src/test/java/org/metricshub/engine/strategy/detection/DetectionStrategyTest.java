@@ -82,8 +82,7 @@ class DetectionStrategyTest {
 		connector.setMetrics(connectorMetrics);
 
 		// Initiate telemetryManager with host configuration
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostId(HOST_ID).hostType(DeviceKind.LINUX).hostname(LOCALHOST).build()
 			)
@@ -105,8 +104,7 @@ class DetectionStrategyTest {
 		criterionTestResultList.add(criterionTestResult);
 
 		// Create a ConnectorTestResult instance and set the connector and the previously created criterionTestResultList
-		final ConnectorTestResult connectorTestResult = ConnectorTestResult
-			.builder()
+		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder()
 			.connector(connector)
 			.criterionTestResults(criterionTestResultList)
 			.build();
@@ -153,8 +151,7 @@ class DetectionStrategyTest {
 				.get(MONITOR_ATTRIBUTE_CONNECTOR_ID)
 		);
 		assertEquals(
-			Stream
-				.of(DeviceKind.LINUX, DeviceKind.WINDOWS)
+			Stream.of(DeviceKind.LINUX, DeviceKind.WINDOWS)
 				.sorted()
 				.map(deviceKind -> deviceKind.toString().toLowerCase())
 				.collect(Collectors.joining(",")),
@@ -177,12 +174,11 @@ class DetectionStrategyTest {
 		// Set criterion test result to isSuccess = false, call DetectionStrategy and expect the metric to be set to failed
 		criterionTestResult.setSuccess(false);
 		detectionStrategy.createConnectorMonitors(connectorTestResultList);
-		stateSetMetric =
-			telemetryManager
-				.getMonitors()
-				.get(KnownMonitorType.CONNECTOR.getKey())
-				.get(monitorId)
-				.getMetric(CONNECTOR_STATUS_METRIC_KEY, StateSetMetric.class);
+		stateSetMetric = telemetryManager
+			.getMonitors()
+			.get(KnownMonitorType.CONNECTOR.getKey())
+			.get(monitorId)
+			.getMetric(CONNECTOR_STATUS_METRIC_KEY, StateSetMetric.class);
 		assertEquals(MetricsHubConstants.STATE_SET_METRIC_FAILED, stateSetMetric.getValue());
 	}
 
@@ -199,15 +195,13 @@ class DetectionStrategyTest {
 		criterionTestResultList.add(criterionTestResult);
 
 		// Create a ConnectorTestResult instance and set the connector and the previously created criterionTestResultList
-		final ConnectorTestResult connectorTestResult = ConnectorTestResult
-			.builder()
+		final ConnectorTestResult connectorTestResult = ConnectorTestResult.builder()
 			.connector(connector)
 			.criterionTestResults(criterionTestResultList)
 			.build();
 
 		// Initiate telemetryManager with host configuration
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostId(HOST_ID).hostType(DeviceKind.LINUX).hostname(LOCALHOST).build()
 			)
@@ -256,11 +250,9 @@ class DetectionStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(Map.of(METRICS_HUB_CONFIGURED_CONNECTOR_ID, connector));
 		// Initiate telemetryManager with host configuration
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostType(DeviceKind.LINUX)
 					.hostname(LOCALHOST)
@@ -277,8 +269,7 @@ class DetectionStrategyTest {
 			new Date().getTime(),
 			new ClientsExecutor(telemetryManager),
 			ExtensionManager.empty()
-		)
-			.run();
+		).run();
 
 		final Monitor configuredConnectorMonitor = telemetryManager.findMonitorByTypeAndId(
 			KnownMonitorType.CONNECTOR.getKey(),
@@ -312,8 +303,7 @@ class DetectionStrategyTest {
 		Map<String, Map<String, Monitor>> monitors = new HashMap<>(Map.of(HOST.getKey(), Map.of(HOSTNAME, hostMonitor)));
 
 		// Create a connector with connector identity and a detection
-		Connector connector = Connector
-			.builder()
+		Connector connector = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().detection(new Detection()).build())
 			.build();
 
@@ -321,8 +311,7 @@ class DetectionStrategyTest {
 		store.setStore(Map.of("connector", connector));
 
 		// Create a telemetry manager without configuration
-		TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(HostConfiguration.builder().hostId(HOSTNAME).hostname(HOSTNAME).build())
 			.connectorStore(store)
@@ -353,8 +342,7 @@ class DetectionStrategyTest {
 
 		// verify Ssh with CommandLineSource and CommandLineCriterion that executes locally
 		connector.setSourceTypes(Set.of(CommandLineSource.class));
-		CommandLineCriterion localCriterion = CommandLineCriterion
-			.builder()
+		CommandLineCriterion localCriterion = CommandLineCriterion.builder()
 			.executeLocally(true)
 			.commandLine("command")
 			.build();
@@ -394,8 +382,7 @@ class DetectionStrategyTest {
 		Connector connector = telemetryManager.getConnectorStore().getStore().get("connector");
 
 		// Verify that verifySshCriteria correctly handles a CommandLineCriterion configured to execute only locally
-		CommandLineCriterion localCriterion = CommandLineCriterion
-			.builder()
+		CommandLineCriterion localCriterion = CommandLineCriterion.builder()
 			.executeLocally(true)
 			.commandLine("command")
 			.build();

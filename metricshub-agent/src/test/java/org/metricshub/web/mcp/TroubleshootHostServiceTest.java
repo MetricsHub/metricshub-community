@@ -39,8 +39,7 @@ class TroubleshootHostServiceTest {
 	void setup() {
 		agentContextHolder = mock(AgentContextHolder.class);
 		final AgentContext agentContext = mock(AgentContext.class);
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(new SnmpExtension()))
 			.build();
 
@@ -49,16 +48,17 @@ class TroubleshootHostServiceTest {
 
 		final ConnectorStore connectorStore = mock(ConnectorStore.class);
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostId(HOSTNAME)
 			.hostType(DeviceKind.LINUX)
 			.configurations(Map.of(SnmpConfiguration.class, SnmpConfiguration.builder().build()))
 			.build();
 
-		telemetryManager =
-			TelemetryManager.builder().connectorStore(connectorStore).hostConfiguration(hostConfiguration).build();
+		telemetryManager = TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(hostConfiguration)
+			.build();
 
 		service = new TroubleshootHostService(agentContextHolder);
 	}

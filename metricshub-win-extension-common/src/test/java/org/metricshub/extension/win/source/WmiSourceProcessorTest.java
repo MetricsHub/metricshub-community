@@ -50,21 +50,17 @@ class WmiSourceProcessorTest {
 
 	@Test
 	void testProcessWmiSourceNoNamespace() {
-		final WmiSource wmiSource = WmiSource
-			.builder()
+		final WmiSource wmiSource = WmiSource.builder()
 			.query(WMI_QUERY)
 			.namespace(MetricsHubConstants.AUTOMATIC_NAMESPACE)
 			.build();
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -78,21 +74,17 @@ class WmiSourceProcessorTest {
 
 	@Test
 	void testProcessWmiSourceOk() throws Exception {
-		final WmiSource wmiSource = WmiSource
-			.builder()
+		final WmiSource wmiSource = WmiSource.builder()
 			.query(WMI_QUERY)
 			.namespace(MetricsHubConstants.WMI_DEFAULT_NAMESPACE)
 			.build();
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -119,16 +111,13 @@ class WmiSourceProcessorTest {
 	@Test
 	void testProcessWmiSourceClientException() throws ClientException {
 		final WmiSource wmiSource = WmiSource.builder().query(WMI_QUERY).build();
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -145,16 +134,13 @@ class WmiSourceProcessorTest {
 
 	@Test
 	void testProcessWmiSourceNull() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(HOST_NAME + "\\" + USERNAME)
 			.password(PASSWORD)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -169,11 +155,9 @@ class WmiSourceProcessorTest {
 	@Test
 	void testProcessWmiSourceButWmiNotConfigured() {
 		final WmiSource wmiSource = WmiSource.builder().query(WMI_QUERY).build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)

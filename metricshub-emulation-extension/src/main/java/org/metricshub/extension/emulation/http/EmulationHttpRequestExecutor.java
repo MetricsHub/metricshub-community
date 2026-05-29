@@ -73,9 +73,10 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			.getHostConfiguration()
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
-		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getHttp() != null
-			? emulationConfiguration.getHttp().getDirectory()
-			: null;
+		final String emulationInputDirectory =
+			emulationConfiguration != null && emulationConfiguration.getHttp() != null
+				? emulationConfiguration.getHttp().getDirectory()
+				: null;
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - Emulation input directory is not configured.", httpRequest.getHostname());
 			return null;
@@ -126,23 +127,25 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final String method = httpRequest.getMethod() != null ? httpRequest.getMethod().toUpperCase() : "GET";
 		final String path = httpRequest.getPath();
 		final Body body = httpRequest.getBody();
-		final String resolvedBody = body != null
-			? body.getContent(
-				HttpMacroDefaults.USERNAME,
-				HttpMacroDefaults.PASSWORD,
-				authenticationToken,
-				httpRequest.getHostname()
-			)
-			: null;
+		final String resolvedBody =
+			body != null
+				? body.getContent(
+						HttpMacroDefaults.USERNAME,
+						HttpMacroDefaults.PASSWORD,
+						authenticationToken,
+						httpRequest.getHostname()
+					)
+				: null;
 		final Header header = httpRequest.getHeader();
-		final Map<String, String> resolvedHeaders = header != null
-			? header.getContent(
-				HttpMacroDefaults.USERNAME,
-				HttpMacroDefaults.PASSWORD,
-				authenticationToken,
-				httpRequest.getHostname()
-			)
-			: Collections.emptyMap();
+		final Map<String, String> resolvedHeaders =
+			header != null
+				? header.getContent(
+						HttpMacroDefaults.USERNAME,
+						HttpMacroDefaults.PASSWORD,
+						authenticationToken,
+						httpRequest.getHostname()
+					)
+				: Collections.emptyMap();
 		final ResultContent resultContent = httpRequest.getResultContent();
 
 		// Find all matching entries

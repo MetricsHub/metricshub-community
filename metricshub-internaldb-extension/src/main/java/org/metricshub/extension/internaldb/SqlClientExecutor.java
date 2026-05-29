@@ -165,9 +165,11 @@ public class SqlClientExecutor {
 	 * @param connection The connection to the database.
 	 */
 	private void insertTableDataBatch(final SqlTable sqlTable, final Connection connection) {
-		final SourceTable sourceTable = SourceTable
-			.lookupSourceTable(sqlTable.getSource(), connectorId, telemetryManager)
-			.orElse(null);
+		final SourceTable sourceTable = SourceTable.lookupSourceTable(
+			sqlTable.getSource(),
+			connectorId,
+			telemetryManager
+		).orElse(null);
 		if (sourceTable == null) {
 			log.error(
 				"The source table {} is not found during the Internal DB Query job. Skip processing.",
@@ -188,7 +190,13 @@ public class SqlClientExecutor {
 		final List<String> columnNames = columns.stream().map(SqlColumn::getName).toList();
 
 		final String joinedColumnNames = String.join(",", columnNames);
-		final String placeholders = String.join(",", columns.stream().map(c -> "?").toArray(String[]::new));
+		final String placeholders = String.join(
+			",",
+			columns
+				.stream()
+				.map(c -> "?")
+				.toArray(String[]::new)
+		);
 
 		final String insertSQL = "INSERT INTO " + alias + " (" + joinedColumnNames + ") VALUES (" + placeholders + ")";
 

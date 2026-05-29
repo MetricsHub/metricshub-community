@@ -80,8 +80,7 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping WINRM CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -142,7 +141,7 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 	@Option(
 		names = { "--authentications", "--auth" },
 		description = "Comma-separated ordered list of authentication schemes." +
-		" Possible values are NTLM and KERBEROS. By default, only NTLM is used",
+			" Possible values are NTLM and KERBEROS. By default, only NTLM is used",
 		order = 6,
 		paramLabel = "AUTH",
 		split = ","
@@ -276,8 +275,7 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(extension -> {
 				try {

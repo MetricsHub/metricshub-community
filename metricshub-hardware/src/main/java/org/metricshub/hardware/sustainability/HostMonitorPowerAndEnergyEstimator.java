@@ -151,7 +151,7 @@ public class HostMonitorPowerAndEnergyEstimator {
 			// Let's try next collect
 			log.debug(
 				"Hostname {} - The measured power consumption is absent." +
-				" An attempt to estimate the monitors power consumption will be made during the next collect.",
+					" An attempt to estimate the monitors power consumption will be made during the next collect.",
 				hostname
 			);
 

@@ -65,8 +65,9 @@ public class MonitorJobsDeserializer extends JsonDeserializer<Map<String, Monito
 		}
 
 		// Resolve relative source references through the ReferenceResolverProcessor
-		final JsonNode monitorsNode = new ReferenceResolverProcessor(new SourceKeyProcessor())
-			.process(JsonNodeFactory.instance.objectNode().set("monitors", jsonNode));
+		final JsonNode monitorsNode = new ReferenceResolverProcessor(new SourceKeyProcessor()).process(
+			JsonNodeFactory.instance.objectNode().set("monitors", jsonNode)
+		);
 
 		// Parse the connector like it is done by the engine for regular connectors
 		final Connector connector = JsonHelper.deserialize(OBJECT_MAPPER, monitorsNode, Connector.class);

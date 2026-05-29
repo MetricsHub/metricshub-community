@@ -32,8 +32,7 @@ class ResourceSchedulingTest {
 	@Test
 	void testSchedule() throws IOException {
 		TestHelper.configureGlobalLogger();
-		final ResourceConfig resourceConfig = ResourceConfig
-			.builder()
+		final ResourceConfig resourceConfig = ResourceConfig.builder()
 			.loggerLevel("OFF")
 			.attributes(Map.of(HOST_NAME, HOSTNAME, HOST_TYPE_ATTRIBUTE_KEY, OS_LINUX))
 			.discoveryCycle(4)
@@ -48,8 +47,7 @@ class ResourceSchedulingTest {
 
 		final MetricsExporter metricsExporter = MetricsExporter.builder().withClient(otelClient).build();
 
-		final ResourceScheduling resourceScheduling = ResourceScheduling
-			.builder()
+		final ResourceScheduling resourceScheduling = ResourceScheduling.builder()
 			.withHostMetricDefinitions(ConfigHelper.readHostMetricDefinitions())
 			.withMetricsExporter(metricsExporter)
 			.withResourceConfig(resourceConfig)

@@ -126,11 +126,11 @@ public class EmulationJmxRequestExecutor extends JmxRequestExecutor {
 					final JmxContext context
 				) {
 					return EmulationJmxRequestExecutor.this.findMatchingEntries(
-							entries,
-							context.objectName(),
-							context.attributes(),
-							context.keyProperties()
-						);
+						entries,
+						context.objectName(),
+						context.attributes(),
+						context.keyProperties()
+					);
 				}
 
 				@Override

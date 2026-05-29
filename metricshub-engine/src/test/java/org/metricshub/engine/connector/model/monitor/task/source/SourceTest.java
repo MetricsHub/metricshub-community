@@ -22,8 +22,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesCopy() throws IOException {
-		final String copyYaml =
-			"""
+		final String copyYaml = """
 			type: copy
 			from: ${source::monitors.cpu.discovery.sources.source1}
 			forceSerialization: false
@@ -34,8 +33,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesHttp() throws IOException {
-		final String httpYaml =
-			"""
+		final String httpYaml = """
 			type: http
 			url: url/$entry.column(1)$
 			header: ${source::beforeAll.source1}
@@ -54,8 +52,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesIpmi() throws IOException {
-		final String ipmiYaml =
-			"""
+		final String ipmiYaml = """
 			type: ipmi
 			forceSerialization: false
 			""";
@@ -66,8 +63,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesCommandLine() throws IOException {
-		final String commandLineYaml =
-			"""
+		final String commandLineYaml = """
 			type: commandLine
 			forceSerialization: false
 			commandLine: ${source::monitors.cpu.discovery.sources.source1}
@@ -85,8 +81,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesSnmpGet() throws IOException {
-		final String snmpGetYaml =
-			"""
+		final String snmpGetYaml = """
 			type: snmpGet
 			forceSerialization: false
 			oid: ${source::monitors.cpu.discovery.sources.source1}
@@ -98,8 +93,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesSnmpTable() throws IOException {
-		final String snmpTableYaml =
-			"""
+		final String snmpTableYaml = """
 			type: snmpTable
 			forceSerialization: false
 			oid: ${source::monitors.cpu.discovery.sources.source1}
@@ -112,8 +106,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesStatic() throws IOException {
-		final String staticSourceYaml =
-			"""
+		final String staticSourceYaml = """
 			type: static
 			value: ${source::monitors.cpu.discovery.sources.source1}
 			""";
@@ -123,8 +116,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesTableJoin() throws IOException {
-		final String tableJoinYaml =
-			"""
+		final String tableJoinYaml = """
 			type: tableJoin
 			forceSerialization: false
 			leftTable: ${source::monitors.cpu.discovery.sources.source1}
@@ -141,8 +133,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesTableUnion() throws IOException {
-		final String tableUnionYaml =
-			"""
+		final String tableUnionYaml = """
 			type: tableUnion
 			forceSerialization: false
 			tables:
@@ -156,8 +147,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesWbem() throws IOException {
-		final String wbemYaml =
-			"""
+		final String wbemYaml = """
 			type: wbem
 			forceSerialization: false
 			query: ${source::monitors.cpu.discovery.sources.source1}
@@ -170,8 +160,7 @@ class SourceTest {
 
 	@Test
 	void testReferencesWmi() throws IOException {
-		final String wmiYaml =
-			"""
+		final String wmiYaml = """
 			type: wmi
 			forceSerialization: false
 			query: ${source::monitors.cpu.discovery.sources.source1}

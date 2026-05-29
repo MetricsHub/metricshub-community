@@ -62,19 +62,18 @@ class ToolResponseManagerServiceTest {
 		final Path tempFile = Files.createTempFile("mh-test-", ".json");
 		Files.writeString(tempFile, "temporary");
 
-		when(persistService.persist(eq(toolName), eq(toolResultJson)))
-			.thenReturn(
-				PersistedToolOutputFile
-					.builder()
-					.absolutePath(tempFile.toAbsolutePath().toString())
-					.resultId("test-id")
-					.sizeBytes(toolResultJson.length())
-					.toolName(toolName)
-					.build()
-			);
+		when(persistService.persist(eq(toolName), eq(toolResultJson))).thenReturn(
+			PersistedToolOutputFile.builder()
+				.absolutePath(tempFile.toAbsolutePath().toString())
+				.resultId("test-id")
+				.sizeBytes(toolResultJson.length())
+				.toolName(toolName)
+				.build()
+		);
 
-		when(uploadService.uploadToOpenAi(any(Path.class)))
-			.thenReturn(UploadedToolOutputManifest.builder().openaiFileId(fileId).fileName("test.json").build());
+		when(uploadService.uploadToOpenAi(any(Path.class))).thenReturn(
+			UploadedToolOutputManifest.builder().openaiFileId(fileId).fileName("test.json").build()
+		);
 
 		return tempFile;
 	}
@@ -97,12 +96,10 @@ class ToolResponseManagerServiceTest {
 			items.add(MonitorTypeSummaryVo.builder().totalMonitors(entry.getValue()).build());
 			monitors.put(entry.getKey(), items);
 		}
-		return MultiHostToolResponse
-			.<TelemetryResult>builder()
+		return MultiHostToolResponse.<TelemetryResult>builder()
 			.hosts(
 				List.of(
-					HostToolResponse
-						.<TelemetryResult>builder()
+					HostToolResponse.<TelemetryResult>builder()
 						.hostname(hostname)
 						.response(TelemetryResult.builder().telemetry(MonitorsVo.builder().monitors(monitors).build()).build())
 						.build()
@@ -256,7 +253,7 @@ class ToolResponseManagerServiceTest {
 			// Description should contain truncation information
 			assertTrue(
 				manifestNode.get("description").asText().contains("TRUNCATED SUMMARY") ||
-				manifestNode.get("description").asText().contains("payload"),
+					manifestNode.get("description").asText().contains("payload"),
 				"Description should contain truncation info"
 			);
 			// Payload should contain truncated data
@@ -315,12 +312,10 @@ class ToolResponseManagerServiceTest {
 		final String toolName = TroubleshootHostService.TOOL_NAMES.iterator().next();
 
 		// Build a valid troubleshoot response with no monitors — only a long error message
-		final MultiHostToolResponse<TelemetryResult> response = MultiHostToolResponse
-			.<TelemetryResult>builder()
+		final MultiHostToolResponse<TelemetryResult> response = MultiHostToolResponse.<TelemetryResult>builder()
 			.hosts(
 				List.of(
-					HostToolResponse
-						.<TelemetryResult>builder()
+					HostToolResponse.<TelemetryResult>builder()
 						.hostname("server1")
 						.response(TelemetryResult.builder().errorMessage("x".repeat(300)).build())
 						.build()
@@ -480,13 +475,13 @@ class ToolResponseManagerServiceTest {
 			assertTrue(
 				actualTokensConsumed < largeOutput.length() / 10,
 				"Budget consumed should be much less than allocated size due to refund. " +
-				"Consumed: " +
-				actualTokensConsumed +
-				" tokens, allocated would be ~" +
-				tokensBeforeAllocation +
-				" tokens, manifest size is ~" +
-				expectedTokensUsed +
-				" tokens"
+					"Consumed: " +
+					actualTokensConsumed +
+					" tokens, allocated would be ~" +
+					tokensBeforeAllocation +
+					" tokens, manifest size is ~" +
+					expectedTokensUsed +
+					" tokens"
 			);
 
 			// Verify the manifest is indeed a generic one (no payload)
@@ -534,9 +529,9 @@ class ToolResponseManagerServiceTest {
 			assertNotNull(
 				manifestNode.get("payload"),
 				"Second tool should get FULL allocation with payload due to budget refund from first tool. " +
-				"Remaining before: " +
-				remainingBefore +
-				" tokens"
+					"Remaining before: " +
+					remainingBefore +
+					" tokens"
 			);
 			assertFalse(manifestNode.get("payload").isNull(), "Payload should not be null for FULL allocation");
 

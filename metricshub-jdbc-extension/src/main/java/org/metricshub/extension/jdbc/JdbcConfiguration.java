@@ -139,8 +139,7 @@ public class JdbcConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return JdbcConfiguration
-			.builder()
+		return JdbcConfiguration.builder()
 			.database(database)
 			.password(password)
 			.port(port)
@@ -176,18 +175,29 @@ public class JdbcConfiguration implements IConfiguration {
 	 */
 	char[] generateUrl() {
 		return switch (type.toLowerCase()) {
-			case "mysql" -> String
-				.format("jdbc:mysql://%s:%d/%s", hostname, port, database != null ? database : "")
-				.toCharArray();
-			case "mariadb" -> String
-				.format("jdbc:mariadb://%s:%d/%s", hostname, port, database != null ? database : "")
-				.toCharArray();
-			case "postgresql" -> String
-				.format("jdbc:postgresql://%s:%d/%s", hostname, port, database != null ? database : "postgres")
-				.toCharArray();
-			case "mssql" -> String
-				.format("jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true", hostname, port)
-				.toCharArray();
+			case "mysql" -> String.format(
+				"jdbc:mysql://%s:%d/%s",
+				hostname,
+				port,
+				database != null ? database : ""
+			).toCharArray();
+			case "mariadb" -> String.format(
+				"jdbc:mariadb://%s:%d/%s",
+				hostname,
+				port,
+				database != null ? database : ""
+			).toCharArray();
+			case "postgresql" -> String.format(
+				"jdbc:postgresql://%s:%d/%s",
+				hostname,
+				port,
+				database != null ? database : "postgres"
+			).toCharArray();
+			case "mssql" -> String.format(
+				"jdbc:sqlserver://%s:%d;decrypt=true;trustServerCertificate=true",
+				hostname,
+				port
+			).toCharArray();
 			default -> new char[0];
 		};
 	}

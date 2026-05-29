@@ -24,6 +24,7 @@ import org.metricshub.extension.oscommand.OsCommandExtension;
 import org.metricshub.it.job.oscommand.SuperConnectorITJob;
 
 class SuperConnectorOsIT {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -47,8 +48,7 @@ class SuperConnectorOsIT {
 	static void setUp() throws Exception {
 		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration.builder().timeout(120L).build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(LOCALHOST)
 			.hostname(LOCALHOST)
 			.hostType(DeviceKind.STORAGE)
@@ -58,8 +58,10 @@ class SuperConnectorOsIT {
 
 		final ConnectorStore connectorStore = new ConnectorStore(CONNECTOR_DIRECTORY);
 
-		telemetryManager =
-			TelemetryManager.builder().connectorStore(connectorStore).hostConfiguration(hostConfiguration).build();
+		telemetryManager = TelemetryManager.builder()
+			.connectorStore(connectorStore)
+			.hostConfiguration(hostConfiguration)
+			.build();
 
 		clientsExecutor = new ClientsExecutor(telemetryManager);
 

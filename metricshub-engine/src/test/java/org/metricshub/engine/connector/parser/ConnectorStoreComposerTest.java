@@ -33,14 +33,12 @@ class ConnectorStoreComposerTest {
 		final Path yamlTestPath = Paths.get("src", "test", "resources", "connectorStoreComposer");
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore(yamlTestPath);
 
-		composer =
-			ConnectorStoreComposer
-				.builder()
-				.withRawConnectorStore(rawConnectorStore)
-				.withUpdateChain(ConnectorParser.createUpdateChain())
-				.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
-				.withAdditionalConnectors(additionalConnectors)
-				.build();
+		composer = ConnectorStoreComposer.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(JsonHelper.buildYamlMapper()))
+			.withAdditionalConnectors(additionalConnectors)
+			.build();
 	}
 
 	/**
@@ -79,26 +77,22 @@ class ConnectorStoreComposerTest {
 	void testResolveConnectorStoreVariables() {
 		final AdditionalConnector linuxProcessGeneric = AdditionalConnector.builder().uses("ConnectorVariables").build();
 
-		final AdditionalConnector linuxProcessMetricsHub = AdditionalConnector
-			.builder()
+		final AdditionalConnector linuxProcessMetricsHub = AdditionalConnector.builder()
 			.uses("ConnectorVariables")
 			.variables(Map.of("matchName", "MetricsHub"))
 			.build();
 
-		final AdditionalConnector linuxProcessComplete = AdditionalConnector
-			.builder()
+		final AdditionalConnector linuxProcessComplete = AdditionalConnector.builder()
 			.uses("ConnectorVariables")
 			.variables(Map.of("matchName", "MetricsHub", "matchCommand", "./MetricsHubServiceManager", "matchUser", "admin"))
 			.build();
 
-		final AdditionalConnector windowsGeneric = AdditionalConnector
-			.builder()
+		final AdditionalConnector windowsGeneric = AdditionalConnector.builder()
 			.uses("EmbeddedConnectorVariables")
 			.force(false)
 			.build();
 
-		final AdditionalConnector windowsSpecific = AdditionalConnector
-			.builder()
+		final AdditionalConnector windowsSpecific = AdditionalConnector.builder()
 			.uses("EmbeddedConnectorVariables")
 			.variables(Map.of("columns", "Caption,Version,buildnumber,osarchitecture,csname"))
 			.build();

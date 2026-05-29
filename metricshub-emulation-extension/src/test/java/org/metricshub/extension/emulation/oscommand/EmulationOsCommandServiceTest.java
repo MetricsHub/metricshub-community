@@ -34,19 +34,16 @@ class EmulationOsCommandServiceTest {
 	);
 
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.LINUX)
 					.configurations(
 						Map.of(
 							EmulationConfiguration.class,
-							EmulationConfiguration
-								.builder()
+							EmulationConfiguration.builder()
 								.hostname(HOSTNAME)
 								.oscommand(new OsCommandEmulationConfig(new OsCommandConfiguration(), emulationInputDir))
 								.build()
@@ -172,18 +169,16 @@ class EmulationOsCommandServiceTest {
 
 	@Test
 	void testRunSshCommandThrowsUnsupportedOperationException() {
-		assertThrows(
-			UnsupportedOperationException.class,
-			() ->
-				service.runSshCommand(
-					"echo test",
-					HOSTNAME,
-					new SshConfiguration(),
-					30L,
-					List.<File>of(),
-					"echo test",
-					DeviceKind.LINUX
-				)
+		assertThrows(UnsupportedOperationException.class, () ->
+			service.runSshCommand(
+				"echo test",
+				HOSTNAME,
+				new SshConfiguration(),
+				30L,
+				List.<File>of(),
+				"echo test",
+				DeviceKind.LINUX
+			)
 		);
 	}
 }

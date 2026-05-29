@@ -1,7 +1,6 @@
 package org.metricshub.extension.oscommand.file;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -109,26 +108,22 @@ class FileSourceProcessorTest {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 
 		// Setup configuration for remote Windows host
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.FLAT)
@@ -183,26 +178,22 @@ class FileSourceProcessorTest {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 
 		// Setup configuration for remote Windows host
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.hostType(DeviceKind.WINDOWS)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.LOG)
@@ -252,8 +243,9 @@ class FileSourceProcessorTest {
 
 		// Iteration 2: Second read with new content
 		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
-			.thenReturn(newContent);
+		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(
+			newContent
+		);
 
 		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
@@ -270,26 +262,22 @@ class FileSourceProcessorTest {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 
 		// Setup configuration for remote Linux host
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.FLAT)
@@ -344,8 +332,7 @@ class FileSourceProcessorTest {
 		final OsCommandService osCommandService = mock(OsCommandService.class);
 
 		// Setup configuration for remote Linux host
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
@@ -353,19 +340,16 @@ class FileSourceProcessorTest {
 			.port(22)
 			.build();
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.LOG)
@@ -415,8 +399,9 @@ class FileSourceProcessorTest {
 
 		// Iteration 2: Second read with new content
 		when(mockRequestExecutor.getRemoteFileSize(anyString())).thenReturn(newFileSize);
-		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt()))
-			.thenReturn(newContent);
+		when(mockRequestExecutor.readRemoteFileOffsetContent(eq(resolvedPath), eq(initialFileSize), anyInt())).thenReturn(
+			newContent
+		);
 
 		SourceTable result2 = processor.process(fileSource, CONNECTOR_ID, telemetryManager);
 
@@ -434,18 +419,15 @@ class FileSourceProcessorTest {
 		final String content = "Initial file content\nLine 2";
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.FLAT)
@@ -484,23 +466,19 @@ class FileSourceProcessorTest {
 		final String newContent = "New log line added\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(1000L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.LOG)
@@ -547,23 +525,19 @@ class FileSourceProcessorTest {
 		final String newContent = "New log line added\nMore lines when unlimited\n";
 		final long newFileSize = initialFileSize + newContent.length();
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.isLocalhost(true)
 			.connectorNamespaces(new HashMap<>(Map.of(CONNECTOR_ID, ConnectorNamespace.builder().build())))
 			.build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(FileSource.UNLIMITED_SIZE_PER_POLL)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.LOG)
@@ -610,18 +584,15 @@ class FileSourceProcessorTest {
 		final String content1 = "Content one";
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.hostType(DeviceKind.LINUX)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostProperties(hostProperties)
 			.hostConfiguration(hostConfiguration)
 			.build();
-		final FileSource fileSource = FileSource
-			.builder()
+		final FileSource fileSource = FileSource.builder()
 			.maxSizePerPoll(100L * 1024 * 1024)
 			.key(SOURCE_KEY)
 			.mode(FileSourceProcessingMode.FLAT)

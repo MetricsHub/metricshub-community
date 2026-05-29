@@ -53,8 +53,7 @@ public class NodeProcessorHelper {
 		final Path connectorDirectory,
 		final ObjectMapper mapper
 	) {
-		return ExtendsProcessor
-			.builder()
+		return ExtendsProcessor.builder()
 			.connectorDirectory(connectorDirectory)
 			.mapper(mapper)
 			.next(new ReferenceResolverProcessor(constantsProcessorWithSourceKeyProcessor()))
@@ -75,12 +74,10 @@ public class NodeProcessorHelper {
 		final ObjectMapper mapper,
 		final Map<String, String> connectorVariables
 	) {
-		return ExtendsProcessor
-			.builder()
+		return ExtendsProcessor.builder()
 			.connectorDirectory(connectorDirectory)
 			.next(
-				ConnectorVariableProcessor
-					.builder()
+				ConnectorVariableProcessor.builder()
 					.connectorVariables(connectorVariables)
 					.next(new ReferenceResolverProcessor(constantsProcessorWithSourceKeyProcessor()))
 					.build()

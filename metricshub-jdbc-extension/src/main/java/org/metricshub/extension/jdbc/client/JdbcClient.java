@@ -42,7 +42,7 @@ public class JdbcClient {
 
 	static {
 		// Set the default locale to US to ensure that the SQL query results are formatted correctly
-		Locale.setDefault(new Locale("en", "US"));
+		Locale.setDefault(Locale.of("en", "US"));
 	}
 
 	/**
@@ -75,9 +75,10 @@ public class JdbcClient {
 		}
 
 		try (
-			Connection databaseConnection = username == null || password == null
-				? DriverManager.getConnection(url)
-				: DriverManager.getConnection(url, username, new String(password));
+			Connection databaseConnection =
+				username == null || password == null
+					? DriverManager.getConnection(url)
+					: DriverManager.getConnection(url, username, new String(password));
 			Statement queryStatement = databaseConnection.createStatement()
 		) {
 			queryStatement.setQueryTimeout(timeout);

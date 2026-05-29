@@ -75,11 +75,9 @@ class EmulationExtensionTest {
 	private TelemetryManager buildTelemetryManager(final Map<Class<? extends IConfiguration>, IConfiguration> configs) {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(Map.of("connector", Connector.builder().build()));
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.LINUX)
@@ -92,8 +90,7 @@ class EmulationExtensionTest {
 	}
 
 	private EmulationConfiguration buildEmulationConfiguration(final String directory) {
-		return EmulationConfiguration
-			.builder()
+		return EmulationConfiguration.builder()
 			.hostname(HOSTNAME)
 			.http(new HttpEmulationConfig(HttpConfiguration.builder().hostname(HOSTNAME).build(), directory))
 			.snmp(new SnmpEmulationConfig(SnmpConfiguration.builder().hostname(HOSTNAME).build(), directory))
@@ -267,8 +264,7 @@ class EmulationExtensionTest {
 			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().build())
 		);
 
-		final HttpSource httpSource = HttpSource
-			.builder()
+		final HttpSource httpSource = HttpSource.builder()
 			.url("/api/test")
 			.method(HttpMethod.GET)
 			.resultContent(ResultContent.BODY)
@@ -324,8 +320,7 @@ class EmulationExtensionTest {
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(
 				EmulationConfiguration.class,
-				EmulationConfiguration
-					.builder()
+				EmulationConfiguration.builder()
 					.hostname(HOSTNAME)
 					.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
 					.build()
@@ -369,8 +364,7 @@ class EmulationExtensionTest {
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(
 				EmulationConfiguration.class,
-				EmulationConfiguration
-					.builder()
+				EmulationConfiguration.builder()
 					.hostname(HOSTNAME)
 					.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
 					.build()
@@ -520,8 +514,7 @@ class EmulationExtensionTest {
 			Map.of(EmulationConfiguration.class, buildEmulationConfiguration(tempDir.toString()))
 		);
 
-		final CommandLineCriterion criterion = CommandLineCriterion
-			.builder()
+		final CommandLineCriterion criterion = CommandLineCriterion.builder()
 			.commandLine("echo test")
 			.expectedResult("status=OK")
 			.build();
@@ -552,8 +545,7 @@ class EmulationExtensionTest {
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(
 				EmulationConfiguration.class,
-				EmulationConfiguration
-					.builder()
+				EmulationConfiguration.builder()
 					.hostname(HOSTNAME)
 					.jdbc(new JdbcEmulationConfig(JdbcConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
 					.build()
@@ -583,8 +575,7 @@ class EmulationExtensionTest {
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(
 				EmulationConfiguration.class,
-				EmulationConfiguration
-					.builder()
+				EmulationConfiguration.builder()
 					.hostname(HOSTNAME)
 					.ipmi(new IpmiEmulationConfig(IpmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
 					.build()
@@ -621,16 +612,14 @@ class EmulationExtensionTest {
 		final TelemetryManager tm = buildTelemetryManager(
 			Map.of(
 				EmulationConfiguration.class,
-				EmulationConfiguration
-					.builder()
+				EmulationConfiguration.builder()
 					.hostname(HOSTNAME)
 					.wmi(new WmiEmulationConfig(WmiConfiguration.builder().hostname(HOSTNAME).build(), tempDir.toString()))
 					.build()
 			)
 		);
 
-		final WmiSource wmiSource = WmiSource
-			.builder()
+		final WmiSource wmiSource = WmiSource.builder()
 			.query("SELECT Name FROM Win32_ComputerSystem")
 			.namespace("root\\cimv2")
 			.build();
@@ -647,8 +636,7 @@ class EmulationExtensionTest {
 			Map.of(EmulationConfiguration.class, EmulationConfiguration.builder().build())
 		);
 
-		final WmiSource wmiSource = WmiSource
-			.builder()
+		final WmiSource wmiSource = WmiSource.builder()
 			.query("SELECT Name FROM Win32_ComputerSystem")
 			.namespace("root\\cimv2")
 			.build();
@@ -702,9 +690,8 @@ class EmulationExtensionTest {
 	@Test
 	void testExecuteQueryThrowsUnsupported() {
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
-		assertThrows(
-			UnsupportedOperationException.class,
-			() -> emulationExtension.executeQuery(EmulationConfiguration.builder().build(), queryNode)
+		assertThrows(UnsupportedOperationException.class, () ->
+			emulationExtension.executeQuery(EmulationConfiguration.builder().build(), queryNode)
 		);
 	}
 

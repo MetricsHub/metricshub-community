@@ -142,15 +142,14 @@ public class AutomaticDetection extends AbstractConnectorProcessor {
 		connectorTestResults.forEach(connectorTestResult -> updateSupersedes(supersedes, connectorTestResult));
 
 		// Filter Superseded connectors
-		connectorTestResults =
-			connectorTestResults
-				.stream()
-				.filter(connectorTestResult ->
-					!supersedes.contains(
-						connectorTestResult.getConnector().getConnectorIdentity().getCompiledFilename().toLowerCase()
-					)
+		connectorTestResults = connectorTestResults
+			.stream()
+			.filter(connectorTestResult ->
+				!supersedes.contains(
+					connectorTestResult.getConnector().getConnectorIdentity().getCompiledFilename().toLowerCase()
 				)
-				.collect(Collectors.toList()); //NOSONAR
+			)
+			.collect(Collectors.toList()); //NOSONAR
 
 		// Filter onLastResort Connectors
 		filterLastResortConnectors(connectorTestResults, hostname);

@@ -201,7 +201,7 @@ public class ThreadHelper {
 	 * @return the mutable counter holder
 	 */
 	private static AtomicStats getOrCreateStats(final StatsKey key) {
-		return STATS_MAP.computeIfAbsent(key, k -> new AtomicStats());
+		return STATS_MAP.computeIfAbsent(key, _ -> new AtomicStats());
 	}
 
 	/**
@@ -214,8 +214,7 @@ public class ThreadHelper {
 	 */
 	public static Map<String, Stats> getStats(final String hostname) {
 		return Collections.unmodifiableMap(
-			STATS_MAP
-				.entrySet()
+			STATS_MAP.entrySet()
 				.stream()
 				.filter(entry -> entry.getKey().hostname().equals(hostname))
 				.collect(Collectors.toMap(entry -> entry.getKey().operationType(), entry -> entry.getValue().snapshot()))

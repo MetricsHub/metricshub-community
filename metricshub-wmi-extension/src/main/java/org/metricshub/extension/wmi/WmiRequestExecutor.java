@@ -99,7 +99,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing WMI request:\n- Hostname: {}\n- Network-resource: {}\n- Username: {}\n- Query: {}\n" + // NOSONAR
-				"- Namespace: {}\n- Timeout: {} s\n",
+					"- Namespace: {}\n- Timeout: {} s\n",
 				hostname,
 				networkResource,
 				username,
@@ -127,7 +127,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed WMI request:\n- Hostname: {}\n- Network-resource: {}\n- Username: {}\n- Query: {}\n" + // NOSONAR
-					"- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
+						"- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
 					networkResource,
 					username,
@@ -175,7 +175,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executing WMI remote command:\n- Command: {}\n- Hostname: {}\n- Username: {}\n" + // NOSONAR
-					"- Timeout: {} s\n- Local-files: {}\n",
+						"- Timeout: {} s\n- Local-files: {}\n",
 					command,
 					hostname,
 					username,
@@ -204,7 +204,7 @@ public class WmiRequestExecutor implements IWinRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed WMI remote command:\n- Command: {}\n- Hostname: {}\n- Username: {}\n" + // NOSONAR
-					"- Timeout: {} s\n- Local-files: {}\n- Result:\n{}\n- response-time: {}\n",
+						"- Timeout: {} s\n- Local-files: {}\n- Result:\n{}\n- response-time: {}\n",
 					command,
 					hostname,
 					username,

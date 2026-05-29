@@ -56,6 +56,6 @@ public abstract class AbstractNonBlankNonNullInCollectionDeserializer extends Ab
 
 	@Override
 	protected Predicate<String> getFilterPredicate() {
-		return str -> true;
+		return _ -> true;
 	}
 }

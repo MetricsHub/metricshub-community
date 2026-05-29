@@ -24,14 +24,12 @@ class ListConnectorsServiceTest {
 
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 		when(agentContext.getConnectorStore()).thenReturn(connectorStore);
-		final ConnectorIdentity connectorIdentity1 = ConnectorIdentity
-			.builder()
+		final ConnectorIdentity connectorIdentity1 = ConnectorIdentity.builder()
 			.compiledFilename("Connector 1")
 			.information("Info 1")
 			.build();
 		final Connector connector1 = Connector.builder().connectorIdentity(connectorIdentity1).build();
-		final ConnectorIdentity connectorIdentity2 = ConnectorIdentity
-			.builder()
+		final ConnectorIdentity connectorIdentity2 = ConnectorIdentity.builder()
 			.compiledFilename("Connector 2")
 			.information("Info 2")
 			.build();

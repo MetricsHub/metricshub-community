@@ -129,8 +129,7 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("port", new IntNode(getOrDeducePortNumber()));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("wbem", configuration, value -> value)
 			.orElseThrow();
 	}

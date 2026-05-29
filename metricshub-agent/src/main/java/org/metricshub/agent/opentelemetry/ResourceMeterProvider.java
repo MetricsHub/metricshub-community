@@ -135,8 +135,7 @@ public class ResourceMeterProvider {
 	 */
 	public ResourceMeter newResourceMeter(final String instrumentation, final Map<String, String> attributes) {
 		final Map<String, Metric> metricsCache = new LinkedHashMap<>();
-		final ResourceMeter meter = ResourceMeter
-			.builder()
+		final ResourceMeter meter = ResourceMeter.builder()
 			.withInstrumentation(instrumentation)
 			.withAttributes(attributes)
 			.withMetricsCache(metricsCache)

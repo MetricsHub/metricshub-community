@@ -21,8 +21,7 @@ import org.metricshub.engine.strategy.source.OrderedSources.OrderedSourcesBuilde
 
 class OrderedSourcesTest {
 
-	private static final JobInfo JOB_INFO = JobInfo
-		.builder()
+	private static final JobInfo JOB_INFO = JobInfo.builder()
 		.connectorId("connector")
 		.hostname("test")
 		.monitorType("enclosure")
@@ -38,22 +37,19 @@ class OrderedSourcesTest {
 	private static final String SOURCE_NAME_3 = "source3";
 	private static final String SOURCE_NAME_4 = "source4";
 
-	private static final HttpSource SOURCE1 = HttpSource
-		.builder()
+	private static final HttpSource SOURCE1 = HttpSource.builder()
 		.method(HttpMethod.GET)
 		.url("/system")
 		.resultContent(ResultContent.BODY)
 		.build();
 
-	private static final HttpSource SOURCE2 = HttpSource
-		.builder()
+	private static final HttpSource SOURCE2 = HttpSource.builder()
 		.method(HttpMethod.GET)
 		.url("/health")
 		.resultContent(ResultContent.BODY)
 		.build();
 
-	private static final TableJoinSource SOURCE3 = TableJoinSource
-		.builder()
+	private static final TableJoinSource SOURCE3 = TableJoinSource.builder()
 		.leftTable("${source::monitors.enclosure.discovery.sources.source1}")
 		.rightTable("${source::monitors.enclosure.discovery.sources.source2}")
 		.rightKeyColumn(1)
@@ -69,8 +65,7 @@ class OrderedSourcesTest {
 
 		final List<String> executionOrder = List.of(SOURCE_NAME_1, SOURCE_NAME_2, SOURCE_NAME_3);
 
-		final List<Source> result = OrderedSources
-			.builder()
+		final List<Source> result = OrderedSources.builder()
 			.sources(sources, executionOrder, EMPTY_DEP_TREE, JOB_INFO)
 			.build()
 			.getSources();
@@ -108,8 +103,7 @@ class OrderedSourcesTest {
 	void testOrderEmptyOrNullSources() {
 		assertEquals(
 			EMPTY_DEP_TREE,
-			OrderedSources
-				.builder()
+			OrderedSources.builder()
 				.sources(null, List.of(SOURCE_NAME_1, SOURCE_NAME_2), EMPTY_DEP_TREE, JOB_INFO)
 				.build()
 				.getSources()
@@ -117,8 +111,7 @@ class OrderedSourcesTest {
 
 		assertEquals(
 			EMPTY_DEP_TREE,
-			OrderedSources
-				.builder()
+			OrderedSources.builder()
 				.sources(EMPTY_MAP, List.of(SOURCE_NAME_1, SOURCE_NAME_2), EMPTY_DEP_TREE, JOB_INFO)
 				.build()
 				.getSources()
@@ -137,16 +130,14 @@ class OrderedSourcesTest {
 			Set.of(SOURCE_NAME_3)
 		);
 
-		final List<Source> result1 = OrderedSources
-			.builder()
+		final List<Source> result1 = OrderedSources.builder()
 			.sources(sources, null, sourceDepTree, JOB_INFO)
 			.build()
 			.getSources();
 
 		assertEquals(List.of(SOURCE1, SOURCE2, SOURCE3), result1);
 
-		final List<Source> result2 = OrderedSources
-			.builder()
+		final List<Source> result2 = OrderedSources.builder()
 			.sources(sources, EMPTY_EXECUTION_ORDER, sourceDepTree, JOB_INFO)
 			.build()
 			.getSources();
@@ -161,16 +152,14 @@ class OrderedSourcesTest {
 		sources.put(SOURCE_NAME_2, SOURCE2);
 		sources.put(SOURCE_NAME_3, SOURCE3);
 
-		final List<Source> result1 = OrderedSources
-			.builder()
+		final List<Source> result1 = OrderedSources.builder()
 			.sources(sources, EMPTY_EXECUTION_ORDER, null, JOB_INFO)
 			.build()
 			.getSources();
 
 		assertEquals(List.of(SOURCE1, SOURCE2, SOURCE3), result1);
 
-		final List<Source> result2 = OrderedSources
-			.builder()
+		final List<Source> result2 = OrderedSources.builder()
 			.sources(sources, EMPTY_EXECUTION_ORDER, EMPTY_DEP_TREE, JOB_INFO)
 			.build()
 			.getSources();

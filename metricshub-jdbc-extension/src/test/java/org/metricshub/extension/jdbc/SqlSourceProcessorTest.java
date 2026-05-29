@@ -43,8 +43,7 @@ class SqlSourceProcessorTest {
 	void testProcessWhenConfigurationIsNullReturnsEmptySourceTable() {
 		final SqlSource sqlSource = SqlSource.builder().query("SELECT * FROM test_table").build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(new HashMap<>())
 			.build();
@@ -95,8 +94,7 @@ class SqlSourceProcessorTest {
 				eq(false),
 				any()
 			)
-		)
-			.thenReturn(expectedResults);
+		).thenReturn(expectedResults);
 		when(jdbcConfiguration.getHostname()).thenReturn("hostname");
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 
@@ -114,8 +112,7 @@ class SqlSourceProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of(JdbcConfiguration.class, jdbcConfiguration))
 			.build();

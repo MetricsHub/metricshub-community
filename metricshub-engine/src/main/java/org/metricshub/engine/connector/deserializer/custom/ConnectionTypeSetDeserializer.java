@@ -51,6 +51,6 @@ public class ConnectionTypeSetDeserializer extends AbstractCollectionDeserialize
 
 	@Override
 	protected Predicate<ConnectionType> getFilterPredicate() {
-		return type -> true;
+		return _ -> true;
 	}
 }

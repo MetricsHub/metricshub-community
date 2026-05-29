@@ -82,7 +82,7 @@ public class ApiKeyCliService {
 			names = { "--expires-on" },
 			required = false,
 			description = "The expiration date time for the API key in ISO-8601 format 'YYYY-MM-DDThh:mm:ss' (optional)." +
-			"%nExample: 2025-07-23T08:42:45."
+				"%nExample: 2025-07-23T08:42:45."
 		)
 		String expiresOn;
 
@@ -91,13 +91,11 @@ public class ApiKeyCliService {
 			final var printWriter = spec.commandLine().getOut();
 			try {
 				final LocalDateTime expirationDateTime = resolveExpirationDateTime(expiresOn);
-				final String expirationMessage = expirationDateTime != null
-					? String.format(" (Expires on %s)", expirationDateTime)
-					: " (No expiration)";
+				final String expirationMessage =
+					expirationDateTime != null ? String.format(" (Expires on %s)", expirationDateTime) : " (No expiration)";
 				final var apiKey = createApiKey(alias, expirationDateTime);
 				printWriter.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.a("API key created for alias '")
 						.a(alias)
 						.a("': ")
@@ -110,8 +108,7 @@ public class ApiKeyCliService {
 				printWriter.println("Please store this key securely, as it will not be shown again.");
 			} catch (Exception e) {
 				printWriter.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.fgRed()
 						.a(String.format("Error creating API key with alias '%s': %s", alias, e.getMessage()))
 						.reset()
@@ -156,8 +153,10 @@ public class ApiKeyCliService {
 
 			// Get the secretKey entry by its alias.
 			KeyStore.SecretKeyEntry entry = null;
-			entry =
-				(KeyStore.SecretKeyEntry) ks.getEntry(API_KEY_PREFIX + apiKeyAlias, new PasswordProtection(getKeyStoreChars()));
+			entry = (KeyStore.SecretKeyEntry) ks.getEntry(
+				API_KEY_PREFIX + apiKeyAlias,
+				new PasswordProtection(getKeyStoreChars())
+			);
 
 			if (entry != null) {
 				throw new IllegalStateException("An API key with alias '" + apiKeyAlias + "' already exists.");
@@ -244,12 +243,11 @@ public class ApiKeyCliService {
 						String expirationMessage = " (No expiration)";
 						if (parts.length > 1) {
 							final var expirationDateTime = LocalDateTime.parse(parts[1]);
-							expirationMessage =
-								String.format(
-									" (Expire%s on %s)",
-									expirationDateTime.isBefore(LocalDateTime.now()) ? "d" : "s",
-									expirationDateTime.toString()
-								);
+							expirationMessage = String.format(
+								" (Expire%s on %s)",
+								expirationDateTime.isBefore(LocalDateTime.now()) ? "d" : "s",
+								expirationDateTime.toString()
+							);
 						}
 
 						printWriter.println(

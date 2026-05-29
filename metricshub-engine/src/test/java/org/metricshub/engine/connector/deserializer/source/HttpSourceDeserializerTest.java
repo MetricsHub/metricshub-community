@@ -29,8 +29,7 @@ class HttpSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testHttpSource",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testHttpSource}")
 					.type("http")
 					.url("http://machine:5985/testUrl/")
@@ -50,8 +49,7 @@ class HttpSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testHttpSource",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testHttpSource}")
 					.type("http")
 					.path("/testPath/")
@@ -71,8 +69,7 @@ class HttpSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testHttpSource",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testHttpSource}")
 					.type("http")
 					.url("http://machine:5985/path/")
@@ -93,8 +90,7 @@ class HttpSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testHttpSource",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testHttpSource}")
 					.type("http")
 					.method(POST)
@@ -115,8 +111,7 @@ class HttpSourceDeserializerTest extends DeserializerTest {
 				"devices",
 				HttpSource.builder().key("${source::beforeAll.devices}").type("http").url("/devices").method(GET).build(),
 				"detailsOfEachDevice",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.detailsOfEachDevice}")
 					.type("http")
 					.url("/device-detail/$entry.column(1)$")

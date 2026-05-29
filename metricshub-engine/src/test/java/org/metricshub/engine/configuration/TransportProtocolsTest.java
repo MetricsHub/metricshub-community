@@ -28,12 +28,9 @@ class TransportProtocolsTest {
 		assertEquals(TransportProtocols.HTTPS, TransportProtocols.interpretValueOf(HTTPS));
 
 		// Invalid protocol: throw an exception
-		final Exception exception = assertThrows(
-			IllegalArgumentException.class,
-			() -> {
-				TransportProtocols.interpretValueOf(INVALID_PROTOCOL);
-			}
-		);
+		final Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+			TransportProtocols.interpretValueOf(INVALID_PROTOCOL);
+		});
 		final String actualMessage = exception.getMessage();
 		assertTrue(actualMessage.contains(INVALID_PROTOCOL_EXCEPTION_MESSAGE));
 	}
