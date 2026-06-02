@@ -4,13 +4,13 @@ import { useTheme } from "@mui/material/styles";
 
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml as cmYaml } from "@codemirror/lang-yaml";
-import { history, historyKeymap, defaultKeymap } from "@codemirror/commands";
 import { keymap, EditorView, Decoration, ViewPlugin } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
 import "./lint-fallback.css";
 import { buildYamlLinterExtension } from "../../utils/yaml-lint-utils";
 import { velocity } from "../../utils/codemirror-velocity";
+import { yamlMappingIndentService } from "../../utils/codemirror-yaml-indent";
 import { isVmFile } from "../../utils/file-type-utils";
 
 const LOCAL_STORAGE_KEY = "yaml-editor-doc";
@@ -105,18 +105,21 @@ export default function YamlEditor({
 	);
 
 	const extensions = React.useMemo(() => {
-		const km = [...defaultKeymap, ...historyKeymap];
-		if (onSave) {
-			km.unshift({
-				key: "Mod-s",
-				preventDefault: true,
-				run: (view) => {
-					if (!canSave) return true;
-					onSave(view.state.doc.toString());
-					return true;
-				},
-			});
-		}
+		// basicSetup already provides the default keymap, history, and history keymap,
+		// so only the editor-specific save binding is added here.
+		const saveKeymap = onSave
+			? [
+					{
+						key: "Mod-s",
+						preventDefault: true,
+						run: (view) => {
+							if (!canSave) return true;
+							onSave(view.state.doc.toString());
+							return true;
+						},
+					},
+				]
+			: [];
 
 		// Track selection changes and rebuild markers only for selected ranges
 		const selectionWhitespaceMarkers = ViewPlugin.fromClass(
@@ -160,10 +163,12 @@ export default function YamlEditor({
 		});
 
 		// Select language mode based on file type
-		const langExtension = isVmFile(fileName) ? velocity() : cmYaml();
+		const isVelocityFile = isVmFile(fileName);
+		const langExtension = isVelocityFile ? velocity() : cmYaml();
 
 		return [
 			langExtension,
+			...(isVelocityFile ? [] : [yamlMappingIndentService]),
 			indentationMarkers({
 				// Make indent guides clearer in dark mode and a bit darker in light mode
 				colors: {
@@ -174,8 +179,7 @@ export default function YamlEditor({
 				},
 			}),
 			selectionWhitespaceMarkers,
-			history(),
-			keymap.of(km),
+			keymap.of(saveKeymap),
 			followSelection,
 			...validationExtension,
 		];
@@ -241,9 +245,8 @@ export default function YamlEditor({
 						lineNumbers: true,
 						highlightActiveLine: true,
 						foldGutter: true,
-						// Re-enable default search behavior and keymap (Ctrl/Cmd+F)
+						// Keep the default search keymap (Ctrl/Cmd+F)
 						searchKeymap: true,
-						search: true,
 					}}
 					theme={theme.palette.mode}
 					onCreateEditor={(view) => {
