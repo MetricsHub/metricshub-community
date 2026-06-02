@@ -40,6 +40,10 @@ import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.Connector;
+import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.JdbcInfo;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.Source;
@@ -48,6 +52,9 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
+import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
+import org.metricshub.extension.jdbc.driver.JdbcPathExpression;
 
 /**
  * This class implements the {@link IProtocolExtension} contract, reports the supported features,
@@ -132,7 +139,8 @@ public class JdbcExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof SqlCriterion sqlCriterion) {
-			return new SqlCriterionProcessor(sqlRequestExecutor, logMode).process(sqlCriterion, telemetryManager);
+			final JdbcDriverSelection selection = ensureDeclaredDriver(connectorId, telemetryManager);
+			return new SqlCriterionProcessor(sqlRequestExecutor, logMode, selection).process(sqlCriterion, telemetryManager);
 		}
 
 		throw new IllegalArgumentException(
@@ -147,7 +155,8 @@ public class JdbcExtension implements IProtocolExtension {
 	@Override
 	public SourceTable processSource(Source source, String connectorId, TelemetryManager telemetryManager) {
 		if (source instanceof SqlSource sqlSource) {
-			return new SqlSourceProcessor(sqlRequestExecutor, connectorId).process(sqlSource, telemetryManager);
+			final JdbcDriverSelection selection = ensureDeclaredDriver(connectorId, telemetryManager);
+			return new SqlSourceProcessor(sqlRequestExecutor, connectorId, selection).process(sqlSource, telemetryManager);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -156,6 +165,91 @@ public class JdbcExtension implements IProtocolExtension {
 				source != null ? source.getClass().getSimpleName() : "<null>"
 			)
 		);
+	}
+
+	/**
+	 * Pre-resolves the JDBC driver to use, applying the following priority order:
+	 * <ol>
+	 *   <li>Resource-level {@link JdbcConfiguration#getDriver() configuration driver} block, when set.</li>
+	 *   <li>Connector-level {@link ConnectorIdentity#getJdbc() identity jdbc} block, when set.</li>
+	 * </ol>
+	 * Each level is null-safe and resolution failures are swallowed at DEBUG so the eventual
+	 * {@code Driver.connect} call surfaces the real {@link java.sql.SQLException}.
+	 *
+	 * @param connectorId      identifier of the connector whose source or criterion is being
+	 *                         processed; may be {@code null} or unknown to the store.
+	 * @param telemetryManager telemetry manager carrying host configuration and connector store;
+	 *                         may be {@code null}.
+	 * @return the resolved {@link JdbcDriverSelection}, or {@code null} when no {@link JdbcInfo}
+	 *         block is declared (legacy zero-config path).
+	 */
+	private JdbcDriverSelection ensureDeclaredDriver(final String connectorId, final TelemetryManager telemetryManager) {
+		if (telemetryManager == null) {
+			return null;
+		}
+
+		// First priority: resource-level JdbcConfiguration.driver.
+		final JdbcInfo configJdbc = resolveConfigurationJdbcInfo(telemetryManager);
+		if (configJdbc != null) {
+			return JdbcDriverRegistryHolder.resolveSelection(configJdbc, JdbcPathExpression.Scope.RESOURCE);
+		}
+
+		// Fallback: connector-level ConnectorIdentity.jdbc.
+		return JdbcDriverRegistryHolder.resolveSelection(
+			resolveConnectorJdbcInfo(connectorId, telemetryManager),
+			JdbcPathExpression.Scope.CONNECTOR
+		);
+	}
+
+	/**
+	 * Reads the {@link JdbcConfiguration#getJdbc() jdbc} block from the host's JDBC configuration,
+	 * if any.
+	 *
+	 * @param telemetryManager telemetry manager carrying the host configuration; must not be {@code null}.
+	 * @return the configuration-level {@link JdbcInfo} or {@code null} when absent.
+	 */
+	private JdbcInfo resolveConfigurationJdbcInfo(final TelemetryManager telemetryManager) {
+		if (telemetryManager.getHostConfiguration() == null) {
+			return null;
+		}
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
+			.getHostConfiguration()
+			.getConfigurations();
+		if (configurations == null) {
+			return null;
+		}
+		final IConfiguration raw = configurations.get(JdbcConfiguration.class);
+		if (raw instanceof JdbcConfiguration jdbcConfig) {
+			return jdbcConfig.getDriver();
+		}
+		return null;
+	}
+
+	/**
+	 * Reads the {@link ConnectorIdentity#getJdbc() jdbc} block declared by the connector identified
+	 * by {@code connectorId}, if any.
+	 *
+	 * @param connectorId      identifier of the connector; may be {@code null} or unknown.
+	 * @param telemetryManager telemetry manager carrying the connector store; must not be {@code null}.
+	 * @return the connector-level {@link JdbcInfo} or {@code null} when absent.
+	 */
+	private JdbcInfo resolveConnectorJdbcInfo(final String connectorId, final TelemetryManager telemetryManager) {
+		if (connectorId == null) {
+			return null;
+		}
+		final ConnectorStore store = telemetryManager.getConnectorStore();
+		if (store == null || store.getStore() == null) {
+			return null;
+		}
+		final Connector connector = store.getStore().get(connectorId);
+		if (connector == null) {
+			return null;
+		}
+		final ConnectorIdentity identity = connector.getConnectorIdentity();
+		if (identity == null) {
+			return null;
+		}
+		return identity.getJdbc();
 	}
 
 	@Override
@@ -260,6 +354,9 @@ public class JdbcExtension implements IProtocolExtension {
 		final char[] password,
 		final long timeout
 	) {
+		// Ensure the appropriate driver is registered with DriverManager before connecting.
+		JdbcDriverRegistryHolder.ensureDriverForUrl(jdbcUrl);
+
 		try (
 			Connection connection = (username == null || password == null)
 				? DriverManager.getConnection(jdbcUrl)

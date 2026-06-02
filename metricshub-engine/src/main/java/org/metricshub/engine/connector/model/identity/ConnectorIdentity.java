@@ -96,4 +96,11 @@ public class ConnectorIdentity implements Serializable {
 	 */
 	@Default
 	private Map<String, ConnectorDefaultVariable> variables = new HashMap<>();
+
+	/**
+	 * Optional JDBC driver requirement declared by the connector. When present, the JDBC
+	 * extension uses this block to resolve a driver from the operator-default drivers directory
+	 * or, when {@link JdbcInfo#getDriverPath()} is set, from the specified path expression.
+	 */
+	private JdbcInfo jdbc;
 }

@@ -184,7 +184,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("1")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -203,7 +203,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of())
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -223,7 +223,7 @@ class JdbcExtensionTest {
 
 		doThrow(new ClientException("SQL query failed"))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final CriterionTestResult result = jdbcExtension.processCriterion(
 			sqlCriterion,
@@ -255,7 +255,7 @@ class JdbcExtensionTest {
 
 		doReturn(List.of(List.of("value1", "value2")))
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		CriterionTestResult result = jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
 

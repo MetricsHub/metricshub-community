@@ -1,0 +1,2 @@
+org.metricshub.extension.jdbc.driver.BuiltInJdbcDriverProvider
+org.metricshub.extension.jdbc.driver.ExternalJdbcDriverDescriptorsProvider
