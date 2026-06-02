@@ -87,6 +87,18 @@ describe("codemirror-yaml-indent", () => {
 
 	it("falls back to CodeMirror indentation for block scalars", () => {
 		expect(getYamlMappingNewlineIndentColumn("          script: |", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: >", indentContext)).toBeNull();
+		// Chomping and explicit indentation indicators, in either order.
+		expect(getYamlMappingNewlineIndentColumn("          script: |-", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: |+", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: >-", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: |2", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: |2-", indentContext)).toBeNull();
+		expect(getYamlMappingNewlineIndentColumn("          script: >+1", indentContext)).toBeNull();
+		// A block scalar header may be followed by a comment.
+		expect(
+			getYamlMappingNewlineIndentColumn("          script: |- # keep", indentContext),
+		).toBeNull();
 	});
 
 	it("overrides native YAML indentation for an inline mapping value", () => {

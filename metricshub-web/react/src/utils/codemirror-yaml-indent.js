@@ -1,5 +1,10 @@
 import { indentService } from "@codemirror/language";
 
+// Matches a YAML block scalar header: a literal (|) or folded (>) indicator,
+// optionally followed by indentation (1-9) and chomping (- or +) indicators in
+// either order, then end-of-line or whitespace (e.g. |, >, |-, |+, >2, |2-, >+1).
+const BLOCK_SCALAR_HEADER = /^[|>](?:[1-9][-+]?|[-+][1-9]?)?(?:\s|$)/;
+
 /**
  * Finds the indentation column CodeMirror should use after pressing Enter on a
  * YAML mapping line.
@@ -41,7 +46,7 @@ export function getYamlMappingNewlineIndentColumn(lineText, context, previousLin
 
 	// Block scalars (| and >) and open flow collections defer to CodeMirror, which
 	// understands how to indent their continuation lines.
-	if (/^[|>](?:\s|$)/.test(valueText) || hasUnbalancedFlowOpener(valueText)) {
+	if (BLOCK_SCALAR_HEADER.test(valueText) || hasUnbalancedFlowOpener(valueText)) {
 		return null;
 	}
 
@@ -242,6 +247,14 @@ function skipSingleQuoted(text, start) {
 	return text.length;
 }
 
+/**
+ * Tests whether the character at the given index is a mapping separator colon
+ * (:) followed by end-of-line or whitespace.
+ *
+ * @param {string} text The text being scanned.
+ * @param {number} index The index of the colon to test.
+ * @returns {boolean} True when the colon is a mapping separator.
+ */
 function isMappingSeparator(text, index) {
 	const nextChar = text[index + 1] ?? "";
 
