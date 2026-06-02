@@ -44,16 +44,5 @@ public enum DriverOrigin {
 	 * Driver JAR was located via an explicit {@code JdbcInfo.driverPath} expression (resolved to
 	 * an absolute file path or a single glob match).
 	 */
-	USER_EXPLICIT,
-
-	/**
-	 * Driver JAR was discovered alongside a community connector YAML (sibling {@code drivers/} folder).
-	 * Never applies to enterprise (serialized) connectors.
-	 */
-	CONNECTOR_SIBLING,
-
-	/**
-	 * Driver JAR was discovered through the {@code additionalDriverJars} escape hatch in {@code metricshub.yaml}.
-	 */
-	ADDITIONAL
+	USER_EXPLICIT
 }
