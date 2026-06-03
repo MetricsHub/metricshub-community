@@ -12,40 +12,40 @@ class JdbcInfoTest {
 
 	@Test
 	void minimalValidBlock() throws Exception {
-		final JdbcInfo info = JdbcInfo.create("com.acme.Driver", null);
-		assertEquals("com.acme.Driver", info.getDriverClass());
-		assertNull(info.getDriverPath());
+		final DriverInfo info = DriverInfo.create("com.acme.Driver", null);
+		assertEquals("com.acme.Driver", info.getClassName());
+		assertNull(info.getJarPath());
 	}
 
 	@Test
 	void bothFieldsValid() throws Exception {
-		final JdbcInfo info = JdbcInfo.create(
+		final DriverInfo info = DriverInfo.create(
 			"com.ibm.as400.access.AS400JDBCDriver",
 			"$INSTALL_DIR/lib/extensions/jdbc/jt400.jar"
 		);
-		assertEquals("com.ibm.as400.access.AS400JDBCDriver", info.getDriverClass());
-		assertEquals("$INSTALL_DIR/lib/extensions/jdbc/jt400.jar", info.getDriverPath());
+		assertEquals("com.ibm.as400.access.AS400JDBCDriver", info.getClassName());
+		assertEquals("$INSTALL_DIR/lib/extensions/jdbc/jt400.jar", info.getJarPath());
 	}
 
 	@Test
 	void blankPathIsNormalisedToNull() throws Exception {
-		assertNull(JdbcInfo.create("a.B", "   ").getDriverPath());
-		assertNull(JdbcInfo.create("a.B", "").getDriverPath());
+		assertNull(DriverInfo.create("a.B", "   ").getJarPath());
+		assertNull(DriverInfo.create("a.B", "").getJarPath());
 	}
 
 	@Test
 	void surroundingWhitespaceTrimmed() throws Exception {
-		final JdbcInfo info = JdbcInfo.create("a.B", "   /opt/x.jar   ");
-		assertEquals("/opt/x.jar", info.getDriverPath());
+		final DriverInfo info = DriverInfo.create("a.B", "   /opt/x.jar   ");
+		assertEquals("/opt/x.jar", info.getJarPath());
 	}
 
 	@Test
-	void driverClassRequired() {
+	void classNameRequired() {
 		final JsonMappingException nullClass = assertThrows(JsonMappingException.class, () ->
-			JdbcInfo.create(null, "/opt/x.jar")
+			DriverInfo.create(null, "/opt/x.jar")
 		);
-		assertTrue(nullClass.getMessage().contains("driverClass"));
-		assertThrows(JsonMappingException.class, () -> JdbcInfo.create("   ", "/opt/x.jar"));
+		assertTrue(nullClass.getMessage().contains("className"));
+		assertThrows(JsonMappingException.class, () -> DriverInfo.create("   ", "/opt/x.jar"));
 	}
 
 	@Test
@@ -53,19 +53,19 @@ class JdbcInfoTest {
 		// Parse-time accepts everything non-blank; resolver enforces the security boundary.
 		assertEquals(
 			"$INSTALL_DIR/lib/extensions/jdbc/zos/db2jcc4.jar",
-			JdbcInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/zos/db2jcc4.jar").getDriverPath()
+			DriverInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/zos/db2jcc4.jar").getJarPath()
 		);
 		assertEquals(
 			"$USER_HOME/.metricshub/drivers/acme.jar",
-			JdbcInfo.create("a.B", "$USER_HOME/.metricshub/drivers/acme.jar").getDriverPath()
+			DriverInfo.create("a.B", "$USER_HOME/.metricshub/drivers/acme.jar").getJarPath()
 		);
 		assertEquals(
 			"/opt/oracle/instantclient/ojdbc11.jar",
-			JdbcInfo.create("a.B", "/opt/oracle/instantclient/ojdbc11.jar").getDriverPath()
+			DriverInfo.create("a.B", "/opt/oracle/instantclient/ojdbc11.jar").getJarPath()
 		);
 		assertEquals(
 			"$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar",
-			JdbcInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar").getDriverPath()
+			DriverInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar").getJarPath()
 		);
 	}
 }

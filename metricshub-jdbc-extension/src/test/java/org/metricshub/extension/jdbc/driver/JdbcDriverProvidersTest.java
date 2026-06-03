@@ -17,7 +17,7 @@ class JdbcDriverProvidersTest {
 		final Set<String> classes = new HashSet<>();
 		for (final JdbcDriverDescriptor d : new BuiltInJdbcDriverProvider().provide()) {
 			assertEquals(DriverOrigin.BUILT_IN, d.origin(), "Built-in descriptors must be BUILT_IN");
-			assertFalse(d.urlPrefixes().isEmpty(), "Built-in must declare URL prefixes for " + d.driverClass());
+			assertFalse(d.driverPackages().isEmpty(), "Built-in must declare driver packages for " + d.driverClass());
 			classes.add(d.driverClass());
 		}
 		assertTrue(classes.contains("org.mariadb.jdbc.Driver"));
@@ -33,7 +33,6 @@ class JdbcDriverProvidersTest {
 		final Set<String> classes = new HashSet<>();
 		for (final JdbcDriverDescriptor d : descriptors) {
 			assertEquals(DriverOrigin.USER_DEFAULT, d.origin(), "External descriptors must be USER_DEFAULT");
-			assertFalse(d.urlPrefixes().isEmpty(), "External descriptor must declare URL prefixes: " + d.driverClass());
 			assertFalse(d.driverPackages().isEmpty(), "External descriptor must declare driver packages: " + d.driverClass());
 			classes.add(d.driverClass());
 		}

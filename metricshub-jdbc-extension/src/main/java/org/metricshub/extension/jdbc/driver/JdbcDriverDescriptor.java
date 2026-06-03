@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -36,32 +36,23 @@ import java.util.Objects;
  * advertised by descriptor-only providers and resolved against {@code <INSTALL_DIR>/extensions/jdbc/}
  * at runtime.
  *
- * @param driverClass     Fully-qualified {@link java.sql.Driver} implementation class. Required.
- * @param displayName     Human-readable name used in logs and diagnostics.
- * @param urlPrefixes     JDBC URL prefixes this driver accepts (e.g. {@code "jdbc:mariadb:"}).
- *                        Used for URL-based resolution.
- * @param defaultPort     Default network port for this database, or {@code -1} when not applicable.
- * @param origin          Where this descriptor was discovered. {@link DriverOrigin#BUILT_IN} for
- *                        shaded drivers; otherwise filled in by the registry at resolution time.
- * @param driverPackages  Java package prefixes that must be loaded child-first by
- *                        {@link IsolatedDriverClassLoader} (vendor code). All other classes are
- *                        loaded parent-first. May be empty for built-ins.
- * @param validationQuery Optional vendor-specific connection validation query
- *                        (e.g. {@code "VALUES 1"} for Db2-for-i). Used as a fallback when
- *                        {@link java.sql.Connection#isValid(int)} is unreliable. May be {@code null}.
+ * @param driverClass    Fully-qualified {@link java.sql.Driver} implementation class. Required.
+ * @param displayName    Human-readable name used in logs and diagnostics.
+ * @param origin         Where this descriptor was discovered. {@link DriverOrigin#BUILT_IN} for
+ *                       shaded drivers; otherwise filled in by the registry at resolution time.
+ * @param driverPackages Java package prefixes that must be loaded child-first by
+ *                       {@link IsolatedDriverClassLoader} (vendor code). All other classes are
+ *                       loaded parent-first. May be empty for built-ins.
  */
 public record JdbcDriverDescriptor(
 	String driverClass,
 	String displayName,
-	List<String> urlPrefixes,
-	int defaultPort,
 	DriverOrigin origin,
-	List<String> driverPackages,
-	String validationQuery
+	List<String> driverPackages
 ) {
 	/**
-	 * Canonical constructor. Defensive: makes lists immutable and null-safe, and rejects a blank
-	 * driver class.
+	 * Canonical constructor. Defensive: makes the package list immutable and null-safe, and
+	 * rejects a blank driver class.
 	 */
 	public JdbcDriverDescriptor {
 		Objects.requireNonNull(driverClass, "driverClass");
@@ -69,7 +60,6 @@ public record JdbcDriverDescriptor(
 			throw new IllegalArgumentException("driverClass must not be blank");
 		}
 		Objects.requireNonNull(origin, "origin");
-		urlPrefixes = urlPrefixes == null ? List.of() : List.copyOf(urlPrefixes);
 		driverPackages = driverPackages == null ? List.of() : List.copyOf(driverPackages);
 	}
 }

@@ -28,11 +28,11 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +43,7 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 import org.metricshub.engine.connector.model.identity.JdbcInfo;
 import org.metricshub.engine.connector.model.identity.criterion.Criterion;
 import org.metricshub.engine.connector.model.identity.criterion.SqlCriterion;
@@ -52,9 +53,11 @@ import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.driver.BuiltInJdbcDrivers;
+import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
-import org.metricshub.extension.jdbc.driver.JdbcPathExpression;
+import org.metricshub.extension.jdbc.driver.LoadedDriver;
 
 /**
  * This class implements the {@link IProtocolExtension} contract, reports the supported features,
@@ -180,7 +183,7 @@ public class JdbcExtension implements IProtocolExtension {
 	 *                         processed; may be {@code null} or unknown to the store.
 	 * @param telemetryManager telemetry manager carrying host configuration and connector store;
 	 *                         may be {@code null}.
-	 * @return the resolved {@link JdbcDriverSelection}, or {@code null} when no {@link JdbcInfo}
+	 * @return the resolved {@link JdbcDriverSelection}, or {@code null} when no {@link DriverInfo}
 	 *         block is declared (legacy zero-config path).
 	 */
 	private JdbcDriverSelection ensureDeclaredDriver(final String connectorId, final TelemetryManager telemetryManager) {
@@ -189,16 +192,13 @@ public class JdbcExtension implements IProtocolExtension {
 		}
 
 		// First priority: resource-level JdbcConfiguration.driver.
-		final JdbcInfo configJdbc = resolveConfigurationJdbcInfo(telemetryManager);
+		final DriverInfo configJdbc = resolveConfigurationJdbcInfo(telemetryManager);
 		if (configJdbc != null) {
-			return JdbcDriverRegistryHolder.resolveSelection(configJdbc, JdbcPathExpression.Scope.RESOURCE);
+			return JdbcDriverRegistryHolder.resolveSelection(configJdbc);
 		}
 
 		// Fallback: connector-level ConnectorIdentity.jdbc.
-		return JdbcDriverRegistryHolder.resolveSelection(
-			resolveConnectorJdbcInfo(connectorId, telemetryManager),
-			JdbcPathExpression.Scope.CONNECTOR
-		);
+		return JdbcDriverRegistryHolder.resolveSelection(resolveConnectorJdbcInfo(connectorId, telemetryManager));
 	}
 
 	/**
@@ -206,9 +206,9 @@ public class JdbcExtension implements IProtocolExtension {
 	 * if any.
 	 *
 	 * @param telemetryManager telemetry manager carrying the host configuration; must not be {@code null}.
-	 * @return the configuration-level {@link JdbcInfo} or {@code null} when absent.
+	 * @return the configuration-level {@link DriverInfo} or {@code null} when absent.
 	 */
-	private JdbcInfo resolveConfigurationJdbcInfo(final TelemetryManager telemetryManager) {
+	private DriverInfo resolveConfigurationJdbcInfo(final TelemetryManager telemetryManager) {
 		if (telemetryManager.getHostConfiguration() == null) {
 			return null;
 		}
@@ -231,9 +231,9 @@ public class JdbcExtension implements IProtocolExtension {
 	 *
 	 * @param connectorId      identifier of the connector; may be {@code null} or unknown.
 	 * @param telemetryManager telemetry manager carrying the connector store; must not be {@code null}.
-	 * @return the connector-level {@link JdbcInfo} or {@code null} when absent.
+	 * @return the connector-level {@link DriverInfo} or {@code null} when absent.
 	 */
-	private JdbcInfo resolveConnectorJdbcInfo(final String connectorId, final TelemetryManager telemetryManager) {
+	private DriverInfo resolveConnectorJdbcInfo(final String connectorId, final TelemetryManager telemetryManager) {
 		if (connectorId == null) {
 			return null;
 		}
@@ -249,7 +249,8 @@ public class JdbcExtension implements IProtocolExtension {
 		if (identity == null) {
 			return null;
 		}
-		return identity.getJdbc();
+		final JdbcInfo jdbcInfo = identity.getJdbc();
+		return jdbcInfo == null ? null : jdbcInfo.getDriver();
 	}
 
 	@Override
@@ -354,15 +355,27 @@ public class JdbcExtension implements IProtocolExtension {
 		final char[] password,
 		final long timeout
 	) {
-		// Ensure the appropriate driver is registered with DriverManager before connecting.
-		JdbcDriverRegistryHolder.ensureDriverForUrl(jdbcUrl);
-
-		try (
-			Connection connection = (username == null || password == null)
-				? DriverManager.getConnection(jdbcUrl)
-				: DriverManager.getConnection(jdbcUrl, username, new String(password))
-		) {
-			return connection.isValid((int) timeout);
+		final Optional<String> inferred = BuiltInJdbcDrivers.driverClassForUrl(jdbcUrl);
+		if (inferred.isEmpty()) {
+			log.debug("isDatabaseAlive: no built-in JDBC driver matches URL {}", jdbcUrl);
+			return false;
+		}
+		final LoadedDriver loaded;
+		try {
+			loaded = JdbcDriverRegistryHolder.get().resolve(inferred.get(), null);
+		} catch (DriverResolutionException e) {
+			log.debug("isDatabaseAlive: failed to resolve driver {} for URL {}: {}", inferred.get(), jdbcUrl, e.getMessage());
+			return false;
+		}
+		final Properties props = new Properties();
+		if (username != null) {
+			props.setProperty("user", username);
+		}
+		if (password != null) {
+			props.setProperty("password", new String(password));
+		}
+		try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {
+			return connection != null && connection.isValid((int) timeout);
 		} catch (SQLException e) {
 			return false;
 		}

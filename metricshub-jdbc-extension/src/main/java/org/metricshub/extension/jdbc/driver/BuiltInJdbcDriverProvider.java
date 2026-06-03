@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -42,39 +42,22 @@ public final class BuiltInJdbcDriverProvider implements JdbcDriverProvider {
 			new JdbcDriverDescriptor(
 				"org.mariadb.jdbc.Driver",
 				"MariaDB Connector/J",
-				List.of("jdbc:mariadb:"),
-				3306,
 				DriverOrigin.BUILT_IN,
-				List.of("org.mariadb."),
-				"SELECT 1"
+				List.of("org.mariadb.")
 			),
 			new JdbcDriverDescriptor(
 				"org.postgresql.Driver",
 				"PostgreSQL JDBC Driver",
-				List.of("jdbc:postgresql:"),
-				5432,
 				DriverOrigin.BUILT_IN,
-				List.of("org.postgresql."),
-				"SELECT 1"
+				List.of("org.postgresql.")
 			),
 			new JdbcDriverDescriptor(
 				"com.mysql.cj.jdbc.Driver",
 				"MySQL Connector/J",
-				List.of("jdbc:mysql:"),
-				3306,
 				DriverOrigin.BUILT_IN,
-				List.of("com.mysql."),
-				"SELECT 1"
+				List.of("com.mysql.")
 			),
-			new JdbcDriverDescriptor(
-				"org.h2.Driver",
-				"H2 Database Engine",
-				List.of("jdbc:h2:"),
-				-1,
-				DriverOrigin.BUILT_IN,
-				List.of("org.h2."),
-				"SELECT 1"
-			)
+			new JdbcDriverDescriptor("org.h2.Driver", "H2 Database Engine", DriverOrigin.BUILT_IN, List.of("org.h2."))
 		);
 	}
 }

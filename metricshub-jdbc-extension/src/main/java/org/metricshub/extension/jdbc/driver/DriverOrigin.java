@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -36,12 +36,12 @@ public enum DriverOrigin {
 	/**
 	 * Driver JAR was discovered by scanning the operator-default drivers directory (typically
 	 * {@code <INSTALL_DIR>/lib/extensions/jdbc/}) for any JAR exposing the requested
-	 * {@code driverClass}. Used when {@code JdbcInfo.driverPath} is null.
+	 * {@code className}. Used when {@code DriverInfo.jarPath} is null.
 	 */
 	USER_DEFAULT,
 
 	/**
-	 * Driver JAR was located via an explicit {@code JdbcInfo.driverPath} expression (resolved to
+	 * Driver JAR was located via an explicit {@code DriverInfo.jarPath} expression (resolved to
 	 * an absolute file path or a single glob match).
 	 */
 	USER_EXPLICIT

@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -27,8 +27,8 @@ import java.util.Objects;
  * Per-call selection of the JDBC driver to use for a single SQL execution.
  *
  * <p>Resolved once (typically in {@code JdbcExtension.processSource}/{@code processCriterion}) by
- * applying the resource-then-connector priority over the available {@code JdbcInfo} blocks and
- * expanding the {@code driverPath} expression with {@link JdbcPathExpression}. The expanded
+ * applying the resource-then-connector priority over the available {@code DriverInfo} blocks and
+ * expanding the {@code jarPath} expression with {@link JdbcPathExpression}. The expanded
  * {@code explicitJarPath} is then carried verbatim down the call chain to {@code JdbcClient}, which
  * uses it to look up a {@link LoadedDriver} from the registry and call
  * {@link java.sql.Driver#connect(String, java.util.Properties)} directly — bypassing

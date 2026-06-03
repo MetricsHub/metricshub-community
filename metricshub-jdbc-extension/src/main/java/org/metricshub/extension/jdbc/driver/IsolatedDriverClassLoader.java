@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -95,7 +95,7 @@ public class IsolatedDriverClassLoader extends URLClassLoader {
 			if (c == null) {
 				try {
 					c = findClass(name);
-				} catch (ClassNotFoundException ignored) {
+				} catch (ClassNotFoundException _) {
 					// Fall through to parent.
 					c = super.loadClass(name, false);
 				}

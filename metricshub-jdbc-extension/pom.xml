@@ -81,6 +81,11 @@
 			<artifactId>mariadb-java-client</artifactId>
 			<version>3.5.8</version>
 		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

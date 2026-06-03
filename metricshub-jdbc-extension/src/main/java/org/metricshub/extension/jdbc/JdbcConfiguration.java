@@ -33,7 +33,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.connector.model.identity.JdbcInfo;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
@@ -77,7 +77,7 @@ public class JdbcConfiguration implements IConfiguration {
 	 * connection is opened. {@code null} means defer to the connector's declaration, if any.
 	 */
 	@JsonSetter(nulls = SKIP)
-	private JdbcInfo driver;
+	private DriverInfo driver;
 
 	@Override
 	public String toString() {

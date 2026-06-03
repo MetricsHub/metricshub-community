@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -29,10 +29,10 @@ import lombok.NoArgsConstructor;
  * Descriptor-only {@link JdbcDriverProvider} for JDBC drivers MetricsHub supports but does
  * <em>not</em> ship.
  *
- * <p>Each descriptor declares its driver class, URL prefixes, default port and the vendor packages
- * that must be isolated. The actual driver JAR is expected at
- * {@code <INSTALL_DIR>/extensions/jdbc/} (or {@code .../jdbc/<variant>/}) and will be loaded
- * lazily by {@link JdbcDriverRegistry} through an {@link IsolatedDriverClassLoader}.
+ * <p>Each descriptor declares its driver class and the vendor packages that must be isolated.
+ * The actual driver JAR is expected at {@code <INSTALL_DIR>/extensions/jdbc/} (or
+ * {@code .../jdbc/<variant>/}) and will be loaded lazily by {@link JdbcDriverRegistry} through an
+ * {@link IsolatedDriverClassLoader}.
  *
  * <p>Origin is {@link DriverOrigin#USER_DEFAULT} because, from the registry's point of view, every
  * descriptor advertised here ultimately requires a user-supplied JAR.
@@ -46,65 +46,44 @@ public final class ExternalJdbcDriverDescriptorsProvider implements JdbcDriverPr
 			new JdbcDriverDescriptor(
 				"oracle.jdbc.OracleDriver",
 				"Oracle JDBC Driver",
-				List.of("jdbc:oracle:thin:", "jdbc:oracle:oci:"),
-				1521,
 				DriverOrigin.USER_DEFAULT,
-				List.of("oracle."),
-				"SELECT 1 FROM DUAL"
+				List.of("oracle.")
 			),
 			new JdbcDriverDescriptor(
 				"com.microsoft.sqlserver.jdbc.SQLServerDriver",
 				"Microsoft SQL Server JDBC Driver",
-				List.of("jdbc:sqlserver:"),
-				1433,
 				DriverOrigin.USER_DEFAULT,
-				List.of("com.microsoft.sqlserver."),
-				"SELECT 1"
+				List.of("com.microsoft.sqlserver.")
 			),
 			new JdbcDriverDescriptor(
 				"net.sourceforge.jtds.jdbc.Driver",
 				"jTDS JDBC Driver",
-				List.of("jdbc:jtds:"),
-				1433,
 				DriverOrigin.USER_DEFAULT,
-				List.of("net.sourceforge.jtds."),
-				"SELECT 1"
+				List.of("net.sourceforge.jtds.")
 			),
 			new JdbcDriverDescriptor(
 				"com.informix.jdbc.IfxDriver",
 				"IBM Informix JDBC Driver",
-				List.of("jdbc:informix-sqli:", "jdbc:informix-direct:"),
-				1526,
 				DriverOrigin.USER_DEFAULT,
-				List.of("com.informix."),
-				"SELECT 1 FROM systables WHERE tabid = 1"
+				List.of("com.informix.")
 			),
 			new JdbcDriverDescriptor(
 				"org.apache.derby.jdbc.EmbeddedDriver",
 				"Apache Derby Embedded Driver",
-				List.of("jdbc:derby:"),
-				1527,
 				DriverOrigin.USER_DEFAULT,
-				List.of("org.apache.derby."),
-				"VALUES 1"
+				List.of("org.apache.derby.")
 			),
 			new JdbcDriverDescriptor(
 				"com.ibm.as400.access.AS400JDBCDriver",
 				"IBM Toolbox for Java (JTOpen) JDBC Driver",
-				List.of("jdbc:as400:"),
-				8471,
 				DriverOrigin.USER_DEFAULT,
-				List.of("com.ibm.as400."),
-				"VALUES 1"
+				List.of("com.ibm.as400.")
 			),
 			new JdbcDriverDescriptor(
 				"com.ibm.db2.jcc.DB2Driver",
 				"IBM Db2 JDBC Driver",
-				List.of("jdbc:db2:"),
-				50000,
 				DriverOrigin.USER_DEFAULT,
-				List.of("com.ibm.db2."),
-				"VALUES 1"
+				List.of("com.ibm.db2.")
 			)
 		);
 	}

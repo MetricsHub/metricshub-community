@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -24,6 +24,7 @@ package org.metricshub.extension.jdbc.driver;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
@@ -53,11 +54,8 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * tested without depending on where JUnit happens to load classes from.
  */
 @Slf4j
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class JdbcInstallDir {
-
-	private JdbcInstallDir() {
-		// utility
-	}
 
 	/**
 	 * Resolves {@code subPath} relative to the MetricsHub install directory. See the class-level
@@ -66,7 +64,7 @@ public final class JdbcInstallDir {
 	 * @param subPath path fragment to append (e.g. {@code "extensions/jdbc"}); must not be
 	 *                {@code null} or blank.
 	 * @return the resolved absolute {@link Path}; never {@code null}. The returned path is
-	 *         normalised but its existence on disk is not checked.
+	 *         normalized but its existence on disk is not checked.
 	 */
 	public static Path resolveSubPath(final String subPath) {
 		if (subPath == null || subPath.isBlank()) {
@@ -89,7 +87,7 @@ public final class JdbcInstallDir {
 	/**
 	 * Pure path math extracted for unit testing. Mirrors {@code ConfigHelper.getSubPath}: take the
 	 * code source path, use its parent (or the path itself if it has no parent), then resolve
-	 * {@code "../" + subPath} and normalise.
+	 * {@code "../" + subPath} and normalize.
 	 *
 	 * @param codeSource the file or directory the engine class was loaded from.
 	 * @param subPath    path fragment to append.

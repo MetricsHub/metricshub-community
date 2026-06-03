@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
-import org.metricshub.engine.connector.model.identity.JdbcInfo;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 
 class JdbcConfigurationTest {
 
@@ -185,9 +185,9 @@ class JdbcConfigurationTest {
 			.url("jdbc:mysql://localhost:3306/testdb".toCharArray())
 			.timeout(200L)
 			.driver(
-				JdbcInfo.builder()
-					.driverClass("org.mariadb.jdbc.Driver")
-					.driverPath("$INSTALL_DIR/lib/extensions/jdbc/mariadb-3.x.jar")
+				DriverInfo.builder()
+					.className("org.mariadb.jdbc.Driver")
+					.jarPath("$INSTALL_DIR/lib/extensions/jdbc/mariadb-3.x.jar")
 					.build()
 			)
 			.build();

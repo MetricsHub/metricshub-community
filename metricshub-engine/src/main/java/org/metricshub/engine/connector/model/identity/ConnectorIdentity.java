@@ -98,9 +98,9 @@ public class ConnectorIdentity implements Serializable {
 	private Map<String, ConnectorDefaultVariable> variables = new HashMap<>();
 
 	/**
-	 * Optional JDBC driver requirement declared by the connector. When present, the JDBC
-	 * extension uses this block to resolve a driver from the operator-default drivers directory
-	 * or, when {@link JdbcInfo#getDriverPath()} is set, from the specified path expression.
+	 * Optional JDBC driver requirement declared by the connector. The block wraps a
+	 * {@link DriverInfo} under {@code driver} so connector YAML mirrors the resource shape
+	 * ({@code jdbc.driver.{className,jarPath}}).
 	 */
 	private JdbcInfo jdbc;
 }

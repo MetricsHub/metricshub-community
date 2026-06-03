@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -32,7 +32,7 @@ import java.sql.Driver;
  * {@link IsolatedDriverClassLoader} is created. For all other drivers, {@code classLoader} is the
  * dedicated isolated loader keyed by {@code (driverClass, explicitJarPath)}.
  *
- * @param driver      the vendor {@link Driver} instance (not the {@link ShieldedDriver} wrapper).
+ * @param driver      the vendor {@link Driver} instance.
  * @param classLoader the classloader that defined {@code driver}'s class.
  * @param descriptor  the descriptor that produced this driver.
  */

@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -61,6 +62,14 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 	/** Glob meta-characters; presence in a path triggers glob resolution. */
 	private static final String GLOB_META_CHARS = "*?[";
 
+	/**
+	 * Hard ceiling applied when a glob uses the {@code **} recursive wildcard. Realistic JDBC
+	 * driver layouts are 2&ndash;4 directories deep; capping at 10 leaves comfortable headroom
+	 * while preventing an accidentally broad expression (for instance one rooted at
+	 * {@code $USER_HOME}) from triggering an unbounded directory walk.
+	 */
+	private static final int DEEP_GLOB_MAX_DEPTH = 10;
+
 	private final Path defaultDir;
 
 	/**
@@ -74,13 +83,6 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 	 */
 	public FilesystemDriverScanner(final Path defaultDir) {
 		this.defaultDir = Objects.requireNonNull(defaultDir, "defaultDir");
-	}
-
-	/**
-	 * @return the operator-default directory this scanner was created with.
-	 */
-	public Path defaultDir() {
-		return defaultDir;
 	}
 
 	@Override
@@ -118,6 +120,11 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 	/**
 	 * Expands a glob expression rooted at its non-glob ancestor directory.
 	 *
+	 * <p>Multi-segment globs are walked with a bounded depth: the depth implied by the
+	 * pattern's segment count, or {@link #DEEP_GLOB_MAX_DEPTH} when the pattern uses the
+	 * recursive {@code **} wildcard. This prevents an overly broad expression from walking
+	 * a deep tree such as {@code $USER_HOME}.
+	 *
 	 * @param driverClass driver class, for logging.
 	 * @param globPath    absolute path expression whose final segment(s) contain glob
 	 *                    meta-characters.
@@ -153,10 +160,13 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 			}
 		} else {
 			// Multi-segment glob: walk and match relative paths using forward-slash form so the
-			// glob syntax is uniform across operating systems.
+			// glob syntax is uniform across operating systems. The walk is depth-bounded by the
+			// pattern itself (or DEEP_GLOB_MAX_DEPTH when '**' is used) to guard against an
+			// expression accidentally rooted at a deep tree such as $USER_HOME.
 			final PathMatcher matcher = FileSystems.getDefault().getPathMatcher("glob:" + remainder);
-			try {
-				Files.walk(parent)
+			final int maxDepth = computeMaxDepth(remainder);
+			try (Stream<Path> walk = Files.walk(parent, maxDepth)) {
+				walk
 					.filter(Files::isRegularFile)
 					.filter(p -> {
 						final Path rel = parent.relativize(p);
@@ -232,6 +242,31 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 	}
 
 	/**
+	 * Computes the maximum directory depth required to satisfy a relative glob pattern.
+	 *
+	 * <p>When {@code remainder} contains the recursive {@code **} wildcard the depth is capped
+	 * at {@link #DEEP_GLOB_MAX_DEPTH}. Otherwise the depth is exactly the number of path
+	 * segments in the pattern (one more than the count of {@code /} separators), because no
+	 * deeper file could possibly match.
+	 *
+	 * @param remainder the glob portion expressed relative to its non-glob parent, using
+	 *                  forward-slash separators (never {@code null}).
+	 * @return the {@code maxDepth} argument to pass to {@link Files#walk(Path, int, java.nio.file.FileVisitOption...)}.
+	 */
+	private static int computeMaxDepth(final String remainder) {
+		if (remainder.contains("**")) {
+			return DEEP_GLOB_MAX_DEPTH;
+		}
+		int segments = 1;
+		for (int i = 0; i < remainder.length(); i++) {
+			if (remainder.charAt(i) == '/') {
+				segments++;
+			}
+		}
+		return segments;
+	}
+
+	/**
 	 * @param pathString a path expression.
 	 * @return {@code true} when {@code pathString} contains any glob meta-character.
 	 */
@@ -297,16 +332,26 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 			sorted.sort(null);
 			for (final Path jar : sorted) {
 				if (Files.isRegularFile(jar)) {
-					try {
-						urls.add(jar.toUri().toURL());
-					} catch (MalformedURLException e) {
-						log.warn("Skipping unreadable JAR {}: {}", jar, e.getMessage());
-					}
+					addJarUrl(urls, jar);
 				}
 			}
 		} catch (IOException e) {
 			log.warn("Failed to enumerate JDBC driver directory {}: {}", dir, e.getMessage());
 		}
 		return urls.toArray(URL[]::new);
+	}
+
+	/**
+	 * Converts {@code jar} to URL and adds it to {@code urls}, logging and skipping on failure.
+	 *
+	 * @param urls the list to add to; never {@code null}.
+	 * @param jar  the JAR file to convert; must exist and be a regular file.
+	 */
+	private static void addJarUrl(final List<URL> urls, final Path jar) {
+		try {
+			urls.add(jar.toUri().toURL());
+		} catch (MalformedURLException e) {
+			log.warn("Skipping unreadable JAR {}: {}", jar, e.getMessage());
+		}
 	}
 }

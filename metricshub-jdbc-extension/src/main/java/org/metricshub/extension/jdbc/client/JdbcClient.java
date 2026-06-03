@@ -23,7 +23,6 @@ package org.metricshub.extension.jdbc.client;
 
 import java.sql.Connection;
 import java.sql.Driver;
-import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -33,6 +32,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import lombok.NoArgsConstructor;
+import org.metricshub.extension.jdbc.driver.BuiltInJdbcDrivers;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -42,9 +43,8 @@ import org.metricshub.extension.jdbc.driver.LoadedDriver;
  * This class provides functionality to execute SQL queries via JDBC and return
  * the results in a structured format.
  */
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public class JdbcClient {
-
-	private JdbcClient() {}
 
 	static {
 		// Set the default locale to US to ensure that the SQL query results are formatted correctly
@@ -78,15 +78,14 @@ public class JdbcClient {
 	/**
 	 * Executes a SQL query via JDBC using a pre-resolved {@link JdbcDriverSelection}.
 	 *
-	 * <p>When {@code selection} is non-{@code null}, this method bypasses
-	 * {@link DriverManager} routing entirely and obtains a {@link Connection} directly from the
-	 * resolved {@link Driver} instance, ensuring strict per-resource jar scoping (two resources
-	 * referencing the same {@code driverClass} but different {@code driverPath} values will use
-	 * their own dedicated driver instances).
+	 * <p>This method always obtains a {@link Connection} directly from the resolved
+	 * {@link Driver} instance, ensuring strict per-resource jar scoping (two resources referencing
+	 * the same {@code className} but different {@code jarPath} values will use their own
+	 * dedicated driver instances).
 	 *
-	 * <p>When {@code selection} is {@code null}, the legacy {@link DriverManager}-based path is
-	 * used (after pre-registering any matching shielded driver via
-	 * {@link JdbcDriverRegistryHolder#ensureDriverForUrl(String)}).
+	 * <p>When {@code selection} is {@code null}, this method attempts to infer a built-in driver
+	 * from the URL prefix (see {@link BuiltInJdbcDrivers}); if no built-in matches, an
+	 * {@link SQLException} is raised.
 	 *
 	 * @param url          The JDBC URL to connect to the database.
 	 * @param username     The username for the database connection.
@@ -94,7 +93,8 @@ public class JdbcClient {
 	 * @param sqlQuery     The SQL query to be executed.
 	 * @param showWarnings If true, SQL warnings are added to the {@link SqlResult}.
 	 * @param timeout      The timeout in seconds for the query.
-	 * @param selection    Pre-resolved driver selection; may be {@code null}.
+	 * @param selection    Pre-resolved driver selection; may be {@code null} to fall back to
+	 *                     built-in URL inference.
 	 * @return A {@link SqlResult} object with the query results and warnings.
 	 * @throws SQLException If an error occurs with the database.
 	 */
@@ -149,13 +149,15 @@ public class JdbcClient {
 	}
 
 	/**
-	 * Opens a {@link Connection} either via the resolved {@link Driver} (when {@code selection}
-	 * is non-{@code null}) or via {@link DriverManager} (legacy path).
+	 * Opens a {@link Connection} via the resolved {@link Driver} obtained from
+	 * {@link JdbcDriverRegistryHolder}. When {@code selection} is {@code null}, the URL prefix is
+	 * matched against the built-in driver inference table (see {@link BuiltInJdbcDrivers}).
 	 *
 	 * @param url        The JDBC URL.
 	 * @param username   The username; may be {@code null}.
 	 * @param password   The password; may be {@code null}.
-	 * @param selection  Pre-resolved driver selection; may be {@code null}.
+	 * @param selection  Pre-resolved driver selection; may be {@code null} to trigger URL-based
+	 *                   inference.
 	 * @return The opened {@link Connection}.
 	 * @throws SQLException If the driver cannot be resolved or refuses the URL.
 	 */
@@ -165,19 +167,24 @@ public class JdbcClient {
 		final char[] password,
 		final JdbcDriverSelection selection
 	) throws SQLException {
-		if (selection == null) {
-			// Ensure the appropriate driver is registered with DriverManager before connecting.
-			JdbcDriverRegistryHolder.ensureDriverForUrl(url);
-			return username == null || password == null
-				? DriverManager.getConnection(url)
-				: DriverManager.getConnection(url, username, new String(password));
-		}
+		final JdbcDriverSelection effective =
+			selection != null
+				? selection
+				: BuiltInJdbcDrivers.driverClassForUrl(url)
+						.map(c -> new JdbcDriverSelection(c, null))
+						.orElseThrow(() ->
+							new SQLException(
+								"No JDBC driver declared for URL " +
+									url +
+									"; declare jdbc.driver in metricshub.yaml or in the connector header"
+							)
+						);
 
 		final LoadedDriver loaded;
 		try {
-			loaded = JdbcDriverRegistryHolder.get().resolve(selection.driverClass(), selection.explicitJarPath());
+			loaded = JdbcDriverRegistryHolder.get().resolve(effective.driverClass(), effective.explicitJarPath());
 		} catch (DriverResolutionException e) {
-			throw new SQLException("Failed to resolve JDBC driver " + selection.driverClass() + ": " + e.getMessage(), e);
+			throw new SQLException("Failed to resolve JDBC driver " + effective.driverClass() + ": " + e.getMessage(), e);
 		}
 
 		final Properties props = new Properties();
@@ -190,7 +197,7 @@ public class JdbcClient {
 
 		final Connection connection = loaded.driver().connect(url, props);
 		if (connection == null) {
-			throw new SQLException("Driver " + selection.driverClass() + " did not accept JDBC URL " + url);
+			throw new SQLException("Driver " + effective.driverClass() + " did not accept JDBC URL " + url);
 		}
 		return connection;
 	}

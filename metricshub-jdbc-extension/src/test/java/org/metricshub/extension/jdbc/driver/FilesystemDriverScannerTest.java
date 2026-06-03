@@ -100,4 +100,46 @@ class FilesystemDriverScannerTest {
 			scanner.locate("oracle.jdbc.OracleDriver", tmp.toString() + java.io.File.separator + "nope-*.jar")
 		);
 	}
+
+	/**
+	 * A {@code **} glob must not walk past the hard depth ceiling (10). A JAR placed 12
+	 * directories deep is therefore unreachable.
+	 */
+	@Test
+	void recursiveGlobIsDepthCapped(@TempDir Path tmp) throws IOException {
+		Path deep = tmp;
+		for (int i = 0; i < 12; i++) {
+			deep = Files.createDirectory(deep.resolve("d" + i));
+		}
+		Files.createFile(deep.resolve("too-deep.jar"));
+
+		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp.resolve("ignored"));
+		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
+			"com.acme.Driver",
+			tmp.toString() + java.io.File.separator + "**" + java.io.File.separator + "*.jar"
+		);
+		assertSame(Optional.empty(), located);
+	}
+
+	/**
+	 * A non-{@code **} multi-segment glob is bounded by its own segment count, so a deeper
+	 * red-herring JAR sitting one level beyond the pattern is not matched.
+	 */
+	@Test
+	void multiSegmentGlobUsesPatternDepth(@TempDir Path tmp) throws IOException {
+		final Path lib = Files.createDirectories(tmp.resolve("lib").resolve("jdbc"));
+		Files.createFile(lib.resolve("driver.jar"));
+		final Path extra = Files.createDirectory(lib.resolve("extra"));
+		Files.createFile(extra.resolve("redherring.jar"));
+
+		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp.resolve("ignored"));
+		final String sep = java.io.File.separator;
+		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
+			"com.acme.Driver",
+			tmp.toString() + sep + "lib" + sep + "jdbc" + sep + "*.jar"
+		);
+		assertTrue(located.isPresent());
+		assertEquals(1, located.get().urls().length);
+		assertTrue(located.get().urls()[0].toString().endsWith("driver.jar"));
+	}
 }

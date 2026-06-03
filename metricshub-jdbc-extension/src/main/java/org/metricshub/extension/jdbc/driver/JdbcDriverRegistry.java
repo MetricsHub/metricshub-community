@@ -4,7 +4,7 @@ package org.metricshub.extension.jdbc.driver;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub JDBC Extension
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -23,8 +23,7 @@ package org.metricshub.extension.jdbc.driver;
 
 import java.io.IOException;
 import java.sql.Driver;
-import java.sql.DriverManager;
-import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -41,24 +40,27 @@ import lombok.extern.slf4j.Slf4j;
  * Engine-scoped registry of JDBC drivers.
  *
  * <p>Aggregates {@link JdbcDriverDescriptor}s from {@link JdbcDriverProvider}s and resolves driver
- * requests by {@code (driverClass, explicitJarPath)} or by JDBC URL prefix. Caches one
- * {@link LoadedDriver} per resolved key for the lifetime of the registry.
+ * requests by {@code (driverClass, explicitJarPath)}. Caches one {@link LoadedDriver} per resolved
+ * key for the lifetime of the registry.
  *
  * <p>Resolution flow:
  * <ol>
- *   <li>Look up the descriptor for {@code driverClass}. If absent, a synthetic descriptor is
- *       fabricated (so unknown drivers can still be loaded if the JAR is present).</li>
+ *   <li>Look up the descriptor for {@code driverClass}. If absent, throw
+ *       {@link DriverResolutionException}: every supported driver must be advertised by a
+ *       {@link JdbcDriverProvider}.</li>
  *   <li>If {@code origin == BUILT_IN} <em>and</em> no explicit JAR path is supplied, load the
  *       driver from {@link #parentLoader} (the JDBC extension's own classloader) — no isolated
  *       loader.</li>
  *   <li>Otherwise, ask {@link #jarLocator} for the JAR URLs, build an
- *       {@link IsolatedDriverClassLoader}, instantiate the driver, wrap it in a
- *       {@link ShieldedDriver} and register the shield with {@link DriverManager}.</li>
+ *       {@link IsolatedDriverClassLoader} and instantiate the driver.</li>
  * </ol>
  *
- * <p>The registry implements {@link AutoCloseable}: on close it deregisters every
- * {@code ShieldedDriver} and closes every isolated loader. Callers should close the registry on
- * agent shutdown to avoid the well-known abandoned-driver leak.
+ * <p>Drivers obtained from this registry are used directly through
+ * {@link LoadedDriver#driver()}; the registry never registers them with
+ * {@link java.sql.DriverManager}.
+ *
+ * <p>The registry implements {@link AutoCloseable}: on close it closes every isolated loader.
+ * Callers should close the registry on agent shutdown.
  */
 @Slf4j
 public final class JdbcDriverRegistry implements AutoCloseable {
@@ -72,10 +74,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	/** Cache of resolved drivers, keyed by {@code (driverClass, explicitJarPath)}. */
 	private final Map<Key, LoadedDriver> loadedByKey = new ConcurrentHashMap<>();
 
-	/** Every {@link ShieldedDriver} we registered, in registration order, for clean shutdown. */
-	private final List<ShieldedDriver> registeredShields = new CopyOnWriteArrayList<>();
-
-	/** Isolated loaders we created, for shutdown. */
+	/** Every isolated loader this registry owns, recorded at creation so close() never leaks. */
 	private final List<IsolatedDriverClassLoader> isolatedLoaders = new CopyOnWriteArrayList<>();
 
 	/**
@@ -83,9 +82,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 *
 	 * @param descriptors  initial set of descriptors (typically aggregated from
 	 *                     {@link JdbcDriverProvider}s).
-	 * @param jarLocator   strategy for locating JAR(s) on disk; use
-	 *                     {@link JdbcDriverJarLocator#noOp()} when no filesystem scanning is wired
-	 *                     yet.
+	 * @param jarLocator   strategy for locating JAR(s) on disk.
 	 * @param parentLoader parent classloader used for built-ins and as the parent of every
 	 *                     {@link IsolatedDriverClassLoader}.
 	 */
@@ -122,7 +119,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 * @return a new registry; never {@code null}.
 	 */
 	public static JdbcDriverRegistry buildDefault(final JdbcDriverJarLocator jarLocator, final ClassLoader parentLoader) {
-		final List<JdbcDriverDescriptor> aggregated = new java.util.ArrayList<>();
+		final List<JdbcDriverDescriptor> aggregated = new ArrayList<>();
 		for (final JdbcDriverProvider provider : ServiceLoader.load(JdbcDriverProvider.class, parentLoader)) {
 			aggregated.addAll(provider.provide());
 		}
@@ -132,28 +129,8 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	/**
 	 * @return an unmodifiable view of every known descriptor, in registration order.
 	 */
-	public Collection<JdbcDriverDescriptor> descriptors() {
+	Collection<JdbcDriverDescriptor> descriptors() {
 		return descriptorsByClass.values();
-	}
-
-	/**
-	 * Resolves the descriptor whose {@code urlPrefixes} contains a prefix of {@code url}.
-	 *
-	 * @param url a JDBC URL.
-	 * @return the matching descriptor, or {@link Optional#empty()} when none matches.
-	 */
-	public Optional<JdbcDriverDescriptor> descriptorForUrl(final String url) {
-		if (url == null) {
-			return Optional.empty();
-		}
-		for (final JdbcDriverDescriptor d : descriptorsByClass.values()) {
-			for (final String prefix : d.urlPrefixes()) {
-				if (url.startsWith(prefix)) {
-					return Optional.of(d);
-				}
-			}
-		}
-		return Optional.empty();
 	}
 
 	/**
@@ -164,7 +141,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 * @param driverClass     fully-qualified driver class; required.
 	 * @param explicitJarPath optional absolute, expanded JAR path expression (may contain glob
 	 *                        meta-characters) previously resolved from
-	 *                        {@code JdbcInfo.driverPath}; {@code null} triggers a scan of the
+	 *                        {@code DriverInfo.jarPath}; {@code null} triggers a scan of the
 	 *                        operator-default drivers directory.
 	 * @return the loaded driver; never {@code null}.
 	 * @throws DriverResolutionException when the driver cannot be located, loaded, or instantiated.
@@ -196,10 +173,14 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 * @throws DriverResolutionException when the locator returns nothing or instantiation fails.
 	 */
 	private LoadedDriver doResolve(final Key key) {
-		final JdbcDriverDescriptor descriptor = descriptorsByClass.getOrDefault(
-			key.driverClass(),
-			syntheticDescriptor(key.driverClass())
-		);
+		final JdbcDriverDescriptor descriptor = descriptorsByClass.get(key.driverClass());
+		if (descriptor == null) {
+			throw new DriverResolutionException(
+				"Unknown JDBC driver class: " +
+					key.driverClass() +
+					". Declare it through a JdbcDriverProvider or check the connector configuration."
+			);
+		}
 
 		final boolean useBuiltIn = descriptor.origin() == DriverOrigin.BUILT_IN && key.explicitJarPath() == null;
 		if (useBuiltIn) {
@@ -224,14 +205,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 
 		final Driver driver = instantiate(descriptor.driverClass(), loader);
 		final JdbcDriverDescriptor resolvedDescriptor = withOrigin(descriptor, located.get().origin());
-		// Skip DriverManager registration for explicit-jar resolutions: when the operator pinned a
-		// specific JAR path, callers must reach this driver through the per-call selection (see
-		// JdbcClient.execute(..., JdbcDriverSelection)). Registering a shield here would expose the
-		// instance to legacy DriverManager.getConnection(url) lookups and could collide with another
-		// resource that pinned a different JAR for the same driver class.
-		if (key.explicitJarPath() == null) {
-			registerShield(driver, resolvedDescriptor);
-		}
+		log.info("JDBC driver loaded: {} origin={}", resolvedDescriptor.driverClass(), resolvedDescriptor.origin());
 		return new LoadedDriver(driver, loader, resolvedDescriptor);
 	}
 
@@ -262,7 +236,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 */
 	private LoadedDriver loadFromParent(final JdbcDriverDescriptor descriptor) {
 		final Driver driver = instantiate(descriptor.driverClass(), parentLoader);
-		registerShield(driver, descriptor);
+		log.info("JDBC driver loaded: {} origin={}", descriptor.driverClass(), descriptor.origin());
 		return new LoadedDriver(driver, parentLoader, descriptor);
 	}
 
@@ -292,26 +266,6 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	}
 
 	/**
-	 * Wraps {@code driver} in a {@link ShieldedDriver} loaded by the engine classloader and
-	 * registers it with {@link DriverManager} so that URL-based connection routing works.
-	 * The shield is tracked for deregistration in {@link #close()}.
-	 *
-	 * @param driver     the vendor driver instance to expose to {@link DriverManager}.
-	 * @param descriptor descriptor kept on the shield for diagnostics.
-	 * @throws DriverResolutionException when {@link DriverManager#registerDriver(Driver)} fails.
-	 */
-	private void registerShield(final Driver driver, final JdbcDriverDescriptor descriptor) {
-		final ShieldedDriver shield = new ShieldedDriver(driver, descriptor);
-		try {
-			DriverManager.registerDriver(shield);
-			registeredShields.add(shield);
-			log.info("JDBC driver registered: {} origin={}", descriptor.driverClass(), descriptor.origin());
-		} catch (SQLException e) {
-			throw new DriverResolutionException("Failed to register JDBC driver: " + descriptor.driverClass(), e);
-		}
-	}
-
-	/**
 	 * Returns a copy of {@code base} whose {@link JdbcDriverDescriptor#origin()} is replaced by
 	 * {@code origin}. The original is returned unchanged when the origin already matches.
 	 *
@@ -323,35 +277,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		if (base.origin() == origin) {
 			return base;
 		}
-		return new JdbcDriverDescriptor(
-			base.driverClass(),
-			base.displayName(),
-			base.urlPrefixes(),
-			base.defaultPort(),
-			origin,
-			base.driverPackages(),
-			base.validationQuery()
-		);
-	}
-
-	/**
-	 * Fabricates a minimal descriptor for an unknown driver class so the registry can still attempt
-	 * to load a JAR contributed only at the filesystem level. Origin is set to
-	 * {@link DriverOrigin#USER_DEFAULT}; URL prefixes and child-first packages are empty.
-	 *
-	 * @param driverClass fully-qualified driver class.
-	 * @return a placeholder descriptor used only for resolution.
-	 */
-	private static JdbcDriverDescriptor syntheticDescriptor(final String driverClass) {
-		return new JdbcDriverDescriptor(
-			driverClass,
-			driverClass,
-			List.of(),
-			-1,
-			DriverOrigin.USER_DEFAULT,
-			List.of(),
-			null
-		);
+		return new JdbcDriverDescriptor(base.driverClass(), base.displayName(), origin, base.driverPackages());
 	}
 
 	/**
@@ -368,7 +294,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		if (explicitJarPath == null) {
 			return String.format(
 				"JDBC driver %s not found. Drop the driver JAR into the operator-default drivers directory " +
-					"(typically <INSTALL_DIR>/lib/extensions/jdbc/) or set jdbc.driverPath.",
+					"(typically <INSTALL_DIR>/lib/extensions/jdbc/) or set jdbc.driver.jarPath.",
 				descriptor.driverClass()
 			);
 		}
@@ -380,21 +306,12 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	}
 
 	/**
-	 * Releases every resource owned by the registry: deregisters every {@link ShieldedDriver} from
-	 * {@link DriverManager}, closes every {@link IsolatedDriverClassLoader} and clears the
-	 * resolution cache. Safe to call multiple times. Must be invoked on agent shutdown to avoid
-	 * the well-known abandoned-driver leak.
+	 * Releases every resource owned by the registry: closes every {@link IsolatedDriverClassLoader}
+	 * and clears the resolution cache. Safe to call multiple times. Must be invoked on agent
+	 * shutdown to avoid the well-known abandoned-driver leak.
 	 */
 	@Override
 	public synchronized void close() {
-		for (final ShieldedDriver shield : registeredShields) {
-			try {
-				DriverManager.deregisterDriver(shield);
-			} catch (SQLException e) {
-				log.debug("Failed to deregister shielded driver {}", shield.descriptor().driverClass(), e);
-			}
-		}
-		registeredShields.clear();
 		for (final IsolatedDriverClassLoader loader : isolatedLoaders) {
 			try {
 				loader.close();
@@ -411,7 +328,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 *
 	 * @param driverClass     fully-qualified {@link Driver} implementation class; required.
 	 * @param explicitJarPath absolute, expanded JAR path expression previously resolved from
-	 *                        {@code JdbcInfo.driverPath}; {@code null} selects the operator-default
+	 *                        {@code DriverInfo.jarPath}; {@code null} selects the operator-default
 	 *                        drivers directory scan.
 	 */
 	record Key(String driverClass, String explicitJarPath) {}
