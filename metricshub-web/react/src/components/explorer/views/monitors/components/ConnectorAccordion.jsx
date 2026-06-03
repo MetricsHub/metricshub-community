@@ -35,6 +35,7 @@ import { paths } from "../../../../../paths";
 import { flashBlueAnimation } from "../../../../../utils/animations";
 import { SUPPORT_URL } from "../../../../../utils/constants";
 import AppAlert from "../../../../common/AppAlert";
+import { MonitorIcon } from "../../../../common/MetricIcons";
 import MonitorTypeIcon from "../icons/MonitorTypeIcon";
 
 import { useDataGridColumnWidths } from "../../common/use-data-grid-column-widths";
@@ -168,7 +169,10 @@ const MonitorAccordion = React.memo(function MonitorAccordion({
 							gap: 1,
 						}}
 					>
-						<MonitorTypeIcon type={prettifyKey(monitor.name)} />
+						<MonitorTypeIcon
+							type={prettifyKey(monitor.name)}
+							fallback={<MonitorIcon sx={{ fontSize: 20 }} />}
+						/>
 						<Tooltip title="Open Monitor Type Page" arrow placement="top" disableInteractive>
 							<Box component="span" sx={{ display: "inline-block" }}>
 								<Typography
