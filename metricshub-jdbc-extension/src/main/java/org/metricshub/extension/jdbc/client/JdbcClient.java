@@ -174,9 +174,9 @@ public class JdbcClient {
 						.map(c -> new JdbcDriverSelection(c, null))
 						.orElseThrow(() ->
 							new SQLException(
-								"No JDBC driver declared for URL " +
-									url +
-									"; declare jdbc.driver in metricshub.yaml or in the connector header"
+								"""
+								No JDBC driver declared for URL %s; declare jdbc.driver in metricshub.yaml \
+								or in the connector header""".formatted(url)
 							)
 						);
 

@@ -184,14 +184,9 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 		}
 		if (matches.size() > 1) {
 			throw new DriverResolutionException(
-				"Driver path glob '" +
-					globPath +
-					"' matched " +
-					matches.size() +
-					" files for " +
-					driverClass +
-					"; expected exactly one. Matches: " +
-					matches
+				"""
+				Driver path glob '%s' matched %d files for %s; expected exactly one. Matches: %s\
+				""".formatted(globPath, matches.size(), driverClass, matches)
 			);
 		}
 		return toLocated(driverClass, matches.get(0), DriverOrigin.USER_EXPLICIT);
