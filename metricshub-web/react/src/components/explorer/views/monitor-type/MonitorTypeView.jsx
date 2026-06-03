@@ -29,6 +29,7 @@ import EntityHeader from "../common/EntityHeader";
 import InstanceMetricsTable from "../monitors/components/InstanceMetricsTable";
 import InstanceNameWithAttributes from "../monitors/components/InstanceNameWithAttributes";
 import MonitorTypeIcon from "../monitors/icons/MonitorTypeIcon";
+import { MonitorIcon } from "../../../common/MetricIcons";
 import MetricValueCell from "../common/MetricValueCell";
 import { renderMetricHeader } from "../common/metric-column-helper";
 import {
@@ -229,7 +230,13 @@ const MonitorTypeView = ({ resourceName, resourceGroupName, connectorId, monitor
 		<Box sx={{ p: 3, display: "flex", flexDirection: "column" }}>
 			<EntityHeader
 				title={`${decodedName} : ${decodedMonitorType} (${monitorData.connectorName})`}
-				icon={<MonitorTypeIcon type={decodedMonitorType} fontSize="large" />}
+				icon={
+					<MonitorTypeIcon
+						type={decodedMonitorType}
+						fontSize="large"
+						fallback={<MonitorIcon sx={{ fontSize: 32 }} />}
+					/>
+				}
 			/>
 
 			<Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
