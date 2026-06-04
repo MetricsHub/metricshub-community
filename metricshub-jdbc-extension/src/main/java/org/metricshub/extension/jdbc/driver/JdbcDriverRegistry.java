@@ -209,12 +209,20 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 			parentLoader,
 			descriptor.driverPackages()
 		);
-		isolatedLoaders.add(loader);
-
-		final Driver driver = instantiate(descriptor.driverClass(), loader);
-		final JdbcDriverDescriptor resolvedDescriptor = withOrigin(descriptor, located.get().origin());
-		log.info("JDBC driver loaded: {} origin={}", resolvedDescriptor.driverClass(), resolvedDescriptor.origin());
-		return new LoadedDriver(driver, loader, resolvedDescriptor);
+		try {
+			final Driver driver = instantiate(descriptor.driverClass(), loader);
+			isolatedLoaders.add(loader);
+			final JdbcDriverDescriptor resolvedDescriptor = withOrigin(descriptor, located.get().origin());
+			log.info("JDBC driver loaded: {} origin={}", resolvedDescriptor.driverClass(), resolvedDescriptor.origin());
+			return new LoadedDriver(driver, loader, resolvedDescriptor);
+		} catch (RuntimeException e) {
+			try {
+				loader.close();
+			} catch (IOException ioe) {
+				log.debug("Failed to close isolated driver classloader {}", loader.getName(), ioe);
+			}
+			throw e;
+		}
 	}
 
 	/**
