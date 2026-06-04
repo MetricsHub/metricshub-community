@@ -243,7 +243,7 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * Reads the {@link JdbcConfiguration#getJdbc() jdbc} block from the host's JDBC configuration,
+	 * Reads the {@link JdbcConfiguration#getDriver() driver} block from the host's JDBC configuration,
 	 * if any.
 	 *
 	 * @param telemetryManager telemetry manager carrying the host configuration; must not be {@code null}.
