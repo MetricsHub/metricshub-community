@@ -55,13 +55,17 @@ class JdbcDriverRegistryHolderTest {
 	}
 
 	@Test
-	void resolveSelectionSwallowsResolutionFailures() {
-		// Unknown driver class => DriverResolutionException raised by the registry => returns null.
+	void resolveSelectionDefersResolutionToConnectionSite() {
+		// Even when the underlying driver class would not resolve (no jar, unknown class), the
+		// selection is returned as-is so callers honour the declared intent and surface the real
+		// resolution error at Driver.connect time instead of falling back to built-in inference.
 		final DriverInfo info = DriverInfo.builder()
 			.className("com.example.NoSuchDriver")
 			.jarPath("$USER_HOME/no-such.jar")
 			.build();
-		assertNull(JdbcDriverRegistryHolder.resolveSelection(info));
+		final JdbcDriverSelection selection = JdbcDriverRegistryHolder.resolveSelection(info);
+		assertNotNull(selection);
+		assertEquals("com.example.NoSuchDriver", selection.driverClass());
 	}
 
 	@Test

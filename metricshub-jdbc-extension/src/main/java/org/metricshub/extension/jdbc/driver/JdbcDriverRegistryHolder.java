@@ -93,18 +93,21 @@ public final class JdbcDriverRegistryHolder {
 	}
 
 	/**
-	 * Resolves a {@link DriverInfo} block into an actionable {@link JdbcDriverSelection}, primes the
-	 * registry cache as a side effect, and returns the selection so that callers can carry it into
-	 * the per-call code path.
+	 * Translates a {@link DriverInfo} block into an actionable {@link JdbcDriverSelection}.
 	 *
-	 * <p>Resolution failures (missing JAR, bad class, invalid path) are logged at DEBUG and
-	 * cause this method to return {@code null}. The eventual {@code Driver.connect} call will
-	 * surface the failure as a {@link java.sql.SQLException} with the proper message.
+	 * <p>This is a pure translation: it does <em>not</em> attempt to load the driver. Actual
+	 * resolution happens at the connection site (e.g. inside {@code isDatabaseAlive} or the SQL
+	 * processors), so a declared-but-unresolvable driver surfaces a precise
+	 * {@link DriverResolutionException} message — instead of being silently demoted to
+	 * {@code null}, which would let callers fall back to built-in inference and hide the real
+	 * problem.
+	 *
+	 * <p>Returns {@code null} only when nothing was declared ({@code info == null} or className is
+	 * blank), or when the {@code jarPath} expression itself is malformed (logged at DEBUG).
 	 *
 	 * @param info the JDBC requirement; may be {@code null}, in which case this method returns
 	 *             {@code null}.
-	 * @return the resolved selection, or {@code null} when {@code info} is missing/blank or the
-	 *         expression cannot be resolved.
+	 * @return the declared selection, or {@code null} when nothing usable was declared.
 	 */
 	public static JdbcDriverSelection resolveSelection(final DriverInfo info) {
 		if (info == null) {
@@ -122,19 +125,7 @@ public final class JdbcDriverRegistryHolder {
 			log.debug("Invalid jarPath for className={}: {}", driverClass, e.getMessage());
 			return null;
 		}
-		final JdbcDriverSelection selection = new JdbcDriverSelection(driverClass, explicitJarPath);
-		try {
-			get().resolve(driverClass, explicitJarPath);
-		} catch (DriverResolutionException e) {
-			log.debug(
-				"JDBC driver resolution failed for className={} jarPath={}: {}",
-				driverClass,
-				explicitJarPath,
-				e.getMessage()
-			);
-			return null;
-		}
-		return selection;
+		return new JdbcDriverSelection(driverClass, explicitJarPath);
 	}
 
 	/**

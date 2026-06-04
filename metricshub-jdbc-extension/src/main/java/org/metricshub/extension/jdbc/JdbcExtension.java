@@ -422,9 +422,10 @@ public class JdbcExtension implements IProtocolExtension {
 		try {
 			loaded = JdbcDriverRegistryHolder.get().resolve(effective.driverClass(), effective.explicitJarPath());
 		} catch (DriverResolutionException e) {
-			log.debug(
-				"isDatabaseAlive: failed to resolve driver {} for URL {}: {}",
+			log.warn(
+				"isDatabaseAlive: failed to resolve declared JDBC driver {} (jarPath={}) for URL {}: {}",
 				effective.driverClass(),
+				effective.explicitJarPath(),
 				jdbcUrl,
 				e.getMessage()
 			);
