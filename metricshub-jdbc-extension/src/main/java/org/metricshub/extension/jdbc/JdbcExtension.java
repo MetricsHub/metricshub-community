@@ -37,6 +37,8 @@ import java.util.Set;
 import java.util.function.UnaryOperator;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.common.helpers.TextTableHelper;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -52,6 +54,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.extension.IProtocolExtension;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
+import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.jdbc.driver.BuiltInJdbcDrivers;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
@@ -124,8 +127,12 @@ public class JdbcExtension implements IProtocolExtension {
 		final char[] password = jdbcConfiguration.getPassword();
 		final long timeout = jdbcConfiguration.getTimeout();
 
+		// Pre-resolve a driver selection so the health check uses the same driver as collection:
+		// resource-level configuration first, then any connector monitor advertising a driver.
+		final JdbcDriverSelection selection = resolveHealthCheckSelection(jdbcConfiguration, telemetryManager);
+
 		// Check database availability using Connection.isValid()
-		boolean isAlive = isDatabaseAlive(jdbcUrl, username, password, timeout);
+		boolean isAlive = isDatabaseAlive(jdbcUrl, username, password, timeout, selection);
 
 		if (!isAlive) {
 			log.warn("Hostname {} - Database health check failed", hostname);
@@ -192,13 +199,47 @@ public class JdbcExtension implements IProtocolExtension {
 		}
 
 		// First priority: resource-level JdbcConfiguration.driver.
-		final DriverInfo configJdbc = resolveConfigurationJdbcInfo(telemetryManager);
-		if (configJdbc != null) {
-			return JdbcDriverRegistryHolder.resolveSelection(configJdbc);
+		final DriverInfo driverInfo = resolveConfigurationJdbcInfo(telemetryManager);
+		if (driverInfo != null) {
+			return JdbcDriverRegistryHolder.resolveSelection(driverInfo);
 		}
 
-		// Fallback: connector-level ConnectorIdentity.jdbc.
-		return JdbcDriverRegistryHolder.resolveSelection(resolveConnectorJdbcInfo(connectorId, telemetryManager));
+		// Second priority: connector-level ConnectorIdentity.jdbc.
+		final JdbcDriverSelection connectorSelection = JdbcDriverRegistryHolder.resolveSelection(
+			resolveConnectorJdbcInfo(connectorId, telemetryManager)
+		);
+		if (connectorSelection != null) {
+			return connectorSelection;
+		}
+
+		// Final fallback: pick a registered descriptor whose driver accepts this resource's URL.
+		// Catches enterprise distributions where the driver JAR is on the agent classpath but the
+		// connector and the resource configuration both omit jdbc.driver.
+		return JdbcDriverRegistryHolder.findSelectionForUrl(resolveConfigurationUrl(telemetryManager));
+	}
+
+	/**
+	 * Reads the JDBC URL from the resource-level {@link JdbcConfiguration}, returning {@code null}
+	 * when no JDBC configuration is registered or the URL is missing.
+	 *
+	 * @param telemetryManager telemetry manager carrying the host configuration; may be {@code null}.
+	 * @return the JDBC URL as a string, or {@code null} when absent.
+	 */
+	private String resolveConfigurationUrl(final TelemetryManager telemetryManager) {
+		if (telemetryManager == null || telemetryManager.getHostConfiguration() == null) {
+			return null;
+		}
+		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = telemetryManager
+			.getHostConfiguration()
+			.getConfigurations();
+		if (configurations == null) {
+			return null;
+		}
+		if (configurations.get(JdbcConfiguration.class) instanceof JdbcConfiguration jdbcConfig) {
+			final char[] url = jdbcConfig.getUrl();
+			return url == null ? null : String.valueOf(url);
+		}
+		return null;
 	}
 
 	/**
@@ -341,30 +382,52 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * Checks if the database is reachable using Connection.isValid().
+	 * Checks if the database is reachable using {@link Connection#isValid(int)}.
 	 *
-	 * @param jdbcUrl  The JDBC URL of the database
-	 * @param username The database username
-	 * @param password The database password
-	 * @param timeout  The timeout duration
+	 * <p>When {@code selection} is non-null the supplied driver is used. Otherwise the URL prefix is
+	 * matched against the built-in driver inference table; this keeps zero-config liveness checks
+	 * working for built-in drivers (MariaDB, PostgreSQL, MySQL, H2).
+	 *
+	 * @param jdbcUrl   The JDBC URL of the database
+	 * @param username  The database username
+	 * @param password  The database password
+	 * @param timeout   The timeout duration in seconds
+	 * @param selection Pre-resolved driver selection; may be {@code null} to fall back to URL
+	 *                  inference.
 	 * @return true if the database is reachable, false otherwise
 	 */
 	static boolean isDatabaseAlive(
 		final String jdbcUrl,
 		final String username,
 		final char[] password,
-		final long timeout
+		final long timeout,
+		final JdbcDriverSelection selection
 	) {
-		final Optional<String> inferred = BuiltInJdbcDrivers.driverClassForUrl(jdbcUrl);
-		if (inferred.isEmpty()) {
-			log.debug("isDatabaseAlive: no built-in JDBC driver matches URL {}", jdbcUrl);
-			return false;
+		final JdbcDriverSelection effective;
+		if (selection != null) {
+			effective = selection;
+		} else {
+			final Optional<String> inferred = BuiltInJdbcDrivers.driverClassForUrl(jdbcUrl);
+			if (inferred.isEmpty()) {
+				log.warn(
+					"isDatabaseAlive: no JDBC driver accepts URL {}; declare jdbc.driver.className on the resource " +
+						"or install the driver JAR (operator-default drivers directory or agent classpath).",
+					jdbcUrl
+				);
+				return false;
+			}
+			effective = new JdbcDriverSelection(inferred.get(), null);
 		}
 		final LoadedDriver loaded;
 		try {
-			loaded = JdbcDriverRegistryHolder.get().resolve(inferred.get(), null);
+			loaded = JdbcDriverRegistryHolder.get().resolve(effective.driverClass(), effective.explicitJarPath());
 		} catch (DriverResolutionException e) {
-			log.debug("isDatabaseAlive: failed to resolve driver {} for URL {}: {}", inferred.get(), jdbcUrl, e.getMessage());
+			log.debug(
+				"isDatabaseAlive: failed to resolve driver {} for URL {}: {}",
+				effective.driverClass(),
+				jdbcUrl,
+				e.getMessage()
+			);
 			return false;
 		}
 		final Properties props = new Properties();
@@ -376,8 +439,94 @@ public class JdbcExtension implements IProtocolExtension {
 		}
 		try (Connection connection = loaded.driver().connect(jdbcUrl, props)) {
 			return connection != null && connection.isValid((int) timeout);
-		} catch (SQLException e) {
+		} catch (SQLException _) {
 			return false;
 		}
+	}
+
+	/**
+	 * Pre-resolves the JDBC driver selection used by the health check.
+	 *
+	 * <p>Priority order:
+	 * <ol>
+	 *   <li>Resource-level {@link JdbcConfiguration#getDriver() configuration driver}.</li>
+	 *   <li>Any connector monitor in the {@link TelemetryManager} whose connector identity
+	 *       advertises a {@link DriverInfo} (covers cycles after detection has populated
+	 *       connector monitors, including database connectors that ship explicit drivers).</li>
+	 * </ol>
+	 * Returns {@code null} when no driver is declared so the caller can fall back to URL-based
+	 * built-in inference.
+	 *
+	 * @param jdbcConfiguration the resource-level configuration; never {@code null}.
+	 * @param telemetryManager  the telemetry manager carrying connector monitors and the connector
+	 *                          store; never {@code null}.
+	 * @return a resolved {@link JdbcDriverSelection}, or {@code null} when no declared driver was
+	 *         found or its resolution failed.
+	 */
+	private JdbcDriverSelection resolveHealthCheckSelection(
+		final JdbcConfiguration jdbcConfiguration,
+		final TelemetryManager telemetryManager
+	) {
+		final DriverInfo configurationDriver = jdbcConfiguration.getDriver();
+		if (configurationDriver != null) {
+			return JdbcDriverRegistryHolder.resolveSelection(configurationDriver);
+		}
+		final DriverInfo connectorDriver = discoverDriverFromConnectorMonitors(telemetryManager);
+		if (connectorDriver != null) {
+			return JdbcDriverRegistryHolder.resolveSelection(connectorDriver);
+		}
+		// Final fallback: pick a registered descriptor whose driver accepts this URL. Catches
+		// enterprise distributions where the driver JAR is bundled on the agent classpath without
+		// any explicit jdbc.driver declaration in the connector or the resource configuration.
+		final char[] url = jdbcConfiguration.getUrl();
+		return url == null ? null : JdbcDriverRegistryHolder.findSelectionForUrl(String.valueOf(url));
+	}
+
+	/**
+	 * Walks every connector monitor in {@code telemetryManager} and returns the first non-null
+	 * {@link DriverInfo} declared by the matching {@link Connector} in the
+	 * {@link ConnectorStore}.
+	 *
+	 * <p>This makes the health check honour database connectors that ship a connector-level
+	 * driver (for instance JTOpen, Oracle), at least once detection has populated the connector
+	 * monitors. On the very first cycle, before detection runs, no connector monitor exists yet
+	 * and this method returns {@code null}; the caller then falls back to URL-based inference.
+	 * </p>
+	 * @param telemetryManager the telemetry manager; may be {@code null}.
+	 * @return the first non-null connector-level {@link DriverInfo} found, or {@code null}.
+	 */
+	private DriverInfo discoverDriverFromConnectorMonitors(final TelemetryManager telemetryManager) {
+		if (telemetryManager == null) {
+			return null;
+		}
+		final Map<String, Monitor> connectorMonitors = telemetryManager.findMonitorsByType(
+			KnownMonitorType.CONNECTOR.getKey()
+		);
+		if (connectorMonitors == null || connectorMonitors.isEmpty()) {
+			return null;
+		}
+		final ConnectorStore store = telemetryManager.getConnectorStore();
+		if (store == null || store.getStore() == null) {
+			return null;
+		}
+		for (final Monitor monitor : connectorMonitors.values()) {
+			final String connectorId = monitor.getAttribute(MetricsHubConstants.MONITOR_ATTRIBUTE_CONNECTOR_ID);
+			if (connectorId == null) {
+				continue;
+			}
+			final Connector connector = store.getStore().get(connectorId);
+			if (connector == null) {
+				continue;
+			}
+			final ConnectorIdentity identity = connector.getConnectorIdentity();
+			if (identity == null) {
+				continue;
+			}
+			final JdbcInfo jdbcInfo = identity.getJdbc();
+			if (jdbcInfo != null && jdbcInfo.getDriver() != null) {
+				return jdbcInfo.getDriver();
+			}
+		}
+		return null;
 	}
 }

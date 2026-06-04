@@ -73,4 +73,24 @@ class JdbcDriverRegistryHolderTest {
 			.build();
 		assertNull(JdbcDriverRegistryHolder.resolveSelection(info));
 	}
+
+	@Test
+	void findSelectionForUrlMatchesBuiltInDriver() {
+		final JdbcDriverSelection selection = JdbcDriverRegistryHolder.findSelectionForUrl("jdbc:h2:mem:probe");
+		assertNotNull(selection, "H2 is a built-in driver and must accept jdbc:h2:* URLs");
+		assertEquals("org.h2.Driver", selection.driverClass());
+		assertNull(selection.explicitJarPath());
+	}
+
+	@Test
+	void findSelectionForUrlReturnsNullForBlankUrl() {
+		assertNull(JdbcDriverRegistryHolder.findSelectionForUrl(null));
+		assertNull(JdbcDriverRegistryHolder.findSelectionForUrl("   "));
+	}
+
+	@Test
+	void findSelectionForUrlReturnsNullWhenNoDescriptorAccepts() {
+		// No registered descriptor accepts a synthetic URL like this.
+		assertNull(JdbcDriverRegistryHolder.findSelectionForUrl("jdbc:nope-no-driver:whatever"));
+	}
 }

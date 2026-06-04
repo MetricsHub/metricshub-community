@@ -24,6 +24,7 @@ package org.metricshub.extension.jdbc.driver;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.SQLException;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -137,7 +138,52 @@ public final class JdbcDriverRegistryHolder {
 	}
 
 	/**
-	 * Lazily-initialised path-expression resolver shared by every call into the holder.
+	 * Picks the first registered descriptor whose driver accepts {@code jdbcUrl}.
+	 *
+	 * <p>This drives the zero-config fallback for the health check and for source/criterion
+	 * processing when neither the resource nor any connector declares a driver. Each descriptor is
+	 * tried with {@code null} jarPath so the registry uses its standard resolution path: isolated
+	 * loader if a JAR is located in the operator-default drivers directory, otherwise the parent
+	 * classloader (which catches drivers shipped on the agent classpath, e.g. an enterprise
+	 * distribution that bundles Oracle/JTOpen/DB2). Resolution failures are logged at DEBUG and
+	 * skipped so a single missing JAR does not abort the scan.
+	 *
+	 * @param jdbcUrl the JDBC URL to match; may be {@code null} or blank, in which case this method
+	 *                returns {@code null}.
+	 * @return a {@link JdbcDriverSelection} for the first matching descriptor, or {@code null}
+	 *         when no resolvable descriptor accepts the URL.
+	 */
+	public static JdbcDriverSelection findSelectionForUrl(final String jdbcUrl) {
+		if (jdbcUrl == null || jdbcUrl.isBlank()) {
+			return null;
+		}
+		final JdbcDriverRegistry registry = get();
+		for (final JdbcDriverDescriptor descriptor : registry.descriptors()) {
+			final String driverClass = descriptor.driverClass();
+			final LoadedDriver loaded;
+			try {
+				loaded = registry.resolve(driverClass, null);
+			} catch (DriverResolutionException e) {
+				log.debug("findSelectionForUrl: skipping {} for URL {} ({})", driverClass, jdbcUrl, e.getMessage());
+				continue;
+			}
+			final boolean accepts;
+			try {
+				accepts = loaded.driver().acceptsURL(jdbcUrl);
+			} catch (SQLException e) {
+				log.debug("findSelectionForUrl: {}.acceptsURL threw for URL {} ({})", driverClass, jdbcUrl, e.getMessage());
+				continue;
+			}
+			if (accepts) {
+				DatabaseLogUtils.disableLogging(driverClass);
+				return new JdbcDriverSelection(driverClass, null);
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Lazily-initialized path-expression resolver shared by every call into the holder.
 	 */
 	private static final class PathExpressionHolder {
 

@@ -192,6 +192,14 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 			key.explicitJarPath()
 		);
 		if (located.isEmpty()) {
+			// No JAR was located. When the caller did not supply an explicit jarPath, the driver
+			// may still be reachable through the parent classloader (typical of bundled-driver
+			// distributions where the JAR is on the agent classpath rather than under the
+			// operator-default drivers directory). Fall back to the parent loader in that case;
+			// only reject when the class is absent from both isolated jars and the parent.
+			if (key.explicitJarPath() == null && isClassOnParent(descriptor.driverClass())) {
+				return loadFromParent(descriptor);
+			}
 			throw new DriverResolutionException(missingJarMessage(descriptor, key.explicitJarPath()));
 		}
 
@@ -238,6 +246,25 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		final Driver driver = instantiate(descriptor.driverClass(), parentLoader);
 		log.info("JDBC driver loaded: {} origin={}", descriptor.driverClass(), descriptor.origin());
 		return new LoadedDriver(driver, parentLoader, descriptor);
+	}
+
+	/**
+	 * Tests whether {@code driverClass} is reachable through {@link #parentLoader} without
+	 * triggering its static initialiser. Used to decide whether to fall back to the parent
+	 * classloader when no isolated JAR was located for a {@link DriverOrigin#USER_DEFAULT}
+	 * descriptor.
+	 *
+	 * @param driverClass fully-qualified driver class name.
+	 * @return {@code true} when the class is visible to the parent loader, {@code false}
+	 *         otherwise.
+	 */
+	private boolean isClassOnParent(final String driverClass) {
+		try {
+			Class.forName(driverClass, false, parentLoader);
+			return true;
+		} catch (ClassNotFoundException e) {
+			return false;
+		}
 	}
 
 	/**

@@ -126,8 +126,57 @@ class JdbcDriverRegistryTest {
 	}
 
 	@Test
+	void userDefaultFallsBackToParentLoaderWhenJarMissingButClassOnClasspath() {
+		// USER_DEFAULT descriptor for a class that *is* on the test classpath (H2). With a no-op
+		// locator and no explicit jarPath, the registry must fall back to the parent classloader
+		// rather than throwing — this models the enterprise distribution where driver JARs are
+		// shipped on the agent classpath.
+		final JdbcDriverDescriptor h2UserDefault = new JdbcDriverDescriptor(
+			"org.h2.Driver",
+			"H2 (user-default)",
+			DriverOrigin.USER_DEFAULT,
+			List.of("org.h2")
+		);
+		try (
+			JdbcDriverRegistry registry = new JdbcDriverRegistry(
+				List.of(h2UserDefault),
+				NO_OP,
+				JdbcDriverRegistryTest.class.getClassLoader()
+			)
+		) {
+			final LoadedDriver loaded = registry.resolve("org.h2.Driver", (String) null);
+			assertNotNull(loaded);
+			assertSame(JdbcDriverRegistryTest.class.getClassLoader(), loaded.classLoader());
+		}
+	}
+
+	@Test
+	void userDefaultThrowsWhenJarMissingAndClassNotOnClasspath() {
+		// USER_DEFAULT descriptor for a class absent from both isolated jars and the parent loader
+		// must still throw — Fix A only opens the parent fallback, it does not silently succeed
+		// when the class is genuinely missing.
+		final JdbcDriverDescriptor missing = new JdbcDriverDescriptor(
+			"com.example.absent.Driver",
+			"Absent",
+			DriverOrigin.USER_DEFAULT,
+			List.of("com.example.absent")
+		);
+		try (
+			JdbcDriverRegistry registry = new JdbcDriverRegistry(
+				List.of(missing),
+				NO_OP,
+				JdbcDriverRegistryTest.class.getClassLoader()
+			)
+		) {
+			final DriverResolutionException ex = assertThrows(DriverResolutionException.class, () ->
+				registry.resolve("com.example.absent.Driver", (String) null)
+			);
+			assertTrue(ex.getMessage().contains("com.example.absent.Driver"), ex.getMessage());
+		}
+	}
+
+	@Test
 	void distinctExplicitPathsLoadIntoDistinctClassLoaders() {
-		// Build a synthetic locator that always points at the H2 JAR (which is on the test classpath),
 		// regardless of the explicit path. Verifies that two distinct paths on the same driverClass
 		// produce two distinct ClassLoaders and two distinct Class<Driver> identities.
 		final URL h2JarUrl = org.h2.Driver.class.getProtectionDomain().getCodeSource().getLocation();
