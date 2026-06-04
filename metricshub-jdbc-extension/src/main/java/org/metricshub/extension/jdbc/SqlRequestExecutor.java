@@ -42,6 +42,12 @@ public class SqlRequestExecutor {
 	/**
 	 * Execute an SQL query using the provided configuration and return the result.
 	 *
+	 * <p>Convenience overload that delegates to
+	 * {@link #executeSql(String, JdbcConfiguration, String, boolean, TelemetryManager, JdbcDriverSelection)}
+	 * with a {@code null} driver selection. Intentionally <em>not</em> annotated with
+	 * {@link WithSpan} — the delegate is, and double-annotating would produce nested duplicate
+	 * spans for the common call path.
+	 *
 	 * @param hostname         The hostname of the database server.
 	 * @param jdbcConfig       JDBC configuration including URL, username, password, and timeout.
 	 * @param sqlQuery         The SQL query to execute.
@@ -50,12 +56,11 @@ public class SqlRequestExecutor {
 	 * @return A {@link List} of {@link List} of {@link String}s representing the result table.
 	 * @throws ClientException when anything goes wrong (details in cause)
 	 */
-	@WithSpan("JDBC SQL Query")
 	public List<List<String>> executeSql(
-		@SpanAttribute("host.hostname") final String hostname,
-		@SpanAttribute("jdbc.config") @NonNull final JdbcConfiguration jdbcConfig,
-		@SpanAttribute("sql.query") @NonNull final String sqlQuery,
-		@SpanAttribute("sql.showWarnings") final boolean showWarnings,
+		final String hostname,
+		@NonNull final JdbcConfiguration jdbcConfig,
+		@NonNull final String sqlQuery,
+		final boolean showWarnings,
 		final TelemetryManager telemetryManager
 	) throws ClientException {
 		return executeSql(hostname, jdbcConfig, sqlQuery, showWarnings, telemetryManager, null);
