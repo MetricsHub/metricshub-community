@@ -223,7 +223,7 @@ const LoginPage = () => {
 					</Button>
 
 					<Link
-						href="https://metricshub.com/docs/latest/operating-web-ui"
+						href="https://metricshub.com/docs/latest/operating-web-interface"
 						target="_blank"
 						rel="noopener noreferrer"
 						underline="always"
