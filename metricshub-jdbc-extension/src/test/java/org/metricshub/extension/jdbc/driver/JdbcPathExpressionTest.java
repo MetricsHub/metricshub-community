@@ -10,18 +10,18 @@ import org.junit.jupiter.api.Test;
 
 class JdbcPathExpressionTest {
 
-	private static final Path INSTALL = Paths.get("target/test-install").toAbsolutePath().normalize();
+	private static final Path APP = Paths.get("target/test-app").toAbsolutePath().normalize();
 	private static final Path HOME = Paths.get("target/test-home").toAbsolutePath().normalize();
 	private static final Path CWD = Paths.get("target/test-cwd").toAbsolutePath().normalize();
 
 	private static JdbcPathExpression resolver() {
-		return new JdbcPathExpression(() -> INSTALL, () -> HOME, () -> CWD);
+		return new JdbcPathExpression(() -> APP, () -> HOME, () -> CWD);
 	}
 
 	@Test
-	void resolvesInstallDir() {
-		final String expected = INSTALL.toString() + "/lib/extensions/jdbc/jt400.jar";
-		assertEquals(expected, resolver().resolve("$INSTALL_DIR/lib/extensions/jdbc/jt400.jar"));
+	void resolvesAppDir() {
+		final String expected = APP.toString() + "/extensions/jdbc/jt400.jar";
+		assertEquals(expected, resolver().resolve("$APP_DIR/extensions/jdbc/jt400.jar"));
 	}
 
 	@Test
@@ -44,14 +44,14 @@ class JdbcPathExpressionTest {
 	@Test
 	void unknownPlaceholderRejected() {
 		final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () ->
-			resolver().resolve("$INSTALL_DIR/$NOPE/foo.jar")
+			resolver().resolve("$APP_DIR/$NOPE/foo.jar")
 		);
 		assertTrue(ex.getMessage().contains("$NOPE"), ex.getMessage());
 	}
 
 	@Test
 	void traversalRejected() {
-		assertThrows(IllegalArgumentException.class, () -> resolver().resolve("$INSTALL_DIR/../etc/shadow"));
+		assertThrows(IllegalArgumentException.class, () -> resolver().resolve("$APP_DIR/../etc/shadow"));
 		assertThrows(IllegalArgumentException.class, () -> resolver().resolve("/opt/../etc/shadow"));
 	}
 
@@ -69,7 +69,7 @@ class JdbcPathExpressionTest {
 	@Test
 	void globPatternsArePreservedAsStrings() {
 		// Globs are not evaluated by the resolver; they pass through after token expansion.
-		final String expected = INSTALL.toString() + "/lib/extensions/jdbc/ojdbc*.jar";
-		assertEquals(expected, resolver().resolve("$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar"));
+		final String expected = APP.toString() + "/extensions/jdbc/ojdbc*.jar";
+		assertEquals(expected, resolver().resolve("$APP_DIR/extensions/jdbc/ojdbc*.jar"));
 	}
 }

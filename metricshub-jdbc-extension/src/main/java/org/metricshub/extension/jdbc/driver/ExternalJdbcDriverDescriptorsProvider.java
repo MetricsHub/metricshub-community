@@ -30,9 +30,12 @@ import lombok.NoArgsConstructor;
  * <em>not</em> ship.
  *
  * <p>Each descriptor declares its driver class and the vendor packages that must be isolated.
- * The actual driver JAR is expected at {@code <INSTALL_DIR>/extensions/jdbc/} (or
- * {@code .../jdbc/<variant>/}) and will be loaded lazily by {@link JdbcDriverRegistry} through an
- * {@link IsolatedDriverClassLoader}.
+ * The actual driver JAR is expected in the operator-default drivers directory and will be loaded
+ * lazily by {@link JdbcDriverRegistry} through an {@link IsolatedDriverClassLoader}:
+ * <ul>
+ *   <li>Linux:   {@code /opt/metricshub/lib/extensions/jdbc/}</li>
+ *   <li>Windows: {@code C:\Program Files\MetricsHub\extensions\jdbc\}</li>
+ * </ul>
  *
  * <p>Origin is {@link DriverOrigin#USER_DEFAULT} because, from the registry's point of view, every
  * descriptor advertised here ultimately requires a user-supplied JAR.

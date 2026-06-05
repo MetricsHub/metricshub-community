@@ -38,8 +38,9 @@ import java.util.Collection;
  *       {@link DriverOrigin#BUILT_IN}.</li>
  *   <li><em>Descriptor-only providers</em> (also shipped in the JDBC extension) that advertise
  *       well-known external drivers (Oracle, SQL Server, JTOpen, ...) without bundling the JAR.
- *       The registry then resolves the JAR from {@code <INSTALL_DIR>/extensions/jdbc/} at first
- *       use.</li>
+ *       The registry then resolves the JAR from the operator-default drivers directory at first
+ *       use — {@code /opt/metricshub/lib/extensions/jdbc/} on Linux,
+ *       {@code C:\Program Files\MetricsHub\extensions\jdbc\} on Windows.</li>
  * </ul>
  */
 public interface JdbcDriverProvider {

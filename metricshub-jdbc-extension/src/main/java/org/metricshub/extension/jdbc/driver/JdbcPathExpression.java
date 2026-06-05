@@ -41,7 +41,11 @@ import java.util.regex.Pattern;
  * <table border="1">
  *   <caption>Placeholders</caption>
  *   <tr><th>Token</th><th>Resolves to</th></tr>
- *   <tr><td>{@code $INSTALL_DIR}</td><td>MetricsHub install root (parent of {@code lib/app/}).</td></tr>
+ *   <tr>
+ *     <td>{@code $APP_DIR}</td>
+ *     <td>MetricsHub application directory. Anchor resolved by {@link JdbcAppDir}; on Linux
+ *         this is {@code /opt/metricshub/lib/}, on Windows {@code C:\Program Files\MetricsHub\}.</td>
+ *   </tr>
  *   <tr><td>{@code $USER_HOME}</td><td>{@code System.getProperty("user.home")}.</td></tr>
  *   <tr><td>{@code $WORKING_DIR}</td><td>{@code System.getProperty("user.dir")}.</td></tr>
  * </table>
@@ -50,8 +54,8 @@ import java.util.regex.Pattern;
  */
 public final class JdbcPathExpression {
 
-	/** Placeholder token: install root (parent of {@code lib/app/}). */
-	public static final String INSTALL_DIR = "$INSTALL_DIR";
+	/** Placeholder token: MetricsHub application directory ({@link JdbcAppDir}). */
+	public static final String APP_DIR = "$APP_DIR";
 
 	/** Placeholder token: current user home. */
 	public static final String USER_HOME = "$USER_HOME";
@@ -62,16 +66,16 @@ public final class JdbcPathExpression {
 	/** Matches {@code $UPPER_SNAKE_CASE} placeholders. */
 	private static final Pattern PLACEHOLDER = Pattern.compile("\\$[A-Z][A-Z0-9_]*");
 
-	private final Supplier<Path> installDirSupplier;
+	private final Supplier<Path> appDirSupplier;
 	private final Supplier<Path> userHomeSupplier;
 	private final Supplier<Path> workingDirSupplier;
 
 	/**
-	 * Production constructor; wires the install dir against {@link JdbcInstallDir}.
+	 * Production constructor; wires the app dir against {@link JdbcAppDir}.
 	 */
 	public JdbcPathExpression() {
 		this(
-			() -> JdbcInstallDir.resolveSubPath("."),
+			() -> JdbcAppDir.resolveSubPath("."),
 			() -> Paths.get(System.getProperty("user.home")),
 			() -> Paths.get(System.getProperty("user.dir"))
 		);
@@ -80,16 +84,16 @@ public final class JdbcPathExpression {
 	/**
 	 * Test constructor.
 	 *
-	 * @param installDirSupplier supplier for {@code $INSTALL_DIR}; never {@code null}.
+	 * @param appDirSupplier     supplier for {@code $APP_DIR}; never {@code null}.
 	 * @param userHomeSupplier   supplier for {@code $USER_HOME}; never {@code null}.
 	 * @param workingDirSupplier supplier for {@code $WORKING_DIR}; never {@code null}.
 	 */
 	public JdbcPathExpression(
-		final Supplier<Path> installDirSupplier,
+		final Supplier<Path> appDirSupplier,
 		final Supplier<Path> userHomeSupplier,
 		final Supplier<Path> workingDirSupplier
 	) {
-		this.installDirSupplier = Objects.requireNonNull(installDirSupplier, "installDirSupplier");
+		this.appDirSupplier = Objects.requireNonNull(appDirSupplier, "appDirSupplier");
 		this.userHomeSupplier = Objects.requireNonNull(userHomeSupplier, "userHomeSupplier");
 		this.workingDirSupplier = Objects.requireNonNull(workingDirSupplier, "workingDirSupplier");
 	}
@@ -103,7 +107,7 @@ public final class JdbcPathExpression {
 	 * lets callers pass expressions like {@code .../ojdbc11-*.jar}, which {@link Path} cannot
 	 * represent on Windows.
 	 *
-	 * @param expression the raw value, e.g. {@code $INSTALL_DIR/lib/extensions/jdbc/jt400.jar} or
+	 * @param expression the raw value, e.g. {@code $APP_DIR/extensions/jdbc/jt400.jar} or
 	 *                   {@code /opt/oracle/instantclient/ojdbc11.jar}; required, non-blank.
 	 * @return the expanded path expression; never {@code null}. Forward slashes inside the
 	 *         original expression are preserved.
@@ -153,8 +157,8 @@ public final class JdbcPathExpression {
 	 */
 	private String resolveToken(final String token) {
 		switch (token) {
-			case INSTALL_DIR:
-				return installDirSupplier.get().toAbsolutePath().normalize().toString();
+			case APP_DIR:
+				return appDirSupplier.get().toAbsolutePath().normalize().toString();
 			case USER_HOME:
 				return userHomeSupplier.get().toAbsolutePath().normalize().toString();
 			case WORKING_DIR:

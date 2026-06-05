@@ -18,7 +18,7 @@ connector:
   jdbc:
     driver:
       className: oracle.jdbc.OracleDriver
-      jarPath: $INSTALL_DIR/lib/extensions/jdbc/ojdbc11.jar # optional
+      jarPath: $APP_DIR/extensions/jdbc/ojdbc11.jar # optional
 ```
 
 Resource-level overrides are declared under `jdbc.driver`:
@@ -51,7 +51,7 @@ When no explicit `jarPath` is provided, MetricsHub resolves the default JDBC dri
 
 1. Java system property `metricshub.jdbc.driversDir`
 2. Environment variable `METRICSHUB_JDBC_DRIVERS_DIR`
-3. Install-relative directory `lib/extensions/jdbc/`
+3. App-relative directory `$APP_DIR/extensions/jdbc/` — `/opt/metricshub/lib/extensions/jdbc/` on Linux, `C:\Program Files\MetricsHub\extensions\jdbc\` on Windows.
 
 If that directory does not exist, only the built-in drivers are available.
 
@@ -61,7 +61,7 @@ If that directory does not exist, only the built-in drivers are available.
 
 Supported placeholders:
 
-- `$INSTALL_DIR`
+- `$APP_DIR`
 - `$USER_HOME`
 - `$WORKING_DIR`
 
@@ -76,7 +76,7 @@ connector:
   jdbc:
     driver:
       className: com.ibm.as400.access.AS400JDBCDriver
-      jarPath: $INSTALL_DIR/lib/extensions/jdbc/jt400.jar
+      jarPath: $APP_DIR/extensions/jdbc/jt400.jar
 ```
 
 ```yaml

@@ -45,8 +45,10 @@ import org.metricshub.extension.jdbc.client.DatabaseLogUtils;
  * <ol>
  *   <li>System property {@code metricshub.jdbc.driversDir}.</li>
  *   <li>Environment variable {@code METRICSHUB_JDBC_DRIVERS_DIR}.</li>
- *   <li>Install-relative {@code <INSTALL_DIR>/lib/extensions/jdbc/} computed via
- *       {@link JdbcInstallDir#resolveSubPath(String)} (mirrors {@code ConfigHelper.getSubPath}).</li>
+ *   <li>App-relative {@code $APP_DIR/extensions/jdbc/} computed via
+ *       {@link JdbcAppDir#resolveSubPath(String)} (mirrors {@code ConfigHelper.getSubPath}):
+ *       {@code /opt/metricshub/lib/extensions/jdbc/} on Linux,
+ *       {@code C:\Program Files\MetricsHub\extensions\jdbc\} on Windows.</li>
  * </ol>
  *
  * <p>The directory does not need to exist; absence simply means the scanner returns no JARs and
@@ -66,8 +68,8 @@ public final class JdbcDriverRegistryHolder {
 	/** Environment variable used to override the driver directory. */
 	public static final String DRIVERS_DIR_ENV = "METRICSHUB_JDBC_DRIVERS_DIR";
 
-	/** Install-relative sub-path resolved when no explicit override is provided. */
-	public static final String DEFAULT_INSTALL_SUBPATH = "extensions/jdbc";
+	/** App-relative sub-path resolved when no explicit override is provided. */
+	public static final String DEFAULT_APP_SUBPATH = "extensions/jdbc";
 
 	private static final AtomicReference<JdbcDriverRegistry> INSTANCE = new AtomicReference<>();
 
@@ -261,6 +263,6 @@ public final class JdbcDriverRegistryHolder {
 		if (fromEnv != null && !fromEnv.isBlank()) {
 			return Paths.get(fromEnv);
 		}
-		return JdbcInstallDir.resolveSubPath(DEFAULT_INSTALL_SUBPATH);
+		return JdbcAppDir.resolveSubPath(DEFAULT_APP_SUBPATH);
 	}
 }

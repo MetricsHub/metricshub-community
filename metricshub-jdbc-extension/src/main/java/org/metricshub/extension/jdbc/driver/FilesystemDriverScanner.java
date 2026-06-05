@@ -77,7 +77,7 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 	 * is {@code defaultDir}.
 	 *
 	 * @param defaultDir the operator-default drivers directory (typically
-	 *                   {@code <INSTALL_DIR>/lib/extensions/jdbc/}). The directory does not need to
+	 *                   {@code $APP_DIR/extensions/jdbc/}). The directory does not need to
 	 *                   exist at construction time; missing/non-directory paths simply produce
 	 *                   {@link Optional#empty()} when {@code explicitJarPath == null}.
 	 */

@@ -9,21 +9,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 
-class JdbcInstallDirTest {
+class JdbcAppDirTest {
 
 	@Test
 	void computeSubPathProductionLinuxLayout() {
 		final Path codeSource = Paths.get("/opt/metricshub/lib/app/metricshub-agent.jar");
-		final Path resolved = JdbcInstallDir.computeSubPath(codeSource, "extensions/jdbc");
+		final Path resolved = JdbcAppDir.computeSubPath(codeSource, "extensions/jdbc");
 		assertEquals(Paths.get("/opt/metricshub/lib/extensions/jdbc").toAbsolutePath(), resolved);
 	}
 
 	@Test
 	void computeSubPathProductionWindowsLayout() {
 		// Use a forward-slash representation; Paths normalises separators per the running OS.
-		final Path codeSource = Paths.get("/Program Files/MetricsHub/lib/app/metricshub-agent.jar");
-		final Path resolved = JdbcInstallDir.computeSubPath(codeSource, "extensions/jdbc");
-		assertEquals(Paths.get("/Program Files/MetricsHub/lib/extensions/jdbc").toAbsolutePath(), resolved);
+		final Path codeSource = Paths.get("/Program Files/MetricsHub/app/metricshub-agent.jar");
+		final Path resolved = JdbcAppDir.computeSubPath(codeSource, "extensions/jdbc");
+		assertEquals(Paths.get("/Program Files/MetricsHub/extensions/jdbc").toAbsolutePath(), resolved);
 	}
 
 	@Test
@@ -32,21 +32,21 @@ class JdbcInstallDirTest {
 		// and resolving "../extensions/jdbc" lands at <project>/extensions/jdbc — same math as
 		// ConfigHelper.getSubPath in the agent.
 		final Path codeSource = Paths.get("/tmp/project/target/classes");
-		final Path resolved = JdbcInstallDir.computeSubPath(codeSource, "extensions/jdbc");
+		final Path resolved = JdbcAppDir.computeSubPath(codeSource, "extensions/jdbc");
 		assertEquals(Paths.get("/tmp/project/extensions/jdbc").toAbsolutePath(), resolved);
 	}
 
 	@Test
 	void resolveSubPathRejectsBlank() {
-		assertThrows(IllegalArgumentException.class, () -> JdbcInstallDir.resolveSubPath(null));
-		assertThrows(IllegalArgumentException.class, () -> JdbcInstallDir.resolveSubPath(""));
-		assertThrows(IllegalArgumentException.class, () -> JdbcInstallDir.resolveSubPath("   "));
+		assertThrows(IllegalArgumentException.class, () -> JdbcAppDir.resolveSubPath(null));
+		assertThrows(IllegalArgumentException.class, () -> JdbcAppDir.resolveSubPath(""));
+		assertThrows(IllegalArgumentException.class, () -> JdbcAppDir.resolveSubPath("   "));
 	}
 
 	@Test
 	void resolveSubPathReturnsAbsolutePath() {
 		// Live call: must not throw, must produce an absolute normalised path ending with the requested fragment.
-		final Path resolved = JdbcInstallDir.resolveSubPath("extensions/jdbc");
+		final Path resolved = JdbcAppDir.resolveSubPath("extensions/jdbc");
 		assertNotNull(resolved);
 		assertTrue(resolved.isAbsolute(), "resolved path must be absolute, got: " + resolved);
 		assertTrue(

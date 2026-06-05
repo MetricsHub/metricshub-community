@@ -187,7 +187,7 @@ class JdbcConfigurationTest {
 			.driver(
 				DriverInfo.builder()
 					.className("org.mariadb.jdbc.Driver")
-					.jarPath("$INSTALL_DIR/lib/extensions/jdbc/mariadb-3.x.jar")
+					.jarPath("$APP_DIR/extensions/jdbc/mariadb-3.x.jar")
 					.build()
 			)
 			.build();

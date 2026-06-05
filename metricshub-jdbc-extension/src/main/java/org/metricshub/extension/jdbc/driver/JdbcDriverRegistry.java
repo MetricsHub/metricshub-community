@@ -334,7 +334,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		if (explicitJarPath == null) {
 			return """
 			JDBC driver %s not found. Drop the driver JAR into the operator-default drivers directory \
-			(typically <INSTALL_DIR>/lib/extensions/jdbc/) or set jdbc.driver.jarPath.\
+			(typically $APP_DIR/extensions/jdbc/) or set jdbc.driver.jarPath.\
 			""".formatted(descriptor.driverClass());
 		}
 		return """

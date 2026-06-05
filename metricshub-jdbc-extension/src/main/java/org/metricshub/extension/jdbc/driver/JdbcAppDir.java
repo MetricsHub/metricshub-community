@@ -30,23 +30,35 @@ import org.metricshub.engine.common.helpers.ResourceHelper;
 import org.metricshub.engine.telemetry.TelemetryManager;
 
 /**
- * Resolves install-relative sub-paths the same way {@code ConfigHelper.getSubPath} does for the
+ * Resolves app-relative sub-paths the same way {@code ConfigHelper.getSubPath} does for the
  * agent: locate the source directory of an engine class (always shaded into the agent fat-jar in
  * production), take its parent, then walk up one level and append the requested sub-path.
+ *
+ * <p>The anchor (called {@code $APP_DIR} in user-facing path expressions) differs per OS but the
+ * canonical sub-paths ({@code extensions/...}, {@code connectors/...}, {@code config/...}) always
+ * land at the right place:
  *
  * <p>Production layout (Linux):
  * <pre>
  *   /opt/metricshub/lib/app/metricshub-agent.jar  &larr; findSourceDirectory(TelemetryManager.class)
  *   /opt/metricshub/lib/app/                      &larr; parent
- *   /opt/metricshub/lib/                          &larr; parent.resolve("..")
+ *   /opt/metricshub/lib/                          &larr; $APP_DIR
  *   /opt/metricshub/lib/extensions/jdbc/          &larr; resolveSubPath("extensions/jdbc")
+ * </pre>
+ *
+ * <p>Production layout (Windows):
+ * <pre>
+ *   C:\Program Files\MetricsHub\app\metricshub-agent.jar
+ *   C:\Program Files\MetricsHub\app\             &larr; parent
+ *   C:\Program Files\MetricsHub\                 &larr; $APP_DIR
+ *   C:\Program Files\MetricsHub\extensions\jdbc\ &larr; resolveSubPath("extensions/jdbc")
  * </pre>
  *
  * <p>Development layout (Maven module run):
  * <pre>
  *   .../metricshub-engine/target/classes/         &larr; findSourceDirectory(TelemetryManager.class)
  *   .../metricshub-engine/target/                 &larr; parent
- *   .../metricshub-engine/                        &larr; parent.resolve("..")
+ *   .../metricshub-engine/                        &larr; $APP_DIR
  *   .../metricshub-engine/extensions/jdbc/        &larr; resolveSubPath("extensions/jdbc")
  * </pre>
  *
@@ -55,11 +67,11 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  */
 @Slf4j
 @NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
-public final class JdbcInstallDir {
+public final class JdbcAppDir {
 
 	/**
-	 * Resolves {@code subPath} relative to the MetricsHub install directory. See the class-level
-	 * Javadoc for the layout assumptions.
+	 * Resolves {@code subPath} relative to the MetricsHub application directory ({@code $APP_DIR}).
+	 * See the class-level Javadoc for the layout assumptions.
 	 *
 	 * @param subPath path fragment to append (e.g. {@code "extensions/jdbc"}); must not be
 	 *                {@code null} or blank.

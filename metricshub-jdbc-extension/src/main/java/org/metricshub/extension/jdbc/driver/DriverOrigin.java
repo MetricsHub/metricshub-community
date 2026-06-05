@@ -35,7 +35,7 @@ public enum DriverOrigin {
 
 	/**
 	 * Driver JAR was discovered by scanning the operator-default drivers directory (typically
-	 * {@code <INSTALL_DIR>/lib/extensions/jdbc/}) for any JAR exposing the requested
+	 * {@code $APP_DIR/extensions/jdbc/}) for any JAR exposing the requested
 	 * {@code className}. Used when {@code DriverInfo.jarPath} is null.
 	 */
 	USER_DEFAULT,

@@ -33,8 +33,9 @@ import java.util.Objects;
  * <p>Descriptors are returned by {@link JdbcDriverProvider} implementations discovered through
  * {@link java.util.ServiceLoader}. Built-in drivers (MariaDB, PostgreSQL, MySQL, H2) are advertised
  * by the shipped {@code BuiltInJdbcDriverProvider}; external drivers (JTOpen, Oracle, etc.) are
- * advertised by descriptor-only providers and resolved against {@code <INSTALL_DIR>/extensions/jdbc/}
- * at runtime.
+ * advertised by descriptor-only providers and resolved against the operator-default drivers
+ * directory at runtime — {@code /opt/metricshub/lib/extensions/jdbc/} on Linux,
+ * {@code C:\Program Files\MetricsHub\extensions\jdbc\} on Windows.
  *
  * @param driverClass    Fully-qualified {@link java.sql.Driver} implementation class. Required.
  * @param displayName    Human-readable name used in logs and diagnostics.
