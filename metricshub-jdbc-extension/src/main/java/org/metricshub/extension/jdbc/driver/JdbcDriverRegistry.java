@@ -180,8 +180,9 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		if (descriptor == null) {
 			throw new DriverResolutionException(
 				"""
-				Unknown JDBC driver class: %s. Declare it through a JdbcDriverProvider or check the \
-				connector configuration.""".formatted(key.driverClass())
+				Unknown JDBC driver class: %s. Declare it through a JdbcDriverProvider or check your JDBC \
+
+				configuration (resource jdbc.driver / connector jdbc block).""".formatted(key.driverClass())
 			);
 		}
 
@@ -198,7 +199,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 			// No JAR was located. When the caller did not supply an explicit jarPath, the driver
 			// may still be reachable through the parent classloader (typical of bundled-driver
 			// distributions where the JAR is on the agent classpath rather than under the
-			// operator-default drivers directory). Fall back to the parent loader in that case;
+			// operator-default drivers directory). Fall back to the parent loader in that case
 			// only reject when the class is absent from both isolated jars and the parent.
 			if (key.explicitJarPath() == null && isClassOnParent(descriptor.driverClass())) {
 				return loadFromParent(descriptor);
@@ -278,7 +279,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		try {
 			Class.forName(driverClass, false, parentLoader);
 			return true;
-		} catch (ClassNotFoundException e) {
+		} catch (ClassNotFoundException _) {
 			return false;
 		}
 	}
