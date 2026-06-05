@@ -267,7 +267,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 
 	/**
 	 * Tests whether {@code driverClass} is reachable through {@link #parentLoader} without
-	 * triggering its static initialiser. Used to decide whether to fall back to the parent
+	 * triggering its static initializer. Used to decide whether to fall back to the parent
 	 * classloader when no isolated JAR was located for a {@link DriverOrigin#USER_DEFAULT}
 	 * descriptor.
 	 *
