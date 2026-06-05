@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Filesystem-backed {@link JdbcDriverJarLocator}.
+ * Filesystem-backed {@link IJdbcDriverJarLocator}.
  *
  * <p>Two modes:
  *
@@ -57,7 +57,7 @@ import lombok.extern.slf4j.Slf4j;
  * those URLs then resolves the actual driver class.
  */
 @Slf4j
-public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
+public final class FilesystemDriverScanner implements IJdbcDriverJarLocator {
 
 	/** Glob meta-characters; presence in a path triggers glob resolution. */
 	private static final String GLOB_META_CHARS = "*?[";

@@ -40,7 +40,7 @@ class FilesystemDriverScannerTest {
 		Files.createFile(subdir.resolve("driver-c.jar"));
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp);
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate("com.acme.Driver", null);
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate("com.acme.Driver", null);
 		assertTrue(located.isPresent());
 		assertEquals(2, located.get().urls().length);
 		assertSame(DriverOrigin.USER_DEFAULT, located.get().origin());
@@ -52,7 +52,7 @@ class FilesystemDriverScannerTest {
 		Files.createFile(jar);
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp.resolve("default-ignored"));
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate("com.acme.Driver", jar.toString());
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate("com.acme.Driver", jar.toString());
 		assertTrue(located.isPresent());
 		assertEquals(1, located.get().urls().length);
 		assertSame(DriverOrigin.USER_EXPLICIT, located.get().origin());
@@ -71,7 +71,7 @@ class FilesystemDriverScannerTest {
 		Files.createFile(tmp.resolve("other.jar"));
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp);
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
 			"oracle.jdbc.OracleDriver",
 			tmp.toString() + java.io.File.separator + "ojdbc11-*.jar"
 		);
@@ -114,7 +114,7 @@ class FilesystemDriverScannerTest {
 		Files.createFile(deep.resolve("too-deep.jar"));
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp.resolve("ignored"));
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
 			"com.acme.Driver",
 			tmp.toString() + java.io.File.separator + "**" + java.io.File.separator + "*.jar"
 		);
@@ -134,7 +134,7 @@ class FilesystemDriverScannerTest {
 
 		final FilesystemDriverScanner scanner = new FilesystemDriverScanner(tmp.resolve("ignored"));
 		final String sep = java.io.File.separator;
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = scanner.locate(
 			"com.acme.Driver",
 			tmp.toString() + sep + "lib" + sep + "jdbc" + sep + "*.jar"
 		);

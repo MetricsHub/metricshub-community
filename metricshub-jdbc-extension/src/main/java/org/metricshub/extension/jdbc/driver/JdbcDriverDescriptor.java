@@ -30,7 +30,7 @@ import java.util.Objects;
  * <p>A descriptor does not carry the {@link java.sql.Driver} instance, nor any {@link ClassLoader}.
  * It is the recipe used by {@link JdbcDriverRegistry} to locate and load a driver on first use.
  *
- * <p>Descriptors are returned by {@link JdbcDriverProvider} implementations discovered through
+ * <p>Descriptors are returned by {@link IJdbcDriverProvider} implementations discovered through
  * {@link java.util.ServiceLoader}. Built-in drivers (MariaDB, PostgreSQL, MySQL, H2) are advertised
  * by the shipped {@code BuiltInJdbcDriverProvider}; external drivers (JTOpen, Oracle, etc.) are
  * advertised by descriptor-only providers and resolved against the operator-default drivers

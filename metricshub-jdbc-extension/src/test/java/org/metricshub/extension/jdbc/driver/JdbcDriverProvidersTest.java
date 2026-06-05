@@ -49,8 +49,8 @@ class JdbcDriverProvidersTest {
 	void serviceLoaderDiscoversBothProviders() {
 		boolean builtIn = false;
 		boolean external = false;
-		for (final JdbcDriverProvider p : ServiceLoader.load(
-			JdbcDriverProvider.class,
+		for (final IJdbcDriverProvider p : ServiceLoader.load(
+			IJdbcDriverProvider.class,
 			JdbcDriverProvidersTest.class.getClassLoader()
 		)) {
 			if (p instanceof BuiltInJdbcDriverProvider) {

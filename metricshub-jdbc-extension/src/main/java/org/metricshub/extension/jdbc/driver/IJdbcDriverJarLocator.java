@@ -42,7 +42,7 @@ import java.util.Optional;
  * contain glob meta-characters like {@code *} that {@link java.nio.file.Path} cannot represent on
  * Windows.
  */
-public interface JdbcDriverJarLocator {
+public interface IJdbcDriverJarLocator {
 	/**
 	 * Locates the JAR(s) that provide the given driver class.
 	 *

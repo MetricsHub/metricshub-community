@@ -23,6 +23,7 @@ package org.metricshub.extension.jdbc.driver;
 
 import java.util.Map;
 import java.util.Optional;
+import lombok.NoArgsConstructor;
 
 /**
  * Static URL-prefix to driver-class lookup for the JDBC drivers shipped inside
@@ -33,6 +34,7 @@ import java.util.Optional;
  * tool). External drivers (Oracle, JTOpen, etc.) are not inferred here: they must always be
  * declared explicitly through {@link org.metricshub.engine.connector.model.identity.DriverInfo}.
  */
+@NoArgsConstructor(access = lombok.AccessLevel.PRIVATE)
 public final class BuiltInJdbcDrivers {
 
 	private static final Map<String, String> URL_PREFIX_TO_CLASS = Map.of(
@@ -45,8 +47,6 @@ public final class BuiltInJdbcDrivers {
 		"jdbc:h2:",
 		"org.h2.Driver"
 	);
-
-	private BuiltInJdbcDrivers() {}
 
 	/**
 	 * Returns the driver class advertised by {@link BuiltInJdbcDriverProvider} whose URL prefix

@@ -39,7 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Engine-scoped registry of JDBC drivers.
  *
- * <p>Aggregates {@link JdbcDriverDescriptor}s from {@link JdbcDriverProvider}s and resolves driver
+ * <p>Aggregates {@link JdbcDriverDescriptor}s from {@link IJdbcDriverProvider}s and resolves driver
  * requests by {@code (driverClass, explicitJarPath)}. Caches one {@link LoadedDriver} per resolved
  * key for the lifetime of the registry.
  *
@@ -47,7 +47,7 @@ import lombok.extern.slf4j.Slf4j;
  * <ol>
  *   <li>Look up the descriptor for {@code driverClass}. If absent, throw
  *       {@link DriverResolutionException}: every supported driver must be advertised by a
- *       {@link JdbcDriverProvider}.</li>
+ *       {@link IJdbcDriverProvider}.</li>
  *   <li>If {@code origin == BUILT_IN} <em>and</em> no explicit JAR path is supplied, load the
  *       driver from {@link #parentLoader} (the JDBC extension's own classloader) — no isolated
  *       loader.</li>
@@ -66,7 +66,7 @@ import lombok.extern.slf4j.Slf4j;
 public final class JdbcDriverRegistry implements AutoCloseable {
 
 	private final ClassLoader parentLoader;
-	private final JdbcDriverJarLocator jarLocator;
+	private final IJdbcDriverJarLocator jarLocator;
 
 	/** Descriptors keyed by fully-qualified driver class. Insertion order preserved for logs. */
 	private final Map<String, JdbcDriverDescriptor> descriptorsByClass;
@@ -81,14 +81,14 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 * Primary constructor.
 	 *
 	 * @param descriptors  initial set of descriptors (typically aggregated from
-	 *                     {@link JdbcDriverProvider}s).
+	 *                     {@link IJdbcDriverProvider}s).
 	 * @param jarLocator   strategy for locating JAR(s) on disk.
 	 * @param parentLoader parent classloader used for built-ins and as the parent of every
 	 *                     {@link IsolatedDriverClassLoader}.
 	 */
 	public JdbcDriverRegistry(
 		final Collection<JdbcDriverDescriptor> descriptors,
-		final JdbcDriverJarLocator jarLocator,
+		final IJdbcDriverJarLocator jarLocator,
 		final ClassLoader parentLoader
 	) {
 		this.parentLoader = Objects.requireNonNull(parentLoader, "parentLoader");
@@ -111,16 +111,19 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	}
 
 	/**
-	 * Builds a registry by aggregating every {@link JdbcDriverProvider} discoverable via
+	 * Builds a registry by aggregating every {@link IJdbcDriverProvider} discoverable via
 	 * {@link ServiceLoader} on the given classloader.
 	 *
 	 * @param jarLocator   strategy for locating JAR(s) on disk.
 	 * @param parentLoader parent classloader; also the loader used for service discovery.
 	 * @return a new registry; never {@code null}.
 	 */
-	public static JdbcDriverRegistry buildDefault(final JdbcDriverJarLocator jarLocator, final ClassLoader parentLoader) {
+	public static JdbcDriverRegistry buildDefault(
+		final IJdbcDriverJarLocator jarLocator,
+		final ClassLoader parentLoader
+	) {
 		final List<JdbcDriverDescriptor> aggregated = new ArrayList<>();
-		for (final JdbcDriverProvider provider : ServiceLoader.load(JdbcDriverProvider.class, parentLoader)) {
+		for (final IJdbcDriverProvider provider : ServiceLoader.load(IJdbcDriverProvider.class, parentLoader)) {
 			aggregated.addAll(provider.provide());
 		}
 		return new JdbcDriverRegistry(aggregated, jarLocator, parentLoader);
@@ -187,7 +190,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 			return loadFromParent(descriptor);
 		}
 
-		final Optional<JdbcDriverJarLocator.LocatedDriverJars> located = jarLocator.locate(
+		final Optional<IJdbcDriverJarLocator.LocatedDriverJars> located = jarLocator.locate(
 			key.driverClass(),
 			key.explicitJarPath()
 		);

@@ -26,7 +26,7 @@ import java.util.List;
 import lombok.NoArgsConstructor;
 
 /**
- * Descriptor-only {@link JdbcDriverProvider} for JDBC drivers MetricsHub supports but does
+ * Descriptor-only {@link IJdbcDriverProvider} for JDBC drivers MetricsHub supports but does
  * <em>not</em> ship.
  *
  * <p>Each descriptor declares its driver class and the vendor packages that must be isolated.
@@ -41,7 +41,7 @@ import lombok.NoArgsConstructor;
  * descriptor advertised here ultimately requires a user-supplied JAR.
  */
 @NoArgsConstructor
-public final class ExternalJdbcDriverDescriptorsProvider implements JdbcDriverProvider {
+public final class ExternalJdbcDriverDescriptorsProvider implements IJdbcDriverProvider {
 
 	@Override
 	public Collection<JdbcDriverDescriptor> provide() {

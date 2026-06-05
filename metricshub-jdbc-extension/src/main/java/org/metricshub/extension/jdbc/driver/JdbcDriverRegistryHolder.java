@@ -234,7 +234,7 @@ public final class JdbcDriverRegistryHolder {
 	}
 
 	/**
-	 * Builds a fresh registry using {@link JdbcDriverRegistry#buildDefault(JdbcDriverJarLocator, ClassLoader)}
+	 * Builds a fresh registry using {@link JdbcDriverRegistry#buildDefault(IJdbcDriverJarLocator, ClassLoader)}
 	 * with a {@link FilesystemDriverScanner} rooted at {@link #resolveDriversDir()}.
 	 *
 	 * @return a new {@link JdbcDriverRegistry}; never {@code null}.

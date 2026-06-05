@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 
 class JdbcDriverRegistryTest {
 
-	private static final JdbcDriverJarLocator NO_OP = (_, _) -> Optional.empty();
+	private static final IJdbcDriverJarLocator NO_OP = (_, _) -> Optional.empty();
 
 	private static final JdbcDriverDescriptor H2_BUILTIN = new JdbcDriverDescriptor(
 		"org.h2.Driver",
@@ -77,7 +77,7 @@ class JdbcDriverRegistryTest {
 				registry.resolve("com.acme.Nope", (String) null)
 			);
 			assertTrue(ex.getMessage().contains("com.acme.Nope"));
-			assertTrue(ex.getMessage().contains("JdbcDriverProvider"), ex.getMessage());
+			assertTrue(ex.getMessage().contains("IJdbcDriverProvider"), ex.getMessage());
 		}
 	}
 
@@ -182,8 +182,8 @@ class JdbcDriverRegistryTest {
 		final URL h2JarUrl = org.h2.Driver.class.getProtectionDomain().getCodeSource().getLocation();
 		assertNotNull(h2JarUrl, "test setup: h2 jar must be locatable");
 
-		final JdbcDriverJarLocator locator = (_, _) ->
-			Optional.of(new JdbcDriverJarLocator.LocatedDriverJars(new URL[] { h2JarUrl }, DriverOrigin.USER_EXPLICIT));
+		final IJdbcDriverJarLocator locator = (_, _) ->
+			Optional.of(new IJdbcDriverJarLocator.LocatedDriverJars(new URL[] { h2JarUrl }, DriverOrigin.USER_EXPLICIT));
 
 		try (
 			JdbcDriverRegistry registry = new JdbcDriverRegistry(

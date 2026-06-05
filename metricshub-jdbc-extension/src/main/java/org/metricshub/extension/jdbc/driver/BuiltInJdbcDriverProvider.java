@@ -26,7 +26,7 @@ import java.util.List;
 import lombok.NoArgsConstructor;
 
 /**
- * {@link JdbcDriverProvider} that advertises the JDBC drivers shaded into
+ * {@link IJdbcDriverProvider} that advertises the JDBC drivers shaded into
  * {@code metricshub-jdbc-extension}: MariaDB, PostgreSQL, MySQL and H2.
  *
  * <p>All descriptors use {@link DriverOrigin#BUILT_IN}, which instructs
@@ -34,7 +34,7 @@ import lombok.NoArgsConstructor;
  * classloader and no filesystem lookup) when no variant is requested.
  */
 @NoArgsConstructor
-public final class BuiltInJdbcDriverProvider implements JdbcDriverProvider {
+public final class BuiltInJdbcDriverProvider implements IJdbcDriverProvider {
 
 	@Override
 	public Collection<JdbcDriverDescriptor> provide() {

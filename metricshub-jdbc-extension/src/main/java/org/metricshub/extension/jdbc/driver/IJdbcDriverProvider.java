@@ -43,7 +43,7 @@ import java.util.Collection;
  *       {@code C:\Program Files\MetricsHub\extensions\jdbc\} on Windows.</li>
  * </ul>
  */
-public interface JdbcDriverProvider {
+public interface IJdbcDriverProvider {
 	/**
 	 * Returns the descriptors contributed by this provider.
 	 *
