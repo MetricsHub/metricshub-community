@@ -179,16 +179,25 @@ public class NetworkHelper {
 	 */
 	public static URL createUrl(@NonNull String protocol, @NonNull String hostnameOrIp, @NonNull Integer portNumber)
 		throws MalformedURLException, UnknownHostException, URISyntaxException {
-		// Detect if the host is an IPv6 address
-		final InetAddress address = InetAddress.getByName(hostnameOrIp);
+		final boolean isIpv6AlreadyWrapped = IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches();
+		final String hostForValidation;
+		if (isIpv6AlreadyWrapped && hostnameOrIp.length() > 2) {
+			hostForValidation = hostnameOrIp.substring(1, hostnameOrIp.length() - 1);
+		} else {
+			hostForValidation = hostnameOrIp;
+		}
 
 		final String uriHost;
-		if (
-			// CHECKSTYLE:OFF
-			address instanceof java.net.Inet6Address &&
-			!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches() // CHECKSTYLE:ON
-		) {
-			uriHost = "[" + hostnameOrIp + "]";
+		if (hostForValidation.contains(":")) {
+			final InetAddress address = InetAddress.getByName(hostForValidation);
+			if (address instanceof java.net.Inet6Address && !isIpv6AlreadyWrapped) {
+				uriHost = "[" + hostForValidation + "]";
+			} else {
+				uriHost = hostnameOrIp;
+			}
+		} else if (hostForValidation.matches("^[0-9.]+$")) {
+			InetAddress.getByName(hostForValidation);
+			uriHost = hostForValidation;
 		} else {
 			uriHost = hostnameOrIp;
 		}
