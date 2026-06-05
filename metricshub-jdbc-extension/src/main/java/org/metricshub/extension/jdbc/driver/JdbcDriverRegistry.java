@@ -180,7 +180,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 		if (descriptor == null) {
 			throw new DriverResolutionException(
 				"""
-				Unknown JDBC driver class: %s. Declare it through a JdbcDriverProvider or check your JDBC \
+				Unknown JDBC driver class: %s. Declare it through a IJdbcDriverProvider or check your JDBC \
 
 				configuration (resource jdbc.driver / connector jdbc block).""".formatted(key.driverClass())
 			);

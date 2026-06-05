@@ -51,7 +51,7 @@ class JdbcDriverDescriptorTest {
 	}
 
 	@Test
-	void normalisesNullPackages() {
+	void normalizesNullPackages() {
 		final JdbcDriverDescriptor d = new JdbcDriverDescriptor("a.B", "x", DriverOrigin.BUILT_IN, null);
 		assertEquals(List.of(), d.driverPackages());
 	}

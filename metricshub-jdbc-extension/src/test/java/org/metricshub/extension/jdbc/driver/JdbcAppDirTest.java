@@ -20,7 +20,7 @@ class JdbcAppDirTest {
 
 	@Test
 	void computeSubPathProductionWindowsLayout() {
-		// Use a forward-slash representation; Paths normalises separators per the running OS.
+		// Use a forward-slash representation; Paths normalizes separators per the running OS.
 		final Path codeSource = Paths.get("/Program Files/MetricsHub/app/metricshub-agent.jar");
 		final Path resolved = JdbcAppDir.computeSubPath(codeSource, "extensions/jdbc");
 		assertEquals(Paths.get("/Program Files/MetricsHub/extensions/jdbc").toAbsolutePath(), resolved);

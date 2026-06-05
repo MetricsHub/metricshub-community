@@ -56,7 +56,6 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.Monitor;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.extension.jdbc.driver.BuiltInJdbcDrivers;
 import org.metricshub.extension.jdbc.driver.DriverResolutionException;
 import org.metricshub.extension.jdbc.driver.JdbcDriverRegistryHolder;
 import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
@@ -408,8 +407,12 @@ public class JdbcExtension implements IProtocolExtension {
 		if (selection != null) {
 			effective = selection;
 		} else {
-			final Optional<String> inferred = BuiltInJdbcDrivers.driverClassForUrl(jdbcUrl);
-			if (inferred.isEmpty()) {
+			// Walk every registered descriptor (built-in + external via ServiceLoader) and pick
+			// the first one whose Driver instance accepts this URL. Catches enterprise
+			// distributions where Oracle/JTOpen/DB2/etc. ship on the agent classpath without an
+			// explicit jdbc.driver declaration.
+			final JdbcDriverSelection inferred = JdbcDriverRegistryHolder.findSelectionForUrl(jdbcUrl);
+			if (inferred == null) {
 				log.warn(
 					"isDatabaseAlive: no JDBC driver accepts URL {}; declare jdbc.driver.className on the resource " +
 						"or install the driver JAR (operator-default drivers directory or agent classpath).",
@@ -417,7 +420,7 @@ public class JdbcExtension implements IProtocolExtension {
 				);
 				return false;
 			}
-			effective = new JdbcDriverSelection(inferred.get(), null);
+			effective = inferred;
 		}
 		final LoadedDriver loaded;
 		try {
