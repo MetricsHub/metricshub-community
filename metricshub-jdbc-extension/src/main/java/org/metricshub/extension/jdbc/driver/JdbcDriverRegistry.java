@@ -174,13 +174,15 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	 */
 	private LoadedDriver doResolve(final Key key) {
 		final JdbcDriverDescriptor descriptor = descriptorsByClass.get(key.driverClass());
+		if (descriptor == null) {
 		if (descriptor == null) {
 			throw new DriverResolutionException(
 				"""
-				Unknown JDBC driver class: %s. Declare it through a JdbcDriverProvider or check the \
-				connector configuration.""".formatted(key.driverClass())
+				Unknown JDBC driver class: %s. Declare it through a JdbcDriverProvider or check your JDBC \
+				configuration (resource jdbc.driver / connector jdbc block).""".formatted(key.driverClass())
 			);
 		}
+		}
 
 		final boolean useBuiltIn = descriptor.origin() == DriverOrigin.BUILT_IN && key.explicitJarPath() == null;
 		if (useBuiltIn) {
