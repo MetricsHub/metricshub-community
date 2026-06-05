@@ -451,19 +451,14 @@ public class JdbcExtension implements IProtocolExtension {
 	 *
 	 * <p>Priority order:
 	 * <ol>
-	 *   <li>Resource-level {@link JdbcConfiguration#getDriver() configuration driver}.</li>
-	 *   <li>Any connector monitor in the {@link TelemetryManager} whose connector identity
-	 *       advertises a {@link DriverInfo} (covers cycles after detection has populated
-	 *       connector monitors, including database connectors that ship explicit drivers).</li>
+	 *   <li>Resource-level {@link JdbcConfiguration#getDriver()} configuration driver.</li>
+	 *   <li>Any connector monitor in the {@link TelemetryManager} whose connector identity advertises a {@link DriverInfo}.</li>
+	 *   <li>Best-effort URL-based lookup via {@link JdbcDriverRegistryHolder#findSelectionForUrl(String)}.</li>
 	 * </ol>
-	 * Returns {@code null} when no driver is declared so the caller can fall back to URL-based
-	 * built-in inference.
 	 *
 	 * @param jdbcConfiguration the resource-level configuration; never {@code null}.
-	 * @param telemetryManager  the telemetry manager carrying connector monitors and the connector
-	 *                          store; never {@code null}.
-	 * @return a resolved {@link JdbcDriverSelection}, or {@code null} when no declared driver was
-	 *         found or its resolution failed.
+	 * @param telemetryManager  the telemetry manager carrying connector monitors and the connector store; never {@code null}.
+	 * @return a resolved {@link JdbcDriverSelection}, or {@code null} when no suitable driver can be determined.
 	 */
 	private JdbcDriverSelection resolveHealthCheckSelection(
 		final JdbcConfiguration jdbcConfiguration,
