@@ -38,7 +38,7 @@ import lombok.NoArgsConstructor;
  *   jdbc:
  *     driver:
  *       className: com.acme.Driver
- *       jarPath:   $INSTALL_DIR/lib/extensions/jdbc/acme.jar
+ *       jarPath:   $APP_DIR/extensions/jdbc/acme.jar
  * </pre>
  *
  * <p>The same {@link DriverInfo} type is reused on the resource side under {@code jdbc.driver}.

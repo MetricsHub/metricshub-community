@@ -39,7 +39,7 @@ import lombok.NoArgsConstructor;
  *   <li>{@link #className} — required. Fully-qualified {@link java.sql.Driver} implementation
  *       class. Doubles as the primary cache key on the registry side.</li>
  *   <li>{@link #jarPath} — optional. Path expression pointing at a driver JAR file. May use
- *       placeholders such as {@code $INSTALL_DIR} or {@code $USER_HOME} (and, resource-scope only,
+ *       placeholders such as {@code $APP_DIR} or {@code $USER_HOME} (and, resource-scope only,
  *       {@code $WORKING_DIR}) and {@code glob:} patterns. When {@code null}, the operator-default
  *       drivers directory is scanned for a JAR exposing {@link #className}.</li>
  * </ul>
@@ -67,7 +67,7 @@ public class DriverInfo implements Serializable {
 	 *
 	 * @param className fully-qualified driver class (required, non-blank).
 	 * @param jarPath   optional path expression pointing at the driver JAR; placeholders are
-	 *                  accepted as-is and resolved at lookup. Blank values are normalised to
+	 *                  accepted as-is and resolved at lookup. Blank values are normalized to
 	 *                  {@code null}.
 	 * @throws JsonMappingException when {@code className} is missing or blank.
 	 */

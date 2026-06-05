@@ -21,14 +21,14 @@ class JdbcInfoTest {
 	void bothFieldsValid() throws Exception {
 		final DriverInfo info = DriverInfo.create(
 			"com.ibm.as400.access.AS400JDBCDriver",
-			"$INSTALL_DIR/lib/extensions/jdbc/jt400.jar"
+			"$APP_DIR/extensions/jdbc/jt400.jar"
 		);
 		assertEquals("com.ibm.as400.access.AS400JDBCDriver", info.getClassName());
-		assertEquals("$INSTALL_DIR/lib/extensions/jdbc/jt400.jar", info.getJarPath());
+		assertEquals("$APP_DIR/extensions/jdbc/jt400.jar", info.getJarPath());
 	}
 
 	@Test
-	void blankPathIsNormalisedToNull() throws Exception {
+	void blankPathIsNormalizedToNull() throws Exception {
 		assertNull(DriverInfo.create("a.B", "   ").getJarPath());
 		assertNull(DriverInfo.create("a.B", "").getJarPath());
 	}
@@ -52,8 +52,8 @@ class JdbcInfoTest {
 	void parserAcceptsPathPlaceholdersAndGlobs() throws Exception {
 		// Parse-time accepts everything non-blank; resolver enforces the security boundary.
 		assertEquals(
-			"$INSTALL_DIR/lib/extensions/jdbc/zos/db2jcc4.jar",
-			DriverInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/zos/db2jcc4.jar").getJarPath()
+			"$APP_DIR/extensions/jdbc/zos/db2jcc4.jar",
+			DriverInfo.create("a.B", "$APP_DIR/extensions/jdbc/zos/db2jcc4.jar").getJarPath()
 		);
 		assertEquals(
 			"$USER_HOME/.metricshub/drivers/acme.jar",
@@ -64,8 +64,8 @@ class JdbcInfoTest {
 			DriverInfo.create("a.B", "/opt/oracle/instantclient/ojdbc11.jar").getJarPath()
 		);
 		assertEquals(
-			"$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar",
-			DriverInfo.create("a.B", "$INSTALL_DIR/lib/extensions/jdbc/ojdbc*.jar").getJarPath()
+			"$APP_DIR/extensions/jdbc/ojdbc*.jar",
+			DriverInfo.create("a.B", "$APP_DIR/extensions/jdbc/ojdbc*.jar").getJarPath()
 		);
 	}
 }

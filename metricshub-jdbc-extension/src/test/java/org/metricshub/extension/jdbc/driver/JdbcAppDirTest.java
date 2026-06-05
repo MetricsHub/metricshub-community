@@ -45,7 +45,7 @@ class JdbcAppDirTest {
 
 	@Test
 	void resolveSubPathReturnsAbsolutePath() {
-		// Live call: must not throw, must produce an absolute normalised path ending with the requested fragment.
+		// Live call: must not throw, must produce an absolute normalized path ending with the requested fragment.
 		final Path resolved = JdbcAppDir.resolveSubPath("extensions/jdbc");
 		assertNotNull(resolved);
 		assertTrue(resolved.isAbsolute(), "resolved path must be absolute, got: " + resolved);
