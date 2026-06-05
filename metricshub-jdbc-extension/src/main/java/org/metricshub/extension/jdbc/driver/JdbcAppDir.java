@@ -54,14 +54,6 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  *   C:\Program Files\MetricsHub\extensions\jdbc\ &larr; resolveSubPath("extensions/jdbc")
  * </pre>
  *
- * <p>Development layout (Maven module run):
- * <pre>
- *   .../metricshub-engine/target/classes/         &larr; findSourceDirectory(TelemetryManager.class)
- *   .../metricshub-engine/target/                 &larr; parent
- *   .../metricshub-engine/                        &larr; $APP_DIR
- *   .../metricshub-engine/extensions/jdbc/        &larr; resolveSubPath("extensions/jdbc")
- * </pre>
- *
  * <p>The pure helper {@link #computeSubPath(Path, String)} contains the path math so it can be
  * tested without depending on where JUnit happens to load classes from.
  */
