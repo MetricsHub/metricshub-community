@@ -178,20 +178,21 @@ public class JdbcExtension implements IProtocolExtension {
 	}
 
 	/**
-	 * Pre-resolves the JDBC driver to use, applying the following priority order:
+	 * Resolves the JDBC driver selection to use for SQL execution.
+	 *
+	 * <p>Priority order:
 	 * <ol>
-	 *   <li>Resource-level {@link JdbcConfiguration#getDriver() configuration driver} block, when set.</li>
-	 *   <li>Connector-level {@link ConnectorIdentity#getJdbc() identity jdbc} block, when set.</li>
+	 *   <li>Resource-level {@link JdbcConfiguration#getDriver()} configuration driver block, when set.</li>
+	 *   <li>Connector-level {@link ConnectorIdentity#getJdbc()} identity jdbc block, when set.</li>
+	 *   <li>Best-effort URL-based lookup via {@link JdbcDriverRegistryHolder#findSelectionForUrl(String)}.</li>
 	 * </ol>
-	 * Each level is null-safe and resolution failures are swallowed at DEBUG so the eventual
-	 * {@code Driver.connect} call surfaces the real {@link java.sql.SQLException}.
 	 *
 	 * @param connectorId      identifier of the connector whose source or criterion is being
 	 *                         processed; may be {@code null} or unknown to the store.
 	 * @param telemetryManager telemetry manager carrying host configuration and connector store;
 	 *                         may be {@code null}.
-	 * @return the resolved {@link JdbcDriverSelection}, or {@code null} when no {@link DriverInfo}
-	 *         block is declared (legacy zero-config path).
+	 * @return the resolved {@link JdbcDriverSelection}, or {@code null} when {@code telemetryManager}
+	 *         is {@code null} or when no suitable driver can be determined.
 	 */
 	private JdbcDriverSelection ensureDeclaredDriver(final String connectorId, final TelemetryManager telemetryManager) {
 		if (telemetryManager == null) {
