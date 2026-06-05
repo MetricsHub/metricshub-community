@@ -24,8 +24,10 @@ package org.metricshub.extension.jdbc.driver;
 /**
  * Thrown when {@link JdbcDriverRegistry} cannot locate, load, or instantiate a JDBC driver.
  *
- * <p>The message is intended to be operator-facing and should clearly name the driver class and, when applicable,
- * the expected JAR path or directory involved in resolution.
+ * <p>The message is intended to be operator-facing and should clearly name the driver class and, when applicable,
+
+ * the expected JAR path or directory involved in resolution.
+
  */
 public class DriverResolutionException extends RuntimeException {
 
