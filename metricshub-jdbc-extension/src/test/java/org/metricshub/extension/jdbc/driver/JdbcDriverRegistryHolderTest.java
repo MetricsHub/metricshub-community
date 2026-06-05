@@ -69,13 +69,19 @@ class JdbcDriverRegistryHolderTest {
 	}
 
 	@Test
-	void resolveSelectionRejectsInvalidPath() {
-		// Path with traversal must be rejected and yield null.
+	void resolveSelectionRejectsInvalidPathButKeepsDriverClass() {
+		// A malformed jarPath (traversal, unknown placeholder, …) must NOT silently drop the
+		// whole selection — that would let URL-based inference pick a different driver. The bad
+		// path is rejected and logged, but the declared className is preserved so the registry
+		// still tries to honour the operator's intent.
 		final DriverInfo info = DriverInfo.builder()
 			.className("com.example.NoSuchDriver")
 			.jarPath("/etc/../shadow")
 			.build();
-		assertNull(JdbcDriverRegistryHolder.resolveSelection(info));
+		final JdbcDriverSelection selection = JdbcDriverRegistryHolder.resolveSelection(info);
+		assertNotNull(selection);
+		assertEquals("com.example.NoSuchDriver", selection.driverClass());
+		assertNull(selection.explicitJarPath());
 	}
 
 	@Test

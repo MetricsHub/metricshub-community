@@ -39,9 +39,12 @@ import lombok.NoArgsConstructor;
  *   <li>{@link #className} — required. Fully-qualified {@link java.sql.Driver} implementation
  *       class. Doubles as the primary cache key on the registry side.</li>
  *   <li>{@link #jarPath} — optional. Path expression pointing at a driver JAR file. May use
- *       placeholders such as {@code $APP_DIR}, {@code $USER_HOME}, {@code $WORKING_DIR} and glob
- *       patterns. When {@code null}, the operator-default drivers directory is scanned for a JAR
- *       exposing {@link #className}.</li>
+ *       placeholders such as {@code $APP_DIR}, {@code $USER_HOME}, {@code $WORKING_DIR} and glob
+
+ *       patterns. When {@code null}, the operator-default drivers directory is scanned for a JAR
+
+ *       exposing {@link #className}.</li>
+
  * </ul>
  *
  * <p>The parser accepts {@link #jarPath} syntactically; placeholder expansion and the

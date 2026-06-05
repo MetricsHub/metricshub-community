@@ -104,8 +104,15 @@ public final class JdbcDriverRegistryHolder {
 	 * {@code null}, which would let callers fall back to built-in inference and hide the real
 	 * problem.
 	 *
+	 * <p>When the {@code jarPath} expression itself is malformed (unknown placeholder, traversal
+	 * segment, ...) the bad path is rejected and logged at WARN, but the declared
+	 * {@code className} is <em>preserved</em>. The returned selection carries a {@code null}
+	 * {@code explicitJarPath}, so the registry still attempts to resolve the operator's declared
+	 * class via the parent classloader and the scanned drivers directory rather than silently
+	 * falling back to URL-based driver inference (which could pick an unintended driver).
+	 *
 	 * <p>Returns {@code null} only when nothing was declared ({@code info == null} or className is
-	 * blank), or when the {@code jarPath} expression itself is malformed (logged at DEBUG).
+	 * blank).
 	 *
 	 * @param info the JDBC requirement; may be {@code null}, in which case this method returns
 	 *             {@code null}.
@@ -120,12 +127,21 @@ public final class JdbcDriverRegistryHolder {
 			return null;
 		}
 		DatabaseLogUtils.disableLogging(driverClass);
-		final String explicitJarPath;
+		String explicitJarPath;
 		try {
 			explicitJarPath = resolveDriverPath(info.getJarPath());
 		} catch (IllegalArgumentException e) {
-			log.debug("Invalid jarPath for className={}: {}", driverClass, e.getMessage());
-			return null;
+			// Reject the malformed path but keep the declared className so the registry can still
+			// honor the operator's intent (parent loader / scanned drivers directory) instead of
+			// silently demoting the whole selection and letting URL-based inference pick a
+			// different driver.
+			log.warn(
+				"Invalid jarPath {} for className={}: {}. Path is ignored; resolution will use the operator-default drivers directory or the parent classloader.",
+				info.getJarPath(),
+				driverClass,
+				e.getMessage()
+			);
+			explicitJarPath = null;
 		}
 		return new JdbcDriverSelection(driverClass, explicitJarPath);
 	}
