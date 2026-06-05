@@ -208,7 +208,12 @@ public final class FilesystemDriverScanner implements JdbcDriverJarLocator {
 			log.debug("JDBC driver default directory {} contains no JARs (driverClass={}).", defaultDir, driverClass);
 			return Optional.empty();
 		}
-		log.info("Located {} JAR(s) for driver {} in {} (origin=USER_DEFAULT).", urls.length, driverClass, defaultDir);
+		log.info(
+			"Located {} JAR(s) in default JDBC drivers directory {} (origin=USER_DEFAULT, driverClass={}).",
+			urls.length,
+			defaultDir,
+			driverClass
+		);
 		return Optional.of(new LocatedDriverJars(urls, DriverOrigin.USER_DEFAULT));
 	}
 
