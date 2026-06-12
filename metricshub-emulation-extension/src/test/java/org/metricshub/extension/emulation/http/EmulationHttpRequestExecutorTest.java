@@ -544,4 +544,182 @@ class EmulationHttpRequestExecutorTest {
 
 		assertNull(executor.executeHttp(request, false, tm));
 	}
+
+	// ---- URL-based matching ----
+
+	@Test
+	void testExecuteHttpUrlMatch(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      url: http://host:1234/full
+			    response:
+			      file: url-response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/full")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		final String result = executor.executeHttp(request, false, tm);
+		assertEquals("url answer", result);
+	}
+
+	@Test
+	void testExecuteHttpUrlMismatch(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      url: http://host:1234/full
+			    response:
+			      file: url-response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/different")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		assertNull(executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathOnlyEntryNotMatchedByUrlOnlyRequest(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("response.txt"), "answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		// Request only sets url, the entry only sets path → no match (strict equality on both)
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/api/v1/status")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		assertNull(executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathAndUrlBothMatch(@TempDir Path tempDir) throws IOException {
+		// A single entry carrying both path and url fields is what the recorder
+		// produces when both are set on the request.
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/data
+			      url: http://host:1234
+			    response:
+			      file: combined.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		// Request supplies both path and url and matches the entry
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.url("http://host:1234")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertEquals("combined answer", executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathAndUrlMismatchWhenOnlyOneMatches(@TempDir Path tempDir) throws IOException {
+		// Entry has both path and url. Request must match BOTH (strict equality).
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/data
+			      url: http://host:1234
+			    response:
+			      file: combined.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		// Path matches but url does not → no match
+		final HttpRequest pathOnlyRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(pathOnlyRequest, false, tm));
+
+		// Url matches but path does not → no match
+		final HttpRequest urlOnlyRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(urlOnlyRequest, false, tm));
+
+		// Path matches but url differs → no match
+		final HttpRequest mismatchUrlRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.url("http://other-host:9999")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(mismatchUrlRequest, false, tm));
+	}
 }

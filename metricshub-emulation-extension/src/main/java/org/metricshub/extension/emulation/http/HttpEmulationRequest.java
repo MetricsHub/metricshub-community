@@ -38,6 +38,7 @@ public class HttpEmulationRequest {
 
 	private String method;
 	private String path;
+	private String url;
 	private String body;
 	private LinkedHashMap<String, String> headers;
 }
