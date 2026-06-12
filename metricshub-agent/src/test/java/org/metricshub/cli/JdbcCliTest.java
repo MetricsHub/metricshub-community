@@ -2,6 +2,7 @@ package org.metricshub.cli;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -71,5 +72,27 @@ public class JdbcCliTest {
 		assertTrue(jdbcCli.isCharArrayBlank(new char[] {}));
 		assertTrue(jdbcCli.isCharArrayBlank(new char[] { ' ', ' ', ' ' }));
 		assertFalse(jdbcCli.isCharArrayBlank(new char[] { ' ', ' ', ' ', 's' }));
+	}
+
+	@Test
+	void testDriverOptionsParsing() {
+		initCli();
+		commandLine.parseArgs(
+			HOSTNAME,
+			"--url=" + URL,
+			"--query=" + SQL_QUERY,
+			"--driver-class=com.ibm.as400.access.AS400JDBCDriver",
+			"--driver-jar=$APP_DIR/drivers/jt400.jar"
+		);
+		assertEquals("com.ibm.as400.access.AS400JDBCDriver", jdbcCli.getDriverClass());
+		assertEquals("$APP_DIR/drivers/jt400.jar", jdbcCli.getDriverJar());
+	}
+
+	@Test
+	void testDriverOptionsDefaultsAreNull() {
+		initCli();
+		commandLine.parseArgs(HOSTNAME, "--url=" + URL, "--query=" + SQL_QUERY);
+		assertNull(jdbcCli.getDriverClass());
+		assertNull(jdbcCli.getDriverJar());
 	}
 }

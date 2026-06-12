@@ -194,7 +194,7 @@ public class SqlClientExecutor {
 			",",
 			columns
 				.stream()
-				.map(c -> "?")
+				.map(_ -> "?")
 				.toArray(String[]::new)
 		);
 

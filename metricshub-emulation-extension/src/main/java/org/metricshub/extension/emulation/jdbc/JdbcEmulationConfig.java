@@ -59,7 +59,8 @@ public class JdbcEmulationConfig extends JdbcConfiguration {
 			configuration.getType(),
 			configuration.getPort(),
 			configuration.getDatabase(),
-			configuration.getHostname()
+			configuration.getHostname(),
+			configuration.getDriver()
 		);
 		this.directory = directory;
 	}
