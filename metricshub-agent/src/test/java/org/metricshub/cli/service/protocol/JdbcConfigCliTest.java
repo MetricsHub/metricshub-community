@@ -2,11 +2,13 @@ package org.metricshub.cli.service.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.metricshub.cli.service.CliExtensionManager;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jdbc.JdbcExtension;
@@ -51,6 +53,75 @@ class JdbcConfigCliTest {
 			assertEquals("mydatabase", jdbcConfiguration.getDatabase());
 			assertEquals("MySQL", jdbcConfiguration.getType());
 			assertEquals("testPassword", String.valueOf(jdbcConfiguration.getPassword()));
+			assertNull(jdbcConfiguration.getDriver(), "driver should be null when no --jdbc-driver-class is provided");
+		}
+	}
+
+	@Test
+	void testToProtocolWithDriver() throws Exception {
+		final JdbcConfigCli jdbcConfigCli = new JdbcConfigCli();
+		jdbcConfigCli.setUrl("jdbc:as400://ibmi-01".toCharArray());
+		jdbcConfigCli.setUsername("QSECOFR");
+		jdbcConfigCli.setPassword("secret".toCharArray());
+		jdbcConfigCli.setTimeout("60");
+		jdbcConfigCli.setDatabase("ibmi-db");
+		jdbcConfigCli.setType("DB2");
+		jdbcConfigCli.setDriverClass("  com.ibm.as400.access.AS400JDBCDriver  ");
+		jdbcConfigCli.setDriverJar("  $APP_DIR/drivers/jt400.jar  ");
+
+		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
+			final ExtensionManager extensionManager = ExtensionManager.builder()
+				.withProtocolExtensions(List.of(new JdbcExtension()))
+				.build();
+
+			cliExtensionManagerMock
+				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+				.thenReturn(extensionManager);
+
+			final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) jdbcConfigCli.toConfiguration(
+				"defaultUser",
+				"defaultPassword".toCharArray()
+			);
+
+			assertNotNull(jdbcConfiguration);
+			final DriverInfo driver = jdbcConfiguration.getDriver();
+			assertNotNull(driver, "driver should be populated when --jdbc-driver-class is provided");
+			assertEquals("com.ibm.as400.access.AS400JDBCDriver", driver.getClassName());
+			assertEquals("$APP_DIR/drivers/jt400.jar", driver.getJarPath());
+		}
+	}
+
+	@Test
+	void testToProtocolWithDriverClassOnly() throws Exception {
+		final JdbcConfigCli jdbcConfigCli = new JdbcConfigCli();
+		jdbcConfigCli.setUrl("jdbc:as400://ibmi-01".toCharArray());
+		jdbcConfigCli.setUsername("QSECOFR");
+		jdbcConfigCli.setPassword("secret".toCharArray());
+		jdbcConfigCli.setTimeout("60");
+		jdbcConfigCli.setDatabase("ibmi-db");
+		jdbcConfigCli.setType("DB2");
+		jdbcConfigCli.setDriverClass("com.ibm.as400.access.AS400JDBCDriver");
+		// driverJar intentionally unset → should not appear in serialised driver block
+		jdbcConfigCli.setDriverJar("   ");
+
+		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
+			final ExtensionManager extensionManager = ExtensionManager.builder()
+				.withProtocolExtensions(List.of(new JdbcExtension()))
+				.build();
+
+			cliExtensionManagerMock
+				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+				.thenReturn(extensionManager);
+
+			final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) jdbcConfigCli.toConfiguration(
+				"defaultUser",
+				"defaultPassword".toCharArray()
+			);
+
+			final DriverInfo driver = jdbcConfiguration.getDriver();
+			assertNotNull(driver);
+			assertEquals("com.ibm.as400.access.AS400JDBCDriver", driver.getClassName());
+			assertNull(driver.getJarPath(), "jarPath should be null when --jdbc-driver-jar is blank");
 		}
 	}
 }

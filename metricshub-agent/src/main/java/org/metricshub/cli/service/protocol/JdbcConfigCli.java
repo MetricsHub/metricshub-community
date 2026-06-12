@@ -88,6 +88,26 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 	)
 	private String type;
 
+	@Option(
+		names = "--jdbc-driver-class",
+		order = 9,
+		paramLabel = "CLASSNAME",
+		description = """
+		Fully-qualified java.sql.Driver implementation to use (e.g. com.mysql.cj.jdbc.Driver). \
+		Required when the URL is not accepted by any registered drivers\
+		"""
+	)
+	private String driverClass;
+
+	@Option(
+		names = "--jdbc-driver-jar",
+		order = 10,
+		paramLabel = "JARPATH",
+		description = "Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR " +
+		"and $USER_HOME. Ignored unless --jdbc-driver-class is also provided"
+	)
+	private String driverJar;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password..
 	 *
@@ -118,6 +138,16 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("database", new TextNode(database));
 		configuration.set("type", new TextNode(type));
+
+		// Optional explicit JDBC driver selection (className + optional jarPath).
+		if (driverClass != null && !driverClass.isBlank()) {
+			final ObjectNode driverNode = JsonNodeFactory.instance.objectNode();
+			driverNode.set("className", new TextNode(driverClass.trim()));
+			if (driverJar != null && !driverJar.isBlank()) {
+				driverNode.set("jarPath", new TextNode(driverJar.trim()));
+			}
+			configuration.set("driver", driverNode);
+		}
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("jdbc", configuration, value -> value)
