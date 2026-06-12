@@ -72,7 +72,7 @@ class HttpRecorderTest {
 	void testRecordCreatesImageYamlAndResponseFile() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.BODY, "OK");
 		recorder.flush();
 
 		final Path httpDir = tempDir.resolve(HttpRecorder.HTTP_SUBDIR);
@@ -84,7 +84,7 @@ class HttpRecorderTest {
 	void testRecordWritesCorrectResponseContent() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/data", null, null, ResultContent.BODY, "response body content");
+		recorder.record("GET", "/api/data", null, null, null, ResultContent.BODY, "response body content");
 		recorder.flush();
 
 		final Path responseFile = findSingleTxtFile(tempDir.resolve(HttpRecorder.HTTP_SUBDIR));
@@ -97,7 +97,7 @@ class HttpRecorderTest {
 	void testRecordWritesCorrectImageYaml() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("POST", "/api/v1/query", "request body", null, ResultContent.BODY, "response");
+		recorder.record("POST", "/api/v1/query", null, "request body", null, ResultContent.BODY, "response");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -121,9 +121,9 @@ class HttpRecorderTest {
 	void testRecordMultipleEntriesAppendsToImage() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
-		recorder.record("GET", "/api/v1/metrics", null, null, ResultContent.BODY, "metrics data");
-		recorder.record("POST", "/api/v1/query", "query body", null, ResultContent.BODY, "query result");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/metrics", null, null, null, ResultContent.BODY, "metrics data");
+		recorder.record("POST", "/api/v1/query", null, "query body", null, ResultContent.BODY, "query result");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -140,8 +140,8 @@ class HttpRecorderTest {
 	void testRecordAllowsDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK again");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.BODY, "OK again");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -155,8 +155,8 @@ class HttpRecorderTest {
 	void testRecordDifferentResultContentNotDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.BODY, "OK");
-		recorder.record("GET", "/api/v1/health", null, null, ResultContent.HTTP_STATUS, "200");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/health", null, null, null, ResultContent.HTTP_STATUS, "200");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -172,7 +172,7 @@ class HttpRecorderTest {
 		headers.put("Content-Type", "application/json");
 		headers.put("Accept", "application/json");
 
-		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response");
+		recorder.record("POST", "/api/v1/query", null, "body", headers, ResultContent.BODY, "response");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -188,7 +188,7 @@ class HttpRecorderTest {
 	void testRecordEmptyBodyIsOmitted() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", "", null, ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/health", null, "", null, ResultContent.BODY, "OK");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -202,7 +202,7 @@ class HttpRecorderTest {
 	void testRecordEmptyHeadersAreOmitted() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/api/v1/health", null, Map.of(), ResultContent.BODY, "OK");
+		recorder.record("GET", "/api/v1/health", null, null, Map.of(), ResultContent.BODY, "OK");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -216,7 +216,7 @@ class HttpRecorderTest {
 	void testRecordAllResultContent() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/path", null, null, ResultContent.ALL, "all content");
+		recorder.record("GET", "/path", null, null, null, ResultContent.ALL, "all content");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -230,7 +230,7 @@ class HttpRecorderTest {
 	void testRecordHttpStatusResultContent() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("GET", "/path", null, null, ResultContent.HTTP_STATUS, "200");
+		recorder.record("GET", "/path", null, null, null, ResultContent.HTTP_STATUS, "200");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -307,6 +307,7 @@ class HttpRecorderTest {
 			"/api/v1/health",
 			null,
 			null,
+			null,
 			ResultContent.BODY,
 			"response_001.txt"
 		);
@@ -314,6 +315,7 @@ class HttpRecorderTest {
 		final Map<String, Object> request = asMap(entry.get("request"));
 		assertEquals("GET", request.get("method"));
 		assertEquals("/api/v1/health", request.get("path"));
+		assertFalse(request.containsKey("url"));
 		assertFalse(request.containsKey("body"));
 		assertFalse(request.containsKey("headers"));
 
@@ -331,6 +333,7 @@ class HttpRecorderTest {
 		final Map<String, Object> entry = recorder.buildEntry(
 			"POST",
 			"/api/query",
+			null,
 			"request body",
 			headers,
 			ResultContent.ALL,
@@ -358,6 +361,7 @@ class HttpRecorderTest {
 			null,
 			null,
 			null,
+			null,
 			ResultContent.BODY,
 			"response_001.txt"
 		);
@@ -369,7 +373,7 @@ class HttpRecorderTest {
 	@Test
 	void testBuildEntryNullResultContent() {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
-		final Map<String, Object> entry = recorder.buildEntry("GET", "/path", null, null, null, "response_001.txt");
+		final Map<String, Object> entry = recorder.buildEntry("GET", "/path", null, null, null, null, "response_001.txt");
 
 		final Map<String, Object> response = asMap(entry.get("response"));
 		assertFalse(response.containsKey("resultContent"));
@@ -381,8 +385,8 @@ class HttpRecorderTest {
 		final Map<String, String> headers = new LinkedHashMap<>();
 		headers.put("Content-Type", "application/json");
 
-		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response 1");
-		recorder.record("POST", "/api/v1/query", "body", headers, ResultContent.BODY, "response 2");
+		recorder.record("POST", "/api/v1/query", null, "body", headers, ResultContent.BODY, "response 1");
+		recorder.record("POST", "/api/v1/query", null, "body", headers, ResultContent.BODY, "response 2");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
@@ -395,13 +399,84 @@ class HttpRecorderTest {
 	void testRecordSamePathDifferentBodyNotDuplicate() throws IOException {
 		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
 
-		recorder.record("POST", "/api/v1/query", "body1", null, ResultContent.BODY, "response 1");
-		recorder.record("POST", "/api/v1/query", "body2", null, ResultContent.BODY, "response 2");
+		recorder.record("POST", "/api/v1/query", null, "body1", null, ResultContent.BODY, "response 1");
+		recorder.record("POST", "/api/v1/query", null, "body2", null, ResultContent.BODY, "response 2");
 		recorder.flush();
 
 		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
 		final List<Map<String, Object>> entries = readImageEntries(indexFile);
 
 		assertEquals(2, entries.size());
+	}
+
+	@Test
+	void testRecordWithUrlOnly() throws IOException {
+		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
+
+		recorder.record("GET", null, "http://host:1234", null, null, ResultContent.BODY, "OK");
+		recorder.flush();
+
+		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+
+		assertEquals(1, entries.size());
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
+		assertFalse(request.containsKey("path"));
+		assertEquals("http://host:1234", request.get("url"));
+	}
+
+	@Test
+	void testRecordWithBothPathAndUrlAddsSingleEntryWithBothFields() throws IOException {
+		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
+
+		recorder.record("GET", "/api/v1/data", "http://host:1234", null, null, ResultContent.BODY, "shared response");
+		recorder.flush();
+
+		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+
+		assertEquals(1, entries.size());
+
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
+		assertEquals("/api/v1/data", request.get("path"));
+		assertEquals("http://host:1234", request.get("url"));
+
+		// A single response file should have been created
+		final Path httpDir = tempDir.resolve(HttpRecorder.HTTP_SUBDIR);
+		assertEquals(1, countTxtFiles(httpDir));
+	}
+
+	@Test
+	void testRecordWithNoPathAndNoUrl() throws IOException {
+		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
+
+		recorder.record("GET", null, null, null, null, ResultContent.BODY, "OK");
+		recorder.flush();
+
+		final Path indexFile = tempDir.resolve(HttpRecorder.HTTP_SUBDIR).resolve(HttpRecorder.IMAGE_YAML);
+		final List<Map<String, Object>> entries = readImageEntries(indexFile);
+
+		assertEquals(1, entries.size());
+		final Map<String, Object> request = asMap(entries.get(0).get("request"));
+		assertFalse(request.containsKey("path"));
+		assertFalse(request.containsKey("url"));
+	}
+
+	@Test
+	void testBuildEntryWithUrl() {
+		final HttpRecorder recorder = new HttpRecorder(tempDir.toString());
+		final Map<String, Object> entry = recorder.buildEntry(
+			"GET",
+			null,
+			"http://host:1234",
+			null,
+			null,
+			ResultContent.BODY,
+			"response_001.txt"
+		);
+
+		final Map<String, Object> request = asMap(entry.get("request"));
+		assertEquals("http://host:1234", request.get("url"));
+		assertFalse(request.containsKey("path"));
 	}
 }
