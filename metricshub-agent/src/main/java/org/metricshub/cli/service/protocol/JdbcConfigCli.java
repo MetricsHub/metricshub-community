@@ -107,6 +107,10 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
 		Ignored unless --jdbc-driver-class is also provided\
 		"""
+	)
+	private String driverJar;
+
+	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password..
 	 *
 	 * @param defaultUsername Username specified at the top level of the CLI (with the --username option)
