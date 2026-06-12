@@ -366,12 +366,24 @@ public class JdbcExtension implements IProtocolExtension {
 		final String hostname = configuration.getHostname();
 		final String sqlQuery = queryNode.get("query").asText();
 		final JdbcConfiguration jdbcConfiguration = (JdbcConfiguration) configuration;
+		final DriverInfo configurationDriver = jdbcConfiguration.getDriver();
+		JdbcDriverSelection selection = null;
+		if (configurationDriver != null) {
+			selection = JdbcDriverRegistryHolder.resolveSelection(configurationDriver);
+		}
+
+		if (selection == null) {
+			final char[] url = jdbcConfiguration.getUrl();
+			selection = url == null ? null : JdbcDriverRegistryHolder.findSelectionForUrl(String.valueOf(url));
+		}
+
 		final List<List<String>> resultList = sqlRequestExecutor.executeSql(
 			hostname,
 			jdbcConfiguration,
 			sqlQuery,
 			false,
-			null
+			null,
+			selection
 		);
 		final String[] columns = StringHelper.extractColumns(sqlQuery);
 		if (columns.length == 1 && columns[0].equals("*")) {

@@ -40,33 +40,6 @@ import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 public class SqlRequestExecutor {
 
 	/**
-	 * Execute an SQL query using the provided configuration and return the result.
-	 *
-	 * <p>Convenience overload that delegates to
-	 * {@link #executeSql(String, JdbcConfiguration, String, boolean, TelemetryManager, JdbcDriverSelection)}
-	 * with a {@code null} driver selection. Intentionally <em>not</em> annotated with
-	 * {@link WithSpan} — the delegate is, and double-annotating would produce nested duplicate
-	 * spans for the common call path.
-	 *
-	 * @param hostname         The hostname of the database server.
-	 * @param jdbcConfig       JDBC configuration including URL, username, password, and timeout.
-	 * @param sqlQuery         The SQL query to execute.
-	 * @param showWarnings     Whether to show SQL warnings.
-	 * @param telemetryManager The telemetry manager providing host properties.
-	 * @return A {@link List} of {@link List} of {@link String}s representing the result table.
-	 * @throws ClientException when anything goes wrong (details in cause)
-	 */
-	public List<List<String>> executeSql(
-		final String hostname,
-		@NonNull final JdbcConfiguration jdbcConfig,
-		@NonNull final String sqlQuery,
-		final boolean showWarnings,
-		final TelemetryManager telemetryManager
-	) throws ClientException {
-		return executeSql(hostname, jdbcConfig, sqlQuery, showWarnings, telemetryManager, null);
-	}
-
-	/**
 	 * Execute an SQL query using the provided configuration and a per-call driver selection.
 	 *
 	 * <p>When {@code driverSelection} is non-{@code null}, the call bypasses

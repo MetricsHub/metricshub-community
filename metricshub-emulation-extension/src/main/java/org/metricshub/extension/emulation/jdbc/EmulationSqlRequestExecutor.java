@@ -67,20 +67,6 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 		final JdbcConfiguration jdbcConfig,
 		final String sqlQuery,
 		final boolean showWarnings,
-		final TelemetryManager telemetryManager
-	) throws ClientException {
-		// Override the 5-arg variant so dynamic dispatch reaches this method (rather than the
-		// base class implementation, whose @NonNull constraint on sqlQuery would reject the
-		// emulation contract that null queries simply yield an empty result).
-		return executeSql(hostname, jdbcConfig, sqlQuery, showWarnings, telemetryManager, null);
-	}
-
-	@Override
-	public List<List<String>> executeSql(
-		final String hostname,
-		final JdbcConfiguration jdbcConfig,
-		final String sqlQuery,
-		final boolean showWarnings,
 		final TelemetryManager telemetryManager,
 		final JdbcDriverSelection driverSelection
 	) throws ClientException {

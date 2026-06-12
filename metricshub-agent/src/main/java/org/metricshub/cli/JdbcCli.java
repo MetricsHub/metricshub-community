@@ -118,8 +118,10 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 		names = "--driver-jar",
 		order = 7,
 		paramLabel = "JARPATH",
-		description = "Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR " +
-		"and $USER_HOME. Ignored unless --driver-class is also provided"
+		description = """
+		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
+		Ignored unless --driver-class is also provided\
+		"""
 	)
 	private String driverJar;
 

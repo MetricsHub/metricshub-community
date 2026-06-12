@@ -103,12 +103,10 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		names = "--jdbc-driver-jar",
 		order = 10,
 		paramLabel = "JARPATH",
-		description = "Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR " +
-		"and $USER_HOME. Ignored unless --jdbc-driver-class is also provided"
-	)
-	private String driverJar;
-
-	/**
+		description = """
+		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
+		Ignored unless --jdbc-driver-class is also provided\
+		"""
 	 * This method creates an {@link IConfiguration} for a given username and a given password..
 	 *
 	 * @param defaultUsername Username specified at the top level of the CLI (with the --username option)

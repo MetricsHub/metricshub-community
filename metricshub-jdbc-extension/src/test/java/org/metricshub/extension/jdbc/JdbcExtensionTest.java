@@ -361,7 +361,7 @@ class JdbcExtensionTest {
 	void tesExecuteQuery() throws Exception {
 		doReturn(SQL_RESULT)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
@@ -380,7 +380,7 @@ class JdbcExtensionTest {
 	void tesExecuteQueryThrow() throws Exception {
 		doThrow(ClientException.class)
 			.when(sqlRequestExecutorMock)
-			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any());
+			.executeSql(anyString(), any(JdbcConfiguration.class), anyString(), anyBoolean(), any(), any());
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
