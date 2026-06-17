@@ -50,6 +50,10 @@ public enum DeviceKind {
 	 */
 	AIX("IBM AIX"),
 	/**
+	 * IBM i (formerly OS/400, i5/OS).
+	 */
+	IBMI("IBM i"),
+	/**
 	 * Linux.
 	 */
 	LINUX("Linux"),
@@ -102,6 +106,10 @@ public enum DeviceKind {
 		new SimpleEntry<>(TRU64, Pattern.compile("^tru64$|^osf1$|^hp\\s*tru64\\s*unix$")),
 		new SimpleEntry<>(HPUX, Pattern.compile("^hp-ux$|^hpux$|^hp$")),
 		new SimpleEntry<>(AIX, Pattern.compile("^ibm(\\s*|-)aix$|^aix$|^rs6000$")),
+		new SimpleEntry<>(
+			IBMI,
+			Pattern.compile("^ibm\\s*i$|^ibmi$|^i5\\s*/?\\s*os$|^os\\s*/?\\s*400$|^iseries$|^as\\s*/?\\s*400$")
+		),
 		new SimpleEntry<>(SOLARIS, Pattern.compile("^((sun|oracle)\\s*)?solaris$|^sunos$")),
 		new SimpleEntry<>(OTHER, Pattern.compile("^other$"))
 	);
