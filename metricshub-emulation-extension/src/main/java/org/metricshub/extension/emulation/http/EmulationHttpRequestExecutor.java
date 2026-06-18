@@ -126,6 +126,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		// Resolve body and headers using the same macro substitution as HttpRequestExecutor
 		final String method = httpRequest.getMethod() != null ? httpRequest.getMethod().toUpperCase() : "GET";
 		final String path = httpRequest.getPath();
+		final String url = httpRequest.getUrl();
 		final Body body = httpRequest.getBody();
 		final String resolvedBody =
 			body != null
@@ -153,6 +154,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			entries,
 			method,
 			path,
+			url,
 			resolvedBody,
 			resolvedHeaders,
 			resultContent
@@ -160,16 +162,17 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 		if (matchingEntries.isEmpty()) {
 			log.warn(
-				"Hostname {} - No matching HTTP emulation entry found for {} {}",
+				"Hostname {} - No matching HTTP emulation entry found for {} path={} url={}",
 				httpRequest.getHostname(),
 				method,
-				path
+				path,
+				url
 			);
 			return null;
 		}
 
 		// Compute request key and get the next round-robin entry
-		final String requestKey = buildRequestKey(method, path, resolvedBody, resolvedHeaders, resultContent);
+		final String requestKey = buildRequestKey(method, path, url, resolvedBody, resolvedHeaders, resultContent);
 		final int index = roundRobinManager.nextIndex(
 			indexFile.toAbsolutePath().toString(),
 			requestKey,
@@ -180,10 +183,11 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		// Read the response file
 		if (matchingEntry.getResponse() == null) {
 			log.warn(
-				"Hostname {} - Malformed HTTP emulation entry found for {} {}: missing response section",
+				"Hostname {} - Malformed HTTP emulation entry found for {} path={} url={}: missing response section",
 				httpRequest.getHostname(),
 				method,
-				path
+				path,
+				url
 			);
 			return null;
 		}
@@ -191,10 +195,11 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final String responseFileName = matchingEntry.getResponse().getFile();
 		if (responseFileName == null || responseFileName.isBlank()) {
 			log.warn(
-				"Hostname {} - Malformed HTTP emulation entry found for {} {}: missing or blank response file",
+				"Hostname {} - Malformed HTTP emulation entry found for {} path={} url={}: missing or blank response file",
 				httpRequest.getHostname(),
 				method,
-				path
+				path,
+				url
 			);
 			return null;
 		}
@@ -220,11 +225,12 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 
 	/**
 	 * Finds all entries in the emulation image that match the given HTTP
-	 * method, path, body, headers, and result content.
+	 * method, path, url, body, headers, and result content.
 	 *
 	 * @param entries       The list of emulation entries to search.
 	 * @param method        The HTTP method (GET, POST, etc.).
-	 * @param path          The request path.
+	 * @param path          The request path (may be {@code null}).
+	 * @param url           The request URL (may be {@code null}).
 	 * @param body          The request body (may be {@code null}).
 	 * @param headers       The request headers as key-value pairs (may be {@code null}).
 	 * @param resultContent The expected result content type.
@@ -234,6 +240,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final List<HttpEmulationEntry> entries,
 		final String method,
 		final String path,
+		final String url,
 		final String body,
 		final Map<String, String> headers,
 		final ResultContent resultContent
@@ -250,6 +257,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 			if (
 				entryMethod.equals(method) &&
 				nullableEquals(request.getPath(), path) &&
+				nullableEquals(request.getUrl(), url) &&
 				nullableEquals(request.getBody(), body) &&
 				headersMatch(request.getHeaders(), headers) &&
 				resultContentMatches(entry.getResponse(), resultContent)
@@ -312,7 +320,8 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	 * was last served for a specific request signature.
 	 *
 	 * @param method        The HTTP method.
-	 * @param path          The request path.
+	 * @param path          The request path (may be {@code null}).
+	 * @param url           The request URL (may be {@code null}).
 	 * @param body          The resolved request body (may be {@code null}).
 	 * @param headers       The resolved request headers (may be empty).
 	 * @param resultContent The result content type.
@@ -321,6 +330,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 	String buildRequestKey(
 		final String method,
 		final String path,
+		final String url,
 		final String body,
 		final Map<String, String> headers,
 		final ResultContent resultContent
@@ -328,6 +338,7 @@ public class EmulationHttpRequestExecutor extends HttpRequestExecutor {
 		final StringBuilder key = new StringBuilder();
 		key.append(method).append('|');
 		key.append(path != null ? path : "").append('|');
+		key.append(url != null ? url : "").append('|');
 		key.append(body != null ? body : "").append('|');
 		if (headers != null && !headers.isEmpty()) {
 			key.append(

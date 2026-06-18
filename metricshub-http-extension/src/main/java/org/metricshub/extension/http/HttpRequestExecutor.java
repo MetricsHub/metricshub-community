@@ -212,6 +212,7 @@ public class HttpRequestExecutor {
 			HttpRecorder.getInstance(recordOutputDirectory).record(
 				method,
 				httpRequestPath,
+				httpRequestUrl,
 				recordBody,
 				recordHeaders,
 				httpRequest.getResultContent(),

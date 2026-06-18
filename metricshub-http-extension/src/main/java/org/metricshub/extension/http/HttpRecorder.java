@@ -59,6 +59,7 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	record HttpRecordRequest(
 		String method,
 		String path,
+		String url,
 		String body,
 		Map<String, String> headers,
 		ResultContent resultContent,
@@ -118,8 +119,13 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	 * Records an HTTP request-response pair. Duplicate entries are allowed
 	 * so that the emulation extension can serve them in round-robin order.
 	 *
+	 * <p>When both {@code path} and {@code url} are non-{@code null}, both fields
+	 * are written into the same entry so that playback can match the request
+	 * using either field. The entry references a single response file.
+	 *
 	 * @param method          The HTTP method (GET, POST, etc.).
-	 * @param path            The request path.
+	 * @param path            The request path (may be {@code null}).
+	 * @param url             The request URL (may be {@code null}).
 	 * @param bodyContent     The resolved request body (may be {@code null} or empty).
 	 * @param headerContent   The resolved request headers (may be {@code null} or empty).
 	 * @param resultContent   The requested result content type.
@@ -128,6 +134,7 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	public void record(
 		final String method,
 		final String path,
+		final String url,
 		final String bodyContent,
 		final Map<String, String> headerContent,
 		final ResultContent resultContent,
@@ -136,8 +143,9 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 		final String normalizedBody = bodyContent == null || bodyContent.isEmpty() ? null : bodyContent;
 		final Map<String, String> normalizedHeaders =
 			headerContent == null || headerContent.isEmpty() ? null : headerContent;
+
 		recordInternal(
-			new HttpRecordRequest(method, path, normalizedBody, normalizedHeaders, resultContent, responseContent)
+			new HttpRecordRequest(method, path, url, normalizedBody, normalizedHeaders, resultContent, responseContent)
 		);
 	}
 
@@ -166,6 +174,7 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 		return buildEntry(
 			request.method(),
 			request.path(),
+			request.url(),
 			request.body(),
 			request.headers(),
 			request.resultContent(),
@@ -200,7 +209,8 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	 * Builds a YAML-compatible entry map for the given request-response data.
 	 *
 	 * @param method           The HTTP method.
-	 * @param path             The request path.
+	 * @param path             The request path (may be {@code null}).
+	 * @param url              The request URL (may be {@code null}).
 	 * @param body             The request body (may be {@code null}).
 	 * @param headers          The request headers (may be {@code null}).
 	 * @param resultContent    The result content type.
@@ -210,6 +220,7 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	Map<String, Object> buildEntry(
 		final String method,
 		final String path,
+		final String url,
 		final String body,
 		final Map<String, String> headers,
 		final ResultContent resultContent,
@@ -219,6 +230,9 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 		request.put("method", method);
 		if (path != null) {
 			request.put("path", path);
+		}
+		if (url != null) {
+			request.put("url", url);
 		}
 		if (body != null) {
 			request.put("body", body);
@@ -242,9 +256,10 @@ public class HttpRecorder extends AbstractRecorder<HttpRecorder.HttpRecordReques
 	@Override
 	protected void logRecordFailure(final HttpRecordRequest request, final IOException exception) {
 		log.error(
-			"HTTP recording - Failed to record HTTP request {} {}: {}",
+			"HTTP recording - Failed to record HTTP request {} path={} url={}: {}",
 			request.method(),
 			request.path(),
+			request.url(),
 			exception.getMessage()
 		);
 		log.debug("HTTP recording - Error details:", exception);
