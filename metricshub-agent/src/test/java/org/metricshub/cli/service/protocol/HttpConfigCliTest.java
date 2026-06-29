@@ -30,6 +30,7 @@ class HttpConfigCliTest {
 		httpConfigCli.setUsername(username);
 		httpConfigCli.setTimeout(timeout);
 		httpConfigCli.setHttpOrHttps(httpOrHttps);
+		httpConfigCli.setHostname("anyHost");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -47,6 +48,7 @@ class HttpConfigCliTest {
 				.timeout(120L)
 				.port(80)
 				.https(false)
+				.hostname("anyHost")
 				.build();
 
 			HttpConfiguration result = (HttpConfiguration) httpConfigCli.toConfiguration(null, null);
@@ -57,6 +59,7 @@ class HttpConfigCliTest {
 			httpConfigCli = new HttpConfigCli();
 			httpConfigCli.setTimeout(timeout);
 			httpConfigCli.setHttpOrHttps(httpOrHttps);
+			httpConfigCli.setHostname("anyHost");
 
 			result = (HttpConfiguration) httpConfigCli.toConfiguration(username, password);
 			assertNotNull(result);

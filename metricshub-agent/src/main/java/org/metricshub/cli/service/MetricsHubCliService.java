@@ -60,6 +60,8 @@ import org.metricshub.cli.service.protocol.WmiConfigCli;
 import org.metricshub.engine.client.ClientsExecutor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.KnownMonitorType;
+import org.metricshub.engine.common.helpers.MetricsHubConstants;
+import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.AdditionalConnector;
 import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.configuration.IConfiguration;
@@ -323,6 +325,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.hostId(hostname)
 			.hostname(hostname)
 			.hostType(deviceType)
+			.attributes(buildResourceAttributes())
 			.sequential(sequential)
 			.resolveHostnameToFqdn(resolveHostnameToFqdn)
 			.strategyTimeout(jobTimeout)
@@ -528,6 +531,14 @@ public class MetricsHubCliService implements Callable<Integer> {
 	}
 
 	/**
+	 * Builds a map of resource attributes for the current host, including the hostname and device type.
+	 * @return a map of <key,value>	 pairs representing resource attributes
+	 */
+	Map<String, String> buildResourceAttributes() {
+		return Map.of(MetricsHubConstants.HOST_NAME, hostname, "host.type", deviceType.name().toLowerCase());
+	}
+
+	/**
 	 * Flushes recorder buffers for all protocol extensions for the current session.
 	 *
 	 * @param telemetryManager telemetry manager holding the recording context
@@ -631,8 +642,10 @@ public class MetricsHubCliService implements Callable<Integer> {
 			.map(protocolConfig -> {
 				try {
 					final IConfiguration protocol = protocolConfig.toConfiguration(username, password);
-					// Duplicate the main hostname on each configuration. By design, the extensions retrieve the hostname from the configuration.
-					protocol.setHostname(hostname);
+					// If the protocol hostname is not set, use the main hostname.
+					if (!StringHelper.nonNullNonBlank(protocol.getHostname())) {
+						protocol.setHostname(hostname);
+					}
 					protocol.validateConfiguration(hostname);
 					return protocol;
 				} catch (InvalidConfigurationException e) {
