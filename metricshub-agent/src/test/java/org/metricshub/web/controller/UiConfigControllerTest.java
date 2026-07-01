@@ -62,8 +62,7 @@ class UiConfigControllerTest {
 	private MockMvc mockMvc;
 	private UiConfigService uiConfigService;
 	private UiProtocolCheckService uiProtocolCheckService;
-	private final ExtensionManager extensionManager = ExtensionManager
-		.builder()
+	private final ExtensionManager extensionManager = ExtensionManager.builder()
 		.withProtocolExtensions(List.of(new OsCommandExtension()))
 		.build();
 	private ObjectMapper objectMapper;
@@ -78,11 +77,9 @@ class UiConfigControllerTest {
 		injectableValues.addValue(ExtensionManager.class, extensionManager);
 		injectableValues.addValue(ExtensionManager.class.getName(), extensionManager);
 		objectMapper.setInjectableValues(injectableValues);
-		mockMvc =
-			MockMvcBuilders
-				.standaloneSetup(controller)
-				.setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
-				.build();
+		mockMvc = MockMvcBuilders.standaloneSetup(controller)
+			.setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+			.build();
 	}
 
 	// -------------------------------------------------------------------------
@@ -118,8 +115,7 @@ class UiConfigControllerTest {
 
 	@Test
 	void testGetSnapshotReturnsResourcesAndGroups() throws Exception {
-		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto
-			.builder()
+		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto.builder()
 			.resources(Map.of("host1", Map.of("attributes", Map.of("host.name", "server1"))))
 			.resourceGroups(Map.of("GroupA", Map.of("attributes", Map.of("site", "Paris"))))
 			.build();
@@ -155,8 +151,7 @@ class UiConfigControllerTest {
 		request.setAttributes(Map.of("site", "Paris"));
 		request.setMetrics(Map.of("hw.site.carbon_intensity", 230, "hw.site.electricity_cost", 0.12, "hw.site.pue", 1.8));
 
-		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto
-			.builder()
+		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto.builder()
 			.resourceGroups(
 				Map.of(
 					"Paris",
@@ -236,8 +231,7 @@ class UiConfigControllerTest {
 		request.setAttributes(Map.of("site", "Paris"));
 		request.setMetrics(Map.of("hw.site.electricity_cost", 0.15));
 
-		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto
-			.builder()
+		final UiConfigSnapshotDto snapshot = UiConfigSnapshotDto.builder()
 			.resourceGroups(
 				Map.of(
 					"Paris",
@@ -252,8 +246,9 @@ class UiConfigControllerTest {
 				)
 			)
 			.build();
-		when(uiConfigService.updateResourceGroup(eq("Paris"), any(UpdateResourceGroupRequestDto.class)))
-			.thenReturn(snapshot);
+		when(uiConfigService.updateResourceGroup(eq("Paris"), any(UpdateResourceGroupRequestDto.class))).thenReturn(
+			snapshot
+		);
 
 		mockMvc
 			.perform(
@@ -281,11 +276,10 @@ class UiConfigControllerTest {
 			)
 			.andExpect(status().isOk());
 
-		verify(uiConfigService)
-			.updateResourceGroup(
-				eq("Original"),
-				argThat(r -> "Renamed".equals(r.getName()) && r.getMetrics() != null && !r.getMetrics().isEmpty())
-			);
+		verify(uiConfigService).updateResourceGroup(
+			eq("Original"),
+			argThat(r -> "Renamed".equals(r.getName()) && r.getMetrics() != null && !r.getMetrics().isEmpty())
+		);
 	}
 
 	// -------------------------------------------------------------------------
@@ -315,18 +309,16 @@ class UiConfigControllerTest {
 
 	@Test
 	void testGetConnectorCatalogReturnsStaticCatalog() throws Exception {
-		when(uiConfigService.getConnectorCatalog())
-			.thenReturn(
-				List.of(
-					UiConnectorSummaryDto
-						.builder()
-						.id("Linux")
-						.displayName("Linux")
-						.appliesToHostTypes(List.of("linux"))
-						.requiredProtocols(List.of("ssh"))
-						.build()
-				)
-			);
+		when(uiConfigService.getConnectorCatalog()).thenReturn(
+			List.of(
+				UiConnectorSummaryDto.builder()
+					.id("Linux")
+					.displayName("Linux")
+					.appliesToHostTypes(List.of("linux"))
+					.requiredProtocols(List.of("ssh"))
+					.build()
+			)
+		);
 
 		mockMvc
 			.perform(get("/api/ui-config/connectors/catalog"))

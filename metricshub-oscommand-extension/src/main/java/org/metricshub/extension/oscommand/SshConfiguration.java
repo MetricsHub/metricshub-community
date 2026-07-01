@@ -127,7 +127,7 @@ public class SshConfiguration extends OsCommandConfiguration {
 				throw new InvalidConfigurationException(
 					String.format(
 						"Resource %s - No password or private key configured for protocol %s." +
-						" Configure one authentication method. This resource will not be monitored.",
+							" Configure one authentication method. This resource will not be monitored.",
 						resourceKey,
 						"SSH"
 					)

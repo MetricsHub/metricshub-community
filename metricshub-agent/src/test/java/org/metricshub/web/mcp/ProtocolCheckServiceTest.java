@@ -67,8 +67,10 @@ class ProtocolCheckServiceTest {
 		AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 
-		protocolCheckService =
-			new ProtocolCheckService(agentContextHolder, new ProtocolHealthCheckService(agentContextHolder));
+		protocolCheckService = new ProtocolCheckService(
+			agentContextHolder,
+			new ProtocolHealthCheckService(agentContextHolder)
+		);
 	}
 
 	@Test

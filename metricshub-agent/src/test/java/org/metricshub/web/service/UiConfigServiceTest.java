@@ -60,8 +60,11 @@ class UiConfigServiceTest {
 		final AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 
-		service =
-			new UiConfigService(agentContextHolder, mock(UiConnectorCompatibilityService.class), new ConnectorStore());
+		service = new UiConfigService(
+			agentContextHolder,
+			mock(UiConnectorCompatibilityService.class),
+			new ConnectorStore()
+		);
 	}
 
 	// -------------------------------------------------------------------------

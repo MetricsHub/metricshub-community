@@ -1006,8 +1006,7 @@ public class ConfigHelper {
 		final RawConnectorStore rawConnectorStore
 	) {
 		// Read connectors with configuration variables safely
-		final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
-			.builder()
+		final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer.builder()
 			.withRawConnectorStore(rawConnectorStore)
 			.withUpdateChain(ConnectorParser.createUpdateChain())
 			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))

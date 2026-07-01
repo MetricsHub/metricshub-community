@@ -60,16 +60,13 @@ class UiConnectorCompatibilityServiceTest {
 		service = new UiConnectorCompatibilityService();
 		extensionManager = ExtensionManager.builder().withProtocolExtensions(List.of(new OsCommandExtension())).build();
 
-		final Connector linuxConnector = Connector
-			.builder()
+		final Connector linuxConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.displayName("Linux Monitoring")
 					.information("Monitor Linux servers and hardware")
 					.detection(
-						Detection
-							.builder()
+						Detection.builder()
 							.appliesTo(Set.of(DeviceKind.LINUX))
 							.connectionTypes(Set.of(ConnectionType.REMOTE))
 							.tags(Set.of("os"))
@@ -80,15 +77,12 @@ class UiConnectorCompatibilityServiceTest {
 			.sourceTypes(Set.of(CommandLineSource.class))
 			.build();
 
-		final Connector windowsConnector = Connector
-			.builder()
+		final Connector windowsConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.displayName("Windows Monitoring")
 					.detection(
-						Detection
-							.builder()
+						Detection.builder()
 							.appliesTo(Set.of(DeviceKind.WINDOWS))
 							.connectionTypes(Set.of(ConnectionType.REMOTE))
 							.build()
@@ -98,15 +92,12 @@ class UiConnectorCompatibilityServiceTest {
 			.sourceTypes(Set.of(CommandLineSource.class))
 			.build();
 
-		final Connector templateConnector = Connector
-			.builder()
+		final Connector templateConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.displayName("Template Connector")
 					.detection(
-						Detection
-							.builder()
+						Detection.builder()
 							.appliesTo(Set.of(DeviceKind.LINUX))
 							.connectionTypes(Set.of(ConnectionType.REMOTE))
 							.build()
@@ -258,8 +249,7 @@ class UiConnectorCompatibilityServiceTest {
 
 	@Test
 	void testListConnectorsReportsMissingDetectionDefinition() {
-		final Connector noDetection = Connector
-			.builder()
+		final Connector noDetection = Connector.builder()
 			.connectorIdentity(ConnectorIdentity.builder().displayName("No Detection").build())
 			.build();
 
@@ -276,20 +266,23 @@ class UiConnectorCompatibilityServiceTest {
 
 		assertEquals(1, all.size());
 		assertFalse(all.get(0).isCompatible());
-		assertTrue(all.get(0).getIncompatibilityReasons().stream().anyMatch(r -> r.contains("no detection definition")));
+		assertTrue(
+			all
+				.get(0)
+				.getIncompatibilityReasons()
+				.stream()
+				.anyMatch(r -> r.contains("no detection definition"))
+		);
 	}
 
 	@Test
 	void testListConnectorsReportsConnectionTypeMismatch() {
-		final Connector localOnly = Connector
-			.builder()
+		final Connector localOnly = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.displayName("Local Only")
 					.detection(
-						Detection
-							.builder()
+						Detection.builder()
 							.appliesTo(Set.of(DeviceKind.LINUX))
 							.connectionTypes(Set.of(ConnectionType.LOCAL))
 							.build()
@@ -312,7 +305,13 @@ class UiConnectorCompatibilityServiceTest {
 
 		assertEquals(1, all.size());
 		assertFalse(all.get(0).isCompatible());
-		assertTrue(all.get(0).getIncompatibilityReasons().stream().anyMatch(r -> r.contains("remote connection")));
+		assertTrue(
+			all
+				.get(0)
+				.getIncompatibilityReasons()
+				.stream()
+				.anyMatch(r -> r.contains("remote connection"))
+		);
 	}
 
 	@Test
@@ -323,15 +322,12 @@ class UiConnectorCompatibilityServiceTest {
 		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
 		rawConnectorStore.setStore(Map.of("BrokenTemplate", invalidTemplate));
 
-		final Connector templateConnector = Connector
-			.builder()
+		final Connector templateConnector = Connector.builder()
 			.connectorIdentity(
-				ConnectorIdentity
-					.builder()
+				ConnectorIdentity.builder()
 					.displayName("Broken Template")
 					.detection(
-						Detection
-							.builder()
+						Detection.builder()
 							.appliesTo(Set.of(DeviceKind.LINUX))
 							.connectionTypes(Set.of(ConnectionType.REMOTE))
 							.build()

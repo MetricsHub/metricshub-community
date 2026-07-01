@@ -51,8 +51,9 @@ class UiProtocolCheckServiceTest {
 
 	@Test
 	void testHostUpWhenReachable() {
-		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any()))
-			.thenReturn(ProtocolCheckResponse.builder().hostname("server1").isReachable(true).responseTime(42.0).build());
+		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any())).thenReturn(
+			ProtocolCheckResponse.builder().hostname("server1").isReachable(true).responseTime(42.0).build()
+		);
 
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		request.setHostname("server1");
@@ -70,8 +71,9 @@ class UiProtocolCheckServiceTest {
 
 	@Test
 	void testHostDownWhenUnreachable() {
-		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any()))
-			.thenReturn(ProtocolCheckResponse.builder().hostname("server1").isReachable(false).build());
+		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any())).thenReturn(
+			ProtocolCheckResponse.builder().hostname("server1").isReachable(false).build()
+		);
 
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		request.setHostname("server1");
@@ -85,14 +87,12 @@ class UiProtocolCheckServiceTest {
 
 	@Test
 	void testTimeoutMessage() {
-		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any()))
-			.thenReturn(
-				ProtocolCheckResponse
-					.builder()
-					.hostname("server1")
-					.errorMessage("Command \"echo test\" execution has timed out after 2 s")
-					.build()
-			);
+		when(protocolHealthCheckService.checkWithInlineConfiguration(eq("server1"), eq("ssh"), any())).thenReturn(
+			ProtocolCheckResponse.builder()
+				.hostname("server1")
+				.errorMessage("Command \"echo test\" execution has timed out after 2 s")
+				.build()
+		);
 
 		final ProtocolCheckRequestDto request = new ProtocolCheckRequestDto();
 		request.setHostname("server1");

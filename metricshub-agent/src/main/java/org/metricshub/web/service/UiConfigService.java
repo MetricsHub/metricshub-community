@@ -131,8 +131,7 @@ public class UiConfigService {
 	 */
 	public UiConfigSnapshotDto getSnapshot() {
 		final ObjectNode root = readUiConfigAsObjectNode();
-		return UiConfigSnapshotDto
-			.builder()
+		return UiConfigSnapshotDto.builder()
 			.resources(asMap(root.get("resources")))
 			.resourceGroups(asMap(root.get("resourceGroups")))
 			.build();

@@ -77,8 +77,7 @@ public class ProtocolHealthCheckService {
 		try {
 			return checkProtocolWithExtensionSafe(hostname, protocol, timeout, extension);
 		} catch (Exception e) {
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.errorMessage("Error detected during protocol check: " + e.getMessage())
 				.build();
@@ -113,8 +112,7 @@ public class ProtocolHealthCheckService {
 			.findExtensionByType(protocol)
 			.map(extension -> checkWithInlineConfiguration(hostname, protocol, configuration, extension))
 			.orElseGet(() ->
-				ProtocolCheckResponse
-					.builder()
+				ProtocolCheckResponse.builder()
 					.hostname(hostname)
 					.errorMessage(protocol + " extension is not available")
 					.build()
@@ -129,8 +127,7 @@ public class ProtocolHealthCheckService {
 	) {
 		try {
 			if (!extension.isValidConfiguration(configuration)) {
-				return ProtocolCheckResponse
-					.builder()
+				return ProtocolCheckResponse.builder()
 					.hostname(hostname)
 					.errorMessage("Invalid protocol configuration")
 					.build();
@@ -145,8 +142,7 @@ public class ProtocolHealthCheckService {
 				extension
 			);
 		} catch (Exception e) {
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.errorMessage("Error detected during protocol check: " + e.getMessage())
 				.build();
@@ -197,16 +193,15 @@ public class ProtocolHealthCheckService {
 		final IConfiguration configuration,
 		final IProtocolExtension extension
 	) {
-		final long resolvedTimeout = NumberHelper
-			.getPositiveOrDefault(timeoutOverride, DEFAULT_PROTOCOL_CHECK_TIMEOUT)
-			.longValue();
+		final long resolvedTimeout = NumberHelper.getPositiveOrDefault(
+			timeoutOverride,
+			DEFAULT_PROTOCOL_CHECK_TIMEOUT
+		).longValue();
 		configuration.setTimeout(resolvedTimeout);
 
-		final var telemetryManager = TelemetryManager
-			.builder()
+		final var telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.configurations(Map.of(configuration.getClass(), configuration))
 					.hostname(hostname)
 					.build()
@@ -218,8 +213,7 @@ public class ProtocolHealthCheckService {
 		final Optional<Boolean> response = extension.checkProtocol(telemetryManager);
 
 		if (response.isPresent() && response.get()) {
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.isReachable(true)
 				.responseTime(System.currentTimeMillis() - startTime)

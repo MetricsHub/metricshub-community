@@ -110,7 +110,8 @@ public class UiConfig implements WebMvcConfigurer {
 			return false;
 		}
 		return switch (resourcePath.substring(dotIndex + 1).toLowerCase()) {
-			case "js",
+			case
+				"js",
 				"mjs",
 				"css",
 				"map",

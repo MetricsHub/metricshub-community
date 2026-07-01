@@ -70,8 +70,7 @@ public class UiProtocolCheckService {
 			return HostUpCheckResponseDto.builder().errorMessage(errorMessage).build();
 		}
 
-		return HostUpCheckResponseDto
-			.builder()
+		return HostUpCheckResponseDto.builder()
 			.hostUp(response.isReachable() ? 1 : 0)
 			.responseTimeMs(response.getResponseTime() > 0 ? response.getResponseTime() : null)
 			.build();

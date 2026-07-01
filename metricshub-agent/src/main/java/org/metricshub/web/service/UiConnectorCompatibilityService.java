@@ -190,8 +190,8 @@ public class UiConnectorCompatibilityService {
 		if (probe.acceptedSources.isEmpty()) {
 			reasons.add(
 				"No monitoring source available for the configured protocols (" +
-				String.join(", ", probe.configuredProtocols) +
-				")."
+					String.join(", ", probe.configuredProtocols) +
+					")."
 			);
 			return false;
 		}
@@ -202,44 +202,44 @@ public class UiConnectorCompatibilityService {
 		if (probe.deviceKind == null || !summary.getAppliesToHostTypes().contains(deviceKindKey(probe.deviceKind))) {
 			reasons.add(
 				"Requires host.type " +
-				formatDisplayHostTypes(summary) +
-				" (current: " +
-				(probe.deviceKind != null ? probe.deviceKind.getDisplayName() : probe.hostTypeInput) +
-				" / " +
-				(probe.deviceKind != null ? deviceKindKey(probe.deviceKind) : probe.hostTypeInput) +
-				")."
+					formatDisplayHostTypes(summary) +
+					" (current: " +
+					(probe.deviceKind != null ? probe.deviceKind.getDisplayName() : probe.hostTypeInput) +
+					" / " +
+					(probe.deviceKind != null ? deviceKindKey(probe.deviceKind) : probe.hostTypeInput) +
+					")."
 			);
 			return false;
 		}
 		final ConnectionType expected = probe.isLocalhost ? ConnectionType.LOCAL : ConnectionType.REMOTE;
-		final Set<String> allowedConnections = summary.getConnectionTypes() == null
-			? Set.of()
-			: summary
-				.getConnectionTypes()
-				.stream()
-				.map(String::toUpperCase)
-				.collect(Collectors.toCollection(LinkedHashSet::new));
+		final Set<String> allowedConnections =
+			summary.getConnectionTypes() == null
+				? Set.of()
+				: summary
+						.getConnectionTypes()
+						.stream()
+						.map(String::toUpperCase)
+						.collect(Collectors.toCollection(LinkedHashSet::new));
 		if (!allowedConnections.contains(expected.name())) {
 			reasons.add(
 				"Requires " +
-				expected.name().toLowerCase() +
-				" connection (connector allows: " +
-				allowedConnections.stream().map(String::toLowerCase).collect(Collectors.joining(", ")) +
-				")."
+					expected.name().toLowerCase() +
+					" connection (connector allows: " +
+					allowedConnections.stream().map(String::toLowerCase).collect(Collectors.joining(", ")) +
+					")."
 			);
 			return false;
 		}
-		final Set<String> requiredProtocols = summary.getRequiredProtocols() == null
-			? Set.of()
-			: new LinkedHashSet<>(summary.getRequiredProtocols());
+		final Set<String> requiredProtocols =
+			summary.getRequiredProtocols() == null ? Set.of() : new LinkedHashSet<>(summary.getRequiredProtocols());
 		final boolean hasProtocol = requiredProtocols.stream().anyMatch(probe.configuredProtocols::contains);
 		if (!hasProtocol) {
 			reasons.add(
 				"Requires at least one of these protocols: " +
-				String.join(", ", requiredProtocols) +
-				" (configured: " +
-				String.join(", ", probe.configuredProtocols) +
-				")."
+					String.join(", ", requiredProtocols) +
+					" (configured: " +
+					String.join(", ", probe.configuredProtocols) +
+					")."
 			);
 			return false;
 		}
@@ -252,9 +252,8 @@ public class UiConnectorCompatibilityService {
 	 */
 	private static String formatDisplayHostTypes(final UiConnectorSummaryDto summary) {
 		if (summary.getAppliesToDisplayNames() != null && !summary.getAppliesToDisplayNames().isEmpty()) {
-			final List<String> appliesToHostTypes = summary.getAppliesToHostTypes() == null
-				? List.of()
-				: summary.getAppliesToHostTypes();
+			final List<String> appliesToHostTypes =
+				summary.getAppliesToHostTypes() == null ? List.of() : summary.getAppliesToHostTypes();
 			final List<String> parts = new ArrayList<>();
 			for (int i = 0; i < summary.getAppliesToDisplayNames().size(); i++) {
 				final String displayName = summary.getAppliesToDisplayNames().get(i);
@@ -277,34 +276,36 @@ public class UiConnectorCompatibilityService {
 		final RawConnectorStore rawConnectorStore
 	) {
 		final ConnectorIdentity identity = connector.getConnectorIdentity();
-		final String displayName = identity != null &&
-			identity.getDisplayName() != null &&
-			!identity.getDisplayName().isBlank()
-			? identity.getDisplayName()
-			: connectorId;
+		final String displayName =
+			identity != null && identity.getDisplayName() != null && !identity.getDisplayName().isBlank()
+				? identity.getDisplayName()
+				: connectorId;
 
 		final String information = resolveConnectorInformation(identity, connectorId, rawConnectorStore);
 
-		final List<String> platforms = identity != null && identity.getPlatforms() != null
-			? identity.getPlatforms().stream().sorted().toList()
-			: List.of();
+		final List<String> platforms =
+			identity != null && identity.getPlatforms() != null
+				? identity.getPlatforms().stream().sorted().toList()
+				: List.of();
 
 		final Detection detection = identity != null ? identity.getDetection() : null;
 
-		final List<String> tags = detection != null && detection.getTags() != null
-			? detection.getTags().stream().sorted().toList()
-			: List.of();
-		final List<String> appliesToHostTypes = detection != null && detection.getAppliesTo() != null
-			? detection.getAppliesTo().stream().map(UiConnectorCompatibilityService::deviceKindKey).sorted().toList()
-			: List.of();
+		final List<String> tags =
+			detection != null && detection.getTags() != null ? detection.getTags().stream().sorted().toList() : List.of();
+		final List<String> appliesToHostTypes =
+			detection != null && detection.getAppliesTo() != null
+				? detection.getAppliesTo().stream().map(UiConnectorCompatibilityService::deviceKindKey).sorted().toList()
+				: List.of();
 
-		final List<String> appliesToDisplayNames = detection != null && detection.getAppliesTo() != null
-			? detection.getAppliesTo().stream().map(DeviceKind::getDisplayName).sorted().toList()
-			: List.of();
+		final List<String> appliesToDisplayNames =
+			detection != null && detection.getAppliesTo() != null
+				? detection.getAppliesTo().stream().map(DeviceKind::getDisplayName).sorted().toList()
+				: List.of();
 
-		final List<String> connectionTypes = detection != null && detection.getConnectionTypes() != null
-			? detection.getConnectionTypes().stream().map(Enum::name).sorted().toList()
-			: List.of();
+		final List<String> connectionTypes =
+			detection != null && detection.getConnectionTypes() != null
+				? detection.getConnectionTypes().stream().map(Enum::name).sorted().toList()
+				: List.of();
 
 		final Set<String> requiredProtocols = resolveRequiredProtocolKeys(connector.getSourceTypes(), extensionManager);
 		final boolean autoDetectionDisabled = detection == null || detection.isDisableAutoDetection();
@@ -313,8 +314,7 @@ public class UiConnectorCompatibilityService {
 			? extractVariableDefinitions(connectorId, rawConnectorStore)
 			: List.of();
 
-		return UiConnectorSummaryDto
-			.builder()
+		return UiConnectorSummaryDto.builder()
 			.id(connectorId)
 			.displayName(displayName)
 			.information(information)
@@ -409,15 +409,16 @@ public class UiConnectorCompatibilityService {
 				.properties()
 				.forEach(entry -> {
 					final JsonNode variableValue = entry.getValue();
-					final String description = variableValue.has("description") && !variableValue.get("description").isNull()
-						? variableValue.get("description").asText()
-						: "";
-					final String defaultValue = variableValue.has("defaultValue") && !variableValue.get("defaultValue").isNull()
-						? variableValue.get("defaultValue").asText()
-						: "";
+					final String description =
+						variableValue.has("description") && !variableValue.get("description").isNull()
+							? variableValue.get("description").asText()
+							: "";
+					final String defaultValue =
+						variableValue.has("defaultValue") && !variableValue.get("defaultValue").isNull()
+							? variableValue.get("defaultValue").asText()
+							: "";
 					variables.add(
-						UiConnectorVariableDto
-							.builder()
+						UiConnectorVariableDto.builder()
 							.name(entry.getKey())
 							.description(description)
 							.defaultValue(defaultValue)
@@ -483,14 +484,15 @@ public class UiConnectorCompatibilityService {
 			invalidHostType = true;
 		}
 
-		final Set<String> configuredProtocols = protocolKeys == null
-			? Set.of()
-			: protocolKeys
-				.stream()
-				.filter(Objects::nonNull)
-				.map(String::trim)
-				.filter(s -> !s.isBlank())
-				.collect(Collectors.toCollection(LinkedHashSet::new));
+		final Set<String> configuredProtocols =
+			protocolKeys == null
+				? Set.of()
+				: protocolKeys
+						.stream()
+						.filter(Objects::nonNull)
+						.map(String::trim)
+						.filter(s -> !s.isBlank())
+						.collect(Collectors.toCollection(LinkedHashSet::new));
 
 		final Map<Class<? extends IConfiguration>, IConfiguration> configurations = new LinkedHashMap<>();
 		for (final String protocol : configuredProtocols) {

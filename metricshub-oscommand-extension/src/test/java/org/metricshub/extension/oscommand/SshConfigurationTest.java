@@ -85,8 +85,7 @@ class SshConfigurationTest {
 	@Test
 	void testValidateConfigurationRequiresPasswordOrPrivateKeyForRemoteHost() {
 		final String resourceKey = "remote-host";
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username("username")
 			.timeout(120L)
 			.hostname("remote.example.com")
@@ -105,8 +104,7 @@ class SshConfigurationTest {
 	@Test
 	void testValidateConfigurationSkipsAuthForLocalhost() {
 		final String resourceKey = "local-host";
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username("username")
 			.timeout(120L)
 			.hostname("localhost")
