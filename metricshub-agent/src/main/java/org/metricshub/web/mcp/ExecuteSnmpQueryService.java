@@ -126,8 +126,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(
 								executeQueryWithExtension(extension, host.trim(), sanitizedQueryType, sanitizedOid, columns, timeout)
@@ -161,8 +160,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	) {
 		// Make sure the selected SNMP method exists.
 		if (!SNMP_METHODS.contains(queryType.toLowerCase())) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("Unknown SNMP query. Only Get, GetNext, Walk and Table are allowed.")
 				.build();
 		}
@@ -177,8 +175,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			final ArrayNode columnsNode = normalizedColumnsNode(columns);
 
 			if (columnsNode.isEmpty()) {
-				return QueryResponse
-					.builder()
+				return QueryResponse.builder()
 					.error("At least one valid column index must be provided for SNMP Table queries.")
 					.build();
 			}
@@ -188,15 +185,15 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 		}
 
 		// Execute the query using the SNMP Extension.
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
 			.map((IConfiguration configuration) ->
 				executeQuerySafe(extension, hostname, queryType, timeout, queryNode, configuration)
 			)
-			.orElseGet(() -> QueryResponse.builder().error("No SNMP configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() ->
+				QueryResponse.builder().error("No SNMP configuration found for %s.".formatted(hostname)).build()
 			);
 	}
 
@@ -224,8 +221,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 			final String result = extension.executeQuery(configuration, queryNode);
 			return QueryResponse.builder().response(result).build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("Failed to execute SNMP %s query on %s.".formatted(queryType, hostname))
 				.build();
 		}
@@ -251,8 +247,7 @@ public class ExecuteSnmpQueryService implements IMCPToolService {
 	static ArrayNode normalizedColumnsNode(@NonNull final String columns) {
 		final var columnsNode = JsonNodeFactory.instance.arrayNode();
 
-		Arrays
-			.stream(columns.split(","))
+		Arrays.stream(columns.split(","))
 			.map(String::trim)
 			.filter(INTEGER_PATTERN.asPredicate())
 			.mapToInt(Integer::parseInt)

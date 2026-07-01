@@ -5,7 +5,7 @@
 #
 # Requirements:
 # - Maven build that upload assets
-# - JDK 21
+# - JDK 25
 # - WiX Toolset 3 (3.14) for Windows
 
 name: Package Creation
@@ -18,7 +18,7 @@ on:
         type: string
         description: "Version of the JDK to setup and use"
         required: false
-        default: "21"
+        default: "25"
       assetPackage:
         type: string
         description: "Name of the asset artifact to get for packages"

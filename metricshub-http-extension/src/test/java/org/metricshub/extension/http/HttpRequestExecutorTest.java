@@ -67,14 +67,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -83,11 +81,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.BODY)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -136,14 +132,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -152,11 +146,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.HEADER)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -204,14 +196,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -220,11 +210,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.HTTP_STATUS)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -274,14 +262,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -290,11 +276,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.ALL)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -344,14 +328,12 @@ class HttpRequestExecutorTest {
 				.thenThrow(new IOException());
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -360,11 +342,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.ALL)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -420,14 +400,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse2);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -436,11 +414,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.BODY)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)
@@ -491,14 +467,12 @@ class HttpRequestExecutorTest {
 				.thenReturn(httpResponse);
 
 			final String hostname = "hostname";
-			final HttpConfiguration httpConfiguration = HttpConfiguration
-				.builder()
+			final HttpConfiguration httpConfiguration = HttpConfiguration.builder()
 				.username(username)
 				.password(password)
 				.timeout(timeout * 1L)
 				.build();
-			final HttpRequest request = HttpRequest
-				.builder()
+			final HttpRequest request = HttpRequest.builder()
 				.path(path)
 				.method(method)
 				.body(bodyContent, Map.of(), "connector", hostname)
@@ -507,11 +481,9 @@ class HttpRequestExecutorTest {
 				.header("Connection: keep-alive", Map.of(), "connector", hostname)
 				.resultContent(ResultContent.BODY)
 				.build();
-			final TelemetryManager telemetryManager = TelemetryManager
-				.builder()
+			final TelemetryManager telemetryManager = TelemetryManager.builder()
 				.hostConfiguration(
-					HostConfiguration
-						.builder()
+					HostConfiguration.builder()
 						.hostname(hostname)
 						.hostId(hostname)
 						.hostType(DeviceKind.LINUX)

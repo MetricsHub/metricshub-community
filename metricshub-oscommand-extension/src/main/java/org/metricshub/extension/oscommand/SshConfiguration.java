@@ -95,7 +95,7 @@ public class SshConfiguration extends OsCommandConfiguration {
 			() ->
 				String.format(
 					"Resource %s - No username configured for protocol %s." +
-					" This resource will not be monitored. Please verify the configured username.",
+						" This resource will not be monitored. Please verify the configured username.",
 					resourceKey,
 					"SSH"
 				)
@@ -107,7 +107,7 @@ public class SshConfiguration extends OsCommandConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					"SSH",
 					timeout
@@ -147,8 +147,7 @@ public class SshConfiguration extends OsCommandConfiguration {
 
 	@Override
 	public SshConfiguration copy() {
-		return SshConfiguration
-			.sshConfigurationBuilder()
+		return SshConfiguration.sshConfigurationBuilder()
 			.password(password)
 			.port(port)
 			.privateKey(privateKey)

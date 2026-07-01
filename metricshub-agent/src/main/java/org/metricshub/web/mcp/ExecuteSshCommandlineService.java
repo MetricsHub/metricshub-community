@@ -109,8 +109,7 @@ public class ExecuteSshCommandlineService implements IMCPToolService {
 					hostnames,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeSshCommandlineWithExtensionSafe(extension, host, commandline, timeout))
 							.build(),
@@ -136,8 +135,7 @@ public class ExecuteSshCommandlineService implements IMCPToolService {
 		final Long timeout
 	) {
 		// Try to retrieve an SSH configuration for the host
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
@@ -179,8 +177,7 @@ public class ExecuteSshCommandlineService implements IMCPToolService {
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("An error has occurred when executing the commandline: %s".formatted(e.getMessage()))
 				.build();
 		}

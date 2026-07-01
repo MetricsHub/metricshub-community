@@ -27,26 +27,22 @@ class FanPowerAndEnergyEstimatorTest {
 
 	@BeforeEach
 	void init() {
-		monitor =
-			Monitor
-				.builder()
-				.metrics(
-					new HashMap<>(
-						Map.of(
-							FAN_SPEED_METRIC,
-							NumberMetric.builder().value(7.0).build(),
-							FAN_SPEED_RATIO_METRIC,
-							NumberMetric.builder().value(0.2).build()
-						)
+		monitor = Monitor.builder()
+			.metrics(
+				new HashMap<>(
+					Map.of(
+						FAN_SPEED_METRIC,
+						NumberMetric.builder().value(7.0).build(),
+						FAN_SPEED_RATIO_METRIC,
+						NumberMetric.builder().value(0.2).build()
 					)
 				)
-				.build();
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.strategyTime(1696597422644L)
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.build();
+			)
+			.build();
+		telemetryManager = TelemetryManager.builder()
+			.strategyTime(1696597422644L)
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.build();
 		fanPowerAndEnergyEstimator = new FanPowerAndEnergyEstimator(monitor, telemetryManager);
 	}
 

@@ -113,15 +113,16 @@ public class PostConfigDeserializer extends DelegatingDeserializer {
 		existingResourceConfigMap
 			.entrySet()
 			.stream()
-			.filter(resourceConfigEntry ->
-				Objects.nonNull(resourceConfigEntry.getValue()) &&
-				resourceConfigEntry
-					.getValue()
-					.getAttributes()
-					.values()
-					.stream()
-					.filter(Objects::nonNull)
-					.anyMatch(s -> s.contains(MULTI_VALUE_SEPARATOR))
+			.filter(
+				resourceConfigEntry ->
+					Objects.nonNull(resourceConfigEntry.getValue()) &&
+					resourceConfigEntry
+						.getValue()
+						.getAttributes()
+						.values()
+						.stream()
+						.filter(Objects::nonNull)
+						.anyMatch(s -> s.contains(MULTI_VALUE_SEPARATOR))
 			)
 			.forEach(resourceConfigEntry ->
 				resolveMultiResourceConfig(resolvedMultiResourceConfigKeys, newResourceConfigMap, resourceConfigEntry)

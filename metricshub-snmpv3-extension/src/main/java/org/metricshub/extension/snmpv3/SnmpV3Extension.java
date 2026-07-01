@@ -63,8 +63,10 @@ public class SnmpV3Extension extends AbstractSnmpExtension {
 		UnaryOperator<char[]> decrypt
 	) throws InvalidConfigurationException {
 		try {
-			final SnmpV3Configuration snmpV3Configuration = newObjectMapper()
-				.treeToValue(jsonNode, SnmpV3Configuration.class);
+			final SnmpV3Configuration snmpV3Configuration = newObjectMapper().treeToValue(
+				jsonNode,
+				SnmpV3Configuration.class
+			);
 
 			if (decrypt != null) {
 				char[] password = snmpV3Configuration.getPassword();

@@ -65,8 +65,7 @@ public class ApplicationStatusService {
 	 */
 	public ApplicationStatus reportApplicationStatus() {
 		final var agentContext = agentContextHolder.getAgentContext();
-		return ApplicationStatus
-			.builder()
+		return ApplicationStatus.builder()
 			.status(determineApplicationStatus(agentContext))
 			.agentInfo(readAgentInfo(agentContext))
 			.otelCollectorStatus(determineOtelCollectorStatus(agentContext))
@@ -241,7 +240,8 @@ public class ApplicationStatusService {
 	 */
 	private static double determineCpuUsage() {
 		final java.lang.management.OperatingSystemMXBean displayOSBean = ManagementFactory.getOperatingSystemMXBean();
-		if (displayOSBean instanceof OperatingSystemMXBean osBean) { // Use pattern matching for instanceof
+		if (displayOSBean instanceof OperatingSystemMXBean osBean) {
+			// Use pattern matching for instanceof
 			final var processCpuLoad = osBean.getProcessCpuLoad();
 			if (processCpuLoad >= 0) {
 				return processCpuLoad * 100.0;

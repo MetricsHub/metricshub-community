@@ -22,9 +22,8 @@ class ProcessControlTest {
 		final List<String> emptyList = Collections.emptyList();
 		final List<String> cmdLine = List.of("cmd");
 		assertThrows(IllegalArgumentException.class, () -> ProcessControl.newProcessBuilder(null, emptyMap, null, false));
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> ProcessControl.newProcessBuilder(emptyList, emptyMap, null, false)
+		assertThrows(IllegalArgumentException.class, () ->
+			ProcessControl.newProcessBuilder(emptyList, emptyMap, null, false)
 		);
 		assertThrows(IllegalArgumentException.class, () -> ProcessControl.newProcessBuilder(cmdLine, null, null, false));
 		assertDoesNotThrow(() -> ProcessControl.newProcessBuilder(cmdLine, emptyMap, null, false));

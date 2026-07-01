@@ -158,8 +158,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 			// Execute the source and retry the operation
 			// in case the source fails but the previous source table didn't fail
-			SourceTable sourceTable = RetryOperation
-				.<SourceTable>builder()
+			SourceTable sourceTable = RetryOperation.<SourceTable>builder()
 				.withDefaultValue(SourceTable.empty())
 				.withMaxRetries(1)
 				.withWaitStrategy(telemetryManager.getHostConfiguration().getRetryDelay())
@@ -179,12 +178,10 @@ public abstract class AbstractStrategy implements IStrategy {
 					monitorType
 				);
 				// This ensures that the internal table (List<List<String>>) is not null and rawData integrity is maintained
-				sourceTable =
-					SourceTable
-						.builder()
-						.rawData(sourceTable != null ? sourceTable.getRawData() : null)
-						.table(new ArrayList<>())
-						.build();
+				sourceTable = SourceTable.builder()
+					.rawData(sourceTable != null ? sourceTable.getRawData() : null)
+					.table(new ArrayList<>())
+					.build();
 			}
 
 			// log the source table
@@ -206,8 +203,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				continue;
 			}
 
-			final ComputeProcessor computeProcessor = ComputeProcessor
-				.builder()
+			final ComputeProcessor computeProcessor = ComputeProcessor.builder()
 				.sourceKey(sourceKey)
 				.sourceTable(sourceTable)
 				.connectorId(connectorId)
@@ -216,8 +212,7 @@ public abstract class AbstractStrategy implements IStrategy {
 				.telemetryManager(telemetryManager)
 				.build();
 
-			final ComputeUpdaterProcessor computeUpdaterProcessor = ComputeUpdaterProcessor
-				.builder()
+			final ComputeUpdaterProcessor computeUpdaterProcessor = ComputeUpdaterProcessor.builder()
 				.computeProcessor(computeProcessor)
 				.attributes(attributes)
 				.connectorId(connectorId)
@@ -283,8 +278,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		final Source source,
 		final SourceTable previousSourceTable
 	) {
-		final ISourceProcessor sourceProcessor = SourceProcessor
-			.builder()
+		final ISourceProcessor sourceProcessor = SourceProcessor.builder()
 			.connectorId(connectorId)
 			.clientsExecutor(clientsExecutor)
 			.telemetryManager(telemetryManager)
@@ -293,8 +287,7 @@ public abstract class AbstractStrategy implements IStrategy {
 
 		final Supplier<SourceTable> executable = () ->
 			source.accept(
-				SourceUpdaterProcessor
-					.builder()
+				SourceUpdaterProcessor.builder()
 					.connectorId(connectorId)
 					.sourceProcessor(sourceProcessor)
 					.telemetryManager(telemetryManager)
@@ -308,15 +301,14 @@ public abstract class AbstractStrategy implements IStrategy {
 		final SourceTable sourceTable;
 
 		if (source.isForceSerialization()) {
-			sourceTable =
-				ForceSerializationHelper.forceSerialization(
-					executable,
-					telemetryManager,
-					connectorId,
-					source,
-					SOURCE,
-					SourceTable.empty()
-				);
+			sourceTable = ForceSerializationHelper.forceSerialization(
+				executable,
+				telemetryManager,
+				connectorId,
+				source,
+				SOURCE,
+				SourceTable.empty()
+			);
 		} else {
 			sourceTable = executable.get();
 		}
@@ -484,8 +476,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			Collections.emptySet(),
 			extensionManager,
 			true
-		)
-			.runConnectorDetectionCriteria(currentConnector, hostname);
+		).runConnectorDetectionCriteria(currentConnector, hostname);
 
 		// Track the connector detection criteria execution end time
 		final long jobEndTime = System.currentTimeMillis();
@@ -531,7 +522,7 @@ public abstract class AbstractStrategy implements IStrategy {
 			// Transient failure: log a warning but do NOT stop the connector's job
 			log.warn(
 				"Hostname {} - Detection re-validation failed for connector {} (failure {}/{}). " +
-				"Treating as transient; the connector's {} job will continue.",
+					"Treating as transient; the connector's {} job will continue.",
 				hostname,
 				connectorId,
 				failureCount,
@@ -546,7 +537,7 @@ public abstract class AbstractStrategy implements IStrategy {
 		// Threshold exceeded: this is a persistent failure
 		log.error(
 			"Hostname {} - Detection re-validation failed {} consecutive times for connector {}. " +
-			"The connector no longer matches the host. Stopping the connector's {} job.",
+				"The connector no longer matches the host. Stopping the connector's {} job.",
 			hostname,
 			failureCount,
 			connectorId,

@@ -104,8 +104,7 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 		}
 
 		// Construct job information including job name, connector identifier, hostname and monitor type.
-		final JobInfo jobInfo = JobInfo
-			.builder()
+		final JobInfo jobInfo = JobInfo.builder()
 			.hostname(hostname)
 			.connectorId(connectorId)
 			.jobName(jobName)
@@ -113,8 +112,7 @@ public abstract class SurroundingStrategy extends AbstractStrategy {
 			.build();
 
 		// Build and order sources based on dependencies.
-		final OrderedSources orderedSources = OrderedSources
-			.builder()
+		final OrderedSources orderedSources = OrderedSources.builder()
 			.sources(sources, new ArrayList<>(), getSourceDependencies(), jobInfo)
 			.build();
 

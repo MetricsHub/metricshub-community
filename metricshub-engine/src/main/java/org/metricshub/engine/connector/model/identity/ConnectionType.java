@@ -53,9 +53,9 @@ public enum ConnectionType {
 			// No match => Exception
 			throw new IllegalArgumentException(
 				"'" +
-				value +
-				"' is not a supported connection type." +
-				"ConnectionType must be a known connection type (local, remote)."
+					value +
+					"' is not a supported connection type." +
+					"ConnectionType must be a known connection type (local, remote)."
 			);
 		}
 	}

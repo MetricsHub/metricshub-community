@@ -65,8 +65,7 @@ public class WbemCriterion extends WqlCriterion {
 
 	@Override
 	public WbemCriterion copy() {
-		return WbemCriterion
-			.builder()
+		return WbemCriterion.builder()
 			.query(getQuery())
 			.namespace(getNamespace())
 			.expectedResult(getExpectedResult())

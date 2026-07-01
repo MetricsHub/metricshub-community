@@ -31,13 +31,11 @@ class CounterSuppressZerosStateMetricRecorderTest {
 	@BeforeEach
 	void setUp() {
 		TestHelper.configureGlobalLogger();
-		recorder =
-			CounterSuppressZerosStateMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withDescription("Test counter suppress zeros state metric")
-				.withStateValue(TEST_STATE_VALUE)
-				.build();
+		recorder = CounterSuppressZerosStateMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withDescription("Test counter suppress zeros state metric")
+			.withStateValue(TEST_STATE_VALUE)
+			.build();
 	}
 
 	@Test
@@ -75,14 +73,12 @@ class CounterSuppressZerosStateMetricRecorderTest {
 		when(mockMetric.getCollectTime()).thenReturn(System.currentTimeMillis());
 		when(mockMetric.getAttributes()).thenReturn(Map.of("state", "ok"));
 
-		recorder =
-			CounterSuppressZerosStateMetricRecorder
-				.builder()
-				.withMetric(mockMetric)
-				.withDescription("Test counter suppress zeros state metric")
-				.withStateValue(TEST_STATE_VALUE)
-				.withResourceAttributes(Map.of("resource", "resourceValue"))
-				.build();
+		recorder = CounterSuppressZerosStateMetricRecorder.builder()
+			.withMetric(mockMetric)
+			.withDescription("Test counter suppress zeros state metric")
+			.withStateValue(TEST_STATE_VALUE)
+			.withResourceAttributes(Map.of("resource", "resourceValue"))
+			.build();
 
 		// When
 		final Optional<Metric> result = recorder.doRecord();

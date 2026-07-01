@@ -33,8 +33,7 @@ class HttpCriterionDeserializerTest extends DeserializerTest {
 
 		final List<Criterion> expected = new ArrayList<>();
 
-		final HttpCriterion http1 = HttpCriterion
-			.builder()
+		final HttpCriterion http1 = HttpCriterion.builder()
 			.type("http")
 			.method(HttpMethod.GET) // The connector doesn't define the method (default: Get)
 			.url("test")
@@ -45,8 +44,7 @@ class HttpCriterionDeserializerTest extends DeserializerTest {
 			.expectedResult("result")
 			.errorMessage("error")
 			.build();
-		final HttpCriterion http2 = HttpCriterion
-			.builder()
+		final HttpCriterion http2 = HttpCriterion.builder()
 			.type("http")
 			.method(HttpMethod.GET) // The connector doesn't define the method (default: Get)
 			.url("test/path1")
@@ -57,8 +55,7 @@ class HttpCriterionDeserializerTest extends DeserializerTest {
 			.expectedResult("result")
 			.errorMessage("error")
 			.build();
-		final HttpCriterion http3 = HttpCriterion
-			.builder()
+		final HttpCriterion http3 = HttpCriterion.builder()
 			.type("http")
 			.method(HttpMethod.POST)
 			.url("test/path2")

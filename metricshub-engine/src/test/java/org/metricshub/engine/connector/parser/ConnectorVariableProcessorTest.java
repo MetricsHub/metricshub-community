@@ -43,8 +43,7 @@ class ConnectorVariableProcessorTest {
 		connectorVariables.put("local-connection-type", "local");
 
 		// Init ConnectorVariableProcessor with the connector variables map and a node processor
-		final ConnectorVariableProcessor connectorVariableProcessor = ConnectorVariableProcessor
-			.builder()
+		final ConnectorVariableProcessor connectorVariableProcessor = ConnectorVariableProcessor.builder()
 			.connectorVariables(connectorVariables)
 			.next(new ConstantsProcessor(new SourceKeyProcessor()))
 			.build();

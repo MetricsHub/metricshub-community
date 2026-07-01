@@ -16,24 +16,20 @@ class WmiConfigurationTest {
 	@Test
 	void testValidateConfiguration() throws InvalidConfigurationException {
 		assertDoesNotThrow(() ->
-			WmiConfiguration
-				.builder()
+			WmiConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.timeout(15L)
 				.build()
 				.validateConfiguration("resourceKey")
 		);
-		assertThrows(
-			InvalidConfigurationException.class,
-			() ->
-				WmiConfiguration
-					.builder()
-					.username("user")
-					.password("pass".toCharArray())
-					.timeout(-15L) // Bad timeout
-					.build()
-					.validateConfiguration("resourceKey")
+		assertThrows(InvalidConfigurationException.class, () ->
+			WmiConfiguration.builder()
+				.username("user")
+				.password("pass".toCharArray())
+				.timeout(-15L) // Bad timeout
+				.build()
+				.validateConfiguration("resourceKey")
 		);
 	}
 
@@ -41,8 +37,7 @@ class WmiConfigurationTest {
 	void testToString() {
 		assertEquals(
 			"WMI as Administrator",
-			WmiConfiguration
-				.builder()
+			WmiConfiguration.builder()
 				.username("Administrator")
 				.password("passwd".toCharArray())
 				.timeout(15L)
@@ -53,8 +48,7 @@ class WmiConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.namespace("namespace")
 			.password("password".toCharArray())
 			.timeout(100L)
@@ -72,8 +66,7 @@ class WmiConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.namespace("myNamespace")
 			.password("myPassword".toCharArray())
 			.username("myUsername")

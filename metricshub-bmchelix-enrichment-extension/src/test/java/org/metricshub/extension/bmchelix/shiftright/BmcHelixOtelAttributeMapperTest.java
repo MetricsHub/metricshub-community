@@ -28,8 +28,9 @@ class BmcHelixOtelAttributeMapperTest {
 
 	@Test
 	void testToKeyValuesConvertsMapToKeyValues() {
-		final List<KeyValue> result = new BmcHelixOtelAttributeMapper()
-			.toKeyValues(Map.of("key1", "value1", "key2", "value2"));
+		final List<KeyValue> result = new BmcHelixOtelAttributeMapper().toKeyValues(
+			Map.of("key1", "value1", "key2", "value2")
+		);
 
 		assertEquals(2, result.size(), "Should create two key-values");
 		assertTrue(result.stream().anyMatch(keyValue -> "key1".equals(keyValue.getKey())));

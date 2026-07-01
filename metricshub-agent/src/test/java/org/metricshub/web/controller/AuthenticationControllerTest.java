@@ -58,8 +58,7 @@ class AuthenticationControllerTest {
 
 		when(userService.performSecurity(Mockito.any(LoginAuthenticationRequest.class))).thenReturn(auth);
 
-		final String body =
-			"""
+		final String body = """
 			{
 			  "username": "john",
 			  "password": "secret"
@@ -79,10 +78,11 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h ->
-					h.contains(SecurityHelper.TOKEN_KEY + "=" + token) &&
-					h.contains("Max-Age=" + expiresIn) &&
-					h.contains("Path=/")
+				.anyMatch(
+					h ->
+						h.contains(SecurityHelper.TOKEN_KEY + "=" + token) &&
+						h.contains("Max-Age=" + expiresIn) &&
+						h.contains("Path=/")
 				),
 			"Access token cookie not found or malformed"
 		);
@@ -90,10 +90,11 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h ->
-					h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + refreshToken) &&
-					h.contains("Max-Age=" + refreshExpiresIn) &&
-					h.contains("Path=/")
+				.anyMatch(
+					h ->
+						h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + refreshToken) &&
+						h.contains("Max-Age=" + refreshExpiresIn) &&
+						h.contains("Path=/")
 				),
 			"Refresh token cookie not found or malformed"
 		);
@@ -128,10 +129,11 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h ->
-					h.contains(SecurityHelper.TOKEN_KEY + "=" + newToken) &&
-					h.contains("Max-Age=" + newExpiresIn) &&
-					h.contains("Path=/")
+				.anyMatch(
+					h ->
+						h.contains(SecurityHelper.TOKEN_KEY + "=" + newToken) &&
+						h.contains("Max-Age=" + newExpiresIn) &&
+						h.contains("Path=/")
 				),
 			"Refreshed access token cookie not found or malformed"
 		);
@@ -139,10 +141,11 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h ->
-					h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + newRefreshToken) &&
-					h.contains("Max-Age=" + newRefreshExpiresIn) &&
-					h.contains("Path=/")
+				.anyMatch(
+					h ->
+						h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + newRefreshToken) &&
+						h.contains("Max-Age=" + newRefreshExpiresIn) &&
+						h.contains("Path=/")
 				),
 			"Refreshed refresh token cookie not found or malformed"
 		);
@@ -163,7 +166,8 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h -> h.contains(SecurityHelper.TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
+				.anyMatch(
+					h -> h.contains(SecurityHelper.TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
 				),
 			"Access token cookie not cleared correctly"
 		);
@@ -171,8 +175,8 @@ class AuthenticationControllerTest {
 		assertTrue(
 			setCookies
 				.stream()
-				.anyMatch(h ->
-					h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
+				.anyMatch(
+					h -> h.contains(SecurityHelper.REFRESH_TOKEN_KEY + "=" + MetricsHubConstants.EMPTY) && h.contains("Max-Age=0")
 				),
 			"Refresh token cookie not cleared correctly"
 		);

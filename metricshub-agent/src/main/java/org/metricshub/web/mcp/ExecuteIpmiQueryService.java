@@ -98,8 +98,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeIpmiQueryWithExtensionSafe(extension, host, timeout))
 							.build(),
@@ -123,8 +122,7 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 		final String hostname,
 		final Long timeout
 	) {
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
@@ -133,13 +131,13 @@ public class ExecuteIpmiQueryService implements IMCPToolService {
 				try {
 					return QueryResponse.builder().response(extension.executeQuery(configuration, null)).build();
 				} catch (Exception e) {
-					return QueryResponse
-						.builder()
+					return QueryResponse.builder()
 						.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 						.build();
 				}
 			})
-			.orElseGet(() -> QueryResponse.builder().error("No IPMI configuration found for %s.".formatted(hostname)).build()
+			.orElseGet(() ->
+				QueryResponse.builder().error("No IPMI configuration found for %s.".formatted(hostname)).build()
 			);
 	}
 

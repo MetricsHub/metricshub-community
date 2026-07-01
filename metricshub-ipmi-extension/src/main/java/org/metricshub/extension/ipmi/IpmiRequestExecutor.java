@@ -74,7 +74,7 @@ public class IpmiRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executed IPMI detection request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
-				"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
+					"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 				hostname,
 				ipmiConfiguration.getUsername(),
 				ipmiConfiguration.isSkipAuth(),
@@ -131,7 +131,7 @@ public class IpmiRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executing IPMI FRUs and Sensors request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
-				"- Timeout: {} s\n",
+					"- Timeout: {} s\n",
 				hostname,
 				ipmiConfiguration.getUsername(),
 				ipmiConfiguration.isSkipAuth(),
@@ -148,7 +148,7 @@ public class IpmiRequestExecutor {
 		LoggingHelper.trace(() ->
 			log.trace(
 				"Executed IPMI FRUs and Sensors request:\n- Hostname: {}\n- Username: {}\n- SkipAuth: {}\n" + // NOSONAR
-				"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
+					"- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 				hostname,
 				ipmiConfiguration.getUsername(),
 				ipmiConfiguration.isSkipAuth(),

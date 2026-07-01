@@ -45,8 +45,7 @@ public class SnmpGetCriterionProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of())
 			.build();
@@ -66,11 +65,11 @@ public class SnmpGetCriterionProcessorTest {
 		String expectedResult = "TestValue";
 		String expectedHostname = "hostname";
 
-		when(snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, "hostname"))
-			.thenReturn(expectedResult);
+		when(
+			snmpRequestExecutor.executeSNMPGet(expectedOid, snmpConfiguration, expectedHostname, false, "hostname")
+		).thenReturn(expectedResult);
 
-		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion
-			.builder()
+		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder()
 			.oid(expectedOid)
 			.expectedResult(expectedResult)
 			.build();
@@ -124,8 +123,7 @@ public class SnmpGetCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenThrow(new InterruptedException("Test exception"));
+		).thenThrow(new InterruptedException("Test exception"));
 
 		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
 
@@ -145,16 +143,15 @@ public class SnmpGetCriterionProcessorTest {
 			snmpRequestExecutor,
 			configurationRetriever,
 			true
-		)
-			.checkSNMPGetNextExpectedValue(hostname, oid, expectedResult, result);
+		).checkSNMPGetNextExpectedValue(hostname, oid, expectedResult, result);
 
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"Hostname " +
-			hostname +
-			" - SNMP test failed - SNMP GetNext of " +
-			oid +
-			" was unsuccessful due to a null result.",
+				hostname +
+				" - SNMP test failed - SNMP GetNext of " +
+				oid +
+				" was unsuccessful due to a null result.",
 			criterionTestResult.getMessage()
 		);
 	}
@@ -256,8 +253,7 @@ public class SnmpGetCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenThrow(new TimeoutException("SNMP request timed out"));
+		).thenThrow(new TimeoutException("SNMP request timed out"));
 
 		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
 
@@ -283,8 +279,7 @@ public class SnmpGetCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenThrow(new RuntimeException("SNMP agent not available"));
+		).thenThrow(new RuntimeException("SNMP agent not available"));
 
 		SnmpGetCriterion snmpGetCriterion = SnmpGetCriterion.builder().oid("1.3.6.1.2.1.1.1.0").build();
 

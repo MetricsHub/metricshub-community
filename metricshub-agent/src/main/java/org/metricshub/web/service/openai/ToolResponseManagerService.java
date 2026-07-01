@@ -309,8 +309,7 @@ public class ToolResponseManagerService {
 				final JsonNode truncatedPayload = objectMapper.valueToTree(truncationResult.truncatedResponse());
 
 				// Build the full manifest
-				final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-					.builder()
+				final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 					.openaiFileId(fileId)
 					.fileName(fileName)
 					.description(description)
@@ -373,7 +372,7 @@ public class ToolResponseManagerService {
 			// Truncation could not bring the full manifest within the limit — fall back to generic manifest
 			log.warn(
 				"Troubleshooting manifest for tool '{}' still exceeds limit after truncation retries; " +
-				"falling back to generic manifest",
+					"falling back to generic manifest",
 				toolName
 			);
 			return buildGenericManifest(fileName, fileId);
@@ -426,8 +425,7 @@ public class ToolResponseManagerService {
 
 			final JsonNode truncatedPayload = objectMapper.valueToTree(truncationResult.truncatedResponse());
 
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 				.openaiFileId(fileId)
 				.fileName(fileName)
 				.description(description)
@@ -482,8 +480,7 @@ public class ToolResponseManagerService {
 				"\nFor the complete dataset, use Code Interpreter to read " +
 				"the uploaded file using the openai_file_id.";
 
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 				.openaiFileId(fileId)
 				.fileName(fileName)
 				.description(description)
@@ -507,13 +504,12 @@ public class ToolResponseManagerService {
 	 */
 	private String buildFileReferenceOnlyManifest(final String fileName, final String fileId) {
 		try {
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 				.openaiFileId(fileId)
 				.fileName(fileName)
 				.description(
 					"Tool output uploaded to file. Context budget exhausted — no inline data available. " +
-					"Use Code Interpreter to read the file using the openai_file_id."
+						"Use Code Interpreter to read the file using the openai_file_id."
 				)
 				.build();
 			return objectMapper.writeValueAsString(manifest);
@@ -567,8 +563,7 @@ public class ToolResponseManagerService {
 	private String buildManifestWithPayload(final String fileName, final String fileId, final String jsonPayload) {
 		try {
 			final JsonNode payloadNode = objectMapper.readTree(jsonPayload);
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 				.openaiFileId(fileId)
 				.fileName(fileName)
 				.description("Complete tool output (not truncated). The payload field contains the full data.")
@@ -591,8 +586,7 @@ public class ToolResponseManagerService {
 	 */
 	String buildGenericManifest(final String fileName, final String fileId) {
 		try {
-			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest
-				.builder()
+			final UploadedToolOutputManifest manifest = UploadedToolOutputManifest.builder()
 				.openaiFileId(fileId)
 				.fileName(fileName)
 				.build();

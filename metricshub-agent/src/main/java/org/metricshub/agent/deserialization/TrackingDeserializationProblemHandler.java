@@ -139,10 +139,10 @@ public class TrackingDeserializationProblemHandler extends DeserializationProble
 		register(
 			ctxt,
 			"Instantiation problem for type %s with argument %s: %s".formatted(
-					instClass.getSimpleName(),
-					argument,
-					t.getMessage()
-				)
+				instClass.getSimpleName(),
+				argument,
+				t.getMessage()
+			)
 		);
 		return NOT_HANDLED;
 	}

@@ -433,12 +433,11 @@ public class OsCommandService {
 
 		SudoInformation sudoInformation = null;
 		if (osCommandConfiguration != null) {
-			sudoInformation =
-				new SudoInformation(
-					osCommandConfiguration.isUseSudo(),
-					osCommandConfiguration.getUseSudoCommands(),
-					osCommandConfiguration.getSudoCommand()
-				);
+			sudoInformation = new SudoInformation(
+				osCommandConfiguration.isUseSudo(),
+				osCommandConfiguration.getUseSudoCommands(),
+				osCommandConfiguration.getSudoCommand()
+			);
 		}
 
 		final Map<String, File> embeddedTempFiles = createOsCommandEmbeddedFiles(
@@ -481,7 +480,7 @@ public class OsCommandService {
 						protectCaseInsensitiveRegex(entry.getKey()),
 						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
 					),
-				(s1, s2) -> null
+				(_, _) -> null
 			);
 
 		final String commandNoPassword = embeddedTempFiles
@@ -494,7 +493,7 @@ public class OsCommandService {
 						protectCaseInsensitiveRegex(entry.getKey()),
 						Matcher.quoteReplacement(entry.getValue().getAbsolutePath())
 					),
-				(s1, s2) -> null
+				(_, _) -> null
 			);
 
 		try {
@@ -513,16 +512,15 @@ public class OsCommandService {
 				commandResult = localCommandResult != null ? localCommandResult : EMPTY;
 			} else {
 				// Case others (Linux) Remote
-				commandResult =
-					runSshCommand(
-						command,
-						hostname,
-						(SshConfiguration) sshConfiguration,
-						timeout,
-						new ArrayList<>(embeddedTempFiles.values()),
-						commandNoPassword,
-						telemetryManager.getHostConfiguration().getHostType()
-					);
+				commandResult = runSshCommand(
+					command,
+					hostname,
+					(SshConfiguration) sshConfiguration,
+					timeout,
+					new ArrayList<>(embeddedTempFiles.values()),
+					commandNoPassword,
+					telemetryManager.getHostConfiguration().getHostType()
+				);
 			}
 
 			// Record the OS command exchange if recording is enabled.

@@ -243,8 +243,7 @@ public class WbemCriterionProcessor {
 		// No namespace => failure
 		if (namespaces.isEmpty()) {
 			String formattedNamespaceList = possibleNamespaces.stream().collect(Collectors.joining("\n- "));
-			return NamespaceResult
-				.builder()
+			return NamespaceResult.builder()
 				.result(
 					CriterionTestResult.failure(
 						criterion,
@@ -286,8 +285,7 @@ public class WbemCriterionProcessor {
 		// If the user specified a namespace, we return it as if it was the only namespace available
 		// and for which we're going to test our connector
 		if (configuration.getNamespace() != null && !configuration.getNamespace().isBlank()) {
-			return PossibleNamespacesResult
-				.builder()
+			return PossibleNamespacesResult.builder()
 				.possibleNamespaces(Collections.singleton(configuration.getNamespace()))
 				.success(true)
 				.build();
@@ -348,8 +346,7 @@ public class WbemCriterionProcessor {
 
 		// No namespace love?
 		if (possibleWbemNamespaces.isEmpty()) {
-			return PossibleNamespacesResult
-				.builder()
+			return PossibleNamespacesResult.builder()
 				.errorMessage("No suitable namespace could be found to query host " + hostname + ".")
 				.success(false)
 				.build();
@@ -379,15 +376,14 @@ public class WbemCriterionProcessor {
 		// Make the WBEM query
 		final List<List<String>> queryResult;
 		try {
-			queryResult =
-				wbemRequestExecutor.executeWbem(
-					hostname,
-					configuration,
-					criterion.getQuery(),
-					criterion.getNamespace(),
-					telemetryManager,
-					telemetryManager.getHostname()
-				);
+			queryResult = wbemRequestExecutor.executeWbem(
+				hostname,
+				configuration,
+				criterion.getQuery(),
+				criterion.getNamespace(),
+				telemetryManager,
+				telemetryManager.getHostname()
+			);
 		} catch (ClientException e) {
 			if (logMode) {
 				log.error(
@@ -422,9 +418,10 @@ public class WbemCriterionProcessor {
 		}
 
 		// Search for the expected result
-		final Matcher matcher = Pattern
-			.compile(PslUtils.psl2JavaRegex(criterion.getExpectedResult()), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE)
-			.matcher(actualResult);
+		final Matcher matcher = Pattern.compile(
+			PslUtils.psl2JavaRegex(criterion.getExpectedResult()),
+			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+		).matcher(actualResult);
 
 		// If the expected result is found ==> success
 		if (matcher.find()) {
@@ -455,9 +452,8 @@ public class WbemCriterionProcessor {
 		}
 
 		// Retrieve the hostname from the WbemConfiguration, otherwise from the telemetryManager
-		final String hostname = wbemConfiguration.getHostname() != null
-			? wbemConfiguration.getHostname()
-			: telemetryManager.getHostname();
+		final String hostname =
+			wbemConfiguration.getHostname() != null ? wbemConfiguration.getHostname() : telemetryManager.getHostname();
 
 		// If namespace is specified as "Automatic"
 		if (AUTOMATIC_NAMESPACE.equalsIgnoreCase(wbemCriterion.getNamespace())) {

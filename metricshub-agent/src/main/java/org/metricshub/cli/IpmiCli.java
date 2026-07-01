@@ -58,8 +58,7 @@ public class IpmiCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping IPMI CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -205,8 +204,7 @@ public class IpmiCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(extension -> {
 				try {

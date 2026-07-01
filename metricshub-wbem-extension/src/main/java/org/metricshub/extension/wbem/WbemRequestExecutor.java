@@ -127,19 +127,17 @@ public class WbemRequestExecutor {
 		String ticket = telemetryManager.getHostProperties().getVCenterTicket();
 
 		if (ticket == null) {
-			ticket =
-				refreshVCenterTicket(
-					wbemConfig.getVCenter(),
-					wbemConfig.getUsername(),
-					wbemConfig.getPassword(),
-					hostname,
-					wbemConfig.getTimeout(),
-					resourceHostname
-				);
+			ticket = refreshVCenterTicket(
+				wbemConfig.getVCenter(),
+				wbemConfig.getUsername(),
+				wbemConfig.getPassword(),
+				hostname,
+				wbemConfig.getTimeout(),
+				resourceHostname
+			);
 		}
 
-		final WbemConfiguration vCenterWbemConfig = WbemConfiguration
-			.builder()
+		final WbemConfiguration vCenterWbemConfig = WbemConfiguration.builder()
 			.username(ticket)
 			.password(ticket.toCharArray())
 			.namespace(wbemConfig.getNamespace())
@@ -152,15 +150,14 @@ public class WbemRequestExecutor {
 			return doWbemQuery(hostname, vCenterWbemConfig, query, namespace);
 		} catch (ClientException e) {
 			if (isRefreshTicketNeeded(e.getCause())) {
-				ticket =
-					refreshVCenterTicket(
-						wbemConfig.getVCenter(),
-						wbemConfig.getUsername(),
-						wbemConfig.getPassword(),
-						hostname,
-						wbemConfig.getTimeout(),
-						resourceHostname
-					);
+				ticket = refreshVCenterTicket(
+					wbemConfig.getVCenter(),
+					wbemConfig.getUsername(),
+					wbemConfig.getPassword(),
+					hostname,
+					wbemConfig.getTimeout(),
+					resourceHostname
+				);
 				vCenterWbemConfig.setUsername(ticket);
 				vCenterWbemConfig.setPassword(ticket.toCharArray());
 				return doWbemQuery(hostname, vCenterWbemConfig, query, namespace);
@@ -195,17 +192,18 @@ public class WbemRequestExecutor {
 	) throws ClientException {
 		VCenterClient.setDebug(() -> true, log::debug);
 		try {
-			String ticket = resourceHostname != null
-				? ThreadHelper.execute(
-					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-					timeout,
-					resourceHostname,
-					"wbem"
-				)
-				: ThreadHelper.execute(
-					() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
-					timeout
-				);
+			String ticket =
+				resourceHostname != null
+					? ThreadHelper.execute(
+							() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+							timeout,
+							resourceHostname,
+							"wbem"
+						)
+					: ThreadHelper.execute(
+							() -> VCenterClient.requestCertificate(vCenter, username, new String(password), hostname),
+							timeout
+						);
 			if (ticket == null) {
 				throw new ClientException("Cannot get the ticket through vCenter module");
 			}
@@ -267,7 +265,7 @@ public class WbemRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executing WBEM request:\n- Hostname: {}\n- Port: {}\n- Protocol: {}\n- URL: {}\n" + // NOSONAR
-					"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n",
+						"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n",
 					hostname,
 					wbemConfig.getPort(),
 					wbemConfig.getProtocol().toString(),
@@ -298,7 +296,7 @@ public class WbemRequestExecutor {
 			LoggingHelper.trace(() ->
 				log.trace(
 					"Executed WBEM request:\n- Hostname: {}\n- Port: {}\n- Protocol: {}\n- URL: {}\n" + // NOSONAR
-					"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
+						"- Username: {}\n- Query: {}\n- Namespace: {}\n- Timeout: {} s\n- Result:\n{}\n- response-time: {}\n",
 					hostname,
 					wbemConfig.getPort(),
 					wbemConfig.getProtocol().toString(),
@@ -313,7 +311,8 @@ public class WbemRequestExecutor {
 			);
 
 			return result;
-		} catch (Exception e) { // NOSONAR an exception is already thrown
+		} catch (Exception e) {
+			// NOSONAR an exception is already thrown
 			throw new ClientException("WBEM query failed on " + hostname + ".", e);
 		}
 	}
@@ -336,8 +335,7 @@ public class WbemRequestExecutor {
 			return isAcceptableWbemError(cimErrorType);
 		} else if (
 			// CHECKSTYLE:OFF
-			t instanceof org.metricshub.wbem.client.exceptions.WqlQuerySyntaxException
-			// CHECKSTYLE:ON
+			t instanceof org.metricshub.wbem.client.exceptions.WqlQuerySyntaxException // CHECKSTYLE:ON
 		) {
 			return true;
 		}

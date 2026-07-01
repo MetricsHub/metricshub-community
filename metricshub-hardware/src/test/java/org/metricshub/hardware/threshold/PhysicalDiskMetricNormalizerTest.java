@@ -23,8 +23,7 @@ class PhysicalDiskMetricNormalizerTest {
 	@Test
 	void testNormalize() {
 		// Create the hw.errors metric
-		final NumberMetric hwErrorsMetric = NumberMetric
-			.builder()
+		final NumberMetric hwErrorsMetric = NumberMetric.builder()
 			.value(1.0)
 			.name("hw.errors")
 			.attributes(Map.of("limit_type", "critical", "hw.type", "physical_disk"))
@@ -32,14 +31,12 @@ class PhysicalDiskMetricNormalizerTest {
 
 		// Test case 1: Both degraded and critical are present and critical < degraded
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "physical_disk"))
 				.build();
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "physical_disk"))
@@ -51,8 +48,7 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(
@@ -85,14 +81,12 @@ class PhysicalDiskMetricNormalizerTest {
 		}
 		// Test case 2: Both degraded and critical are present and critical >= degraded
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(3.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "physical_disk"))
 				.build();
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "physical_disk"))
@@ -104,8 +98,7 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(
@@ -142,15 +135,15 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsMetric);
 
 			// Create the monitor
-			final Monitor monitorWithoutBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(new HashMap<>(Map.of("hw.errors", hwErrorsMetric)))
 				.build();
 
-			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithoutBothMetrics);
+			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithoutBothMetrics
+			);
 			assertEquals(
 				1.0,
 				monitorWithoutBothMetrics
@@ -160,8 +153,7 @@ class PhysicalDiskMetricNormalizerTest {
 		}
 		// Test case 4: Only degraded is present
 		{
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "physical_disk"))
@@ -172,8 +164,7 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithDegradedMetric = Monitor
-				.builder()
+			final Monitor monitorWithDegradedMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(
@@ -188,8 +179,9 @@ class PhysicalDiskMetricNormalizerTest {
 				)
 				.build();
 
-			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithDegradedMetric);
+			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithDegradedMetric
+			);
 			assertNull(
 				monitorWithDegradedMetric.getMetric(
 					HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK,
@@ -205,8 +197,7 @@ class PhysicalDiskMetricNormalizerTest {
 		}
 		// Test case 5: Only critical is present
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_PHYSICAL_DISK)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "physical_disk"))
@@ -217,8 +208,7 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitCriticalMetric);
 
 			// Create the monitor
-			final Monitor monitorWithCriticalMetric = Monitor
-				.builder()
+			final Monitor monitorWithCriticalMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(
@@ -233,8 +223,9 @@ class PhysicalDiskMetricNormalizerTest {
 				)
 				.build();
 
-			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithCriticalMetric);
+			new PhysicalDiskMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithCriticalMetric
+			);
 			assertEquals(
 				1.0,
 				monitorWithCriticalMetric
@@ -254,8 +245,7 @@ class PhysicalDiskMetricNormalizerTest {
 			setCollectTimes(hwErrorsMetric);
 
 			// Create the monitor
-			final Monitor monitorWithoutMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("physical_disk")
 				.metrics(new HashMap<>())

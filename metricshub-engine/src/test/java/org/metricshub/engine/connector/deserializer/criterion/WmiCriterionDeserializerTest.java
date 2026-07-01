@@ -32,8 +32,7 @@ class WmiCriterionDeserializerTest extends DeserializerTest {
 
 		final List<Criterion> expected = new ArrayList<>();
 
-		final WmiCriterion wmi = WmiCriterion
-			.builder()
+		final WmiCriterion wmi = WmiCriterion.builder()
 			.type("wmi")
 			.query("testQuery")
 			.namespace("testNamespace")
@@ -53,7 +52,8 @@ class WmiCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws IOException
 	 */
-	void testWmiDefaultNamespace() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testWmiDefaultNamespace() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		final Connector connector = getConnector("wmiCriterionDefaultNamespace");
 
 		final List<Criterion> expected = new ArrayList<>();

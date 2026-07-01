@@ -80,8 +80,9 @@ class SnmpGetSourceProcessorTest {
 		TelemetryManager telemetryManager = createTelemetryManagerWithHostConfiguration();
 		ISnmpConfiguration snmpConfiguration = mock(ISnmpConfiguration.class);
 		when(configurationRetriever.apply(telemetryManager)).thenReturn(snmpConfiguration);
-		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname"))
-			.thenReturn("result");
+		when(snmpRequestExecutor.executeSNMPGet("test_oid", snmpConfiguration, "hostname", true, "hostname")).thenReturn(
+			"result"
+		);
 
 		SourceTable result = snmpGetSourceProcessor.process(snmpGetSource, "connectorId", telemetryManager);
 
@@ -96,8 +97,7 @@ class SnmpGetSourceProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of())
 			.build();

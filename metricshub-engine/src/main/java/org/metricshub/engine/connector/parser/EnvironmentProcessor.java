@@ -60,8 +60,7 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 		final UnaryOperator<String> updater = this::performEnvReplacements;
 		final Predicate<String> replacementPredicate = Objects::nonNull;
 
-		JsonNodeUpdater
-			.jsonNodeUpdaterBuilder()
+		JsonNodeUpdater.jsonNodeUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(replacementPredicate)
 			.withUpdater(updater)
@@ -83,14 +82,12 @@ public class EnvironmentProcessor extends AbstractNodeProcessor {
 			return value;
 		}
 
-		return ENV_PATTERN
-			.matcher(value)
-			.replaceAll(match -> {
-				final String variableValue = System.getenv(match.group(1));
-				if (variableValue != null) {
-					return Matcher.quoteReplacement(variableValue);
-				}
-				return Matcher.quoteReplacement(match.group());
-			});
+		return ENV_PATTERN.matcher(value).replaceAll(match -> {
+			final String variableValue = System.getenv(match.group(1));
+			if (variableValue != null) {
+				return Matcher.quoteReplacement(variableValue);
+			}
+			return Matcher.quoteReplacement(match.group());
+		});
 	}
 }

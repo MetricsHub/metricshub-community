@@ -53,24 +53,21 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	/**
 	 * Set of monitor types that should be excluded from hardware missing device detection.
 	 */
-	private static final Set<String> EXCLUDED_MONITOR_TYPES = Stream
-		.of(
-			KnownMonitorType.HOST.getKey(),
-			KnownMonitorType.CONNECTOR.getKey(),
-			KnownMonitorType.LUN.getKey(),
-			KnownMonitorType.LOGICAL_DISK.getKey(),
-			KnownMonitorType.VOLTAGE.getKey(),
-			KnownMonitorType.TEMPERATURE.getKey(),
-			KnownMonitorType.VM.getKey(),
-			KnownMonitorType.LED.getKey()
-		)
-		.collect(Collectors.toSet());
+	private static final Set<String> EXCLUDED_MONITOR_TYPES = Stream.of(
+		KnownMonitorType.HOST.getKey(),
+		KnownMonitorType.CONNECTOR.getKey(),
+		KnownMonitorType.LUN.getKey(),
+		KnownMonitorType.LOGICAL_DISK.getKey(),
+		KnownMonitorType.VOLTAGE.getKey(),
+		KnownMonitorType.TEMPERATURE.getKey(),
+		KnownMonitorType.VM.getKey(),
+		KnownMonitorType.LED.getKey()
+	).collect(Collectors.toSet());
 
 	/**
 	 * Set of monitor types that are candidates for hardware missing device.
 	 */
-	private static final Set<String> MONITOR_TYPE_CANDIDATES = KnownMonitorType.KEYS
-		.stream()
+	private static final Set<String> MONITOR_TYPE_CANDIDATES = KnownMonitorType.KEYS.stream()
 		.filter(type -> !EXCLUDED_MONITOR_TYPES.contains(type))
 		.collect(Collectors.toSet());
 
@@ -100,8 +97,12 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	 * @param metricName The collected metric name
 	 */
 	public void setAsMissing(final Monitor monitor, final String hostname, final String metricName) {
-		new MetricFactory(hostname, telemetryManager.getConnectorStore())
-			.collectNumberMetric(monitor, metricName, 0.0, strategyTime);
+		new MetricFactory(hostname, telemetryManager.getConnectorStore()).collectNumberMetric(
+			monitor,
+			metricName,
+			0.0,
+			strategyTime
+		);
 	}
 
 	/**
@@ -111,8 +112,12 @@ public class HardwarePostDiscoveryStrategy extends AbstractStrategy {
 	 * @param metricName The collected metric name
 	 */
 	public void setAsPresent(final Monitor monitor, final String hostname, final String metricName) {
-		new MetricFactory(hostname, telemetryManager.getConnectorStore())
-			.collectNumberMetric(monitor, metricName, 1.0, strategyTime);
+		new MetricFactory(hostname, telemetryManager.getConnectorStore()).collectNumberMetric(
+			monitor,
+			metricName,
+			1.0,
+			strategyTime
+		);
 	}
 
 	/**

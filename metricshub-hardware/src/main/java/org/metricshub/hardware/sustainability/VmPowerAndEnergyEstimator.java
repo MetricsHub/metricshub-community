@@ -75,9 +75,8 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 		final Double totalPowerShares = totalPowerSharesByPowerSource.get(powerSourceId);
 
 		// totalPowerShares is never null here because the VM always comes with a powerShare value
-		final double powerShareRatio = totalPowerShares != null && totalPowerShares > 0.0
-			? vmPowerShare / totalPowerShares
-			: 0.0;
+		final double powerShareRatio =
+			totalPowerShares != null && totalPowerShares > 0.0 ? vmPowerShare / totalPowerShares : 0.0;
 
 		// Getting the power source's power consumption value
 		final Monitor powerSourceMonitor = telemetryManager.findMonitorById(powerSourceId);
@@ -88,22 +87,27 @@ public class VmPowerAndEnergyEstimator extends HardwarePowerAndEnergyEstimator {
 			if (KnownMonitorType.HOST.getKey().equals(powerSourceMonitor.getType())) {
 				// If the power of the power source monitor is measured
 				if (isPowerMeasured) {
-					powerSourcePowerConsumption =
-						CollectHelper.getNumberMetricValue(powerSourceMonitor, HW_HOST_MEASURED_POWER, false);
+					powerSourcePowerConsumption = CollectHelper.getNumberMetricValue(
+						powerSourceMonitor,
+						HW_HOST_MEASURED_POWER,
+						false
+					);
 				} else {
 					// If the power of the power source monitor is estimated
-					powerSourcePowerConsumption =
-						CollectHelper.getNumberMetricValue(powerSourceMonitor, HW_HOST_ESTIMATED_POWER, false);
+					powerSourcePowerConsumption = CollectHelper.getNumberMetricValue(
+						powerSourceMonitor,
+						HW_HOST_ESTIMATED_POWER,
+						false
+					);
 				}
 			} else if (KnownMonitorType.ENCLOSURE.getKey().equals(powerSourceMonitor.getType())) {
 				powerSourcePowerConsumption = CollectHelper.getNumberMetricValue(powerSourceMonitor, HW_ENCLOSURE_POWER, false);
 			} else {
-				powerSourcePowerConsumption =
-					CollectHelper.getNumberMetricValue(
-						powerSourceMonitor,
-						HwCollectHelper.generateEnergyMetricNameForMonitorType(powerSourceMonitor.getType()),
-						false
-					);
+				powerSourcePowerConsumption = CollectHelper.getNumberMetricValue(
+					powerSourceMonitor,
+					HwCollectHelper.generateEnergyMetricNameForMonitorType(powerSourceMonitor.getType()),
+					false
+				);
 			}
 		}
 

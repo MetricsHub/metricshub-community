@@ -88,8 +88,7 @@ public class TableUnionSource extends Source {
 
 	@Override
 	public TableUnionSource copy() {
-		return TableUnionSource
-			.builder()
+		return TableUnionSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

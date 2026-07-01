@@ -79,8 +79,10 @@ public class InternalDbExtension implements ISourceComputationExtension {
 			return SourceTable.empty();
 		}
 
-		final List<List<String>> executeSqlQuery = new SqlClientExecutor(telemetryManager, connectorId)
-			.executeQuery(sqlTables, query);
+		final List<List<String>> executeSqlQuery = new SqlClientExecutor(telemetryManager, connectorId).executeQuery(
+			sqlTables,
+			query
+		);
 
 		SourceTable sourceTable = new SourceTable();
 

@@ -76,8 +76,7 @@ public final class SpringToolsToOpenAiTools {
 
 			var description = def.description().isBlank() ? def.name() : def.description();
 
-			var functionTool = FunctionTool
-				.builder()
+			var functionTool = FunctionTool.builder()
 				.name(def.name())
 				.description(description)
 				.strict(false)

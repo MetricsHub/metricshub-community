@@ -3,7 +3,7 @@
 	<parent>
 		<groupId>org.metricshub</groupId>
 		<artifactId>metricshub-community</artifactId>
-		<version>3.9.04-SNAPSHOT</version>
+		<version>3.9.05-SNAPSHOT</version>
 	</parent>
 
 	<artifactId>metricshub-agent</artifactId>
@@ -428,6 +428,7 @@
 					<forkNode implementation="org.apache.maven.plugin.surefire.extensions.SurefireForkNodeFactory" />
 					<systemPropertyVariables>
 						<jacoco-agent.destfile>target/jacoco.exec</jacoco-agent.destfile>
+						<log4j2.configurationFile>log4j2-test.xml</log4j2.configurationFile>
 					</systemPropertyVariables>
 					<argLine>@{argLine} -javaagent:"${org.mockito:mockito-core:jar}"</argLine>
 				</configuration>

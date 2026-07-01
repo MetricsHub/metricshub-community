@@ -87,7 +87,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-					" This resource will not be monitored. Please verify the configured port value.",
+						" This resource will not be monitored. Please verify the configured port value.",
 					resourceKey,
 					WINRM_DESCRIPTION,
 					port
@@ -100,7 +100,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					WINRM_DESCRIPTION,
 					timeout
@@ -113,7 +113,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 			() ->
 				String.format(
 					"Resource %s - No username configured for protocol %s." +
-					" This resource will not be monitored. Please verify the configured username.",
+						" This resource will not be monitored. Please verify the configured username.",
 					resourceKey,
 					WINRM_DESCRIPTION
 				)
@@ -131,8 +131,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return WinRmConfiguration
-			.builder()
+		return WinRmConfiguration.builder()
 			.authentications(new ArrayList<>(authentications))
 			.namespace(namespace)
 			.password(password)

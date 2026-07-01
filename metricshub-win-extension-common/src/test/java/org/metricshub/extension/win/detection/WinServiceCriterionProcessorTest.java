@@ -47,17 +47,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceCheckOsNull() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.configurations(Map.of(WmiTestConfiguration.class, wmiConfiguration))
@@ -96,8 +93,7 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceCheckProtocolNull() {
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
 				HostConfiguration.builder().hostname(HOST_NAME).hostId(HOST_NAME).configurations(Map.of()).build()
 			)
@@ -118,17 +114,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceCheckOsNotWindows() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -160,17 +153,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceNameBlank() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -202,17 +192,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceRunning() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -248,17 +235,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceDown() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -294,17 +278,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceNullResult() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)
@@ -340,17 +321,14 @@ class WinServiceCriterionProcessorTest {
 
 	@Test
 	void testProcessServiceQueryFails() {
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.timeout(15L)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.hostId(HOST_NAME)
 					.hostType(DeviceKind.WINDOWS)

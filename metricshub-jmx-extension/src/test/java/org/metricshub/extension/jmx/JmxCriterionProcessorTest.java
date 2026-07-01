@@ -156,8 +156,9 @@ class JmxCriterionProcessorTest {
 		criterion.setObjectName("obj");
 		criterion.setAttributes(List.of("attr"));
 
-		when(jmxRequestExecutor.fetchMBean(any(), any(), any(), any(), any(), any()))
-			.thenThrow(new RuntimeException("Simulated failure"));
+		when(jmxRequestExecutor.fetchMBean(any(), any(), any(), any(), any(), any())).thenThrow(
+			new RuntimeException("Simulated failure")
+		);
 
 		final CriterionTestResult result = processor.process(criterion, "connectorERR", telemetryManager);
 

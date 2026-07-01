@@ -23,8 +23,7 @@ class TapeDriveMetricNormalizerTest {
 	@Test
 	void testNormalize() {
 		// Create the hw.errors metric
-		final NumberMetric hwErrorsMetric = NumberMetric
-			.builder()
+		final NumberMetric hwErrorsMetric = NumberMetric.builder()
 			.value(1.0)
 			.name("hw.errors")
 			.attributes(Map.of("limit_type", "critical", "hw.type", "tape_drive"))
@@ -32,14 +31,12 @@ class TapeDriveMetricNormalizerTest {
 
 		// Test case 1: Both degraded and critical are present and critical < degraded
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "tape_drive"))
 				.build();
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "tape_drive"))
@@ -51,8 +48,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(
@@ -85,14 +81,12 @@ class TapeDriveMetricNormalizerTest {
 		}
 		// Test case 2: Both degraded and critical are present and critical >= degraded
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(3.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "tape_drive"))
 				.build();
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "tape_drive"))
@@ -104,8 +98,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(
@@ -142,8 +135,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsMetric);
 
 			// Create the monitor
-			final Monitor monitorWithoutBothMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutBothMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(new HashMap<>(Map.of("hw.errors", hwErrorsMetric)))
@@ -159,8 +151,7 @@ class TapeDriveMetricNormalizerTest {
 		}
 		// Test case 4: Only degraded is present
 		{
-			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_DEGRADED_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "degraded", "hw.type", "tape_drive"))
@@ -171,8 +162,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitDegradedMetric);
 
 			// Create the monitor
-			final Monitor monitorWithDegradedMetric = Monitor
-				.builder()
+			final Monitor monitorWithDegradedMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(
@@ -200,8 +190,7 @@ class TapeDriveMetricNormalizerTest {
 		}
 		// Test case 5: Only critical is present
 		{
-			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwErrorsLimitCriticalMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_ERRORS_LIMIT_LIMIT_TYPE_CRITICAL_HW_TYPE_TAPE_DRIVE)
 				.attributes(Map.of("limit_type", "critical", "hw.type", "tape_drive"))
@@ -212,8 +201,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsLimitCriticalMetric);
 
 			// Create the monitor
-			final Monitor monitorWithCriticalMetric = Monitor
-				.builder()
+			final Monitor monitorWithCriticalMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(
@@ -245,8 +233,7 @@ class TapeDriveMetricNormalizerTest {
 			setCollectTimes(hwErrorsMetric);
 
 			// Create the monitor
-			final Monitor monitorWithoutMetrics = Monitor
-				.builder()
+			final Monitor monitorWithoutMetrics = Monitor.builder()
 				.id("monitorOne")
 				.type("tape_drive")
 				.metrics(new HashMap<>())

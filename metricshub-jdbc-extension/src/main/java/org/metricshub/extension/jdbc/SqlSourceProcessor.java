@@ -90,7 +90,7 @@ public class SqlSourceProcessor {
 		if (jdbcConfiguration == null) {
 			log.debug(
 				"Hostname {} - The SQL database credentials are not configured. " +
-				"Returning an empty table for SQL source {}. ",
+					"Returning an empty table for SQL source {}. ",
 				telemetryManager.getHostname(),
 				sqlSource.getKey()
 			);

@@ -54,8 +54,7 @@ public class ToolOutputFileUploadService {
 				.files()
 				.create(FileCreateParams.builder().file(filePath).purpose(FilePurpose.USER_DATA).build());
 
-			return UploadedToolOutputManifest
-				.builder()
+			return UploadedToolOutputManifest.builder()
 				.openaiFileId(uploadedFile.id())
 				.fileName(uploadedFile.filename())
 				.build();

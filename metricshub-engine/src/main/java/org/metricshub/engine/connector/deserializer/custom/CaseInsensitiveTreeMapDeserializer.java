@@ -56,7 +56,10 @@ public class CaseInsensitiveTreeMapDeserializer extends AbstractMapDeserializer<
 
 	@Override
 	protected boolean isValidMap(Map<String, String> map) {
-		return map.keySet().stream().noneMatch(key -> key == null || key.isBlank());
+		return map
+			.keySet()
+			.stream()
+			.noneMatch(key -> key == null || key.isBlank());
 	}
 
 	@Override

@@ -23,8 +23,7 @@ import org.metricshub.engine.connector.model.monitor.task.Simple;
 
 class PowerMeasurementStatusUpdateTest {
 
-	private ConnectorIdentity connectorIdentity = ConnectorIdentity
-		.builder()
+	private ConnectorIdentity connectorIdentity = ConnectorIdentity.builder()
 		.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OTHER)).tags(Set.of("hardware")).build())
 		.build();
 
@@ -34,12 +33,10 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(Discovery.builder().build())
 					.collect(
-						MultiInstanceCollect
-							.builder()
+						MultiInstanceCollect.builder()
 							.mapping(Mapping.builder().metrics(Map.of("hw.enclosure.power", "$3")).build())
 							.build()
 					)
@@ -58,12 +55,10 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.discovery(Discovery.builder().build())
 					.collect(
-						MonoInstanceCollect
-							.builder()
+						MonoInstanceCollect.builder()
 							.mapping(Mapping.builder().metrics(Map.of("hw.enclosure.power", "$3")).build())
 							.build()
 					)
@@ -81,8 +76,7 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				SimpleMonitorJob
-					.simpleBuilder()
+				SimpleMonitorJob.simpleBuilder()
 					.simple(
 						Simple.builder().mapping(Mapping.builder().metrics(Map.of("hw.enclosure.power", "$3")).build()).build()
 					)
@@ -100,11 +94,9 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.collect(
-						MonoInstanceCollect
-							.builder()
+						MonoInstanceCollect.builder()
 							.mapping(Mapping.builder().metrics(Map.of("temperature", "$1")).build())
 							.build()
 					)
@@ -122,8 +114,7 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.collect(MonoInstanceCollect.builder().mapping(Mapping.builder().metrics(null).build()).build())
 					.build()
 			)
@@ -188,14 +179,11 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.collect(
-						MonoInstanceCollect
-							.builder()
+						MonoInstanceCollect.builder()
 							.mapping(
-								Mapping
-									.builder()
+								Mapping.builder()
 									.metrics(Map.of("hw.enclosure.power", "$3"))
 									.conditionalCollection(Map.of("hw.enclosure.energy", "$5"))
 									.build()
@@ -220,11 +208,9 @@ class PowerMeasurementStatusUpdateTest {
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.collect(
-						MonoInstanceCollect
-							.builder()
+						MonoInstanceCollect.builder()
 							.mapping(Mapping.builder().conditionalCollection(Map.of("hw.enclosure.power", "$3")).build())
 							.build()
 					)
@@ -238,22 +224,18 @@ class PowerMeasurementStatusUpdateTest {
 	@Test
 	void testPowerMetricNoHardwareConnector() {
 		final Connector connector = new Connector();
-		final ConnectorIdentity connectorIdentity = ConnectorIdentity
-			.builder()
+		final ConnectorIdentity connectorIdentity = ConnectorIdentity.builder()
 			.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OTHER)).tags(Set.of("application")).build())
 			.build();
 		connector.setConnectorIdentity(connectorIdentity);
 		connector.setMonitors(
 			Map.of(
 				"enclosure",
-				StandardMonitorJob
-					.standardBuilder()
+				StandardMonitorJob.standardBuilder()
 					.collect(
-						MonoInstanceCollect
-							.builder()
+						MonoInstanceCollect.builder()
 							.mapping(
-								Mapping
-									.builder()
+								Mapping.builder()
 									.metrics(Map.of("hw.enclosure.power", "$3"))
 									.conditionalCollection(Map.of("hw.enclosure.energy", "$5"))
 									.build()

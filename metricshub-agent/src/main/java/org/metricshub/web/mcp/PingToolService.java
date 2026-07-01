@@ -101,8 +101,7 @@ public class PingToolService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<ProtocolCheckResponse>builder()
+						HostToolResponse.<ProtocolCheckResponse>builder()
 							.hostname(host)
 							.response(pingHostWithExtensionSafe(host, resolvedTimeout, extension))
 							.build(),
@@ -151,16 +150,14 @@ public class PingToolService implements IMCPToolService {
 			final String result = extension.executeQuery(configuration, null);
 			final long duration = (System.currentTimeMillis() - startTime);
 
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.responseTime(duration)
 				.isReachable("true".equalsIgnoreCase(result))
 				.build();
 		} catch (Exception e) {
 			// Error
-			return ProtocolCheckResponse
-				.builder()
+			return ProtocolCheckResponse.builder()
 				.hostname(hostname)
 				.errorMessage("Error detected during host check: " + e.getMessage())
 				.build();

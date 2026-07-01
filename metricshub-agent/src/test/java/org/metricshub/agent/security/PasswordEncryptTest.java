@@ -32,7 +32,7 @@ class PasswordEncryptTest {
 			try (final MockedStatic<PasswordEncrypt> mockedPasswordEncrypt = mockStatic(PasswordEncrypt.class)) {
 				mockedPasswordEncrypt
 					.when(() -> PasswordEncrypt.getSecurityFolderOnWindows())
-					.thenAnswer(invocation -> Files.createDirectories(tempDir.resolve("metricshub/security")));
+					.thenAnswer(_ -> Files.createDirectories(tempDir.resolve("metricshub/security")));
 
 				mockedPasswordEncrypt
 					.when(() -> PasswordEncrypt.resolveKeyStoreFile(any(Path.class), any(Boolean.class)))
@@ -60,7 +60,7 @@ class PasswordEncryptTest {
 			try (final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)) {
 				mockedResourceHelper
 					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
-					.thenAnswer(invocation -> Files.createDirectories(tempDir.resolve("metricshub/lib/app/jar")).toFile());
+					.thenAnswer(_ -> Files.createDirectories(tempDir.resolve("metricshub/lib/app/jar")).toFile());
 
 				final File actual = PasswordEncrypt.getKeyStoreFile(true);
 				assertNotNull(actual);
@@ -72,7 +72,7 @@ class PasswordEncryptTest {
 			try (final MockedStatic<ResourceHelper> mockedResourceHelper = mockStatic(ResourceHelper.class)) {
 				mockedResourceHelper
 					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
-					.thenAnswer(invocation -> tempDir.resolve("metricshub/lib/app/jar").toFile());
+					.thenAnswer(_ -> tempDir.resolve("metricshub/lib/app/jar").toFile());
 
 				final File keyStoreFile = PasswordEncrypt.getKeyStoreFile(false);
 				assertNotNull(keyStoreFile);
@@ -92,7 +92,7 @@ class PasswordEncryptTest {
 			) {
 				mockedResourceHelper
 					.when(() -> ResourceHelper.findSourceDirectory(PasswordEncrypt.class))
-					.thenAnswer(invocation -> tempDir.resolve("metricshub/app/jar").toFile());
+					.thenAnswer(_ -> tempDir.resolve("metricshub/app/jar").toFile());
 
 				mockedConfigHelper.when(() -> ConfigHelper.getProgramDataPath()).thenReturn(Optional.empty());
 

@@ -82,8 +82,7 @@ class SnmpV3ExtensionTest {
 			Map.of(HOST.getKey(), Map.of(HOST_NAME, hostMonitor))
 		);
 
-		final SnmpV3Configuration snmpV3Configuration = SnmpV3Configuration
-			.builder()
+		final SnmpV3Configuration snmpV3Configuration = SnmpV3Configuration.builder()
 			.port(161)
 			.timeout(120L)
 			.username("username")
@@ -94,20 +93,17 @@ class SnmpV3ExtensionTest {
 			.privacyPassword("authPass".toCharArray())
 			.build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.hostId(HOST_NAME)
-						.hostType(DeviceKind.LINUX)
-						.configurations(Map.of(SnmpV3Configuration.class, snmpV3Configuration))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.hostId(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.configurations(Map.of(SnmpV3Configuration.class, snmpV3Configuration))
+					.build()
+			)
+			.build();
 	}
 
 	@Test
@@ -123,13 +119,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 " +
-					"timed out. " +
-					"Message: SNMPGetNext timeout. Connector ID: %s.",
+						"timed out. " +
+						"Message: SNMPGetNext timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
 				)
@@ -149,13 +144,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext " +
-					"of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful " +
-					"due to a null result.",
+						"of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful " +
+						"due to a null result.",
 					HOST_NAME
 				)
 			)
@@ -174,12 +168,11 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 " +
-					"was unsuccessful due to an empty result.",
+						"was unsuccessful due to an empty result.",
 					HOST_NAME
 				)
 			)
@@ -203,13 +196,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP " +
-					"GetNext of 1.3.6.1.4.1.674.10893.1.20 was successful but the returned OID is" +
-					" not under the same tree. Returned OID: 1.3.6.1.4.1.674.99999.1.20.1.",
+						"GetNext of 1.3.6.1.4.1.674.10893.1.20 was successful but the returned OID is" +
+						" not under the same tree. Returned OID: 1.3.6.1.4.1.674.99999.1.20.1.",
 					HOST_NAME
 				)
 			)
@@ -231,13 +223,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - Successful SNMP GetNext of " +
-					"1.3.6.1.4.1.674.10893.1.20. Returned result: " +
-					"1.3.6.1.4.1.674.10893.1.20.1 ASN_INTEGER 1.",
+						"1.3.6.1.4.1.674.10893.1.20. Returned result: " +
+						"1.3.6.1.4.1.674.10893.1.20.1 ASN_INTEGER 1.",
 					HOST_NAME
 				)
 			)
@@ -260,13 +251,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - " +
-					"SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 was successful but the value of " +
-					"the returned OID did not match with the expected result. Expected value: 2.4.6 - returned value 1.",
+						"SNMP GetNext of 1.3.6.1.4.1.674.10893.1.20 was successful but the value of " +
+						"the returned OID did not match with the expected result. Expected value: 2.4.6 - returned value 1.",
 					HOST_NAME
 				)
 			)
@@ -288,13 +278,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - Successful SNMP GetNext of " +
-					"1.3.6.1.4.1.674.10893.1.20. " +
-					"Returned result: 1.3.6.1.4.1.674.10893.1.20.1 ASN_OCT 2.4.6.",
+						"1.3.6.1.4.1.674.10893.1.20. " +
+						"Returned result: 1.3.6.1.4.1.674.10893.1.20.1 ASN_OCT 2.4.6.",
 					HOST_NAME
 				)
 			)
@@ -317,13 +306,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP GetNext " +
-					"of 1.3.6.1.4.1.674.10893.1.20 was successful " +
-					"but the value cannot be extracted. Returned result: 1.3.6.1.4.1.674.10893.1.20.1 ASN_OCT.",
+						"of 1.3.6.1.4.1.674.10893.1.20 was successful " +
+						"but the value cannot be extracted. Returned result: 1.3.6.1.4.1.674.10893.1.20.1 ASN_OCT.",
 					HOST_NAME
 				)
 			)
@@ -367,8 +355,7 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - Successful SNMP Get of 1.3.6.1.4.1.674.10893.1.20. Returned result: CMC DELL",
@@ -394,13 +381,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - " +
-					"SNMP Get of 1.3.6.1.4.1.674.10893.1.20 was successful but the value of the returned " +
-					"OID did not match with the expected result. Expected value: 2.4.6 - returned value CMC DELL.",
+						"SNMP Get of 1.3.6.1.4.1.674.10893.1.20 was successful but the value of the returned " +
+						"OID did not match with the expected result. Expected value: 2.4.6 - returned value CMC DELL.",
 					HOST_NAME
 				)
 			)
@@ -422,8 +408,7 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - Successful SNMP Get of 1.3.6.1.4.1.674.10893.1.20. Returned result: CMC DELL.",
@@ -447,12 +432,11 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP Get " +
-					"of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful due to an empty result.",
+						"of 1.3.6.1.4.1.674.10893.1.20 was unsuccessful due to an empty result.",
 					HOST_NAME
 				)
 			)
@@ -472,12 +456,11 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 was " +
-					"unsuccessful due to a null result",
+						"unsuccessful due to a null result",
 					HOST_NAME
 				)
 			)
@@ -498,13 +481,12 @@ class SnmpV3ExtensionTest {
 			telemetryManager,
 			true
 		);
-		final CriterionTestResult expected = CriterionTestResult
-			.builder()
+		final CriterionTestResult expected = CriterionTestResult.builder()
 			.message(
 				String.format(
 					"Hostname %s - SNMP test failed - SNMP Get of 1.3.6.1.4.1.674.10893.1.20 " +
-					"timed out. " +
-					"Message: SNMPGet timeout. Connector ID: %s.",
+						"timed out. " +
+						"Message: SNMPGet timeout. Connector ID: %s.",
 					HOST_NAME,
 					CONNECTOR_ID
 				)
@@ -627,8 +609,7 @@ class SnmpV3ExtensionTest {
 		configuration.set("timeout", new TextNode("2m"));
 
 		assertEquals(
-			SnmpV3Configuration
-				.builder()
+			SnmpV3Configuration.builder()
 				.password("passwordTest".toCharArray())
 				.privacyPassword("privacyPasswordTest".toCharArray())
 				.port(161)
@@ -638,8 +619,7 @@ class SnmpV3ExtensionTest {
 		);
 
 		assertEquals(
-			SnmpV3Configuration
-				.builder()
+			SnmpV3Configuration.builder()
 				.password("passwordTest".toCharArray())
 				.privacyPassword("privacyPasswordTest".toCharArray())
 				.port(161)

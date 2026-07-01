@@ -83,7 +83,7 @@ public class HttpConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					"HTTP",
 					timeout
@@ -96,7 +96,7 @@ public class HttpConfiguration implements IConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-					" This resource will not be monitored. Please verify the configured port value.",
+						" This resource will not be monitored. Please verify the configured port value.",
 					resourceKey,
 					"HTTP",
 					port
@@ -106,8 +106,7 @@ public class HttpConfiguration implements IConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return HttpConfiguration
-			.builder()
+		return HttpConfiguration.builder()
 			.username(username)
 			.password(password)
 			.https(https)

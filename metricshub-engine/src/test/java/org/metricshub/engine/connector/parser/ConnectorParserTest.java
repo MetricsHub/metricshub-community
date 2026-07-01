@@ -72,8 +72,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testAvailableSourceUpdate() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/availableUpdate")
-			.parse("availableSources");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/availableUpdate").parse(
+			"availableSources"
+		);
 		assertEquals(
 			Set.of(WmiSource.class, WbemSource.class, TableJoinSource.class, TableUnionSource.class),
 			connector.getSourceTypes()
@@ -84,8 +85,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase1() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase1"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -100,8 +100,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase2() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase2"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -114,8 +113,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase3() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase3"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -128,8 +126,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase4() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase4"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -142,8 +139,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase5() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase5"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -156,8 +152,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase6() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase6"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final SimpleMonitorJob monitorJob = (SimpleMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -170,8 +165,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase7() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase7"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -184,8 +178,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase8() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase8"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -198,8 +191,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase9() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase9"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -212,8 +204,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase10() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase10"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -226,8 +217,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase11() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase11"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -240,8 +230,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase12() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase12"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -254,8 +243,7 @@ class ConnectorParserTest {
 	void testMonitorTaskSourceDepUpdateUseCase13() throws IOException {
 		final Connector connector = new ConnectorParserUpdateManagement(
 			"connector/management/monitorTaskSourceDep/useCase13"
-		)
-			.parse("sourceDep");
+		).parse("sourceDep");
 
 		final StandardMonitorJob monitorJob = (StandardMonitorJob) connector.getMonitors().get("enclosure");
 
@@ -266,8 +254,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase1() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase1")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/beforeAllSourceDep/useCase1"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase1Dependency();
 
@@ -276,8 +265,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase2() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase2")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/beforeAllSourceDep/useCase2"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase2Dependency();
 
@@ -286,8 +276,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase3() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase3")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/beforeAllSourceDep/useCase3"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase3Dependency();
 		assertEquals(expected, connector.getBeforeAllSourceDep());
@@ -295,8 +286,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testBeforeAllSourceDepUpdateUseCase4() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/beforeAllSourceDep/useCase4")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/beforeAllSourceDep/useCase4"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = new ArrayList<>();
 		final Set<String> level1 = new HashSet<>();
@@ -315,8 +307,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase1() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase1")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/afterAllSourceDep/useCase1"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase1Dependency();
 
@@ -325,8 +318,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase2() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase2")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/afterAllSourceDep/useCase2"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase2Dependency();
 
@@ -335,8 +329,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase3() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase3")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/afterAllSourceDep/useCase3"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = buildUseCase3Dependency();
 		assertEquals(expected, connector.getAfterAllSourceDep());
@@ -344,8 +339,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testAfterAllSourceDepUpdateUseCase4() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/afterAllSourceDep/useCase4")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement(
+			"connector/management/afterAllSourceDep/useCase4"
+		).parse("sourceDep");
 
 		final List<Set<String>> expected = new ArrayList<>();
 		final Set<String> level1 = new HashSet<>();
@@ -364,8 +360,9 @@ class ConnectorParserTest {
 
 	@Test
 	void testSourceDepUpdateWithBeforeAllAndAfterAll() throws IOException {
-		final Connector connector = new ConnectorParserUpdateManagement("connector/management/surroundingSourceDep")
-			.parse("sourceDep");
+		final Connector connector = new ConnectorParserUpdateManagement("connector/management/surroundingSourceDep").parse(
+			"sourceDep"
+		);
 
 		final List<Set<String>> expectedAfterAllSourceDeps = buildUseCase1Dependency();
 
@@ -669,10 +666,8 @@ class ConnectorParserTest {
 	@Test
 	void withNodeProcessorExtendsAndConstantsProcessorTest() {
 		final AbstractNodeProcessor processor = ConnectorParser.withNodeProcessor(RESOURCES_TEST_FILES_PATH).getProcessor();
-		assertNotNull(
-			processor,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. First processor shouldn't be null"
+		assertNotNull(processor, () ->
+			"Context: Extends, reference resolver and constants node processors creation. First processor shouldn't be null"
 		);
 		assertTrue(
 			processor instanceof ExtendsProcessor,
@@ -682,10 +677,8 @@ class ConnectorParserTest {
 		);
 
 		AbstractNodeProcessor next = processor.getNext();
-		assertNotNull(
-			next,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. Second processor shouldn't be null"
+		assertNotNull(next, () ->
+			"Context: Extends, reference resolver and constants node processors creation. Second processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ReferenceResolverProcessor,
@@ -694,10 +687,8 @@ class ConnectorParserTest {
 				ReferenceResolverProcessor.class.getSimpleName()
 		);
 		next = next.next;
-		assertNotNull(
-			next,
-			() ->
-				"Context: Extends, reference resolver and constants node processors creation. Third processor shouldn't be null"
+		assertNotNull(next, () ->
+			"Context: Extends, reference resolver and constants node processors creation. Third processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConstantsProcessor,
@@ -709,13 +700,12 @@ class ConnectorParserTest {
 
 	@Test
 	void withExtendsAndTemplateVariableProcessorTest() {
-		final AbstractNodeProcessor processor = ConnectorParser
-			.withNodeProcessor(RESOURCES_TEST_FILES_PATH, Collections.emptyMap())
-			.getProcessor();
-		assertNotNull(
-			processor,
-			() ->
-				"Context: Extends, template variable, reference resolver and constants node processors creation. First processor shouldn't be null"
+		final AbstractNodeProcessor processor = ConnectorParser.withNodeProcessor(
+			RESOURCES_TEST_FILES_PATH,
+			Collections.emptyMap()
+		).getProcessor();
+		assertNotNull(processor, () ->
+			"Context: Extends, template variable, reference resolver and constants node processors creation. First processor shouldn't be null"
 		);
 		assertTrue(
 			processor instanceof ExtendsProcessor,
@@ -725,10 +715,8 @@ class ConnectorParserTest {
 		);
 
 		AbstractNodeProcessor next = processor.getNext();
-		assertNotNull(
-			next,
-			() ->
-				"Context: Extends, template variable, reference resolver and constants node processors creation. Second processor shouldn't be null"
+		assertNotNull(next, () ->
+			"Context: Extends, template variable, reference resolver and constants node processors creation. Second processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConnectorVariableProcessor,
@@ -738,10 +726,8 @@ class ConnectorParserTest {
 		);
 
 		next = next.getNext();
-		assertNotNull(
-			next,
-			() ->
-				"Context: Extends, template variable, reference resolver and constants node processors creation. Third processor shouldn't be null"
+		assertNotNull(next, () ->
+			"Context: Extends, template variable, reference resolver and constants node processors creation. Third processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ReferenceResolverProcessor,
@@ -750,10 +736,8 @@ class ConnectorParserTest {
 				ReferenceResolverProcessor.class.getSimpleName()
 		);
 		next = next.getNext();
-		assertNotNull(
-			next,
-			() ->
-				"Context: Extends, template variable, reference resolver and constants node processors creation. Fourth processor shouldn't be null"
+		assertNotNull(next, () ->
+			"Context: Extends, template variable, reference resolver and constants node processors creation. Fourth processor shouldn't be null"
 		);
 		assertTrue(
 			next instanceof ConstantsProcessor,

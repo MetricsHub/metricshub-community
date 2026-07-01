@@ -118,8 +118,7 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 					hostnames,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeWindowsRemoteCommandWithExtensionSafe(extension, host, commandline, timeout))
 							.build(),
@@ -150,8 +149,7 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 		final Long timeout
 	) {
 		// Try to retrieve a Windows remote configuration for the host
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
@@ -159,8 +157,7 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 				executeQuerySafe(extension, configurationCopy, hostname, commandline, timeout)
 			)
 			.orElseGet(() ->
-				QueryResponse
-					.builder()
+				QueryResponse.builder()
 					.error("No valid configuration found for remote Windows on %s.".formatted(hostname))
 					.build()
 			);
@@ -202,8 +199,7 @@ public class ExecuteWinRemoteCommandService implements IMCPToolService {
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("An error has occurred when executing the commandline: %s".formatted(e.getMessage()))
 				.build();
 		}

@@ -193,14 +193,13 @@ class OsCommandHelperTest {
 	@BeforeAll
 	static void setup() {
 		// Initialize temporary file creator for JUnit tests.
-		jUnitTempFileCreator =
-			(name, extension) -> {
-				try {
-					return File.createTempFile(EMBEDDED_TEMP_FILE_PREFIX + name, extension, tempDir);
-				} catch (IOException e) {
-					throw new OsCommandService.TempFileCreationException(e);
-				}
-			};
+		jUnitTempFileCreator = (name, extension) -> {
+			try {
+				return File.createTempFile(EMBEDDED_TEMP_FILE_PREFIX + name, extension, tempDir);
+			} catch (IOException e) {
+				throw new OsCommandService.TempFileCreationException(e);
+			}
+		};
 		commandLineEmbeddedFiles = new HashMap<>();
 	}
 
@@ -215,7 +214,7 @@ class OsCommandHelperTest {
 	 * @return Array of {@link File} instances
 	 */
 	private static File[] getTempEmbeddedFiles() {
-		return tempDir.listFiles((directory, fileName) -> fileName.startsWith(EMBEDDED_TEMP_FILE_PREFIX));
+		return tempDir.listFiles((_, fileName) -> fileName.startsWith(EMBEDDED_TEMP_FILE_PREFIX));
 	}
 
 	/**
@@ -229,21 +228,18 @@ class OsCommandHelperTest {
 	void testCreateOsCommandEmbeddedFiles() throws Exception {
 		checkNoTempEmbeddedFileExist();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> OsCommandHelper.createOsCommandEmbeddedFiles(null, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator)
+		assertThrows(IllegalArgumentException.class, () ->
+			OsCommandHelper.createOsCommandEmbeddedFiles(null, null, EMPTY_EMBEDDED_FILE_MAP, jUnitTempFileCreator)
 		);
 
 		// Embedded files are referenced in the command line but cannot be found
-		assertThrows(
-			IllegalStateException.class,
-			() ->
-				OsCommandHelper.createOsCommandEmbeddedFiles(
-					EMBEDDED_FILE_1_COPY_COMMAND_LINE,
-					null,
-					EMPTY_EMBEDDED_FILE_MAP,
-					jUnitTempFileCreator
-				)
+		assertThrows(IllegalStateException.class, () ->
+			OsCommandHelper.createOsCommandEmbeddedFiles(
+				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
+				null,
+				EMPTY_EMBEDDED_FILE_MAP,
+				jUnitTempFileCreator
+			)
 		);
 
 		assertEquals(
@@ -253,27 +249,23 @@ class OsCommandHelperTest {
 
 		// case embeddedFile not found
 		commandLineEmbeddedFiles.put(EMBEDDED_FILE_1_REF, new EmbeddedFile());
-		assertThrows(
-			IllegalStateException.class,
-			() ->
-				OsCommandHelper.createOsCommandEmbeddedFiles(
-					EMBEDDED_FILE_1_COPY_COMMAND_LINE,
-					null,
-					commandLineEmbeddedFiles,
-					jUnitTempFileCreator
-				)
+		assertThrows(IllegalStateException.class, () ->
+			OsCommandHelper.createOsCommandEmbeddedFiles(
+				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
+				null,
+				commandLineEmbeddedFiles,
+				jUnitTempFileCreator
+			)
 		);
 
 		// case embeddedFile content null
-		assertThrows(
-			IllegalStateException.class,
-			() ->
-				OsCommandHelper.createOsCommandEmbeddedFiles(
-					EMBEDDED_FILE_1_COPY_COMMAND_LINE,
-					null,
-					commandLineEmbeddedFiles,
-					jUnitTempFileCreator
-				)
+		assertThrows(IllegalStateException.class, () ->
+			OsCommandHelper.createOsCommandEmbeddedFiles(
+				EMBEDDED_FILE_1_COPY_COMMAND_LINE,
+				null,
+				commandLineEmbeddedFiles,
+				jUnitTempFileCreator
+			)
 		);
 
 		checkNoTempEmbeddedFileExist();
@@ -301,15 +293,13 @@ class OsCommandHelperTest {
 				)
 				.thenCallRealMethod();
 
-			assertThrows(
-				IOException.class,
-				() ->
-					OsCommandHelper.createOsCommandEmbeddedFiles(
-						EMBEDDED_FILE_1_COPY_COMMAND_LINE,
-						null,
-						commandLineEmbeddedFiles,
-						jUnitTempFileCreator
-					)
+			assertThrows(IOException.class, () ->
+				OsCommandHelper.createOsCommandEmbeddedFiles(
+					EMBEDDED_FILE_1_COPY_COMMAND_LINE,
+					null,
+					commandLineEmbeddedFiles,
+					jUnitTempFileCreator
+				)
 			);
 		}
 
@@ -461,25 +451,20 @@ class OsCommandHelperTest {
 		final int timeout = 1000;
 		final OsCommandService osCommandService = new OsCommandService();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandService.runSshCommand(null, HOST, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandService.runSshCommand(CMD, null, sshConfiguration, timeout, null, null, DeviceKind.LINUX)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandService.runSshCommand(CMD, HOST, null, timeout, null, null, DeviceKind.LINUX)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandService.runSshCommand(CMD, HOST, null, timeout, null, null, DeviceKind.LINUX)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null, DeviceKind.LINUX)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandService.runSshCommand(CMD, HOST, sshConfiguration, -1, null, null, DeviceKind.LINUX)
 		);
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null, DeviceKind.LINUX)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandService.runSshCommand(CMD, HOST, sshConfiguration, 0, null, null, DeviceKind.LINUX)
 		);
 
 		try (
@@ -529,8 +514,7 @@ class OsCommandHelperTest {
 		final OsCommandConfiguration osCommandConfig = new OsCommandConfiguration();
 		osCommandConfig.setTimeout(2L);
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.build();
@@ -595,31 +579,27 @@ class OsCommandHelperTest {
 	void testRunOsCommandCommandLineNull() {
 		final TelemetryManager telemetryManager = TelemetryManager.builder().build();
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = Map.of();
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new OsCommandService().runOsCommand(null, telemetryManager, 120L, false, false, connectorEmbeddedFiles)
+		assertThrows(IllegalArgumentException.class, () ->
+			new OsCommandService().runOsCommand(null, telemetryManager, 120L, false, false, connectorEmbeddedFiles)
 		);
 	}
 
 	@Test
 	void testRunOsCommandTelemetryManagerNull() {
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = Map.of();
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> new OsCommandService().runOsCommand(CMD, null, 120L, false, false, connectorEmbeddedFiles)
+		assertThrows(IllegalArgumentException.class, () ->
+			new OsCommandService().runOsCommand(CMD, null, 120L, false, false, connectorEmbeddedFiles)
 		);
 	}
 
 	@Test
 	void testRunOsCommandRemoteNoUser() {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(SINGLE_SPACE)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.WINDOWS)
@@ -628,9 +608,8 @@ class OsCommandHelperTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		assertThrows(
-			NoCredentialProvidedException.class,
-			() -> new OsCommandService().runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
+		assertThrows(NoCredentialProvidedException.class, () ->
+			new OsCommandService().runOsCommand(NAVISECCLI_COMMAND, telemetryManager, 120L, false, false, Map.of())
 		);
 	}
 
@@ -638,14 +617,12 @@ class OsCommandHelperTest {
 	@EnabledOnOs(OS.WINDOWS)
 	void testRunOsCommandWindowsError() {
 		final Map<Integer, EmbeddedFile> connectorEmbeddedFiles = Map.of();
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.WINDOWS)
@@ -654,9 +631,8 @@ class OsCommandHelperTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		assertThrows(
-			TimeoutException.class,
-			() -> new OsCommandService().runOsCommand(PAUSE, telemetryManager, 1L, false, true, connectorEmbeddedFiles)
+		assertThrows(TimeoutException.class, () ->
+			new OsCommandService().runOsCommand(PAUSE, telemetryManager, 1L, false, true, connectorEmbeddedFiles)
 		);
 	}
 
@@ -670,8 +646,7 @@ class OsCommandHelperTest {
 		osCommandConfiguration.setUsername(USERNAME);
 		osCommandConfiguration.setPassword(PWD_COMMAND.toCharArray());
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.WINDOWS)
@@ -699,10 +674,8 @@ class OsCommandHelperTest {
 				)
 				.thenThrow(new IOException(ERROR_IN_FILE1));
 
-			assertThrows(
-				IOException.class,
-				() ->
-					new OsCommandService().runOsCommand(COMMAND_TO_UPDATE, telemetryManager, 120L, false, false, embeddedFiles)
+			assertThrows(IOException.class, () ->
+				new OsCommandService().runOsCommand(COMMAND_TO_UPDATE, telemetryManager, 120L, false, false, embeddedFiles)
 			);
 		}
 	}
@@ -710,8 +683,7 @@ class OsCommandHelperTest {
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testRunOsCommandLinuxError() {
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -719,17 +691,15 @@ class OsCommandHelperTest {
 
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		assertThrows(
-			TimeoutException.class,
-			() -> new OsCommandService().runOsCommand(SLEEP_5, telemetryManager, 1L, false, true, Map.of())
+		assertThrows(TimeoutException.class, () ->
+			new OsCommandService().runOsCommand(SLEEP_5, telemetryManager, 1L, false, true, Map.of())
 		);
 	}
 
 	@Test
 	@EnabledOnOs(OS.WINDOWS)
 	void testRunOsCommandLocalWindows() throws Exception {
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.WINDOWS)
@@ -748,14 +718,12 @@ class OsCommandHelperTest {
 	@Test
 	@EnabledOnOs(OS.LINUX)
 	void testRunOsCommandLocalLinux() throws Exception {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -777,8 +745,7 @@ class OsCommandHelperTest {
 	void testRunOsCommandRemoteExecutedLocallyWindows() throws Exception {
 		final OsCommandResult expect = new OsCommandResult(TEST_RESULT, ECHO_TEST_UPPER_CASE);
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.WINDOWS)
@@ -797,8 +764,7 @@ class OsCommandHelperTest {
 	void testRunOsCommandRemoteExecutedLocallyLinux() throws Exception {
 		final OsCommandResult expect = new OsCommandResult(TEST_RESULT, ECHO_TEST_LOWER_CASE);
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -814,14 +780,12 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunOsCommandRemoteLinuxOSCommandConfigNull() throws Exception {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -869,8 +833,7 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunOsCommandRemoteLinuxNoSudo() throws Exception {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
@@ -878,8 +841,7 @@ class OsCommandHelperTest {
 		final OsCommandConfiguration osCommandConfiguration = new OsCommandConfiguration();
 		osCommandConfiguration.setUseSudoCommands(Collections.singleton(NAVISECCLI_CAMEL_CASE.toLowerCase()));
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -936,8 +898,7 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunOsCommandRemoteLinuxNotInUseSudoCommands() throws Exception {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
@@ -946,8 +907,7 @@ class OsCommandHelperTest {
 		osCommandConfiguration.setUseSudo(true);
 		osCommandConfiguration.setUseSudoCommands(Collections.singleton(WMI_EXCEPTION_OTHER_MESSAGE));
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -1004,8 +964,7 @@ class OsCommandHelperTest {
 
 	@Test
 	void testRunOsCommandRemoteLinuxWithSudoReplaced() throws Exception {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
@@ -1014,8 +973,7 @@ class OsCommandHelperTest {
 		osCommandConfiguration.setUseSudo(true);
 		osCommandConfiguration.setUseSudoCommands(Collections.singleton(NAVISECCLI_CAMEL_CASE.toLowerCase()));
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -1081,20 +1039,17 @@ class OsCommandHelperTest {
 		final Map<String, File> embeddedTempFiles = new HashMap<>();
 		embeddedTempFiles.put(String.format("${file::%d}", EMBEDDED_FILE_1_REF), localFile);
 
-		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration
-			.builder()
+		final OsCommandConfiguration osCommandConfiguration = OsCommandConfiguration.builder()
 			.useSudo(true)
 			.useSudoCommands(Collections.singleton(ARCCONF_PATH))
 			.build();
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PWD_COMMAND.toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(ID)
 			.hostname(HOST)
 			.hostType(DeviceKind.LINUX)
@@ -1173,9 +1128,8 @@ class OsCommandHelperTest {
 		assertDoesNotThrow(() -> osCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30));
 
 		semaphore.acquire(8);
-		assertThrows(
-			ControlledSshException.class,
-			() -> osCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 1)
+		assertThrows(ControlledSshException.class, () ->
+			osCommandService.runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 1)
 		);
 	}
 
@@ -1183,9 +1137,8 @@ class OsCommandHelperTest {
 	void testRunControlledSshCommandClearsInterruptFlag() {
 		Thread.currentThread().interrupt();
 
-		assertThrows(
-			InterruptedException.class,
-			() -> new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
+		assertThrows(InterruptedException.class, () ->
+			new OsCommandService().runControlledSshCommand(LocalDate.MIN::toString, HOSTNAME, 30)
 		);
 
 		assertFalse(Thread.currentThread().isInterrupted());

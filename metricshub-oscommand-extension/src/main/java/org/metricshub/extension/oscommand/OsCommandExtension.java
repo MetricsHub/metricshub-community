@@ -144,8 +144,12 @@ public class OsCommandExtension implements IProtocolExtension {
 		}
 
 		if (telemetryManager.getHostProperties().isOsCommandExecutesRemotely()) {
-			sshResult =
-				remoteSshTest(hostname, sshResult, sshConfiguration, telemetryManager.getHostConfiguration().getHostType());
+			sshResult = remoteSshTest(
+				hostname,
+				sshResult,
+				sshConfiguration,
+				telemetryManager.getHostConfiguration().getHostType()
+			);
 		}
 
 		return Optional.of(UP.equals(sshResult));
@@ -175,8 +179,10 @@ public class OsCommandExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof CommandLineCriterion commandLineCriterion) {
-			return new CommandLineCriterionProcessor(connectorId, osCommandService)
-				.process(commandLineCriterion, telemetryManager);
+			return new CommandLineCriterionProcessor(connectorId, osCommandService).process(
+				commandLineCriterion,
+				telemetryManager
+			);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -315,8 +321,7 @@ public class OsCommandExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

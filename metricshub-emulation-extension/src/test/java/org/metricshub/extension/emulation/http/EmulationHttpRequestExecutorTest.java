@@ -36,19 +36,16 @@ class EmulationHttpRequestExecutorTest {
 	 * Creates a TelemetryManager with the given emulation input directory.
 	 */
 	private TelemetryManager buildTelemetryManager(final String emulationInputDir) {
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOSTNAME)
 					.hostId(HOSTNAME)
 					.hostType(DeviceKind.LINUX)
 					.configurations(
 						Map.of(
 							EmulationConfiguration.class,
-							EmulationConfiguration
-								.builder()
+							EmulationConfiguration.builder()
 								.hostname(HOSTNAME)
 								.http(
 									new HttpEmulationConfig(HttpConfiguration.builder().hostname(HOSTNAME).build(), emulationInputDir)
@@ -65,8 +62,7 @@ class EmulationHttpRequestExecutorTest {
 	 * Creates a basic HttpRequest with the given method and path.
 	 */
 	private HttpRequest buildHttpRequest(final String method, final String path) {
-		return HttpRequest
-			.builder()
+		return HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method(method)
@@ -213,8 +209,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpNullMethodDefaultsToGet(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method(null)
@@ -232,8 +227,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpPostWithBodyAndHeaders(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("POST")
@@ -263,8 +257,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpResultContentMatchHttpStatus(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -280,8 +273,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpResultContentMatchHeader(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -299,8 +291,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpDeleteMatch(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("DELETE")
@@ -340,8 +331,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpBodyMismatch(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("POST")
@@ -360,8 +350,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpHeadersMismatch(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("POST")
@@ -446,8 +435,7 @@ class EmulationHttpRequestExecutorTest {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		// GET /api/v1/status has no body in the YAML, request has no body set
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -465,8 +453,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpBodyPresentButEntryHasNone(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -484,8 +471,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpHeadersPresentButEntryHasNone(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -505,8 +491,7 @@ class EmulationHttpRequestExecutorTest {
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
 		// The first GET /api/v1/status entry has resultContent=body, requesting ALL should not match it
 		// The second has httpStatus. So requesting ALL should find no match.
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -535,8 +520,7 @@ class EmulationHttpRequestExecutorTest {
 	void testExecuteHttpWithAuthenticationToken(@TempDir Path tempDir) throws IOException {
 		writeStandardImage(tempDir);
 		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
-		final HttpRequest request = HttpRequest
-			.builder()
+		final HttpRequest request = HttpRequest.builder()
 			.hostname(HOSTNAME)
 			.httpConfiguration(HttpConfiguration.builder().build())
 			.method("GET")
@@ -559,5 +543,183 @@ class EmulationHttpRequestExecutorTest {
 		final HttpRequest request = buildHttpRequest("GET", "/something");
 
 		assertNull(executor.executeHttp(request, false, tm));
+	}
+
+	// ---- URL-based matching ----
+
+	@Test
+	void testExecuteHttpUrlMatch(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      url: http://host:1234/full
+			    response:
+			      file: url-response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/full")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		final String result = executor.executeHttp(request, false, tm);
+		assertEquals("url answer", result);
+	}
+
+	@Test
+	void testExecuteHttpUrlMismatch(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      url: http://host:1234/full
+			    response:
+			      file: url-response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("url-response.txt"), "url answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/different")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		assertNull(executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathOnlyEntryNotMatchedByUrlOnlyRequest(@TempDir Path tempDir) throws IOException {
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/status
+			    response:
+			      file: response.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("response.txt"), "answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+		// Request only sets url, the entry only sets path → no match (strict equality on both)
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234/api/v1/status")
+			.resultContent(ResultContent.BODY)
+			.build();
+
+		assertNull(executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathAndUrlBothMatch(@TempDir Path tempDir) throws IOException {
+		// A single entry carrying both path and url fields is what the recorder
+		// produces when both are set on the request.
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/data
+			      url: http://host:1234
+			    response:
+			      file: combined.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		// Request supplies both path and url and matches the entry
+		final HttpRequest request = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.url("http://host:1234")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertEquals("combined answer", executor.executeHttp(request, false, tm));
+	}
+
+	@Test
+	void testExecuteHttpPathAndUrlMismatchWhenOnlyOneMatches(@TempDir Path tempDir) throws IOException {
+		// Entry has both path and url. Request must match BOTH (strict equality).
+		Files.writeString(
+			tempDir.resolve("image.yaml"),
+			"""
+			image:
+			  - request:
+			      method: GET
+			      path: /api/v1/data
+			      url: http://host:1234
+			    response:
+			      file: combined.txt
+			      resultContent: body
+			""",
+			StandardCharsets.UTF_8
+		);
+		Files.writeString(tempDir.resolve("combined.txt"), "combined answer", StandardCharsets.UTF_8);
+
+		final TelemetryManager tm = buildTelemetryManager(tempDir.toString());
+
+		// Path matches but url does not → no match
+		final HttpRequest pathOnlyRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(pathOnlyRequest, false, tm));
+
+		// Url matches but path does not → no match
+		final HttpRequest urlOnlyRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.url("http://host:1234")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(urlOnlyRequest, false, tm));
+
+		// Path matches but url differs → no match
+		final HttpRequest mismatchUrlRequest = HttpRequest.builder()
+			.hostname(HOSTNAME)
+			.httpConfiguration(HttpConfiguration.builder().build())
+			.method("GET")
+			.path("/api/v1/data")
+			.url("http://other-host:9999")
+			.resultContent(ResultContent.BODY)
+			.build();
+		assertNull(executor.executeHttp(mismatchUrlRequest, false, tm));
 	}
 }

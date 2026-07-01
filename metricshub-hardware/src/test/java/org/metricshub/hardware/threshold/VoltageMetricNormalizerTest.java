@@ -30,24 +30,21 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric.builder()
 				.value(10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwVoltageLimitHighCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitHighCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitLowCriticaldMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitLowCriticaldMetric = NumberMetric.builder()
 				.value(15.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL)
 				.attributes(Map.of("limit_type", "low.critical"))
 				.build();
 			hwVoltageLimitLowCriticaldMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitLowCriticaldMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -64,8 +61,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				15.0,
 				monitorWithHwVoltageLimitMetric
@@ -85,24 +83,21 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric.builder()
 				.value(15.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwVoltageLimitHighCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitHighCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitLowCriticaldMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitLowCriticaldMetric = NumberMetric.builder()
 				.value(10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL)
 				.attributes(Map.of("limit_type", "low.critical"))
 				.build();
 			hwVoltageLimitLowCriticaldMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitLowCriticaldMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -119,8 +114,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				15.0,
 				monitorWithHwVoltageLimitMetric
@@ -140,16 +136,14 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric.builder()
 				.value(10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwVoltageLimitHighCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitHighCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -164,8 +158,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				10.0,
 				monitorWithHwVoltageLimitMetric
@@ -185,16 +180,14 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitHighCriticalMetric = NumberMetric.builder()
 				.value(-10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwVoltageLimitHighCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitHighCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -209,8 +202,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				-10.0,
 				monitorWithHwVoltageLimitMetric
@@ -230,16 +224,14 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitLowCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitLowCriticalMetric = NumberMetric.builder()
 				.value(10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_LOW_CRITICAL)
 				.attributes(Map.of("limit_type", "low.critical"))
 				.build();
 			hwVoltageLimitLowCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitLowCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -254,8 +246,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				11.0,
 				monitorWithHwVoltageLimitMetric
@@ -275,16 +268,14 @@ class VoltageMetricNormalizerTest {
 			final NumberMetric hwVoltageMetric = NumberMetric.builder().value(1.0).name("hw.voltage").build();
 			hwVoltageMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwVoltageLimitLowCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwVoltageLimitLowCriticalMetric = NumberMetric.builder()
 				.value(-10.0)
 				.name(HW_VOLTAGE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "low.critical"))
 				.build();
 			hwVoltageLimitLowCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwVoltageLimitLowCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwVoltageLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwVoltageLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("voltage")
 				.metrics(
@@ -299,8 +290,9 @@ class VoltageMetricNormalizerTest {
 				)
 				.build();
 
-			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwVoltageLimitMetric);
+			new VoltageMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwVoltageLimitMetric
+			);
 			assertEquals(
 				-9.0,
 				monitorWithHwVoltageLimitMetric

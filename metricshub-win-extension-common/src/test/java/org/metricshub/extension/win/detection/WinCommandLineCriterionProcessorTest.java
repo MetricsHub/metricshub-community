@@ -48,8 +48,11 @@ class WinCommandLineCriterionProcessorTest {
 
 	@BeforeEach
 	void setup() {
-		winCommandLineCriterionProcessor =
-			new WinCommandLineCriterionProcessor(winCommandServiceMock, configurationRetrieverMock, CONNECTOR_ID);
+		winCommandLineCriterionProcessor = new WinCommandLineCriterionProcessor(
+			winCommandServiceMock,
+			configurationRetrieverMock,
+			CONNECTOR_ID
+		);
 	}
 
 	private static final String HOST_NAME = "test-host" + UUID.randomUUID().toString();
@@ -102,14 +105,12 @@ class WinCommandLineCriterionProcessorTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_NAME)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.LINUX)
@@ -118,8 +119,7 @@ class WinCommandLineCriterionProcessorTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
@@ -140,14 +140,12 @@ class WinCommandLineCriterionProcessorTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_NAME)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.WINDOWS)
@@ -156,8 +154,7 @@ class WinCommandLineCriterionProcessorTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
@@ -252,14 +249,12 @@ class WinCommandLineCriterionProcessorTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_NAME)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.WINDOWS)
@@ -268,8 +263,7 @@ class WinCommandLineCriterionProcessorTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)
@@ -308,14 +302,12 @@ class WinCommandLineCriterionProcessorTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_NAME)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.WINDOWS)
@@ -324,8 +316,7 @@ class WinCommandLineCriterionProcessorTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)
@@ -359,14 +350,12 @@ class WinCommandLineCriterionProcessorTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration
-			.builder()
+		final WmiTestConfiguration wmiConfiguration = WmiTestConfiguration.builder()
 			.username(USERNAME)
 			.password(PASSWORD)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId(HOST_NAME)
 			.hostname(HOST_NAME)
 			.hostType(DeviceKind.WINDOWS)
@@ -375,8 +364,7 @@ class WinCommandLineCriterionProcessorTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)

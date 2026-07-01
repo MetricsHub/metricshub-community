@@ -66,33 +66,30 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 
 		final var parts = context.split("\\.");
 
-		return REGEX_SOURCE_REF_MONITORS
-			.matcher(valueToUpdate)
-			.replaceAll(match -> {
-				// If the context starts with the string "monitors", perform the corresponding replacement
-				if (
-					// CHECKSTYLE:OFF
-					parts.length >= 4 &&
-					"monitors".equals(parts[0]) &&
-					JOBS.contains(parts[2]) &&
-					("sources".equals(parts[3]) || "mapping".equals(parts[3]))
-					// CHECKSTYLE:ON
-				) {
-					return Matcher.quoteReplacement(
-						String.format(
-							SOURCE_REF_FORMAT,
-							Stream.of(parts[0], parts[1], parts[2], "sources", match.group(7)).collect(Collectors.joining("."))
-						)
-					);
-				} else if (parts.length >= 2 && ("beforeAll".equals(parts[0]) || "afterAll".equals(parts[0]))) {
-					// If the context starts with the string "beforeAll" or "afterAll", perform the corresponding replacement
-					return Matcher.quoteReplacement(
-						String.format(SOURCE_REF_FORMAT, Stream.of(parts[0], match.group(7)).collect(Collectors.joining(".")))
-					);
-				}
+		return REGEX_SOURCE_REF_MONITORS.matcher(valueToUpdate).replaceAll(match -> {
+			// If the context starts with the string "monitors", perform the corresponding replacement
+			if (
+				// CHECKSTYLE:OFF
+				parts.length >= 4 &&
+				"monitors".equals(parts[0]) &&
+				JOBS.contains(parts[2]) &&
+				("sources".equals(parts[3]) || "mapping".equals(parts[3])) // CHECKSTYLE:ON
+			) {
+				return Matcher.quoteReplacement(
+					String.format(
+						SOURCE_REF_FORMAT,
+						Stream.of(parts[0], parts[1], parts[2], "sources", match.group(7)).collect(Collectors.joining("."))
+					)
+				);
+			} else if (parts.length >= 2 && ("beforeAll".equals(parts[0]) || "afterAll".equals(parts[0]))) {
+				// If the context starts with the string "beforeAll" or "afterAll", perform the corresponding replacement
+				return Matcher.quoteReplacement(
+					String.format(SOURCE_REF_FORMAT, Stream.of(parts[0], match.group(7)).collect(Collectors.joining(".")))
+				);
+			}
 
-				return Matcher.quoteReplacement(match.group());
-			});
+			return Matcher.quoteReplacement(match.group());
+		});
 	}
 
 	/**
@@ -104,8 +101,7 @@ public class ReferenceResolverProcessor extends AbstractNodeProcessor {
 	 */
 	@Override
 	protected JsonNode processNode(final JsonNode node) throws IOException {
-		JsonNodeContextUpdater
-			.jsonNodeContextUpdaterBuilder()
+		JsonNodeContextUpdater.jsonNodeContextUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(Objects::nonNull)
 			.withUpdater(this::updateSourceReferences)

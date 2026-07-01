@@ -33,15 +33,13 @@ class MCPConfigHelperTest {
 		// Given
 		String hostname = "my-host";
 
-		HttpConfiguration httpConfig = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfig = HttpConfiguration.builder()
 			.hostname(hostname)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(hostname)
 			.configurations(Map.of(HttpConfiguration.class, httpConfig))
 			.build();
@@ -69,15 +67,13 @@ class MCPConfigHelperTest {
 		// Given
 		String hostname = "non-existent-host";
 
-		HttpConfiguration httpConfig = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfig = HttpConfiguration.builder()
 			.hostname("different-host")
 			.username("user")
 			.password("pass".toCharArray())
 			.build();
 
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("different-host")
 			.configurations(Map.of(HttpConfiguration.class, httpConfig))
 			.build();
@@ -101,8 +97,7 @@ class MCPConfigHelperTest {
 
 	@Test
 	void testConvertConfigurationForProtocol_realHttpExtension() throws InvalidConfigurationException {
-		HttpConfiguration sourceConfig = HttpConfiguration
-			.builder()
+		HttpConfiguration sourceConfig = HttpConfiguration.builder()
 			.username("admin")
 			.password("pass123".toCharArray())
 			.timeout(10L)

@@ -40,8 +40,7 @@ class WinRmConfigCliTest {
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
-			final ExtensionManager extensionManager = ExtensionManager
-				.builder()
+			final ExtensionManager extensionManager = ExtensionManager.builder()
 				.withProtocolExtensions(List.of(new WinRmExtension()))
 				.build();
 
@@ -51,8 +50,7 @@ class WinRmConfigCliTest {
 
 			// Create a WinRmTestConfiguration and call method toProtocol
 			WinRmConfiguration winRmConfiguration = (WinRmConfiguration) winRmConfigCli.toConfiguration(null, null);
-			final WinRmConfiguration expected = WinRmConfiguration
-				.builder()
+			final WinRmConfiguration expected = WinRmConfiguration.builder()
 				.username(username)
 				.password(password)
 				.port(port)

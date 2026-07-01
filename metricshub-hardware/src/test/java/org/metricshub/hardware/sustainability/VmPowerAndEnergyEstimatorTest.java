@@ -36,8 +36,7 @@ class VmPowerAndEnergyEstimatorTest {
 	@Test
 	void testEstimateVmsPowerConsumption() {
 		// Create the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(HOST).build())
 			.build();
@@ -143,8 +142,7 @@ class VmPowerAndEnergyEstimatorTest {
 	@Test
 	void testEstimateVmsPowerConsumptionTotalPowerShareZero() {
 		// Create the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(HOST).build())
 			.build();
@@ -198,8 +196,7 @@ class VmPowerAndEnergyEstimatorTest {
 	@Test
 	void testEstimateVmsPowerConsumptionHostPowerConsumptionMissing() {
 		// Create the telemetry manager
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(120L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).hostId(HOST).build())
 			.build();

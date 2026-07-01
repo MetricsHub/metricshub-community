@@ -81,13 +81,12 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 			maybeEmbeddedFile = Optional.of(EmbeddedFile.fromString(script));
 		} else {
 			try {
-				maybeEmbeddedFile =
-					EmbeddedFileHelper.findEmbeddedFile(
-						script,
-						telemetryManager.getEmbeddedFiles(connectorId),
-						hostname,
-						connectorId
-					);
+				maybeEmbeddedFile = EmbeddedFileHelper.findEmbeddedFile(
+					script,
+					telemetryManager.getEmbeddedFiles(connectorId),
+					hostname,
+					connectorId
+				);
 			} catch (Exception exception) {
 				log.warn("Hostname {} - Awk Operation script {} has not been set correctly.", hostname, script);
 				return SourceTable.empty();
@@ -107,12 +106,12 @@ public class JawkSourceExtension implements ICompositeSourceScriptExtension {
 		final String input = jawkSource.getInput();
 		final String inputContent = (input != null && !input.isEmpty())
 			? SourceUpdaterProcessor.replaceSourceReferenceContent(
-				input,
-				telemetryManager,
-				connectorId,
-				"Awk",
-				source.getKey()
-			)
+					input,
+					telemetryManager,
+					connectorId,
+					"Awk",
+					source.getKey()
+				)
 			: input;
 
 		// Instantiate the MetricsHub extension for Jawk with the proper context

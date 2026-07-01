@@ -28,8 +28,7 @@ class ExtractPropertyFromWbemPathComputeDeserializerTest extends DeserializerTes
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(
-			ExtractPropertyFromWbemPath
-				.builder()
+			ExtractPropertyFromWbemPath.builder()
 				.type("extractPropertyFromWbemPath")
 				.column(1)
 				.property("propertyTest")
@@ -39,8 +38,7 @@ class ExtractPropertyFromWbemPathComputeDeserializerTest extends DeserializerTes
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testCompute",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testCompute}")
 					.type("http")
 					.url("/testUrl/")

@@ -66,7 +66,7 @@ import picocli.CommandLine.Spec;
 	synopsisHeading = "%n@|bold,underline Usage|@:%n%n",
 	descriptionHeading = "%n@|bold,underline Description|@:%n%n",
 	description = "Create, list, and delete users stored in the secure keystore.%n" +
-	"Passwords are bcrypt-hashed. Roles are 'ro' (read-only) or 'rw' (read-write).%n%n",
+		"Passwords are bcrypt-hashed. Roles are 'ro' (read-only) or 'rw' (read-write).%n%n",
 	parameterListHeading = "%n@|bold,underline Parameters|@:%n",
 	optionListHeading = "%n@|bold,underline Options|@:%n"
 )
@@ -185,8 +185,7 @@ public class UserCliService {
 				store(ks, keyStoreFile);
 
 				out.println(
-					Ansi
-						.ansi()
+					Ansi.ansi()
 						.a("User '")
 						.fgGreen()
 						.a(username)

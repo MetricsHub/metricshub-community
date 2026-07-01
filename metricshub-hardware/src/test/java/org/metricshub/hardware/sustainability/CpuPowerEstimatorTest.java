@@ -20,8 +20,7 @@ class CpuPowerEstimatorTest {
 	@Test
 	void testEstimatePowerAndEnergy() {
 		final Monitor monitor = Monitor.builder().build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(1696597422644L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
 			.build();

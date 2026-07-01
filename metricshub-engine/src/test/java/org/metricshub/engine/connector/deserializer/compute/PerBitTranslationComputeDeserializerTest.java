@@ -29,8 +29,7 @@ class PerBitTranslationComputeDeserializerTest extends DeserializerTest {
 
 		final List<Compute> computes = new ArrayList<>();
 		computes.add(
-			PerBitTranslation
-				.builder()
+			PerBitTranslation.builder()
 				.type("perBitTranslation")
 				.column(1)
 				.bitList("1,2,3,4")
@@ -41,8 +40,7 @@ class PerBitTranslationComputeDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testCompute",
-				HttpSource
-					.builder()
+				HttpSource.builder()
 					.key("${source::beforeAll.testCompute}")
 					.type("http")
 					.url("/testUrl/")

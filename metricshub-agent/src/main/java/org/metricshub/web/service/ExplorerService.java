@@ -156,8 +156,7 @@ public class ExplorerService {
 		boolean deep
 	) {
 		final Map<String, String> groupAttributes = new HashMap<>();
-		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry
-			.builder()
+		final ResourceGroupTelemetry groupNode = ResourceGroupTelemetry.builder()
 			.name(groupName)
 			.attributes(groupAttributes)
 			.build();
@@ -170,7 +169,7 @@ public class ExplorerService {
 			.forEach(resource ->
 				resource
 					.getMetrics()
-					.forEach((k, v) -> {
+					.forEach((_, _) -> {
 						// implement aggregation logic here
 					})
 			);
@@ -318,8 +317,7 @@ public class ExplorerService {
 
 		final var topLevel = telemetryManagers == null ? null : telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY);
 
-		return Optional
-			.ofNullable(topLevel)
+		return Optional.ofNullable(topLevel)
 			.map(m -> m.get(resourceName))
 			.map(tm -> buildFullResourceNode(resourceName, tm))
 			.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Resource not found: " + resourceName));
@@ -627,7 +625,7 @@ public class ExplorerService {
 				if (connectorId == null || connectorId.isBlank()) {
 					return;
 				}
-				result.computeIfAbsent(connectorId, k -> new HashSet<>()).add(monitor.getType());
+				result.computeIfAbsent(connectorId, _ -> new HashSet<>()).add(monitor.getType());
 			});
 
 		// Ensure that each listed connector-id exists, even if no non-connector/host
@@ -638,7 +636,7 @@ public class ExplorerService {
 				.stream()
 				.map(m -> m.getAttributes().get(MONITOR_ATTRIBUTE_ID))
 				.collect(Collectors.toSet());
-			connectorIds.forEach(id -> result.computeIfAbsent(id, k -> new HashSet<>()));
+			connectorIds.forEach(id -> result.computeIfAbsent(id, _ -> new HashSet<>()));
 		}
 
 		return result;

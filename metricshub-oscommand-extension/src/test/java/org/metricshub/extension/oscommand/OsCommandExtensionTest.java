@@ -135,8 +135,7 @@ class OsCommandExtensionTest {
 		osCommandconfiguration.set("timeout", new TextNode("120"));
 
 		assertEquals(
-			OsCommandConfiguration
-				.builder()
+			OsCommandConfiguration.builder()
 				.sudoCommand("sudo")
 				.useSudo(true)
 				.useSudoCommands(Set.of("sudo"))
@@ -145,8 +144,7 @@ class OsCommandExtensionTest {
 			osCommandExtension.buildConfiguration("oscommand", osCommandconfiguration, value -> value)
 		);
 		assertEquals(
-			OsCommandConfiguration
-				.builder()
+			OsCommandConfiguration.builder()
 				.sudoCommand("sudo")
 				.useSudo(true)
 				.useSudoCommands(Set.of("sudo"))
@@ -167,8 +165,7 @@ class OsCommandExtensionTest {
 		sshConfiguration.set("timeout", new TextNode("120"));
 
 		assertEquals(
-			SshConfiguration
-				.sshConfigurationBuilder()
+			SshConfiguration.sshConfigurationBuilder()
 				.username("username")
 				.password("password".toCharArray())
 				.timeout(120L)
@@ -182,8 +179,7 @@ class OsCommandExtensionTest {
 			osCommandExtension.buildConfiguration("ssh", sshConfiguration, value -> value)
 		);
 		assertEquals(
-			SshConfiguration
-				.sshConfigurationBuilder()
+			SshConfiguration.sshConfigurationBuilder()
 				.username("username")
 				.password("password".toCharArray())
 				.timeout(120L)
@@ -203,17 +199,15 @@ class OsCommandExtensionTest {
 		{
 			final ObjectNode sshConfiguration = JsonNodeFactory.instance.objectNode();
 			sshConfiguration.set("timeout", new TextNode("NaN"));
-			assertThrows(
-				InvalidConfigurationException.class,
-				() -> osCommandExtension.buildConfiguration("ssh", sshConfiguration, null)
+			assertThrows(InvalidConfigurationException.class, () ->
+				osCommandExtension.buildConfiguration("ssh", sshConfiguration, null)
 			);
 		}
 		{
 			final ObjectNode osCommandconfiguration = JsonNodeFactory.instance.objectNode();
 			osCommandconfiguration.set("timeout", new TextNode("NaN"));
-			assertThrows(
-				InvalidConfigurationException.class,
-				() -> osCommandExtension.buildConfiguration("oscommand", osCommandconfiguration, null)
+			assertThrows(InvalidConfigurationException.class, () ->
+				osCommandExtension.buildConfiguration("oscommand", osCommandconfiguration, null)
 			);
 		}
 		{
@@ -226,9 +220,8 @@ class OsCommandExtensionTest {
 			sshConfiguration.set("useSudo", BooleanNode.TRUE);
 			sshConfiguration.set("sudoCommand", new TextNode("sudo"));
 			sshConfiguration.set("timeout", new TextNode("120"));
-			assertThrows(
-				InvalidConfigurationException.class,
-				() -> osCommandExtension.buildConfiguration("snmp", sshConfiguration, null)
+			assertThrows(InvalidConfigurationException.class, () ->
+				osCommandExtension.buildConfiguration("snmp", sshConfiguration, null)
 			);
 		}
 	}
@@ -252,19 +245,16 @@ class OsCommandExtensionTest {
 		// Create monitors
 		setup();
 		// Create a telemetry manager
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOSTNAME)
 					.hostname(HOSTNAME)
 					.configurations(
 						Map.of(
 							SshConfiguration.class,
-							SshConfiguration
-								.sshConfigurationBuilder()
+							SshConfiguration.sshConfigurationBuilder()
 								.username("username")
 								.password("password".toCharArray())
 								.timeout(60L)
@@ -285,8 +275,7 @@ class OsCommandExtensionTest {
 		// Create monitors
 		setup();
 		// Create a telemetry manager
-		return TelemetryManager
-			.builder()
+		return TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(HostConfiguration.builder().hostId(HOSTNAME).hostname(HOSTNAME).build())
 			.build();
@@ -466,11 +455,9 @@ class OsCommandExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(LOCALHOST)
 					.hostId(LOCALHOST)
 					.hostType(DeviceKind.LINUX)
@@ -481,9 +468,8 @@ class OsCommandExtensionTest {
 			.hostProperties(hostProperties)
 			.build();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandExtension.processSource((CommandLineSource) null, MY_CONNECTOR_1_NAME, telemetryManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandExtension.processSource((CommandLineSource) null, MY_CONNECTOR_1_NAME, telemetryManager)
 		);
 		assertEquals(
 			SourceTable.empty(),
@@ -556,8 +542,7 @@ class OsCommandExtensionTest {
 				eq(Map.of())
 			);
 
-		final SourceTable expected = SourceTable
-			.builder()
+		final SourceTable expected = SourceTable.builder()
 			.rawData("1;ext_bus;3;4;5")
 			.table(List.of(List.of("1", "ext_bus", "3", "4", "5")))
 			.build();
@@ -587,9 +572,9 @@ class OsCommandExtensionTest {
 		assertTrue(criterionTestResult.isSuccess());
 		assertEquals(
 			"CommandLineCriterion test succeeded:\n" +
-			commandLineCriterion.toString() +
-			"\n\n" +
-			"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
+				commandLineCriterion.toString() +
+				"\n\n" +
+				"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
 			criterionTestResult.getMessage()
 		);
 		assertEquals("CommandLine or ExpectedResult are empty. Skipping this test.", criterionTestResult.getResult());
@@ -602,9 +587,8 @@ class OsCommandExtensionTest {
 		final HostConfiguration hostConfiguration = HostConfiguration.builder().hostname(HOSTNAME).build();
 		final TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true)
+		assertThrows(IllegalArgumentException.class, () ->
+			osCommandExtension.processCriterion(commandLineCriterion, MY_CONNECTOR_1_NAME, telemetryManager, true)
 		);
 	}
 
@@ -630,9 +614,9 @@ class OsCommandExtensionTest {
 		assertTrue(criterionTestResult.isSuccess());
 		assertEquals(
 			"CommandLineCriterion test succeeded:\n" +
-			commandLineCriterion.toString() +
-			"\n\n" +
-			"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
+				commandLineCriterion.toString() +
+				"\n\n" +
+				"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
 			criterionTestResult.getMessage()
 		);
 		assertEquals("CommandLine or ExpectedResult are empty. Skipping this test.", criterionTestResult.getResult());
@@ -659,9 +643,9 @@ class OsCommandExtensionTest {
 		assertTrue(criterionTestResult.isSuccess());
 		assertEquals(
 			"CommandLineCriterion test succeeded:\n" +
-			commandLineCriterion.toString() +
-			"\n\n" +
-			"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
+				commandLineCriterion.toString() +
+				"\n\n" +
+				"Result: CommandLine or ExpectedResult are empty. Skipping this test.",
 			criterionTestResult.getMessage()
 		);
 		assertEquals("CommandLine or ExpectedResult are empty. Skipping this test.", criterionTestResult.getResult());
@@ -684,14 +668,12 @@ class OsCommandExtensionTest {
 		commandLineCriterion.setExecuteLocally(false);
 		commandLineCriterion.setErrorMessage("Unable to connect using Navisphere");
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(" ")
 			.password("pwd".toCharArray())
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId("id")
 			.hostname("host")
 			.hostType(DeviceKind.LINUX)
@@ -700,8 +682,7 @@ class OsCommandExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(false).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)
@@ -740,8 +721,7 @@ class OsCommandExtensionTest {
 		commandLineCriterion.setErrorMessage("No date.");
 		commandLineCriterion.setTimeout(1L);
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(" ")
 			.password("pwd".toCharArray())
 			.build();
@@ -749,8 +729,7 @@ class OsCommandExtensionTest {
 		final OsCommandConfiguration osCommandConfiguration = new OsCommandConfiguration();
 		osCommandConfiguration.setTimeout(1L);
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId("id")
 			.hostname("localhost")
 			.hostType(DeviceKind.WINDOWS)
@@ -761,8 +740,7 @@ class OsCommandExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)
@@ -779,9 +757,9 @@ class OsCommandExtensionTest {
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"Error in CommandLineCriterion test:\n" +
-			commandLineCriterion.toString() +
-			"\n\n" +
-			"TimeoutException: Command \"sleep 5\" execution has timed out after 1 s",
+				commandLineCriterion.toString() +
+				"\n\n" +
+				"TimeoutException: Command \"sleep 5\" execution has timed out after 1 s",
 			criterionTestResult.getMessage()
 		);
 		assertNull(criterionTestResult.getResult());
@@ -805,15 +783,13 @@ class OsCommandExtensionTest {
 		commandLineCriterion.setExecuteLocally(true);
 		commandLineCriterion.setErrorMessage("No display.");
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(" ")
 			.password("pwd".toCharArray())
 			.timeout(1L)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId("id")
 			.hostname("localhost")
 			.hostType(DeviceKind.LINUX)
@@ -822,8 +798,7 @@ class OsCommandExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)
@@ -840,10 +815,10 @@ class OsCommandExtensionTest {
 		assertFalse(criterionTestResult.isSuccess());
 		assertEquals(
 			"CommandLineCriterion test ran but failed:\n" +
-			commandLineCriterion.toString() +
-			"\n\n" +
-			"Actual result:\n" +
-			result,
+				commandLineCriterion.toString() +
+				"\n\n" +
+				"Actual result:\n" +
+				result,
 			criterionTestResult.getMessage()
 		);
 		assertEquals(result, criterionTestResult.getResult());
@@ -867,15 +842,13 @@ class OsCommandExtensionTest {
 		commandLineCriterion.setExecuteLocally(true);
 		commandLineCriterion.setErrorMessage("No display.");
 
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(" ")
 			.password("pwd".toCharArray())
 			.timeout(1L)
 			.build();
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostId("id")
 			.hostname("localhost")
 			.hostType(DeviceKind.LINUX)
@@ -884,8 +857,7 @@ class OsCommandExtensionTest {
 
 		final HostProperties hostProperties = HostProperties.builder().isLocalhost(true).build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.connectorStore(connectorStore)

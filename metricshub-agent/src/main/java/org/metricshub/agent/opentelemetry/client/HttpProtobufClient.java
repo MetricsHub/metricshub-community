@@ -80,8 +80,7 @@ public class HttpProtobufClient extends AbstractOtelClient {
 		try {
 			final byte[] requestBody = request.toByteArray(); // Serialize Protobuf request
 
-			final HttpRequest.Builder requestBuilder = HttpRequest
-				.newBuilder()
+			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
 				.uri(url.toURI())
 				.timeout(Duration.ofSeconds(timeout))
 				.header("Content-Type", "application/x-protobuf");
@@ -147,12 +146,12 @@ public class HttpProtobufClient extends AbstractOtelClient {
 				return HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(timeout)).executor(executorService).build();
 			}
 
-			final SSLContext sslContext = certificate != null && !certificate.isBlank()
-				? createSslContext(certificate) // Load custom certificate
-				: SSLContext.getDefault(); // Use system CA trust store
+			final SSLContext sslContext =
+				certificate != null && !certificate.isBlank()
+					? createSslContext(certificate) // Load custom certificate
+					: SSLContext.getDefault(); // Use system CA trust store
 
-			return HttpClient
-				.newBuilder()
+			return HttpClient.newBuilder()
 				.sslContext(sslContext)
 				.connectTimeout(Duration.ofSeconds(timeout))
 				.executor(executorService)

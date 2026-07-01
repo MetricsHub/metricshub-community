@@ -74,8 +74,7 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping WinRemote CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -272,8 +271,7 @@ public class WinRemoteCli implements IQuery, Callable<Integer> {
 		final String protocol = configEntry.getKey();
 
 		// Find an extension to execute the command
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(protocol)
 			.ifPresent(extension -> {
 				try {

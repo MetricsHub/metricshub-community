@@ -79,8 +79,7 @@ public class ConnectorVariableProcessor extends AbstractNodeProcessor {
 		final Predicate<String> isMatchingConnectorVariableRegex = str -> str != null && str.contains("${var::");
 
 		// Call JsonNodeUpdater to replace the placeholder by the variable value
-		JsonNodeUpdater
-			.jsonNodeUpdaterBuilder()
+		JsonNodeUpdater.jsonNodeUpdaterBuilder()
 			.withJsonNode(node)
 			.withPredicate(isMatchingConnectorVariableRegex)
 			.withUpdater(variableValueUpdater)

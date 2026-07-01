@@ -18,8 +18,7 @@ class WinRmConfigurationTest {
 	@Test
 	void testValidateConfiguration() throws InvalidConfigurationException {
 		assertDoesNotThrow(() ->
-			WinRmConfiguration
-				.builder()
+			WinRmConfiguration.builder()
 				.username("user")
 				.password("pass".toCharArray())
 				.namespace("namespace")
@@ -28,16 +27,13 @@ class WinRmConfigurationTest {
 				.build()
 				.validateConfiguration("resourceKey")
 		);
-		assertThrows(
-			InvalidConfigurationException.class,
-			() ->
-				WinRmConfiguration
-					.builder()
-					.username("user")
-					.password("pass".toCharArray())
-					.timeout(-15L) // Bad timeout
-					.build()
-					.validateConfiguration("resourceKey")
+		assertThrows(InvalidConfigurationException.class, () ->
+			WinRmConfiguration.builder()
+				.username("user")
+				.password("pass".toCharArray())
+				.timeout(-15L) // Bad timeout
+				.build()
+				.validateConfiguration("resourceKey")
 		);
 	}
 
@@ -45,8 +41,7 @@ class WinRmConfigurationTest {
 	void testToString() {
 		assertEquals(
 			"WinRm as Administrator",
-			WinRmConfiguration
-				.builder()
+			WinRmConfiguration.builder()
 				.username("Administrator")
 				.password("passwd".toCharArray())
 				.timeout(15L)
@@ -57,8 +52,7 @@ class WinRmConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final WinRmConfiguration winRmConfiguration = WinRmConfiguration
-			.builder()
+		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.authentications(List.of(AuthenticationEnum.KERBEROS))
 			.namespace("namespace")
 			.password("password".toCharArray())
@@ -80,8 +74,7 @@ class WinRmConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final WinRmConfiguration winRmConfiguration = WinRmConfiguration
-			.builder()
+		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.namespace("myNamespace")
 			.password("myPassword".toCharArray())
 			.port(443)

@@ -127,8 +127,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(executeQueryWithExtensionSafe(extension, host, query, normalizedNamespace, timeout))
 							.build(),
@@ -159,8 +158,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		final String namespace,
 		final Long timeout
 	) {
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.map(configCandidate -> buildConfigurationWithNamespace(extension, configCandidate, namespace))
@@ -170,8 +168,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 				executeQuerySafe(extension, hostname, query, timeout, configurationCopy)
 			)
 			.orElseGet(() ->
-				QueryResponse
-					.builder()
+				QueryResponse.builder()
 					.error("No valid %s configuration found for %s.".formatted(extension.getIdentifier(), hostname))
 					.build()
 			);
@@ -211,8 +208,7 @@ public class ExecuteWqlQueryService implements IMCPToolService {
 		try {
 			return QueryResponse.builder().response(extension.executeQuery(configurationCopy, queryNode)).build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("An error has occurred when executing the query: %s".formatted(e.getMessage()))
 				.build();
 		}

@@ -127,7 +127,8 @@ public class TelemetryManager {
 			log.debug("Hostname {} - Operation failed with InterruptedException: ", hostname, e);
 
 			Thread.currentThread().interrupt();
-		} catch (Throwable e) { // NOSONAR
+		} catch (Throwable e) {
+			// NOSONAR
 			log.error(
 				"Hostname {} - {} operation failed with {}.",
 				hostname,
@@ -221,7 +222,7 @@ public class TelemetryManager {
 		@NonNull final String id
 	) {
 		synchronized (monitors) {
-			monitors.computeIfAbsent(monitorType, t -> new HashMap<>()).put(id, monitor);
+			monitors.computeIfAbsent(monitorType, _ -> new HashMap<>()).put(id, monitor);
 			return monitor;
 		}
 	}

@@ -165,9 +165,8 @@ public class MacrosUpdater {
 		final Map<String, String> macroNameField
 	) {
 		final String replacement = macroNameField.getOrDefault(macroName, EMPTY);
-		final String maybeEscapedReplacement = escapeType != null
-			? escapeReplacement(replacement, escapeType)
-			: replacement;
+		final String maybeEscapedReplacement =
+			escapeType != null ? escapeReplacement(replacement, escapeType) : replacement;
 		return protectAndReplaceMatchedMacro(content, matchedMacro, maybeEscapedReplacement);
 	}
 
@@ -200,8 +199,7 @@ public class MacrosUpdater {
 	 * @return The escaped string.
 	 */
 	private static String escapeReplacement(final String replacement, final String escapeType) {
-		return Optional
-			.ofNullable(EscapeType.fromString(escapeType))
+		return Optional.ofNullable(EscapeType.fromString(escapeType))
 			.map(type -> type.escape(replacement))
 			.orElse(replacement);
 	}

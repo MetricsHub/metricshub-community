@@ -149,8 +149,7 @@ public class SshConfigCli implements IProtocolConfigCli {
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("port", new IntNode(getPort()));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ssh", configuration, value -> value)
 			.orElseThrow();
 	}

@@ -264,8 +264,7 @@ class MonitorNameBuilderTest {
 		cpuAttributes.put(MODEL, "Xeon");
 
 		final Map<String, AbstractMetric> cpuMetrics = new HashMap<>();
-		NumberMetric cpuMaxSpeedMetric = NumberMetric
-			.builder()
+		NumberMetric cpuMaxSpeedMetric = NumberMetric.builder()
 			.value(3_600_000_000.0)
 			.name(CPU_MAXIMUM_SPEED)
 			.attributes(Map.of("limit_type", "max"))
@@ -273,8 +272,7 @@ class MonitorNameBuilderTest {
 			.build();
 		cpuMetrics.put(CPU_MAXIMUM_SPEED, cpuMaxSpeedMetric);
 
-		Monitor cpu = Monitor
-			.builder()
+		Monitor cpu = Monitor.builder()
 			.attributes(cpuAttributes)
 			.metrics(cpuMetrics)
 			.type(KnownMonitorType.CPU.getKey())
@@ -288,14 +286,12 @@ class MonitorNameBuilderTest {
 		cpuAttributes.put(ID_COUNT, "0");
 		cpuAttributes.put(DEVICE_ID, "CPU1,1");
 		cpuAttributes.put(VENDOR, "Intel");
-		cpuMaxSpeedMetric =
-			NumberMetric
-				.builder()
-				.value(999.0 * 1_000_000)
-				.name(CPU_MAXIMUM_SPEED)
-				.attributes(Map.of("limit_type", "max"))
-				.collectTime(System.currentTimeMillis() - 120000)
-				.build();
+		cpuMaxSpeedMetric = NumberMetric.builder()
+			.value(999.0 * 1_000_000)
+			.name(CPU_MAXIMUM_SPEED)
+			.attributes(Map.of("limit_type", "max"))
+			.collectTime(System.currentTimeMillis() - 120000)
+			.build();
 		cpuMetrics.put(CPU_MAXIMUM_SPEED, cpuMaxSpeedMetric);
 		cpu = Monitor.builder().attributes(cpuAttributes).metrics(cpuMetrics).build();
 		assertEquals("11 (Intel - 999 MHz)", buildCpuName(cpu));

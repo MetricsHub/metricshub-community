@@ -122,8 +122,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<QueryResponse>builder()
+						HostToolResponse.<QueryResponse>builder()
 							.hostname(host)
 							.response(
 								executeJmxQueryWithExtensionSafe(extension, host, objectName, attributes, keyProperties, timeout)
@@ -158,8 +157,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 		final Long timeout
 	) {
 		// Try to retrieve a JMX configuration for the host
-		return MCPConfigHelper
-			.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
+		return MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(hostname, agentContextHolder)
 			.stream()
 			.filter(extension::isValidConfiguration)
 			.findFirst()
@@ -199,13 +197,11 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 
 		// Executes the query and returns the response if it's valid, or an error if it occurs.
 		try {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.response(extension.executeQuery(configurationCopy, createQueryNode(objectName, attributes, keyProperties)))
 				.build();
 		} catch (Exception e) {
-			return QueryResponse
-				.builder()
+			return QueryResponse.builder()
 				.error("An error has occurred when executing the JMX request: %s.".formatted(e.getMessage()))
 				.build();
 		}
@@ -232,8 +228,7 @@ public class ExecuteJmxQueryService implements IMCPToolService {
 	static ArrayNode normalizeElements(@NonNull final String elements) {
 		final var elementsNode = JsonNodeFactory.instance.arrayNode();
 
-		Arrays
-			.stream(elements.split(","))
+		Arrays.stream(elements.split(","))
 			.map(String::trim)
 			.filter(element -> !element.isEmpty())
 			.forEach(elementsNode::add);

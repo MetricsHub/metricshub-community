@@ -65,8 +65,7 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping JDBC CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -221,8 +220,7 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(extension -> {
 				try {

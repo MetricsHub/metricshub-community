@@ -39,7 +39,7 @@ jobs:
       id: jdk
       uses: actions/setup-java@v5
       with:
-        java-version: 21
+        java-version: 25
         distribution: temurin
         cache: maven
 
@@ -126,7 +126,7 @@ jobs:
 
     - name: Create Pull Request from ${{ env.BRANCH_NAME }} to ${{ github.event.repository.default_branch }}
       if: steps.check_release.outputs.create_pr == 'true'
-      uses: devops-infra/action-pull-request@v1.0.2
+      uses: devops-infra/action-pull-request@v1.2.3
       with:
         github_token: ${{ github.token }}
         source_branch: ${{ env.BRANCH_NAME }}

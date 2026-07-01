@@ -255,16 +255,14 @@ public class ChatController {
 		// - Available tools exposed to the model
 		// - Store the response
 		// - Web search tool always included
-		final Builder builder = ResponseCreateParams
-			.builder()
+		final Builder builder = ResponseCreateParams.builder()
 			.store(true)
 			.model(model)
 			.input(ResponseCreateParams.Input.ofResponse(initialInputs))
 			.tools(tools)
 			.addTool(WebSearchTool.builder().type(Type.WEB_SEARCH).build())
 			.addCodeInterpreterTool(
-				Tool.CodeInterpreter.Container.CodeInterpreterToolAuto
-					.builder()
+				Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.builder()
 					.memoryLimit(Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.MemoryLimit._4G)
 					.build()
 			);
@@ -272,8 +270,7 @@ public class ChatController {
 		// Enable reasoning if enabled in the configuration
 		if (chatConfig.getReasoning().isEnabled()) {
 			builder.reasoning(
-				Reasoning
-					.builder()
+				Reasoning.builder()
 					.effort(chatConfig.getReasoning().getEffort())
 					.summary(chatConfig.getReasoning().getSummary())
 					.build()
@@ -392,8 +389,7 @@ public class ChatController {
 				ContextBudgetHolder.clear();
 			}
 
-			final ResponseCreateParams.Builder builder = ResponseCreateParams
-				.builder()
+			final ResponseCreateParams.Builder builder = ResponseCreateParams.builder()
 				.store(true)
 				.model(chatConfig.getModel())
 				.previousResponseId(prevId)
@@ -403,8 +399,7 @@ public class ChatController {
 			// Enable reasoning for follow-up calls if configured
 			if (chatConfig.getReasoning().isEnabled()) {
 				builder.reasoning(
-					Reasoning
-						.builder()
+					Reasoning.builder()
 						.effort(chatConfig.getReasoning().getEffort())
 						.summary(chatConfig.getReasoning().getSummary())
 						.build()
@@ -416,8 +411,7 @@ public class ChatController {
 
 			if (!uploadedFileIds.isEmpty()) {
 				builder.addCodeInterpreterTool(
-					Tool.CodeInterpreter.Container.CodeInterpreterToolAuto
-						.builder()
+					Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.builder()
 						.fileIds(uploadedFileIds)
 						.memoryLimit(Tool.CodeInterpreter.Container.CodeInterpreterToolAuto.MemoryLimit._4G)
 						.build()
@@ -480,8 +474,7 @@ public class ChatController {
 
 			followUpInputs.add(
 				ResponseInputItem.ofFunctionCallOutput(
-					ResponseInputItem.FunctionCallOutput
-						.builder()
+					ResponseInputItem.FunctionCallOutput.builder()
 						.status(ResponseInputItem.FunctionCallOutput.Status.COMPLETED)
 						.callId(tc.getCallId())
 						.outputAsJson(JsonField.of(adaptedToolResultJson))
@@ -750,7 +743,7 @@ public class ChatController {
 
 		log.info(
 			"Context budget initialized: contextWindow={}t, promptUsed={}t, reserved={}t, " +
-			"availableBudget={}t for {} tool call(s)",
+				"availableBudget={}t for {} tool call(s)",
 			contextWindow,
 			inputTokensUsed,
 			reservedResponse,
@@ -786,8 +779,7 @@ public class ChatController {
 
 		items.add(
 			ResponseInputItem.ofEasyInputMessage(
-				EasyInputMessage
-					.builder()
+				EasyInputMessage.builder()
 					.role(EasyInputMessage.Role.SYSTEM)
 					.content(ChatClientOpenAiConfiguration.SYSTEM_PROMPT)
 					.build()
@@ -815,8 +807,7 @@ public class ChatController {
 
 		items.add(
 			ResponseInputItem.ofEasyInputMessage(
-				EasyInputMessage
-					.builder()
+				EasyInputMessage.builder()
 					.role(EasyInputMessage.Role.USER)
 					.content(Optional.ofNullable(userMessage).orElse(""))
 					.build()

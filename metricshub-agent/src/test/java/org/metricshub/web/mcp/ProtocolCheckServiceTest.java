@@ -41,15 +41,13 @@ class ProtocolCheckServiceTest {
 		doReturn(Optional.of(Boolean.TRUE)).when(httpExtension).checkProtocol(any());
 
 		// Mock configuration
-		HttpConfiguration httpConfig = HttpConfiguration
-			.builder()
+		HttpConfiguration httpConfig = HttpConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("user")
 			.password("pass".toCharArray())
 			.build();
 
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(HttpConfiguration.class, httpConfig))
 			.build();
@@ -57,14 +55,14 @@ class ProtocolCheckServiceTest {
 		TelemetryManager telemetryManager = TelemetryManager.builder().hostConfiguration(hostConfiguration).build();
 
 		AgentContext agentContext = mock(AgentContext.class);
-		ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(httpExtension))
 			.build();
 
 		when(agentContext.getExtensionManager()).thenReturn(extensionManager);
-		when(agentContext.getTelemetryManagers())
-			.thenReturn(Map.of("resourceGroupId", Map.of("host-id", telemetryManager)));
+		when(agentContext.getTelemetryManagers()).thenReturn(
+			Map.of("resourceGroupId", Map.of("host-id", telemetryManager))
+		);
 
 		AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
@@ -121,8 +119,9 @@ class ProtocolCheckServiceTest {
 		AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		AgentContext agentContext = mock(AgentContext.class);
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
-		when(agentContext.getExtensionManager())
-			.thenReturn(ExtensionManager.builder().withProtocolExtensions(java.util.List.of()).build());
+		when(agentContext.getExtensionManager()).thenReturn(
+			ExtensionManager.builder().withProtocolExtensions(java.util.List.of()).build()
+		);
 
 		ProtocolCheckService missingExtService = new ProtocolCheckService(
 			agentContextHolder,

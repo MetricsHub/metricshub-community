@@ -141,15 +141,14 @@ public class WbemExtension implements IProtocolExtension {
 					wbemNamespace
 				);
 				// The query on the WBEM namespace returned a result
-				wbemResult =
-					wbemRequestExecutor.executeWbem(
-						hostname,
-						wbemConfiguration,
-						WBEM_TEST_QUERY,
-						wbemNamespace,
-						telemetryManager,
-						telemetryManager.getHostname()
-					);
+				wbemResult = wbemRequestExecutor.executeWbem(
+					hostname,
+					wbemConfiguration,
+					WBEM_TEST_QUERY,
+					wbemNamespace,
+					telemetryManager,
+					telemetryManager.getHostname()
+				);
 			} catch (Exception e) {
 				if (wbemRequestExecutor.isAcceptableException(e)) {
 					return Optional.of(true);
@@ -173,8 +172,10 @@ public class WbemExtension implements IProtocolExtension {
 		boolean logMode
 	) {
 		if (criterion instanceof WbemCriterion wbemCriterion) {
-			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId, logMode)
-				.process(wbemCriterion, telemetryManager);
+			return new WbemCriterionProcessor(wbemRequestExecutor, connectorId, logMode).process(
+				wbemCriterion,
+				telemetryManager
+			);
 		}
 		throw new IllegalArgumentException(
 			String.format(
@@ -231,8 +232,7 @@ public class WbemExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

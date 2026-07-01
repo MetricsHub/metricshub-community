@@ -123,8 +123,7 @@ public class AgentInfoService implements IMCPToolService {
 		// Get application status information
 		final ApplicationStatus applicationStatus = applicationStatusService.reportApplicationStatus();
 
-		return AgentInfoResponse
-			.builder()
+		return AgentInfoResponse.builder()
 			// Agent metadata from metricshub.agent.info metric attributes
 			.serviceName(attributes.get(AGENT_RESOURCE_SERVICE_NAME_ATTRIBUTE_KEY))
 			.hostName(attributes.get(AGENT_RESOURCE_HOST_NAME_ATTRIBUTE_KEY))

@@ -96,8 +96,7 @@ public class SqlSource extends Source {
 
 	@Override
 	public SqlSource copy() {
-		return SqlSource
-			.builder()
+		return SqlSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

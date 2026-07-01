@@ -77,7 +77,7 @@ public class WmiConfiguration implements IWinConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					"WMI",
 					timeout
@@ -87,8 +87,7 @@ public class WmiConfiguration implements IWinConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return WmiConfiguration
-			.builder()
+		return WmiConfiguration.builder()
 			.namespace(namespace)
 			.password(password)
 			.timeout(timeout)

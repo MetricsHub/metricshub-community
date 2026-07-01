@@ -77,9 +77,10 @@ public class EmulationWbemRequestExecutor extends WbemRequestExecutor {
 			.getConfigurations()
 			.get(EmulationConfiguration.class);
 
-		final String emulationInputDirectory = emulationConfiguration != null && emulationConfiguration.getWbem() != null
-			? emulationConfiguration.getWbem().getDirectory()
-			: null;
+		final String emulationInputDirectory =
+			emulationConfiguration != null && emulationConfiguration.getWbem() != null
+				? emulationConfiguration.getWbem().getDirectory()
+				: null;
 
 		if (emulationInputDirectory == null || emulationInputDirectory.isBlank()) {
 			log.warn("Hostname {} - WBEM emulation input directory is not configured.", hostname);

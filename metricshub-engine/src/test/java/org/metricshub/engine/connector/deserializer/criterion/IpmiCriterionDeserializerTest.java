@@ -22,7 +22,8 @@ class IpmiCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws IOException
 	 */
-	void testDeserializeDoesntThrow() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testDeserializeDoesntThrow() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		final Connector connector = getConnector("ipmiCriterion");
 
 		List<Criterion> expected = new ArrayList<>();

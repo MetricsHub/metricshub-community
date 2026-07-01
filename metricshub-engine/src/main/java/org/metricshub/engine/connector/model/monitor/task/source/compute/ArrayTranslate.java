@@ -115,8 +115,7 @@ public class ArrayTranslate extends Compute {
 
 	@Override
 	public ArrayTranslate copy() {
-		return ArrayTranslate
-			.builder()
+		return ArrayTranslate.builder()
 			.type(type)
 			.column(column)
 			.translationTable(translationTable)

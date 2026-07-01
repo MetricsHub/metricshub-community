@@ -115,12 +115,11 @@ public class HostMonitorThermalCalculator {
 			boolean isCpuSensor = false;
 			final String isCpuSensorString = temperatureMonitor.getAttribute(IS_CPU_SENSOR);
 			if (isCpuSensorString == null) {
-				isCpuSensor =
-					isCpuSensor(
-						warningThreshold,
-						temperatureMonitor.getAttribute(MONITOR_ATTRIBUTE_NAME),
-						temperatureMonitor.getAttribute("info")
-					);
+				isCpuSensor = isCpuSensor(
+					warningThreshold,
+					temperatureMonitor.getAttribute(MONITOR_ATTRIBUTE_NAME),
+					temperatureMonitor.getAttribute("info")
+				);
 				temperatureMonitor.addAttribute(IS_CPU_SENSOR, String.valueOf(isCpuSensor));
 			} else {
 				isCpuSensor = Boolean.parseBoolean(isCpuSensorString);
@@ -139,8 +138,10 @@ public class HostMonitorThermalCalculator {
 			);
 
 			if (temperatureWarningThreshold != null) {
-				heatingMargin =
-					MathOperationsHelper.min(heatingMargin, Math.max(temperatureWarningThreshold - temperature, 0.0));
+				heatingMargin = MathOperationsHelper.min(
+					heatingMargin,
+					Math.max(temperatureWarningThreshold - temperature, 0.0)
+				);
 
 				cpuWarningThresholdAverage += temperatureWarningThreshold;
 				cpuWarningThresholdCount++;

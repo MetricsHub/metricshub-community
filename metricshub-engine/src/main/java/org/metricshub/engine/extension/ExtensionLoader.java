@@ -67,7 +67,7 @@ public class ExtensionLoader {
 		}
 
 		// Get the jar files located under the extension directory
-		final File[] extensionJars = extensionsDirectory.listFiles((unused, fileName) -> fileName.endsWith(".jar"));
+		final File[] extensionJars = extensionsDirectory.listFiles((_, fileName) -> fileName.endsWith(".jar"));
 
 		// If there is no extension then create an empty extension manger and skip the current loading
 		if (extensionJars == null || extensionJars.length == 0) {
@@ -153,17 +153,15 @@ public class ExtensionLoader {
 		);
 
 		// Build the extension manager
-		extensionManager =
-			ExtensionManager
-				.builder()
-				.withProtocolExtensions(loadedProtocolExtensions)
-				.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
-				.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
-				.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
-				.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
-				.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
-				.withMetricEnrichmentExtensions(convertProviderStreamToList(metricEnrichmentExtensions.stream()))
-				.build();
+		extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(loadedProtocolExtensions)
+			.withStrategyProviderExtensions(convertProviderStreamToList(strategyProviderExtensions.stream()))
+			.withConnectorStoreProviderExtensions(convertProviderStreamToList(connectorStoreProviderExtensions.stream()))
+			.withSourceComputationExtensions(convertProviderStreamToList(sourceComputationExtensions.stream()))
+			.withCompositeSourceScriptExtensions(convertProviderStreamToList(compositeSourceScriptExtensions.stream()))
+			.withConfigurationProviderExtensions(convertProviderStreamToList(configurationProviderExtensions.stream()))
+			.withMetricEnrichmentExtensions(convertProviderStreamToList(metricEnrichmentExtensions.stream()))
+			.build();
 
 		return extensionManager;
 	}

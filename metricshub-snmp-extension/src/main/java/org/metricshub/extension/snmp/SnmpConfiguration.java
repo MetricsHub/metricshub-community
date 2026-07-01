@@ -153,7 +153,7 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Invalid port configured for protocol %s. Port value returned: %s." +
-					" This resource will not be monitored. Please verify the configured port value.",
+						" This resource will not be monitored. Please verify the configured port value.",
 					resourceKey,
 					displayName,
 					port
@@ -166,7 +166,7 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - Timeout value is invalid for protocol %s." +
-					" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
+						" Timeout value returned: %s. This resource will not be monitored. Please verify the configured timeout value.",
 					resourceKey,
 					displayName,
 					timeout
@@ -179,7 +179,7 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 			() ->
 				String.format(
 					"Resource %s - retryIntervals value is invalid for protocol %s." +
-					" retryIntervals value returned: %s. This resource will not be monitored. Please verify the configured retryIntervals value.",
+						" retryIntervals value returned: %s. This resource will not be monitored. Please verify the configured retryIntervals value.",
 					resourceKey,
 					displayName,
 					retryIntervals
@@ -194,8 +194,7 @@ public class SnmpConfiguration implements ISnmpConfiguration {
 
 	@Override
 	public IConfiguration copy() {
-		return SnmpConfiguration
-			.builder()
+		return SnmpConfiguration.builder()
 			.community(community)
 			.port(port)
 			.timeout(timeout)

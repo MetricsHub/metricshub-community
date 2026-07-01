@@ -53,8 +53,7 @@ class PrettyPrinterServiceTest {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 
 		// Create the host monitor as root endpoint monitor
-		final Monitor host = Monitor
-			.builder()
+		final Monitor host = Monitor.builder()
 			.type(KnownMonitorType.HOST.getKey())
 			.attributes(
 				Map.of(
@@ -81,8 +80,7 @@ class PrettyPrinterServiceTest {
 		metricFactory.collectNumberMetric(host, "hw.host.ambient_temperature", 22D, COLLECT_TIME);
 
 		// Create a new enclosure instance
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.attributes(
 				Map.of(
@@ -119,8 +117,7 @@ class PrettyPrinterServiceTest {
 		metricFactory.collectNumberMetric(enclosure, "hw.enclosure.energy", 3000000D, COLLECT_TIME);
 
 		// Create the first battery
-		final Monitor battery1 = Monitor
-			.builder()
+		final Monitor battery1 = Monitor.builder()
 			.type(KnownMonitorType.BATTERY.getKey())
 			.attributes(
 				Map.of(
@@ -156,8 +153,7 @@ class PrettyPrinterServiceTest {
 		metricFactory.collectNumberMetric(battery1, BATTERY_HW_ENERGY_METRIC_KEY, 50000D, COLLECT_TIME);
 
 		// Create the second battery
-		final Monitor battery2 = Monitor
-			.builder()
+		final Monitor battery2 = Monitor.builder()
 			.type(KnownMonitorType.BATTERY.getKey())
 			.attributes(
 				Map.of(

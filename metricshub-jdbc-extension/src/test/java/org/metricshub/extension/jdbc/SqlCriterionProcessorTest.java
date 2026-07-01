@@ -43,8 +43,7 @@ class SqlCriterionProcessorTest {
 	 * @return a configured telemetryManager instance
 	 */
 	private TelemetryManager createTelemetryManagerWithHostConfiguration() {
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("hostname")
 			.configurations(Map.of(JdbcConfiguration.class, jdbcConfiguration))
 			.build();
@@ -60,8 +59,9 @@ class SqlCriterionProcessorTest {
 		String expectedResult = List.of(List.of("row1_col1", "row1_col2")).toString();
 		SqlCriterion sqlCriterion = SqlCriterion.builder().query(query).expectedResult(expectedResult).build();
 		when(jdbcConfiguration.copy()).thenReturn(jdbcConfiguration);
-		when(sqlRequestExecutor.executeSql(any(), eq(jdbcConfiguration), eq(query), eq(false), any()))
-			.thenReturn(List.of(List.of("row1_col1", "row1_col2")));
+		when(sqlRequestExecutor.executeSql(any(), eq(jdbcConfiguration), eq(query), eq(false), any())).thenReturn(
+			List.of(List.of("row1_col1", "row1_col2"))
+		);
 
 		CriterionTestResult criterionTestResult = sqlCriterionProcessor.process(sqlCriterion, telemetryManager);
 		assertNotNull(criterionTestResult);
@@ -81,8 +81,7 @@ class SqlCriterionProcessorTest {
 	void testProcessNullSqlConfiguration() {
 		Map<Class<? extends IConfiguration>, IConfiguration> configurations = new HashMap<>();
 		configurations.put(JdbcConfiguration.class, null);
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("test-host")
 			.configurations(configurations)
 			.build();
@@ -107,8 +106,7 @@ class SqlCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenThrow(new RuntimeException("Test exception"));
+		).thenThrow(new RuntimeException("Test exception"));
 
 		SqlCriterion sqlCriterion = SqlCriterion.builder().query("SELECT * FROM test_table").build();
 
@@ -131,8 +129,7 @@ class SqlCriterionProcessorTest {
 				any(Boolean.class),
 				any()
 			)
-		)
-			.thenReturn(null);
+		).thenReturn(null);
 
 		CriterionTestResult result = sqlCriterionProcessor.process(sqlCriterion, telemetryManager);
 

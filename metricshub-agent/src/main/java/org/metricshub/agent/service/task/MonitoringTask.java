@@ -122,8 +122,9 @@ public class MonitoringTask implements Runnable {
 			initHostAttributes(telemetryManager, resourceConfig);
 
 			// Record metrics and export them all
-			registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions)
-				.exportMetrics(() -> configureLoggerContext(hostId));
+			registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(() ->
+				configureLoggerContext(hostId)
+			);
 		}
 
 		log.info("Calling the engine to collect resource: {}.", hostId);
@@ -146,8 +147,9 @@ public class MonitoringTask implements Runnable {
 		applyShiftLeftEnrichments(telemetryManager, metricEnrichmentExtensions);
 
 		// Record metrics and export them all
-		registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions)
-			.exportMetrics(() -> configureLoggerContext(hostId));
+		registerTelemetryManagerRecorders(telemetryManager, metricEnrichmentExtensions).exportMetrics(() ->
+			configureLoggerContext(hostId)
+		);
 
 		// Increment the number of collects
 		numberOfCollects++;
@@ -270,8 +272,7 @@ public class MonitoringTask implements Runnable {
 
 		// Registers a metric recorder to be invoked when recording the metric
 		meter.registerRecorder(
-			MetricContext
-				.builder()
+			MetricContext.builder()
 				.withDescription(metricDefinition.getDescription())
 				.withType(metricDefinition.getType().get())
 				.withUnit(metricDefinition.getUnit())
@@ -292,11 +293,9 @@ public class MonitoringTask implements Runnable {
 		final String metricName,
 		final Map<String, MetricDefinition> metricDefinitionMap
 	) {
-		return Optional
-			.ofNullable(metricDefinitionMap.get(metricName))
-			.orElseGet(() ->
-				MetricDefinition.builder().description(String.format(GENERIC_METRIC_DESCRIPTION_FORMAT, metricName)).build()
-			);
+		return Optional.ofNullable(metricDefinitionMap.get(metricName)).orElseGet(() ->
+			MetricDefinition.builder().description(String.format(GENERIC_METRIC_DESCRIPTION_FORMAT, metricName)).build()
+		);
 	}
 
 	/**

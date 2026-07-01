@@ -105,7 +105,7 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 	@Option(
 		names = "--winrm-auth",
 		description = "Comma-separated ordered list of authentication schemes." +
-		" Possible values are NTLM and KERBEROS. By default, only NTLM is used",
+			" Possible values are NTLM and KERBEROS. By default, only NTLM is used",
 		order = 7,
 		paramLabel = "AUTH",
 		split = ","
@@ -145,8 +145,7 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("authentications", getAuthentications());
 		configuration.set("timeout", new TextNode(timeout));
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("winrm", configuration, value -> value)
 			.orElseThrow();
 	}

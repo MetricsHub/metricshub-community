@@ -11,7 +11,7 @@ jobs:
     name: Build Community Artifacts
     uses: ./.github/workflows/maven-build.yml
     with:
-      jdkVersion: "21"
+      jdkVersion: "25"
       mavenPhases: "clean verify"
     secrets: inherit
 
@@ -20,7 +20,7 @@ jobs:
     needs: build-community-artifacts
     uses: ./.github/workflows/packaging.yml
     with:
-      jdkVersion: "21"
+      jdkVersion: "25"
       assetPackage: ${{ needs.build-community-artifacts.outputs.packageArtifact }}
       version: ${{ needs.build-community-artifacts.outputs.version }}
       deploy: false

@@ -75,8 +75,7 @@ class JdbcExtensionTest {
 		final Monitor hostMonitor = Monitor.builder().type("HOST").isEndpoint(true).build();
 		final Map<String, Map<String, Monitor>> monitors = new HashMap<>(Map.of("HOST", Map.of(HOST_NAME, hostMonitor)));
 
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.hostname("hostname")
 			.username(USERNAME)
 			.password(PASSWORD)
@@ -89,20 +88,17 @@ class JdbcExtensionTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		connectorStore.setStore(store);
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostname(HOST_NAME)
-						.configurations(Map.of(JdbcConfiguration.class, jdbcConfiguration))
-						.build()
-				)
-				.connectorStore(connectorStore)
-				.strategyTime(System.currentTimeMillis())
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostname(HOST_NAME)
+					.configurations(Map.of(JdbcConfiguration.class, jdbcConfiguration))
+					.build()
+			)
+			.connectorStore(connectorStore)
+			.strategyTime(System.currentTimeMillis())
+			.build();
 	}
 
 	@Test
@@ -245,12 +241,9 @@ class JdbcExtensionTest {
 
 		final SqlCriterion sqlCriterion = null;
 
-		final IllegalArgumentException exception = assertThrows(
-			IllegalArgumentException.class,
-			() -> {
-				jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
-			}
-		);
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
+			jdbcExtension.processCriterion(sqlCriterion, CONNECTOR_ID, telemetryManager, true);
+		});
 
 		assertEquals("Hostname test-host - Cannot process criterion <null>.", exception.getMessage());
 	}
@@ -274,9 +267,8 @@ class JdbcExtensionTest {
 	void testProcessSourceThrowsIllegalArgumentException() {
 		initSql(JDBC_URL);
 		final WbemSource wbemSource = WbemSource.builder().query("SELECT Name FROM testDb").build();
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> jdbcExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
+		assertThrows(IllegalArgumentException.class, () ->
+			jdbcExtension.processSource(wbemSource, CONNECTOR_ID, telemetryManager)
 		);
 	}
 
@@ -286,12 +278,9 @@ class JdbcExtensionTest {
 
 		final WbemCriterion wbemCriterion = WbemCriterion.builder().query("SELECT Name FROM testDB").build();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() -> {
-				jdbcExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true);
-			}
-		);
+		assertThrows(IllegalArgumentException.class, () -> {
+			jdbcExtension.processCriterion(wbemCriterion, CONNECTOR_ID, telemetryManager, true);
+		});
 	}
 
 	@Test
@@ -304,8 +293,7 @@ class JdbcExtensionTest {
 		configuration.set("port", new IntNode(161));
 
 		assertEquals(
-			JdbcConfiguration
-				.builder()
+			JdbcConfiguration.builder()
 				.password("testPassword".toCharArray())
 				.url("jdbc:mysql://localhost:3306/dbname".toCharArray())
 				.timeout(120L)
@@ -315,8 +303,7 @@ class JdbcExtensionTest {
 			jdbcExtension.buildConfiguration("sql", configuration, value -> value)
 		);
 		assertEquals(
-			JdbcConfiguration
-				.builder()
+			JdbcConfiguration.builder()
 				.password("testPassword".toCharArray())
 				.url("jdbc:mysql://localhost:3306/dbname".toCharArray())
 				.timeout(120L)
@@ -326,8 +313,7 @@ class JdbcExtensionTest {
 			jdbcExtension.buildConfiguration("sql", configuration, null)
 		);
 		assertEquals(
-			JdbcConfiguration
-				.builder()
+			JdbcConfiguration.builder()
 				.password("testPassword".toCharArray())
 				.url("jdbc:mysql://localhost:3306/dbname".toCharArray())
 				.timeout(120L)
@@ -347,9 +333,8 @@ class JdbcExtensionTest {
 	void testProcessSourceWithNullSource() {
 		initSql(JDBC_URL);
 
-		final IllegalArgumentException exception = assertThrows(
-			IllegalArgumentException.class,
-			() -> jdbcExtension.processSource(null, CONNECTOR_ID, telemetryManager)
+		final IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () ->
+			jdbcExtension.processSource(null, CONNECTOR_ID, telemetryManager)
 		);
 
 		assertEquals("Hostname test-host - Cannot process source <null>.", exception.getMessage());
@@ -380,8 +365,7 @@ class JdbcExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
-		JdbcConfiguration configuration = JdbcConfiguration
-			.builder()
+		JdbcConfiguration configuration = JdbcConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)
@@ -400,8 +384,7 @@ class JdbcExtensionTest {
 
 		final ObjectNode queryNode = JsonNodeFactory.instance.objectNode();
 		queryNode.set("query", new TextNode(SQL_QUERY));
-		JdbcConfiguration configuration = JdbcConfiguration
-			.builder()
+		JdbcConfiguration configuration = JdbcConfiguration.builder()
 			.hostname(HOST_NAME)
 			.username(USERNAME)
 			.password(PASSWORD)

@@ -147,8 +147,7 @@ public class DetectionStrategy extends AbstractStrategy {
 					stagedConnectorIdentifiers.getForcedConnectorIds(),
 					extensionManager,
 					true
-				)
-					.run()
+				).run()
 			);
 		}
 
@@ -161,14 +160,12 @@ public class DetectionStrategy extends AbstractStrategy {
 					clientsExecutor,
 					stagedConnectorIdentifiers.getAutoDetectionConnectorIds(),
 					extensionManager
-				)
-					.run()
+				).run()
 			);
 		}
 
 		// Create Host monitor
-		final MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		final MonitorFactory monitorFactory = MonitorFactory.builder()
 			.telemetryManager(telemetryManager)
 			.discoveryTime(strategyTime)
 			.keys(new HashSet<>(Set.of(MetricsHubConstants.HOST_NAME)))
@@ -207,8 +204,7 @@ public class DetectionStrategy extends AbstractStrategy {
 		monitorAttributes.put(MONITOR_ATTRIBUTE_PARENT_ID, hostname);
 
 		// Create the monitor factory
-		final MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		final MonitorFactory monitorFactory = MonitorFactory.builder()
 			.telemetryManager(telemetryManager)
 			.monitorType(KnownMonitorType.CONNECTOR.getKey())
 			.attributes(monitorAttributes)
@@ -273,8 +269,7 @@ public class DetectionStrategy extends AbstractStrategy {
 		monitorAttributes.put(MONITOR_ATTRIBUTE_PARENT_ID, hostname);
 
 		// Create the monitor factory
-		final MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		final MonitorFactory monitorFactory = MonitorFactory.builder()
 			.telemetryManager(telemetryManager)
 			.monitorType(KnownMonitorType.CONNECTOR.getKey())
 			.attributes(monitorAttributes)

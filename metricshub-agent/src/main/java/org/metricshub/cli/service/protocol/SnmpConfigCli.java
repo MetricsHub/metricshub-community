@@ -113,8 +113,7 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 			Arrays.stream(retryIntervals).forEach(retryIntervalsArrayNode::add);
 		}
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
+		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("snmp", configuration, value -> value)
 			.orElseThrow();
 	}

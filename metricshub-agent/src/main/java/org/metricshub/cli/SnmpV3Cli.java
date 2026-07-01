@@ -72,8 +72,7 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 	/**
 	 * Footer regrouping SNMPv3 CLI examples
 	 */
-	public static final String FOOTER =
-		"""
+	public static final String FOOTER = """
 
 		Example:
 
@@ -346,8 +345,7 @@ public class SnmpV3Cli implements IQuery, Callable<Integer> {
 		// Set the logger level
 		MetricsHubCliService.setLogLevel(verbose);
 		// Find an extension to execute the query
-		CliExtensionManager
-			.getExtensionManagerSingleton()
+		CliExtensionManager.getExtensionManagerSingleton()
 			.findExtensionByType(PROTOCOL_IDENTIFIER)
 			.ifPresent(extension -> {
 				try {

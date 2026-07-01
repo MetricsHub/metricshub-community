@@ -116,8 +116,7 @@ public class Awk extends Compute {
 
 	@Override
 	public Awk copy() {
-		return Awk
-			.builder()
+		return Awk.builder()
 			.type(type)
 			.script(script)
 			.exclude(exclude)

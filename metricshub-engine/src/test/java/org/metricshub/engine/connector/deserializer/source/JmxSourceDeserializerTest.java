@@ -28,8 +28,7 @@ class JmxSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<String, Source>(
 			Map.of(
 				"jmxSource",
-				JmxSource
-					.builder()
+				JmxSource.builder()
 					.type("jmx")
 					.objectName("org.metricshub.extension.jmx:type=JmxMBean,scope=*")
 					.attributes(new LinkedList<>(List.of("Name")))

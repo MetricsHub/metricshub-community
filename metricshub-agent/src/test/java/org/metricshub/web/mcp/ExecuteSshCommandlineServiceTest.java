@@ -76,8 +76,7 @@ class ExecuteSshCommandlineServiceTest {
 	void testExecuteSshCommandlineWithoutConfiguration() {
 		setup();
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -123,9 +122,8 @@ class ExecuteSshCommandlineServiceTest {
 		);
 
 		assertEquals(0, result.getHosts().size(), () -> "No host should respond");
-		assertTrue(
-			result.getErrorMessage().contains("No Extension found for SSH"),
-			() -> "Unexpected error message when the SSH extension isn't found"
+		assertTrue(result.getErrorMessage().contains("No Extension found for SSH"), () ->
+			"Unexpected error message when the SSH extension isn't found"
 		);
 	}
 
@@ -133,16 +131,14 @@ class ExecuteSshCommandlineServiceTest {
 	void testExecuteSshCommandlineRequest() throws Exception {
 		setup();
 		// Creating a SSH Configuration for the host
-		SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the SSH configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.build();
@@ -156,8 +152,9 @@ class ExecuteSshCommandlineServiceTest {
 		// Enable SSH on MCP tools
 		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 
-		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class)))
-			.thenReturn(SUCCESS_RESPONSE);
+		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class))).thenReturn(
+			SUCCESS_RESPONSE
+		);
 
 		final MultiHostToolResponse<QueryResponse> result = sshCommandlineService.executeQuery(
 			List.of(HOSTNAME),
@@ -169,10 +166,8 @@ class ExecuteSshCommandlineServiceTest {
 		assertEquals(1, result.getHosts().size(), "Result should not be null when executing a query");
 
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
-		assertEquals(
-			SUCCESS_RESPONSE,
-			hostResponse.getResponse().getResponse(),
-			() -> "SSH Commandline response mismatch for mocked value `Success`"
+		assertEquals(SUCCESS_RESPONSE, hostResponse.getResponse().getResponse(), () ->
+			"SSH Commandline response mismatch for mocked value `Success`"
 		);
 	}
 
@@ -180,16 +175,14 @@ class ExecuteSshCommandlineServiceTest {
 	void testExecuteSshCommandlineRequestThrows() throws Exception {
 		setup();
 		// Creating a SSH Configuration for the host
-		SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the SSH configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.build();
@@ -203,8 +196,9 @@ class ExecuteSshCommandlineServiceTest {
 		// Enable SSH on MCP tools
 		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 
-		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class)))
-			.thenThrow(new IllegalArgumentException("An error has occurred"));
+		when(osCommandExtension.executeQuery(any(SshConfiguration.class), any(ObjectNode.class))).thenThrow(
+			new IllegalArgumentException("An error has occurred")
+		);
 
 		final MultiHostToolResponse<QueryResponse> result = sshCommandlineService.executeQuery(
 			List.of(HOSTNAME),
@@ -217,9 +211,8 @@ class ExecuteSshCommandlineServiceTest {
 		final HostToolResponse<QueryResponse> hostResponse = result.getHosts().get(0);
 		final String errorMessage = hostResponse.getResponse().getError();
 		assertNotNull(errorMessage, () -> "Error message should be returned when an exception is throws");
-		assertTrue(
-			errorMessage.contains("An error has occurred when executing the commandline"),
-			() -> "Error message should contain 'An error has occurred'"
+		assertTrue(errorMessage.contains("An error has occurred when executing the commandline"), () ->
+			"Error message should contain 'An error has occurred'"
 		);
 	}
 
@@ -227,16 +220,14 @@ class ExecuteSshCommandlineServiceTest {
 	void testExecuteSshCommandlineRequestWhenSshDisabled() throws Exception {
 		setup();
 		// Creating a SSH Configuration for the host
-		SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the SSH configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(SshConfiguration.class, sshConfiguration))
 			.build();
@@ -258,28 +249,24 @@ class ExecuteSshCommandlineServiceTest {
 		);
 		assertEquals(0, result.getHosts().size(), "Result should not be null when executing a query");
 
-		assertEquals(
-			"The SSH connections are disabled for MCP.",
-			result.getErrorMessage(),
-			() -> "SSH commandline shouldn't be executed as SSH is disabled."
+		assertEquals("The SSH connections are disabled for MCP.", result.getErrorMessage(), () ->
+			"SSH commandline shouldn't be executed as SSH is disabled."
 		);
 	}
 
 	@Test
 	void testIsSshEnabledForMCP() {
 		System.clearProperty("metricshub.mcp.tool.ssh.enabled");
-		assertFalse(
-			ExecuteSshCommandlineService.isSshEnabledForMCP(),
-			() -> "SSH is disabled, the response should be false"
+		assertFalse(ExecuteSshCommandlineService.isSshEnabledForMCP(), () ->
+			"SSH is disabled, the response should be false"
 		);
 
 		System.setProperty("metricshub.mcp.tool.ssh.enabled", "true");
 		assertTrue(ExecuteSshCommandlineService.isSshEnabledForMCP(), () -> "SSH is enabled, the response should be true");
 
 		System.setProperty("metricshub.mcp.tool.ssh.enabled", "false");
-		assertFalse(
-			ExecuteSshCommandlineService.isSshEnabledForMCP(),
-			() -> "SSH is disabled, the response should be false"
+		assertFalse(ExecuteSshCommandlineService.isSshEnabledForMCP(), () ->
+			"SSH is disabled, the response should be false"
 		);
 	}
 }

@@ -111,5 +111,4 @@ public class OtelConfigConstants {
 		OTEL_EXPORTER_OTLP_METRICS_TIMEOUT, DEFAULT_OTLP_TIMEOUT
 	);
 	// @formatter:on
-
 }

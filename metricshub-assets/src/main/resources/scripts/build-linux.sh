@@ -42,7 +42,7 @@ step "Checking Java / JDK"
 
 JAVA_OUTPUT=""
 if ! JAVA_OUTPUT="$(java --version 2>&1)"; then
-  fail "Java (JDK) not found on PATH. Please install JDK 21+ and ensure 'java' is on PATH."
+  fail "Java (JDK) not found on PATH. Please install JDK @jdkBuildVersion@+ and ensure 'java' is on PATH."
   exit 1
 fi
 
@@ -68,8 +68,8 @@ if [[ -z "${JAVA_MAJOR}" || ! "$JAVA_MAJOR" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-if (( JAVA_MAJOR < 21 )); then
-  fail "Java version ${JAVA_MAJOR} detected. JDK 21 or newer is required."
+if (( JAVA_MAJOR < @jdkBuildVersion@ )); then
+  fail "Java version ${JAVA_MAJOR} detected. JDK @jdkBuildVersion@ or newer is required."
   exit 1
 fi
 

@@ -48,8 +48,7 @@ class TaskSchedulingServiceTest {
 
 	@Test
 	void testScheduleSelfRecorder() {
-		final AgentConfig agentConfig = AgentConfig
-			.builder()
+		final AgentConfig agentConfig = AgentConfig.builder()
 			.attributes(Map.of(COMPANY_ATTRIBUTE_KEY, COMPANY_ATTRIBUTE_VALUE))
 			.build();
 
@@ -60,8 +59,7 @@ class TaskSchedulingServiceTest {
 
 		doReturn(scheduledFutureMock).when(taskSchedulerMock).schedule(any(Runnable.class), any(Trigger.class));
 
-		final TaskSchedulingService taskSchedulingService = TaskSchedulingService
-			.builder()
+		final TaskSchedulingService taskSchedulingService = TaskSchedulingService.builder()
 			.withAgentConfig(agentConfig)
 			.withAgentInfo(agentInfo)
 			.withMetricsExporter(MetricsExporter.builder().withClient(new NoopClient()).build())
@@ -81,16 +79,14 @@ class TaskSchedulingServiceTest {
 		final Map<String, ResourceGroupConfig> resourceGroups = new HashMap<>();
 		resourceGroups.put(
 			PARIS_RESOURCE_GROUP_KEY,
-			ResourceGroupConfig
-				.builder()
+			ResourceGroupConfig.builder()
 				.attributes(Map.of(SITE_ATTRIBUTE_KEY, PARIS_SITE_VALUE))
 				.metrics(Map.of(HW_SITE_PUE_METRIC, 1D))
 				.build()
 		);
 		resourceGroups.put(
 			OTTAWA_RESOURCE_GROUP_KEY,
-			ResourceGroupConfig
-				.builder()
+			ResourceGroupConfig.builder()
 				.attributes(Map.of(SITE_ATTRIBUTE_KEY, OTTAWA_SITE_VALUE))
 				.metrics(Map.of(HW_SITE_PUE_METRIC, 1D))
 				.build()
@@ -104,8 +100,7 @@ class TaskSchedulingServiceTest {
 
 		doReturn(scheduledFutureMock).when(taskSchedulerMock).schedule(any(Runnable.class), any(Trigger.class));
 
-		final TaskSchedulingService taskSchedulingService = TaskSchedulingService
-			.builder()
+		final TaskSchedulingService taskSchedulingService = TaskSchedulingService.builder()
 			.withAgentConfig(agentConfig)
 			.withMetricsExporter(MetricsExporter.builder().withClient(new NoopClient()).build())
 			.withSchedules(new HashMap<>())
@@ -144,8 +139,7 @@ class TaskSchedulingServiceTest {
 		final String resourceKey1 = UUID.randomUUID().toString();
 		resourceConfigMap.put(
 			resourceKey1,
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(
 					Map.of(HOST_NAME, resourceKey1, HOST_ID_ATTRIBUTE_KEY, resourceKey1, HOST_TYPE_ATTRIBUTE_KEY, OS_LINUX)
 				)
@@ -157,8 +151,7 @@ class TaskSchedulingServiceTest {
 		final String resourceKey2 = UUID.randomUUID().toString();
 		resourceConfigMap.put(
 			resourceKey2,
-			ResourceConfig
-				.builder()
+			ResourceConfig.builder()
 				.attributes(
 					Map.of(HOST_NAME, resourceKey2, HOST_ID_ATTRIBUTE_KEY, resourceKey2, HOST_TYPE_ATTRIBUTE_KEY, OS_LINUX)
 				)
@@ -169,8 +162,7 @@ class TaskSchedulingServiceTest {
 
 		final ResourceGroupConfig resourceGroupConfig = ResourceGroupConfig.builder().resources(resourceConfigMap).build();
 
-		final AgentConfig agentConfig = AgentConfig
-			.builder()
+		final AgentConfig agentConfig = AgentConfig.builder()
 			.resourceGroups(Map.of(PARIS_RESOURCE_GROUP_KEY, resourceGroupConfig))
 			.build();
 
@@ -179,8 +171,7 @@ class TaskSchedulingServiceTest {
 
 		doReturn(scheduledFutureMock).when(taskSchedulerMock).schedule(any(Runnable.class), any(Trigger.class));
 
-		final TaskSchedulingService taskSchedulingService = TaskSchedulingService
-			.builder()
+		final TaskSchedulingService taskSchedulingService = TaskSchedulingService.builder()
 			.withAgentConfig(agentConfig)
 			.withMetricsExporter(MetricsExporter.builder().withClient(new NoopClient()).build())
 			.withSchedules(new HashMap<>())

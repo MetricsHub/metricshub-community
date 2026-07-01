@@ -78,14 +78,13 @@ public class WmiDetectionService {
 		// Make the WBEM query
 		final List<List<String>> queryResult;
 		try {
-			queryResult =
-				winRequestExecutor.executeWmi(
-					hostname,
-					winConfiguration,
-					wmiCriterion.getQuery(),
-					wmiCriterion.getNamespace(),
-					recordOutputDirectory
-				);
+			queryResult = winRequestExecutor.executeWmi(
+				hostname,
+				winConfiguration,
+				wmiCriterion.getQuery(),
+				wmiCriterion.getNamespace(),
+				recordOutputDirectory
+			);
 		} catch (Exception e) {
 			if (logMode) {
 				log.error(
@@ -120,9 +119,10 @@ public class WmiDetectionService {
 		}
 
 		// Search for the expected result
-		final Matcher matcher = Pattern
-			.compile(PslUtils.psl2JavaRegex(wmiCriterion.getExpectedResult()), Pattern.CASE_INSENSITIVE | Pattern.MULTILINE)
-			.matcher(actualResult);
+		final Matcher matcher = Pattern.compile(
+			PslUtils.psl2JavaRegex(wmiCriterion.getExpectedResult()),
+			Pattern.CASE_INSENSITIVE | Pattern.MULTILINE
+		).matcher(actualResult);
 
 		// If the expected result is found ==> success
 		if (matcher.find()) {

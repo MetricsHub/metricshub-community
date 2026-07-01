@@ -56,16 +56,14 @@ class InternalDbExtensionTest {
 	void testProcessSource() {
 		final String connectorId = "myConnector";
 
-		final HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		final HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname("localhost")
 			.hostId("localhost")
 			.hostType(DeviceKind.LINUX)
 			.build();
 
 		final Map<String, SourceTable> mapSources = new HashMap<>();
-		final SourceTable tabl1 = SourceTable
-			.builder()
+		final SourceTable tabl1 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(LOWERCASE_A, LOWERCASE_V1, TRUE, ONE),
@@ -75,8 +73,7 @@ class InternalDbExtensionTest {
 				)
 			)
 			.build();
-		final SourceTable tabl2 = SourceTable
-			.builder()
+		final SourceTable tabl2 = SourceTable.builder()
 			.table(
 				Arrays.asList(
 					Arrays.asList(ONE, LOWERCASE_A, UPPERCASE_V1, TRUE),
@@ -92,13 +89,11 @@ class InternalDbExtensionTest {
 		final Map<String, ConnectorNamespace> connectorNamespaces = new HashMap<>();
 		connectorNamespaces.put(connectorId, connectorNamespace);
 
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(connectorNamespaces)
 			.isLocalhost(true)
 			.build();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(hostConfiguration)
 			.hostProperties(hostProperties)
 			.build();
@@ -131,8 +126,7 @@ class InternalDbExtensionTest {
 			SqlTable.builder().alias("T2").columns(columnsTable2).source(TAB2_REF).build()
 		);
 
-		final InternalDbQuerySource internalDbQuery = InternalDbQuerySource
-			.builder()
+		final InternalDbQuerySource internalDbQuery = InternalDbQuerySource.builder()
 			.query("SELECT COL1_1, COL2_1, COL1_2, COL2_2 FROM T1 JOIN T2 ON COL1_1 = COL1_2;")
 			.tables(sqlTables)
 			.build();

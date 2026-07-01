@@ -73,9 +73,8 @@ public class TimeDeserializer extends JsonDeserializer<Long> {
 			return longValue;
 		}
 
-		final Matcher matcher = Pattern
-			.compile(
-				"\\s*(?:(\\d+)\\s*(?:years?|yrs?|y))?" +
+		final Matcher matcher = Pattern.compile(
+			"\\s*(?:(\\d+)\\s*(?:years?|yrs?|y))?" +
 				"\\s*(?:(\\d+)\\s*(?:weeks?|wks?|w))?" +
 				"\\s*(?:(\\d+)\\s*(?:days?|d))?" +
 				"\\s*(?:(\\d+)\\s*(?:hours?|hrs?|h))?" +
@@ -83,9 +82,8 @@ public class TimeDeserializer extends JsonDeserializer<Long> {
 				"\\s*(?:(\\d+)\\s*(?:seconds?|secs?|s))?" +
 				"\\s*(?:(\\d+)\\s*(?:milliseconds?|millisecs?|ms))?" +
 				"\\s*",
-				Pattern.CASE_INSENSITIVE
-			)
-			.matcher(value);
+			Pattern.CASE_INSENSITIVE
+		).matcher(value);
 
 		if (!matcher.matches()) {
 			throw new IllegalArgumentException("Not valid duration: " + value);

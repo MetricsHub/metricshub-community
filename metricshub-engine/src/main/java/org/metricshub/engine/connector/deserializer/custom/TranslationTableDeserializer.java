@@ -53,8 +53,10 @@ public class TranslationTableDeserializer extends JsonDeserializer<ITranslationT
 			if (node.isTextual()) {
 				return new ReferenceTranslationTable(node.asText());
 			} else if (node.isObject()) {
-				final Map<String, String> map = new ObjectMapper()
-					.convertValue(node, new TypeReference<Map<String, String>>() {});
+				final Map<String, String> map = new ObjectMapper().convertValue(
+					node,
+					new TypeReference<Map<String, String>>() {}
+				);
 				final Map<String, String> caseInsensitiveTreeMap = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 				caseInsensitiveTreeMap.putAll(map);
 				return new TranslationTable(caseInsensitiveTreeMap);

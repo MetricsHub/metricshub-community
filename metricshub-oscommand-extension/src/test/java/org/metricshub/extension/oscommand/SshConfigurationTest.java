@@ -22,8 +22,7 @@ class SshConfigurationTest {
 
 	@Test
 	void testBuilder() {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username(USERNAME)
 			.password(PASSWORD.toCharArray())
 			.sudoCommand(SSH_SUDO_COMMAND)
@@ -57,8 +56,7 @@ class SshConfigurationTest {
 	@Test
 	void testValidateConfiguration() {
 		final String resourceKey = "resource";
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.username("username")
 			.password("password".toCharArray())
 			.timeout(120L)
@@ -119,8 +117,7 @@ class SshConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final SshConfiguration sshConfiguration = SshConfiguration
-			.sshConfigurationBuilder()
+		final SshConfiguration sshConfiguration = SshConfiguration.sshConfigurationBuilder()
 			.password(PASSWORD.toCharArray())
 			.port(100)
 			.privateKey("privateKey")

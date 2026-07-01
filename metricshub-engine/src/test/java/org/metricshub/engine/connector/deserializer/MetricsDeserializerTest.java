@@ -36,8 +36,7 @@ class MetricsDeserializerTest extends DeserializerTest {
 			"hw.energy",
 			MetricDefinition.builder().type(MetricType.GAUGE).unit("J").description("descr").build(),
 			"hw.status",
-			MetricDefinition
-				.builder()
+			MetricDefinition.builder()
 				.type(StateSet.builder().set(Set.of("degraded", "failed", "ok")).build())
 				.description("descr")
 				.unit(EMPTY)

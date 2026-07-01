@@ -53,8 +53,7 @@ public class AdditionalConnectorConfigCli {
 	 * @return the constructed {@link AdditionalConnector}
 	 */
 	AdditionalConnector toAdditionalConnector() {
-		return AdditionalConnector
-			.builder()
+		return AdditionalConnector.builder()
 			.force(true)
 			.uses(uses != null ? uses : connectorId)
 			.variables(variables)

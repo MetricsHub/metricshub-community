@@ -66,9 +66,9 @@ public class AuthenticationController {
 	@Operation(
 		summary = "Login",
 		description = "Authenticates a user and returns a JWT token both in the JSON response body and in an HTTP-only cookie. " +
-		"The cookie is set automatically by the browser, while the token field in the response body can be used by programmatic clients. " +
-		"Users must be created beforehand using the MetricsHub user CLI: `./user create USERNAME --password PASSWORD --role ROLE`. " +
-		"Run this command on the same machine where the MetricsHub Agent (and its keystore) is running.",
+			"The cookie is set automatically by the browser, while the token field in the response body can be used by programmatic clients. " +
+			"Users must be created beforehand using the MetricsHub user CLI: `./user create USERNAME --password PASSWORD --role ROLE`. " +
+			"Run this command on the same machine where the MetricsHub Agent (and its keystore) is running.",
 		responses = {
 			@ApiResponse(responseCode = "200", description = "Login successful"),
 			@ApiResponse(responseCode = "401", description = "Invalid credentials")
@@ -97,29 +97,28 @@ public class AuthenticationController {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
 		// Build the response
-		final LoginAuthenticationResponse response = LoginAuthenticationResponse
-			.builder()
+		final LoginAuthenticationResponse response = LoginAuthenticationResponse.builder()
 			.token(authentication.getToken())
 			.build();
 
 		// Build the cookie
-		final ResponseCookie cookie = ResponseCookie
-			.from(SecurityHelper.TOKEN_KEY, authentication.getToken())
+		final ResponseCookie cookie = ResponseCookie.from(SecurityHelper.TOKEN_KEY, authentication.getToken())
 			.path("/")
 			.httpOnly(true)
 			.maxAge(authentication.getExpiresIn())
 			.build();
 
 		// Build the refresh cookie
-		final ResponseCookie refreshCookie = ResponseCookie
-			.from(SecurityHelper.REFRESH_TOKEN_KEY, authentication.getRefreshToken())
+		final ResponseCookie refreshCookie = ResponseCookie.from(
+			SecurityHelper.REFRESH_TOKEN_KEY,
+			authentication.getRefreshToken()
+		)
 			.path("/")
 			.httpOnly(true)
 			.maxAge(authentication.getRefreshExpiresIn())
 			.build();
 
-		return ResponseEntity
-			.ok()
+		return ResponseEntity.ok()
 			.header(HttpHeaders.SET_COOKIE, cookie.toString())
 			.header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
 			.body(response);
@@ -141,23 +140,23 @@ public class AuthenticationController {
 		SecurityContextHolder.getContext().setAuthentication(null);
 
 		// Remove the cookie
-		final ResponseCookie cookie = ResponseCookie
-			.from(SecurityHelper.TOKEN_KEY, MetricsHubConstants.EMPTY)
+		final ResponseCookie cookie = ResponseCookie.from(SecurityHelper.TOKEN_KEY, MetricsHubConstants.EMPTY)
 			.path("/")
 			.httpOnly(true)
 			.maxAge(0)
 			.build();
 
 		// Remove the refresh cookie
-		final ResponseCookie refreshCookie = ResponseCookie
-			.from(SecurityHelper.REFRESH_TOKEN_KEY, MetricsHubConstants.EMPTY)
+		final ResponseCookie refreshCookie = ResponseCookie.from(
+			SecurityHelper.REFRESH_TOKEN_KEY,
+			MetricsHubConstants.EMPTY
+		)
 			.path("/")
 			.httpOnly(true)
 			.maxAge(0)
 			.build();
 
-		return ResponseEntity
-			.ok()
+		return ResponseEntity.ok()
 			.header(HttpHeaders.SET_COOKIE, cookie.toString())
 			.header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
 			.build();

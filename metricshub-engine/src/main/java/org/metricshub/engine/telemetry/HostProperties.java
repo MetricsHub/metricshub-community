@@ -68,6 +68,6 @@ public class HostProperties {
 	 * @return ConnectorNamespace instance
 	 */
 	public ConnectorNamespace getConnectorNamespace(@NonNull final String connectorId) {
-		return connectorNamespaces.computeIfAbsent(connectorId, cn -> ConnectorNamespace.builder().build());
+		return connectorNamespaces.computeIfAbsent(connectorId, _ -> ConnectorNamespace.builder().build());
 	}
 }

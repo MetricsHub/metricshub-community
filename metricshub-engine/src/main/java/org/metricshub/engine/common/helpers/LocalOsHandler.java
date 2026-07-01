@@ -99,7 +99,12 @@ public class LocalOsHandler {
 	static Optional<ILocalOs> detectOs() {
 		return getSystemOsName()
 			.map(String::toLowerCase)
-			.map(name -> OS_LIST.stream().filter(os -> name.startsWith(os.getOsTag())).findFirst().orElse(null));
+			.map(name ->
+				OS_LIST.stream()
+					.filter(os -> name.startsWith(os.getOsTag()))
+					.findFirst()
+					.orElse(null)
+			);
 	}
 
 	/**

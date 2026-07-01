@@ -24,13 +24,13 @@ class JmxCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws IOException if the deserialization fails
 	 */
-	void testDeserializeDoesntThrow() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testDeserializeDoesntThrow() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		final Connector connector = getConnector("jmxCriterion");
 
 		final List<Criterion> expected = new ArrayList<>();
 		expected.add(
-			JmxCriterion
-				.builder()
+			JmxCriterion.builder()
 				.type("jmx")
 				.forceSerialization(true)
 				.objectName("org.metricshub.extension.jmx:type=TestJmx")
@@ -48,7 +48,8 @@ class JmxCriterionDeserializerTest extends DeserializerTest {
 	 *
 	 * @throws IOException if the deserialization fails
 	 */
-	void testDeserializeThrow() throws IOException { // NOSONAR compareCriterion performs assertion
+	void testDeserializeThrow() throws IOException {
+		// NOSONAR compareCriterion performs assertion
 		{
 			try {
 				getConnector("jmxCriterionNullObjectName");

@@ -26,24 +26,21 @@ class TemperatureMetricNormalizerTest {
 			final NumberMetric hwTemperatureMetric = NumberMetric.builder().value(1.0).name("hw.temperature").build();
 			hwTemperatureMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwTemperatureLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED)
 				.attributes(Map.of("limit_type", "high.degraded"))
 				.build();
 			hwTemperatureLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwTemperatureLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwTemperatureLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("temperature")
 				.metrics(
@@ -60,8 +57,9 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwTemperatureLimitMetric
+			);
 			assertEquals(
 				2.0,
 				monitorWithHwTemperatureLimitMetric
@@ -81,24 +79,21 @@ class TemperatureMetricNormalizerTest {
 			final NumberMetric hwTemperatureMetric = NumberMetric.builder().value(1.0).name("hw.temperature").build();
 			hwTemperatureMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwTemperatureLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric.builder()
 				.value(1.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED)
 				.attributes(Map.of("limit_type", "high.degraded"))
 				.build();
 			hwTemperatureLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwTemperatureLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwTemperatureLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("temperature")
 				.metrics(
@@ -115,8 +110,9 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwTemperatureLimitMetric
+			);
 			assertEquals(
 				2.0,
 				monitorWithHwTemperatureLimitMetric
@@ -136,16 +132,14 @@ class TemperatureMetricNormalizerTest {
 			final NumberMetric hwTemperatureMetric = NumberMetric.builder().value(1.0).name("hw.temperature").build();
 			hwTemperatureMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitCriticalMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_CRITICAL)
 				.attributes(Map.of("limit_type", "high.critical"))
 				.build();
 			hwTemperatureLimitCriticalMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitCriticalMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwTemperatureLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwTemperatureLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("temperature")
 				.metrics(
@@ -160,8 +154,9 @@ class TemperatureMetricNormalizerTest {
 				)
 				.build();
 
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwTemperatureLimitMetric
+			);
 			assertEquals(
 				1.8,
 				monitorWithHwTemperatureLimitMetric
@@ -175,16 +170,14 @@ class TemperatureMetricNormalizerTest {
 			final NumberMetric hwTemperatureMetric = NumberMetric.builder().value(1.0).name("hw.temperature").build();
 			hwTemperatureMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric
-				.builder()
+			final NumberMetric hwTemperatureLimitDegradedMetric = NumberMetric.builder()
 				.value(2.0)
 				.name(HW_TEMPERATURE_LIMIT_LIMIT_TYPE_HIGH_DEGRADED)
 				.attributes(Map.of("limit_type", "high.degraded"))
 				.build();
 			hwTemperatureLimitDegradedMetric.setCollectTime(STRATEGY_TIME);
 			hwTemperatureLimitDegradedMetric.setPreviousCollectTime(STRATEGY_TIME - 1000 * 60 * 2);
-			final Monitor monitorWithHwTemperatureLimitMetric = Monitor
-				.builder()
+			final Monitor monitorWithHwTemperatureLimitMetric = Monitor.builder()
 				.id("monitorOne")
 				.type("temperature")
 				.metrics(
@@ -198,8 +191,9 @@ class TemperatureMetricNormalizerTest {
 					)
 				)
 				.build();
-			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore())
-				.normalize(monitorWithHwTemperatureLimitMetric);
+			new TemperatureMetricNormalizer(STRATEGY_TIME, HOSTNAME, new ConnectorStore()).normalize(
+				monitorWithHwTemperatureLimitMetric
+			);
 			assertEquals(
 				2.2,
 				monitorWithHwTemperatureLimitMetric

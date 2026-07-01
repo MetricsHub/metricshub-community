@@ -101,24 +101,20 @@ class HardwareEnergyPostExecutionServiceTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-			ConnectorIdentity
-				.builder()
+			ConnectorIdentity.builder()
 				.detection(Detection.builder().appliesTo(Set.of(DeviceKind.OOB)).tags(Set.of("hardware")).build())
 				.build()
 		);
 		connectorStore.setStore(new HashMap<>(Map.of(TEST_CONNECTOR, connector)));
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
-				.strategyTime(STRATEGY_TIME)
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
+			.strategyTime(STRATEGY_TIME)
+			.connectorStore(connectorStore)
+			.build();
 
 		// Set the status ok in the host properties
 		final ConnectorNamespace connectorNamespace = ConnectorNamespace.builder().isStatusOk(true).build();
-		final HostProperties hostProperties = HostProperties
-			.builder()
+		final HostProperties hostProperties = HostProperties.builder()
 			.connectorNamespaces(new HashMap<>(Map.of("TestConnector", connectorNamespace)))
 			.build();
 		telemetryManager.setHostProperties(hostProperties);
@@ -127,8 +123,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithFanMonitor() {
 		// Create a fan monitor
-		final Monitor fanMonitor = Monitor
-			.builder()
+		final Monitor fanMonitor = Monitor.builder()
 			.type(FAN)
 			.metrics(new HashMap<>(Map.of(FAN_SPEED_METRIC, NumberMetric.builder().value(0.7).build())))
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -161,8 +156,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithMissingFanMonitor() {
 		// Create a fan monitor
-		final Monitor fanMonitor = Monitor
-			.builder()
+		final Monitor fanMonitor = Monitor.builder()
 			.type(FAN)
 			.metrics(new HashMap<>(Map.of(FAN_SPEED_METRIC, NumberMetric.builder().value(0.7).build())))
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, TEST_CONNECTOR)))
@@ -200,8 +194,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithRoboticsMonitor() {
 		// Create a robotics monitor
-		final Monitor roboticsMonitor = Monitor
-			.builder()
+		final Monitor roboticsMonitor = Monitor.builder()
 			.type(ROBOTICS)
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.metrics(new HashMap<>(Map.of(ROBOTICS_MOVE_COUNT_METRIC, NumberMetric.builder().value(0.7).build())))
@@ -234,8 +227,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithTapeDriveMonitor() {
 		// Create a tape drive monitor
-		final Monitor tapeDriveMonitor = Monitor
-			.builder()
+		final Monitor tapeDriveMonitor = Monitor.builder()
 			.type(TAPE_DRIVE)
 			.metrics(
 				new HashMap<>(
@@ -277,8 +269,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithDiskControllerMonitor() {
 		// Create a disk controller monitor
-		final Monitor diskControllerMonitor = Monitor
-			.builder()
+		final Monitor diskControllerMonitor = Monitor.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.type(DISK_CONTROLLER)
 			.build();
@@ -310,8 +301,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithMemoryMonitor() {
 		// Create a memory monitor
-		final Monitor memoryMonitor = Monitor
-			.builder()
+		final Monitor memoryMonitor = Monitor.builder()
 			.type(MEMORY)
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
@@ -343,8 +333,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithPhysicalDiskMonitor() {
 		// Create a physical disk monitor
-		final Monitor physicalDiskMonitor = Monitor
-			.builder()
+		final Monitor physicalDiskMonitor = Monitor.builder()
 			.type(PHYSICAL_DISK)
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
@@ -376,8 +365,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testRunWithNetworkMonitor() {
 		// Create a network monitor
-		final Monitor networkMonitor = Monitor
-			.builder()
+		final Monitor networkMonitor = Monitor.builder()
 			.type(NETWORK)
 			.attributes(
 				new HashMap<>(
@@ -460,8 +448,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testComputeHostPowerAndEnergyMetricsWithMissingMonitors() {
 		// Initialize the host and other monitors
-		final Monitor host = Monitor
-			.builder()
+		final Monitor host = Monitor.builder()
 			.id(KnownMonitorType.HOST.getKey())
 			.type(KnownMonitorType.HOST.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -481,15 +468,13 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 		previousPowerValue.save();
 
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.ENCLOSURE.getKey())
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 
-		final Monitor cpu = Monitor
-			.builder()
+		final Monitor cpu = Monitor.builder()
 			.id("cpu1")
 			.type(KnownMonitorType.CPU.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -502,8 +487,7 @@ class HardwareEnergyPostExecutionServiceTest {
 			telemetryManager.getStrategyTime()
 		);
 
-		final Monitor memory = Monitor
-			.builder()
+		final Monitor memory = Monitor.builder()
 			.id("memory1")
 			.type(KnownMonitorType.MEMORY.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -517,8 +501,7 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime());
 
-		final Monitor disk = Monitor
-			.builder()
+		final Monitor disk = Monitor.builder()
 			.id("disk_nvm_1")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -526,15 +509,13 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		metricFactory.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime());
 
-		final Monitor diskNoPower = Monitor
-			.builder()
+		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 
-		final Monitor missingDisk = Monitor
-			.builder()
+		final Monitor missingDisk = Monitor.builder()
 			.id("disk_nvm_2")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -581,8 +562,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	@Test
 	void testComputeHostPowerAndEnergyMetrics() {
 		// Initialize the host and other monitors
-		final Monitor host = Monitor
-			.builder()
+		final Monitor host = Monitor.builder()
 			.id(KnownMonitorType.HOST.getKey())
 			.type(KnownMonitorType.HOST.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -602,23 +582,20 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 		previousPowerValue.save();
 
-		final Monitor enclosure = Monitor
-			.builder()
+		final Monitor enclosure = Monitor.builder()
 			.id(KnownMonitorType.ENCLOSURE.getKey())
 			.type(KnownMonitorType.ENCLOSURE.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 
-		final Monitor cpu = Monitor
-			.builder()
+		final Monitor cpu = Monitor.builder()
 			.id("cpu1")
 			.type(KnownMonitorType.CPU.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 		metricFactory.collectNumberMetric(cpu, HW_CPU_POWER, 60.0, telemetryManager.getStrategyTime());
 
-		final Monitor memory = Monitor
-			.builder()
+		final Monitor memory = Monitor.builder()
 			.id("memory1")
 			.type(KnownMonitorType.MEMORY.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -626,8 +603,7 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		metricFactory.collectNumberMetric(memory, HW_MEMORY_POWER, 4.0, telemetryManager.getStrategyTime());
 
-		final Monitor disk = Monitor
-			.builder()
+		final Monitor disk = Monitor.builder()
 			.id("disk_nvm_1")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -635,15 +611,13 @@ class HardwareEnergyPostExecutionServiceTest {
 
 		metricFactory.collectNumberMetric(disk, HW_PHYSICAL_DISK_POWER, 6.0, telemetryManager.getStrategyTime());
 
-		final Monitor diskNoPower = Monitor
-			.builder()
+		final Monitor diskNoPower = Monitor.builder()
 			.id("disk_noPower")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.build();
 
-		final Monitor missingDisk = Monitor
-			.builder()
+		final Monitor missingDisk = Monitor.builder()
 			.id("disk_nvm_2")
 			.type(KnownMonitorType.PHYSICAL_DISK.getKey())
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
@@ -670,8 +644,7 @@ class HardwareEnergyPostExecutionServiceTest {
 	}
 
 	private static Monitor buildMonitor(final String monitorType, final String id) {
-		return Monitor
-			.builder()
+		return Monitor.builder()
 			.id(id)
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "TestConnector")))
 			.type(monitorType)
@@ -748,40 +721,36 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOffline2,
-				HW_POWER_VM_METRIC,
-				1.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOffline2,
+			HW_POWER_VM_METRIC,
+			1.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOnline3,
-				HW_POWER_VM_METRIC,
-				2.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOnline3,
+			HW_POWER_VM_METRIC,
+			2.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOnlineNoPowerShare4,
-				HW_POWER_VM_METRIC,
-				12.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOnlineNoPowerShare4,
+			HW_POWER_VM_METRIC,
+			12.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOnlineBadPowerShare5,
-				HW_POWER_VM_METRIC,
-				5.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOnlineBadPowerShare5,
+			HW_POWER_VM_METRIC,
+			5.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
 		// Call run method in HardwareEnergyPostExecutionService
@@ -887,22 +856,20 @@ class HardwareEnergyPostExecutionServiceTest {
 		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOnlineNoPowerShare4,
-				HW_POWER_VM_METRIC,
-				12.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOnlineNoPowerShare4,
+			HW_POWER_VM_METRIC,
+			12.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
-		previousPowerValue =
-			metricFactory.collectNumberMetric(
-				vmOnlineBadPowerShare5,
-				HW_POWER_VM_METRIC,
-				5.0,
-				telemetryManager.getStrategyTime() - 120 * 1000
-			);
+		previousPowerValue = metricFactory.collectNumberMetric(
+			vmOnlineBadPowerShare5,
+			HW_POWER_VM_METRIC,
+			5.0,
+			telemetryManager.getStrategyTime() - 120 * 1000
+		);
 		previousPowerValue.save();
 
 		// Call run method in HardwareEnergyPostExecutionService
@@ -979,8 +946,7 @@ class HardwareEnergyPostExecutionServiceTest {
 		telemetryManager.setConnectorStore(connectorStore);
 
 		// Create a physical disk monitor
-		final Monitor physicalDiskMonitor = Monitor
-			.builder()
+		final Monitor physicalDiskMonitor = Monitor.builder()
 			.type(PHYSICAL_DISK)
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_CONNECTOR_ID, "Linux")))
 			.build();

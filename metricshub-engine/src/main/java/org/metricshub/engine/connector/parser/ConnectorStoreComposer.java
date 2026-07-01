@@ -388,8 +388,7 @@ public class ConnectorStoreComposer {
 		// Replace the intermediate connector embedded files by the processed ones.
 		intermediateConnector.setEmbeddedFiles(processedEmbeddedFiles);
 
-		ConnectorVariableProcessor processor = ConnectorVariableProcessor
-			.builder()
+		ConnectorVariableProcessor processor = ConnectorVariableProcessor.builder()
 			.connectorVariables(connectorVariables)
 			.next(null)
 			.build();
@@ -424,7 +423,7 @@ public class ConnectorStoreComposer {
 				Collectors.toMap(
 					Map.Entry::getKey,
 					Map.Entry::getValue,
-					(e1, e2) -> e1,
+					(e1, _) -> e1,
 					() -> new TreeMap<>(String.CASE_INSENSITIVE_ORDER)
 				)
 			);

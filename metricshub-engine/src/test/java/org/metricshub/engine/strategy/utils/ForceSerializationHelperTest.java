@@ -49,8 +49,7 @@ class ForceSerializationHelperTest {
 
 	private static final String HOST_NAME = "host.test.force.serialization";
 	private static final String SELECT_COLUMNS = "ID,1,3";
-	private static final SourceTable EXPECTED_SOURCE_TABLE = SourceTable
-		.builder()
+	private static final SourceTable EXPECTED_SOURCE_TABLE = SourceTable.builder()
 		.table(EXPECTED_SNMP_TABLE_DATA)
 		.headers(Arrays.asList(SELECT_COLUMNS.split(MetricsHubConstants.COMMA)))
 		.build();
@@ -63,69 +62,59 @@ class ForceSerializationHelperTest {
 		final TelemetryManager telemetryManager = new TelemetryManager();
 		final Source snmpTableSource = SnmpTableSource.builder().oid("1.2.3.4").selectColumns(SELECT_COLUMNS).build();
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() ->
-				ForceSerializationHelper.forceSerialization(
-					null,
-					telemetryManager,
-					CONNECTOR_ID,
-					snmpTableSource,
-					DESCRIPTION,
-					emptySourceTable
-				)
+		assertThrows(IllegalArgumentException.class, () ->
+			ForceSerializationHelper.forceSerialization(
+				null,
+				telemetryManager,
+				CONNECTOR_ID,
+				snmpTableSource,
+				DESCRIPTION,
+				emptySourceTable
+			)
 		);
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() ->
-				ForceSerializationHelper.forceSerialization(
-					() -> emptySourceTable,
-					null,
-					CONNECTOR_ID,
-					snmpTableSource,
-					DESCRIPTION,
-					emptySourceTable
-				)
+		assertThrows(IllegalArgumentException.class, () ->
+			ForceSerializationHelper.forceSerialization(
+				() -> emptySourceTable,
+				null,
+				CONNECTOR_ID,
+				snmpTableSource,
+				DESCRIPTION,
+				emptySourceTable
+			)
 		);
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() ->
-				ForceSerializationHelper.forceSerialization(
-					() -> emptySourceTable,
-					telemetryManager,
-					null,
-					snmpTableSource,
-					DESCRIPTION,
-					emptySourceTable
-				)
+		assertThrows(IllegalArgumentException.class, () ->
+			ForceSerializationHelper.forceSerialization(
+				() -> emptySourceTable,
+				telemetryManager,
+				null,
+				snmpTableSource,
+				DESCRIPTION,
+				emptySourceTable
+			)
 		);
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() ->
-				ForceSerializationHelper.forceSerialization(
-					() -> emptySourceTable,
-					telemetryManager,
-					CONNECTOR_ID,
-					snmpTableSource,
-					null,
-					emptySourceTable
-				)
+		assertThrows(IllegalArgumentException.class, () ->
+			ForceSerializationHelper.forceSerialization(
+				() -> emptySourceTable,
+				telemetryManager,
+				CONNECTOR_ID,
+				snmpTableSource,
+				null,
+				emptySourceTable
+			)
 		);
 
-		assertThrows(
-			IllegalArgumentException.class,
-			() ->
-				ForceSerializationHelper.forceSerialization(
-					() -> emptySourceTable,
-					telemetryManager,
-					CONNECTOR_ID,
-					snmpTableSource,
-					DESCRIPTION,
-					null
-				)
+		assertThrows(IllegalArgumentException.class, () ->
+			ForceSerializationHelper.forceSerialization(
+				() -> emptySourceTable,
+				telemetryManager,
+				CONNECTOR_ID,
+				snmpTableSource,
+				DESCRIPTION,
+				null
+			)
 		);
 	}
 
@@ -215,19 +204,16 @@ class ForceSerializationHelperTest {
 
 	@Test
 	void testForceSerializationLockAcquired() throws Exception {
-		final Source snmpTableSource = SnmpTableSource
-			.builder()
+		final Source snmpTableSource = SnmpTableSource.builder()
 			.oid("1.2.3.4")
 			.selectColumns(SELECT_COLUMNS)
 			.forceSerialization(true)
 			.build();
 
 		final ClientsExecutor clientsExecutor = spy(ClientsExecutor.class);
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
 					.build()
@@ -236,8 +222,7 @@ class ForceSerializationHelperTest {
 
 		telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -250,8 +235,7 @@ class ForceSerializationHelperTest {
 			.when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 
-		final ISourceProcessor processor = SourceProcessor
-			.builder()
+		final ISourceProcessor processor = SourceProcessor.builder()
 			.connectorId(CONNECTOR_ID)
 			.clientsExecutor(clientsExecutor)
 			.telemetryManager(telemetryManager)
@@ -273,19 +257,16 @@ class ForceSerializationHelperTest {
 
 	@Test
 	void testForceSerializationMultiThreads() throws Exception {
-		final Source snmpTableSource = SnmpTableSource
-			.builder()
+		final Source snmpTableSource = SnmpTableSource.builder()
 			.oid("1.2.3.4")
 			.selectColumns(SELECT_COLUMNS)
 			.forceSerialization(true)
 			.build();
 
 		final ClientsExecutor clientsExecutor = spy(ClientsExecutor.class);
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname(HOST_NAME)
 					.configurations(Map.of(TestConfiguration.class, TestConfiguration.builder().build()))
 					.build()
@@ -293,8 +274,7 @@ class ForceSerializationHelperTest {
 			.build();
 
 		telemetryManager.getHostProperties().getConnectorNamespace(CONNECTOR_ID);
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -308,8 +288,7 @@ class ForceSerializationHelperTest {
 			.when(protocolExtensionMock)
 			.processSource(eq(snmpTableSource), anyString(), any(TelemetryManager.class));
 
-		final ISourceProcessor processor = SourceProcessor
-			.builder()
+		final ISourceProcessor processor = SourceProcessor.builder()
 			.connectorId(CONNECTOR_ID)
 			.clientsExecutor(clientsExecutor)
 			.telemetryManager(telemetryManager)

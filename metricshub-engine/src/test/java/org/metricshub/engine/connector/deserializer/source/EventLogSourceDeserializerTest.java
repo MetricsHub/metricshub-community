@@ -29,8 +29,7 @@ class EventLogSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testEventLogSource",
-				EventLogSource
-					.builder()
+				EventLogSource.builder()
 					.key("${source::beforeAll.testEventLogSource}")
 					.type("eventLog")
 					.logName("System")
@@ -56,8 +55,7 @@ class EventLogSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testEventLogSource",
-				EventLogSource
-					.builder()
+				EventLogSource.builder()
 					.key("${source::beforeAll.testEventLogSource}")
 					.type("eventLog")
 					.logName("System")
@@ -79,8 +77,7 @@ class EventLogSourceDeserializerTest extends DeserializerTest {
 		final Map<String, Source> expected = new LinkedHashMap<>(
 			Map.of(
 				"testEventLogSource",
-				EventLogSource
-					.builder()
+				EventLogSource.builder()
 					.key("${source::beforeAll.testEventLogSource}")
 					.type("eventLog")
 					.logName("System")

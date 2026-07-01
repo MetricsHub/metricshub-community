@@ -37,15 +37,13 @@ class LogFilesControllerTest {
 
 	@Test
 	void testShouldListLogFiles() throws Exception {
-		final LogFile f1 = LogFile
-			.builder()
+		final LogFile f1 = LogFile.builder()
 			.name(METRICSHUB_LOG_FILE_NAME)
 			.size(1024L)
 			.lastModificationTime("2025-09-01T10:15:30Z")
 			.build();
 
-		final LogFile f2 = LogFile
-			.builder()
+		final LogFile f2 = LogFile.builder()
 			.name("agent.log")
 			.size(256L)
 			.lastModificationTime("2025-09-02T08:00:00Z")
@@ -80,8 +78,9 @@ class LogFilesControllerTest {
 	@Test
 	void testShouldGetFileTail() throws Exception {
 		final String tailContent = "2025-01-30 10:00:00 INFO MetricsHub started\n";
-		when(logFilesService.getFileTail(METRICSHUB_LOG_FILE_NAME, LogFilesService.DEFAULT_MAX_TAIL_BYTES))
-			.thenReturn(tailContent);
+		when(logFilesService.getFileTail(METRICSHUB_LOG_FILE_NAME, LogFilesService.DEFAULT_MAX_TAIL_BYTES)).thenReturn(
+			tailContent
+		);
 
 		mockMvc
 			.perform(get("/api/log-files/metricshub.log/tail").accept(MediaType.TEXT_PLAIN))
@@ -104,8 +103,9 @@ class LogFilesControllerTest {
 
 	@Test
 	void testGetFileTailNotFound() throws Exception {
-		when(logFilesService.getFileTail("missing.log", LogFilesService.DEFAULT_MAX_TAIL_BYTES))
-			.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found"));
+		when(logFilesService.getFileTail("missing.log", LogFilesService.DEFAULT_MAX_TAIL_BYTES)).thenThrow(
+			new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found")
+		);
 
 		mockMvc.perform(get("/api/log-files/missing.log/tail")).andExpect(status().isNotFound());
 	}
@@ -113,8 +113,9 @@ class LogFilesControllerTest {
 	@Test
 	void testShouldDownloadFile() throws Exception {
 		final byte[] fileContent = "Full log file content\nLine 2\nLine 3".getBytes(StandardCharsets.UTF_8);
-		when(logFilesService.getFileForDownload(METRICSHUB_LOG_FILE_NAME))
-			.thenReturn(new ByteArrayInputStream(fileContent));
+		when(logFilesService.getFileForDownload(METRICSHUB_LOG_FILE_NAME)).thenReturn(
+			new ByteArrayInputStream(fileContent)
+		);
 
 		mockMvc
 			.perform(get("/api/log-files/metricshub.log/download"))
@@ -126,8 +127,9 @@ class LogFilesControllerTest {
 
 	@Test
 	void testDownloadFileNotFound() throws Exception {
-		when(logFilesService.getFileForDownload("missing.log"))
-			.thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found"));
+		when(logFilesService.getFileForDownload("missing.log")).thenThrow(
+			new ResponseStatusException(HttpStatus.NOT_FOUND, "Not Found")
+		);
 
 		mockMvc.perform(get("/api/log-files/missing.log/download")).andExpect(status().isNotFound());
 	}

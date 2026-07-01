@@ -22,8 +22,9 @@ class BmcHelixMetricsEnricherTest {
 		final List<ResourceMetrics> enriched = new BmcHelixMetricsEnricher().enrich(List.of(resourceMetrics));
 
 		assertEquals(1, enriched.size(), "Should return a single ResourceMetrics");
-		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper()
-			.toMap(enriched.get(0).getResource().getAttributesList());
+		final Map<String, String> attributes = new BmcHelixOtelAttributeMapper().toMap(
+			enriched.get(0).getResource().getAttributesList()
+		);
 		assertEquals("site-a", attributes.get(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY));
 		assertEquals("site", attributes.get(BmcHelixEnrichmentExtension.ENTITY_TYPE_ID_KEY));
 	}
@@ -31,8 +32,7 @@ class BmcHelixMetricsEnricherTest {
 	private static ResourceMetrics buildResourceMetrics(final Map<String, String> attributes, final String metricName) {
 		final BmcHelixOtelAttributeMapper mapper = new BmcHelixOtelAttributeMapper();
 		final Resource resource = Resource.newBuilder().addAllAttributes(mapper.toKeyValues(attributes)).build();
-		final Metric metric = Metric
-			.newBuilder()
+		final Metric metric = Metric.newBuilder()
 			.setName(metricName)
 			.setGauge(Gauge.newBuilder().addDataPoints(NumberDataPoint.getDefaultInstance()).build())
 			.build();

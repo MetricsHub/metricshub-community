@@ -126,86 +126,54 @@ public class MonitorNameBuilder {
 		new HashMap<>();
 
 	static {
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.CPU.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildCpuName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.CPU.getKey(), (monitor, _) -> MonitorNameBuilder.buildCpuName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.MEMORY.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildMemoryName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.MEMORY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildMemoryName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.PHYSICAL_DISK.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildPhysicalDiskName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.PHYSICAL_DISK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildPhysicalDiskName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.LOGICAL_DISK.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildLogicalDiskName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.LOGICAL_DISK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLogicalDiskName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.DISK_CONTROLLER.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildDiskControllerName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.DISK_CONTROLLER.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildDiskControllerName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.NETWORK.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildNetworkCardName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.NETWORK.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildNetworkCardName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.FAN.getKey(), (monitor, _) -> MonitorNameBuilder.buildFanName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.POWER_SUPPLY.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildPowerSupplyName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.FAN.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildFanName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.TEMPERATURE.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildTemperatureName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.POWER_SUPPLY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildPowerSupplyName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.TAPE_DRIVE.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildTapeDriveName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.TEMPERATURE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildTemperatureName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.TAPE_DRIVE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildTapeDriveName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.ROBOTICS.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildRoboticsName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.ROBOTICS.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildRoboticsName(monitor)
 		);
 		// Note: 'enclosure' requires a telemetryManager, so we pass it into the method.
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.ENCLOSURE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildEnclosureName(telemetry, monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.ENCLOSURE.getKey(), (monitor, telemetry) ->
+			MonitorNameBuilder.buildEnclosureName(telemetry, monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.VM.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildVmName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.VM.getKey(), (monitor, _) -> MonitorNameBuilder.buildVmName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.VOLTAGE.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildVoltageName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.VOLTAGE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildVoltageName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.BLADE.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildBladeName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.BLADE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildBladeName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.GPU.getKey(), (monitor, _) -> MonitorNameBuilder.buildGpuName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.BATTERY.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildBatteryName(monitor)
 		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.GPU.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildGpuName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.BATTERY.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildBatteryName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.LED.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLedName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.LUN.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildLunName(monitor)
-		);
-		MONITOR_NAME_BUILDERS.put(
-			KnownMonitorType.OTHER_DEVICE.getKey(),
-			(monitor, telemetry) -> MonitorNameBuilder.buildOtherDeviceName(monitor)
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.LED.getKey(), (monitor, _) -> MonitorNameBuilder.buildLedName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.LUN.getKey(), (monitor, _) -> MonitorNameBuilder.buildLunName(monitor));
+		MONITOR_NAME_BUILDERS.put(KnownMonitorType.OTHER_DEVICE.getKey(), (monitor, _) ->
+			MonitorNameBuilder.buildOtherDeviceName(monitor)
 		);
 	}
 

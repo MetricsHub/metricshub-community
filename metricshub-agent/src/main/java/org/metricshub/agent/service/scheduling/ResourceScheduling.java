@@ -115,8 +115,7 @@ public class ResourceScheduling extends AbstractScheduling {
 
 		// Create the monitoring task
 		final MonitoringTask monitoringTask = new MonitoringTask(
-			MonitoringTaskInfo
-				.builder()
+			MonitoringTaskInfo.builder()
 				.telemetryManager(telemetryManager)
 				.resourceConfig(resourceConfig)
 				.resourceGroupKey(resourceGroupKey)

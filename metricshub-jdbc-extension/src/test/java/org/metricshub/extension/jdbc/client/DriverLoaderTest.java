@@ -22,11 +22,8 @@ class DriverLoaderTest {
 		DriverLoader driverLoader = DriverLoader.getInstance();
 
 		// Test loading an invalid driver (which should throw ClassNotFoundException)
-		assertThrows(
-			ClassNotFoundException.class,
-			() -> {
-				driverLoader.loadDriver("com.invalid.Driver", true);
-			}
-		);
+		assertThrows(ClassNotFoundException.class, () -> {
+			driverLoader.loadDriver("com.invalid.Driver", true);
+		});
 	}
 }

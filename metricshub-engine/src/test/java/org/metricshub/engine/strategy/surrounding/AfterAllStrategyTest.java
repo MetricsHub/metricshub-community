@@ -104,24 +104,20 @@ class AfterAllStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.monitors(monitors)
-				.hostConfiguration(
-					HostConfiguration
-						.builder()
-						.hostId(HOST_ID)
-						.hostname(HOST_NAME)
-						.hostType(DeviceKind.LINUX)
-						.sequential(false)
-						.configurations(Map.of(TestConfiguration.class, snmpConfig))
-						.build()
-				)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.monitors(monitors)
+			.hostConfiguration(
+				HostConfiguration.builder()
+					.hostId(HOST_ID)
+					.hostname(HOST_NAME)
+					.hostType(DeviceKind.LINUX)
+					.sequential(false)
+					.configurations(Map.of(TestConfiguration.class, snmpConfig))
+					.build()
+			)
+			.build();
 
-		MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		MonitorFactory monitorFactory = MonitorFactory.builder()
 			.monitorType(ENCLOSURE)
 			.telemetryManager(telemetryManager)
 			.connectorId("afterAllSource")
@@ -131,16 +127,14 @@ class AfterAllStrategyTest {
 			.build();
 		enclosure = monitorFactory.createOrUpdateMonitor();
 
-		monitorFactory =
-			MonitorFactory
-				.builder()
-				.monitorType(DISK_CONTROLLER)
-				.telemetryManager(telemetryManager)
-				.connectorId("afterAllSource")
-				.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "1")))
-				.discoveryTime(strategyTime - 30 * 60 * 1000)
-				.keys(DEFAULT_KEYS)
-				.build();
+		monitorFactory = MonitorFactory.builder()
+			.monitorType(DISK_CONTROLLER)
+			.telemetryManager(telemetryManager)
+			.connectorId("afterAllSource")
+			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "1")))
+			.discoveryTime(strategyTime - 30 * 60 * 1000)
+			.keys(DEFAULT_KEYS)
+			.build();
 		diskController = monitorFactory.createOrUpdateMonitor();
 
 		hostMonitor.addAttribute(IS_ENDPOINT, "true");
@@ -156,19 +150,16 @@ class AfterAllStrategyTest {
 	void testRunFromCollect() {
 		initTest();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		collectStrategy =
-			CollectStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		collectStrategy = CollectStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		doReturn(true)
 			.when(protocolExtensionMock)
@@ -179,8 +170,7 @@ class AfterAllStrategyTest {
 			.getSupportedCriteria();
 
 		// Mock the criterion
-		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -189,16 +179,14 @@ class AfterAllStrategyTest {
 			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
-		final SnmpTableSource enclosureSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource enclosureSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.30.1")
 			.selectColumns("ID,1,2")
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -206,8 +194,7 @@ class AfterAllStrategyTest {
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.31.1")
 			.selectColumns("ID,1,2")
 			.type("snmpTable")
@@ -217,8 +204,7 @@ class AfterAllStrategyTest {
 			.when(protocolExtensionMock)
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
-		final SnmpTableSource afterAllSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource afterAllSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.5")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -226,8 +212,7 @@ class AfterAllStrategyTest {
 			.build();
 		// Mock source table information for the snmp afterAll source
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(
 					SourceTable.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
 				)
@@ -301,19 +286,16 @@ class AfterAllStrategyTest {
 	void testRunFromDiscovery() {
 		initTest();
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
-		discoveryStrategy =
-			DiscoveryStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		discoveryStrategy = DiscoveryStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		// Mock detection criteria result
 		doReturn(true)
@@ -325,8 +307,7 @@ class AfterAllStrategyTest {
 			.getSupportedCriteria();
 
 		// Mock the criterion
-		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -335,16 +316,14 @@ class AfterAllStrategyTest {
 			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
-		final SnmpTableSource enclosureSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource enclosureSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.discovery.sources.source(1)}")
 			.build();
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -352,16 +331,14 @@ class AfterAllStrategyTest {
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.1")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
 			.key("${source::monitors.disk_controller.discovery.sources.source(1)}")
 			.build();
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(
 					SourceTable.csvToTable("diskController-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
 				)
@@ -371,8 +348,7 @@ class AfterAllStrategyTest {
 			.processSource(eq(diskControllerSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for the snmp afterAll source
-		final SnmpTableSource afterAllSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource afterAllSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.4.5")
 			.selectColumns("ID,1,3,7,8")
 			.type("snmpTable")
@@ -380,8 +356,7 @@ class AfterAllStrategyTest {
 			.build();
 		// Mock source table information for the snmp afterAll source
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(
 					SourceTable.csvToTable("afterAllSource-1;1;2;3;4;5;6;7;healthy;health-ok", MetricsHubConstants.TABLE_SEP)
 				)

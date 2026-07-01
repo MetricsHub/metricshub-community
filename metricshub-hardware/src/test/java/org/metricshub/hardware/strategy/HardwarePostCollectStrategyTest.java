@@ -37,15 +37,13 @@ class HardwarePostCollectStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-			ConnectorIdentity
-				.builder()
+			ConnectorIdentity.builder()
 				.detection(Detection.builder().tags(Set.of("hardware")).appliesTo(Set.of(DeviceKind.WINDOWS)).build())
 				.build()
 		);
 		connectorStore.setStore(Map.of(CONNECTOR, connector));
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
 			.connectorStore(connectorStore)
 			.build();
@@ -56,8 +54,7 @@ class HardwarePostCollectStrategyTest {
 		final long discoveryTime = System.currentTimeMillis();
 
 		// Create an enclosure monitor
-		final MonitorFactory enclosureMonitorFactory = MonitorFactory
-			.builder()
+		final MonitorFactory enclosureMonitorFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "id", MONITOR_ATTRIBUTE_NAME, "name")))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR)

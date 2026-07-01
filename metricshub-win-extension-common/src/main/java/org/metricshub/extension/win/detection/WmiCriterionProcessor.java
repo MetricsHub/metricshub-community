@@ -242,8 +242,7 @@ public class WmiCriterionProcessor {
 		// No namespace => failure
 		if (namespaces.isEmpty()) {
 			String formattedNamespaceList = possibleNamespaces.stream().collect(Collectors.joining("\n- "));
-			return NamespaceResult
-				.builder()
+			return NamespaceResult.builder()
 				.result(
 					CriterionTestResult.failure(
 						wmiCriterion,
@@ -349,8 +348,7 @@ public class WmiCriterionProcessor {
 		// If the user specified a namespace, we return it as if it was the only namespace available
 		// and for which we're going to test our connector
 		if (winConfiguration.getNamespace() != null && !winConfiguration.getNamespace().isBlank()) {
-			return PossibleNamespacesResult
-				.builder()
+			return PossibleNamespacesResult.builder()
 				.possibleNamespaces(Collections.singleton(winConfiguration.getNamespace()))
 				.success(true)
 				.build();
@@ -371,14 +369,14 @@ public class WmiCriterionProcessor {
 				.filter(namespace -> !namespace.toLowerCase().contains("interop"))
 				.filter(namespace -> !IGNORED_WMI_NAMESPACES.contains(namespace))
 				.filter(namespace ->
-					IGNORED_WMI_NAMESPACES
-						.stream()
-						.noneMatch(ignoredNamespace -> (ROOT_SLASH + ignoredNamespace).equalsIgnoreCase(namespace))
+					IGNORED_WMI_NAMESPACES.stream().noneMatch(ignoredNamespace ->
+						(ROOT_SLASH + ignoredNamespace).equalsIgnoreCase(namespace)
+					)
 				)
 				.filter(namespace ->
-					IGNORED_WMI_NAMESPACES
-						.stream()
-						.noneMatch(ignoredNamespace -> ("root\\" + ignoredNamespace).equalsIgnoreCase(namespace))
+					IGNORED_WMI_NAMESPACES.stream().noneMatch(ignoredNamespace ->
+						("root\\" + ignoredNamespace).equalsIgnoreCase(namespace)
+					)
 				)
 				.map(namespace -> ROOT_SLASH + namespace)
 				.forEach(possibleWmiNamespaces::add);
@@ -401,8 +399,7 @@ public class WmiCriterionProcessor {
 		}
 
 		if (possibleWmiNamespaces.isEmpty()) {
-			return PossibleNamespacesResult
-				.builder()
+			return PossibleNamespacesResult.builder()
 				.errorMessage("No suitable namespace could be found to query host " + hostname + ".")
 				.success(false)
 				.build();

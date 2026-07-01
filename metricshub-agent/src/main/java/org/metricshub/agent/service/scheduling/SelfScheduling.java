@@ -133,8 +133,7 @@ public class SelfScheduling extends AbstractScheduling {
 		// Register the metric recorder
 		meter.registerRecorder(
 			MetricContext.builder().withDescription(METRICS_HUB_AGENT_INFORMATION).withType(MetricType.GAUGE).build(),
-			NumberMetric
-				.builder()
+			NumberMetric.builder()
 				.value(1.0)
 				.name(AgentInfo.METRICS_HUB_AGENT_METRIC_NAME)
 				.collectTime(System.currentTimeMillis())

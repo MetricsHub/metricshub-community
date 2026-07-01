@@ -17,6 +17,7 @@ class HttpEmulationRequestTest {
 		final HttpEmulationRequest request = HttpEmulationRequest.builder().build();
 		assertNull(request.getMethod());
 		assertNull(request.getPath());
+		assertNull(request.getUrl());
 		assertNull(request.getBody());
 		assertNull(request.getHeaders());
 	}
@@ -27,16 +28,17 @@ class HttpEmulationRequestTest {
 		headers.put("Content-Type", "application/json");
 		headers.put("Accept", "text/plain");
 
-		final HttpEmulationRequest request = HttpEmulationRequest
-			.builder()
+		final HttpEmulationRequest request = HttpEmulationRequest.builder()
 			.method("POST")
 			.path("/api/v1/data")
+			.url("http://host:1234")
 			.body("{\"key\": \"value\"}")
 			.headers(headers)
 			.build();
 
 		assertEquals("POST", request.getMethod());
 		assertEquals("/api/v1/data", request.getPath());
+		assertEquals("http://host:1234", request.getUrl());
 		assertEquals("{\"key\": \"value\"}", request.getBody());
 		assertEquals(headers, request.getHeaders());
 	}
@@ -46,6 +48,7 @@ class HttpEmulationRequestTest {
 		final HttpEmulationRequest request = new HttpEmulationRequest();
 		assertNull(request.getMethod());
 		assertNull(request.getPath());
+		assertNull(request.getUrl());
 		assertNull(request.getBody());
 		assertNull(request.getHeaders());
 	}
@@ -55,10 +58,11 @@ class HttpEmulationRequestTest {
 		final LinkedHashMap<String, String> headers = new LinkedHashMap<>();
 		headers.put("Authorization", "Bearer token");
 
-		final HttpEmulationRequest request = new HttpEmulationRequest("GET", "/test", "body", headers);
+		final HttpEmulationRequest request = new HttpEmulationRequest("GET", "/test", "http://host:1234", "body", headers);
 
 		assertEquals("GET", request.getMethod());
 		assertEquals("/test", request.getPath());
+		assertEquals("http://host:1234", request.getUrl());
 		assertEquals("body", request.getBody());
 		assertNotNull(request.getHeaders());
 		assertEquals("Bearer token", request.getHeaders().get("Authorization"));
@@ -69,6 +73,7 @@ class HttpEmulationRequestTest {
 		final HttpEmulationRequest request = new HttpEmulationRequest();
 		request.setMethod("PUT");
 		request.setPath("/update");
+		request.setUrl("http://host:1234");
 		request.setBody("update body");
 		final LinkedHashMap<String, String> headers = new LinkedHashMap<>();
 		headers.put("X-Custom", "value");
@@ -76,6 +81,7 @@ class HttpEmulationRequestTest {
 
 		assertEquals("PUT", request.getMethod());
 		assertEquals("/update", request.getPath());
+		assertEquals("http://host:1234", request.getUrl());
 		assertEquals("update body", request.getBody());
 		assertEquals("value", request.getHeaders().get("X-Custom"));
 	}

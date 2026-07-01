@@ -21,8 +21,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.HttpSource;
 class ResultContentDeserializerTest {
 
 	private static final String SOURCE_URL = "/url";
-	private static final String HTTP_SOURCE_YAML =
-		"""
+	private static final String HTTP_SOURCE_YAML = """
 		type: http
 		url: /url
 		resultContent: ReplaceMe
@@ -34,14 +33,12 @@ class ResultContentDeserializerTest {
 
 	@BeforeAll
 	static void setUp() {
-		mapper =
-			JsonMapper
-				.builder(new YAMLFactory())
-				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
-				.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
-				.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
-				.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_VALUES)
-				.build();
+		mapper = JsonMapper.builder(new YAMLFactory())
+			.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, true)
+			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES)
+			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_VALUES)
+			.build();
 	}
 
 	@Test

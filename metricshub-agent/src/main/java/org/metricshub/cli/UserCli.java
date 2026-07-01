@@ -31,6 +31,7 @@ import picocli.CommandLine;
  * UserCli is the entry point for managing users via the command line interface (CLI).
  */
 public class UserCli {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}

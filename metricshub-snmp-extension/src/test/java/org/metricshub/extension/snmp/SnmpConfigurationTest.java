@@ -22,8 +22,7 @@ class SnmpConfigurationTest {
 		final char[] emptyCommunity = new char[] {};
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(emptyCommunity)
 				.port(1234)
 				.timeout(60L)
@@ -34,8 +33,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(null)
 				.port(1234)
 				.timeout(60L)
@@ -46,8 +44,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(-1)
 				.timeout(60L)
@@ -58,8 +55,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(66666)
 				.timeout(60L)
@@ -70,8 +66,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(null)
 				.timeout(60L)
@@ -82,8 +77,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(1234)
 				.timeout(-60L)
@@ -94,8 +88,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(1234)
 				.timeout(null)
@@ -106,8 +99,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(1234)
 				.timeout(60L)
@@ -119,8 +111,7 @@ class SnmpConfigurationTest {
 		}
 
 		{
-			final SnmpConfiguration snmpConfig = SnmpConfiguration
-				.builder()
+			final SnmpConfiguration snmpConfig = SnmpConfiguration.builder()
 				.community(community)
 				.port(1234)
 				.timeout(60L)
@@ -144,8 +135,7 @@ class SnmpConfigurationTest {
 
 	@Test
 	void testCopy() {
-		final SnmpConfiguration snmpConfiguration = SnmpConfiguration
-			.builder()
+		final SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder()
 			.community("public".toCharArray())
 			.port(100)
 			.timeout(100L)
@@ -163,8 +153,7 @@ class SnmpConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final SnmpConfiguration snmpConfiguration = SnmpConfiguration
-			.builder()
+		final SnmpConfiguration snmpConfiguration = SnmpConfiguration.builder()
 			.community("myCommunity".toCharArray())
 			.port(443)
 			.retryIntervals(new int[] { 100 })

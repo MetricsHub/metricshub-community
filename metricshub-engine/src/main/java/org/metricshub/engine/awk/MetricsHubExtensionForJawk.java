@@ -165,15 +165,13 @@ public class MetricsHubExtensionForJawk extends AbstractExtension {
 	@JawkFunction("json2csv")
 	public String executeJson2csv(final @JawkAssocArray AssocArray argMap) {
 		try {
-			return ClientsExecutor
-				.executeJson2Csv(
-					String.valueOf(argMap.get("jsonSource")),
-					String.valueOf(argMap.get("entryKey")),
-					toAwkListString(argMap.get("properties")),
-					String.valueOf(argMap.get("separator")),
-					hostname
-				)
-				.strip();
+			return ClientsExecutor.executeJson2Csv(
+				String.valueOf(argMap.get("jsonSource")),
+				String.valueOf(argMap.get("entryKey")),
+				toAwkListString(argMap.get("properties")),
+				String.valueOf(argMap.get("separator")),
+				hostname
+			).strip();
 		} catch (Exception exception) {
 			log.error(
 				"Hostname {} - Json2Csv Operation has failed. Errors:\n{}\n",

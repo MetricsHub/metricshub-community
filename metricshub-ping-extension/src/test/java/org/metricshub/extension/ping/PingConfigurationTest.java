@@ -20,13 +20,11 @@ class PingConfigurationTest {
 
 	@Test
 	void testValidateConfiguration() {
-		assertThrows(
-			InvalidConfigurationException.class,
-			() -> PingConfiguration.builder().timeout(-60L).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(InvalidConfigurationException.class, () ->
+			PingConfiguration.builder().timeout(-60L).build().validateConfiguration(RESOURCE_KEY)
 		);
-		assertThrows(
-			InvalidConfigurationException.class,
-			() -> PingConfiguration.builder().timeout(null).build().validateConfiguration(RESOURCE_KEY)
+		assertThrows(InvalidConfigurationException.class, () ->
+			PingConfiguration.builder().timeout(null).build().validateConfiguration(RESOURCE_KEY)
 		);
 		assertDoesNotThrow(() -> PingConfiguration.builder().timeout(60L).build().validateConfiguration(RESOURCE_KEY));
 	}
@@ -46,8 +44,7 @@ class PingConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final PingConfiguration pingConfiguration = PingConfiguration
-			.builder()
+		final PingConfiguration pingConfiguration = PingConfiguration.builder()
 			.timeout(100L)
 			.hostname("myHostname")
 			.build();

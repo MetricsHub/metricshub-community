@@ -25,8 +25,9 @@ class BmcHelixMetricTransformerTest {
 		final ResourceMetrics output = new BmcHelixMetricTransformer().transform(input);
 
 		assertNotNull(output.getResource(), "Resource should be present");
-		final Map<String, String> resourceAttributes = new BmcHelixOtelAttributeMapper()
-			.toMap(output.getResource().getAttributesList());
+		final Map<String, String> resourceAttributes = new BmcHelixOtelAttributeMapper().toMap(
+			output.getResource().getAttributesList()
+		);
 		assertEquals("value", resourceAttributes.get("keep"));
 		assertEquals("host-a", resourceAttributes.get(BmcHelixEnrichmentExtension.ENTITY_NAME_KEY));
 		assertEquals("svc-a", resourceAttributes.get(BmcHelixEnrichmentExtension.INSTANCE_NAME_KEY));
@@ -40,8 +41,7 @@ class BmcHelixMetricTransformerTest {
 	private static ResourceMetrics buildResourceMetrics(final Map<String, String> attributes, final String metricName) {
 		final BmcHelixOtelAttributeMapper mapper = new BmcHelixOtelAttributeMapper();
 		final Resource resource = Resource.newBuilder().addAllAttributes(mapper.toKeyValues(attributes)).build();
-		final Metric metric = Metric
-			.newBuilder()
+		final Metric metric = Metric.newBuilder()
 			.setName(metricName)
 			.setGauge(Gauge.newBuilder().addDataPoints(NumberDataPoint.getDefaultInstance()).build())
 			.build();

@@ -15,8 +15,7 @@ class AdditionalConnectorConfigCliTest {
 		additionalConnectorConfigCli.setUses("usedConnectorId");
 		additionalConnectorConfigCli.setVariables(Map.of("var1", "value1", "var2", "value2"));
 
-		final AdditionalConnector additionalConnector = AdditionalConnector
-			.builder()
+		final AdditionalConnector additionalConnector = AdditionalConnector.builder()
 			.force(true)
 			.uses("usedConnectorId")
 			.variables(Map.of("var1", "value1", "var2", "value2"))

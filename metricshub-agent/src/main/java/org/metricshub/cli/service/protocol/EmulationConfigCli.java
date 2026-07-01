@@ -141,8 +141,9 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 	@Override
 	public IConfiguration toConfiguration(final String defaultUsername, final char[] defaultPassword)
 		throws InvalidConfigurationException {
-		return buildConfiguration(defaultUsername, defaultPassword)
-			.orElseThrow(() -> new InvalidConfigurationException("Emulation configuration is not enabled."));
+		return buildConfiguration(defaultUsername, defaultPassword).orElseThrow(() ->
+			new InvalidConfigurationException("Emulation configuration is not enabled.")
+		);
 	}
 
 	/**
@@ -196,9 +197,11 @@ public class EmulationConfigCli implements IProtocolConfigCli {
 			emulationConfigurationNode.set("wmi", buildProtocolEmulationNode(emulateWmi, defaultUsername, defaultPassword));
 		}
 
-		return CliExtensionManager
-			.getExtensionManagerSingleton()
-			.buildConfigurationFromJsonNode("emulation", emulationConfigurationNode, value -> value);
+		return CliExtensionManager.getExtensionManagerSingleton().buildConfigurationFromJsonNode(
+			"emulation",
+			emulationConfigurationNode,
+			value -> value
+		);
 	}
 
 	/**

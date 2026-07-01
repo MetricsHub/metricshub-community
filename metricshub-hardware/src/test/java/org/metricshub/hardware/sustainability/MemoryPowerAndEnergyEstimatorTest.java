@@ -18,8 +18,7 @@ class MemoryPowerAndEnergyEstimatorTest {
 	@Test
 	void testDoPowerEstimation() {
 		Monitor monitor = Monitor.builder().build();
-		TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(1696597422644L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
 			.build();
@@ -34,8 +33,7 @@ class MemoryPowerAndEnergyEstimatorTest {
 	@Test
 	void testEstimateEnergy() {
 		Monitor monitor = Monitor.builder().build();
-		TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		TelemetryManager telemetryManager = TelemetryManager.builder()
 			.strategyTime(1696597422644L)
 			.hostConfiguration(HostConfiguration.builder().hostname(LOCALHOST).build())
 			.build();

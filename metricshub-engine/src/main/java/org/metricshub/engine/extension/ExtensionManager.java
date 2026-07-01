@@ -144,11 +144,9 @@ public class ExtensionManager {
 			if (
 				// CHECKSTYLE:OFF
 				DeviceKind.WINDOWS == telemetryManager.getHostConfiguration().getHostType() &&
-				!telemetryManager.getHostProperties().isLocalhost()
-				// CHECKSTYLE:ON
+				!telemetryManager.getHostProperties().isLocalhost() // CHECKSTYLE:ON
 			) {
-				return Stream
-					.of(maybeWmiExtension, maybeWinrmExtension)
+				return Stream.of(maybeWmiExtension, maybeWinrmExtension)
 					.filter(Optional::isPresent)
 					.map(Optional::get)
 					.findFirst();
@@ -171,7 +169,10 @@ public class ExtensionManager {
 		final List<IProtocolExtension> extensions,
 		final String type
 	) {
-		return extensions.stream().filter(extension -> extension.isSupportedConfigurationType(type)).findFirst();
+		return extensions
+			.stream()
+			.filter(extension -> extension.isSupportedConfigurationType(type))
+			.findFirst();
 	}
 
 	/**
@@ -288,7 +289,7 @@ public class ExtensionManager {
 			.stream()
 			.map(IProtocolExtension::getConfigurationToSourceMapping)
 			.flatMap(map -> map.entrySet().stream())
-			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue));
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue));
 	}
 
 	/**
@@ -353,7 +354,10 @@ public class ExtensionManager {
 	 * @return an {@link Optional} of an {@link ISourceComputationExtension} instance.
 	 */
 	public Optional<ISourceComputationExtension> findSourceComputationExtension(final Source source) {
-		return sourceComputationExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
+		return sourceComputationExtensions
+			.stream()
+			.filter(extension -> extension.isValidSource(source))
+			.findFirst();
 	}
 
 	/**
@@ -363,7 +367,10 @@ public class ExtensionManager {
 	 * @return an {@link Optional} of an {@link ICompositeSourceScriptExtension} instance.
 	 */
 	public Optional<ICompositeSourceScriptExtension> findCompositeSourceScriptExtension(final Source source) {
-		return compositeSourceScriptExtensions.stream().filter(extension -> extension.isValidSource(source)).findFirst();
+		return compositeSourceScriptExtensions
+			.stream()
+			.filter(extension -> extension.isValidSource(source))
+			.findFirst();
 	}
 
 	/**
@@ -390,7 +397,8 @@ public class ExtensionManager {
 		protocolExtensions.forEach(extension -> {
 			try {
 				extension.onRecordingSessionEnd(telemetryManager);
-			} catch (Exception ignored) { // NOSONAR keep flush resilient
+			} catch (Exception ignored) {
+				// NOSONAR keep flush resilient
 				// Recording flush should not fail the engine lifecycle.
 			}
 		});

@@ -17,8 +17,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testGenerateUrl() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.type("mysql")
 			.hostname("localhost")
 			.port(3306)
@@ -30,30 +29,27 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testValidateConfigurationMissingUsername() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.type("mysql")
 			.database("testdb")
 			.hostname("localhost")
 			.username("")
 			.build();
 
-		final Exception exception = assertThrows(
-			InvalidConfigurationException.class,
-			() -> jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
+			jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
 			"Resource resourceKey - Username value is invalid for JDBC. " +
-			"This resource will not be monitored. Please verify the configured username value.",
+				"This resource will not be monitored. Please verify the configured username value.",
 			exception.getMessage()
 		);
 	}
 
 	@Test
 	void testValidateConfigurationInvalidTimeout() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.database("testdb")
@@ -61,23 +57,21 @@ class JdbcConfigurationTest {
 			.timeout(-10L)
 			.build();
 
-		final Exception exception = assertThrows(
-			InvalidConfigurationException.class,
-			() -> jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
+			jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
 			"Resource resourceKey - Timeout value is invalid for JDBC. " +
-			"Timeout value returned: -10. This resource will not be monitored. " +
-			"Please verify the configured timeout value.",
+				"Timeout value returned: -10. This resource will not be monitored. " +
+				"Please verify the configured timeout value.",
 			exception.getMessage()
 		);
 	}
 
 	@Test
 	void testValidateConfigurationInvalidPort() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.database("testdb")
@@ -85,23 +79,21 @@ class JdbcConfigurationTest {
 			.port(-1)
 			.build();
 
-		final Exception exception = assertThrows(
-			InvalidConfigurationException.class,
-			() -> jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
+			jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
 			"Resource resourceKey - Invalid port configured for JDBC. " +
-			"Port value returned: -1. This resource will not be monitored. " +
-			"Please verify the configured port value.",
+				"Port value returned: -1. This resource will not be monitored. " +
+				"Please verify the configured port value.",
 			exception.getMessage()
 		);
 	}
 
 	@Test
 	void testValidateConfigurationWithNullUrl() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.database("testdb")
@@ -117,8 +109,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testValidateConfigurationWithEmptyUrl() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("unsupported_db")
 			.database("testdb")
@@ -126,23 +117,21 @@ class JdbcConfigurationTest {
 			.port(3306)
 			.build();
 
-		final Exception exception = assertThrows(
-			InvalidConfigurationException.class,
-			() -> jdbcConfiguration.validateConfiguration("resourceKey")
+		final Exception exception = assertThrows(InvalidConfigurationException.class, () ->
+			jdbcConfiguration.validateConfiguration("resourceKey")
 		);
 
 		assertEquals(
 			"Resource resourceKey - Invalid url configured for JDBC." +
-			" This resource will not be monitored." +
-			" Please verify the configured url value.",
+				" This resource will not be monitored." +
+				" Please verify the configured url value.",
 			exception.getMessage()
 		);
 	}
 
 	@Test
 	void testValidateConfigurationWithPredefinedUrl() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.database("testdb")
@@ -157,8 +146,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testValidateConfigurationGeneratesUrlWhenUrlIsEmpty() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.hostname("localhost")
@@ -173,8 +161,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testValidateConfigurationAssignsDefaultPort() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.type("mysql")
 			.database("testdb")
@@ -188,8 +175,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testCopyConfigurationWithAllFields() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("testUser")
 			.password("password".toCharArray())
 			.type("mysql")
@@ -209,8 +195,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testGenerateUrlPostgreSql() {
-		JdbcConfiguration cfg = JdbcConfiguration
-			.builder()
+		JdbcConfiguration cfg = JdbcConfiguration.builder()
 			.type("postgresql")
 			.hostname("localhost")
 			.port(5432)
@@ -222,8 +207,7 @@ class JdbcConfigurationTest {
 
 	@Test
 	void testGetProperty() {
-		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration
-			.builder()
+		final JdbcConfiguration jdbcConfiguration = JdbcConfiguration.builder()
 			.username("myUsername")
 			.password("myPassword".toCharArray())
 			.database("myDatabase")

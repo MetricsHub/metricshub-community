@@ -71,8 +71,7 @@ public class MetricNormalizationService implements IPostExecutionService {
 	);
 
 	// Hardware monitor types
-	private static final Set<String> HARDWARE_MONITOR_TYPES = Stream
-		.of(KnownMonitorType.values())
+	private static final Set<String> HARDWARE_MONITOR_TYPES = Stream.of(KnownMonitorType.values())
 		.filter(type -> !EXCLUDED_MONITOR_TYPES.contains(type))
 		.map(KnownMonitorType::getKey)
 		.collect(Collectors.toCollection(() -> new TreeSet<>(String.CASE_INSENSITIVE_ORDER)));
@@ -103,7 +102,9 @@ public class MetricNormalizationService implements IPostExecutionService {
 			.flatMap(monitors -> monitors.values().stream())
 			.filter(this::isHardwareMonitor)
 			.flatMap(monitor ->
-				KnownMonitorType.fromString(monitor.getType()).map(type -> new KnownMonitor(monitor, type)).stream()
+				KnownMonitorType.fromString(monitor.getType())
+					.map(type -> new KnownMonitor(monitor, type))
+					.stream()
 			)
 			.forEach(knownMonitor -> {
 				final Monitor monitor = knownMonitor.getMonitor();
@@ -120,8 +121,9 @@ public class MetricNormalizationService implements IPostExecutionService {
 						new GpuMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(monitor);
 						break;
 					case LOGICAL_DISK:
-						new LogicalDiskMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new LogicalDiskMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case LUN:
 						new LunMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(monitor);
@@ -130,32 +132,39 @@ public class MetricNormalizationService implements IPostExecutionService {
 						new MemoryMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(monitor);
 						break;
 					case NETWORK:
-						new NetworkMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new NetworkMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case OTHER_DEVICE:
-						new OtherDeviceMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new OtherDeviceMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case PHYSICAL_DISK:
-						new PhysicalDiskMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new PhysicalDiskMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case ROBOTICS:
-						new RoboticsMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new RoboticsMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case TAPE_DRIVE:
-						new TapeDriveMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new TapeDriveMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case TEMPERATURE:
-						new TemperatureMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new TemperatureMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					case VOLTAGE:
-						new VoltageMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore())
-							.normalize(monitor);
+						new VoltageMetricNormalizer(strategyTime, hostname, telemetryManager.getConnectorStore()).normalize(
+							monitor
+						);
 						break;
 					default:
 						break;

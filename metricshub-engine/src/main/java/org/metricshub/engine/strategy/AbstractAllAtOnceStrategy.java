@@ -107,7 +107,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		if (!validateConnectorDetectionCriteria(currentConnector, hostname, getJobName())) {
 			log.error(
 				"Hostname {} - The connector {} no longer matches the host after {} consecutive detection failures." +
-				" Stopping the connector's {} job.",
+					" Stopping the connector's {} job.",
 				hostname,
 				currentConnector.getCompiledFilename(),
 				MAX_CONSECUTIVE_DETECTION_FAILURES,
@@ -117,8 +117,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		}
 
 		// Run BeforeAllStrategy that executes beforeAll sources
-		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy
-			.builder()
+		final BeforeAllStrategy beforeAllStrategy = BeforeAllStrategy.builder()
 			.clientsExecutor(clientsExecutor)
 			.strategyTime(strategyTime)
 			.telemetryManager(telemetryManager)
@@ -140,25 +139,19 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 						: MONITOR_JOBS_PRIORITY.get(OTHER_MONITOR_JOB_TYPES)
 				)
 			)
-			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
-			);
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
 		final Map<String, MonitorJob> sequentialMonitorJobs = connectorMonitorJobs
 			.entrySet()
 			.stream()
 			.filter(entry -> MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
-			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
-			);
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
 		final Map<String, MonitorJob> otherMonitorJobs = connectorMonitorJobs
 			.entrySet()
 			.stream()
 			.filter(entry -> !MONITOR_JOBS_PRIORITY.containsKey(entry.getKey()))
-			.collect(
-				Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue, LinkedHashMap::new)
-			);
+			.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (oldValue, _) -> oldValue, LinkedHashMap::new));
 
 		// Run monitor jobs defined in monitor jobs priority map (host, enclosure, blade, disk_controller and cpu)  in sequential mode
 		sequentialMonitorJobs.entrySet().forEach(entry -> processMonitorJob(currentConnector, hostname, entry));
@@ -210,8 +203,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			}
 		}
 		// Run AfterAllStrategy that executes afterAll sources
-		final AfterAllStrategy afterAllStrategy = AfterAllStrategy
-			.builder()
+		final AfterAllStrategy afterAllStrategy = AfterAllStrategy.builder()
 			.clientsExecutor(clientsExecutor)
 			.strategyTime(strategyTime)
 			.telemetryManager(telemetryManager)
@@ -251,8 +243,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			return;
 		}
 
-		final JobInfo jobInfo = JobInfo
-			.builder()
+		final JobInfo jobInfo = JobInfo.builder()
 			.hostname(hostname)
 			.connectorId(currentConnector.getCompiledFilename())
 			.jobName(getJobName())
@@ -260,8 +251,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			.build();
 
 		// Build the ordered sources
-		final OrderedSources orderedSources = OrderedSources
-			.builder()
+		final OrderedSources orderedSources = OrderedSources.builder()
 			.sources(
 				monitorTask.getSources(),
 				monitorTask.getExecutionOrder().stream().collect(Collectors.toList()), // NOSONAR
@@ -345,7 +335,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 
 		log.debug(
 			"Hostname {} - Start {} {} mapping with source {}, attributes {}, metrics {}, conditional collection {} and legacy text parameters {}" +
-			". Connector ID: {}.",
+				". Connector ID: {}.",
 			hostname,
 			monitorType,
 			getJobName(),
@@ -360,13 +350,11 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 		for (int i = 0; i < table.size(); i++) {
 			final List<String> row = table.get(i);
 			// Init mapping processor
-			final MappingProcessor mappingProcessor = MappingProcessor
-				.builder()
+			final MappingProcessor mappingProcessor = MappingProcessor.builder()
 				.telemetryManager(telemetryManager)
 				.mapping(mapping)
 				.jobInfo(
-					JobInfo
-						.builder()
+					JobInfo.builder()
 						.connectorId(connectorId)
 						.hostname(hostname)
 						.monitorType(monitorType)
@@ -387,8 +375,7 @@ public abstract class AbstractAllAtOnceStrategy extends AbstractStrategy {
 			// Get the identifying attribute keys
 			final Set<String> identifyingAttributeKeys = monitorJob.getKeys();
 
-			final MonitorFactory monitorFactory = MonitorFactory
-				.builder()
+			final MonitorFactory monitorFactory = MonitorFactory.builder()
 				.monitorType(monitorType)
 				.telemetryManager(telemetryManager)
 				.attributes(noContextAttributeInterpretedValues)

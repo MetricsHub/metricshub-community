@@ -131,8 +131,7 @@ public class HttpSource extends Source {
 	}
 
 	public HttpSource copy() {
-		return HttpSource
-			.builder()
+		return HttpSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

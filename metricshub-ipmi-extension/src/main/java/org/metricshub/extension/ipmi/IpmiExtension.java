@@ -108,17 +108,16 @@ public class IpmiExtension implements IProtocolExtension {
 
 		// Execute IPMI test command
 		try {
-			ipmiResult =
-				IpmiClient.getChassisStatusAsStringResult(
-					new IpmiClientConfiguration(
-						hostname,
-						ipmiConfiguration.getUsername(),
-						ipmiConfiguration.getPassword(),
-						ArrayHelper.hexToByteArray(ipmiConfiguration.getBmcKey()),
-						ipmiConfiguration.isSkipAuth(),
-						ipmiConfiguration.getTimeout()
-					)
-				);
+			ipmiResult = IpmiClient.getChassisStatusAsStringResult(
+				new IpmiClientConfiguration(
+					hostname,
+					ipmiConfiguration.getUsername(),
+					ipmiConfiguration.getPassword(),
+					ArrayHelper.hexToByteArray(ipmiConfiguration.getBmcKey()),
+					ipmiConfiguration.isSkipAuth(),
+					ipmiConfiguration.getTimeout()
+				)
+			);
 		} catch (Exception e) {
 			log.debug(
 				"Hostname {} - Checking IPMI protocol status. IPMI exception when performing a IPMI 'Get Chassis Status As String Result' query: ",
@@ -194,8 +193,7 @@ public class IpmiExtension implements IProtocolExtension {
 		try {
 			final String result = ipmiRequestExecutor.executeIpmiDetection(hostname, configuration);
 			if (result == null) {
-				return CriterionTestResult
-					.builder()
+				return CriterionTestResult.builder()
 					.message("Received <null> result after connecting to the IPMI BMC chip with the IPMI-over-LAN interface.")
 					.build();
 			}
@@ -205,13 +203,13 @@ public class IpmiExtension implements IProtocolExtension {
 				IpmiRecorder.getInstance(recordOutputDirectory).record(IpmiRecorder.IPMI_DETECTION_REQUEST, result);
 			}
 
-			return CriterionTestResult
-				.builder()
+			return CriterionTestResult.builder()
 				.result(result)
 				.message("Successfully connected to the IPMI BMC chip with the IPMI-over-LAN interface.")
 				.success(true)
 				.build();
-		} catch (final Exception e) { // NOSONAR on interruption
+		} catch (final Exception e) {
+			// NOSONAR on interruption
 			final String message = String.format(
 				"Hostname %s - Cannot execute IPMI-over-LAN command to get the chassis status. Exception: %s",
 				hostname,
@@ -259,8 +257,7 @@ public class IpmiExtension implements IProtocolExtension {
 	 * @return A configured ObjectMapper instance.
 	 */
 	public static JsonMapper newObjectMapper() {
-		return JsonMapper
-			.builder(new YAMLFactory())
+		return JsonMapper.builder(new YAMLFactory())
 			.enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
 			.enable(SerializationFeature.INDENT_OUTPUT)
 			.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false)

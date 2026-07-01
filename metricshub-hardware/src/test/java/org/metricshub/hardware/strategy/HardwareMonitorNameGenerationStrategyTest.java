@@ -57,20 +57,17 @@ class HardwareMonitorNameGenerationStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-			ConnectorIdentity
-				.builder()
+			ConnectorIdentity.builder()
 				.detection(Detection.builder().tags(Set.of("hardware")).appliesTo(Set.of(DeviceKind.WINDOWS)).build())
 				.build()
 		);
 		connectorStore.setStore(Map.of(CONNECTOR_ID, connector));
 
 		// 2. Build TelemetryManager with the connector store and a HostConfiguration:
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
+			.connectorStore(connectorStore)
+			.build();
 
 		// 3. Mark the connector status as OK so that isConnectorStatusOk(...) returns true:
 		StrategyTestHelper.setConnectorStatusInNamespace(true, CONNECTOR_ID, telemetryManager);
@@ -93,8 +90,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 		secondMonitorAttributes.put(MONITOR_ATTRIBUTE_ID, "b"); // ID 'b'
 		secondMonitorAttributes.put(MONITOR_ATTRIBUTE_NAME, ""); // blank name
 
-		final MonitorFactory factory1 = MonitorFactory
-			.builder()
+		final MonitorFactory factory1 = MonitorFactory.builder()
 			.attributes(new HashMap<>(firstMonitorAttributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)
@@ -104,8 +100,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 			.build();
 		final Monitor monitor1 = factory1.createOrUpdateMonitor();
 
-		final MonitorFactory factory2 = MonitorFactory
-			.builder()
+		final MonitorFactory factory2 = MonitorFactory.builder()
 			.attributes(new HashMap<>(secondMonitorAttributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)
@@ -157,8 +152,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 		attributes.put(MONITOR_ATTRIBUTE_ID, "fixed-id");
 		attributes.put(MONITOR_ATTRIBUTE_NAME, "my-custom-name");
 
-		final MonitorFactory factory = MonitorFactory
-			.builder()
+		final MonitorFactory factory = MonitorFactory.builder()
 			.attributes(new HashMap<>(attributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)
@@ -200,8 +194,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 		cpuAttributes.put("vendor", "Intel");
 		cpuAttributes.put("model", "Xeon");
 
-		final MonitorFactory cpuFactory = MonitorFactory
-			.builder()
+		final MonitorFactory cpuFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(cpuAttributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)
@@ -238,8 +231,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 		diskAttributes.put("device_id", "pd0"); // fallback
 		diskAttributes.put("vendor", "Seagate");
 
-		final MonitorFactory diskFactory = MonitorFactory
-			.builder()
+		final MonitorFactory diskFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(diskAttributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)
@@ -269,11 +261,9 @@ class HardwareMonitorNameGenerationStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore();
 		final Connector connector = new Connector();
 		connector.setConnectorIdentity(
-			ConnectorIdentity
-				.builder()
+			ConnectorIdentity.builder()
 				.detection(
-					Detection
-						.builder()
+					Detection.builder()
 						// no "hardware" tag here
 						.tags(Set.of())
 						.appliesTo(Set.of(DeviceKind.WINDOWS))
@@ -284,12 +274,10 @@ class HardwareMonitorNameGenerationStrategyTest {
 		connectorStore.setStore(Map.of(CONNECTOR_ID, connector));
 
 		// 2. Build TelemetryManager
-		telemetryManager =
-			TelemetryManager
-				.builder()
-				.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
-				.connectorStore(connectorStore)
-				.build();
+		telemetryManager = TelemetryManager.builder()
+			.hostConfiguration(HostConfiguration.builder().hostId(HOST_NAME).hostname(HOST_NAME).sequential(false).build())
+			.connectorStore(connectorStore)
+			.build();
 		StrategyTestHelper.setConnectorStatusInNamespace(true, CONNECTOR_ID, telemetryManager);
 
 		// 3. Create a CPU monitor (type=CPU) under that connector
@@ -299,8 +287,7 @@ class HardwareMonitorNameGenerationStrategyTest {
 		cpuAttributes.put("vendor", "Intel");
 		cpuAttributes.put("model", "Xeon");
 
-		final MonitorFactory cpuFactory = MonitorFactory
-			.builder()
+		final MonitorFactory cpuFactory = MonitorFactory.builder()
 			.attributes(new HashMap<>(cpuAttributes))
 			.discoveryTime(discoveryTime)
 			.connectorId(CONNECTOR_ID)

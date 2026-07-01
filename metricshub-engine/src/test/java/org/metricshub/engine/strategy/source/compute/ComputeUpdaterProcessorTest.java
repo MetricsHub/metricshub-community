@@ -7,8 +7,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.metricshub.engine.configuration.HostConfiguration;
 import org.metricshub.engine.connector.model.common.ConversionType;
 import org.metricshub.engine.connector.model.common.ReferenceTranslationTable;
 import org.metricshub.engine.connector.model.common.TranslationTable;
@@ -34,6 +36,7 @@ import org.metricshub.engine.connector.model.monitor.task.source.compute.Substri
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Subtract;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Translate;
 import org.metricshub.engine.connector.model.monitor.task.source.compute.Xml2Csv;
+import org.metricshub.engine.telemetry.TelemetryManager;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -49,6 +52,13 @@ class ComputeUpdaterProcessorTest {
 
 	@InjectMocks
 	private ComputeUpdaterProcessor computeUpdaterProcessor;
+
+	@BeforeEach
+	void setUp() {
+		this.computeUpdaterProcessor.setTelemetryManager(
+			TelemetryManager.builder().hostConfiguration(HostConfiguration.builder().build()).build()
+		);
+	}
 
 	@Test
 	void testProcessAdd() {
@@ -203,8 +213,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessTranslate() {
-		final Translate translate = Translate
-			.builder()
+		final Translate translate = Translate.builder()
 			.column(-1)
 			.translationTable(TranslationTable.builder().build())
 			.build();
@@ -215,8 +224,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessExtractPropertyFromWbemPath() {
-		final ExtractPropertyFromWbemPath extractPropertyFromWbemPath = ExtractPropertyFromWbemPath
-			.builder()
+		final ExtractPropertyFromWbemPath extractPropertyFromWbemPath = ExtractPropertyFromWbemPath.builder()
 			.property("property")
 			.column(-1)
 			.build();
@@ -227,8 +235,7 @@ class ComputeUpdaterProcessorTest {
 
 	@Test
 	void testProcessPerBitTranslation() {
-		final PerBitTranslation perBitTranslation = PerBitTranslation
-			.builder()
+		final PerBitTranslation perBitTranslation = PerBitTranslation.builder()
 			.column(-1)
 			.bitList(EMPTY)
 			.translationTable(TranslationTable.builder().build())

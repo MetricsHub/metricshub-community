@@ -101,8 +101,7 @@ public class ProtocolCheckService implements IMCPToolService {
 					hostname,
 					this::buildNullHostnameResponse,
 					host ->
-						HostToolResponse
-							.<ProtocolCheckResponse>builder()
+						HostToolResponse.<ProtocolCheckResponse>builder()
 							.hostname(host)
 							.response(protocolHealthCheckService.checkFromAgentContext(host, protocol, timeout, extension))
 							.build(),

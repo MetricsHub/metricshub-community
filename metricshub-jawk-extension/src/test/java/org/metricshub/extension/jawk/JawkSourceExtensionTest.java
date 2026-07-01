@@ -52,16 +52,13 @@ class JawkSourceExtensionTest {
 
 	@Test
 	void testProcessSource() {
-		final ConnectorVariables connectorVariables = ConnectorVariables
-			.builder()
+		final ConnectorVariables connectorVariables = ConnectorVariables.builder()
 			.variableValues(Map.of("myVariable", "myVariableValue"))
 			.build();
 		final JawkSourceExtension jawkExtension = new JawkSourceExtension();
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostname("test-host")
 					.hostId("test-host")
 					.connectorVariables(Map.of(CONNECTOR_ID, connectorVariables))
@@ -73,8 +70,7 @@ class JawkSourceExtensionTest {
 		final List<String> line2 = Arrays.asList("BAR", "10", "20", "30");
 		final List<String> line3 = Arrays.asList("BAZ", "100", "200", "300");
 		final List<List<String>> tableOne = Arrays.asList(line1, line2, line3);
-		final SourceTable sourceTableOne = SourceTable
-			.builder()
+		final SourceTable sourceTableOne = SourceTable.builder()
 			.table(tableOne)
 			.rawData(SourceTable.tableToCsv(tableOne, ";", false))
 			.build();
@@ -88,8 +84,7 @@ class JawkSourceExtensionTest {
 		telemetryManager.setHostProperties(hostProperties);
 
 		// Http request & Json2CSV
-		final Source source = JawkSource
-			.builder()
+		final Source source = JawkSource.builder()
 			.type("Awk")
 			.input("${source::monitors.system.discovery.sources.source_one}")
 			.script(
@@ -118,24 +113,21 @@ class JawkSourceExtensionTest {
 		final SourceTable sourceTableResult2 = SourceTable.builder().rawData(RAW_DATA_RESULT_2).build();
 		final SourceTable sourceTableResult3 = SourceTable.builder().rawData(RAW_DATA_RESULT_3).build();
 
-		final HttpSource httpSourceFoo = HttpSource
-			.builder()
+		final HttpSource httpSourceFoo = HttpSource.builder()
 			.type("http")
 			.method(HttpMethod.GET)
 			.path("/ConfigurationManager/v1/objects/storages/FOO")
 			.resultContent(ResultContent.BODY)
 			.header("myVariableValue")
 			.build();
-		final HttpSource httpSourceBar = HttpSource
-			.builder()
+		final HttpSource httpSourceBar = HttpSource.builder()
 			.type("http")
 			.method(HttpMethod.GET)
 			.path("/ConfigurationManager/v1/objects/storages/BAR")
 			.resultContent(ResultContent.BODY)
 			.header("myVariableValue")
 			.build();
-		final HttpSource httpSourceBaz = HttpSource
-			.builder()
+		final HttpSource httpSourceBaz = HttpSource.builder()
 			.type("http")
 			.method(HttpMethod.GET)
 			.path("/ConfigurationManager/v1/objects/storages/BAZ")
@@ -145,8 +137,11 @@ class JawkSourceExtensionTest {
 
 		doReturn(telemetryManager).when(sourceProcessorMock).getTelemetryManager();
 
-		when(sourceProcessorMock.process(any(HttpSource.class)))
-			.thenReturn(sourceTableResult1, sourceTableResult2, sourceTableResult3);
+		when(sourceProcessorMock.process(any(HttpSource.class))).thenReturn(
+			sourceTableResult1,
+			sourceTableResult2,
+			sourceTableResult3
+		);
 
 		// Create an ArgumentCaptor for capturing HttpSource arguments
 		final ArgumentCaptor<HttpSource> httpCaptor = ArgumentCaptor.forClass(HttpSource.class);
@@ -186,19 +181,19 @@ class JawkSourceExtensionTest {
 
 		// WBEM Request
 		((JawkSource) source).setScript(
-				"""
-					BEGIN {
-					    FS=";"
-					    OFS=";"
-				    }
+			"""
+				BEGIN {
+				    FS=";"
+				    OFS=";"
+			    }
 
-				    {
-				    	requestArguments["query"] = "myQuery"
-				    	requestArguments["namespace"] = "myNamespace"
-					    print executeWbemRequest(requestArguments)
-					}
-				"""
-			);
+			    {
+			    	requestArguments["query"] = "myQuery"
+			    	requestArguments["namespace"] = "myNamespace"
+				    print executeWbemRequest(requestArguments)
+				}
+			"""
+		);
 		((JawkSource) source).setInput("input test");
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
@@ -228,19 +223,19 @@ class JawkSourceExtensionTest {
 
 		// WMI Request
 		((JawkSource) source).setScript(
-				"""
-					BEGIN {
-					    FS=";"
-					    OFS=";"
-				    }
+			"""
+				BEGIN {
+				    FS=";"
+				    OFS=";"
+			    }
 
-				    {
-				    	requestArguments["query"] = "myQuery"
-				    	requestArguments["namespace"] = "myNamespace"
-					    print executeWmiRequest(requestArguments)
-					}
-				"""
-			);
+			    {
+			    	requestArguments["query"] = "myQuery"
+			    	requestArguments["namespace"] = "myNamespace"
+				    print executeWmiRequest(requestArguments)
+				}
+			"""
+		);
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
 		)
@@ -269,18 +264,18 @@ class JawkSourceExtensionTest {
 
 		// SNMP Get Request
 		((JawkSource) source).setScript(
-				"""
-					BEGIN {
-					    FS=";"
-					    OFS=";"
-				    }
+			"""
+				BEGIN {
+				    FS=";"
+				    OFS=";"
+			    }
 
-				    {
-				    	requestArguments["oid"] = "1.2.3.4.5.6"
-					    print executeSnmpGet(requestArguments)
-					}
-				"""
-			);
+			    {
+			    	requestArguments["oid"] = "1.2.3.4.5.6"
+				    print executeSnmpGet(requestArguments)
+				}
+			"""
+		);
 
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
@@ -309,19 +304,19 @@ class JawkSourceExtensionTest {
 
 		// SNMP Table Request
 		((JawkSource) source).setScript(
-				"""
-					BEGIN {
-					    FS=";"
-					    OFS=";"
-				    }
+			"""
+				BEGIN {
+				    FS=";"
+				    OFS=";"
+			    }
 
-				    {
-				    	requestArguments["oid"] = "1.2.3.4.5.6"
-				    	requestArguments["selectColumns"] = "1"
-					    print executeSnmpTable(requestArguments)
-					}
-				"""
-			);
+			    {
+			    	requestArguments["oid"] = "1.2.3.4.5.6"
+			    	requestArguments["selectColumns"] = "1"
+				    print executeSnmpTable(requestArguments)
+				}
+			"""
+		);
 		doReturn(
 			SourceTable.builder().rawData("result1;result2").table(SourceTable.csvToTable("result1;result2", ";")).build()
 		)

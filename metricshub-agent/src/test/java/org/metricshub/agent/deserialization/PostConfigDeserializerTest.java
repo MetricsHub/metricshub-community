@@ -24,8 +24,7 @@ import org.metricshub.extension.snmp.SnmpExtension;
 class PostConfigDeserializerTest {
 
 	// Initialize the extension manager required by ther deserializer
-	final ExtensionManager extensionManager = ExtensionManager
-		.builder()
+	final ExtensionManager extensionManager = ExtensionManager.builder()
 		.withProtocolExtensions(List.of(new OsCommandExtension(), new SnmpExtension()))
 		.build();
 

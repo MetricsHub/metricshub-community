@@ -101,8 +101,7 @@ class ExecuteWqlQueryServiceTest {
 	void testExecuteWqlQueryWithoutConfiguration() {
 		setup();
 		// creating a host configuration without configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of())
 			.build();
@@ -126,10 +125,8 @@ class ExecuteWqlQueryServiceTest {
 
 		assertNotNull(result, "Result should not be null when executing a query");
 
-		assertEquals(
-			"No valid wmi configuration found for %s.".formatted(HOSTNAME),
-			result.getError(),
-			() -> "Unexpected error message when host has no configurations. "
+		assertEquals("No valid wmi configuration found for %s.".formatted(HOSTNAME), result.getError(), () ->
+			"Unexpected error message when host has no configurations. "
 		);
 	}
 
@@ -142,10 +139,8 @@ class ExecuteWqlQueryServiceTest {
 		// Calling execute query
 		final MultiHostToolResponse<QueryResponse> result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT);
 
-		assertEquals(
-			"The %s extension is not available".formatted(WMI_IDENTIFIER),
-			result.getErrorMessage(),
-			() -> "Unexpected error message when the WMI extension isn't found"
+		assertEquals("The %s extension is not available".formatted(WMI_IDENTIFIER), result.getErrorMessage(), () ->
+			"Unexpected error message when the WMI extension isn't found"
 		);
 		assertTrue(result.getHosts().isEmpty(), () -> "No host responses expected when extension missing");
 	}
@@ -154,16 +149,14 @@ class ExecuteWqlQueryServiceTest {
 	void testExecuteWqlQueryOnWmi() throws ClientException {
 		setup();
 		// Creating a WMI Configuration for the host
-		WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the WMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
 			.build();
@@ -183,18 +176,15 @@ class ExecuteWqlQueryServiceTest {
 				eq(NAMESPACE),
 				isNull()
 			)
-		)
-			.thenReturn(List.of(List.of("Value1", "Value2")));
+		).thenReturn(List.of(List.of("Value1", "Value2")));
 
 		final QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT)
 			.getHosts()
 			.get(0)
 			.getResponse();
 
-		assertEquals(
-			TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))),
-			result.getResponse(),
-			() -> "WMI response mismatch for mocked values [Value1, Value2]"
+		assertEquals(TextTableHelper.generateTextTable(List.of(List.of("Value1", "Value2"))), result.getResponse(), () ->
+			"WMI response mismatch for mocked values [Value1, Value2]"
 		);
 	}
 
@@ -204,16 +194,14 @@ class ExecuteWqlQueryServiceTest {
 		setup();
 
 		// Creating a WMI Configuration for the host
-		WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.hostname(HOSTNAME)
 			.username("username")
 			.password("password".toCharArray())
 			.build();
 
 		// Creating a host configuration with the WMI configuration
-		HostConfiguration hostConfiguration = HostConfiguration
-			.builder()
+		HostConfiguration hostConfiguration = HostConfiguration.builder()
 			.hostname(HOSTNAME)
 			.configurations(Map.of(WmiConfiguration.class, wmiConfiguration))
 			.build();
@@ -233,17 +221,15 @@ class ExecuteWqlQueryServiceTest {
 				eq(NAMESPACE),
 				isNull()
 			)
-		)
-			.thenThrow(new RuntimeException("An error has occurred"));
+		).thenThrow(new RuntimeException("An error has occurred"));
 
 		// Call the execute query method
 		QueryResponse result = executeQuery(WMI_IDENTIFIER, WQL_QUERY, NAMESPACE, TIMEOUT).getHosts().get(0).getResponse();
 
 		// Assertions
 		assertNotNull(result.getError(), () -> "Error message should be returned when an exception is throws");
-		assertTrue(
-			result.getError().contains("An error has occurred"),
-			() -> "Error message should contain 'An error has occurred'"
+		assertTrue(result.getError().contains("An error has occurred"), () ->
+			"Error message should contain 'An error has occurred'"
 		);
 	}
 
@@ -251,8 +237,7 @@ class ExecuteWqlQueryServiceTest {
 	void testBuildConfigurationWithNamespace() {
 		final WmiExtension wmiExtension = new WmiExtension();
 		final ExecuteWqlQueryService wqlQueryService = new ExecuteWqlQueryService(agentContextHolder);
-		final WmiConfiguration wmiConfiguration = WmiConfiguration
-			.builder()
+		final WmiConfiguration wmiConfiguration = WmiConfiguration.builder()
 			.username("username")
 			.hostname(HOSTNAME)
 			.password("password".toCharArray())
@@ -268,10 +253,8 @@ class ExecuteWqlQueryServiceTest {
 		final WmiConfiguration newConfiguration = (WmiConfiguration) result.get();
 
 		wmiConfiguration.setNamespace(NAMESPACE);
-		assertEquals(
-			wmiConfiguration,
-			newConfiguration,
-			() -> "Built configuration should match input configuration with namespace set"
+		assertEquals(wmiConfiguration, newConfiguration, () ->
+			"Built configuration should match input configuration with namespace set"
 		);
 	}
 
@@ -280,25 +263,17 @@ class ExecuteWqlQueryServiceTest {
 		wqlQueryService = new ExecuteWqlQueryService(agentContextHolder);
 		final String namespace = "root/custom";
 
-		assertEquals(
-			namespace,
-			wqlQueryService.normalizeNamespace("wbem", namespace),
-			() -> "Should return provided namespace root/custom"
+		assertEquals(namespace, wqlQueryService.normalizeNamespace("wbem", namespace), () ->
+			"Should return provided namespace root/custom"
 		);
-		assertEquals(
-			namespace,
-			wqlQueryService.normalizeNamespace("wmi", namespace),
-			() -> "Should return provided namespace root/custom"
+		assertEquals(namespace, wqlQueryService.normalizeNamespace("wmi", namespace), () ->
+			"Should return provided namespace root/custom"
 		);
-		assertEquals(
-			DEFAULT_WBEM_NAMESPACE,
-			wqlQueryService.normalizeNamespace("WbEm", "   "),
-			() -> "Should return default WBEM namespace when the given namespace is blank"
+		assertEquals(DEFAULT_WBEM_NAMESPACE, wqlQueryService.normalizeNamespace("WbEm", "   "), () ->
+			"Should return default WBEM namespace when the given namespace is blank"
 		);
-		assertEquals(
-			DEFAULT_WQL_NAMESPACE,
-			wqlQueryService.normalizeNamespace("wmi", null),
-			() -> "Should return default WMI namespace when the given namespace is blank"
+		assertEquals(DEFAULT_WQL_NAMESPACE, wqlQueryService.normalizeNamespace("wmi", null), () ->
+			"Should return default WMI namespace when the given namespace is blank"
 		);
 	}
 

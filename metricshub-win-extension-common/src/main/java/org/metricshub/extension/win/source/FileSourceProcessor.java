@@ -555,8 +555,7 @@ public class FileSourceProcessor {
 
 			// File does not exist or cannot be accessed
 			if (fileSize == null) {
-				return FileSourceProcessingResult
-					.builder()
+				return FileSourceProcessingResult.builder()
 					.cursor(cursor == null ? null : cursor)
 					.remainingSize(remainingSize)
 					.build();
@@ -583,9 +582,10 @@ public class FileSourceProcessor {
 			final long additionalContentSize = fileSize - cursor;
 
 			// Determine the actual size to read, respecting the remaining size limit
-			final long sizeLimit = remainingSize == UNLIMITED_SIZE_PER_POLL
-				? additionalContentSize
-				: Math.min(additionalContentSize, remainingSize);
+			final long sizeLimit =
+				remainingSize == UNLIMITED_SIZE_PER_POLL
+					? additionalContentSize
+					: Math.min(additionalContentSize, remainingSize);
 
 			// Cap read length to int range for readFromOffset; advance cursor by what we actually read
 			final int readLength = sizeLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) sizeLimit;
@@ -594,8 +594,7 @@ public class FileSourceProcessor {
 			final String additionalContent = fileOperations.readFromOffset(path, cursor, readLength);
 
 			// Return the processing results with new content, updated cursor, and remaining size
-			return FileSourceProcessingResult
-				.builder()
+			return FileSourceProcessingResult.builder()
 				.content(additionalContent)
 				.cursor(cursor + readLength)
 				.remainingSize(remainingSize == UNLIMITED_SIZE_PER_POLL ? remainingSize : remainingSize - readLength)

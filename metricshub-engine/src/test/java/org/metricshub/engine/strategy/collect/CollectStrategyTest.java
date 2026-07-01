@@ -96,12 +96,10 @@ class CollectStrategyTest {
 
 		final TestConfiguration snmpConfig = TestConfiguration.builder().build();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.monitors(monitors)
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -110,8 +108,7 @@ class CollectStrategyTest {
 			)
 			.build();
 
-		MonitorFactory monitorFactory = MonitorFactory
-			.builder()
+		MonitorFactory monitorFactory = MonitorFactory.builder()
 			.monitorType(ENCLOSURE)
 			.telemetryManager(telemetryManager)
 			.connectorId(TEST_CONNECTOR_ID)
@@ -121,16 +118,14 @@ class CollectStrategyTest {
 			.build();
 		final Monitor enclosure = monitorFactory.createOrUpdateMonitor();
 
-		monitorFactory =
-			MonitorFactory
-				.builder()
-				.monitorType(DISK_CONTROLLER)
-				.telemetryManager(telemetryManager)
-				.connectorId(TEST_CONNECTOR_ID)
-				.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "1")))
-				.discoveryTime(strategyTime - 30 * 60 * 1000)
-				.keys(DEFAULT_KEYS)
-				.build();
+		monitorFactory = MonitorFactory.builder()
+			.monitorType(DISK_CONTROLLER)
+			.telemetryManager(telemetryManager)
+			.connectorId(TEST_CONNECTOR_ID)
+			.attributes(new HashMap<>(Map.of(MONITOR_ATTRIBUTE_ID, "1")))
+			.discoveryTime(strategyTime - 30 * 60 * 1000)
+			.keys(DEFAULT_KEYS)
+			.build();
 		final Monitor diskController = monitorFactory.createOrUpdateMonitor();
 
 		hostMonitor.addAttribute(IS_ENDPOINT, "true");
@@ -141,8 +136,7 @@ class CollectStrategyTest {
 		final ConnectorStore connectorStore = new ConnectorStore(TEST_CONNECTOR_PATH);
 		telemetryManager.setConnectorStore(connectorStore);
 
-		final ExtensionManager extensionManager = ExtensionManager
-			.builder()
+		final ExtensionManager extensionManager = ExtensionManager.builder()
 			.withProtocolExtensions(List.of(protocolExtensionMock))
 			.build();
 
@@ -152,18 +146,15 @@ class CollectStrategyTest {
 			.when(protocolExtensionMock)
 			.getSupportedCriteria();
 
-		collectStrategy =
-			CollectStrategy
-				.builder()
-				.clientsExecutor(clientsExecutorMock)
-				.strategyTime(strategyTime)
-				.telemetryManager(telemetryManager)
-				.extensionManager(extensionManager)
-				.build();
+		collectStrategy = CollectStrategy.builder()
+			.clientsExecutor(clientsExecutorMock)
+			.strategyTime(strategyTime)
+			.telemetryManager(telemetryManager)
+			.extensionManager(extensionManager)
+			.build();
 
 		// Mock detection criteria result
-		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion
-			.builder()
+		final SnmpGetNextCriterion snmpGetNextCriterion = SnmpGetNextCriterion.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.3.1.1")
 			.type("snmpGetNext")
 			.build();
@@ -172,16 +163,14 @@ class CollectStrategyTest {
 			.processCriterion(eq(snmpGetNextCriterion), anyString(), any(TelemetryManager.class), anyBoolean());
 
 		// Mock source table information for enclosure
-		final SnmpTableSource enclosureSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource enclosureSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.30.1")
 			.selectColumns("ID,1,2")
 			.type("snmpTable")
 			.key("${source::monitors.enclosure.collect.sources.source(1)}")
 			.build();
 		doReturn(
-			SourceTable
-				.builder()
+			SourceTable.builder()
 				.table(SourceTable.csvToTable("enclosure-1;1;healthy", MetricsHubConstants.TABLE_SEP))
 				.build()
 		)
@@ -189,8 +178,7 @@ class CollectStrategyTest {
 			.processSource(eq(enclosureSource), anyString(), any(TelemetryManager.class));
 
 		// Mock source table information for disk_controller
-		final SnmpTableSource diskControllerSource = SnmpTableSource
-			.builder()
+		final SnmpTableSource diskControllerSource = SnmpTableSource.builder()
 			.oid("1.3.6.1.4.1.795.10.1.1.31.1")
 			.selectColumns("ID,1,2")
 			.type("snmpTable")
@@ -214,21 +202,21 @@ class CollectStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test succeeded:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on host.name SUCCEEDED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test succeeded:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result: 1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on host.name SUCCEEDED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 
@@ -275,22 +263,22 @@ class CollectStrategyTest {
 		// Check that StatusInformation is collected on the connector monitor (criterion processing failure case)
 		assertEquals(
 			"Executed SnmpGetNextCriterion Criterion:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"\n" +
-			"Message:\n" +
-			"====================================\n" +
-			"SnmpGetNextCriterion test ran but failed:\n" +
-			"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
-			"\n" +
-			"Actual result:\n" +
-			"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
-			"====================================\n" +
-			"\n" +
-			"Conclusion:\n" +
-			"Test on host.name FAILED",
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"\n" +
+				"Message:\n" +
+				"====================================\n" +
+				"SnmpGetNextCriterion test ran but failed:\n" +
+				"- OID: 1.3.6.1.4.1.795.10.1.1.3.1.1\n" +
+				"\n" +
+				"Actual result:\n" +
+				"1.3.6.1.4.1.795.10.1.1.3.1.1.0\tASN_OCTET_STR\tTest\n" +
+				"====================================\n" +
+				"\n" +
+				"Conclusion:\n" +
+				"Test on host.name FAILED",
 			connectorMonitor.getLegacyTextParameters().get(STATUS_INFORMATION)
 		);
 	}

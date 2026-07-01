@@ -93,8 +93,8 @@ class ContextBudgetManagerTest {
 		// Fourth allocation should be truncated or worse since budget is nearly exhausted
 		assertTrue(
 			result4.tier() == AllocationTier.TRUNCATED ||
-			result4.tier() == AllocationTier.SUMMARY_ONLY ||
-			result4.tier() == AllocationTier.FILE_REFERENCE_ONLY
+				result4.tier() == AllocationTier.SUMMARY_ONLY ||
+				result4.tier() == AllocationTier.FILE_REFERENCE_ONLY
 		);
 	}
 
@@ -132,8 +132,14 @@ class ContextBudgetManagerTest {
 
 		// Then: budget should be tracked correctly across threads
 		// Some should succeed (FULL), some should degrade
-		final long fullCount = results.stream().filter(r -> r.tier() == AllocationTier.FULL).count();
-		final long degradedCount = results.stream().filter(r -> r.tier() != AllocationTier.FULL).count();
+		final long fullCount = results
+			.stream()
+			.filter(r -> r.tier() == AllocationTier.FULL)
+			.count();
+		final long degradedCount = results
+			.stream()
+			.filter(r -> r.tier() != AllocationTier.FULL)
+			.count();
 
 		assertTrue(fullCount >= 1, "At least one allocation should be FULL");
 		assertTrue(degradedCount >= 1, "At least one allocation should be degraded due to budget pressure");

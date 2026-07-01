@@ -127,8 +127,7 @@ public class EmulationConfiguration implements IConfiguration, IProtocolScopedPr
 
 	@Override
 	public IConfiguration copy() {
-		return EmulationConfiguration
-			.builder()
+		return EmulationConfiguration.builder()
 			.hostname(hostname)
 			.http(http != null ? new HttpEmulationConfig((HttpConfiguration) http.copy(), http.getDirectory()) : null)
 			.snmp(snmp != null ? new SnmpEmulationConfig((SnmpConfiguration) snmp.copy(), snmp.getDirectory()) : null)

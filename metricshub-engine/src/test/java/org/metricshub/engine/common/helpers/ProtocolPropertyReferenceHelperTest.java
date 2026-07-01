@@ -19,11 +19,9 @@ class ProtocolPropertyReferenceHelperTest {
 	void testGetProtocolProperty() {
 		final TestConfiguration testConfiguration = new TestConfiguration();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -51,11 +49,9 @@ class ProtocolPropertyReferenceHelperTest {
 	void testGetProtocolPropertyWithProtocolScopedAccessor() {
 		final ProtocolScopedTestConfiguration scopedTestConfiguration = new ProtocolScopedTestConfiguration();
 
-		final TelemetryManager telemetryManager = TelemetryManager
-			.builder()
+		final TelemetryManager telemetryManager = TelemetryManager.builder()
 			.hostConfiguration(
-				HostConfiguration
-					.builder()
+				HostConfiguration.builder()
 					.hostId(HOST_ID)
 					.hostname(HOST_NAME)
 					.sequential(false)
@@ -69,7 +65,8 @@ class ProtocolPropertyReferenceHelperTest {
 	}
 
 	private static final class ProtocolScopedTestConfiguration
-		implements IConfiguration, IProtocolScopedPropertyAccessor {
+		implements IConfiguration, IProtocolScopedPropertyAccessor
+	{
 
 		@Override
 		public String getHostname() {

@@ -19,8 +19,7 @@ import org.metricshub.engine.connector.model.common.ExecuteForEachEntryOf;
 class EntryConcatMethodDeserializerTest {
 
 	private static final String SOURCE_REF = "${source::beforeAll.source1}";
-	private static final String EXECUTE_FOR_EACH_ENTRY_OF_YAML =
-		"""
+	private static final String EXECUTE_FOR_EACH_ENTRY_OF_YAML = """
 		source: ${source::beforeAll.source1}
 		concatMethod: ReplaceMe
 		""";
@@ -36,8 +35,7 @@ class EntryConcatMethodDeserializerTest {
 
 	@Test
 	void testCustomConcatMethodValue() throws IOException {
-		final String yaml =
-			"""
+		final String yaml = """
 
 			  concatStart: "<tag>"
 			  concatEnd: "</tag>"
@@ -49,8 +47,7 @@ class EntryConcatMethodDeserializerTest {
 			ExecuteForEachEntryOf.class
 		);
 		assertEquals(
-			ExecuteForEachEntryOf
-				.builder()
+			ExecuteForEachEntryOf.builder()
 				.source(SOURCE_REF)
 				.concatMethod(new CustomConcatMethod("<tag>", "</tag>"))
 				.build(),

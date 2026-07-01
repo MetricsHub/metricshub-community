@@ -97,8 +97,7 @@ public class WbemSource extends Source {
 
 	@Override
 	public WbemSource copy() {
-		return WbemSource
-			.builder()
+		return WbemSource.builder()
 			.type(type)
 			.key(key)
 			.forceSerialization(forceSerialization)

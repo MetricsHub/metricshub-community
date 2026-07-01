@@ -213,8 +213,7 @@ public class LogFilesService {
 	 */
 	private LogFile buildLogFile(final Path path) {
 		try {
-			return LogFile
-				.builder()
+			return LogFile.builder()
 				.name(path.getFileName().toString())
 				.size(Files.size(path))
 				.lastModificationTime(Files.getLastModifiedTime(path).toString())

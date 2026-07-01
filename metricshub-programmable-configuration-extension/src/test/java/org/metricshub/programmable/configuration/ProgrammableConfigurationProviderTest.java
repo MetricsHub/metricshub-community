@@ -145,8 +145,7 @@ class ProgrammableConfigurationProviderTest {
 			Connection connection = DriverManager.getConnection(url, "sa", "pwd1");
 			Statement statement = connection.createStatement()
 		) {
-			String createTableSQL =
-				"""
+			String createTableSQL = """
 				    CREATE TABLE IF NOT EXISTS users (
 				      username VARCHAR(64),
 				      password VARCHAR(64),
@@ -157,8 +156,7 @@ class ProgrammableConfigurationProviderTest {
 			statement.execute(createTableSQL);
 
 			// Insert data
-			String insertDataSQL =
-				"""
+			String insertDataSQL = """
 				    INSERT INTO users (username, password, hostname, ostype) VALUES
 				      ('adminA','passA','host-a','STORAGE'),
 				      ('adminB','passB','host-b','LINUX'),

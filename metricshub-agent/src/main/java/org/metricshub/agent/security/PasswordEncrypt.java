@@ -43,6 +43,7 @@ import org.metricshub.engine.security.SecurityManager;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class PasswordEncrypt {
+
 	static {
 		Locale.setDefault(Locale.US);
 	}
@@ -70,8 +71,7 @@ public class PasswordEncrypt {
 	 * @return {@link Path} instance
 	 */
 	static Path getSecurityFolderOnWindows() {
-		return ConfigHelper
-			.getProgramDataPath()
+		return ConfigHelper.getProgramDataPath()
 			.stream()
 			.map(path -> Paths.get(path, AgentConstants.PRODUCT_WIN_DIR_NAME, AgentConstants.SECURITY_DIRECTORY_NAME))
 			.findFirst()
@@ -121,9 +121,10 @@ public class PasswordEncrypt {
 		}
 
 		// path/hws-keystore.p12
-		return Paths
-			.get(securityDirectory.toAbsolutePath().toString(), SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME)
-			.toFile();
+		return Paths.get(
+			securityDirectory.toAbsolutePath().toString(),
+			SecurityManager.METRICSHUB_KEY_STORE_FILE_NAME
+		).toFile();
 	}
 
 	/**

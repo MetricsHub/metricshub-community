@@ -312,8 +312,7 @@ public class ConfigurationFilesService {
 	 */
 	private ConfigurationFile buildConfigurationFile(final Path path) {
 		try {
-			return ConfigurationFile
-				.builder()
+			return ConfigurationFile.builder()
 				.name(path.getFileName().toString())
 				.size(Files.size(path))
 				.lastModificationTime(Files.getLastModifiedTime(path).toString())
@@ -503,7 +502,11 @@ public class ConfigurationFilesService {
 				return "";
 			}
 
-			return errors.stream().findFirst().map(DeserializationFailure.Error::getMessage).orElseGet(() -> "");
+			return errors
+				.stream()
+				.findFirst()
+				.map(DeserializationFailure.Error::getMessage)
+				.orElseGet(() -> "");
 		}
 	}
 

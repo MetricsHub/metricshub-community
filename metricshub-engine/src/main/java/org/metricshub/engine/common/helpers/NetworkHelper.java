@@ -186,8 +186,7 @@ public class NetworkHelper {
 		if (
 			// CHECKSTYLE:OFF
 			address instanceof java.net.Inet6Address &&
-			!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches()
-			// CHECKSTYLE:ON
+			!IPV6_ENCLOSED_IN_SQUARE_BRACKETS_PATTERN.matcher(hostnameOrIp).matches() // CHECKSTYLE:ON
 		) {
 			uriHost = "[" + hostnameOrIp + "]";
 		} else {

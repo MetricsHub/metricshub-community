@@ -203,6 +203,14 @@ public class ComputeUpdaterProcessor implements IComputeProcessor {
 		// Deep copy
 		final Compute copy = origin.copy();
 
+		// Replace resource attributes references
+		copy.update(value ->
+			SourceUpdaterProcessor.replaceResourceAttributeReferences(
+				value,
+				telemetryManager.getHostConfiguration().getAttributes()
+			)
+		);
+
 		// Replace device id (mono instance)
 		copy.update(value -> SourceUpdaterProcessor.replaceAttributeReferences(value, attributes));
 
