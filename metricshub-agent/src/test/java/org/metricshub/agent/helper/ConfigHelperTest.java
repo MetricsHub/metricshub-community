@@ -49,6 +49,7 @@ import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.metric.MetricDefinition;
 import org.metricshub.engine.connector.model.metric.StateSet;
 import org.metricshub.engine.connector.model.monitor.MonitorJob;
+import org.metricshub.engine.connector.parser.AdditionalConnectorsParsingResult;
 import org.metricshub.engine.connector.parser.ConnectorParser;
 import org.metricshub.engine.connector.parser.ConnectorStoreComposer;
 import org.metricshub.engine.extension.ExtensionManager;
@@ -733,5 +734,23 @@ class ConfigHelperTest {
 			resultMetric.getDescription(),
 			"Monitor description should override connector description"
 		);
+	}
+
+	@Test
+	void testBuildAdditionalConnectorsWithEmptyStoreReturnsEmptyCustomConnectors() {
+		final ConnectorStore connectorStore = new ConnectorStore();
+		connectorStore.setStore(Map.of());
+		final RawConnectorStore rawConnectorStore = new RawConnectorStore();
+		rawConnectorStore.setStore(Map.of());
+		connectorStore.setRawConnectorStore(rawConnectorStore);
+
+		final AdditionalConnectorsParsingResult result = ConfigHelper.buildAdditionalConnectors(
+			connectorStore,
+			null,
+			rawConnectorStore
+		);
+
+		assertNotNull(result);
+		assertTrue(result.getCustomConnectorsMap().isEmpty());
 	}
 }
