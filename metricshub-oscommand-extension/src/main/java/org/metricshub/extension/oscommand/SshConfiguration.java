@@ -31,6 +31,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
+import org.metricshub.engine.common.helpers.NetworkHelper;
 import org.metricshub.engine.common.helpers.StringHelper;
 
 /**
@@ -118,6 +119,21 @@ public class SshConfiguration extends OsCommandConfiguration {
 			attr -> attr == null || attr < 0 || attr > 65535,
 			() -> String.format("Resource %s - Port value is invalid for SSH protocol.", resourceKey)
 		);
+
+		if (!NetworkHelper.isLocalhost(hostname)) {
+			final boolean hasPassword = password != null && String.valueOf(password).trim().length() > 0;
+			final boolean hasPrivateKey = privateKey != null && !privateKey.isBlank();
+			if (!hasPassword && !hasPrivateKey) {
+				throw new InvalidConfigurationException(
+					String.format(
+						"Resource %s - No password or private key configured for protocol %s." +
+						" Configure one authentication method. This resource will not be monitored.",
+						resourceKey,
+						"SSH"
+					)
+				);
+			}
+		}
 	}
 
 	@Override

@@ -974,15 +974,11 @@ public class ConfigHelper {
 			// Retrieve the raw connector store
 			final RawConnectorStore rawConnectorStore = resourceConnectorStore.getRawConnectorStore();
 
-			// Read connectors with configuration variables safely
-			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
-				.builder()
-				.withRawConnectorStore(rawConnectorStore)
-				.withUpdateChain(ConnectorParser.createUpdateChain())
-				.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
-				.withAdditionalConnectors(additionalConnectors)
-				.build()
-				.resolveConnectorStoreVariables(resourceConnectorStore);
+			final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = buildAdditionalConnectors(
+				resourceConnectorStore,
+				additionalConnectors,
+				rawConnectorStore
+			);
 
 			// Overwrite resourceConnectorStore
 			resourceConnectorStore.addMany(additionalConnectorsParsingResult.getCustomConnectorsMap());
@@ -1004,6 +1000,23 @@ public class ConfigHelper {
 				e.getMessage()
 			);
 		}
+	}
+
+	public static AdditionalConnectorsParsingResult buildAdditionalConnectors(
+		final ConnectorStore resourceConnectorStore,
+		final Map<String, AdditionalConnector> additionalConnectors,
+		final RawConnectorStore rawConnectorStore
+	) {
+		// Read connectors with configuration variables safely
+		final AdditionalConnectorsParsingResult additionalConnectorsParsingResult = ConnectorStoreComposer
+			.builder()
+			.withRawConnectorStore(rawConnectorStore)
+			.withUpdateChain(ConnectorParser.createUpdateChain())
+			.withDeserializer(new ConnectorDeserializer(rawConnectorStore.getMapperFromSubtypes()))
+			.withAdditionalConnectors(additionalConnectors)
+			.build()
+			.resolveConnectorStoreVariables(resourceConnectorStore);
+		return additionalConnectorsParsingResult;
 	}
 
 	/**

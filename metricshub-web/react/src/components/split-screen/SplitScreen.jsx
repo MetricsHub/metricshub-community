@@ -85,7 +85,16 @@ export const Right = ({ children, disableScroll = false, ...rest }) => (
 	<Box
 		{...rest}
 		sx={(t) => ({
-			...(disableScroll ? { overflow: "hidden", height: "100%", minWidth: 0 } : Scrollbar(t)),
+			...(disableScroll
+				? {
+						overflow: "hidden",
+						height: "100%",
+						minHeight: 0,
+						minWidth: 0,
+						display: "flex",
+						flexDirection: "column",
+					}
+				: Scrollbar(t)),
 			...rest.sx,
 		})}
 	>
@@ -197,7 +206,18 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 				...rest.sx,
 			}}
 		>
-			<Left sx={{ gridColumn: 1, gridRow: 1 }}>{leftChild?.props.children}</Left>
+			{leftChild
+				? React.cloneElement(leftChild, {
+						sx: [
+							{ gridColumn: 1, gridRow: 1 },
+							...(Array.isArray(leftChild.props.sx)
+								? leftChild.props.sx
+								: leftChild.props.sx
+									? [leftChild.props.sx]
+									: []),
+						],
+					})
+				: null}
 
 			{/* Sash */}
 			<Box
@@ -224,7 +244,18 @@ export const SplitScreen = ({ children, initialLeftPct = 40, smallScreenHeader, 
 				}}
 			/>
 
-			<Right sx={{ gridColumn: 3, gridRow: 1 }}>{rightChild?.props.children}</Right>
+			{rightChild
+				? React.cloneElement(rightChild, {
+						sx: [
+							{ gridColumn: 3, gridRow: 1 },
+							...(Array.isArray(rightChild.props.sx)
+								? rightChild.props.sx
+								: rightChild.props.sx
+									? [rightChild.props.sx]
+									: []),
+						],
+					})
+				: null}
 		</Box>
 	);
 };

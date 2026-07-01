@@ -22,6 +22,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.extension.http.HttpConfiguration;
 import org.metricshub.extension.http.HttpExtension;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.service.ProtocolHealthCheckService;
 
 class ProtocolCheckServiceTest {
 
@@ -68,7 +69,8 @@ class ProtocolCheckServiceTest {
 		AgentContextHolder agentContextHolder = mock(AgentContextHolder.class);
 		when(agentContextHolder.getAgentContext()).thenReturn(agentContext);
 
-		protocolCheckService = new ProtocolCheckService(agentContextHolder);
+		protocolCheckService =
+			new ProtocolCheckService(agentContextHolder, new ProtocolHealthCheckService(agentContextHolder));
 	}
 
 	@Test
@@ -122,7 +124,10 @@ class ProtocolCheckServiceTest {
 		when(agentContext.getExtensionManager())
 			.thenReturn(ExtensionManager.builder().withProtocolExtensions(java.util.List.of()).build());
 
-		ProtocolCheckService missingExtService = new ProtocolCheckService(agentContextHolder);
+		ProtocolCheckService missingExtService = new ProtocolCheckService(
+			agentContextHolder,
+			new ProtocolHealthCheckService(agentContextHolder)
+		);
 		MultiHostToolResponse<ProtocolCheckResponse> result = checkProtocol(
 			missingExtService,
 			httpExtension.getIdentifier()

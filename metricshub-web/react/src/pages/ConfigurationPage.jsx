@@ -78,8 +78,9 @@ import { useAuth } from "../hooks/use-auth";
 function parseConfigurationPath(pathname) {
 	if (!pathname || !pathname.startsWith("/configuration")) return { repo: null, name: null };
 	if (pathname === "/configuration") return { repo: null, name: null };
-	const configPrefix = "/configuration/config/";
-	const otelPrefix = "/configuration/otel/";
+	if (pathname === "/configuration/yaml-editor") return { repo: null, name: null };
+	const configPrefix = "/configuration/yaml-editor/config/";
+	const otelPrefix = "/configuration/yaml-editor/otel/";
 	if (pathname.startsWith(configPrefix)) {
 		const name = decodeURIComponent(pathname.slice(configPrefix.length));
 		return { repo: "config", name: name || null };
@@ -93,7 +94,10 @@ function parseConfigurationPath(pathname) {
 
 /**
  * Single configuration page: tree on the left (roots "config" and "otel"), editor on the right.
- * URL is the source of truth: /configuration, /configuration/config/:name, /configuration/otel/:name.
+ * URL is the source of truth:
+ * /configuration/yaml-editor,
+ * /configuration/yaml-editor/config/:name,
+ * /configuration/yaml-editor/otel/:name.
  */
 function ConfigurationPage() {
 	const dispatch = useAppDispatch();

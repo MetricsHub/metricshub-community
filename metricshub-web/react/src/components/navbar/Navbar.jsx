@@ -7,7 +7,7 @@ import { useAuth } from "../../hooks/use-auth";
 import { paths } from "../../paths";
 import { SUPPORT_URL } from "../../utils/constants";
 
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import {
 	AppBar,
 	Box,
@@ -28,6 +28,7 @@ import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
+import BuildIcon from "@mui/icons-material/Build";
 import ChatIcon from "@mui/icons-material/Chat";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
@@ -51,7 +52,10 @@ const NavBar = ({ onToggleTheme }) => {
 	const theme = useTheme();
 	const isSmallScreen = useMediaQuery("(max-width:900px)");
 	const [mobileMenuAnchor, setMobileMenuAnchor] = React.useState(null);
+	const [toolsMenuAnchor, setToolsMenuAnchor] = React.useState(null);
 	const mobileMenuOpen = Boolean(mobileMenuAnchor);
+	const toolsMenuOpen = Boolean(toolsMenuAnchor);
+	const location = useLocation();
 
 	const handleMobileMenuOpen = useCallback((event) => {
 		setMobileMenuAnchor(event.currentTarget);
@@ -61,15 +65,22 @@ const NavBar = ({ onToggleTheme }) => {
 		setMobileMenuAnchor(null);
 	}, []);
 
+	const handleToolsMenuOpen = useCallback((event) => {
+		setToolsMenuAnchor(event.currentTarget);
+	}, []);
+
+	const handleToolsMenuClose = useCallback(() => {
+		setToolsMenuAnchor(null);
+	}, []);
+
 	const handleSignOut = useCallback(async () => {
 		await signOut();
-		// AuthGuard will automatically redirect to login with the correct returnTo
 	}, [signOut]);
 
 	const dispatch = useAppDispatch();
 	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
 
-	// Config + Otel dirty/error status for navbar dot indicator
+	// YAML editor dirty/error state — shown as a dot on the Tools button
 	const configDirty = useAppSelector((s) => s.config?.dirtyByName) || {};
 	const configFiles = useAppSelector((s) => s.config?.filesByName) || {};
 	const otelDirty = useAppSelector((s) => s.otelConfig?.dirtyByName) || {};
@@ -84,6 +95,7 @@ const NavBar = ({ onToggleTheme }) => {
 			return val && val.valid === false;
 		},
 	);
+
 	useEffect(() => {
 		dispatch(fetchApplicationStatus());
 		const id = setInterval(() => dispatch(fetchApplicationStatus()), STATUS_REFRESH_MS);
@@ -112,6 +124,9 @@ const NavBar = ({ onToggleTheme }) => {
 			borderBottomColor: t.palette.primary.main,
 		}),
 	};
+
+	const isGuidedConfigurationPath = location.pathname.startsWith(paths.guidedConfig);
+	const isToolsPath = location.pathname.startsWith(paths.configuration);
 
 	return (
 		<>
@@ -208,31 +223,24 @@ const NavBar = ({ onToggleTheme }) => {
 								>
 									Explorer
 								</Button>
-								<Button component={NavLink} size="large" to={paths.configuration} sx={navBtnSx}>
-									<Box sx={{ display: "inline-flex", alignItems: "center", gap: 0.75 }}>
-										<span>Configuration</span>
-										{(hasDirty || hasError) && (
-											<Box
-												component="span"
-												aria-label={
-													hasError ? "Configuration has errors" : "Unsaved configuration changes"
-												}
-												title={
-													hasError ? "Configuration has errors" : "Unsaved configuration changes"
-												}
-												sx={{
-													ml: 0.25,
-													width: 8,
-													height: 8,
-													borderRadius: "50%",
-													bgcolor: (t) =>
-														hasError ? t.palette.error.main : t.palette.warning.main,
-													flexShrink: 0,
-												}}
-											/>
-										)}
-									</Box>
+
+								{/* Configuration → direct link to guided-config resource-groups */}
+								<Button
+									component={NavLink}
+									size="large"
+									to={paths.hostsResourceGroups()}
+									end={false}
+									sx={[
+										navBtnSx,
+										isGuidedConfigurationPath && {
+											bgcolor: (t) => t.palette.action.selected,
+											borderBottomColor: (t) => t.palette.primary.main,
+										},
+									]}
+								>
+									Configuration
 								</Button>
+
 								<Button component={NavLink} size="large" to={paths.agent} sx={navBtnSx}>
 									Agent
 								</Button>
@@ -259,13 +267,92 @@ const NavBar = ({ onToggleTheme }) => {
 					</Box>
 
 					{/* ================= RIGHT SIDE ================= */}
-					<Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto" }}>
-						{/* Help menu - Desktop only */}
-						{!isSmallScreen && <HelpMenu />}
-						{/* Theme toggle - Desktop only */}
-						{!isSmallScreen && <ToggleTheme onClick={handleToggleTheme} />}
-						{/* Profile menu - Desktop only */}
-						{!isSmallScreen && <ProfileMenu username={user?.username} onSignOut={handleSignOut} />}
+					<Box sx={{ display: "flex", alignItems: "stretch", gap: 1, ml: "auto", height: "100%" }}>
+						{/* Tools menu — Desktop only, left of Help */}
+						{!isSmallScreen && (
+							<>
+								<Button
+									size="large"
+									onClick={handleToolsMenuOpen}
+									aria-haspopup="true"
+									aria-expanded={toolsMenuOpen ? "true" : undefined}
+									aria-controls={toolsMenuOpen ? "tools-menu" : undefined}
+									sx={[
+										navBtnSx,
+										{ position: "relative" },
+										isToolsPath && {
+											bgcolor: (t) => t.palette.action.selected,
+											borderBottomColor: (t) => t.palette.primary.main,
+										},
+									]}
+								>
+									Tools
+									{(hasDirty || hasError) && (
+										<Box
+											component="span"
+											aria-label={
+												hasError ? "Configuration has errors" : "Unsaved configuration changes"
+											}
+											title={
+												hasError ? "Configuration has errors" : "Unsaved configuration changes"
+											}
+											sx={{
+												position: "absolute",
+												top: 10,
+												right: 10,
+												width: 8,
+												height: 8,
+												borderRadius: "50%",
+												bgcolor: (t) => (hasError ? t.palette.error.main : t.palette.warning.main),
+												pointerEvents: "none",
+											}}
+										/>
+									)}
+								</Button>
+								<Menu
+									id="tools-menu"
+									anchorEl={toolsMenuAnchor}
+									open={toolsMenuOpen}
+									onClose={handleToolsMenuClose}
+									anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+									transformOrigin={{ vertical: "top", horizontal: "right" }}
+								>
+									<MenuItem
+										component={NavLink}
+										to={paths.configuration}
+										onClick={handleToolsMenuClose}
+									>
+										<ListItemIcon>
+											<DataObjectIcon fontSize="small" />
+											{(hasDirty || hasError) && (
+												<Box
+													component="span"
+													sx={{
+														position: "absolute",
+														top: 8,
+														left: 28,
+														width: 8,
+														height: 8,
+														borderRadius: "50%",
+														bgcolor: (t) =>
+															hasError ? t.palette.error.main : t.palette.warning.main,
+													}}
+												/>
+											)}
+										</ListItemIcon>
+										<ListItemText>YAML Editor</ListItemText>
+									</MenuItem>
+								</Menu>
+							</>
+						)}
+
+						{!isSmallScreen && (
+							<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+								<HelpMenu />
+								<ToggleTheme onClick={handleToggleTheme} />
+								<ProfileMenu username={user?.username} onSignOut={handleSignOut} />
+							</Box>
+						)}
 
 						{/* Mobile menu with all options */}
 						{isSmallScreen && (
@@ -299,11 +386,21 @@ const NavBar = ({ onToggleTheme }) => {
 									</MenuItem>
 									<MenuItem
 										component={NavLink}
-										to={paths.configuration}
+										to={paths.hostsResourceGroups()}
 										onClick={handleMobileMenuClose}
 									>
 										<ListItemIcon>
 											<SettingsIcon fontSize="small" />
+										</ListItemIcon>
+										<ListItemText>Configuration</ListItemText>
+									</MenuItem>
+									<MenuItem
+										component={NavLink}
+										to={paths.configuration}
+										onClick={handleMobileMenuClose}
+									>
+										<ListItemIcon>
+											<DataObjectIcon fontSize="small" />
 											{(hasDirty || hasError) && (
 												<Box
 													component="span"
@@ -320,13 +417,23 @@ const NavBar = ({ onToggleTheme }) => {
 												/>
 											)}
 										</ListItemIcon>
-										<ListItemText>Configuration</ListItemText>
+										<ListItemText>YAML Editor</ListItemText>
 									</MenuItem>
 									<MenuItem component={NavLink} to={paths.agent} onClick={handleMobileMenuClose}>
 										<ListItemIcon>
 											<InfoOutlinedIcon fontSize="small" />
 										</ListItemIcon>
 										<ListItemText>Agent</ListItemText>
+									</MenuItem>
+									<MenuItem
+										component={NavLink}
+										to={paths.agentConfig}
+										onClick={handleMobileMenuClose}
+									>
+										<ListItemIcon>
+											<BuildIcon fontSize="small" />
+										</ListItemIcon>
+										<ListItemText>Agent Config</ListItemText>
 									</MenuItem>
 									<MenuItem component={NavLink} to={paths.chat} onClick={handleMobileMenuClose}>
 										<ListItemIcon>
