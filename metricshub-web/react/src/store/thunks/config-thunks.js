@@ -27,8 +27,10 @@ export const fetchConfigList = createAsyncThunk(
 					return [];
 				}),
 			]);
-			// Merge and return; server already returns flat names
-			return [...(configs || []), ...(backups || [])];
+			// Merge and return; server already returns flat names.
+			// Ignore unexpected files in the backup folder that do not follow the backup naming convention.
+			const validBackups = (backups || []).filter((f) => isBackupFileName(f?.name));
+			return [...(configs || []), ...validBackups];
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}

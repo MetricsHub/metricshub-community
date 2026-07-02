@@ -195,4 +195,19 @@ class OtelConfigurationFilesServiceTest {
 		backups = service.listAllBackupFiles();
 		assertEquals(1, backups.size());
 	}
+
+	@Test
+	void testListAllBackupFilesIgnoresUnexpectedFiles() throws Exception {
+		final OtelConfigurationFilesService service = newService();
+		final Path backupDir = tempOtelDir.resolve("backup");
+		Files.createDirectories(backupDir);
+		Files.writeString(backupDir.resolve("backup-20250101-120000__otel-config.yaml"), "receivers: {}");
+		Files.writeString(backupDir.resolve("random.yaml"), "junk");
+		Files.writeString(backupDir.resolve("backup-config.yaml"), "legacy");
+
+		final List<ConfigurationFile> backups = service.listAllBackupFiles();
+
+		assertEquals(1, backups.size(), "Only convention-compliant backup files should be listed");
+		assertEquals("backup-20250101-120000__otel-config.yaml", backups.get(0).getName());
+	}
 }

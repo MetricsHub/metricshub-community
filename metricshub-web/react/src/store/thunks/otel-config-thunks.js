@@ -17,7 +17,8 @@ export const fetchOtelConfigList = createAsyncThunk(
 					return [];
 				}),
 			]);
-			return [...(configs || []), ...(backups || [])];
+			const validBackups = (backups || []).filter((f) => isBackupFileName(f?.name));
+			return [...(configs || []), ...validBackups];
 		} catch (e) {
 			return rejectWithValue(e.message);
 		}
