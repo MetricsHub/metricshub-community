@@ -124,12 +124,7 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 	)
 	private int[] retryIntervals;
 
-	@Option(
-		names = "--snmpv3-hostname",
-		order = 11,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for SNMP version 3"
-	)
+	@Option(names = "--snmpv3-hostname", order = 11, paramLabel = "HOSTNAME", description = "Hostname for SNMP version 3")
 	private String hostname;
 
 	/**

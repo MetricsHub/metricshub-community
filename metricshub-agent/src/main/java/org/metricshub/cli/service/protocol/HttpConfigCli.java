@@ -100,12 +100,7 @@ public class HttpConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String timeout;
 
-	@Option(
-		names = "--http-hostname",
-		order = 7,
-		paramLabel = "HOSTNAME",
-		description = "HTTP hostname"
-	)
+	@Option(names = "--http-hostname", order = 7, paramLabel = "HOSTNAME", description = "HTTP hostname")
 	private String hostname;
 
 	/**

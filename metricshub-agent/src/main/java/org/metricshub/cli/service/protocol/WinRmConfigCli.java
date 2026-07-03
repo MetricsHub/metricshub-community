@@ -120,12 +120,7 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String namespace;
 
-	@Option(
-		names = "--winrm-hostname",
-		order = 9,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for WinRM"
-	)
+	@Option(names = "--winrm-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for WinRM")
 	private String hostname;
 
 	/**

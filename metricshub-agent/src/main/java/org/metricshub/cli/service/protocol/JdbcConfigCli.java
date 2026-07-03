@@ -88,12 +88,7 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 	)
 	private String type;
 
-	@Option(
-		names = "--jdbc-hostname",
-		order = 9,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for JDBC"
-	)
+	@Option(names = "--jdbc-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for JDBC")
 	private String hostname;
 
 	/**

@@ -69,12 +69,7 @@ public class JmxConfigCli implements IProtocolConfigCli {
 	)
 	private String timeout;
 
-	@Option(
-		names = "--jmx-hostname",
-		order = 6,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for JMX"
-	)
+	@Option(names = "--jmx-hostname", order = 6, paramLabel = "HOSTNAME", description = "Hostname for JMX")
 	private String hostname;
 
 	@Override

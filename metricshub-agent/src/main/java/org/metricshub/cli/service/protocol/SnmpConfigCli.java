@@ -90,12 +90,7 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 	)
 	int[] retryIntervals;
 
-	@Option(
-		names = "--snmp-hostname",
-		order = 6,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for SNMP"
-	)
+	@Option(names = "--snmp-hostname", order = 6, paramLabel = "HOSTNAME", description = "Hostname for SNMP")
 	String hostname;
 
 	/**

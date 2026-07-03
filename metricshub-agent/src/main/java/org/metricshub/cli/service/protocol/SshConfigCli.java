@@ -116,12 +116,7 @@ public class SshConfigCli implements IProtocolConfigCli {
 	)
 	private String sudoCommand;
 
-	@Option(
-		names = "--ssh-hostname",
-		order = 9,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for SSH"
-	)
+	@Option(names = "--ssh-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for SSH")
 	private String hostname;
 
 	/**

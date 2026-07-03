@@ -94,12 +94,7 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 	)
 	private String timeout;
 
-	@Option(
-		names = "--ipmi-hostname",
-		order = 7,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for IPMI-over-LAN"
-	)
+	@Option(names = "--ipmi-hostname", order = 7, paramLabel = "HOSTNAME", description = "Hostname for IPMI-over-LAN")
 	private String hostname;
 
 	/**

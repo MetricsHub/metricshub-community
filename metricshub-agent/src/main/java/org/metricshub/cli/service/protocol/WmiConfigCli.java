@@ -87,12 +87,7 @@ public class WmiConfigCli implements IProtocolConfigCli {
 	)
 	private String namespace;
 
-	@Option(
-		names = "--wmi-hostname",
-		order = 6,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for WMI"
-	)
+	@Option(names = "--wmi-hostname", order = 6, paramLabel = "HOSTNAME", description = "Hostname for WMI")
 	private String hostname;
 
 	/**

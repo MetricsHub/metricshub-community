@@ -103,12 +103,7 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String vcenter;
 
-	@Option(
-		names = "--wbem-hostname",
-		order = 9,
-		paramLabel = "HOSTNAME",
-		description = "Hostname for WBEM"
-	)
+	@Option(names = "--wbem-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for WBEM")
 	private String hostname;
 
 	/**
