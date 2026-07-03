@@ -116,6 +116,15 @@ public class SshConfigCli implements IProtocolConfigCli {
 	)
 	private String sudoCommand;
 
+	@Option(
+		names = "--ssh-hostname",
+		order = 9,
+		paramLabel = "HOSTNAME",
+		defaultValue = "",
+		description = "Hostname for SSH"
+	)
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password
 	 *
@@ -148,6 +157,7 @@ public class SshConfigCli implements IProtocolConfigCli {
 		configuration.set("sudoCommand", new TextNode(sudoCommand));
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("port", new IntNode(getPort()));
+		configuration.set("hostname", new TextNode(hostname));
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ssh", configuration, value -> value)

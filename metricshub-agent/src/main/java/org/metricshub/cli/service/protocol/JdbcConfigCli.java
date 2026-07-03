@@ -88,6 +88,15 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 	)
 	private String type;
 
+	@Option(
+		names = "--jdbc-hostname",
+		order = 9,
+		paramLabel = "HOSTNAME",
+		defaultValue = "",
+		description = "Hostname for JDBC"
+	)
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password..
 	 *
@@ -118,6 +127,7 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("database", new TextNode(database));
 		configuration.set("type", new TextNode(type));
+		configuration.set("hostname", new TextNode(hostname));
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("jdbc", configuration, value -> value)

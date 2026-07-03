@@ -120,6 +120,15 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String namespace;
 
+	@Option(
+		names = "--winrm-hostname",
+		order = 9,
+		paramLabel = "HOSTNAME",
+		defaultValue = "",
+		description = "Hostname for WinRM"
+	)
+	private String hostname;
+
 	/**
 	 * @param defaultUsername Username specified at the top level of the CLI (with the --username option)
 	 * @param defaultPassword Password specified at the top level of the CLI (with the --password option)
@@ -144,6 +153,7 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("authentications", getAuthentications());
 		configuration.set("timeout", new TextNode(timeout));
+		configuration.set("hostname", new TextNode(hostname));
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("winrm", configuration, value -> value)
