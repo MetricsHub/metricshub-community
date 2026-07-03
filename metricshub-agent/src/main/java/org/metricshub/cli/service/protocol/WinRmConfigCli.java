@@ -124,7 +124,6 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 		names = "--winrm-hostname",
 		order = 9,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for WinRM"
 	)
 	private String hostname;

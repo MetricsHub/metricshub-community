@@ -94,7 +94,6 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 		names = "--snmp-hostname",
 		order = 6,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for SNMP"
 	)
 	String hostname;

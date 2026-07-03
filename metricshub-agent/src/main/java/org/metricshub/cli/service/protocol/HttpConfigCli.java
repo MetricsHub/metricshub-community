@@ -104,7 +104,6 @@ public class HttpConfigCli extends AbstractTransportProtocolCli {
 		names = "--http-hostname",
 		order = 7,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "HTTP hostname"
 	)
 	private String hostname;

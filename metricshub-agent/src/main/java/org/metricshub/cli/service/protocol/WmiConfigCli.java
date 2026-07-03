@@ -91,7 +91,6 @@ public class WmiConfigCli implements IProtocolConfigCli {
 		names = "--wmi-hostname",
 		order = 6,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for WMI"
 	)
 	private String hostname;

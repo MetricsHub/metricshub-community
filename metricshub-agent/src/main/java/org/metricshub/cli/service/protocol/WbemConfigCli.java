@@ -107,7 +107,6 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 		names = "--wbem-hostname",
 		order = 9,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for WBEM"
 	)
 	private String hostname;

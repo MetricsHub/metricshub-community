@@ -120,7 +120,6 @@ public class SshConfigCli implements IProtocolConfigCli {
 		names = "--ssh-hostname",
 		order = 9,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for SSH"
 	)
 	private String hostname;

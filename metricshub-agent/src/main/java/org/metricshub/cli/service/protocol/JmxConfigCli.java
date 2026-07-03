@@ -73,7 +73,6 @@ public class JmxConfigCli implements IProtocolConfigCli {
 		names = "--jmx-hostname",
 		order = 6,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for JMX"
 	)
 	private String hostname;

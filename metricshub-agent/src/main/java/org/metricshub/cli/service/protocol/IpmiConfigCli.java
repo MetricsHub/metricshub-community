@@ -98,7 +98,6 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 		names = "--ipmi-hostname",
 		order = 7,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for IPMI-over-LAN"
 	)
 	private String hostname;

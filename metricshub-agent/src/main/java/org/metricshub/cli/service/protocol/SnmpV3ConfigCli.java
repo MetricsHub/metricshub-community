@@ -128,7 +128,6 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 		names = "--snmpv3-hostname",
 		order = 11,
 		paramLabel = "HOSTNAME",
-		defaultValue = "",
 		description = "Hostname for SNMP version 3"
 	)
 	private String hostname;
