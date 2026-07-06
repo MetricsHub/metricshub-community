@@ -90,6 +90,9 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 	)
 	int[] retryIntervals;
 
+	@Option(names = "--snmp-hostname", order = 6, paramLabel = "HOSTNAME", description = "Hostname for SNMP")
+	String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password
 	 *
@@ -108,6 +111,7 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("port", new IntNode(port));
 		configuration.set("timeout", new TextNode(timeout));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 		if (retryIntervals != null) {
 			final ArrayNode retryIntervalsArrayNode = configuration.putArray("retryIntervals");
 			Arrays.stream(retryIntervals).forEach(retryIntervalsArrayNode::add);

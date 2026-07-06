@@ -110,6 +110,9 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 	)
 	private String driverJar;
 
+	@Option(names = "--jdbc-hostname", order = 11, paramLabel = "HOSTNAME", description = "Hostname for JDBC")
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password..
 	 *
@@ -140,6 +143,7 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("database", new TextNode(database));
 		configuration.set("type", new TextNode(type));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		// Optional explicit JDBC driver selection (className + optional jarPath).
 		if (driverClass != null && !driverClass.isBlank()) {

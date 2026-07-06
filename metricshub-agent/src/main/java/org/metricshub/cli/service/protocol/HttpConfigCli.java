@@ -100,6 +100,9 @@ public class HttpConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String timeout;
 
+	@Option(names = "--http-hostname", order = 7, paramLabel = "HOSTNAME", description = "HTTP hostname")
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password.
 	 *
@@ -125,7 +128,7 @@ public class HttpConfigCli extends AbstractTransportProtocolCli {
 
 		configuration.set("port", new IntNode(getOrDeducePortNumber()));
 		configuration.set("timeout", new TextNode(timeout));
-
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("http", configuration, value -> value)
 			.orElseThrow();

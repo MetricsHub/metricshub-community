@@ -124,6 +124,9 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 	)
 	private int[] retryIntervals;
 
+	@Option(names = "--snmpv3-hostname", order = 11, paramLabel = "HOSTNAME", description = "Hostname for SNMP version 3")
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a
 	 * given password
@@ -157,6 +160,7 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 		configuration.set("contextName", new TextNode(contextName));
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("port", new IntNode(port));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 		if (retryIntervals != null) {
 			// Creating the JSON array for retryIntervals
 			final ArrayNode retryIntervalsNode = JsonNodeFactory.instance.arrayNode();

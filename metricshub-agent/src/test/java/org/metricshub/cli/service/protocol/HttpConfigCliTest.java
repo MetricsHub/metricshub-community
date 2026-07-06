@@ -2,6 +2,7 @@ package org.metricshub.cli.service.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mockStatic;
 
 import java.util.List;
@@ -30,6 +31,7 @@ class HttpConfigCliTest {
 		httpConfigCli.setUsername(username);
 		httpConfigCli.setTimeout(timeout);
 		httpConfigCli.setHttpOrHttps(httpOrHttps);
+		httpConfigCli.setHostname("anyHost");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -47,6 +49,7 @@ class HttpConfigCliTest {
 				.timeout(120L)
 				.port(80)
 				.https(false)
+				.hostname("anyHost")
 				.build();
 
 			HttpConfiguration result = (HttpConfiguration) httpConfigCli.toConfiguration(null, null);
@@ -57,6 +60,7 @@ class HttpConfigCliTest {
 			httpConfigCli = new HttpConfigCli();
 			httpConfigCli.setTimeout(timeout);
 			httpConfigCli.setHttpOrHttps(httpOrHttps);
+			httpConfigCli.setHostname("anyHost");
 
 			result = (HttpConfiguration) httpConfigCli.toConfiguration(username, password);
 			assertNotNull(result);
@@ -79,5 +83,32 @@ class HttpConfigCliTest {
 		httpConfigCli.httpOrHttps.http = true;
 		httpConfigCli.httpOrHttps.https = false;
 		assertEquals(80, httpConfigCli.getOrDeducePortNumber());
+	}
+
+	@Test
+	void testToProtocolWithNullHostname() throws Exception {
+		final HttpConfigCli httpConfigCli = new HttpConfigCli();
+		final char[] password = "p4ssw0rd".toCharArray();
+		final String username = "username";
+		final HttpOrHttps httpOrHttps = new HttpOrHttps();
+		httpConfigCli.setTimeout("120");
+		httpConfigCli.setHttpOrHttps(httpOrHttps);
+		httpConfigCli.setHostname(null);
+
+		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
+			// Initialize the extension manager required by the agent context
+			final ExtensionManager extensionManager = ExtensionManager.builder()
+				.withProtocolExtensions(List.of(new HttpExtension()))
+				.build();
+
+			cliExtensionManagerMock
+				.when(() -> CliExtensionManager.getExtensionManagerSingleton())
+				.thenReturn(extensionManager);
+
+			final HttpConfiguration result = (HttpConfiguration) httpConfigCli.toConfiguration(username, password);
+
+			assertNotNull(result);
+			assertNull(result.getHostname());
+		}
 	}
 }
