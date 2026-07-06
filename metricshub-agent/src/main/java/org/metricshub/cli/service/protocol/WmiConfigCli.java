@@ -113,9 +113,7 @@ public class WmiConfigCli implements IProtocolConfigCli {
 
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("namespace", new TextNode(namespace));
-		if (hostname != null) {
-			configuration.set("hostname", new TextNode(hostname));
-		}
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("wmi", configuration, value -> value)

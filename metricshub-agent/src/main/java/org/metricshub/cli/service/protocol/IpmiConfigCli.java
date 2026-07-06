@@ -120,9 +120,7 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("skipAuth", BooleanNode.valueOf(skipAuth));
 		configuration.set("bmcKey", new TextNode(bmcKey));
-		if (hostname != null) {
-			configuration.set("hostname", new TextNode(hostname));
-		}
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ipmi", configuration, value -> value)

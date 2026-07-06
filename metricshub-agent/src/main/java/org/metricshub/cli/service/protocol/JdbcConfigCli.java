@@ -121,9 +121,7 @@ public class JdbcConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("database", new TextNode(database));
 		configuration.set("type", new TextNode(type));
-		if (hostname != null) {
-			configuration.set("hostname", new TextNode(hostname));
-		}
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("jdbc", configuration, value -> value)

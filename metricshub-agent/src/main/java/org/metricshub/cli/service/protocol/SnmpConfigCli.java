@@ -111,9 +111,7 @@ public class SnmpConfigCli implements IProtocolConfigCli {
 		}
 		configuration.set("port", new IntNode(port));
 		configuration.set("timeout", new TextNode(timeout));
-		if (hostname != null) {
-			configuration.set("hostname", new TextNode(hostname));
-		}
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 		if (retryIntervals != null) {
 			final ArrayNode retryIntervalsArrayNode = configuration.putArray("retryIntervals");
 			Arrays.stream(retryIntervals).forEach(retryIntervalsArrayNode::add);
