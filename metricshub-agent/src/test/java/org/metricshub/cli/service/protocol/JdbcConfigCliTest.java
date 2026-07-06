@@ -25,6 +25,7 @@ class JdbcConfigCliTest {
 		jdbcConfigCli.setPort(3306);
 		jdbcConfigCli.setDatabase("mydatabase");
 		jdbcConfigCli.setType("MySQL");
+		jdbcConfigCli.setHostname("jdbc-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager with SQL protocol extension
@@ -50,6 +51,7 @@ class JdbcConfigCliTest {
 			assertEquals(3306, jdbcConfiguration.getPort());
 			assertEquals("mydatabase", jdbcConfiguration.getDatabase());
 			assertEquals("MySQL", jdbcConfiguration.getType());
+			assertEquals("jdbc-host", jdbcConfiguration.getHostname());
 			assertEquals("testPassword", String.valueOf(jdbcConfiguration.getPassword()));
 		}
 	}

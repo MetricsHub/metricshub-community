@@ -28,6 +28,7 @@ class SshConfigCliTest {
 		sshConfigCli.setPrivateKey("privateKey");
 		sshConfigCli.setSudoCommand("sudoCommand");
 		sshConfigCli.setUseSudoCommands(Set.of("command1", "command2"));
+		sshConfigCli.setHostname("ssh-host");
 
 		try (MockedStatic<CliExtensionManager> CliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -46,6 +47,7 @@ class SshConfigCliTest {
 			assertNotNull(sshConfiguration);
 			assertEquals(username, sshConfiguration.getUsername());
 			assertEquals(String.valueOf(password), String.valueOf(sshConfiguration.getPassword()));
+			assertEquals("ssh-host", sshConfiguration.getHostname());
 		}
 	}
 

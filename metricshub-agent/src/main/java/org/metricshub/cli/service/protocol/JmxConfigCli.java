@@ -69,6 +69,9 @@ public class JmxConfigCli implements IProtocolConfigCli {
 	)
 	private String timeout;
 
+	@Option(names = "--jmx-hostname", order = 6, paramLabel = "HOSTNAME", description = "Hostname for JMX")
+	private String hostname;
+
 	@Override
 	public IConfiguration toConfiguration(final String defaultUsername, final char[] defaultPassword)
 		throws InvalidConfigurationException {
@@ -85,6 +88,7 @@ public class JmxConfigCli implements IProtocolConfigCli {
 		}
 
 		configuration.set("timeout", new TextNode(timeout));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		if (port != null) {
 			configuration.set("port", new IntNode(port));

@@ -26,6 +26,7 @@ class WmiConfigCliTest {
 		wmiConfigCli.setNamespace(namespace);
 		final String timeout = "120";
 		wmiConfigCli.setTimeout(timeout);
+		wmiConfigCli.setHostname("wmi-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -45,6 +46,7 @@ class WmiConfigCliTest {
 				.password(password)
 				.timeout(Long.valueOf(timeout))
 				.namespace(namespace)
+				.hostname("wmi-host")
 				.build();
 			// Check the resulting WMI configuration
 			assertEquals(expected, wmiConfiguration);
