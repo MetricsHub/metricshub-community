@@ -147,7 +147,9 @@ public class WinRmConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("authentications", getAuthentications());
 		configuration.set("timeout", new TextNode(timeout));
-		configuration.set("hostname", new TextNode(hostname));
+		if (hostname != null) {
+			configuration.set("hostname", new TextNode(hostname));
+		}
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("winrm", configuration, value -> value)

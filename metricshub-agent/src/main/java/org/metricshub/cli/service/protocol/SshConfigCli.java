@@ -151,7 +151,9 @@ public class SshConfigCli implements IProtocolConfigCli {
 		configuration.set("sudoCommand", new TextNode(sudoCommand));
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("port", new IntNode(getPort()));
-		configuration.set("hostname", new TextNode(hostname));
+		if (hostname != null) {
+			configuration.set("hostname", new TextNode(hostname));
+		}
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ssh", configuration, value -> value)

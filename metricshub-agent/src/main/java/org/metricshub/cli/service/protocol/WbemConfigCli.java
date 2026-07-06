@@ -131,7 +131,9 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("vcenter", new TextNode(vcenter));
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("port", new IntNode(getOrDeducePortNumber()));
-		configuration.set("hostname", new TextNode(hostname));
+		if (hostname != null) {
+			configuration.set("hostname", new TextNode(hostname));
+		}
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("wbem", configuration, value -> value)

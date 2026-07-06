@@ -88,7 +88,9 @@ public class JmxConfigCli implements IProtocolConfigCli {
 		}
 
 		configuration.set("timeout", new TextNode(timeout));
-		configuration.set("hostname", new TextNode(hostname));
+		if (hostname != null) {
+			configuration.set("hostname", new TextNode(hostname));
+		}
 
 		if (port != null) {
 			configuration.set("port", new IntNode(port));

@@ -160,7 +160,9 @@ public class SnmpV3ConfigCli implements IProtocolConfigCli {
 		configuration.set("contextName", new TextNode(contextName));
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("port", new IntNode(port));
-		configuration.set("hostname", new TextNode(hostname));
+		if (hostname != null) {
+			configuration.set("hostname", new TextNode(hostname));
+		}
 		if (retryIntervals != null) {
 			// Creating the JSON array for retryIntervals
 			final ArrayNode retryIntervalsNode = JsonNodeFactory.instance.arrayNode();
