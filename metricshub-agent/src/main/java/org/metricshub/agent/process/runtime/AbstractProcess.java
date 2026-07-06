@@ -52,19 +52,36 @@ public abstract class AbstractProcess implements IStoppable {
 	@Getter
 	protected ProcessControl processControl;
 
+	/**
+	 * Whether the process is currently started. Writes happen inside the synchronized
+	 * {@link #start()} / {@link #stop()} methods; volatile so unsynchronized readers
+	 * (e.g. status reporting) always see the current value.
+	 */
 	@Getter
-	protected boolean started;
+	protected volatile boolean started;
+
+	/**
+	 * The virtual-machine shutdown hook that stops the process when the JVM shuts down.
+	 * Tracked so we can unregister it on {@link #stop()} and avoid accumulating a hook
+	 * for every {@link #start()} call (e.g. when the process is restarted repeatedly).
+	 */
+	private Thread shutdownHook;
 
 	protected AbstractProcess(final ProcessConfig processConfig) {
 		this.processConfig = processConfig;
 	}
 
 	/**
-	 * Starts the process
+	 * Starts the process.
+	 * <p>
+	 * Synchronized with {@link #stop()} so a concurrent stop (e.g. the JVM shutdown hook
+	 * firing while a restart is launching the process) cannot interleave with the start
+	 * sequence.
+	 * </p>
 	 *
 	 * @throws IOException is thrown if the process cannot be started
 	 */
-	public void start() throws IOException {
+	public synchronized void start() throws IOException {
 		try {
 			onBeforeProcess();
 
@@ -84,8 +101,10 @@ public abstract class AbstractProcess implements IStoppable {
 			// Start the process
 			processControl = ProcessControl.start(processBuilder);
 
-			// Register a new virtual-machine shutdown hook to stop the process
-			ProcessControl.addShutdownHook(this::stop);
+			// Register a new virtual-machine shutdown hook to stop the process.
+			// Keep a reference so we can unregister it on stop() and avoid leaking
+			// a hook per restart.
+			shutdownHook = ProcessControl.addShutdownHook(this::stop);
 
 			onAfterProcessStart();
 
@@ -100,8 +119,18 @@ public abstract class AbstractProcess implements IStoppable {
 		}
 	}
 
+	/**
+	 * Stops the process.
+	 * <p>
+	 * Synchronized so concurrent callers — the restart thread (via
+	 * {@code OtelCollectorProcessService.stop()} / {@code AgentContext.close()}) and the JVM
+	 * shutdown hook registered in {@link #start()} — serialize instead of both passing the
+	 * {@code started} check and running the teardown twice. The second caller then sees
+	 * {@code started == false} and returns without side effects (idempotent).
+	 * </p>
+	 */
 	@Override
-	public void stop() {
+	public synchronized void stop() {
 		if (started) {
 			onBeforeProcessStop();
 
@@ -112,6 +141,30 @@ public abstract class AbstractProcess implements IStoppable {
 			onAfterProcessStop();
 
 			log.info("Stopped process previously launched with command line: {}", processConfig.getCommandLine());
+		}
+
+		// Unregister the shutdown hook (if any) so we don't accumulate one per restart
+		// and so the wrapper can be garbage-collected.
+		unregisterShutdownHook();
+	}
+
+	/**
+	 * Unregisters the shutdown hook associated with this process, if it was previously
+	 * registered and the JVM is not already shutting down.
+	 */
+	private void unregisterShutdownHook() {
+		final Thread hook = shutdownHook;
+		if (hook == null) {
+			return;
+		}
+		shutdownHook = null;
+		try {
+			Runtime.getRuntime().removeShutdownHook(hook);
+		} catch (IllegalStateException e) {
+			// JVM is already shutting down; nothing to unregister.
+			log.debug("Could not unregister shutdown hook (JVM is shutting down): {}", e.getMessage());
+		} catch (Exception e) {
+			log.debug("Failed to unregister shutdown hook: {}", e.getMessage());
 		}
 	}
 

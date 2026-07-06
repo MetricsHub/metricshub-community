@@ -1,6 +1,8 @@
 package org.metricshub.agent.context;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,8 +67,16 @@ class AgentContextTest {
 
 	@Test
 	void testInitialize() throws IOException {
-		final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager);
+		try (final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager)) {
+			assertInitializedAgentContext(agentContext);
+		}
+	}
 
+	/**
+	 * Body of {@link #testInitialize()} moved to a helper so it can run inside try-with-resources
+	 * without an extra level of indentation on every line.
+	 */
+	private static void assertInitializedAgentContext(final AgentContext agentContext) {
 		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
 		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
 		assertNotNull(agentContext.getPid(), "PID should not be null");
@@ -164,39 +174,51 @@ class AgentContextTest {
 	@Test
 	void testInitializeWithTopLevelResources() throws IOException {
 		// Create the agent context using the configuration file path
-		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/top-level-resource-agent-context-test",
-			extensionManager
-		);
+		try (
+			final AgentContext agentContext = new AgentContext(
+				"src/test/resources/config/top-level-resource-agent-context-test",
+				extensionManager
+			)
+		) {
+			// Check AgentContext fields
+			assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
+			assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
+			assertNotNull(agentContext.getPid(), "PID should not be null");
 
-		// Check AgentContext fields
-		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
-		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
-		assertNotNull(agentContext.getPid(), "PID should not be null");
+			// Verify that the agent configuration is not null
+			final AgentConfig agentConfig = agentContext.getAgentConfig();
+			assertNotNull(agentConfig, "AgentConfig should not be null");
 
-		// Verify that the agent configuration is not null
-		final AgentConfig agentConfig = agentContext.getAgentConfig();
-		assertNotNull(agentConfig, "AgentConfig should not be null");
+			// Check whether top-level resources are included in the telemetry managers
+			final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
+			assertEquals(2, telemetryManagers.size(), "TelemetryManagers size should be 2");
 
-		// Check whether top-level resources are included in the telemetry managers
-		final Map<String, Map<String, TelemetryManager>> telemetryManagers = agentContext.getTelemetryManagers();
-		assertEquals(2, telemetryManagers.size(), "TelemetryManagers size should be 2");
-
-		// Check the presence of the top-level resources and the resources inside resource groups
-		assertNotNull(
-			telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY).get("server-2"),
-			"server-2 should not be null"
-		);
-		assertNotNull(telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY).get("server-1"), "server-1 should not be null");
+			// Check the presence of the top-level resources and the resources inside resource groups
+			assertNotNull(
+				telemetryManagers.get(TOP_LEVEL_VIRTUAL_RESOURCE_GROUP_KEY).get("server-2"),
+				"server-2 should not be null"
+			);
+			assertNotNull(telemetryManagers.get(PARIS_RESOURCE_GROUP_KEY).get("server-1"), "server-1 should not be null");
+		}
 	}
 
 	@Test
 	void testInitializeWithConnectorVariables() throws IOException {
-		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/metricshub-connectorVariables",
-			extensionManager
-		);
+		try (
+			final AgentContext agentContext = new AgentContext(
+				"src/test/resources/config/metricshub-connectorVariables",
+				extensionManager
+			)
+		) {
+			assertConnectorVariablesContext(agentContext);
+		}
+	}
 
+	/**
+	 * Body of {@link #testInitializeWithConnectorVariables()} moved to a helper so it can run
+	 * inside try-with-resources without an extra level of indentation on every line.
+	 */
+	private static void assertConnectorVariablesContext(final AgentContext agentContext) {
 		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should not be null");
 		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should not be null");
 		assertNotNull(agentContext.getPid(), "PID should not be null");
@@ -244,15 +266,51 @@ class AgentContextTest {
 
 	@Test
 	void testInitializeWithEnvironmentVariables() throws IOException {
-		final AgentContext agentContext = new AgentContext(
-			"src/test/resources/config/metricshub-environmentVariables",
-			extensionManager
-		);
+		try (
+			final AgentContext agentContext = new AgentContext(
+				"src/test/resources/config/metricshub-environmentVariables",
+				extensionManager
+			)
+		) {
+			assertNotEquals(
+				"${env::JAVA_HOME}",
+				agentContext.getAgentConfig().getOutputDirectory(),
+				"Output directory should not be the same"
+			);
+		}
+	}
 
-		assertNotEquals(
-			"${env::JAVA_HOME}",
-			agentContext.getAgentConfig().getOutputDirectory(),
-			"Output directory should not be the same"
+	@Test
+	void testCloseStopsServicesKeepsFieldsAndIsIdempotent() throws IOException {
+		final AgentContext agentContext = new AgentContext(TEST_CONFIG_DIRECTORY_PATH, extensionManager);
+
+		// Sanity: heavy state is populated before close()
+		assertNotNull(agentContext.getTelemetryManagers(), "TelemetryManagers should be populated before close");
+		assertNotNull(agentContext.getConnectorStore(), "ConnectorStore should be populated before close");
+		assertNotNull(agentContext.getMetricsExporter(), "MetricsExporter should be populated before close");
+		assertNotNull(agentContext.getTaskSchedulingService(), "TaskSchedulingService should be populated before close");
+		assertNotNull(
+			agentContext.getOtelCollectorProcessService(),
+			"OtelCollectorProcessService should be populated before close"
 		);
+		assertFalse(agentContext.isClosed(), "Context should not be closed initially");
+
+		agentContext.close();
+
+		// The context reports closed, but every field survives: threads that grabbed this
+		// context just before it was replaced must see a stopped-but-intact object, never null.
+		assertTrue(agentContext.isClosed(), "Context should report closed after close()");
+		assertNotNull(agentContext.getTelemetryManagers(), "TelemetryManagers should survive close");
+		assertNotNull(agentContext.getConnectorStore(), "ConnectorStore should survive close");
+		assertNotNull(agentContext.getMetricsExporter(), "MetricsExporter should survive close");
+		assertNotNull(agentContext.getTaskSchedulingService(), "TaskSchedulingService should survive close");
+		assertNotNull(agentContext.getOtelCollectorProcessService(), "OtelCollectorProcessService should survive close");
+		assertNotNull(agentContext.getAgentInfo(), "AgentInfo should survive close() for diagnostics");
+		assertNotNull(agentContext.getAgentConfig(), "AgentConfig should survive close() for diagnostics");
+		assertNotNull(agentContext.getConfigDirectory(), "ConfigDirectory should survive close() for diagnostics");
+
+		// close() is idempotent
+		assertDoesNotThrow(agentContext::close, "close() should be idempotent");
+		assertTrue(agentContext.isClosed(), "Context should still report closed");
 	}
 }

@@ -119,47 +119,71 @@ public class OtelCollectorProcessService extends AbstractProcess {
 		// The subprocess must be ran using a separate thread so that it creates a log context for himself only.
 		// The process output will be redirected to a dedicated file, see how log4j2.xml is configured using the
 		// thread context pattern.
-		final ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
-
-		// Run the execution
-		singleThreadExecutor.submit(() -> {
-			// Configure logger
-			ThreadContext.put("logId", OtelCollectorConfig.EXECUTABLE_OUTPUT_ID);
-
-			// By default otelcol debug is enabled
-			String loggerLevel = Level.DEBUG.name();
-
-			// User might want to disable logging for the process
-			if (otelCollectorConfig.getOutput() != OtelCollectorOutput.LOG) {
-				loggerLevel = Level.OFF.name();
-			}
-
-			ThreadContext.put("loggerLevel", loggerLevel);
-
-			final String outputDirectory = agentConfig.getOutputDirectory();
-			if (outputDirectory != null) {
-				ThreadContext.put("outputDirectory", outputDirectory);
-			}
-
-			// Start the executable
-			try {
-				start();
-			} catch (Exception e) {
-				log.error("Could not start process using command line: {}.", processConfig.getCommandLine());
-				log.debug("Error: ", e);
-			}
+		// Use a daemon thread so a leaked executor never keeps the JVM alive.
+		final ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor(runnable -> {
+			final Thread thread = new Thread(runnable, "otelcol-launcher");
+			thread.setDaemon(true);
+			return thread;
 		});
 
 		try {
-			singleThreadExecutor.awaitTermination(otelCollectorConfig.getStartupDelay(), TimeUnit.SECONDS);
-		} catch (Exception e) {
-			// NOSONAR
-			log.error(
-				"Startup process has been interrupted after {} seconds. Command line: {}.",
-				otelCollectorConfig.getStartupDelay(),
-				processConfig.getCommandLine()
-			);
-			log.debug("Error: ", e);
+			// Run the execution
+			singleThreadExecutor.submit(() -> {
+				// Configure logger
+				ThreadContext.put("logId", OtelCollectorConfig.EXECUTABLE_OUTPUT_ID);
+
+				// By default otelcol debug is enabled
+				String loggerLevel = Level.DEBUG.name();
+
+				// User might want to disable logging for the process
+				if (otelCollectorConfig.getOutput() != OtelCollectorOutput.LOG) {
+					loggerLevel = Level.OFF.name();
+				}
+
+				ThreadContext.put("loggerLevel", loggerLevel);
+
+				final String outputDirectory = agentConfig.getOutputDirectory();
+				if (outputDirectory != null) {
+					ThreadContext.put("outputDirectory", outputDirectory);
+				}
+
+				// Start the executable
+				try {
+					start();
+				} catch (Exception e) {
+					log.error("Could not start process using command line: {}.", processConfig.getCommandLine());
+					log.debug("Error: ", e);
+				}
+			});
+
+			// Signal the executor that no more tasks will be submitted so that
+			// awaitTermination can return as soon as the launch task completes,
+			// instead of always blocking for the full startupDelay.
+			singleThreadExecutor.shutdown();
+
+			try {
+				if (!singleThreadExecutor.awaitTermination(otelCollectorConfig.getStartupDelay(), TimeUnit.SECONDS)) {
+					log.warn(
+						"OpenTelemetry Collector did not finish starting within {} seconds. Command line: {}.",
+						otelCollectorConfig.getStartupDelay(),
+						processConfig.getCommandLine()
+					);
+				}
+			} catch (InterruptedException e) {
+				log.error(
+					"Startup process has been interrupted after {} seconds. Command line: {}.",
+					otelCollectorConfig.getStartupDelay(),
+					processConfig.getCommandLine()
+				);
+				log.debug("Error: ", e);
+				Thread.currentThread().interrupt();
+			}
+		} finally {
+			// Ensure the executor is not leaked; the launched process itself
+			// keeps running because it is a separate OS process.
+			if (!singleThreadExecutor.isTerminated()) {
+				singleThreadExecutor.shutdownNow();
+			}
 		}
 	}
 

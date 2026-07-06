@@ -43,19 +43,42 @@ import org.metricshub.agent.config.ResourceConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.telemetry.TelemetryManager;
-import org.metricshub.web.MetricsHubAgentServer;
 
 /**
  * Handles the reload process of the running agent by comparing the current and reloaded configurations.
  * <p>
- * Applies changes dynamically when possible (e.g., resource additions/removals/updates) and performs a full restart
- * if global settings have changed.
+ * Applies changes dynamically when possible (e.g., resource additions/removals/updates) and reports back
+ * to the caller when a full agent restart is required (via {@link ReloadResult#GLOBAL_RESTART_REQUIRED}).
+ * </p>
+ * <p>
+ * <b>Note:</b> unlike previous versions, {@link #reload()} no longer performs a full agent restart itself on
+ * global configuration changes. It only detects them and returns {@link ReloadResult#GLOBAL_RESTART_REQUIRED};
+ * the caller must route through {@code AgentLifecycleService.restartAsync(...)} to actually swap the context.
+ * This makes the two restart triggers (config-file edit and API call) share the same concurrency guard,
+ * status tracking and old-context disposal path. Actions that previously ran after a global restart
+ * (formerly the {@code afterGlobalRestartCallback}) must now be registered through
+ * {@code AgentLifecycleService.addPostRestartHook(...)}.
  * </p>
  */
 @Data
 @Slf4j
 @Builder(setterPrefix = "with")
 public class ReloadService {
+
+	/**
+	 * Outcome of a {@link ReloadService#reload()} invocation.
+	 */
+	public enum ReloadResult {
+		/** The old and new configurations were identical; nothing was changed. */
+		NO_CHANGE,
+		/** Only resource-level differences were detected and applied in place on the running context. */
+		LOCAL_ONLY,
+		/**
+		 * Global configuration differences were detected. The caller must perform a full agent restart
+		 * (typically via {@code AgentLifecycleService.restartAsync(...)}) using the reloaded context.
+		 */
+		GLOBAL_RESTART_REQUIRED
+	}
 
 	private static final int UNLIMITED_RESOURCE_QUOTA = -1;
 
@@ -76,12 +99,6 @@ public class ReloadService {
 	private Runnable beforeRestartCallback = () -> {};
 
 	/**
-	 * Callback to execute after global restarting of the agent
-	 */
-	@Builder.Default
-	private Runnable afterGlobalRestartCallback = () -> {};
-
-	/**
 	 * Callback to execute before scheduling resources
 	 */
 	@Builder.Default
@@ -96,15 +113,21 @@ public class ReloadService {
 	/**
 	 * Reloads the running agent context by comparing it with the reloaded configuration.
 	 * <p>
-	 * Applies resource-level changes dynamically, and triggers a full restart if global configuration changes are detected.
+	 * On resource-level changes only, the changes are applied in place on the running context and
+	 * {@link ReloadResult#LOCAL_ONLY} is returned. On global configuration changes, this method does
+	 * <b>not</b> restart the agent itself: it simply returns
+	 * {@link ReloadResult#GLOBAL_RESTART_REQUIRED}, leaving the caller responsible for scheduling
+	 * a full restart through the lifecycle service.
 	 * </p>
+	 *
+	 * @return the {@link ReloadResult} describing what happened
 	 */
-	public void reload() {
+	public ReloadResult reload() {
 		log.info("Reloading the Agent Context...");
 
 		// No changes have been made to Agent Context
 		if (runningAgentContext.getAgentConfig().equals(reloadedAgentContext.getAgentConfig())) {
-			return;
+			return ReloadResult.NO_CHANGE;
 		}
 
 		// Execute the callback
@@ -112,28 +135,11 @@ public class ReloadService {
 
 		// Compare global configurations
 		if (globalConfigurationHasChanged(runningAgentContext.getAgentConfig(), reloadedAgentContext.getAgentConfig())) {
-			log.info("Global configuration has changed. Restarting MetricsHub Agent...");
-
-			runningAgentContext.getTaskSchedulingService().stop();
-
-			// ServiceLoader responsibility is to manage the scheduler life cycle
-			// OTEL Collector process is not managed by the current ServiceLoader
-			// And should have its own life cycle hot reload management.
-			// Accordingly, we need to transfer the running OTEL Collector process to the reloaded context
-			reloadedAgentContext.setOtelCollectorProcessService(runningAgentContext.getOtelCollectorProcessService());
-
-			// Point the running context to the reloaded one
-			runningAgentContext = reloadedAgentContext;
-			runningAgentContext.getTaskSchedulingService().start();
-
-			// Update the MetricsHub Agent Server with the new context
-			MetricsHubAgentServer.updateAgentContext(runningAgentContext);
-
-			// Execute the Global restart callback
-			afterGlobalRestartCallback.run();
-
-			log.info("MetricsHub Agent restarted with updated global configuration.");
-			return;
+			log.info("Global configuration has changed. A full agent restart is required.");
+			// Delegate the full restart to the caller (typically AgentLifecycleService.restartAsync)
+			// so both restart triggers (file edit + API call) share the same concurrency guard,
+			// status tracking and old-context disposal path.
+			return ReloadResult.GLOBAL_RESTART_REQUIRED;
 		}
 
 		// Execute the restart callback
@@ -165,6 +171,8 @@ public class ReloadService {
 
 		// Schedule the additional resources
 		scheduleResources(resourcesToSchedule, resourceQuotaSupplier.getAsInt());
+
+		return ReloadResult.LOCAL_ONLY;
 	}
 
 	/**

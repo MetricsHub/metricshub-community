@@ -21,20 +21,75 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import org.metricshub.agent.context.AgentContext;
 
 /**
- * This object holds the {@link AgentContext} instance that is used by the spring application.
- * It is designed to be a singleton, allowing for thread-safe updates to the context.
+ * Single, mutable holder for the currently active {@link AgentContext} instance.
+ * <p>
+ * This class is the single source of truth for the running agent context. All web and MCP
+ * services should retrieve the current context via {@link #getAgentContext()} (never cache it),
+ * and every reload / restart path should publish the newly built context via
+ * {@link #setAgentContext(AgentContext)}.
+ * </p>
+ * <p>
+ * Each successful {@code setAgentContext(...)} call increments a monotonically increasing
+ * {@link #getGeneration() generation} counter — helpful in logs and diagnostics to confirm
+ * which context is currently being served after a reload.
+ * </p>
  */
-@Data
-@AllArgsConstructor
 public class AgentContextHolder {
 
-	/**
-	 * Returns the current {@link AgentContext} instance.
-	 */
 	private volatile AgentContext agentContext;
+
+	/**
+	 * Monotonically increasing generation counter, incremented on every
+	 * {@link #setAgentContext(AgentContext)}.
+	 * <p>
+	 * Starts at {@code 1} once the initial context is stored (bootstrap generation).
+	 * </p>
+	 */
+	private final AtomicLong generation = new AtomicLong();
+
+	/**
+	 * Create a new holder pre-populated with the given (bootstrap) agent context.
+	 *
+	 * @param agentContext the initial {@link AgentContext}; must not be {@code null}
+	 */
+	public AgentContextHolder(final AgentContext agentContext) {
+		this.agentContext = Objects.requireNonNull(agentContext, "agentContext must not be null");
+		this.generation.set(1L);
+	}
+
+	/**
+	 * @return the currently active {@link AgentContext}.
+	 */
+	public AgentContext getAgentContext() {
+		return agentContext;
+	}
+
+	/**
+	 * Publish a new {@link AgentContext} as the currently active one.
+	 * <p>
+	 * The {@link #getGeneration() generation counter} is incremented atomically on every call.
+	 * Callers are expected to have started all services on the new context before publishing it,
+	 * and to {@link AgentContext#close() close} the previous context <b>after</b> the swap.
+	 * </p>
+	 *
+	 * @param agentContext the new {@link AgentContext}; must not be {@code null}
+	 */
+	public void setAgentContext(final AgentContext agentContext) {
+		this.agentContext = Objects.requireNonNull(agentContext, "agentContext must not be null");
+		this.generation.incrementAndGet();
+	}
+
+	/**
+	 * @return the monotonically increasing generation of the currently held context. The
+	 *         bootstrap context has generation {@code 1}; each subsequent
+	 *         {@link #setAgentContext(AgentContext)} increments this value.
+	 */
+	public long getGeneration() {
+		return generation.get();
+	}
 }

@@ -790,4 +790,33 @@ class ReloadServiceTest {
 			)
 		);
 	}
+
+	@Test
+	void testReloadReturnsNoChangeWhenConfigsMatch() throws IOException, InterruptedException {
+		final AgentContext context = loadAgentContext("default-config");
+		final AgentConfig config = context.getAgentConfig();
+
+		final ReloadService reloadService = createReloadServiceWithConfigs(config, config);
+		assertEquals(ReloadService.ReloadResult.NO_CHANGE, reloadService.reload());
+
+		shutdownAgents(reloadService);
+	}
+
+	@Test
+	void testReloadReturnsGlobalRestartRequiredWhenGlobalConfigChanges() throws IOException, InterruptedException {
+		final AgentContext oldContext = loadAgentContext("default-config");
+		final AgentContext newContext = loadAgentContext("default-config");
+
+		// Change a global setting (jobPoolSize) on the reloaded config to trigger a global restart
+		newContext.getAgentConfig().setJobPoolSize(oldContext.getAgentConfig().getJobPoolSize() + 1);
+
+		final ReloadService reloadService = ReloadService.builder()
+			.withRunningAgentContext(oldContext)
+			.withReloadedAgentContext(newContext)
+			.build();
+
+		assertEquals(ReloadService.ReloadResult.GLOBAL_RESTART_REQUIRED, reloadService.reload());
+
+		shutdownAgents(reloadService);
+	}
 }
