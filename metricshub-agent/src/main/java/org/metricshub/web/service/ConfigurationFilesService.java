@@ -58,6 +58,7 @@ import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.ConfigurationFile;
 import org.metricshub.web.exception.ConfigFilesException;
+import org.metricshub.web.util.BackupFileNames;
 import org.springframework.stereotype.Service;
 
 /**
@@ -694,6 +695,7 @@ public class ConfigurationFilesService {
 			return files
 				.filter(Files::isRegularFile)
 				.filter(ConfigurationFilesService::hasAllowedExtension)
+				.filter(path -> BackupFileNames.isBackupFileName(path.getFileName().toString()))
 				.map(this::buildConfigurationFile)
 				.filter(Objects::nonNull)
 				.sorted(Comparator.comparing(ConfigurationFile::getName, String.CASE_INSENSITIVE_ORDER))
