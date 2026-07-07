@@ -82,9 +82,9 @@ public class AgentLifecycleService {
 	/**
 	 * Acknowledgement returned by {@link #restartAsync(Supplier)}: the enqueue outcome plus the
 	 * identifier assigned to this restart request. The identifier is stamped into every
-	 * {@link RestartStatus} published for the run serving this request, so a client that fired
-	 * the request can correlate the polled status with its own request instead of mistaking a
-	 * previous restart's terminal status for its own (see {@link RestartStatus#getRequestId()}).
+	 * {@link RestartStatus} published for the run serving this request (its {@code requestId}
+	 * field), so a client that fired the request can correlate the polled status with its own
+	 * request instead of mistaking a previous restart's terminal status for its own.
 	 *
 	 * @param result    the enqueue outcome
 	 * @param requestId the monotonically increasing identifier assigned to this request
