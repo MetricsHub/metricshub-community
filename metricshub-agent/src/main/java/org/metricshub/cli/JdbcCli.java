@@ -104,14 +104,36 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 	private String query;
 
 	@Option(
-		names = { "-h", "-?", "--help" },
+		names = "--driver-class",
 		order = 6,
+		paramLabel = "CLASSNAME",
+		description = """
+		Fully-qualified java.sql.Driver implementation to use (e.g. com.mysql.cj.jdbc.Driver). \
+		Required when the URL is not accepted by any registered drivers\
+		"""
+	)
+	private String driverClass;
+
+	@Option(
+		names = "--driver-jar",
+		order = 7,
+		paramLabel = "JARPATH",
+		description = """
+		Optional path to the JDBC driver JAR. Supports placeholders such as $APP_DIR and $USER_HOME. \
+		Ignored unless --driver-class is also provided\
+		"""
+	)
+	private String driverJar;
+
+	@Option(
+		names = { "-h", "-?", "--help" },
+		order = 8,
 		usageHelp = true,
 		description = "Shows this help message and exits"
 	)
 	boolean usageHelpRequested;
 
-	@Option(names = "-v", order = 7, description = "Verbose mode (repeat the option to increase verbosity)")
+	@Option(names = "-v", order = 9, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
 	PrintWriter printWriter;
@@ -235,6 +257,16 @@ public class JdbcCli implements IQuery, Callable<Integer> {
 
 					configurationNode.set("url", new TextNode(String.valueOf(url)));
 					configurationNode.set("timeout", new TextNode(timeout));
+
+					// Optional explicit JDBC driver selection (className + optional jarPath).
+					if (driverClass != null && !driverClass.isBlank()) {
+						final ObjectNode driverNode = JsonNodeFactory.instance.objectNode();
+						driverNode.set("className", new TextNode(driverClass.trim()));
+						if (driverJar != null && !driverJar.isBlank()) {
+							driverNode.set("jarPath", new TextNode(driverJar.trim()));
+						}
+						configurationNode.set("driver", driverNode);
+					}
 
 					// Build an IConfiguration from the configuration ObjectNode
 					final IConfiguration configuration = extension.buildConfiguration(

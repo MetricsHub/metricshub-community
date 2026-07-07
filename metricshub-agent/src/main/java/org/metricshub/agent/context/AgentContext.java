@@ -33,11 +33,17 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
 import org.metricshub.agent.context.ApplicationProperties.Project;
@@ -61,10 +67,16 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * AgentContext represents the context of the MetricsHub agent, containing various components such as agent information,
  * configuration, telemetry managers, OpenTelemetry configuration, OtelCollector process service, task scheduling service,
  * and metric definitions. It also includes methods for building the context and logging product information.
+ * <p>
+ * Instances are {@link AutoCloseable}: calling {@link #close()} stops the active components (task scheduling service,
+ * OpenTelemetry Collector process) of a previous, no-longer-active context after a restart / reload. Fields are kept
+ * intact so late readers of the old context never hit a {@link NullPointerException}; the heavy state is reclaimed by
+ * the garbage collector once the context becomes unreachable.
+ * </p>
  */
 @Data
 @Slf4j
-public class AgentContext {
+public class AgentContext implements AutoCloseable {
 
 	private AgentInfo agentInfo;
 	private Path configDirectory;
@@ -79,6 +91,16 @@ public class AgentContext {
 	private MetricDefinitions hostMetricDefinitions;
 	protected ExtensionManager extensionManager;
 	private MetricsExporter metricsExporter;
+
+	/**
+	 * Guard flag for {@link #close()} idempotency. Excluded from Lombok's generated
+	 * getters/setters/equals/hashCode/toString.
+	 */
+	@Getter(AccessLevel.NONE)
+	@Setter(AccessLevel.NONE)
+	@EqualsAndHashCode.Exclude
+	@ToString.Exclude
+	private final AtomicBoolean closed = new AtomicBoolean();
 
 	/**
 	 * Instantiate the global context
@@ -280,6 +302,65 @@ public class AgentContext {
 		} catch (Throwable ex) {
 			// NOSONAR
 			return MetricsHubConstants.EMPTY;
+		}
+	}
+
+	/**
+	 * Stops the active components of this context (task scheduling service and OpenTelemetry
+	 * Collector process) so a previous (no-longer-active) context releases its scheduler pool
+	 * threads, gRPC channel and collector child process after a restart.
+	 * <p>
+	 * This method is idempotent: subsequent invocations have no effect. Stopping is
+	 * best-effort, so a context that was <em>built but never activated</em> (e.g. a request
+	 * coalesced by {@code AgentLifecycleService} while another restart was already running)
+	 * does not leak either. Calling {@code close()} on an already-stopped context is safe
+	 * (double-stop is a no-op).
+	 * </p>
+	 * <p>
+	 * The fields are intentionally <b>not</b> nulled: threads that grabbed this context just
+	 * before it was replaced (an in-flight HTTP request, a configuration-reload pass) may still
+	 * dereference it, and must see a stopped-but-intact object rather than a
+	 * {@link NullPointerException}. Once those short-lived readers finish, the whole context —
+	 * including its heavy state — becomes unreachable and is reclaimed by the garbage
+	 * collector.
+	 * </p>
+	 */
+	@Override
+	public void close() {
+		if (!closed.compareAndSet(false, true)) {
+			return;
+		}
+		// Best-effort stop so a discarded (never-activated) context does not leak scheduler
+		// pool threads / a gRPC channel / an OTEL Collector process.
+		if (taskSchedulingService != null) {
+			safeStop("TaskSchedulingService", taskSchedulingService::stop);
+		}
+		if (otelCollectorProcessService != null) {
+			safeStop("OtelCollectorProcessService", otelCollectorProcessService::stop);
+		}
+		log.debug("AgentContext closed: services stopped.");
+	}
+
+	/**
+	 * @return {@code true} if {@link #close()} has been called on this context, {@code false}
+	 *         otherwise. Useful for tests and diagnostics; production code should not need it.
+	 */
+	public boolean isClosed() {
+		return closed.get();
+	}
+
+	/**
+	 * Best-effort stop helper used from {@link #close()}. Swallows any exception and logs it at
+	 * debug level so that a failure to stop one component does not prevent releasing the others.
+	 *
+	 * @param label  human-readable identifier of the component (for logging)
+	 * @param action the stop action to run
+	 */
+	private static void safeStop(final String label, final Runnable action) {
+		try {
+			action.run();
+		} catch (Exception e) {
+			log.debug("close(): failed to stop {}: {}", label, e.getMessage());
 		}
 	}
 

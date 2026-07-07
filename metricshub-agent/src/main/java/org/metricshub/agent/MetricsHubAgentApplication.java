@@ -31,9 +31,12 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.service.ReloadService;
+import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.MetricsHubAgentServer;
+import org.metricshub.web.service.AgentLifecycleService;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 
@@ -77,19 +80,26 @@ public class MetricsHubAgentApplication implements Runnable {
 			// by the ExtensionManager
 			final var extensionManager = ConfigHelper.loadExtensionManager();
 
-			// Initialize the application context
-			final var agentContext = new AgentContext(alternateConfigDirectory, extensionManager);
+			// Initialize the bootstrap agent context
+			final var bootAgentContext = new AgentContext(alternateConfigDirectory, extensionManager);
 
-			// Start OpenTelemetry Collector process
-			agentContext.getOtelCollectorProcessService().launch();
+			// Create the single source of truth for the running AgentContext. All subsequent
+			// reads (Spring services, DirectoryWatcher, AgentLifecycleService, ...) go through
+			// this holder, never through a closure-captured AgentContext.
+			final var agentContextHolder = new AgentContextHolder(bootAgentContext);
 
-			// Start the Scheduler
-			agentContext.getTaskSchedulingService().start();
+			// Start OpenTelemetry Collector process on the bootstrap context
+			bootAgentContext.getOtelCollectorProcessService().launch();
 
-			new Thread(() -> MetricsHubAgentServer.startServer(agentContext)).start();
+			// Start the Scheduler on the bootstrap context
+			bootAgentContext.getTaskSchedulingService().start();
+
+			// Start the Spring server on a separate thread, handing it the holder so the
+			// AgentContextHolder singleton bean is our own instance (used by every service).
+			new Thread(() -> MetricsHubAgentServer.startServer(agentContextHolder)).start();
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
-			final Path configDirectory = agentContext.getConfigDirectory();
+			final Path configDirectory = bootAgentContext.getConfigDirectory();
 
 			DirectoryWatcherTask.builder()
 				.directory(configDirectory)
@@ -99,7 +109,9 @@ public class MetricsHubAgentApplication implements Runnable {
 					// CHECKSTYLE:OFF
 					return (
 						context != null &&
-						extensionManager
+						agentContextHolder
+							.getAgentContext()
+							.getExtensionManager()
 							.findConfigurationFileExtensions()
 							.stream()
 							.anyMatch(fileExtension -> context.toString().endsWith(fileExtension))
@@ -107,24 +119,70 @@ public class MetricsHubAgentApplication implements Runnable {
 					// CHECKSTYLE:ON
 				})
 				.await(CONFIG_WATCHER_AWAIT_MS)
-				.checksumSupplier(() -> buildChecksum(extensionManager, configDirectory))
-				.onChange(() -> {
-					// Create a new Agent Context to use in the reload service
-					final AgentContext newAgentContext = loadNewAgentContext();
-
-					// Reload the agent according to the new Agent Context
-					ReloadService.builder()
-						.withRunningAgentContext(agentContext)
-						.withReloadedAgentContext(newAgentContext)
-						.build()
-						.reload();
-				})
+				.checksumSupplier(() ->
+					buildChecksum(agentContextHolder.getAgentContext().getExtensionManager(), configDirectory)
+				)
+				.onChange(() -> onConfigurationChange(agentContextHolder))
 				.build()
 				.start();
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to start MetricsHub Agent.", e);
 			throw new IllegalStateException("Error dectected during MetricsHub agent startup.", e);
+		}
+	}
+
+	/**
+	 * Handles a configuration directory change detected by the {@link DirectoryWatcherTask}.
+	 * <p>
+	 * Compares the currently active {@link AgentContext} (obtained from the shared
+	 * {@link AgentContextHolder}) with a freshly built one. On resource-only changes the
+	 * {@link ReloadService} applies them in place. On global configuration changes the
+	 * reload is delegated to {@link AgentLifecycleService#restartAsync(java.util.function.Supplier)}
+	 * so both restart triggers (file edit and API call) share the same concurrency guard,
+	 * status tracking and old-context disposal path.
+	 * </p>
+	 *
+	 * @param agentContextHolder the shared holder, always read to get the freshest context
+	 */
+	void onConfigurationChange(final AgentContextHolder agentContextHolder) {
+		final AgentContext currentContext = agentContextHolder.getAgentContext();
+
+		// Build the new agent context eagerly so we can compare configurations
+		final AgentContext newAgentContext = loadNewAgentContext();
+
+		final ReloadService reloadService = ReloadService.builder()
+			.withRunningAgentContext(currentContext)
+			.withReloadedAgentContext(newAgentContext)
+			.build();
+
+		final ReloadResult result = reloadService.reload();
+
+		switch (result) {
+			case GLOBAL_RESTART_REQUIRED -> {
+				// Route through the lifecycle service so the file-triggered restart shares
+				// the same queue, coalescing policy and status tracking as the API-triggered
+				// one.
+				final AgentLifecycleService lifecycle = MetricsHubAgentServer.getBean(AgentLifecycleService.class);
+				if (lifecycle == null) {
+					log.warn("AgentLifecycleService is not available yet; discarding the freshly built context.");
+					newAgentContext.close();
+					return;
+				}
+				// The lifecycle service always accepts the request (SCHEDULED, QUEUED or
+				// COALESCED). Ownership of newAgentContext is now with the service — do NOT
+				// close it here. On COALESCED the service itself closes the previously queued
+				// context.
+				lifecycle.restartAsync(() -> newAgentContext);
+			}
+			case LOCAL_ONLY ->
+				// ReloadService already grafted the required TelemetryManagers from newAgentContext
+				// into the running one. The remaining state on newAgentContext is no longer needed.
+				newAgentContext.close();
+			case NO_CHANGE ->
+				// The freshly built context is not needed
+				newAgentContext.close();
+			default -> log.warn("Unknown reload result: {}", result);
 		}
 	}
 

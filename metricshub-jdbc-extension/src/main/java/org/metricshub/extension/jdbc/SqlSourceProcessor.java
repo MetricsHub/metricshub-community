@@ -30,6 +30,7 @@ import org.metricshub.engine.common.helpers.LoggingHelper;
 import org.metricshub.engine.connector.model.monitor.task.source.SqlSource;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
 /**
  * A class responsible for processing SQL sources and returning the result as a {@link SourceTable}.
@@ -40,6 +41,7 @@ public class SqlSourceProcessor {
 	private SqlRequestExecutor sqlRequestExecutor;
 	private String connectorId;
 	private Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider;
+	private JdbcDriverSelection driverSelection;
 
 	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER =
 		telemetryManager ->
@@ -47,13 +49,29 @@ public class SqlSourceProcessor {
 
 	/**
 	 * Creates a new {@link SqlSourceProcessor} with the given executor and connector ID,
-	 * using the default JDBC configuration provider.
+	 * using the default JDBC configuration provider and no driver selection.
 	 *
 	 * @param sqlRequestExecutor The executor to perform SQL requests.
 	 * @param connectorId        The connector identifier.
 	 */
 	public SqlSourceProcessor(final SqlRequestExecutor sqlRequestExecutor, final String connectorId) {
-		this(sqlRequestExecutor, connectorId, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+		this(sqlRequestExecutor, connectorId, null, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link SqlSourceProcessor} with a pre-resolved {@link JdbcDriverSelection}.
+	 *
+	 * @param sqlRequestExecutor The executor to perform SQL requests.
+	 * @param connectorId        The connector identifier.
+	 * @param driverSelection    Per-call driver selection (may be {@code null} for the legacy
+	 *                           {@link java.sql.DriverManager} path).
+	 */
+	public SqlSourceProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final String connectorId,
+		final JdbcDriverSelection driverSelection
+	) {
+		this(sqlRequestExecutor, connectorId, driverSelection, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
 	}
 
 	/**
@@ -70,8 +88,27 @@ public class SqlSourceProcessor {
 		final String connectorId,
 		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
 	) {
+		this(sqlRequestExecutor, connectorId, null, jdbcConfigurationProvider);
+	}
+
+	/**
+	 * Full constructor.
+	 *
+	 * @param sqlRequestExecutor        The executor to perform SQL requests.
+	 * @param connectorId               The connector identifier.
+	 * @param driverSelection           Per-call driver selection; may be {@code null}.
+	 * @param jdbcConfigurationProvider A function that retrieves the {@link JdbcConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public SqlSourceProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final String connectorId,
+		final JdbcDriverSelection driverSelection,
+		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
+	) {
 		this.sqlRequestExecutor = sqlRequestExecutor;
 		this.connectorId = connectorId;
+		this.driverSelection = driverSelection;
 		this.jdbcConfigurationProvider = jdbcConfigurationProvider;
 	}
 
@@ -113,7 +150,8 @@ public class SqlSourceProcessor {
 				cfg,
 				sqlSource.getQuery(),
 				false,
-				telemetryManager
+				telemetryManager,
+				driverSelection
 			);
 
 			return SourceTable.builder().table(results).rawData(SourceTable.tableToCsv(results, TABLE_SEP, true)).build();

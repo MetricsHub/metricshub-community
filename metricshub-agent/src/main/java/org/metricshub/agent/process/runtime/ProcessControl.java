@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -106,17 +107,64 @@ public class ProcessControl {
 	}
 
 	/**
-	 * Close the InputStream, OutputStream and ErrorStream then destroy the process
+	 * Default timeout, in seconds, granted to the child process to exit gracefully
+	 * before it is forcibly destroyed.
+	 */
+	private static final long STOP_TIMEOUT_SECONDS = 5L;
+
+	/**
+	 * Timeout, in seconds, granted to each stream {@code close()} call before we give up
+	 * waiting for it and return from {@link #stop()}. If a close does not return in time it
+	 * keeps running on a background daemon thread so it cannot block the caller — and since
+	 * it is a daemon thread it will not prevent the JVM from shutting down either.
+	 * <p>
+	 * In the happy path, once the child process is dead its side of the stdio pipes is
+	 * closed and a parent-side {@code close()} returns immediately. On JDK 25 the historical
+	 * JDK pipe-close hangs on Windows have been fixed, so this guard is a defensive measure
+	 * against two remaining edge cases that are outside the JDK's control:
+	 * </p>
+	 * <ul>
+	 *   <li><b>Concurrent reader mid-{@code read()}.</b> {@link java.io.FileInputStream#close()}
+	 *       serializes with an in-flight native {@code read0()}. A gobbler thread
+	 *       (e.g. {@code LineReaderProcessor} wrapping an {@link InputStreamReader}) still
+	 *       inside a {@code read()} / decode step can delay the {@code close()} return.</li>
+	 *   <li><b>Third-party filter drivers on Windows</b> (antivirus, EDR, DLP) that hook
+	 *       {@code NtClose} / {@code CloseHandle}. A slow or misbehaving filter can block
+	 *       the close indefinitely — completely independent of whether the child is still
+	 *       alive or of the JDK version.</li>
+	 * </ul>
+	 */
+	private static final long STREAM_CLOSE_TIMEOUT_SECONDS = 2L;
+
+	/**
+	 * Destroy the process, wait for it to actually exit, then close its streams. Always
+	 * returns within a bounded time even if a stream {@code close()} would otherwise hang.
+	 * <p>
+	 * <b>Ordering matters:</b> the child process is destroyed <em>before</em> its streams are
+	 * closed. Once the child is dead its end of the pipes is broken, which unblocks any
+	 * parent-side reader that would otherwise keep {@code close()} from returning (observed
+	 * on Windows on {@code process.getInputStream().close()}). Each individual close is then
+	 * performed on a short-lived daemon thread with a {@value #STREAM_CLOSE_TIMEOUT_SECONDS}
+	 * seconds timeout as a belt-and-braces safeguard — see
+	 * {@link #STREAM_CLOSE_TIMEOUT_SECONDS} for the exact scenarios it protects against.
+	 * </p>
 	 */
 	public void stop() {
 		try {
-			// Close streams
-			close(process.getErrorStream());
-			close(process.getInputStream());
-			close(process.getOutputStream());
-
-			// Destroy the process
+			// 1) Kill the child first so its side of the stdio pipes is closed. This unblocks
+			//    any parent-side reader still stuck in read() and lets the subsequent close()
+			//    calls return promptly in the happy path.
 			process.destroy();
+			waitForOrDestroyForcibly();
+
+			// 2) Now that the child is dead, close the streams. Each close is bounded by a
+			//    timeout to guard against the two parent-side close-hang scenarios documented
+			//    on STREAM_CLOSE_TIMEOUT_SECONDS: a gobbler thread mid-read(), or an AV/EDR
+			//    filter driver hooking CloseHandle — neither of which is fixed by killing
+			//    the child.
+			closeQuietlyWithTimeout("stderr", process.getErrorStream());
+			closeQuietlyWithTimeout("stdout", process.getInputStream());
+			closeQuietlyWithTimeout("stdin", process.getOutputStream());
 		} catch (Exception e) {
 			log.error("Error detected when terminating the process. Message {}.", e.getMessage());
 			log.debug("Exception: ", e);
@@ -126,14 +174,68 @@ public class ProcessControl {
 	}
 
 	/**
-	 * Close the closable and avoid any null pointer exception if the argument is <code>null</code>
-	 *
-	 * @param closeable
-	 * @throws IOException
+	 * Wait up to {@value #STOP_TIMEOUT_SECONDS} seconds for the process to exit after a
+	 * {@link Process#destroy()} call by the caller. If it does not exit in time, invoke
+	 * {@link Process#destroyForcibly()} and wait for the same amount of time again.
+	 * <p>
+	 * {@link InterruptedException} is caught, logged and the current thread's interrupt
+	 * flag is preserved so callers can rely on this method not throwing checked exceptions.
+	 * </p>
 	 */
-	private void close(Closeable closeable) throws IOException {
-		if (closeable != null) {
-			closeable.close();
+	private void waitForOrDestroyForcibly() {
+		try {
+			if (!process.waitFor(STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+				log.warn("Process did not exit within {} seconds after destroy(). Forcing termination.", STOP_TIMEOUT_SECONDS);
+				process.destroyForcibly();
+				if (!process.waitFor(STOP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+					log.warn("Process did not exit within {} seconds after destroyForcibly().", STOP_TIMEOUT_SECONDS);
+				}
+			}
+		} catch (InterruptedException _) {
+			log.warn("Interrupted while waiting for process termination.");
+			Thread.currentThread().interrupt();
+		}
+	}
+
+	/**
+	 * Close the given closeable on a short-lived daemon thread and wait up to
+	 * {@value #STREAM_CLOSE_TIMEOUT_SECONDS} seconds for it to return. If the close does not
+	 * return in time, {@link #stop()} moves on while the daemon thread continues in the
+	 * background — it will terminate on its own if {@code close()} eventually returns, and
+	 * being a daemon it never prevents the JVM from shutting down.
+	 *
+	 * @param label     human-readable identifier for logs
+	 * @param closeable the stream to close; {@code null} is a no-op
+	 */
+	private static void closeQuietlyWithTimeout(final String label, final Closeable closeable) {
+		if (closeable == null) {
+			return;
+		}
+		final Thread closer = new Thread(
+			() -> {
+				try {
+					closeable.close();
+				} catch (IOException e) {
+					log.debug("Failed to close {}: {}", label, e.getMessage());
+				}
+			},
+			"process-close-" + label
+		);
+		closer.setDaemon(true);
+		closer.start();
+		try {
+			closer.join(TimeUnit.SECONDS.toMillis(STREAM_CLOSE_TIMEOUT_SECONDS));
+		} catch (InterruptedException _) {
+			Thread.currentThread().interrupt();
+		}
+		if (closer.isAlive()) {
+			log.warn(
+				"close({}) did not return within {} seconds; " +
+					"leaving it running on daemon thread '{}' so stop() can proceed.",
+				label,
+				STREAM_CLOSE_TIMEOUT_SECONDS,
+				closer.getName()
+			);
 		}
 	}
 
@@ -141,8 +243,12 @@ public class ProcessControl {
 	 * Registers a new virtual-machine shutdown hook.
 	 *
 	 * @param runnable The {@code Runnable} to be executed during the shutdown.
+	 * @return the {@link Thread} that was registered as a shutdown hook, so it can later
+	 *         be unregistered via {@link Runtime#removeShutdownHook(Thread)}.
 	 */
-	public static void addShutdownHook(Runnable runnable) {
-		Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+	public static Thread addShutdownHook(Runnable runnable) {
+		final Thread hook = new Thread(runnable);
+		Runtime.getRuntime().addShutdownHook(hook);
+		return hook;
 	}
 }
