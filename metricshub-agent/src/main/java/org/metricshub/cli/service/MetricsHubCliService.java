@@ -153,7 +153,7 @@ public class MetricsHubCliService implements Callable<Integer> {
 		order = 1,
 		required = true,
 		paramLabel = "TYPE",
-		description = "Reports the type of the host to monitor (lin, linux, win, windows, mgmt, management, storage, network, aix, hpux, solaris, tru64, vms)",
+		description = "Reports the type of the host to monitor (lin, linux, win, windows, mgmt, management, storage, network, aix, hpux, ibmi, solaris, tru64, vms)",
 		converter = DeviceKindConverter.class
 	)
 	DeviceKind deviceType;

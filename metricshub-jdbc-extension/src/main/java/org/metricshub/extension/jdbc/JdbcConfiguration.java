@@ -33,6 +33,7 @@ import lombok.NoArgsConstructor;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.common.helpers.StringHelper;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 import org.metricshub.engine.deserialization.TimeDeserializer;
 
 /**
@@ -67,6 +68,16 @@ public class JdbcConfiguration implements IConfiguration {
 	private String database;
 
 	private String hostname;
+
+	/**
+	 * Optional JDBC driver requirement scoped to this resource configuration.
+	 *
+	 * <p>When present, takes priority over any connector-level {@code jdbc:} block and triggers
+	 * pre-resolution of the declared driver class (and optional variant / jar hint) before the
+	 * connection is opened. {@code null} means defer to the connector's declaration, if any.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private DriverInfo driver;
 
 	@Override
 	public String toString() {
@@ -148,6 +159,7 @@ public class JdbcConfiguration implements IConfiguration {
 			.username(username)
 			.url(url)
 			.hostname(hostname)
+			.driver(driver)
 			.build();
 	}
 
@@ -170,8 +182,10 @@ public class JdbcConfiguration implements IConfiguration {
 	}
 
 	/**
-	 * Generates a JDBC URL based on the database type, hostname, database name, and port
-	 * @return The generated JDBC URL.
+	 * Generates a JDBC URL based on the database type, hostname, database name, and port.
+	 *
+	 * @return The generated JDBC URL as a character array; an empty array when the {@code type}
+	 *         is not recognized.
 	 */
 	char[] generateUrl() {
 		return switch (type.toLowerCase()) {

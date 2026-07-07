@@ -32,6 +32,7 @@ import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.PslUtils;
 import org.metricshub.engine.telemetry.TelemetryManager;
+import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
 /**
  * A class responsible for processing SQL criteria to evaluate SQL queries.
@@ -45,6 +46,7 @@ public class SqlCriterionProcessor {
 	private SqlRequestExecutor sqlRequestExecutor;
 	private boolean logMode;
 	private Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider;
+	private JdbcDriverSelection driverSelection;
 
 	private static final Function<TelemetryManager, JdbcConfiguration> DEFAULT_JDBC_CONFIGURATION_PROVIDER =
 		telemetryManager ->
@@ -52,13 +54,29 @@ public class SqlCriterionProcessor {
 
 	/**
 	 * Creates a new {@link SqlCriterionProcessor} with the given executor and log mode,
-	 * using the default JDBC configuration provider.
+	 * using the default JDBC configuration provider and no driver selection.
 	 *
 	 * @param sqlRequestExecutor The executor to perform SQL requests.
 	 * @param logMode            Whether to enable logging mode.
 	 */
 	public SqlCriterionProcessor(final SqlRequestExecutor sqlRequestExecutor, final boolean logMode) {
-		this(sqlRequestExecutor, logMode, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+		this(sqlRequestExecutor, logMode, null, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
+	}
+
+	/**
+	 * Creates a new {@link SqlCriterionProcessor} with a pre-resolved {@link JdbcDriverSelection}.
+	 *
+	 * @param sqlRequestExecutor The executor to perform SQL requests.
+	 * @param logMode            Whether to enable logging mode.
+	 * @param driverSelection    Per-call driver selection (may be {@code null} for the legacy
+	 *                           {@link java.sql.DriverManager} path).
+	 */
+	public SqlCriterionProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final boolean logMode,
+		final JdbcDriverSelection driverSelection
+	) {
+		this(sqlRequestExecutor, logMode, driverSelection, DEFAULT_JDBC_CONFIGURATION_PROVIDER);
 	}
 
 	/**
@@ -75,8 +93,27 @@ public class SqlCriterionProcessor {
 		final boolean logMode,
 		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
 	) {
+		this(sqlRequestExecutor, logMode, null, jdbcConfigurationProvider);
+	}
+
+	/**
+	 * Full constructor.
+	 *
+	 * @param sqlRequestExecutor        The executor to perform SQL requests.
+	 * @param logMode                   Whether to enable logging mode.
+	 * @param driverSelection           Per-call driver selection; may be {@code null}.
+	 * @param jdbcConfigurationProvider A function that retrieves the {@link JdbcConfiguration}
+	 *                                  from the given {@link TelemetryManager}.
+	 */
+	public SqlCriterionProcessor(
+		final SqlRequestExecutor sqlRequestExecutor,
+		final boolean logMode,
+		final JdbcDriverSelection driverSelection,
+		final Function<TelemetryManager, JdbcConfiguration> jdbcConfigurationProvider
+	) {
 		this.sqlRequestExecutor = sqlRequestExecutor;
 		this.logMode = logMode;
+		this.driverSelection = driverSelection;
 		this.jdbcConfigurationProvider = jdbcConfigurationProvider;
 	}
 
@@ -109,7 +146,14 @@ public class SqlCriterionProcessor {
 
 		final List<List<String>> queryResult;
 		try {
-			queryResult = sqlRequestExecutor.executeSql(hostname, cfg, sqlCriterion.getQuery(), false, telemetryManager);
+			queryResult = sqlRequestExecutor.executeSql(
+				hostname,
+				cfg,
+				sqlCriterion.getQuery(),
+				false,
+				telemetryManager,
+				driverSelection
+			);
 		} catch (Exception e) {
 			if (logMode) {
 				log.error("Hostname {} - Error executing SQL criterion: {}", hostname, e.getMessage());

@@ -7,8 +7,11 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import org.junit.jupiter.api.Test;
+import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
 class JdbcClientTest {
+
+	private static final JdbcDriverSelection H2_SELECTION = new JdbcDriverSelection("org.h2.Driver", null);
 
 	@Test
 	void testExecuteSelectQuery() throws SQLException {
@@ -35,7 +38,7 @@ class JdbcClientTest {
 			boolean showWarnings = false;
 			int timeout = 30;
 
-			SqlResult sqlResult = JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout);
+			SqlResult sqlResult = JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout, H2_SELECTION);
 
 			assertEquals("1", sqlResult.getResults().get(0).get(0));
 			assertEquals("John Doe", sqlResult.getResults().get(0).get(1));
@@ -75,10 +78,18 @@ class JdbcClientTest {
 			int timeout = 30;
 
 			// Execute the INSERT query
-			JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout);
+			JdbcClient.execute(url, username, password, sqlQuery, showWarnings, timeout, H2_SELECTION);
 
 			String selectQuery = "SELECT * FROM users WHERE id = 3";
-			SqlResult sqlResult = JdbcClient.execute(url, username, password, selectQuery, showWarnings, timeout);
+			SqlResult sqlResult = JdbcClient.execute(
+				url,
+				username,
+				password,
+				selectQuery,
+				showWarnings,
+				timeout,
+				H2_SELECTION
+			);
 
 			assertEquals("3", sqlResult.getResults().get(0).get(0));
 			assertEquals("Alice", sqlResult.getResults().get(0).get(1));

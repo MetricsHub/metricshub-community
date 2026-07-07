@@ -68,7 +68,14 @@ class SqlSourceProcessorTest {
 
 		doThrow(new RuntimeException("SQL execution error"))
 			.when(sqlRequestExecutor)
-			.executeSql(eq("hostname"), any(JdbcConfiguration.class), eq("SELECT * FROM test_table"), eq(false), any());
+			.executeSql(
+				eq("hostname"),
+				any(JdbcConfiguration.class),
+				eq("SELECT * FROM test_table"),
+				eq(false),
+				any(),
+				any()
+			);
 
 		final SourceTable result = sqlSourceProcessor.process(sqlSource, telemetryManager);
 		assertNotNull(result);
@@ -92,6 +99,7 @@ class SqlSourceProcessorTest {
 				any(JdbcConfiguration.class),
 				eq("SELECT * FROM test_table"),
 				eq(false),
+				any(),
 				any()
 			)
 		).thenReturn(expectedResults);

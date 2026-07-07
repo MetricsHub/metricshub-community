@@ -86,6 +86,7 @@ class DeviceKindSetDeserializerTest {
 				"tru64",
 				"hpux",
 				"aix",
+				"ibmi",
 				"solaris",
 				"other"
 			);
@@ -152,6 +153,17 @@ class DeviceKindSetDeserializerTest {
 					"IBM AIX",
 					"RS6000",
 					"IBM-AIX",
+					"ibmi",
+					"IBMi",
+					"IBM i",
+					"ibm i",
+					"i5/OS",
+					"i5os",
+					"OS/400",
+					"os400",
+					"iSeries",
+					"AS/400",
+					"as400",
 					"solaris",
 					"Solaris",
 					"sunos",
@@ -186,6 +198,8 @@ class DeviceKindSetDeserializerTest {
 			assertEquals(Set.of(DeviceKind.HPUX), DEVICE_KIND_DESERIALIZER.deserialize(yamlParser, null));
 			doReturn("aix").when(yamlParser).getValueAsString();
 			assertEquals(Set.of(DeviceKind.AIX), DEVICE_KIND_DESERIALIZER.deserialize(yamlParser, null));
+			doReturn("ibmi").when(yamlParser).getValueAsString();
+			assertEquals(Set.of(DeviceKind.IBMI), DEVICE_KIND_DESERIALIZER.deserialize(yamlParser, null));
 			doReturn("solaris").when(yamlParser).getValueAsString();
 			assertEquals(Set.of(DeviceKind.SOLARIS), DEVICE_KIND_DESERIALIZER.deserialize(yamlParser, null));
 		}

@@ -23,6 +23,7 @@ package org.metricshub.engine.common.helpers;
 
 import static org.metricshub.engine.connector.model.common.DeviceKind.AIX;
 import static org.metricshub.engine.connector.model.common.DeviceKind.HPUX;
+import static org.metricshub.engine.connector.model.common.DeviceKind.IBMI;
 import static org.metricshub.engine.connector.model.common.DeviceKind.LINUX;
 import static org.metricshub.engine.connector.model.common.DeviceKind.OOB;
 import static org.metricshub.engine.connector.model.common.DeviceKind.SOLARIS;
@@ -185,17 +186,18 @@ public class MetricsHubConstants {
 	 * Map of Host Types to OpenTelemetry Host Types
 	 */
 	// @formatter:off
-	public static final Map<DeviceKind, String> HOST_TYPE_TO_OTEL_HOST_TYPE = Map.of(
-		VMS, HOST_TYPE_COMPUTE,
-		TRU64, HOST_TYPE_COMPUTE,
-		HPUX, HOST_TYPE_COMPUTE,
-		AIX, HOST_TYPE_COMPUTE,
-		LINUX, HOST_TYPE_COMPUTE,
-		OOB, HOST_TYPE_COMPUTE,
-		WINDOWS, HOST_TYPE_COMPUTE,
-		DeviceKind.NETWORK, NETWORK,
-		DeviceKind.STORAGE, STORAGE,
-		SOLARIS, HOST_TYPE_COMPUTE
+	public static final Map<DeviceKind, String> HOST_TYPE_TO_OTEL_HOST_TYPE = Map.ofEntries(
+		Map.entry(VMS, HOST_TYPE_COMPUTE),
+		Map.entry(TRU64, HOST_TYPE_COMPUTE),
+		Map.entry(HPUX, HOST_TYPE_COMPUTE),
+		Map.entry(AIX, HOST_TYPE_COMPUTE),
+		Map.entry(IBMI, HOST_TYPE_COMPUTE),
+		Map.entry(LINUX, HOST_TYPE_COMPUTE),
+		Map.entry(OOB, HOST_TYPE_COMPUTE),
+		Map.entry(WINDOWS, HOST_TYPE_COMPUTE),
+		Map.entry(DeviceKind.NETWORK, NETWORK),
+		Map.entry(DeviceKind.STORAGE, STORAGE),
+		Map.entry(SOLARIS, HOST_TYPE_COMPUTE)
 	);
 	// @formatter:on
 
@@ -240,6 +242,10 @@ public class MetricsHubConstants {
 	 */
 	public static final String OTEL_AIX_OS_TYPE = "aix";
 	/**
+	 * OpenTelemetry OS Type: IBM i
+	 */
+	public static final String OTEL_IBMI_OS_TYPE = "ibmi";
+	/**
 	 * OpenTelemetry OS Type: macOS X
 	 */
 	public static final String OTEL_MAC_OS_X_OS_TYPE = "macosx";
@@ -264,17 +270,18 @@ public class MetricsHubConstants {
 	 * Map of Host Types to OS Types
 	 */
 	// @formatter:off
-	public static final Map<DeviceKind, String> HOST_TYPE_TO_OTEL_OS_TYPE = Map.of(
-		VMS, OTEL_OPENVMS_OS_TYPE,
-		TRU64, OTEL_TRUE64_OS_TYPE,
-		HPUX, OTEL_HPUX_OS_TYPE,
-		AIX, OTEL_AIX_OS_TYPE,
-		LINUX, OTEL_LINUX_OS_TYPE,
-		OOB, OTEL_MANAGEMENT_OS_TYPE,
-		WINDOWS, OTEL_WINDOWS_OS_TYPE,
-		DeviceKind.NETWORK, OTEL_NETWORK_OS_TYPE,
-		DeviceKind.STORAGE, OTEL_STORAGE_OS_TYPE,
-		SOLARIS, OTEL_SOLARIS_OS_TYPE
+	public static final Map<DeviceKind, String> HOST_TYPE_TO_OTEL_OS_TYPE = Map.ofEntries(
+		Map.entry(VMS, OTEL_OPENVMS_OS_TYPE),
+		Map.entry(TRU64, OTEL_TRUE64_OS_TYPE),
+		Map.entry(HPUX, OTEL_HPUX_OS_TYPE),
+		Map.entry(AIX, OTEL_AIX_OS_TYPE),
+		Map.entry(IBMI, OTEL_IBMI_OS_TYPE),
+		Map.entry(LINUX, OTEL_LINUX_OS_TYPE),
+		Map.entry(OOB, OTEL_MANAGEMENT_OS_TYPE),
+		Map.entry(WINDOWS, OTEL_WINDOWS_OS_TYPE),
+		Map.entry(DeviceKind.NETWORK, OTEL_NETWORK_OS_TYPE),
+		Map.entry(DeviceKind.STORAGE, OTEL_STORAGE_OS_TYPE),
+		Map.entry(SOLARIS, OTEL_SOLARIS_OS_TYPE)
 	);
 	// @formatter:on
 

@@ -12,6 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
+import org.metricshub.engine.connector.model.identity.DriverInfo;
 
 class JdbcConfigurationTest {
 
@@ -183,11 +184,18 @@ class JdbcConfigurationTest {
 			.port(3306)
 			.url("jdbc:mysql://localhost:3306/testdb".toCharArray())
 			.timeout(200L)
+			.driver(
+				DriverInfo.builder()
+					.className("org.mariadb.jdbc.Driver")
+					.jarPath("$APP_DIR/extensions/jdbc/mariadb-3.x.jar")
+					.build()
+			)
 			.build();
 		final IConfiguration jdbcConfigurationCopy = jdbcConfiguration.copy();
 
 		// Verify that the copied configuration has the same values as the original configuration
 		assertEquals(jdbcConfiguration, jdbcConfigurationCopy);
+		assertEquals(jdbcConfiguration.getDriver(), ((JdbcConfiguration) jdbcConfigurationCopy).getDriver());
 
 		// Ensure that the copied configuration is a distinct object
 		assert (jdbcConfiguration != jdbcConfigurationCopy);

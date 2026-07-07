@@ -4,5 +4,5 @@ connector:
     appliesTo: [ linux ]
     criteria:
       - type: deviceType
-        keep: [ linux, windows, oob, network, storage, vms, tru64, hpux, aix, solaris, other ]
-        exclude: [ linux, windows, oob, network, storage, vms, tru64, hpux, aix, solaris, other ]
+        keep: [ linux, windows, oob, network, storage, vms, tru64, hpux, aix, ibmi, solaris, other ]
+        exclude: [ linux, windows, oob, network, storage, vms, tru64, hpux, aix, ibmi, solaris, other ]
