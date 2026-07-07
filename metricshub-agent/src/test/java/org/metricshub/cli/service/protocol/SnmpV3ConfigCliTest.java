@@ -31,6 +31,7 @@ class SnmpV3ConfigCliTest {
 		snmpV3ConfigCli.setContextName("testContext");
 		snmpV3ConfigCli.setTimeout("60");
 		snmpV3ConfigCli.setPort(161);
+		snmpV3ConfigCli.setHostname("snmpv3-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -58,6 +59,7 @@ class SnmpV3ConfigCliTest {
 			assertArrayEquals("password".toCharArray(), snmpV3Configuration.getPassword());
 			assertArrayEquals(retryIntervals, snmpV3Configuration.getRetryIntervals());
 			assertEquals("testContext", snmpV3Configuration.getContextName());
+			assertEquals("snmpv3-host", snmpV3Configuration.getHostname());
 		}
 	}
 }

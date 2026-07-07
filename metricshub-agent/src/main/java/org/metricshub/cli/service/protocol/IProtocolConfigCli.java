@@ -21,6 +21,7 @@ package org.metricshub.cli.service.protocol;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 
@@ -28,6 +29,19 @@ import org.metricshub.engine.configuration.IConfiguration;
  * Interface for CLI configurations of protocols to convert to core engine configurations.
  */
 public interface IProtocolConfigCli {
+	/**
+	 * Set a string value in the given JSON node if the value is not null.
+	 *
+	 * @param node The JSON node to update
+	 * @param key The node key
+	 * @param value The string value
+	 */
+	static void setIfNotNull(final ObjectNode node, final String key, final String value) {
+		if (value != null) {
+			node.put(key, value);
+		}
+	}
+
 	/**
 	 * Convert the CLI configuration to the core engine configuration
 	 *

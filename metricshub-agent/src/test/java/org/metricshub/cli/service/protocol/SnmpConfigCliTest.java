@@ -25,6 +25,7 @@ class SnmpConfigCliTest {
 		final char[] community = "community".toCharArray();
 		snmpConfigCli.setCommunity(community);
 		snmpConfigCli.setTimeout("120");
+		snmpConfigCli.setHostname("snmp-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -45,6 +46,7 @@ class SnmpConfigCliTest {
 			// Check the resulting snmp configuration
 			assertNotNull(snmpConfiguration);
 			assertEquals(SnmpConfiguration.SnmpVersion.V1, snmpConfiguration.getVersion());
+			assertEquals("snmp-host", snmpConfiguration.getHostname());
 			assertEquals("SNMP v1 (community)", snmpConfiguration.toString());
 		}
 	}

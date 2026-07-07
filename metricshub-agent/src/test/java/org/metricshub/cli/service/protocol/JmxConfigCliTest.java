@@ -22,6 +22,7 @@ class JmxConfigCliTest {
 		jmxConfigCli.setPassword(password);
 		jmxConfigCli.setTimeout("60");
 		jmxConfigCli.setPort(9999);
+		jmxConfigCli.setHostname("jmx-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager with JMX protocol extension
@@ -42,6 +43,7 @@ class JmxConfigCliTest {
 			assertEquals("user", jmxConfiguration.getUsername(), "Username should match");
 			assertEquals(60, jmxConfiguration.getTimeout(), "Timeout should be 60 seconds");
 			assertEquals(9999, jmxConfiguration.getPort(), "Port should be 3306");
+			assertEquals("jmx-host", jmxConfiguration.getHostname(), "Hostname should match");
 			assertEquals("secret", String.valueOf(jmxConfiguration.getPassword()), "Password should match");
 		}
 	}
