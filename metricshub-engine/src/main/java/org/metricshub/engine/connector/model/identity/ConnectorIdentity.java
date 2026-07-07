@@ -96,4 +96,11 @@ public class ConnectorIdentity implements Serializable {
 	 */
 	@Default
 	private Map<String, ConnectorDefaultVariable> variables = new HashMap<>();
+
+	/**
+	 * Optional JDBC driver requirement declared by the connector. The block wraps a
+	 * {@link DriverInfo} under {@code driver} so connector YAML mirrors the resource shape
+	 * ({@code jdbc.driver.{className,jarPath}}).
+	 */
+	private JdbcInfo jdbc;
 }

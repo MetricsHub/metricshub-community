@@ -10,6 +10,7 @@ connector:
       HP Tru64 UNIX, Tru64, OSF1,
       HP-UX, HPUX, HP,
       IBM AIX, AIX, RS6000,
+      IBM i, IBMi, OS/400,
       Linux,
       Management Card, Out-of-Band, Out of Band, OOB,
       Microsoft Windows, Windows, Win, NT,

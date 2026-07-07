@@ -50,4 +50,39 @@ class SqlToolTest {
 		);
 		assertTrue(ex.getCause() instanceof SQLException, "Cause should be SQLException");
 	}
+
+	@Test
+	void testQueryWithExplicitDriver() throws Exception {
+		final String query = "SELECT 7";
+
+		final List<List<String>> rows = sqlTool.query(query, URL, USER, PWD, 30, "org.h2.Driver", null);
+
+		assertNotNull(rows, "Rows should not be null");
+		assertEquals(1, rows.size(), "Should return one row");
+		assertEquals(List.of("7"), rows.get(0), "First row should contain '7'");
+	}
+
+	@Test
+	void testQueryWithBlankClassNameThrows() {
+		final SQLException ex = assertThrows(
+			SQLException.class,
+			() -> sqlTool.query("SELECT 1", URL, USER, PWD, 5, "  ", null),
+			"Should throw SQLException when className is blank"
+		);
+		assertTrue(ex.getMessage().contains("className is required"), "Message should mention required className");
+	}
+
+	@Test
+	void testQueryUnsupportedUrlThrows() {
+		// jdbc:fakedriver:xyz is accepted by no built-in nor external driver descriptor.
+		final SQLException ex = assertThrows(
+			SQLException.class,
+			() -> sqlTool.query("SELECT 1", "jdbc:fakedriver:xyz", USER, PWD, 5),
+			"Should throw SQLException when no driver accepts the URL"
+		);
+		assertTrue(
+			ex.getMessage().contains("No JDBC driver registered accepts URL"),
+			"Message should explain that no driver accepts the URL"
+		);
+	}
 }

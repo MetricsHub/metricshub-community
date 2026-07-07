@@ -113,7 +113,13 @@ public class JdbcRecorder extends AbstractRecorder<JdbcRecorder.JdbcRecordReques
 	}
 
 	/**
-	 * Flushes buffered entries to {@code image.yaml}.
+	 * Writes the response payload (CSV-encoded result table) to a uniquely-named file under
+	 * {@code outputDir} and returns the file name to be referenced from {@code image.yaml}.
+	 *
+	 * @param request   the recording request containing the SQL query and response table.
+	 * @param outputDir the directory where the response file must be written.
+	 * @return the name (relative to {@code outputDir}) of the file holding the response payload.
+	 * @throws IOException if the response file cannot be written.
 	 */
 	@Override
 	protected String writeResponsePayload(final JdbcRecordRequest request, final Path outputDir) throws IOException {
@@ -127,10 +133,13 @@ public class JdbcRecorder extends AbstractRecorder<JdbcRecorder.JdbcRecordReques
 	}
 
 	/**
-	 * Returns the in-memory recording entries, loading them from disk on first access.
+	 * Builds the {@code image.yaml} entry that maps the recorded SQL query to the file holding
+	 * its response payload.
 	 *
-	 * @return mutable list of recording entries
-	 * @throws IOException if the index file cannot be read
+	 * @param request          the recording request containing the SQL query.
+	 * @param responseFileName the name of the response payload file previously written by
+	 *                         {@link #writeResponsePayload(JdbcRecordRequest, Path)}.
+	 * @return an ordered map with {@code query} and {@code response} keys.
 	 */
 	@Override
 	protected Map<String, Object> buildEntry(final JdbcRecordRequest request, final String responseFileName) {

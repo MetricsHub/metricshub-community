@@ -79,7 +79,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertEquals(1, result.size());
@@ -119,21 +120,24 @@ class EmulationSqlRequestExecutorTest {
 			jdbcConfig,
 			"SELECT * FROM test_table",
 			false,
-			telemetryManager
+			telemetryManager,
+			null
 		);
 		final List<List<String>> result2 = executor.executeSql(
 			HOSTNAME,
 			jdbcConfig,
 			"SELECT * FROM test_table",
 			false,
-			telemetryManager
+			telemetryManager,
+			null
 		);
 		final List<List<String>> result3 = executor.executeSql(
 			HOSTNAME,
 			jdbcConfig,
 			"SELECT * FROM test_table",
 			false,
-			telemetryManager
+			telemetryManager,
+			null
 		);
 
 		assertEquals("first", result1.get(0).get(0));
@@ -163,7 +167,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -176,7 +181,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			null,
 			false,
-			buildTelemetryManager("any")
+			buildTelemetryManager("any"),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -189,6 +195,7 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
+			null,
 			null
 		);
 
@@ -202,7 +209,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -217,7 +225,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -240,7 +249,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -263,7 +273,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			buildTelemetryManager(tempDir.toString())
+			buildTelemetryManager(tempDir.toString()),
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -295,7 +306,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			telemetryManager
+			telemetryManager,
+			null
 		);
 
 		assertTrue(result.isEmpty());
@@ -321,7 +333,8 @@ class EmulationSqlRequestExecutorTest {
 			JdbcConfiguration.builder().hostname(HOSTNAME).build(),
 			"SELECT * FROM test_table",
 			false,
-			telemetryManager
+			telemetryManager,
+			null
 		);
 
 		assertTrue(result.isEmpty());

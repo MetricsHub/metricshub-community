@@ -111,6 +111,7 @@ public class MonitorNameBuilder {
 	public static final String HP_TRU64_UNIX_COMPUTER = "HP Tru64 Computer";
 	public static final String HP_UX_COMPUTER = "HP-UX Computer";
 	public static final String IBM_AIX_COMPUTER = "IBM AIX Computer";
+	public static final String IBM_I_COMPUTER = "IBM i Computer";
 	public static final String LINUX_COMPUTER = "Linux Computer";
 	public static final String MGMT_CARD_ENCLOSURE = "Management Card";
 	public static final String WINDOWS_COMPUTER = "Windows Computer";
@@ -188,6 +189,7 @@ public class MonitorNameBuilder {
 					case TRU64 -> HP_TRU64_UNIX_COMPUTER;
 					case HPUX -> HP_UX_COMPUTER;
 					case AIX -> IBM_AIX_COMPUTER;
+					case IBMI -> IBM_I_COMPUTER;
 					case LINUX -> LINUX_COMPUTER;
 					case OOB -> MGMT_CARD_ENCLOSURE;
 					case WINDOWS -> WINDOWS_COMPUTER;

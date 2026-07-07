@@ -36,6 +36,7 @@ import org.metricshub.extension.emulation.EmulationImageCacheManager;
 import org.metricshub.extension.emulation.EmulationRoundRobinManager;
 import org.metricshub.extension.jdbc.JdbcConfiguration;
 import org.metricshub.extension.jdbc.SqlRequestExecutor;
+import org.metricshub.extension.jdbc.driver.JdbcDriverSelection;
 
 /**
  * SQL request executor that replays query results from recorded emulation files.
@@ -66,7 +67,8 @@ public class EmulationSqlRequestExecutor extends SqlRequestExecutor {
 		final JdbcConfiguration jdbcConfig,
 		final String sqlQuery,
 		final boolean showWarnings,
-		final TelemetryManager telemetryManager
+		final TelemetryManager telemetryManager,
+		final JdbcDriverSelection driverSelection
 	) throws ClientException {
 		if (sqlQuery == null || telemetryManager == null) {
 			return List.of();
