@@ -98,8 +98,12 @@ function AgentPage() {
 	const handleRestart = React.useCallback(() => {
 		dispatch(restartAgent())
 			.unwrap()
-			.then(() => snackbar.success("Agent restart initiated successfully"))
-			.catch((err) => snackbar.error(err || "Failed to restart agent"));
+			.then((result) => {
+				const severity = result?.pending ? "info" : "success";
+				const message = result?.message || "Agent restarted successfully";
+				snackbar.show(message, { severity });
+			})
+			.catch((err) => snackbar.show(err || "Failed to restart agent", { severity: "error" }));
 	}, [dispatch, snackbar]);
 
 	const handleCloseLicenseWarning = React.useCallback(() => {

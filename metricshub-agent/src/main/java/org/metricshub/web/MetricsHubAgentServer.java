@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.config.AgentConfig;
-import org.metricshub.agent.context.AgentContext;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -44,28 +43,37 @@ public class MetricsHubAgentServer {
 	private static ConfigurableApplicationContext context;
 
 	/**
-	 * Starts the server with the given AgentContext.
+	 * Starts the server with the given {@link AgentContextHolder}.
+	 * <p>
+	 * The holder is registered as a Spring singleton so every service that receives it as a
+	 * dependency (e.g. {@code ApplicationStatusService}, {@code ExplorerService},
+	 * {@code AgentLifecycleService}) always reads the currently active {@link org.metricshub.agent.context.AgentContext}
+	 * through it.
+	 * </p>
 	 *
-	 * @param agentContext the AgentContext to be used by the server
+	 * @param agentContextHolder the pre-built holder that owns the running {@link org.metricshub.agent.context.AgentContext};
+	 *                           must not be {@code null}
 	 */
-	public static void startServer(final AgentContext agentContext) {
+	public static void startServer(final AgentContextHolder agentContextHolder) {
 		try {
 			// Install the SLF4J bridge for Java Util Logging (JUL)
 			installJavaUtilLoggingBridge();
 
-			final Map<String, String> mergedWebConfig = mergeWebConfiguration(agentContext.getAgentConfig());
+			final Map<String, String> mergedWebConfig = mergeWebConfiguration(
+				agentContextHolder.getAgentContext().getAgentConfig()
+			);
 			final String[] applicationArguments = buildApplicationArguments(mergedWebConfig);
 
 			// Get the application port number
 			final var applicationPort = mergedWebConfig.getOrDefault("server.port", "8080");
 
-			// Build the Spring application context with the provided AgentContextHolder
-			// and the application arguments then run it
+			// Build the Spring application context, registering the caller-provided holder as
+			// a singleton bean so all @Autowired services share it and see reloads immediately.
 			context = new SpringApplicationBuilder()
 				.sources(MetricsHubAgentServer.class)
 				.initializers((ConfigurableApplicationContext applicationContext) -> {
 					final var beanFactory = applicationContext.getBeanFactory();
-					beanFactory.registerSingleton("agentContextHolder", new AgentContextHolder(agentContext));
+					beanFactory.registerSingleton("agentContextHolder", agentContextHolder);
 				})
 				.run(applicationArguments);
 
@@ -162,21 +170,24 @@ public class MetricsHubAgentServer {
 	}
 
 	/**
-	 * Updates the AgentContext in the application context.
-	 * This method retrieves the AgentContextHolder bean from the application
-	 * context
-	 * and updates its AgentContext with the provided one.
+	 * Retrieves a bean of the given type from the running Spring application context.
+	 * <p>
+	 * Useful for components that live outside the Spring container (typically the
+	 * {@code DirectoryWatcherTask} started from {@code MetricsHubAgentApplication.run()})
+	 * and need to dispatch work to a Spring-managed service such as
+	 * {@code AgentLifecycleService}.
+	 * </p>
 	 *
-	 * @param agentContext the AgentContext to update
+	 * @param <T>       the expected bean type
+	 * @param beanClass the bean class to look up
+	 * @return the bean instance, or {@code null} if the Spring context is not yet initialized
+	 *         (e.g. the server thread has not finished booting when the caller runs)
 	 */
-	public static void updateAgentContext(final AgentContext agentContext) {
-		if (context != null) {
-			// Retrieve the AgentContextHolder bean from the spring application context
-			final AgentContextHolder holder = context.getBean(AgentContextHolder.class);
-			holder.setAgentContext(agentContext);
-			log.info("Updated AgentContext through the AgentContextHolder.");
-		} else {
-			log.warn("Application context is not initialized. Cannot update AgentContext.");
+	public static <T> T getBean(final Class<T> beanClass) {
+		if (context == null) {
+			log.warn("Application context is not initialized. Cannot resolve bean {}.", beanClass.getName());
+			return null;
 		}
+		return context.getBean(beanClass);
 	}
 }
