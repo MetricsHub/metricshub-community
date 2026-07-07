@@ -94,6 +94,9 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 	)
 	private String timeout;
 
+	@Option(names = "--ipmi-hostname", order = 7, paramLabel = "HOSTNAME", description = "Hostname for IPMI-over-LAN")
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password
 	 *
@@ -117,6 +120,7 @@ public class IpmiConfigCli implements IProtocolConfigCli {
 		configuration.set("timeout", new TextNode(timeout));
 		configuration.set("skipAuth", BooleanNode.valueOf(skipAuth));
 		configuration.set("bmcKey", new TextNode(bmcKey));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("ipmi", configuration, value -> value)

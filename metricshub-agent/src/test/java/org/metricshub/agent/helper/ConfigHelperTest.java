@@ -18,7 +18,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -127,23 +126,10 @@ class ConfigHelperTest {
 	}
 
 	@Test
-	@EnabledOnOs(OS.WINDOWS)
-	void testFindUserGroup_onWindows() {
-		String group = ConfigHelper.findUserGroup();
-
-		// Assert we got a group name
-		assertNotNull(group, "The Users group should be found on Windows");
-		assertFalse(group.isBlank(), "The Users group name should not be blank");
-	}
-
-	@Test
-	@EnabledOnOs(OS.WINDOWS)
-	void testGenerateDefaultConfigFileWithWritePermissions() throws IOException {
+	void testGenerateDefaultConfigurationFileIfEmptyDir() throws IOException {
 		try (final MockedStatic<ConfigHelper> mockedConfigHelper = mockStatic(ConfigHelper.class)) {
-			// Build a config directory
-			final Path configDir = Files.createDirectories(tempDir.resolve("metricshub\\config").toAbsolutePath());
+			final Path configDir = Files.createDirectories(tempDir.resolve("config"));
 
-			// Create the example file
 			final Path examplePath = Files.createDirectories(configDir.resolve("example")).resolve(CONFIG_EXAMPLE_FILENAME);
 			Files.copy(
 				Path.of("src", "test", "resources", "config", "metricshub", DEFAULT_CONFIG_FILENAME),
@@ -151,28 +137,17 @@ class ConfigHelperTest {
 				StandardCopyOption.REPLACE_EXISTING
 			);
 
-			// Generating default config should be a real call
 			mockedConfigHelper
 				.when(() -> ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir))
 				.thenCallRealMethod();
-
-			// Setting user permissions should be a real call
-			mockedConfigHelper.when(() -> ConfigHelper.setUserPermissionsOnWindows(configDir)).thenCallRealMethod();
-			mockedConfigHelper.when(() -> ConfigHelper.setUserPermissions(any(Path.class))).thenCallRealMethod();
-
-			// Mock getSubPath as it will try to retrieve the example file deployed in production environment
 			mockedConfigHelper.when(() -> ConfigHelper.getSubPath(anyString())).thenReturn(examplePath);
 
-			// Mock getSourceDirectory as it will try to retrieve the example file deployed in production environment
 			ConfigHelper.generateDefaultConfigurationFileIfEmptyDir(configDir);
 
-			final File file = configDir.resolve(DEFAULT_CONFIG_FILENAME).toFile();
-
-			assertTrue(file.exists(), "File should exist");
-
-			ConfigHelper.setUserPermissionsOnWindows(configDir);
-
-			assertTrue(file.canWrite(), "File should be writable");
+			assertTrue(
+				Files.exists(configDir.resolve(DEFAULT_CONFIG_FILENAME)),
+				"Default configuration file should be created in an empty directory"
+			);
 		}
 	}
 

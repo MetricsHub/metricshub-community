@@ -37,6 +37,7 @@ class WinRmConfigCliTest {
 		winRmConfigCli.setNamespace(namespace);
 		winRmConfigCli.setAuthentications(authentications);
 		winRmConfigCli.setProtocol("HTTP");
+		winRmConfigCli.setHostname("winrm-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -58,6 +59,7 @@ class WinRmConfigCliTest {
 				.namespace(namespace)
 				.authentications(List.of(AuthenticationEnum.KERBEROS))
 				.protocol(transportProtocolHttp)
+				.hostname("winrm-host")
 				.build();
 			// Check the resulting WinRm configuration
 			assertEquals(expected, winRmConfiguration);

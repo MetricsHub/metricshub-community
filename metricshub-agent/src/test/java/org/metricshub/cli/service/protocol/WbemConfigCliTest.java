@@ -31,6 +31,7 @@ class WbemConfigCliTest {
 		wbemConfigCli.setPort(port);
 		wbemConfigCli.setProtocol("HTTPS");
 		wbemConfigCli.setVcenter(vCenter);
+		wbemConfigCli.setHostname("wbem-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -53,6 +54,7 @@ class WbemConfigCliTest {
 				.namespace(namespace)
 				.port(port)
 				.vCenter(vCenter)
+				.hostname("wbem-host")
 				.build();
 
 			assertEquals(wbemConfigurationExpected, wbemConfigCli.toConfiguration(username, password));

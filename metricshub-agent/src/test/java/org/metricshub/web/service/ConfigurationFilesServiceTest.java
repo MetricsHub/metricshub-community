@@ -351,13 +351,30 @@ class ConfigurationFilesServiceTest {
 	@Test
 	void testBackupVmFile() throws Exception {
 		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		final String backupName = "backup-20250101-120000__config.vm";
 
-		service.saveOrUpdateBackupFile("backup-config.vm", "#set($x=1)");
+		service.saveOrUpdateBackupFile(backupName, "#set($x=1)");
 		final Path backupDir = tempConfigDir.resolve("backup");
-		assertTrue(Files.exists(backupDir.resolve("backup-config.vm")), "VM backup file should be created");
+		assertTrue(Files.exists(backupDir.resolve(backupName)), "VM backup file should be created");
 
 		List<ConfigurationFile> backups = service.listAllBackupFiles();
 		assertEquals(1, backups.size(), "Backup list should contain one entry");
-		assertEquals("backup-config.vm", backups.get(0).getName(), "Backup name should match");
+		assertEquals(backupName, backups.get(0).getName(), "Backup name should match");
+	}
+
+	@Test
+	void testListAllBackupFilesIgnoresUnexpectedFiles() throws Exception {
+		final ConfigurationFilesService service = newServiceWithDir(tempConfigDir);
+		final Path backupDir = tempConfigDir.resolve("backup");
+		Files.createDirectories(backupDir);
+		Files.writeString(backupDir.resolve("backup-20250101-120000__config.yaml"), "key: value");
+		Files.writeString(backupDir.resolve("random-notes.txt"), "ignore me");
+		Files.writeString(backupDir.resolve("legacy-backup.yaml"), "legacy");
+		Files.writeString(backupDir.resolve("backup-config.vm"), "#set($x=1)");
+
+		final List<ConfigurationFile> backups = service.listAllBackupFiles();
+
+		assertEquals(1, backups.size(), "Only convention-compliant backup files should be listed");
+		assertEquals("backup-20250101-120000__config.yaml", backups.get(0).getName());
 	}
 }

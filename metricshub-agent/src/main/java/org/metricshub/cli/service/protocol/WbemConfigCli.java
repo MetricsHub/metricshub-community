@@ -103,6 +103,9 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 	)
 	private String vcenter;
 
+	@Option(names = "--wbem-hostname", order = 9, paramLabel = "HOSTNAME", description = "Hostname for WBEM")
+	private String hostname;
+
 	/**
 	 * This method creates an {@link IConfiguration} for a given username and a given password
 	 *
@@ -128,6 +131,7 @@ public class WbemConfigCli extends AbstractTransportProtocolCli {
 		configuration.set("vcenter", new TextNode(vcenter));
 		configuration.set("protocol", new TextNode(protocol));
 		configuration.set("port", new IntNode(getOrDeducePortNumber()));
+		IProtocolConfigCli.setIfNotNull(configuration, "hostname", hostname);
 
 		return CliExtensionManager.getExtensionManagerSingleton()
 			.buildConfigurationFromJsonNode("wbem", configuration, value -> value)

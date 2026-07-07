@@ -24,6 +24,7 @@ class IpmiConfigCliTest {
 		ipmiConfigCli.setPassword(password);
 		ipmiConfigCli.setUsername(username);
 		ipmiConfigCli.setTimeout(timeout);
+		ipmiConfigCli.setHostname("ipmi-host");
 
 		try (MockedStatic<CliExtensionManager> cliExtensionManagerMock = mockStatic(CliExtensionManager.class)) {
 			// Initialize the extension manager required by the agent context
@@ -43,6 +44,7 @@ class IpmiConfigCliTest {
 			final IpmiConfiguration ipmiConfigurationExpected = IpmiConfiguration.builder()
 				.username(username)
 				.password(password)
+				.hostname("ipmi-host")
 				.build();
 
 			assertEquals(ipmiConfigurationExpected, ipmiConfigCli.toConfiguration(username, password));
