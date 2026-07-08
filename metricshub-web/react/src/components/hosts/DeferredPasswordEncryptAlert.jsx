@@ -1,7 +1,7 @@
 import AppAlert from "../common/AppAlert";
 import {
-	CREATE_WIZARD_PASSWORD_HELPER_TEXT,
-	EDIT_WIZARD_PASSWORD_HELPER_TEXT,
+	CREATE_MODE_PASSWORD_HELPER_TEXT,
+	EDIT_MODE_PASSWORD_HELPER_TEXT,
 } from "../../utils/password-encrypt";
 
 /**
@@ -21,7 +21,7 @@ const DeferredPasswordEncryptAlert = ({ allowPasswordReveal = false }) => (
 			},
 		}}
 	>
-		{allowPasswordReveal ? CREATE_WIZARD_PASSWORD_HELPER_TEXT : EDIT_WIZARD_PASSWORD_HELPER_TEXT}
+		{allowPasswordReveal ? CREATE_MODE_PASSWORD_HELPER_TEXT : EDIT_MODE_PASSWORD_HELPER_TEXT}
 	</AppAlert>
 );
 

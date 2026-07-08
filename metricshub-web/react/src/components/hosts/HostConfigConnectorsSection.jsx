@@ -13,7 +13,7 @@ import {
 	Tooltip,
 	Typography,
 } from "@mui/material";
-import { DataGrid, GridRow } from "@mui/x-data-grid";
+import { DataGrid, GridRow, useGridApiRef } from "@mui/x-data-grid";
 import { alpha, useTheme } from "@mui/material/styles";
 import InputAdornment from "@mui/material/InputAdornment";
 import AddIcon from "@mui/icons-material/Add";
@@ -47,12 +47,17 @@ import {
 } from "./connector-directive-ui";
 import {
 	applyAdditionalConnectorsChange,
+	collectCatalogTags,
 	CONNECTOR_CATEGORY_TABS,
+	connectorMatchesCategoryTab,
 	connectorMatchesListFilters,
 	dedupeConnectorCatalogById,
 	filterDirectivesForAdditionalConnectorChips,
+	findCatalogConnectorById,
+	getConnectorDirectiveRowKey,
 	formatInlineConnectorsText,
 	getConnectorListDescription,
+	getAdditionalConnectorSelectionKind,
 	getConnectorSelectionKind,
 	shouldDisableConnectorExcludes,
 	parseConnectorDirective,
@@ -62,15 +67,38 @@ import {
 	removeDirectivesForValue,
 	upsertConnectorDirective,
 } from "./connector-utils";
-import { scrollTableRowBelowStickyHeader } from "./host-config-scroll-spy";
+import {
+	retryOnAnimationFrames,
+	scrollDataGridToRowIndex,
+	scrollTableRowBelowStickyHeader,
+} from "./host-config-scroll-spy";
 import { compareLocale } from "../../utils/alphabetic-sort";
 import { EXPLORER_METRIC_FONT_FAMILY } from "../../utils/metric-font";
 
 const CONNECTOR_KINDS = ["force", "exclude", "select"];
+const TAG_DIRECTIVE_KINDS = ["include-tag", "exclude-tag"];
 const CONFIGURATION_ROW_INDENT_PX = 40;
 const CONNECTOR_ROW_ICON_SIZE = 28;
-const CONNECTOR_ROW_GAP_PX = 10;
-const CONNECTOR_GRID_ROW_HEIGHT = 80;
+const ROW_TYPE_CONNECTOR = "connector";
+const ROW_TYPE_CONFIGURATION = "configuration";
+
+/**
+ * Single fixed height shared by every row type so the table stays evenly aligned.
+ * Must be applied through getRowHeight (used as-is), not the rowHeight prop, which
+ * the DataGrid scales down by the compact-density factor.
+ */
+const CONNECTOR_GRID_ROW_HEIGHT = 88;
+const CONNECTOR_DESCRIPTION_MAX_LINES = 2;
+
+const CONNECTOR_ROW_DESCRIPTION_SX = {
+	display: "-webkit-box",
+	lineHeight: 1.35,
+	overflow: "hidden",
+	textOverflow: "ellipsis",
+	WebkitLineClamp: CONNECTOR_DESCRIPTION_MAX_LINES,
+	WebkitBoxOrient: "vertical",
+};
+
 const ROW_FOCUS_SX = { outline: 2, outlineColor: "primary.main", outlineOffset: -2 };
 const CONNECTOR_ROW_ICON_BOX_SX = {
 	width: CONNECTOR_ROW_ICON_SIZE,
@@ -82,19 +110,16 @@ const CONNECTOR_ROW_ICON_BOX_SX = {
 	justifyContent: "center",
 	flexShrink: 0,
 };
-const CONNECTOR_LABEL_TITLE_INDENT_PX = CONNECTOR_ROW_ICON_SIZE + CONNECTOR_ROW_GAP_PX;
-const CONNECTOR_ROW_DESCRIPTION_SX = {
-	display: "-webkit-box",
-	lineHeight: 1.35,
-	overflow: "hidden",
-	textOverflow: "ellipsis",
-	WebkitLineClamp: 2,
-	WebkitBoxOrient: "vertical",
-};
 /** Keeps the directives panel height stable when switching Directives / Code views. */
 const DIRECTIVES_PANEL_BODY_HEIGHT = 72;
 
 const CONNECTORS_LIST_TABLE_HEIGHT = 560;
+
+/** Connectors table column sizing (~60% / 15% / 7% / 22% at typical widths). */
+const CONNECTOR_COLUMN_FLEX = 6;
+const CONNECTOR_ID_COLUMN_FLEX = 1.5;
+const CONNECTOR_ACTIONS_COLUMN_FLEX = 2.5;
+const CONNECTOR_CONFIGURATION_COLUMN_WIDTH = 72;
 
 const CONNECTORS_GRID_CONTAINER_SX = {
 	height: CONNECTORS_LIST_TABLE_HEIGHT,
@@ -103,11 +128,24 @@ const CONNECTORS_GRID_CONTAINER_SX = {
 	overflow: "hidden",
 };
 
+/** How long the "you reached the top" glow stays visible after a wheel-up at the top. */
+const TOP_EDGE_PULSE_MS = 500;
+
 const buildConnectorsGridSx = (theme) => ({
 	...dataGridSx,
 	height: "100%",
 	border: 0,
 	borderRadius: 0,
+	"& .MuiDataGrid-virtualScroller": {
+		...dataGridSx["& .MuiDataGrid-virtualScroller"],
+		// Keep wheel events at the table boundary from scrolling the whole page.
+		overscrollBehavior: "contain",
+		boxShadow: "none",
+		transition: "box-shadow 240ms ease",
+	},
+	"&.connectors-grid-top-edge-pulse .MuiDataGrid-virtualScroller": {
+		boxShadow: `inset 0 16px 12px -12px ${alpha(theme.palette.primary.main, 0.55)}`,
+	},
 	"& .MuiDataGrid-columnHeaderTitle": {
 		fontWeight: 600,
 	},
@@ -138,9 +176,6 @@ const buildConnectorsGridSx = (theme) => ({
 		"&:hover": {
 			bgcolor: guidedConfigRowHoverBg(theme, false, true),
 		},
-	},
-	"& .connector-grid-row-configuration .MuiDataGrid-cell:not([data-field='connector'])": {
-		alignItems: "center",
 	},
 });
 
@@ -206,6 +241,79 @@ const getRowKeyFromDirective = (directive) => {
 		: `connector:${parsed.value}`;
 };
 
+/**
+ * @param {string[]} directives
+ * @param {string} tag
+ * @returns {'include-tag' | 'exclude-tag' | 'none'}
+ */
+const getTagSelectionKind = (directives, tag) => {
+	const target = String(tag ?? "")
+		.trim()
+		.toLowerCase();
+	if (!target) {
+		return "none";
+	}
+	for (const directive of directives || []) {
+		const parsed = parseConnectorDirective(directive);
+		if (parsed.kind !== "include-tag" && parsed.kind !== "exclude-tag") {
+			continue;
+		}
+		if (parsed.value.toLowerCase() === target) {
+			return parsed.kind;
+		}
+	}
+	return "none";
+};
+
+/** Browser-style tab (rounded top, filled when active) for the category strip. */
+const CATEGORY_BROWSER_TAB_SX = {
+	textTransform: "none",
+	fontSize: "0.8125rem",
+	fontWeight: 600,
+	lineHeight: 1.2,
+	letterSpacing: 0,
+	px: 1.75,
+	py: 0.75,
+	minHeight: 34,
+	color: "text.secondary",
+	bgcolor: "transparent",
+	border: 0,
+	borderRadius: "10px 10px 0 0",
+	"&:hover": {
+		bgcolor: "action.hover",
+		color: "text.primary",
+	},
+	"&.Mui-selected": {
+		bgcolor: "action.selected",
+		color: "text.primary",
+		"&:hover": {
+			bgcolor: "action.selected",
+		},
+	},
+};
+
+const CATEGORY_TAB_STRIP_GROUP_SX = {
+	minWidth: 0,
+	flexWrap: "wrap",
+	alignItems: "flex-end",
+	gap: 0.25,
+	// Neutralize the grouped-button chrome so each button keeps its tab shape.
+	"& .MuiToggleButtonGroup-grouped": {
+		border: 0,
+		m: 0,
+		"&:not(:first-of-type)": {
+			borderRadius: "10px 10px 0 0",
+			borderLeft: 0,
+			m: 0,
+		},
+		"&:first-of-type": {
+			borderRadius: "10px 10px 0 0",
+		},
+	},
+};
+
+const TAG_GRID_ROW_HEIGHT = 56;
+
 const DIRECTIVE_FORCE_TOGGLE_SX = {
 	...guidedConfigChoiceToggleButtonSx,
 	"&.Mui-selected": {
@@ -228,12 +336,17 @@ const DIRECTIVE_EXCLUDE_TOGGLE_SX = {
 	},
 };
 
-const ConnectorDirectiveToggleGroup = ({ value, onChange, excludeDisabled }) => (
+const ConnectorDirectiveToggleGroup = ({ value, onChange, excludeDisabled, allowNone = true }) => (
 	<ToggleButtonGroup
 		exclusive
 		size="small"
 		value={value === "none" ? null : value}
-		onChange={(_, next) => onChange(next ?? "none")}
+		onChange={(_, next) => {
+			if (!allowNone && !next && value) {
+				return;
+			}
+			onChange(next ?? "none");
+		}}
 		sx={{ flexShrink: 0 }}
 	>
 		<ToggleButton value="select" sx={guidedConfigChoiceToggleButtonSx}>
@@ -248,6 +361,29 @@ const ConnectorDirectiveToggleGroup = ({ value, onChange, excludeDisabled }) => 
 	</ToggleButtonGroup>
 );
 
+/** Select / Exclude for a tag row (tags have no "force" directive form). */
+const TagDirectiveToggleGroup = ({ value, onChange, excludeDisabled }) => {
+	const toggleValue = value === "include-tag" ? "select" : value === "exclude-tag" ? "exclude" : null;
+	return (
+		<ToggleButtonGroup
+			exclusive
+			size="small"
+			value={toggleValue}
+			onChange={(_, next) => {
+				onChange(next === "select" ? "include-tag" : next === "exclude" ? "exclude-tag" : "none");
+			}}
+			sx={{ flexShrink: 0 }}
+		>
+			<ToggleButton value="select" sx={guidedConfigChoiceToggleButtonSx}>
+				Select
+			</ToggleButton>
+			<ToggleButton value="exclude" sx={DIRECTIVE_EXCLUDE_TOGGLE_SX} disabled={excludeDisabled}>
+				Exclude
+			</ToggleButton>
+		</ToggleButtonGroup>
+	);
+};
+
 const CONFIGURABLE_CONNECTOR_CHIP_SX = {
 	height: 20,
 	fontSize: "0.625rem",
@@ -261,62 +397,31 @@ const CONFIGURABLE_CONNECTOR_CHIP_SX = {
 	"& .MuiChip-label": { px: 0.75, py: 0 },
 };
 
-const CONNECTOR_LABEL_GRID_SX = {
+const CONNECTOR_LABEL_CONTAINER_SX = {
 	height: "100%",
 	width: "100%",
-	display: "grid",
+	display: "flex",
+	flexDirection: "column",
+	justifyContent: "center",
 	boxSizing: "border-box",
 	minWidth: 0,
 };
 
-const ConnectorTableRowLabel = ({
-	icon,
-	title,
-	description,
-	titleAdornment = null,
-	indentPx = 0,
-	compact = false,
-}) => {
-	const showDescriptionBlock = !compact && description !== undefined;
-	const indentStyle = indentPx ? { pl: `${indentPx}px` } : {};
-
-	if (compact) {
-		return (
-			<Box
-				sx={{
-					...CONNECTOR_LABEL_GRID_SX,
-					...indentStyle,
-					gridTemplateRows: "1fr auto 1fr",
-				}}
-			>
-				<Box aria-hidden="true" />
-				<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
-					<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>{icon}</Box>
-					<Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0, flex: 1 }}>
-						{title}
-					</Typography>
-				</Stack>
-				<Box aria-hidden="true" />
-			</Box>
-		);
-	}
-
-	return (
-		<Box
-			sx={{
-				...CONNECTOR_LABEL_GRID_SX,
-				...indentStyle,
-				gridTemplateRows: "minmax(0, 1fr) auto auto",
-			}}
-		>
-			<Box aria-hidden="true" />
-			<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
-				<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>{icon}</Box>
+const ConnectorTableRowLabel = ({ icon, title, description, titleAdornment = null, indentPx = 0 }) => (
+	<Box
+		sx={{
+			...CONNECTOR_LABEL_CONTAINER_SX,
+			...(indentPx ? { pl: `${indentPx}px` } : {}),
+		}}
+	>
+		<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+			<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>{icon}</Box>
+			<Stack sx={{ minWidth: 0, flex: 1 }}>
 				<Stack
 					direction="row"
 					spacing={0.75}
 					alignItems="center"
-					sx={{ minWidth: 0, flex: 1, flexWrap: "wrap" }}
+					sx={{ minWidth: 0, flexWrap: "wrap" }}
 					useFlexGap
 				>
 					<Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
@@ -324,25 +429,19 @@ const ConnectorTableRowLabel = ({
 					</Typography>
 					{titleAdornment}
 				</Stack>
+				{description !== undefined ? (
+					<Typography
+						variant="caption"
+						color="text.secondary"
+						sx={{ ...CONNECTOR_ROW_DESCRIPTION_SX, pt: 0.25 }}
+					>
+						{description}
+					</Typography>
+				) : null}
 			</Stack>
-			{showDescriptionBlock ? (
-				<Typography
-					variant="caption"
-					color="text.secondary"
-					sx={{
-						...CONNECTOR_ROW_DESCRIPTION_SX,
-						pl: `${CONNECTOR_LABEL_TITLE_INDENT_PX}px`,
-						pt: 0.25,
-					}}
-				>
-					{description}
-				</Typography>
-			) : (
-				<Box aria-hidden="true" />
-			)}
-		</Box>
-	);
-};
+		</Stack>
+	</Box>
+);
 
 const ConnectorRowLabel = ({ item }) => {
 	const id = String(item?.id || "");
@@ -374,7 +473,6 @@ const ConfigurationRowLabel = ({ configurationId }) => (
 		indentPx={CONFIGURATION_ROW_INDENT_PX}
 		icon={<SettingsInputHdmiIcon sx={{ fontSize: 16, color: "success.main" }} />}
 		title={configurationId}
-		compact
 	/>
 );
 
@@ -427,7 +525,12 @@ const DirectiveGridRow = React.forwardRef(function DirectiveGridRow(props, ref) 
  * @param {Map<string, string[]>} instancesByTemplate
  * @param {string[]} selectedDirectives
  */
-const buildConnectorGridRows = (filteredConnectors, instancesByTemplate, selectedDirectives) => {
+const buildConnectorGridRows = (
+	filteredConnectors,
+	instancesByTemplate,
+	selectedDirectives,
+	additionalConnectors,
+) => {
 	/** @type {object[]} */
 	const rows = [];
 	for (const item of filteredConnectors) {
@@ -436,7 +539,7 @@ const buildConnectorGridRows = (filteredConnectors, instancesByTemplate, selecte
 		const selection = hasVariables ? "none" : getConnectorSelectionKind(selectedDirectives, id);
 		rows.push({
 			id: `connector-row:${id}`,
-			rowType: "connector",
+			rowType: ROW_TYPE_CONNECTOR,
 			directiveRowKey: `connector:${id}`,
 			item,
 			connectorId: id,
@@ -445,14 +548,15 @@ const buildConnectorGridRows = (filteredConnectors, instancesByTemplate, selecte
 		});
 		if (hasVariables) {
 			for (const configurationId of instancesByTemplate.get(id) || []) {
+				const configurationEntry = additionalConnectors?.[configurationId];
 				rows.push({
 					id: `configuration-row:${id}:${configurationId}`,
-					rowType: "configuration",
+					rowType: ROW_TYPE_CONFIGURATION,
 					directiveRowKey: `configuration:${configurationId}`,
 					item,
 					connectorId: id,
 					configurationId,
-					selection: getConnectorSelectionKind(selectedDirectives, configurationId),
+					selection: getAdditionalConnectorSelectionKind(configurationEntry),
 					hasVariables: false,
 				});
 			}
@@ -464,7 +568,7 @@ const buildConnectorGridRows = (filteredConnectors, instancesByTemplate, selecte
 const getConnectorGridRowClassName = (row, focusedRowKey) => {
 	/** @type {string[]} */
 	const classes = [];
-	if (row.rowType === "configuration") {
+	if (row.rowType === ROW_TYPE_CONFIGURATION) {
 		classes.push("connector-grid-row-configuration");
 	}
 	if (row.directiveRowKey === focusedRowKey) {
@@ -646,7 +750,7 @@ const ActiveDirectivesPanel = ({
 	);
 };
 
-const HostWizardConnectorsStep = ({
+const HostConfigConnectorsSection = ({
 	selectedDirectives = [],
 	onChange,
 	hostType = "",
@@ -669,8 +773,10 @@ const HostWizardConnectorsStep = ({
 }) => {
 	const isManual = detectionMode === "manual";
 	const [directivesPanelTab, setDirectivesPanelTab] = React.useState("directives");
+	const [listView, setListView] = React.useState("connectors");
 	const [categoryTab, setCategoryTab] = React.useState("all");
-	const [nameIdQuery, setNameIdQuery] = React.useState("");
+	// One search field shared by both views; it filters whichever table is active.
+	const [searchQuery, setSearchQuery] = React.useState("");
 	const [codeText, setCodeText] = React.useState(() =>
 		formatInlineConnectorsText(selectedDirectives),
 	);
@@ -681,8 +787,39 @@ const HostWizardConnectorsStep = ({
 		/** @type {{ template: object; instanceKey: string | null } | null} */ (null),
 	);
 	const tableRef = React.useRef(null);
+	const gridApiRef = useGridApiRef();
 	const stashedExcludesRef = React.useRef([]);
 	const codeFieldFocusedRef = React.useRef(false);
+	const [topEdgePulse, setTopEdgePulse] = React.useState(false);
+	const topEdgePulseTimerRef = React.useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+
+	const handleConnectorsTableWheel = React.useCallback((event) => {
+		if (event.deltaY >= 0) {
+			return;
+		}
+		const scroller = tableRef.current?.querySelector(".MuiDataGrid-virtualScroller");
+		if (!(scroller instanceof HTMLElement)) {
+			return;
+		}
+		const scrollable = scroller.scrollHeight > scroller.clientHeight + 1;
+		if (!scrollable || scroller.scrollTop > 0) {
+			return;
+		}
+		setTopEdgePulse(true);
+		if (topEdgePulseTimerRef.current) {
+			clearTimeout(topEdgePulseTimerRef.current);
+		}
+		topEdgePulseTimerRef.current = setTimeout(() => setTopEdgePulse(false), TOP_EDGE_PULSE_MS);
+	}, []);
+
+	React.useEffect(
+		() => () => {
+			if (topEdgePulseTimerRef.current) {
+				clearTimeout(topEdgePulseTimerRef.current);
+			}
+		},
+		[],
+	);
 
 	const protocolList = React.useMemo(
 		() => [...new Set((protocols || []).map(String).filter(Boolean))].sort(),
@@ -696,10 +833,26 @@ const HostWizardConnectorsStep = ({
 	const filteredConnectors = React.useMemo(
 		() =>
 			plainCatalog.filter((item) =>
-				connectorMatchesListFilters(item, nameIdQuery, new Set(), categoryTab),
+				connectorMatchesListFilters(item, searchQuery, new Set(), categoryTab),
 			),
-		[plainCatalog, nameIdQuery, categoryTab],
+		[plainCatalog, searchQuery, categoryTab],
 	);
+	const visibleCategoryTabs = React.useMemo(
+		() =>
+			CONNECTOR_CATEGORY_TABS.filter(
+				(tab) =>
+					tab.id === "all" ||
+					plainCatalog.some((item) => connectorMatchesCategoryTab(item, tab.id)),
+			),
+		[plainCatalog],
+	);
+
+	// The active category can disappear when the catalog changes (e.g. protocol edits).
+	React.useEffect(() => {
+		if (categoryTab !== "all" && !visibleCategoryTabs.some((tab) => tab.id === categoryTab)) {
+			setCategoryTab("all");
+		}
+	}, [categoryTab, visibleCategoryTabs]);
 	const instancesByTemplate = React.useMemo(() => {
 		/** @type {Map<string, string[]>} */
 		const map = new Map();
@@ -747,20 +900,6 @@ const HostWizardConnectorsStep = ({
 			setCodeText(formatInlineConnectorsText(selectedDirectives));
 		}
 	}, [selectedDirectives]);
-
-	React.useLayoutEffect(() => {
-		if (!pendingRowKey || !tableRef.current) {
-			return;
-		}
-		const row = tableRef.current.querySelector(
-			`[data-directive-row="${CSS.escape(pendingRowKey)}"]`,
-		);
-		if (row instanceof HTMLElement) {
-			scrollTableRowBelowStickyHeader(tableRef.current, row);
-			setFocusedRowKey(pendingRowKey);
-		}
-		setPendingRowKey(null);
-	}, [pendingRowKey, filteredConnectors]);
 
 	const applyDirectives = React.useCallback(
 		(nextDirectives) => {
@@ -845,69 +984,165 @@ const HostWizardConnectorsStep = ({
 		setConfigurationDialog(null);
 	}, []);
 
+	const focusConnectorRow = React.useCallback(
+		(templateItem, rowKey) => {
+			setListView("connectors");
+			if (
+				templateItem &&
+				categoryTab !== "all" &&
+				!connectorMatchesCategoryTab(templateItem, categoryTab)
+			) {
+				setCategoryTab("all");
+			}
+			setSearchQuery("");
+			setPendingRowKey(rowKey);
+		},
+		[categoryTab],
+	);
+
 	React.useEffect(() => {
 		if (!highlightConfigurationId) {
 			return;
 		}
 		const entry = additionalConnectors?.[highlightConfigurationId];
 		const templateId = String(entry?.uses ?? highlightConfigurationId).trim();
-		const template = plainCatalog.find((item) => String(item.id) === templateId);
+		const template = findCatalogConnectorById(plainCatalog, templateId);
 		if (template) {
-			openConfigurationDialog(template, highlightConfigurationId);
+			focusConnectorRow(template, `configuration:${highlightConfigurationId}`);
 		}
 		onHighlightConfigurationIdConsumed?.();
 	}, [
 		additionalConnectors,
+		focusConnectorRow,
 		highlightConfigurationId,
 		onHighlightConfigurationIdConsumed,
-		openConfigurationDialog,
 		plainCatalog,
 	]);
 
-	const updateKind = (value, kind, kinds) => {
-		if (kind === "none") {
-			applyDirectives(removeDirectivesForValue(selectedDirectives, value, kinds));
-			return;
-		}
-		applyDirectives(upsertConnectorDirective(selectedDirectives, kind, value));
-	};
+	const updateKind = React.useCallback(
+		(value, kind, kinds) => {
+			if (kind === "none") {
+				applyDirectives(removeDirectivesForValue(selectedDirectives, value, kinds));
+				return;
+			}
+			applyDirectives(upsertConnectorDirective(selectedDirectives, kind, value));
+		},
+		[applyDirectives, selectedDirectives],
+	);
 
-	const updateConfigurationKind = (instanceId, kind) => {
-		const entry = additionalConnectors?.[instanceId];
-		if (!entry) {
-			return;
-		}
-		let nextAdditional = { ...additionalConnectors };
-		if (kind === "force") {
-			nextAdditional[instanceId] = { ...entry, force: true };
-		} else if (kind === "select") {
-			nextAdditional[instanceId] = { ...entry, force: false };
-		}
-		let nextConnectors = selectedDirectives;
-		if (kind === "none") {
-			nextConnectors = removeDirectivesForValue(selectedDirectives, instanceId, CONNECTOR_KINDS);
-		} else {
-			nextConnectors = upsertConnectorDirective(selectedDirectives, kind, instanceId);
-		}
-		applyConnectorsPatch(buildConnectorsPatch(nextAdditional, nextConnectors));
-	};
+	const updateConfigurationKind = React.useCallback(
+		(instanceId, kind) => {
+			const entry = additionalConnectors?.[instanceId];
+			if (!entry) {
+				return;
+			}
+			const resolvedKind = kind === "none" || kind === "exclude" ? "select" : kind;
+			const nextAdditional = {
+				...additionalConnectors,
+				[instanceId]: {
+					...entry,
+					force: resolvedKind === "force",
+				},
+			};
+			applyConnectorsPatch(buildConnectorsPatch(nextAdditional));
+		},
+		[additionalConnectors, applyConnectorsPatch, buildConnectorsPatch],
+	);
 
 	const theme = useTheme();
 	const connectorGridRows = React.useMemo(
-		() => buildConnectorGridRows(filteredConnectors, instancesByTemplate, selectedDirectives),
-		[filteredConnectors, instancesByTemplate, selectedDirectives],
+		() =>
+			buildConnectorGridRows(
+				filteredConnectors,
+				instancesByTemplate,
+				selectedDirectives,
+				additionalConnectors,
+			),
+		[additionalConnectors, filteredConnectors, instancesByTemplate, selectedDirectives],
 	);
+	const tagGridRows = React.useMemo(() => {
+		/** @type {Map<string, number>} */
+		const counts = new Map();
+		for (const item of plainCatalog) {
+			for (const tag of item.tags || []) {
+				const name = String(tag);
+				counts.set(name, (counts.get(name) || 0) + 1);
+			}
+		}
+		return collectCatalogTags(plainCatalog).map((tag) => ({
+			id: `tag-row:${tag}`,
+			directiveRowKey: `tag:${tag}`,
+			tag,
+			connectorCount: counts.get(tag) || 0,
+			selection: getTagSelectionKind(selectedDirectives, tag),
+		}));
+	}, [plainCatalog, selectedDirectives]);
+	const filteredTagRows = React.useMemo(() => {
+		const query = searchQuery.trim().toLowerCase();
+		if (!query) {
+			return tagGridRows;
+		}
+		return tagGridRows.filter((row) => row.tag.toLowerCase().includes(query));
+	}, [tagGridRows, searchQuery]);
+	const activeGridRows = listView === "tags" ? filteredTagRows : connectorGridRows;
+	const activeGridRowHeight = listView === "tags" ? TAG_GRID_ROW_HEIGHT : CONNECTOR_GRID_ROW_HEIGHT;
+
+	React.useLayoutEffect(() => {
+		if (!pendingRowKey) {
+			return undefined;
+		}
+
+		const tryFocusRow = () => {
+			const container = tableRef.current;
+			if (!container) {
+				return false;
+			}
+
+			const rowIndex = activeGridRows.findIndex((row) => row.directiveRowKey === pendingRowKey);
+			if (rowIndex < 0) {
+				setPendingRowKey(null);
+				return true;
+			}
+
+			const findRowElement = () =>
+				container.querySelector(`[data-directive-row="${CSS.escape(pendingRowKey)}"]`);
+
+			let row = findRowElement();
+			if (!(row instanceof HTMLElement)) {
+				scrollDataGridToRowIndex(container, rowIndex, activeGridRowHeight, gridApiRef);
+				row = findRowElement();
+			}
+
+			if (!(row instanceof HTMLElement)) {
+				return false;
+			}
+
+			scrollTableRowBelowStickyHeader(container, row);
+			setFocusedRowKey(pendingRowKey);
+			setPendingRowKey(null);
+			return true;
+		};
+
+		if (tryFocusRow()) {
+			return undefined;
+		}
+
+		// Give the DataGrid a few frames to render the virtualized row, then drop the
+		// pending key so a stale request cannot hijack a later, unrelated re-render.
+		return retryOnAnimationFrames(tryFocusRow, 5, () => setPendingRowKey(null));
+	}, [pendingRowKey, categoryTab, activeGridRows, activeGridRowHeight, gridApiRef]);
+
 	const connectorGridColumns = React.useMemo(
 		() => [
 			{
 				field: "connector",
 				headerName: "Connector",
-				flex: 2,
-				minWidth: 220,
+				flex: CONNECTOR_COLUMN_FLEX,
+				minWidth: 260,
 				sortable: false,
 				disableColumnMenu: true,
 				renderCell: (params) =>
-					params.row.rowType === "configuration" ? (
+					params.row.rowType === ROW_TYPE_CONFIGURATION ? (
 						<ConfigurationRowLabel configurationId={params.row.configurationId} />
 					) : (
 						<ConnectorRowLabel item={params.row.item} />
@@ -916,12 +1151,12 @@ const HostWizardConnectorsStep = ({
 			{
 				field: "connectorId",
 				headerName: "Connector ID",
-				flex: 1,
-				minWidth: 140,
+				flex: CONNECTOR_ID_COLUMN_FLEX,
+				minWidth: 120,
 				sortable: false,
 				disableColumnMenu: true,
 				renderCell: (params) =>
-					params.row.rowType === "configuration" ? null : (
+					params.row.rowType === ROW_TYPE_CONFIGURATION ? null : (
 						<ConnectorDocumentationLink
 							connectorId={params.row.connectorId}
 							label={params.row.connectorId}
@@ -931,14 +1166,15 @@ const HostWizardConnectorsStep = ({
 			{
 				field: "configuration",
 				headerName: "",
-				width: 96,
+				width: CONNECTOR_CONFIGURATION_COLUMN_WIDTH,
+				resizable: false,
 				sortable: false,
 				disableColumnMenu: true,
 				headerAlign: "center",
 				align: "center",
 				renderHeader: () => null,
 				renderCell: (params) => {
-					if (params.row.rowType === "connector" && params.row.hasVariables) {
+					if (params.row.rowType === ROW_TYPE_CONNECTOR && params.row.hasVariables) {
 						return (
 							<AddConfigurationButton
 								connectorId={params.row.connectorId}
@@ -946,7 +1182,7 @@ const HostWizardConnectorsStep = ({
 							/>
 						);
 					}
-					if (params.row.rowType === "configuration") {
+					if (params.row.rowType === ROW_TYPE_CONFIGURATION) {
 						return (
 							<EditConfigurationButton
 								configurationId={params.row.configurationId}
@@ -960,35 +1196,94 @@ const HostWizardConnectorsStep = ({
 			{
 				field: "actions",
 				headerName: "Actions",
-				flex: 1.2,
-				minWidth: 240,
+				flex: CONNECTOR_ACTIONS_COLUMN_FLEX,
+				minWidth: 220,
 				sortable: false,
 				disableColumnMenu: true,
 				headerAlign: "right",
 				align: "right",
 				renderCell: (params) => {
-					if (params.row.rowType === "connector" && params.row.hasVariables) {
+					if (params.row.rowType === ROW_TYPE_CONNECTOR && params.row.hasVariables) {
 						return null;
 					}
 					const targetId =
-						params.row.rowType === "configuration"
+						params.row.rowType === ROW_TYPE_CONFIGURATION
 							? params.row.configurationId
 							: params.row.connectorId;
 					const onChange =
-						params.row.rowType === "configuration"
+						params.row.rowType === ROW_TYPE_CONFIGURATION
 							? (next) => updateConfigurationKind(targetId, next)
 							: (next) => updateKind(targetId, next, CONNECTOR_KINDS);
 					return (
 						<ConnectorDirectiveToggleGroup
 							value={params.row.selection}
 							excludeDisabled={excludeDisabled}
+							allowNone={params.row.rowType !== ROW_TYPE_CONFIGURATION}
 							onChange={onChange}
 						/>
 					);
 				},
 			},
 		],
-		[excludeDisabled, openConfigurationDialog],
+		[excludeDisabled, openConfigurationDialog, updateConfigurationKind, updateKind],
+	);
+	const tagGridColumns = React.useMemo(
+		() => [
+			{
+				field: "tag",
+				headerName: "Tag",
+				flex: 3,
+				minWidth: 200,
+				sortable: false,
+				disableColumnMenu: true,
+				renderCell: (params) => (
+					<Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0 }}>
+						<Box sx={CONNECTOR_ROW_ICON_BOX_SX}>
+							<Typography
+								component="span"
+								sx={{ fontSize: 15, fontWeight: 700, color: "primary.main", lineHeight: 1 }}
+							>
+								#
+							</Typography>
+						</Box>
+						<Typography variant="body2" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
+							{params.row.tag}
+						</Typography>
+					</Stack>
+				),
+			},
+			{
+				field: "connectorCount",
+				headerName: "Connectors",
+				flex: 1,
+				minWidth: 110,
+				sortable: false,
+				disableColumnMenu: true,
+				renderCell: (params) => (
+					<Typography variant="body2" color="text.secondary">
+						{params.row.connectorCount}
+					</Typography>
+				),
+			},
+			{
+				field: "actions",
+				headerName: "Actions",
+				flex: 2,
+				minWidth: 180,
+				sortable: false,
+				disableColumnMenu: true,
+				headerAlign: "right",
+				align: "right",
+				renderCell: (params) => (
+					<TagDirectiveToggleGroup
+						value={params.row.selection}
+						excludeDisabled={excludeDisabled}
+						onChange={(next) => updateKind(params.row.tag, next, TAG_DIRECTIVE_KINDS)}
+					/>
+				),
+			},
+		],
+		[excludeDisabled, updateKind],
 	);
 	const connectorsGridSx = React.useMemo(() => buildConnectorsGridSx(theme), [theme]);
 	const getRowClassName = React.useCallback(
@@ -1048,26 +1343,30 @@ const HostWizardConnectorsStep = ({
 						const parsed = parseConnectorDirective(directive);
 						const isTag = parsed.kind === "include-tag" || parsed.kind === "exclude-tag";
 						if (isTag) {
+							setListView("tags");
+							setSearchQuery("");
+							setPendingRowKey(`tag:${parsed.value}`);
 							return;
 						}
 						const instanceEntry = additionalConnectors?.[parsed.value];
 						if (instanceEntry) {
 							const templateId = String(instanceEntry.uses ?? parsed.value).trim();
-							const template = plainCatalog.find((item) => String(item.id) === templateId);
-							if (template) {
-								openConfigurationDialog(template, parsed.value);
-								return;
-							}
+							const template = findCatalogConnectorById(plainCatalog, templateId);
+							focusConnectorRow(template, `configuration:${parsed.value}`);
+							return;
 						}
-						setNameIdQuery("");
-						setPendingRowKey(getRowKeyFromDirective(directive));
+						const template = findCatalogConnectorById(plainCatalog, parsed.value);
+						const rowKey = template
+							? getConnectorDirectiveRowKey(template.id)
+							: getRowKeyFromDirective(directive);
+						focusConnectorRow(template, rowKey);
 					}}
 					onNavigateAdditionalConnector={(instanceId) => {
 						const entry = additionalConnectors?.[instanceId];
 						const templateId = String(entry?.uses ?? instanceId).trim();
-						const template = plainCatalog.find((item) => String(item.id) === templateId);
+						const template = findCatalogConnectorById(plainCatalog, templateId);
 						if (template) {
-							openConfigurationDialog(template, instanceId);
+							focusConnectorRow(template, `configuration:${instanceId}`);
 						}
 					}}
 					onRemoveAdditionalConnector={handleRemoveAdditionalConnector}
@@ -1094,34 +1393,56 @@ const HostWizardConnectorsStep = ({
 					) : (
 						<>
 							<Stack spacing={1}>
-								<ToggleButtonGroup
-									value={categoryTab}
-									exclusive
-									onChange={(_, nextTab) => nextTab && setCategoryTab(nextTab)}
-									size="small"
-									sx={{ flexWrap: "wrap" }}
-								>
-									{CONNECTOR_CATEGORY_TABS.map((tab) => (
-										<ToggleButton key={tab.id} value={tab.id} sx={guidedConfigChoiceToggleButtonSx}>
-											{tab.label}
+								<Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+									<ToggleButtonGroup
+										exclusive
+										size="small"
+										value={listView}
+										onChange={(_, nextView) => nextView && setListView(nextView)}
+										sx={CATEGORY_TAB_STRIP_GROUP_SX}
+									>
+										<ToggleButton value="connectors" sx={CATEGORY_BROWSER_TAB_SX}>
+											Connectors
 										</ToggleButton>
-									))}
-								</ToggleButtonGroup>
+										<ToggleButton value="tags" sx={CATEGORY_BROWSER_TAB_SX}>
+											Tags
+										</ToggleButton>
+									</ToggleButtonGroup>
+								</Box>
 								<Stack
 									direction="row"
 									alignItems="center"
 									gap={1}
-									flexWrap={{ xs: "wrap", sm: "nowrap" }}
+									flexWrap={{ xs: "wrap", md: "nowrap" }}
+									sx={{ minHeight: 40 }}
 								>
+									{listView === "connectors" ? (
+										<ToggleButtonGroup
+											value={categoryTab}
+											exclusive
+											onChange={(_, nextTab) => nextTab && setCategoryTab(nextTab)}
+											size="small"
+											sx={{ ...CATEGORY_TAB_STRIP_GROUP_SX, flexShrink: 0 }}
+										>
+											{visibleCategoryTabs.map((tab) => (
+												<ToggleButton key={tab.id} value={tab.id} sx={CATEGORY_BROWSER_TAB_SX}>
+													{tab.label}
+												</ToggleButton>
+											))}
+										</ToggleButtonGroup>
+									) : null}
 									<TextField
 										size="small"
-										label="Search by name or ID"
-										value={nameIdQuery}
-										onChange={(event) => setNameIdQuery(event.target.value)}
+										placeholder={listView === "tags" ? "Search tags" : "Search by name or ID"}
+										value={searchQuery}
+										onChange={(event) => setSearchQuery(event.target.value)}
 										sx={{
 											...guidedConfigPlaceholderSx,
-											flex: 1,
-											minWidth: { xs: "100%", sm: 180 },
+											// Fixed-size, right-anchored: switching Connectors / Tags or hiding
+											// category tabs never moves or resizes it.
+											flex: "0 1 400px",
+											ml: { xs: 0, md: "auto" },
+											minWidth: { xs: "100%", md: 180 },
 										}}
 										InputProps={{
 											startAdornment: (
@@ -1149,6 +1470,7 @@ const HostWizardConnectorsStep = ({
 							</Stack>
 							<Box
 								ref={tableRef}
+								onWheel={handleConnectorsTableWheel}
 								sx={{
 									...CONNECTORS_GRID_CONTAINER_SX,
 									border: 1,
@@ -1156,7 +1478,39 @@ const HostWizardConnectorsStep = ({
 									borderRadius: 1,
 								}}
 							>
-								{filteredConnectors.length === 0 ? (
+								{listView === "tags" ? (
+									filteredTagRows.length === 0 ? (
+										<Box
+											sx={{
+												height: "100%",
+												display: "flex",
+												alignItems: "center",
+												justifyContent: "center",
+												px: 2,
+											}}
+										>
+											<Typography variant="body2" color="text.secondary" textAlign="center">
+												{searchQuery.trim()
+													? "No tags match your search."
+													: "No tags available for the compatible connectors."}
+											</Typography>
+										</Box>
+									) : (
+										<DataGrid
+											apiRef={gridApiRef}
+											rows={filteredTagRows}
+											columns={tagGridColumns}
+											disableRowSelectionOnClick
+											hideFooter
+											density="compact"
+											className={topEdgePulse ? "connectors-grid-top-edge-pulse" : undefined}
+											getRowHeight={() => TAG_GRID_ROW_HEIGHT}
+											getRowClassName={getRowClassName}
+											slots={{ row: DirectiveGridRow }}
+											sx={connectorsGridSx}
+										/>
+									)
+								) : filteredConnectors.length === 0 ? (
 									<Box
 										sx={{
 											height: "100%",
@@ -1167,18 +1521,20 @@ const HostWizardConnectorsStep = ({
 										}}
 									>
 										<Typography variant="body2" color="text.secondary" textAlign="center">
-											{nameIdQuery.trim() || categoryTab !== "all"
+											{searchQuery.trim() || categoryTab !== "all"
 												? "No connectors match your filters."
 												: "No compatible connectors."}
 										</Typography>
 									</Box>
 								) : (
 									<DataGrid
+										apiRef={gridApiRef}
 										rows={connectorGridRows}
 										columns={connectorGridColumns}
 										disableRowSelectionOnClick
 										hideFooter
 										density="compact"
+										className={topEdgePulse ? "connectors-grid-top-edge-pulse" : undefined}
 										getRowHeight={() => CONNECTOR_GRID_ROW_HEIGHT}
 										getRowClassName={getRowClassName}
 										slots={{ row: DirectiveGridRow }}
@@ -1214,4 +1570,4 @@ const HostWizardConnectorsStep = ({
 	);
 };
 
-export default HostWizardConnectorsStep;
+export default HostConfigConnectorsSection;

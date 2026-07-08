@@ -59,7 +59,9 @@ const FILTER_ACCORDION_SX = {
 	bgcolor: "transparent",
 	boxShadow: "none",
 	"&:before": { display: "none" },
-	"&.Mui-expanded": { margin: 0 },
+	// No Mui-expanded margin override: disableGutters already suppresses the default
+	// expansion margins, and overriding margin here would also cancel the parent
+	// Stack's spacing, collapsing the gap above an expanded accordion.
 };
 
 /**

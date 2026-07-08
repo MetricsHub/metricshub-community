@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.Data;
 
 /**
@@ -52,4 +53,32 @@ public class AddHostRequestDto {
 	 * Variable connector instances keyed by connector id (maps to {@code additionalConnectors} in YAML).
 	 */
 	private Map<String, UiAdditionalConnectorDto> additionalConnectors = new HashMap<>();
+
+	private String loggerLevel;
+
+	private String outputDirectory;
+
+	private String collectPeriod;
+
+	private Integer discoveryCycle;
+
+	private UiAlertingSystemConfigDto alertingSystem;
+
+	private Boolean sequential;
+
+	private Boolean enableSelfMonitoring;
+
+	private Boolean logFileSourceDetails;
+
+	private Boolean resolveHostnameToFqdn;
+
+	private Set<String> monitorFilters;
+
+	private String jobTimeout;
+
+	private Map<String, Double> metrics = new HashMap<>();
+
+	private List<String> enrichments = new ArrayList<>();
+
+	private String stateSetCompression;
 }

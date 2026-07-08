@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Box, Chip, Stack, Tooltip, Typography } from "@mui/material";
-import { protocolChipSx } from "./protocol-chip-styles";
+import { protocolChipSx } from "./protocol-chip-sx";
 
 /**
  * @param {0 | 1 | null | undefined} up

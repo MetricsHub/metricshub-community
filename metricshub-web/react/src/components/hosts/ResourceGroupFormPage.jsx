@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useLocation } from "react-router-dom";
 import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import SaveIcon from "@mui/icons-material/Save";
@@ -17,8 +18,8 @@ import {
 	guidedConfigSaveButtonSx,
 	LabeledTextField,
 } from "./guided-config-form-primitives";
-import HostWizardCardStepper from "./HostWizardCardStepper";
-import HostWizardSectionHeader from "./HostWizardSectionHeader";
+import HostConfigSectionNav from "./HostConfigSectionNav";
+import HostConfigSectionHeader from "./HostConfigSectionHeader";
 import HostsResourceTable, { buildMultiHostDerivedIds } from "./HostsResourceTable";
 import KeyValueRowsEditor, {
 	kvRowsToNumericObject,
@@ -42,12 +43,17 @@ import {
 	RESOURCE_GROUP_FORM_STEPS,
 	RESOURCE_GROUP_RESOURCES_STEP,
 } from "./resource-group-form-shared";
+import {
+	isSessionFromCurrentAppBoot,
+	loadHostFormScrollPosition,
+	saveHostFormScrollPosition,
+} from "./host-config-session";
 import { useHostConfigSectionScrollSpy } from "./useHostConfigSectionScrollSpy";
 
 const buildDefaultMetricRows = () => DEFAULT_METRIC_SEEDS.map((s) => makeKvRow(s.key, s.value));
 
 /**
- * Create or edit a resource group (unified wizard layout).
+ * Create or edit a resource group (unified form layout).
  *
  * @param {object} props
  * @param {"create" | "edit"} [props.mode]
@@ -123,6 +129,14 @@ const ResourceGroupFormPage = ({
 
 	const steps = React.useMemo(() => getResourceGroupFormSteps(mode), [mode]);
 
+	const { pathname } = useLocation();
+	const handleScrollPositionChange = React.useCallback(
+		(scrollTop) => {
+			saveHostFormScrollPosition(pathname, scrollTop, 0);
+		},
+		[pathname],
+	);
+
 	const { activeStep: scrollActiveStep, scrollToStepIndex } = useHostConfigSectionScrollSpy({
 		enabled: true,
 		steps,
@@ -131,7 +145,43 @@ const ResourceGroupFormPage = ({
 		onActiveStepChange: (index) => {
 			setFurthestStep((prev) => Math.max(prev, index));
 		},
+		onScrollPositionChange: handleScrollPositionChange,
 	});
+
+	// Restores the scroll position after a page refresh only — a session saved during
+	// this app lifetime means the user navigated back in-app, where the page starts
+	// at the top (same rule as the resource form pages).
+	React.useLayoutEffect(() => {
+		const el = formRootRef.current;
+		const saved = loadHostFormScrollPosition(pathname);
+		const target =
+			typeof saved?.scrollTop === "number" && saved.scrollTop >= 0 ? saved.scrollTop : null;
+		if (!el || target == null || isSessionFromCurrentAppBoot(saved)) {
+			return undefined;
+		}
+		let cancelled = false;
+		let frame = 0;
+		const attempt = () => {
+			if (cancelled) {
+				return;
+			}
+			frame += 1;
+			el.scrollTop = target;
+			const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight);
+			const reachedTarget = Math.abs(el.scrollTop - target) <= 2;
+			const reachedMaxForTarget = target >= maxScroll - 2 && el.scrollTop >= maxScroll - 2;
+			if (reachedTarget || reachedMaxForTarget || frame >= 60) {
+				// Re-save with the current boot id so an in-app return does not restore again.
+				saveHostFormScrollPosition(pathname, el.scrollTop, 0);
+				return;
+			}
+			requestAnimationFrame(attempt);
+		};
+		requestAnimationFrame(attempt);
+		return () => {
+			cancelled = true;
+		};
+	}, [pathname]);
 
 	const handleStepClick = React.useCallback(
 		(index) => {
@@ -472,7 +522,7 @@ const ResourceGroupFormPage = ({
 				<Stack spacing={4}>
 					<Box id={hostConfigSectionId(RESOURCE_GROUP_FORM_STEPS[0])} sx={{ scrollMarginTop: 88 }}>
 						<Box component="section" sx={guidedConfigBorderedPanelSx}>
-							<HostWizardSectionHeader
+							<HostConfigSectionHeader
 								step={RESOURCE_GROUP_FORM_STEPS[0]}
 								stepNumber={1}
 								isCompleted={
@@ -520,7 +570,7 @@ const ResourceGroupFormPage = ({
 
 					<Box id={hostConfigSectionId(RESOURCE_GROUP_FORM_STEPS[1])} sx={{ scrollMarginTop: 88 }}>
 						<Box component="section" sx={guidedConfigBorderedPanelSx}>
-							<HostWizardSectionHeader
+							<HostConfigSectionHeader
 								step={RESOURCE_GROUP_FORM_STEPS[1]}
 								stepNumber={2}
 								isCompleted={
@@ -553,7 +603,7 @@ const ResourceGroupFormPage = ({
 							sx={{ scrollMarginTop: 88 }}
 						>
 							<Box component="section" sx={guidedConfigBorderedPanelSx}>
-								<HostWizardSectionHeader
+								<HostConfigSectionHeader
 									step={RESOURCE_GROUP_RESOURCES_STEP}
 									stepNumber={3}
 									isCompleted={
@@ -625,7 +675,7 @@ const ResourceGroupFormPage = ({
 						boxShadow: "none",
 					}}
 				>
-					<HostWizardCardStepper
+					<HostConfigSectionNav
 						steps={steps}
 						activeStep={scrollActiveStep}
 						validatedStepIds={validatedStepIds}

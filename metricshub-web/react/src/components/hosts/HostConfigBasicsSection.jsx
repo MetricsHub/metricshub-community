@@ -4,10 +4,18 @@ import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 import SettingsInputHdmiIcon from "@mui/icons-material/SettingsInputHdmi";
 import HostNameChipInput from "./HostNameChipInput";
 import HostTypeIcon from "./HostTypeIcon";
-import ProtocolSelectionGrid from "./ProtocolSelectionGrid";
+import ProtocolSelectionPanel from "./ProtocolSelectionPanel";
+// Revert to chip grid: import ProtocolSelectionGridLegacy as ProtocolSelectionPanel from "./ProtocolSelectionGrid.legacy";
 import ResourceGroupPlacementCombobox from "./ResourceGroupPlacementCombobox";
+import ResourceAdvancedOptionsSection from "./ResourceAdvancedOptionsSection";
+import { createEmptyResourceAdvancedState } from "./resource-config-fields";
 import { getHostNames } from "./host-config-utils";
-import { FormSection, LabeledSelect, LabeledTextField } from "./guided-config-form-primitives";
+import {
+	FormSection,
+	LabeledSelect,
+	LabeledTextField,
+	filledInputNoLabelSx,
+} from "./guided-config-form-primitives";
 import {
 	filterSelectedProtocolsForHostType,
 	HOST_TYPE_LABELS,
@@ -16,44 +24,71 @@ import {
 	HOST_TYPES,
 } from "./protocol-definitions";
 
+const HOST_TYPE_FIELD_ICON_SIZE = 32;
+
+const hostTypeSelectSx = {
+	...filledInputNoLabelSx,
+	"& .MuiFilledInput-input": {
+		...filledInputNoLabelSx["& .MuiFilledInput-input"],
+		paddingTop: "16px",
+		paddingBottom: "16px",
+		display: "flex",
+		alignItems: "center",
+	},
+};
+
 const HostTypeOption = ({ hostType }) => (
 	<Stack direction="row" alignItems="center" spacing={1.25}>
-		<HostTypeIcon hostType={hostType} size={20} />
+		<HostTypeIcon hostType={hostType} size={HOST_TYPE_FIELD_ICON_SIZE} />
 		<span>{HOST_TYPE_LABELS[hostType] || hostType}</span>
 	</Stack>
 );
 
 /**
- * First wizard step: host identity and placement.
+ * First form section: host identity and placement.
  *
  * @param {object} props
  * @param {object} props.values
  * @param {(patch: object) => void} props.onChange
  * @param {Record<string, string>} [props.errors]
  * @param {string[]} props.resourceGroups
- * @param {string[]} [props.existingHostIds]
+ * @param {{ groups: Record<string, string[]>; standalone: string[] }} [props.existingHostIdScopes]
  */
-const HostWizardBasicsStep = ({
+const HostConfigBasicsSection = ({
 	values,
 	onChange,
 	errors = {},
 	resourceGroups,
-	existingHostIds = [],
+	existingHostIdScopes,
 }) => {
 	const manualHostIdRef = React.useRef(false);
 	const [autoSuffixMessage, setAutoSuffixMessage] = React.useState("");
 
+	// A resource ID only has to be unique within its placement scope: the selected
+	// resource group, or the standalone section. The same ID in another group is fine.
+	const getExistingIdsForPlacement = React.useCallback(
+		(targetType, resourceGroup) => {
+			const scopes = existingHostIdScopes || { groups: {}, standalone: [] };
+			let ids = [];
+			if (targetType === "group") {
+				ids = scopes.groups?.[String(resourceGroup || "").trim()] || [];
+			} else if (targetType === "standalone") {
+				ids = scopes.standalone || [];
+			}
+			return new Set(ids.map((id) => String(id).trim()).filter(Boolean));
+		},
+		[existingHostIdScopes],
+	);
+
 	const buildUniqueHostId = React.useCallback(
-		(rawHostName) => {
+		(rawHostName, { targetType, resourceGroup }) => {
 			const hostNames = getHostNames(rawHostName);
 			const base =
 				hostNames.length > 1 ? "multi_resource" : hostNames[0] || String(rawHostName || "").trim();
 			if (!base) {
 				return "";
 			}
-			const existing = new Set(
-				(existingHostIds || []).map((id) => String(id).trim()).filter(Boolean),
-			);
+			const existing = getExistingIdsForPlacement(targetType, resourceGroup);
 			if (!existing.has(base)) {
 				return base;
 			}
@@ -63,7 +98,33 @@ const HostWizardBasicsStep = ({
 			}
 			return `${base}_${i}`;
 		},
-		[existingHostIds],
+		[getExistingIdsForPlacement],
+	);
+
+	/**
+	 * Regenerates the auto resource ID (and the "already exists" hint) against the
+	 * given placement. Used on hostname edits and on placement changes.
+	 */
+	const applyGeneratedHostId = React.useCallback(
+		(patch, hostName, placement) => {
+			const generatedHostId = buildUniqueHostId(hostName, placement);
+			const hostNames = getHostNames(hostName);
+			const baseHostId =
+				hostNames.length > 1 ? "multi_resource" : hostNames[0] || String(hostName || "").trim();
+			const suffixed = Boolean(
+				baseHostId &&
+				generatedHostId &&
+				generatedHostId !== baseHostId &&
+				generatedHostId.startsWith(`${baseHostId}_`),
+			);
+			setAutoSuffixMessage(
+				suffixed
+					? `Resource ID "${baseHostId}" already exists in this resource group. Using "${generatedHostId}" instead.`
+					: "",
+			);
+			onChange({ ...patch, hostId: generatedHostId });
+		},
+		[buildUniqueHostId, onChange],
 	);
 
 	return (
@@ -85,24 +146,10 @@ const HostWizardBasicsStep = ({
 								onChange({ hostName });
 								return;
 							}
-							const generatedHostId = buildUniqueHostId(hostName);
-							const hostNames = getHostNames(hostName);
-							const baseHostId =
-								hostNames.length > 1
-									? "multi_resource"
-									: hostNames[0] || String(hostName || "").trim();
-							const suffixed = Boolean(
-								baseHostId &&
-								generatedHostId &&
-								generatedHostId !== baseHostId &&
-								generatedHostId.startsWith(`${baseHostId}_`),
-							);
-							setAutoSuffixMessage(
-								suffixed
-									? `Resource ID "${baseHostId}" already exists. Using "${generatedHostId}" instead.`
-									: "",
-							);
-							onChange({ hostName, hostId: generatedHostId });
+							applyGeneratedHostId({ hostName }, hostName, {
+								targetType: values.targetType,
+								resourceGroup: values.resourceGroup,
+							});
 						}}
 						error={Boolean(errors.hostName)}
 						helperText={errors.hostName}
@@ -132,7 +179,7 @@ const HostWizardBasicsStep = ({
 								autoSuffixMessage ||
 								(values._editMode
 									? "Renames the resource key in metricshub-ui.yaml"
-									: "Unique key in metricshub-ui.yaml")
+									: "Unique key within the selected resource group")
 							}
 						/>
 						<ResourceGroupPlacementCombobox
@@ -140,7 +187,18 @@ const HostWizardBasicsStep = ({
 							resourceGroups={resourceGroups}
 							targetType={values.targetType}
 							resourceGroup={values.resourceGroup}
-							onChange={onChange}
+							onChange={(patch) => {
+								// Moving the resource to another scope changes which IDs are
+								// taken: recompute the auto-generated ID against the new scope.
+								if (values._editMode || manualHostIdRef.current || !values.hostName) {
+									onChange(patch);
+									return;
+								}
+								applyGeneratedHostId(patch, values.hostName, {
+									targetType: patch.targetType ?? values.targetType,
+									resourceGroup: patch.resourceGroup ?? values.resourceGroup,
+								});
+							}}
 							error={Boolean(errors.resourceGroup)}
 							helperText={errors.resourceGroup}
 						/>
@@ -158,7 +216,7 @@ const HostWizardBasicsStep = ({
 				<Stack spacing={2}>
 					<Box sx={{ maxWidth: { md: "50%" } }}>
 						<LabeledSelect
-							id="wizard-host-type"
+							id="host-config-host-type"
 							label={HOST_TYPE_UI.fieldLabel}
 							attributeName={HOST_TYPE_UI.attributeName}
 							required
@@ -166,6 +224,7 @@ const HostWizardBasicsStep = ({
 							helperText={errors.hostType || HOST_TYPE_UI.fieldHelper}
 							selectProps={{
 								value: values.hostType || HOST_TYPE_UNSELECTED,
+								sx: hostTypeSelectSx,
 								onChange: (e) => {
 									const hostType = e.target.value;
 									onChange({
@@ -186,19 +245,22 @@ const HostWizardBasicsStep = ({
 						>
 							<MenuItem value={HOST_TYPE_UNSELECTED} disabled sx={{ display: "none" }} />
 							{HOST_TYPES.map((t) => (
-								<MenuItem key={t} value={t} sx={{ py: 1 }}>
+								<MenuItem key={t} value={t} sx={{ py: 1.5 }}>
 									<HostTypeOption hostType={t} />
 								</MenuItem>
 							))}
 						</LabeledSelect>
 					</Box>
-					<ProtocolSelectionGrid
-						showLabel={false}
+					<ProtocolSelectionPanel
 						hostType={values.hostType}
 						value={values.selectedProtocols || []}
 						onChange={(selectedProtocols) => onChange({ selectedProtocols })}
 						error={Boolean(errors.selectedProtocols)}
 						helperText={errors.selectedProtocols}
+					/>
+					<ResourceAdvancedOptionsSection
+						values={values.resourceAdvanced || createEmptyResourceAdvancedState()}
+						onChange={onChange}
 					/>
 				</Stack>
 			</FormSection>
@@ -206,4 +268,4 @@ const HostWizardBasicsStep = ({
 	);
 };
 
-export default HostWizardBasicsStep;
+export default HostConfigBasicsSection;

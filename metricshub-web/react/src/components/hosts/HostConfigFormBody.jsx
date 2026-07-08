@@ -1,40 +1,34 @@
 import * as React from "react";
 import { Box, Stack } from "@mui/material";
-import HostWizardStepContent from "./HostWizardStepContent";
-import HostWizardSectionHeader from "./HostWizardSectionHeader";
+import HostConfigSectionContent from "./HostConfigSectionContent";
+import HostConfigSectionHeader from "./HostConfigSectionHeader";
 import { guidedConfigBorderedPanelSx } from "./guided-config-form-primitives";
 import { hostConfigSectionId } from "./host-config-form-layout";
-import { getWizardStepPageSubtitle } from "./host-wizard-steps";
+import { getFormSectionPageSubtitle } from "./host-config-sections";
 
 /**
  * Configuration form sections with static titles (no accordion collapse).
  *
  * @param {object} props
- * @param {object} props.wizard return value of useHostWizard
+ * @param {object} props.form return value of useHostConfig
  * @param {string[]} props.resourceGroups
- * @param {string[]} [props.existingHostIds]
+ * @param {{ groups: Record<string, string[]>; standalone: string[] }} [props.existingHostIdScopes]
  * @param {Record<string, 0 | 1 | null>} [props.protocolHealth]
  * @param {() => void} [props.onScrollToConnectorsStep]
  */
 const HostConfigFormBody = ({
-	wizard,
+	form,
 	resourceGroups,
-	existingHostIds = [],
+	existingHostIdScopes,
 	protocolHealth,
 	onScrollToConnectorsStep,
 }) => {
 	const validatedSet = React.useMemo(
-		() => new Set(wizard.validatedStepIds || []),
-		[wizard.validatedStepIds],
+		() => new Set(form.validatedStepIds || []),
+		[form.validatedStepIds],
 	);
-	const invalidSet = React.useMemo(
-		() => new Set(wizard.invalidStepIds || []),
-		[wizard.invalidStepIds],
-	);
-	const editedSet = React.useMemo(
-		() => new Set(wizard.editedStepIds || []),
-		[wizard.editedStepIds],
-	);
+	const invalidSet = React.useMemo(() => new Set(form.invalidStepIds || []), [form.invalidStepIds]);
+	const editedSet = React.useMemo(() => new Set(form.editedStepIds || []), [form.editedStepIds]);
 
 	const renderStepPanel = (step, index) => {
 		if (!step) {
@@ -42,11 +36,11 @@ const HostConfigFormBody = ({
 		}
 
 		const content = (
-			<HostWizardStepContent
+			<HostConfigSectionContent
 				step={step}
-				wizard={wizard}
+				form={form}
 				resourceGroups={resourceGroups}
-				existingHostIds={existingHostIds}
+				existingHostIdScopes={existingHostIdScopes}
 				showProtocolStepHeader={false}
 				onScrollToConnectorsStep={onScrollToConnectorsStep}
 			/>
@@ -65,13 +59,13 @@ const HostConfigFormBody = ({
 		return (
 			<Box key={step.id} id={sectionId} sx={{ scrollMarginTop: 88 }}>
 				<Box component="section" sx={guidedConfigBorderedPanelSx}>
-					<HostWizardSectionHeader
+					<HostConfigSectionHeader
 						step={step}
 						stepNumber={index + 1}
 						isCompleted={validatedSet.has(step.id) && !editedSet.has(step.id)}
 						isInvalid={invalidSet.has(step.id)}
 						isEdited={editedSet.has(step.id)}
-						description={getWizardStepPageSubtitle(step) || undefined}
+						description={getFormSectionPageSubtitle(step) || undefined}
 						protocolUp={protocolUp}
 					/>
 					{content}
@@ -80,9 +74,7 @@ const HostConfigFormBody = ({
 		);
 	};
 
-	return (
-		<Stack spacing={4}>{wizard.steps.map((step, index) => renderStepPanel(step, index))}</Stack>
-	);
+	return <Stack spacing={4}>{form.steps.map((step, index) => renderStepPanel(step, index))}</Stack>;
 };
 
 export default HostConfigFormBody;

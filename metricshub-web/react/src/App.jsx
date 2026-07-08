@@ -1,6 +1,14 @@
 import * as React from "react";
-import { useMemo, useState, useEffect, Suspense } from "react";
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
+import { useMemo, useState, useEffect, useCallback, Suspense } from "react";
+import {
+	createBrowserRouter,
+	createRoutesFromElements,
+	RouterProvider,
+	Route,
+	Navigate,
+	Outlet,
+	useLocation,
+} from "react-router-dom";
 import { ThemeProvider, CssBaseline, Box, CircularProgress } from "@mui/material";
 import { Provider as ReduxProvider } from "react-redux";
 import { useTheme } from "@mui/material/styles";
@@ -70,11 +78,11 @@ const SplashScreen = () => {
  */
 const AppLayout = ({ onToggleTheme }) => {
 	return (
-		<>
+		<Suspense fallback={<SplashScreen />}>
 			<NavBar onToggleTheme={onToggleTheme} />
 			<UnsavedChangesGuard />
 			<Outlet />
-		</>
+		</Suspense>
 	);
 };
 
@@ -115,6 +123,12 @@ export default function App() {
 		localStorage.setItem(STORAGE_KEY, mode);
 	}, [mode]);
 
+	// Stable identity: the router is memoized on this callback, so a new identity
+	// per render would rebuild (and remount) the whole route tree.
+	const handleToggleTheme = useCallback(() => {
+		setMode((prev) => (prev === "light" ? "dark" : "light"));
+	}, []);
+
 	// Create theme dynamically
 	const theme = useMemo(
 		() =>
@@ -133,9 +147,7 @@ export default function App() {
 				<GlobalSnackbarProvider>
 					<AuthProvider>
 						<WriteProtectionDialog />
-						<AppContent
-							onToggleTheme={() => setMode((prev) => (prev === "light" ? "dark" : "light"))}
-						/>
+						<AppContent onToggleTheme={handleToggleTheme} />
 					</AuthProvider>
 				</GlobalSnackbarProvider>
 			</ReduxProvider>
@@ -151,17 +163,25 @@ export default function App() {
 const AppContent = ({ onToggleTheme }) => {
 	const { isInitialized } = useAuth();
 
-	if (!isInitialized) return <SplashScreen />;
+	// Data router (createBrowserRouter) instead of <BrowserRouter> so route
+	// components can use useBlocker to guard navigation with unsaved changes.
+	const router = useMemo(
+		() =>
+			createBrowserRouter(
+				createRoutesFromElements([
+					/* Public routes */
+					<Route
+						key="login"
+						path={paths.login}
+						element={
+							<Suspense fallback={<SplashScreen />}>
+								<LoginPage />
+							</Suspense>
+						}
+					/>,
 
-	return (
-		<BrowserRouter>
-			<Suspense fallback={<SplashScreen />}>
-				<Routes>
-					{/* Public routes */}
-					<Route path={paths.login} element={<LoginPage />} />
-
-					{/* Private routes */}
-					<Route element={<GuardedAppLayout onToggleTheme={onToggleTheme} />}>
+					/* Private routes */
+					<Route key="app" element={<GuardedAppLayout onToggleTheme={onToggleTheme} />}>
 						<Route
 							path={paths.explorer}
 							element={<Navigate to={paths.explorerWelcome} replace />}
@@ -246,9 +266,13 @@ const AppContent = ({ onToggleTheme }) => {
 						<Route path={paths.chat} element={<Chat />} />
 						{/* Catch-all */}
 						<Route path="*" element={<Navigate to={paths.explorer} replace />} />
-					</Route>
-				</Routes>
-			</Suspense>
-		</BrowserRouter>
+					</Route>,
+				]),
+			),
+		[onToggleTheme],
 	);
+
+	if (!isInitialized) return <SplashScreen />;
+
+	return <RouterProvider router={router} />;
 };

@@ -85,7 +85,7 @@ public class ProtocolHealthCheckService {
 	}
 
 	/**
-	 * Checks protocol reachability using an inline configuration supplied by the UI wizard.
+	 * Checks protocol reachability using an inline configuration supplied by the UI configuration form.
 	 *
 	 * @param hostname       target hostname
 	 * @param protocol       protocol identifier (e.g. ssh)

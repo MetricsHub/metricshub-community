@@ -66,7 +66,7 @@ export const computeSectionActivateAt = (container, els) => {
  * @param {number} [offset]
  * @returns {number}
  */
-export const computeActiveStepIndex = (container, els, offset = STEP_ACTIVATION_OFFSET) => {
+export const computeGeometryActiveStepIndex = (container, els, offset = STEP_ACTIVATION_OFFSET) => {
 	const containerRect = container.getBoundingClientRect();
 	const activationY = containerRect.top + offset;
 
@@ -106,6 +106,47 @@ export const computeActiveStepIndex = (container, els, offset = STEP_ACTIVATION_
 		return shortSectionActive;
 	}
 	return passedTitleActive;
+};
+
+/**
+ * Active step from scroll position using distributed activation thresholds
+ * ({@link computeSectionActivateAt}). Ensures trailing steps still activate when
+ * their titles can never reach the top of the viewport.
+ *
+ * @param {HTMLElement} container scroll container
+ * @param {(HTMLElement | null)[]} els section elements, in step order
+ * @returns {number}
+ */
+export const computeThresholdActiveStepIndex = (container, els) => {
+	const scrollTop = container.scrollTop ?? 0;
+	const maxScroll = Math.max(0, (container.scrollHeight ?? 0) - (container.clientHeight ?? 0));
+	if (maxScroll <= 0) {
+		return 0;
+	}
+
+	const { activateAt } = computeSectionActivateAt(container, els);
+	let thresholdActive = 0;
+	for (let i = 0; i < activateAt.length; i++) {
+		if (Number.isFinite(activateAt[i]) && scrollTop + 1 >= activateAt[i]) {
+			thresholdActive = i;
+		}
+	}
+	return thresholdActive;
+};
+
+/**
+ * Balances title-at-top detection with scroll-threshold detection so every step
+ * can become active, including short trailing sections near the page bottom.
+ *
+ * @param {HTMLElement} container scroll container
+ * @param {(HTMLElement | null)[]} els section elements, in step order
+ * @param {number} [offset]
+ * @returns {number}
+ */
+export const computeActiveStepIndex = (container, els, offset = STEP_ACTIVATION_OFFSET) => {
+	const geometryActive = computeGeometryActiveStepIndex(container, els, offset);
+	const thresholdActive = computeThresholdActiveStepIndex(container, els);
+	return Math.max(geometryActive, thresholdActive);
 };
 
 /**
@@ -156,4 +197,59 @@ export const scrollTableRowBelowStickyHeader = (container, row, behavior = "smoo
 	const rowTop = rowRect.top - containerRect.top + scrollEl.scrollTop;
 	const target = Math.max(0, rowTop - headerHeight);
 	scrollEl.scrollTo({ top: target, behavior });
+};
+
+/**
+ * Scrolls a MUI DataGrid so a row index enters the virtual window (row may not be in the DOM yet).
+ *
+ * @param {HTMLElement} container grid wrapper element
+ * @param {number} rowIndex zero-based row index
+ * @param {number} rowHeight fixed row height in pixels
+ * @param {{ current?: { scrollToIndexes?: (params: { rowIndex: number; colIndex: number }) => void } } | null | undefined} [gridApiRef]
+ */
+export const scrollDataGridToRowIndex = (container, rowIndex, rowHeight, gridApiRef) => {
+	if (rowIndex < 0) {
+		return;
+	}
+	if (gridApiRef?.current?.scrollToIndexes) {
+		gridApiRef.current.scrollToIndexes({ rowIndex, colIndex: 0 });
+		return;
+	}
+	const scrollElRaw = container.querySelector(".MuiDataGrid-virtualScroller");
+	if (!(scrollElRaw instanceof HTMLElement)) {
+		return;
+	}
+	const header =
+		container.querySelector("thead") ?? container.querySelector(".MuiDataGrid-columnHeaders");
+	const headerHeight = header instanceof HTMLElement ? header.offsetHeight : 0;
+	scrollElRaw.scrollTop = Math.max(0, rowIndex * rowHeight - headerHeight);
+};
+
+/**
+ * Runs {@code attempt} once per animation frame until it returns true or
+ * {@code maxFrames} frames have elapsed, then calls {@code onGiveUp}.
+ * Useful for DOM lookups that must wait for async rendering (e.g. DataGrid
+ * virtualization) without leaving the request pending forever.
+ *
+ * @param {() => boolean} attempt returns true when the work succeeded
+ * @param {number} maxFrames maximum number of frames to try
+ * @param {() => void} [onGiveUp] called when every attempt failed
+ * @returns {() => void} cancel function (stops pending attempts)
+ */
+export const retryOnAnimationFrames = (attempt, maxFrames, onGiveUp) => {
+	let attemptsLeft = maxFrames;
+	let rafId = 0;
+	const tick = () => {
+		if (attempt()) {
+			return;
+		}
+		attemptsLeft -= 1;
+		if (attemptsLeft > 0) {
+			rafId = requestAnimationFrame(tick);
+			return;
+		}
+		onGiveUp?.();
+	};
+	rafId = requestAnimationFrame(tick);
+	return () => cancelAnimationFrame(rafId);
 };

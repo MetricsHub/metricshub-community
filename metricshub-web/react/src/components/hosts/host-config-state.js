@@ -1,9 +1,10 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
 import { hasManualConnectorConfiguration } from "./connector-utils";
 import { PROTOCOL_DEFAULTS, PROTOCOL_OPTIONS, protocolConfigToForm } from "./protocol-definitions";
-import { getOrderedSelectedProtocols } from "./host-wizard-steps";
+import { createEmptyResourceAdvancedState } from "./resource-config-fields";
+import { getOrderedSelectedProtocols } from "./host-config-sections";
 
-export const createEmptyHostWizardState = (defaultResourceGroup = null) => ({
+export const createEmptyHostFormState = (defaultResourceGroup = null) => ({
 	hostId: "",
 	targetType: defaultResourceGroup ? "group" : "standalone",
 	resourceGroup: defaultResourceGroup || "",
@@ -22,15 +23,16 @@ export const createEmptyHostWizardState = (defaultResourceGroup = null) => ({
 	originalHostId: "",
 	furthestStep: 0,
 	_editMode: false,
+	resourceAdvanced: createEmptyResourceAdvancedState(),
 });
 
 /**
  * @param {object} state
  * @returns {object}
  */
-export const normalizeHostWizardState = (state) => {
+export const normalizeHostFormState = (state) => {
 	const base = {
-		...createEmptyHostWizardState(),
+		...createEmptyHostFormState(),
 		...state,
 		connectors: Array.isArray(state.connectors) ? state.connectors : [],
 		additionalConnectors:
@@ -48,6 +50,12 @@ export const normalizeHostWizardState = (state) => {
 			? state.selectedVariableConnectorTemplates.map(String).filter(Boolean)
 			: [],
 		furthestStep: typeof state.furthestStep === "number" ? state.furthestStep : 0,
+		resourceAdvanced: {
+			...createEmptyResourceAdvancedState(),
+			...(state.resourceAdvanced && typeof state.resourceAdvanced === "object"
+				? state.resourceAdvanced
+				: {}),
+		},
 	};
 
 	if (Array.isArray(state.selectedProtocols) && state.selectedProtocols.length > 0) {
@@ -120,7 +128,7 @@ const hostNameFingerprint = (hostName) => {
 	return names.map(String).filter(Boolean).sort(compareLocale).join(",");
 };
 
-export const getHostWizardCommittedFingerprint = (state) =>
+export const getHostFormCommittedFingerprint = (state) =>
 	JSON.stringify({
 		hostId: String(state.hostId ?? "").trim(),
 		hostName: hostNameFingerprint(state.hostName),
@@ -137,27 +145,25 @@ export const getHostWizardCommittedFingerprint = (state) =>
 			.sort(compareLocale),
 		configureVariableConnectors: Boolean(state.configureVariableConnectors),
 		connectorDetectionMode: state.connectorDetectionMode ?? "automatic",
+		resourceAdvanced: state.resourceAdvanced ?? createEmptyResourceAdvancedState(),
 	});
-
-/** @deprecated alias */
-export const getHostWizardFingerprint = getHostWizardCommittedFingerprint;
 
 /**
  * @param {object} state
  * @param {string} baselineFingerprint
  * @returns {boolean}
  */
-export const isHostWizardDirty = (state, baselineFingerprint) =>
-	getHostWizardCommittedFingerprint(state) !== baselineFingerprint;
+export const isHostFormDirty = (state, baselineFingerprint) =>
+	getHostFormCommittedFingerprint(state) !== baselineFingerprint;
 
 /**
- * Fingerprint for a single wizard step (edit-mode per-step dirty detection).
+ * Fingerprint for a single form section (edit-mode per-step dirty detection).
  *
  * @param {object} state
- * @param {import("./host-wizard-steps").WizardStepDescriptor} step
+ * @param {import("./host-config-sections").FormSectionDescriptor} step
  * @returns {string}
  */
-export const getWizardStepFingerprint = (state, step) => {
+export const getFormSectionFingerprint = (state, step) => {
 	switch (step.type) {
 		case "basics":
 			return JSON.stringify({
@@ -167,6 +173,7 @@ export const getWizardStepFingerprint = (state, step) => {
 				targetType: state.targetType ?? "standalone",
 				resourceGroup: state.resourceGroup ?? "",
 				selectedProtocols: [...getOrderedSelectedProtocols(state.selectedProtocols)],
+				resourceAdvanced: state.resourceAdvanced ?? createEmptyResourceAdvancedState(),
 			});
 		case "protocol":
 			return JSON.stringify(sortObjectKeys(state.protocols?.[step.protocolId] ?? {}));

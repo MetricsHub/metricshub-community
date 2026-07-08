@@ -189,7 +189,7 @@ export const LabeledSelect = ({
  * @param {string} props.title
  * @param {string} props.description
  * @param {boolean} [props.compact] slimmer header and padding for multi-field sections
- * @param {boolean} [props.emphasized] larger title for wizard sub-sections
+ * @param {boolean} [props.emphasized] larger title for form sub-sections
  * @param {React.ReactNode} props.children
  */
 export const FormSection = ({

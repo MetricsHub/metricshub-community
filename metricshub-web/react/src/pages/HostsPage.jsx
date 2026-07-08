@@ -16,9 +16,10 @@ import { useSnackbar } from "../hooks/use-snackbar";
 import HostsBrowseView from "../components/hosts/HostsBrowseView";
 import HostConfigEditLayout from "../components/hosts/HostConfigEditLayout";
 import ResourceGroupFormPage from "../components/hosts/ResourceGroupFormPage";
-import { clearHostWizardSessionForRoute } from "../components/hosts/host-wizard-session";
+import { clearHostFormSessionForRoute } from "../components/hosts/host-config-session";
+import { getHostConfigDraft, useHostConfigDrafts } from "../components/hosts/host-config-drafts";
 import {
-	buildHostPayloadFromWizardAsync,
+	buildHostPayloadFromFormAsync,
 	getGroupResources,
 } from "../components/hosts/host-config-utils";
 import { groupNameForCreateHost, HOSTS_VIEWS } from "../components/hosts/hosts-navigation";
@@ -118,6 +119,8 @@ const HostsPage = () => {
 	const isCreateRoute =
 		location.pathname === "/configuration/guided-config/resources/new" || isStandaloneCreateRoute;
 	const isResourceGroupCreateRoute = location.pathname === paths.hostsResourceGroupNew;
+	// A draft is not a saved resource: "New resource" stays available while editing it.
+	const isDraftCreateRoute = isCreateRoute && Boolean(location.state?.draftId);
 
 	const load = React.useCallback(async () => {
 		setLoading(true);
@@ -154,7 +157,9 @@ const HostsPage = () => {
 	const navigateBrowseView = React.useCallback(
 		(nextView) => {
 			setBrowseCreateContext(null);
-			setView(nextView);
+			// Only navigate — the view state follows the URL (syncViewFromUrl effect).
+			// Setting it eagerly would switch the page even when a dirty form's
+			// navigation blocker cancels the navigation.
 			navigate(pathForView(nextView));
 		},
 		[navigate],
@@ -279,8 +284,11 @@ const HostsPage = () => {
 		const returnToHosts = location.state?.returnToHosts || {};
 		const fallbackReturnView = returnViewFromCreateParam(resourceGroupParam);
 		const returnView = returnToHosts.view || fallbackReturnView;
+		const draftId = location.state?.draftId ?? null;
+		const draft = draftId ? getHostConfigDraft(draftId) : null;
 		return {
 			...state,
+			...(draft ? { initialState: draft.state, draftId } : {}),
 			returnView,
 		};
 	}, [isCreateRoute, isStandaloneCreateRoute, location.search, location.state]);
@@ -323,7 +331,7 @@ const HostsPage = () => {
 						: (resourceGroup ?? resourceGroupParamForCreateView(view));
 				const createState = inlineCreateStateFromParam(resourceGroupParam);
 				const createPath = paths.hostsResourceNew(resourceGroupParam);
-				clearHostWizardSessionForRoute({
+				clearHostFormSessionForRoute({
 					mode: "create",
 					defaultResourceGroup: createState.defaultResourceGroup,
 					pathname: createPath,
@@ -352,19 +360,19 @@ const HostsPage = () => {
 	}, [activeInlineCreateContext?.returnView, navigateBrowseView]);
 
 	const submitInlineCreateHost = React.useCallback(
-		async (wizardState) => {
+		async (formState) => {
 			setBusy(true);
 			setError(null);
 			try {
-				const payload = await buildHostPayloadFromWizardAsync(wizardState, {
+				const payload = await buildHostPayloadFromFormAsync(formState, {
 					encryptPasswords: true,
 				});
 				const updated = await uiConfigApi.addHost(payload);
 				setSnapshot(updated);
 
-				const savedHostId = wizardState.hostId;
-				const savedInGroup = wizardState.targetType === "group";
-				const savedGroupName = wizardState.resourceGroup;
+				const savedHostId = formState.hostId;
+				const savedInGroup = formState.targetType === "group";
+				const savedGroupName = formState.resourceGroup;
 				const nextView = savedInGroup
 					? HOSTS_VIEWS.groupedHost(savedGroupName, savedHostId)
 					: HOSTS_VIEWS.standaloneHost(savedHostId);
@@ -385,6 +393,39 @@ const HostsPage = () => {
 			}
 		},
 		[navigate, showSnackbar],
+	);
+
+	const drafts = useHostConfigDrafts();
+
+	const handleOpenDraft = React.useCallback(
+		(draftId) => {
+			const draft = getHostConfigDraft(draftId);
+			if (!draft) {
+				return;
+			}
+			const draftState = draft.state || {};
+			const resourceGroupParam =
+				draftState.targetType === "group" && draftState.resourceGroup
+					? draftState.resourceGroup
+					: draftState.targetType === "standalone"
+						? CREATE_RESOURCE_GROUP_STANDALONE
+						: CREATE_RESOURCE_GROUP_NONE;
+			const createState = inlineCreateStateFromParam(resourceGroupParam);
+			const createPath = paths.hostsResourceNew(resourceGroupParam);
+			// The route session (auto-persisted form state) must not override the draft.
+			clearHostFormSessionForRoute({
+				mode: "create",
+				defaultResourceGroup: createState.defaultResourceGroup,
+				pathname: createPath,
+			});
+			navigate(createPath, {
+				state: {
+					returnToHosts: { pathname: location.pathname, search: location.search, view },
+					draftId,
+				},
+			});
+		},
+		[navigate, location.pathname, location.search, view],
 	);
 
 	const resourceGroupNames = React.useMemo(
@@ -685,8 +726,10 @@ const HostsPage = () => {
 						onNavigate={navigate}
 						onBusyChange={setBusy}
 						disableNewGroup={isResourceGroupCreateRoute}
-						disableNewResource={isCreateRoute}
+						disableNewResource={isCreateRoute && !isDraftCreateRoute}
 						editRightPane={editRightPane}
+						drafts={drafts}
+						onOpenDraft={handleOpenDraft}
 					/>
 				</Box>
 			</Box>

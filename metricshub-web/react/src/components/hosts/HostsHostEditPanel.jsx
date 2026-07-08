@@ -3,12 +3,12 @@ import { Alert } from "@mui/material";
 import { uiConfigApi } from "../../api/ui-config";
 import { useSnackbar } from "../../hooks/use-snackbar";
 import {
-	buildHostPayloadFromWizardAsync,
+	buildHostPayloadFromFormAsync,
 	getGroupResources,
-	hostConfigToWizardState,
+	hostConfigToFormState,
 	isMultiHostConfig,
 } from "./host-config-utils";
-import HostWizardPage from "./HostWizardPage";
+import HostConfigPage from "./HostConfigPage";
 import ShowInExplorerButton from "./ShowInExplorerButton";
 import { HOSTS_VIEWS } from "./hosts-navigation";
 import { pathForView } from "./hosts-route-sync";
@@ -27,7 +27,6 @@ import { useHostsProtocolHealth } from "../../hooks/use-hosts-protocol-health";
  * @param {(path: string, options?: object) => void} props.onNavigate
  * @param {(groupName: string, hostId: string) => void} props.onDeleteGroupedHost
  * @param {(hostId: string) => void} props.onDeleteStandaloneHost
- * @param {(dirty: boolean) => void} [props.onFormUnsavedChange]
  */
 const HostsHostEditPanel = ({
 	snapshot,
@@ -38,7 +37,6 @@ const HostsHostEditPanel = ({
 	onNavigate,
 	onDeleteGroupedHost,
 	onDeleteStandaloneHost,
-	onFormUnsavedChange,
 }) => {
 	const { show: showSnackbar } = useSnackbar();
 	const [error, setError] = React.useState(null);
@@ -59,18 +57,24 @@ const HostsHostEditPanel = ({
 		[snapshot.resourceGroups],
 	);
 
-	const existingHostIds = React.useMemo(() => {
-		const grouped = Object.values(snapshot?.resourceGroups || {}).flatMap((groupNode) =>
-			Object.keys(getGroupResources(groupNode)),
-		);
-		const standalone = Object.keys(snapshot?.resources || {});
-		return [...grouped, ...standalone].filter((id) => id !== hostId);
-	}, [snapshot?.resourceGroups, snapshot?.resources, hostId]);
+	// Per placement scope (group / standalone), excluding the resource being edited.
+	const existingHostIdScopes = React.useMemo(
+		() => ({
+			groups: Object.fromEntries(
+				Object.entries(snapshot?.resourceGroups || {}).map(([name, groupNode]) => [
+					name,
+					Object.keys(getGroupResources(groupNode)).filter((id) => id !== hostId),
+				]),
+			),
+			standalone: Object.keys(snapshot?.resources || {}).filter((id) => id !== hostId),
+		}),
+		[snapshot?.resourceGroups, snapshot?.resources, hostId],
+	);
 
 	const initialState = React.useMemo(
 		() =>
 			hostConfig
-				? hostConfigToWizardState(hostId, hostConfig, isStandalone ? null : groupName)
+				? hostConfigToFormState(hostId, hostConfig, isStandalone ? null : groupName)
 				: null,
 		[groupName, hostConfig, hostId, isStandalone],
 	);
@@ -105,18 +109,18 @@ const HostsHostEditPanel = ({
 	}, [groupName, hostId, isStandalone, onDeleteGroupedHost, onDeleteStandaloneHost]);
 
 	const handleSubmit = React.useCallback(
-		async (wizardState) => {
+		async (formState) => {
 			onBusyChange(true);
 			setError(null);
 			try {
-				const payload = await buildHostPayloadFromWizardAsync(wizardState, {
+				const payload = await buildHostPayloadFromFormAsync(formState, {
 					encryptPasswords: true,
 				});
 
-				const previousHostId = wizardState.originalHostId || hostId;
-				if (wizardState.originalTargetType === "group") {
+				const previousHostId = formState.originalHostId || hostId;
+				if (formState.originalTargetType === "group") {
 					await uiConfigApi.deleteGroupedHost(
-						wizardState.originalResourceGroup || groupName,
+						formState.originalResourceGroup || groupName,
 						previousHostId,
 					);
 				} else {
@@ -126,9 +130,9 @@ const HostsHostEditPanel = ({
 				const updated = await uiConfigApi.addHost(payload);
 				onSnapshotChange(updated);
 
-				const savedHostId = wizardState?.hostId || hostId;
-				const savedInGroup = wizardState?.targetType === "group";
-				const savedGroupName = wizardState?.resourceGroup || groupName;
+				const savedHostId = formState?.hostId || hostId;
+				const savedInGroup = formState?.targetType === "group";
+				const savedGroupName = formState?.resourceGroup || groupName;
 				const identityChanged =
 					savedHostId !== hostId ||
 					(!isStandalone && savedInGroup && savedGroupName !== groupName) ||
@@ -163,19 +167,18 @@ const HostsHostEditPanel = ({
 					{error}
 				</Alert>
 			)}
-			<HostWizardPage
+			<HostConfigPage
 				mode="edit"
 				hostId={hostId}
 				defaultResourceGroup={isStandalone ? null : groupName}
 				resourceGroups={resourceGroups}
-				existingHostIds={existingHostIds}
+				existingHostIdScopes={existingHostIdScopes}
 				initialState={initialState}
 				protocolHealth={protocolHealth}
 				busy={busy}
 				onCancel={handleCancel}
 				onSubmit={handleSubmit}
 				onDelete={handleDelete}
-				onUnsavedChangesChange={onFormUnsavedChange}
 				headerEndAction={
 					<ShowInExplorerButton
 						resourceGroup={isStandalone ? null : groupName}

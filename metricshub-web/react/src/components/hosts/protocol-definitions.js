@@ -49,6 +49,19 @@ export const SNMPV3_CONTEXT_NAME_TOOLTIP = `SNMPv3 context name identifies which
 
 Leave blank to use the default context. Set it only when your agent or vendor documentation requires a specific context (for example multi-VRF routers or modular chassis).`;
 
+/** Help tooltip for protocol-level hostname override (collection vs. reported metrics). */
+export const PROTOCOL_HOSTNAME_TOOLTIP =
+	"The hostname used for collection can be differentiated from the hostname reported in metrics.";
+
+/** Advanced protocol field: optional collection hostname override. */
+export const PROTOCOL_HOSTNAME_FIELD = {
+	name: "hostname",
+	label: "Hostname",
+	type: "text",
+	advanced: true,
+	helpTooltip: PROTOCOL_HOSTNAME_TOOLTIP,
+};
+
 /** Help tooltip for JDBC connection mode. */
 export const JDBC_CONNECTION_MODE_TOOLTIP = `Choose how to reach the database:
 
@@ -77,23 +90,23 @@ export const HOST_TYPES = Object.keys(HOST_TYPE_LABELS).sort(compareLocale);
 export const formatHostTypeLabel = (hostType = "") =>
 	HOST_TYPE_LABELS[String(hostType ?? "").trim()] || String(hostType ?? "").trim() || "—";
 
-/** Empty value for host.type until the user picks an option in the wizard. */
+/** Empty value for host.type until the user picks an option in the form. */
 export const HOST_TYPE_UNSELECTED = "";
 
-/** User-facing copy for the host.type field (wizard and forms). */
+/** User-facing copy for the host.name field (create and edit forms). */
 export const HOST_NAME_UI = {
 	fieldLabel: "Hostname",
 	attributeName: "host.name",
 	fieldHelper: "Target hostname or IP used for collection.",
 };
 
-/** User-facing copy for the host.type field (wizard and forms). */
+/** User-facing copy for the host.type field (create and edit forms). */
 export const HOST_TYPE_UI = {
 	fieldLabel: "Host Type",
 	attributeName: "host.type",
 	sectionTitle: "Resource Configuration",
 	sectionDescription:
-		"Host type determines which protocols apply. Each selected protocol adds a configuration step next.",
+		"Pick how MetricsHub reaches this host. Protocols drive connector compatibility and add configuration steps next.",
 	fieldHelper: "Required to match connectors and protocols.",
 };
 
@@ -251,8 +264,9 @@ export const PROTOCOL_DEFAULTS = {
 		useSudo: false,
 		sudoCommand: "sudo",
 		useSudoCommands: "",
+		hostname: "",
 	},
-	wmi: { username: "", password: "", timeout: 30, namespace: "" },
+	wmi: { username: "", password: "", timeout: 30, namespace: "", hostname: "" },
 	winrm: {
 		username: "",
 		password: "",
@@ -261,6 +275,7 @@ export const PROTOCOL_DEFAULTS = {
 		timeout: 30,
 		namespace: "",
 		authentications: "NTLM",
+		hostname: "",
 	},
 	wbem: {
 		username: "",
@@ -270,9 +285,17 @@ export const PROTOCOL_DEFAULTS = {
 		timeout: 30,
 		namespace: "",
 		vcenter: "",
+		hostname: "",
 	},
-	http: { username: "", password: "", protocol: "HTTPS", port: "", timeout: 120 },
-	snmp: { version: "2", community: "public", port: 161, timeout: 30, retryIntervals: "" },
+	http: { username: "", password: "", protocol: "HTTPS", port: "", timeout: 120, hostname: "" },
+	snmp: {
+		version: "2",
+		community: "public",
+		port: 161,
+		timeout: 30,
+		retryIntervals: "",
+		hostname: "",
+	},
 	snmpv3: {
 		username: "",
 		password: "",
@@ -283,6 +306,7 @@ export const PROTOCOL_DEFAULTS = {
 		port: 161,
 		timeout: 30,
 		retryIntervals: "",
+		hostname: "",
 	},
 	ipmi: {
 		username: "",
@@ -291,6 +315,7 @@ export const PROTOCOL_DEFAULTS = {
 		skipAuth: false,
 		_authMethod: "credentials",
 		timeout: 120,
+		hostname: "",
 	},
 	jdbc: {
 		_jdbcMode: "url",
@@ -301,10 +326,17 @@ export const PROTOCOL_DEFAULTS = {
 		username: "",
 		password: "",
 		timeout: 30,
+		hostname: "",
 	},
-	jmx: { username: "", password: "", port: 1099, timeout: 30 },
-	oscommand: { useSudo: false, sudoCommand: "sudo", useSudoCommands: "", timeout: 30 },
-	ping: { timeout: 5 },
+	jmx: { username: "", password: "", port: 1099, timeout: 30, hostname: "" },
+	oscommand: {
+		useSudo: false,
+		sudoCommand: "sudo",
+		useSudoCommands: "",
+		timeout: 30,
+		hostname: "",
+	},
+	ping: { timeout: 5, hostname: "" },
 };
 
 /**
@@ -464,11 +496,13 @@ export const PROTOCOL_FIELDS = {
 			type: "text",
 			helperText: "Commands that require sudo",
 		},
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	wmi: [
 		{ name: "username", label: "Username", type: "text", required: true },
 		{ name: "password", label: "Password", type: "password", required: true },
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 	],
 	winrm: [
@@ -490,6 +524,7 @@ export const PROTOCOL_FIELDS = {
 			type: "text",
 		},
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "authentications",
 			label: "Authentication schemes",
@@ -523,6 +558,7 @@ export const PROTOCOL_FIELDS = {
 			type: "text",
 		},
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 		{ name: "vcenter", label: "vCenter hostname", type: "text", advanced: true },
 	],
@@ -545,6 +581,7 @@ export const PROTOCOL_FIELDS = {
 			type: "text",
 		},
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	snmp: [
 		{
@@ -560,6 +597,7 @@ export const PROTOCOL_FIELDS = {
 		{ name: "community", label: "Community", type: "password", required: true },
 		{ name: "port", label: "Port", type: "text", required: true },
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "retryIntervals",
 			label: "Retry intervals (ms, comma-separated)",
@@ -603,6 +641,7 @@ export const PROTOCOL_FIELDS = {
 			required: true,
 			showIf: (values) => Boolean(String(values.privacy ?? "").trim()),
 		},
+		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "contextName",
 			label: "Context name",
@@ -652,6 +691,7 @@ export const PROTOCOL_FIELDS = {
 			],
 		},
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "bmcKey",
 			label: "BMC key (hex)",
@@ -709,12 +749,14 @@ export const PROTOCOL_FIELDS = {
 		{ name: "username", label: "Username", type: "text", required: true },
 		{ name: "password", label: "Password", type: "password", required: true },
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	jmx: [
 		{ name: "username", label: "Username", type: "text" },
 		{ name: "password", label: "Password", type: "password" },
 		{ name: "port", label: "Port", type: "text", required: true },
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	oscommand: [
 		{ name: "useSudo", label: "Use sudo", type: "boolean" },
@@ -725,8 +767,9 @@ export const PROTOCOL_FIELDS = {
 			type: "text",
 		},
 		TIMEOUT_FIELD,
+		PROTOCOL_HOSTNAME_FIELD,
 	],
-	ping: [TIMEOUT_FIELD],
+	ping: [TIMEOUT_FIELD, PROTOCOL_HOSTNAME_FIELD],
 };
 
 const parseTimeoutToSeconds = (value) => {
@@ -949,6 +992,8 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 		default:
 			break;
 	}
+
+	setIfPresent("hostname", raw.hostname);
 
 	return config;
 };
@@ -1198,38 +1243,4 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 	}
 
 	return errors;
-};
-
-/**
- * @param {string} protocol
- * @param {Record<string, unknown>} protocolConfig
- * @param {{ hostId?: string; hostName?: string }} [options]
- * @returns {string | null}
- */
-export const validateProtocolConfig = (protocol, protocolConfig, options = {}) => {
-	const errors = collectProtocolConfigErrors(protocol, protocolConfig, options);
-	const firstKey = Object.keys(errors)[0];
-	return firstKey ? errors[firstKey] : null;
-};
-
-/**
- * Validates every protocol configured on a host.
- *
- * @param {Record<string, Record<string, unknown>>} protocolsForm
- * @param {{ hostId?: string; hostName?: string }} [options]
- * @returns {string | null}
- */
-export const validateAllProtocols = (protocolsForm, options = {}) => {
-	const ids = Object.keys(protocolsForm || {});
-	if (ids.length === 0) {
-		return "Add at least one monitoring protocol.";
-	}
-	for (const protocolId of ids) {
-		const label = PROTOCOL_OPTIONS.find((p) => p.id === protocolId)?.label || protocolId;
-		const message = validateProtocolConfig(protocolId, protocolsForm[protocolId], options);
-		if (message) {
-			return `${label}: ${message}`;
-		}
-	}
-	return null;
 };

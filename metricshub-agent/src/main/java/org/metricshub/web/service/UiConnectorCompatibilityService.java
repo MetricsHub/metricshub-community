@@ -55,7 +55,7 @@ import org.metricshub.web.dto.uiconfig.UiConnectorVariableDto;
 import org.springframework.stereotype.Service;
 
 /**
- * Evaluates connector compatibility for the UI wizard using the same rules as
+ * Evaluates connector compatibility for the UI configuration form using the same rules as
  * {@link org.metricshub.engine.strategy.detection.AutomaticDetection} and
  * {@link HostConfiguration#determineAcceptedSources}.
  */
@@ -501,7 +501,7 @@ public class UiConnectorCompatibilityService {
 					.buildConfigurationFromJsonNode(protocol, EMPTY_PROTOCOL_JSON, NO_DECRYPT)
 					.ifPresent(configuration -> configurations.put(configuration.getClass(), configuration));
 			} catch (InvalidConfigurationException ignored) {
-				// Skip invalid protocol entries from the wizard probe
+				// Skip invalid protocol entries from the configuration form probe
 			}
 		}
 

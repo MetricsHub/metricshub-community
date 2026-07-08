@@ -1,13 +1,13 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
 import { PROTOCOL_OPTIONS } from "./protocol-definitions";
 
-/** @typedef {'basics' | 'protocol' | 'connectors'} WizardStepType */
+/** @typedef {'basics' | 'protocol' | 'connectors'} FormSectionType */
 
 /**
- * @typedef {object} WizardStepDescriptor
+ * @typedef {object} FormSectionDescriptor
  * @property {string} id
  * @property {string} label
- * @property {WizardStepType} type
+ * @property {FormSectionType} type
  * @property {string} [protocolId]
  */
 
@@ -15,7 +15,7 @@ const protocolLabel = (protocolId) =>
 	PROTOCOL_OPTIONS.find((p) => p.id === protocolId)?.label || protocolId;
 
 /**
- * Selected protocol ids sorted A–Z by display label (wizard step order).
+ * Selected protocol ids sorted A–Z by display label (form section order).
  *
  * @param {string[]} [selectedProtocols]
  * @returns {string[]}
@@ -28,13 +28,13 @@ export const getOrderedSelectedProtocols = (selectedProtocols = []) => {
 };
 
 /**
- * Builds the dynamic wizard step list from current state.
+ * Builds the dynamic form section list from current state.
  *
  * @param {object} state
- * @returns {WizardStepDescriptor[]}
+ * @returns {FormSectionDescriptor[]}
  */
-export const buildWizardSteps = (state) => {
-	/** @type {WizardStepDescriptor[]} */
+export const buildFormSections = (state) => {
+	/** @type {FormSectionDescriptor[]} */
 	const steps = [{ id: "basics", label: "Resource Details", type: "basics" }];
 
 	const orderedProtocols = getOrderedSelectedProtocols(state.selectedProtocols);
@@ -56,21 +56,15 @@ export const buildWizardSteps = (state) => {
 };
 
 /**
- * @param {object} state
- * @returns {boolean}
- */
-export const needsConnectorVariablesStep = () => false;
-
-/**
- * @param {WizardStepDescriptor[]} steps
+ * @param {FormSectionDescriptor[]} steps
  * @param {number} index
- * @returns {WizardStepDescriptor | undefined}
+ * @returns {FormSectionDescriptor | undefined}
  */
 export const getStepAt = (steps, index) => steps[index];
 
 /**
- * @param {WizardStepDescriptor[]} steps
- * @param {WizardStepType} type
+ * @param {FormSectionDescriptor[]} steps
+ * @param {FormSectionType} type
  * @param {string} [protocolId]
  * @returns {number}
  */
@@ -80,7 +74,7 @@ export const findStepIndex = (steps, type, protocolId) =>
 /**
  * Visible step indices for the stepper UI.
  *
- * @param {WizardStepDescriptor[]} steps
+ * @param {FormSectionDescriptor[]} steps
  * @param {number} activeStep
  * @param {number} furthestStep
  * @returns {number[]}
@@ -88,10 +82,10 @@ export const findStepIndex = (steps, type, protocolId) =>
 /**
  * Short description shown under the active step in the side stepper.
  *
- * @param {WizardStepDescriptor | undefined} step
+ * @param {FormSectionDescriptor | undefined} step
  * @returns {string | null}
  */
-export const getWizardStepDescription = (step) => {
+export const getFormSectionDescription = (step) => {
 	if (!step) {
 		return null;
 	}
@@ -110,10 +104,10 @@ export const getWizardStepDescription = (step) => {
 /**
  * Subtitle for the create page header (Step X of Y — …).
  *
- * @param {WizardStepDescriptor | undefined} step
+ * @param {FormSectionDescriptor | undefined} step
  * @returns {string}
  */
-export const getWizardStepPageSubtitle = (step) => {
+export const getFormSectionPageSubtitle = (step) => {
 	if (!step) {
 		return "";
 	}
@@ -127,16 +121,4 @@ export const getWizardStepPageSubtitle = (step) => {
 		default:
 			return "";
 	}
-};
-
-export const getVisibleStepIndices = (steps, activeStep, furthestStep) => {
-	if (!steps.length) {
-		return [0];
-	}
-	const lastIndex = steps.length - 1;
-	const hasLeftResourceDetails = activeStep > 0 || furthestStep > 0;
-	if (!hasLeftResourceDetails) {
-		return [0];
-	}
-	return Array.from({ length: lastIndex + 1 }, (_, i) => i);
 };

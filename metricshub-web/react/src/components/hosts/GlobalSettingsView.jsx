@@ -244,7 +244,7 @@ const ResourceGroupAccordion = ({ name, node, onConfigure }) => {
 
 /**
  * Global Settings body: titled sections on the left, vertical section
- * stepper on the right (same layout as the host wizard).
+ * stepper on the right (same layout as the host config form).
  *
  * @param {object} props
  * @param {{ resources?: Record<string, unknown>; resourceGroups?: Record<string, unknown> }} props.snapshot

@@ -1,5 +1,5 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { encryptWizardProtocolPasswords } from "../../utils/password-encrypt";
+import { encryptFormProtocolPasswords } from "../../utils/password-encrypt";
 
 /** Common MetricsHub protocol keys used in host filters (A–Z). */
 export const KNOWN_PROTOCOLS = [
@@ -155,17 +155,6 @@ export const buildMultiHostDerivedIds = (hostId, hostNames) =>
 	hostNames.map((name, index) => `${hostId}-${index + 1}-${name}`);
 
 /**
- * Sorts [hostId, hostConfig] tuples by display name (host.name, else host id).
- *
- * @param {[string, Record<string, unknown>][]} entries
- * @returns {[string, Record<string, unknown>][]}
- */
-export const sortHostEntryTuples = (entries) =>
-	[...entries].sort((a, b) =>
-		compareLocale(getHostDisplayName(a[0], a[1]), getHostDisplayName(b[0], b[1])),
-	);
-
-/**
  * Collects all protocol names present in a group's hosts.
  *
  * @param {Record<string, unknown>} resources
@@ -274,36 +263,21 @@ import {
 	parseConnectorDirectivesFromConfig,
 	parseForcedConnectorIdsFromConfig,
 } from "./connector-utils";
+import {
+	parseResourceAdvancedFromConfig,
+	buildResourceAdvancedPayload,
+} from "./resource-config-utils";
+import { createEmptyResourceAdvancedState } from "./resource-config-fields";
 
 /**
- * Picks the primary protocol to edit when a host has several configured.
- *
- * @param {Record<string, unknown>} protocols
- * @returns {string}
- */
-export const pickPrimaryProtocol = (protocols) => {
-	const keys = Object.keys(protocols || {});
-	if (keys.length === 0) {
-		return "ssh";
-	}
-	const preferred = ["ssh", "wmi", "snmp", "http", "winrm", "wbem"];
-	for (const p of preferred) {
-		if (keys.includes(p)) {
-			return p;
-		}
-	}
-	return keys[0];
-};
-
-/**
- * Maps a host entry from snapshot data into wizard state.
+ * Maps a host entry from snapshot data into form state.
  *
  * @param {string} hostId
  * @param {Record<string, unknown>} hostConfig
  * @param {string | null | undefined} resourceGroup
  * @returns {object}
  */
-export const hostConfigToWizardState = (hostId, hostConfig, resourceGroup) => {
+export const hostConfigToFormState = (hostId, hostConfig, resourceGroup) => {
 	const attrs = hostConfig?.attributes || {};
 	const yamlProtocols = hostConfig?.protocols || {};
 	const inGroup = Boolean(resourceGroup);
@@ -350,16 +324,17 @@ export const hostConfigToWizardState = (hostId, hostConfig, resourceGroup) => {
 				? "manual"
 				: "automatic",
 		furthestStep: 0,
+		resourceAdvanced: parseResourceAdvancedFromConfig(hostConfig),
 	};
 };
 
 /**
- * Builds the API payload from wizard state (only currently selected protocols).
+ * Builds the API payload from form state (only currently selected protocols).
  *
- * @param {object} wizardState
+ * @param {object} formState
  * @returns {object}
  */
-export const buildHostPayloadFromWizard = (wizardState) => {
+export const buildHostPayloadFromForm = (formState) => {
 	const {
 		hostId,
 		targetType,
@@ -371,7 +346,7 @@ export const buildHostPayloadFromWizard = (wizardState) => {
 		connectors: connectorIds,
 		additionalConnectors,
 		connectorDetectionMode,
-	} = wizardState;
+	} = formState;
 
 	const selectedSet = new Set(
 		Array.isArray(selectedProtocols) && selectedProtocols.length > 0
@@ -397,6 +372,19 @@ export const buildHostPayloadFromWizard = (wizardState) => {
 		},
 		protocols,
 	};
+
+	const resourceAdvancedPayload = buildResourceAdvancedPayload(
+		formState.resourceAdvanced || createEmptyResourceAdvancedState(),
+	);
+	const { customAttributes, metrics, ...resourceOptions } = resourceAdvancedPayload;
+	if (customAttributes && typeof customAttributes === "object") {
+		Object.assign(payload.attributes, customAttributes);
+	}
+	if (metrics && typeof metrics === "object" && Object.keys(metrics).length > 0) {
+		payload.metrics = metrics;
+	}
+	Object.assign(payload, resourceOptions);
+
 	if (connectorDetectionMode === "manual" || connectorDetectionMode === "raw") {
 		const connectors = buildConnectorsPayload(connectorIds);
 		if (connectors.length > 0) {
@@ -415,15 +403,12 @@ export const buildHostPayloadFromWizard = (wizardState) => {
 /**
  * Builds the API payload, optionally encrypting plain-text protocol passwords first (on save).
  *
- * @param {object} wizardState
+ * @param {object} formState
  * @param {{ encryptPasswords?: boolean }} [options]
  * @returns {Promise<object>}
  */
-export const buildHostPayloadFromWizardAsync = async (wizardState, options = {}) => {
+export const buildHostPayloadFromFormAsync = async (formState, options = {}) => {
 	const { encryptPasswords = false } = options;
-	const state = encryptPasswords ? await encryptWizardProtocolPasswords(wizardState) : wizardState;
-	return buildHostPayloadFromWizard(state);
+	const state = encryptPasswords ? await encryptFormProtocolPasswords(formState) : formState;
+	return buildHostPayloadFromForm(state);
 };
-
-/** @deprecated use hostConfigToWizardState */
-export const hostConfigToFormValues = hostConfigToWizardState;

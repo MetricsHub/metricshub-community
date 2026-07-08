@@ -117,7 +117,7 @@ const AgentData = ({ agent, totalResources, status }) => {
 				<Box component="img" src="/windows.svg" alt="Windows" sx={{ width: 40, height: 40 }} />
 			);
 		} else if (lower.includes("linux")) {
-			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 60, height: 60 }} />;
+			action = <Box component="img" src="/linux.png" alt="Linux" sx={{ width: 60, height: 60 }} />;
 		}
 	}
 

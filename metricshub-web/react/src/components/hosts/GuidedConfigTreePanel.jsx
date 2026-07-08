@@ -23,6 +23,8 @@ const GuidedConfigTreePanel = ({
 	busy = false,
 	disableNewGroup = false,
 	disableNewResource = false,
+	drafts = [],
+	onOpenDraft,
 	onViewChange,
 	onCreateGroup,
 	onCreateHost,
@@ -49,6 +51,8 @@ const GuidedConfigTreePanel = ({
 				snapshot={snapshot}
 				view={view}
 				onViewChange={onViewChange}
+				drafts={drafts}
+				onOpenDraft={onOpenDraft}
 				filterSearch=""
 				filterProtocol=""
 				filterSortBy="name-asc"

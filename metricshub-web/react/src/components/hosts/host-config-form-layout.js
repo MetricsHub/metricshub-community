@@ -11,7 +11,7 @@ export const HOST_CONFIG_STEP_RAIL_WIDTH = 280;
 /** Top band height on the fixed steps column (aligns with breadcrumb row). */
 export const HOST_CONFIG_BREADCRUMB_ROW_MIN_HEIGHT = 48;
 
-/** Right inset for create-wizard main column (clears the scrollbar). */
+/** Right inset for create form main column (clears the scrollbar). */
 export const HOST_CONFIG_CREATE_FORM_CONTENT_PR = 2;
 
 /** Column gap between create form and stepper (tighter than default page gap). */

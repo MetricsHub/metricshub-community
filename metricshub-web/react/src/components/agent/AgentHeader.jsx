@@ -16,7 +16,7 @@ const AgentHeader = memo(
 				);
 			}
 			if (lower.includes("linux")) {
-				return <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 64, height: 64 }} />;
+				return <Box component="img" src="/linux.png" alt="Linux" sx={{ width: 64, height: 64 }} />;
 			}
 			return null;
 		}, [osType]);

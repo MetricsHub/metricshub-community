@@ -1,11 +1,3 @@
-const DEFAULT_BORDER_COLOR = "#1565c0";
-
-/**
- * @param {string} protocol
- * @returns {string}
- */
-export const getProtocolBorderColor = () => DEFAULT_BORDER_COLOR;
-
 /**
  * MUI sx for a protocol badge: colored border, transparent fill.
  *

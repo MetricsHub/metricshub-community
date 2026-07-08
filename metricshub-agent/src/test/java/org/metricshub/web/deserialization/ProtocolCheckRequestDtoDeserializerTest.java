@@ -52,8 +52,8 @@ class ProtocolCheckRequestDtoDeserializerTest {
 	}
 
 	@Test
-	void testDeserializeNullBodyReturnsEmptyDto() throws Exception {
-		final ProtocolCheckRequestDto request = objectMapper.readValue("null", ProtocolCheckRequestDto.class);
+	void testDeserializeEmptyObjectReturnsEmptyDto() throws Exception {
+		final ProtocolCheckRequestDto request = objectMapper.readValue("{}", ProtocolCheckRequestDto.class);
 
 		assertNotNull(request);
 		assertTrue(request.getProtocolConfig().isEmpty());

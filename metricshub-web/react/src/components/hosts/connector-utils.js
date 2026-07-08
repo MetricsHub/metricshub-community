@@ -1,7 +1,7 @@
 import { uiConfigApi } from "../../api/ui-config";
 import { compareLocale, sortConnectorSummaries } from "../../utils/alphabetic-sort";
 import { HOST_TYPE_LABELS, formatHostTypeLabel } from "./protocol-definitions";
-import { getOrderedSelectedProtocols } from "./host-wizard-steps";
+import { getOrderedSelectedProtocols } from "./host-config-sections";
 
 /** @type {Promise<object[]> | null} */
 let connectorCatalogPromise = null;
@@ -89,13 +89,6 @@ export const parseForcedConnectorIdsFromConfig = (connectors) =>
 		.sort(compareLocale);
 
 /**
- * @deprecated use {@link parseForcedConnectorIdsFromConfig} or {@link parseConnectorDirectivesFromConfig}
- * @param {unknown} connectors
- * @returns {string[]}
- */
-export const parseConnectorIdsFromConfig = parseForcedConnectorIdsFromConfig;
-
-/**
  * @param {string[]} directives
  * @returns {string[]}
  */
@@ -131,6 +124,16 @@ export const getConnectorSelectionKind = (directives, connectorId) => {
 };
 
 /**
+ * Selection kind for a configurable connector instance (additionalConnectors entry).
+ * Instances default to forced; {@code force: false} maps to plain select.
+ *
+ * @param {{ force?: boolean } | null | undefined} entry
+ * @returns {'force' | 'select'}
+ */
+export const getAdditionalConnectorSelectionKind = (entry) =>
+	entry?.force === false ? "select" : "force";
+
+/**
  * True when at least one connector is selected/forced or a tag is selected.
  * In that mode exclusions are redundant — unlisted connectors are already skipped.
  *
@@ -144,7 +147,7 @@ export const hasSelectionOrForceDirectives = (directives) =>
 	});
 
 /**
- * Whether the wizard has any manual connector configuration (directives, instances, or templates).
+ * Whether the form has any manual connector configuration (directives, instances, or templates).
  *
  * @param {object} state
  * @returns {boolean}
@@ -225,30 +228,6 @@ export const reconcileExcludeDirectives = (directives, stashedExcludes = []) => 
 		active: buildConnectorsPayload([...working, ...(stashedExcludes || [])]),
 		stashedExcludes: [],
 	};
-};
-
-/**
- * @param {string[]} directives
- * @param {string} tag
- * @returns {'none' | 'include-tag' | 'exclude-tag'}
- */
-export const getTagSelectionKind = (directives, tag) => {
-	const target = String(tag ?? "")
-		.trim()
-		.toLowerCase();
-	if (!target) {
-		return "none";
-	}
-	for (const directive of directives || []) {
-		const parsed = parseConnectorDirective(directive);
-		if (parsed.kind === "include-tag" && parsed.value.toLowerCase() === target) {
-			return "include-tag";
-		}
-		if (parsed.kind === "exclude-tag" && parsed.value.toLowerCase() === target) {
-			return "exclude-tag";
-		}
-	}
-	return "none";
 };
 
 /**
@@ -364,20 +343,54 @@ export const collectCatalogTags = (catalog = []) => {
  */
 export const getConnectorListDescription = (item) => String(item?.information ?? "").trim();
 
-/** Category tabs for the compatible connectors list (filters by detection tag). */
+/** Category tabs for the compatible connectors list (filters by detection tag). "All" first, then alphabetical. */
 export const CONNECTOR_CATEGORY_TABS = [
 	{ id: "all", label: "All" },
-	{ id: "hardware", label: "Hardware", tag: "Hardware" },
-	{ id: "system", label: "System", tag: "System" },
-	{ id: "storage", label: "Storage", tag: "Storage" },
 	{ id: "database", label: "Database", tag: "Database" },
+	{ id: "hardware", label: "Hardware", tag: "Hardware" },
 	{ id: "network", label: "Network", tag: "Network" },
+	{ id: "storage", label: "Storage", tag: "Storage" },
+	{ id: "system", label: "System", tag: "System" },
 ];
 
 /**
  * @param {object[]} catalog
  * @returns {object[]}
  */
+/**
+ * Finds a catalog connector by id (exact match, then case-insensitive).
+ *
+ * @param {object[]} [catalog]
+ * @param {string} connectorId
+ * @returns {object | null}
+ */
+export const findCatalogConnectorById = (catalog = [], connectorId) => {
+	const needle = String(connectorId ?? "").trim();
+	if (!needle) {
+		return null;
+	}
+	const exact = catalog.find((item) => String(item?.id ?? "").trim() === needle);
+	if (exact) {
+		return exact;
+	}
+	const lower = needle.toLowerCase();
+	return (
+		catalog.find(
+			(item) =>
+				String(item?.id ?? "")
+					.trim()
+					.toLowerCase() === lower,
+		) ?? null
+	);
+};
+
+/**
+ * @param {string} connectorId canonical catalog connector id
+ * @returns {string}
+ */
+export const getConnectorDirectiveRowKey = (connectorId) =>
+	`connector:${String(connectorId ?? "").trim()}`;
+
 export const dedupeConnectorCatalogById = (catalog = []) => {
 	/** @type {Map<string, object>} */
 	const byId = new Map();
@@ -526,27 +539,6 @@ export const collectCatalogFilterOptions = (catalog = []) => {
 };
 
 /**
- * @param {ConnectorDirectiveKind} kind
- * @returns {string}
- */
-export const connectorDirectiveLabel = (kind) => {
-	switch (kind) {
-		case "select":
-			return "selection";
-		case "force":
-			return "force";
-		case "exclude":
-			return "exclude";
-		case "include-tag":
-			return "tag selection";
-		case "exclude-tag":
-			return "tag exclusion";
-		default:
-			return "auto-detect";
-	}
-};
-
-/**
  * Builds default variable values from connector catalog definitions.
  *
  * @param {Array<{ name?: string; defaultValue?: string }>} variableDefinitions
@@ -642,7 +634,7 @@ export const createDefaultAdditionalConnectorEntry = (templateId, variableDefini
 });
 
 /**
- * Parses additionalConnectors from host config into wizard state shape.
+ * Parses additionalConnectors from host config into form state shape.
  *
  * @param {unknown} additionalConnectors
  * @returns {Record<string, { uses: string; force: boolean; variables: Record<string, string> }>}
@@ -775,16 +767,6 @@ export const annotateConnectorCatalog = (catalog = [], context = {}) =>
 	});
 
 /**
- * Returns compatible connectors for the given resource context.
- *
- * @param {object[]} catalog
- * @param {{ hostType?: string; protocols?: string[]; isLocalhost?: boolean }} context
- * @returns {object[]}
- */
-export const filterCompatibleConnectorCatalog = (catalog = [], context = {}) =>
-	annotateConnectorCatalog(catalog, context).filter((item) => item.compatible);
-
-/**
  * Fetches the static connector catalog once per page session.
  *
  * @returns {Promise<object[]>}
@@ -802,43 +784,10 @@ export const fetchConnectorCatalog = async () => {
 	return connectorCatalogPromise;
 };
 
-/** Clears the in-memory connector catalog cache (tests). */
-export const resetConnectorCatalogCache = () => {
-	connectorCatalogPromise = null;
-};
-
 /**
- * Fetches the compatible connector catalog for host.type + protocols.
+ * Derives compatible connector IDs from the latest form state and a catalog map.
  *
- * @param {string} hostType
- * @param {string[]} selectedProtocols
- * @returns {Promise<{ catalog: object[]; catalogById: Map<string, object> | null; skipped: boolean; failed: boolean }>}
- */
-export const fetchCompatibleConnectorCatalog = async (hostType, selectedProtocols) => {
-	const normalizedHostType = String(hostType ?? "").trim();
-	const protocols = getOrderedSelectedProtocols(selectedProtocols);
-
-	if (!normalizedHostType || protocols.length === 0) {
-		return { catalog: [], catalogById: null, skipped: true, failed: false };
-	}
-
-	try {
-		const fullCatalog = await fetchConnectorCatalog();
-		const catalog = filterCompatibleConnectorCatalog(fullCatalog, {
-			hostType: normalizedHostType,
-			protocols,
-		});
-		const catalogById = new Map(catalog.map((item) => [String(item.id || ""), item]));
-		return { catalog, catalogById, skipped: false, failed: false };
-	} catch {
-		return { catalog: [], catalogById: null, skipped: false, failed: true };
-	}
-};
-
-/**
- * Derives compatible connector IDs from the latest wizard state and a catalog map.
- *
- * @param {object} state wizard state slice
+ * @param {object} state form state slice
  * @param {Map<string, object> | null} catalogById
  * @param {{ failed?: boolean }} [options]
  * @returns {{ compatibleConnectorIds: string[]; compatibleVariableConnectorIds: string[] }}
@@ -879,38 +828,6 @@ export const computeCompatibleConnectorIdsFromCatalog = (
 	return { compatibleConnectorIds, compatibleVariableConnectorIds };
 };
 
-/**
- * Fetches the connector catalog for the given host.type + protocols so the
- * caller can recompute compatibility against the *current* wizard state.
- *
- * @deprecated Prefer {@link fetchCompatibleConnectorCatalog} + {@link computeCompatibleConnectorIdsFromCatalog}.
- * @param {object} state wizard state slice
- * @returns {Promise<{ catalogById: Map<string, object> | null; skipped: boolean; failed: boolean }>}
- */
-export const pruneWizardConnectorsForCompatibility = async (state) => {
-	const { catalogById, skipped, failed } = await fetchCompatibleConnectorCatalog(
-		state.hostType,
-		state.selectedProtocols,
-	);
-	return { catalogById, skipped, failed };
-};
-
-/**
- * @param {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>} [additionalConnectors]
- * @returns {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>}
- */
-export const visibleAdditionalConnectors = (additionalConnectors = {}) => ({
-	...(additionalConnectors || {}),
-});
-
-/**
- * Merges edits from the variables step into stored additionalConnectors, preserving hidden drafts.
- *
- * @param {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>} stored
- * @param {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>} visiblePatch
- * @param {string[]} compatibleVariableConnectorIds
- * @returns {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>}
- */
 /**
  * Returns whether another additionalConnectors entry already uses the candidate ID.
  *
@@ -1038,17 +955,12 @@ export const suggestAdditionalConnectorInstanceId = (templateId, additionalConne
 	return `${base}-${suffix}`;
 };
 
-export const mergeAdditionalConnectorsPatch = (stored = {}, visiblePatch = {}) => ({
-	...stored,
-	...visiblePatch,
-});
-
 /**
  * Applies additionalConnectors edits and keeps force directives in sync for forced instances.
  *
- * @param {object} state wizard state slice
+ * @param {object} state form state slice
  * @param {Record<string, { uses?: string; force?: boolean; variables?: Record<string, string> }>} nextAdditionalConnectors
- * @returns {object} wizard state patch
+ * @returns {object} form state patch
  */
 export const applyAdditionalConnectorsChange = (state, nextAdditionalConnectors) => {
 	const prevAdditional = state.additionalConnectors || {};
@@ -1062,10 +974,12 @@ export const applyAdditionalConnectorsChange = (state, nextAdditionalConnectors)
 	}
 
 	for (const [id, entry] of Object.entries(nextAdditionalConnectors || {})) {
-		if (entry?.force !== false) {
-			connectors = upsertConnectorDirective(connectors, "force", id);
-		} else {
+		if (entry?.force === false) {
 			connectors = removeDirectivesForValue(connectors, id, ["force"]);
+			connectors = upsertConnectorDirective(connectors, "select", id);
+		} else {
+			connectors = removeDirectivesForValue(connectors, id, ["select"]);
+			connectors = upsertConnectorDirective(connectors, "force", id);
 		}
 	}
 
@@ -1128,18 +1042,6 @@ export const connectorDocumentationUrl = (connectorId) => {
 };
 
 /**
- * @param {string} text
- * @returns {string[]}
- */
-export const parseRawConnectorsText = (text) => {
-	const lines = String(text ?? "")
-		.split(/\r?\n/)
-		.map((line) => line.trim())
-		.filter(Boolean);
-	return [...new Set(lines)].sort(compareLocale);
-};
-
-/**
  * Parses comma-separated connector directives (single-line code editor).
  *
  * @param {string} text
@@ -1152,17 +1054,6 @@ export const parseInlineConnectorsText = (text) => {
 		.filter(Boolean);
 	return [...new Set(parts)].sort(compareLocale);
 };
-
-/**
- * @param {string[]} directives
- * @returns {string}
- */
-export const formatRawConnectorsText = (directives) =>
-	(directives || [])
-		.map((entry) => String(entry ?? "").trim())
-		.filter(Boolean)
-		.sort(compareLocale)
-		.join("\n");
 
 /**
  * Formats connector directives as a single comma-separated line for the code tab.
@@ -1181,11 +1072,11 @@ export const formatInlineConnectorsText = (directives) =>
  * Removes connector directives and variable instances that are incompatible with the
  * current host context after host.type or protocol changes.
  *
- * @param {object} state wizard state slice
+ * @param {object} state form state slice
  * @param {object[]} [annotatedCatalog]
  * @returns {{ connectors: string[]; additionalConnectors: Record<string, unknown>; selectedVariableConnectorTemplates: string[]; configureVariableConnectors: boolean }}
  */
-export const pruneWizardConnectorsForHostContext = (state, annotatedCatalog = []) => {
+export const pruneFormConnectorsForHostContext = (state, annotatedCatalog = []) => {
 	const compatiblePlain = (annotatedCatalog || []).filter(
 		(item) => item?.compatible && !item?.hasVariables,
 	);

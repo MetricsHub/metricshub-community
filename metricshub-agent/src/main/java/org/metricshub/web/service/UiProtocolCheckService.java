@@ -44,7 +44,7 @@ public class UiProtocolCheckService {
 	}
 
 	/**
-	 * Runs a protocol check using the inline configuration supplied by the UI wizard.
+	 * Runs a protocol check using the inline configuration supplied by the UI configuration form.
 	 *
 	 * @param request hostname, protocol id, and protocol configuration map
 	 * @return host.up style result for display in the guided configuration UI

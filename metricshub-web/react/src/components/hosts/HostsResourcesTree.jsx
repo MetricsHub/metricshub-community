@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import ExplorerTreeItem from "../explorer/tree/TreeItem";
 import {
 	getGroupResources,
+	getHostNames,
 	isMultiHostConfig,
 	hostMatchesFilters,
 	summarizeHostsSnapshot,
@@ -14,6 +15,28 @@ import { compareLocale } from "../../utils/alphabetic-sort";
 
 export const HOSTS_TREE_STANDALONE_ID = "hosts-tree/standalone-section";
 export const HOSTS_TREE_ROOT_ID = "hosts-tree/root";
+
+const DRAFT_TREE_ID_PREFIX = "hosts-tree/draft/";
+
+/**
+ * @param {string} draftId
+ * @returns {string}
+ */
+export const draftTreeId = (draftId) => `${DRAFT_TREE_ID_PREFIX}${encodeURIComponent(draftId)}`;
+
+/** @param {{ id: string; name: string; state?: object }} draft */
+const draftTreeNode = (draft) => {
+	const draftState = draft.state || {};
+	return {
+		id: draftTreeId(draft.id),
+		// Drafts are labeled by their resource ID, like saved resources.
+		name: String(draftState.hostId || "").trim() || draft.name,
+		type: getHostNames(draftState.hostName).length > 1 ? "multi-host-resource" : "resource",
+		badge: "draft",
+		children: [],
+		isExpandable: false,
+	};
+};
 
 /**
  * @param {string} groupName
@@ -108,6 +131,8 @@ const HostsResourcesTree = ({
 	snapshot,
 	view,
 	onViewChange,
+	drafts = [],
+	onOpenDraft,
 	filterSearch = "",
 	filterProtocol = "",
 	filterSortBy = "name-asc",
@@ -140,6 +165,26 @@ const HostsResourcesTree = ({
 	);
 
 	const treeRoot = React.useMemo(() => {
+		// A draft belongs to its target resource group; drafts without a (still
+		// existing) group land in the "No resource group" section.
+		const groupNames = new Set(visibleGroups.map((group) => group.name));
+		/** @type {Map<string, object[]>} */
+		const draftsByGroup = new Map();
+		/** @type {object[]} */
+		const ungroupedDrafts = [];
+		for (const draft of drafts) {
+			const draftState = draft.state || {};
+			const groupName =
+				draftState.targetType === "group" ? String(draftState.resourceGroup || "").trim() : "";
+			if (groupName && groupNames.has(groupName)) {
+				const list = draftsByGroup.get(groupName) || [];
+				list.push(draftTreeNode(draft));
+				draftsByGroup.set(groupName, list);
+			} else {
+				ungroupedDrafts.push(draftTreeNode(draft));
+			}
+		}
+
 		/** @type {Array<{ id: string; name: string; type: string; children: object[]; isExpandable: boolean }>} */
 		const groupNodes = visibleGroups.map((group) => {
 			const resources = getGroupResources(group.node);
@@ -156,24 +201,29 @@ const HostsResourcesTree = ({
 					isExpandable: false,
 				}));
 
+			const children = [
+				...hostNodes,
+				...(draftsByGroup.get(group.name) || []).sort((a, b) => compareLocale(a.name, b.name)),
+			];
 			return {
 				id: groupTreeId(group.name),
 				name: group.name,
 				type: "resource-group",
-				children: hostNodes,
-				isExpandable: hostNodes.length > 0,
+				children,
+				isExpandable: children.length > 0,
 			};
 		});
 
-		const standaloneChildren = visibleStandaloneHosts
-			.map((host) => ({
+		const standaloneChildren = [
+			...visibleStandaloneHosts.map((host) => ({
 				id: standaloneHostTreeId(host.hostId),
 				name: host.hostId,
 				type: isMultiHostConfig(host.hostConfig) ? "multi-host-resource" : "resource",
 				children: [],
 				isExpandable: false,
-			}))
-			.sort((a, b) => a.name.localeCompare(b.name));
+			})),
+			...ungroupedDrafts,
+		].sort((a, b) => a.name.localeCompare(b.name));
 
 		const standaloneSection = [
 			{
@@ -192,7 +242,7 @@ const HostsResourcesTree = ({
 			children: [...groupNodes, ...standaloneSection],
 			isExpandable: true,
 		};
-	}, [visibleGroups, visibleStandaloneHosts, filterSearch, protocolFilterForHosts]);
+	}, [visibleGroups, visibleStandaloneHosts, drafts, filterSearch, protocolFilterForHosts]);
 
 	const selectedNodeId = hostsViewToTreeItemId(view);
 
@@ -234,9 +284,13 @@ const HostsResourcesTree = ({
 			if (event.target.closest(`.${treeItemClasses.iconContainer}`)) {
 				return;
 			}
+			if (itemId.startsWith(DRAFT_TREE_ID_PREFIX)) {
+				onOpenDraft?.(decodeURIComponent(itemId.slice(DRAFT_TREE_ID_PREFIX.length)));
+				return;
+			}
 			handleTreeNodeSelect(null, itemId, onViewChange);
 		},
-		[onViewChange],
+		[onOpenDraft, onViewChange],
 	);
 
 	return (

@@ -29,7 +29,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Summary of an installed connector for the UI resource wizard.
+ * Summary of an installed connector for the UI resource configuration.
  */
 @Data
 @Builder(toBuilder = true)

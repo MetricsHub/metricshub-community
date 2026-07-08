@@ -12,7 +12,7 @@ import {
 	buildMultiHostDerivedIds,
 } from "./host-config-utils";
 import { ProtocolChips } from "./ProtocolChip";
-import { protocolChipSx } from "./protocol-chip-styles";
+import { protocolChipSx } from "./protocol-chip-sx";
 import { setHostDragData } from "./host-drag";
 
 export { buildMultiHostDerivedIds };
@@ -378,7 +378,7 @@ const HostsResourceTable = ({
 	const setRowsPerPage = onRowsPerPageChange ?? setInternalRowsPerPage;
 
 	const entriesFingerprint = React.useMemo(
-		() => hostEntries.map(([hostId]) => hostId).join(" "),
+		() => hostEntries.map(([hostId]) => hostId).join("\u0000"),
 		[hostEntries],
 	);
 

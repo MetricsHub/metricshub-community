@@ -1,24 +1,42 @@
 import * as React from "react";
 import { Box } from "@mui/material";
-import RouterOutlinedIcon from "@mui/icons-material/RouterOutlined";
-import SecurityOutlinedIcon from "@mui/icons-material/SecurityOutlined";
+import { useTheme } from "@mui/material/styles";
 import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import { HOST_TYPE_LABELS } from "./protocol-definitions";
 
-/** Brand / OS logos served from /public. */
-const HOST_TYPE_BRAND_ICONS = {
-	windows: "/windows.svg",
-	linux: "/linux.svg",
-	aix: "/aix.svg",
-	hpux: "/hpux.svg",
-	solaris: "/solaris.svg",
+/** Fixed slot so host.type labels align regardless of logo aspect ratio. */
+const HOST_TYPE_ICON_SLOT_WIDTH_PX = 56;
+
+/**
+ * The themed logos ship on a padded 30×30 canvas (artwork only fills the center),
+ * so they need to render larger than edge-to-edge logos to look the same size.
+ */
+const THEMED_ICON_SCALE = 1.7;
+
+/** @param {string} name */
+const themedHostTypeIcon = (name) => ({
+	dark: `/host-types/${name}-dark.svg`,
+	light: `/host-types/${name}-light.svg`,
+});
+
+/** Palette-mode-specific logos served from /public/host-types. */
+const HOST_TYPE_THEMED_ICONS = {
+	aix: themedHostTypeIcon("aix"),
+	hpux: themedHostTypeIcon("hpux"),
+	network: themedHostTypeIcon("network"),
+	oob: themedHostTypeIcon("oob"),
+	solaris: themedHostTypeIcon("solaris"),
 };
 
-/** Generic icons for non-OS host types. */
+/** Brand / OS logos served from /public (Wikimedia Commons) — no themed variant. */
+const HOST_TYPE_BRAND_ICONS = {
+	windows: "/windows.svg",
+	linux: "/linux.png",
+};
+
+/** Generic icons for host types without a logo. */
 const GENERIC_HOST_TYPE_ICONS = {
-	network: RouterOutlinedIcon,
 	storage: StorageOutlinedIcon,
-	oob: SecurityOutlinedIcon,
 };
 
 /**
@@ -29,30 +47,50 @@ const GENERIC_HOST_TYPE_ICONS = {
  * @param {number} [props.size]
  */
 const HostTypeIcon = ({ hostType, size = 20 }) => {
-	const brandSrc = HOST_TYPE_BRAND_ICONS[hostType];
+	const theme = useTheme();
+	const mode = theme.palette.mode === "dark" ? "dark" : "light";
+	const themedSrc = HOST_TYPE_THEMED_ICONS[hostType]?.[mode];
+	const renderSize = themedSrc ? Math.round(size * THEMED_ICON_SCALE) : size;
+	const slotSx = {
+		width: HOST_TYPE_ICON_SLOT_WIDTH_PX,
+		height: renderSize,
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		flexShrink: 0,
+	};
+
+	const brandSrc = themedSrc ?? HOST_TYPE_BRAND_ICONS[hostType];
 	if (brandSrc) {
 		return (
-			<Box
-				component="img"
-				src={brandSrc}
-				alt={HOST_TYPE_LABELS[hostType] || hostType}
-				sx={{
-					width: size,
-					height: size,
-					objectFit: "contain",
-					display: "block",
-					flexShrink: 0,
-				}}
-			/>
+			<Box sx={slotSx}>
+				<Box
+					component="img"
+					src={brandSrc}
+					alt={HOST_TYPE_LABELS[hostType] || hostType}
+					sx={{
+						maxWidth: "100%",
+						maxHeight: renderSize,
+						width: "auto",
+						height: "auto",
+						objectFit: "contain",
+						display: "block",
+					}}
+				/>
+			</Box>
 		);
 	}
 
 	const GenericIcon = GENERIC_HOST_TYPE_ICONS[hostType];
 	if (GenericIcon) {
-		return <GenericIcon sx={{ fontSize: size, color: "text.secondary", flexShrink: 0 }} />;
+		return (
+			<Box sx={slotSx}>
+				<GenericIcon sx={{ fontSize: size, color: "text.secondary" }} />
+			</Box>
+		);
 	}
 
-	return null;
+	return <Box sx={slotSx} aria-hidden />;
 };
 
 export default HostTypeIcon;

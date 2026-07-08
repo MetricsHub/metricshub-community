@@ -6,20 +6,21 @@ import {
 	protocolConfigToForm,
 } from "./protocol-definitions";
 import {
-	buildWizardSteps,
+	buildFormSections,
 	findStepIndex,
 	getOrderedSelectedProtocols,
 	getStepAt,
-} from "./host-wizard-steps";
+} from "./host-config-sections";
 import {
-	clearHostWizardSession,
-	clearHostWizardScrollPosition,
-	getHostWizardSessionKey,
-	loadHostWizardScrollPosition,
-	loadHostWizardSession,
-	saveHostWizardScrollPosition,
-	saveHostWizardSession,
-} from "./host-wizard-session";
+	clearHostFormSession,
+	clearHostFormScrollPosition,
+	getHostFormSessionKey,
+	isSessionFromCurrentAppBoot,
+	loadHostFormScrollPosition,
+	loadHostFormSession,
+	saveHostFormScrollPosition,
+	saveHostFormSession,
+} from "./host-config-session";
 import { compareLocale } from "../../utils/alphabetic-sort";
 import {
 	annotateConnectorCatalog,
@@ -27,23 +28,23 @@ import {
 	collectConnectorVariablesErrors,
 	computeCompatibleConnectorIdsFromCatalog,
 	fetchConnectorCatalog,
-	pruneWizardConnectorsForHostContext,
+	pruneFormConnectorsForHostContext,
 } from "./connector-utils";
 import {
 	applySelectedProtocols,
-	createEmptyHostWizardState,
-	getHostWizardCommittedFingerprint,
-	isHostWizardDirty,
-	normalizeHostWizardState,
-	getWizardStepFingerprint,
-} from "./host-wizard-state";
+	createEmptyHostFormState,
+	getHostFormCommittedFingerprint,
+	isHostFormDirty,
+	normalizeHostFormState,
+	getFormSectionFingerprint,
+} from "./host-config-state";
 
 /**
  * @param {object} state
- * @param {import("./host-wizard-steps").WizardStepDescriptor[]} steps
+ * @param {import("./host-config-sections").FormSectionDescriptor[]} steps
  * @returns {boolean}
  */
-const areAllWizardStepsValid = (state, steps) => {
+const areAllFormSectionsValid = (state, steps) => {
 	if (!steps.length) {
 		return false;
 	}
@@ -119,7 +120,7 @@ const areAllWizardStepsValid = (state, steps) => {
  * @param {string | null} [options.defaultResourceGroup]
  * @param {"create" | "edit"} options.mode
  */
-const buildWizardStateFromSources = ({
+const buildFormStateFromSources = ({
 	sessionState,
 	initialState,
 	defaultResourceGroup = null,
@@ -127,23 +128,23 @@ const buildWizardStateFromSources = ({
 }) => {
 	const serverState = initialState
 		? {
-				...createEmptyHostWizardState(defaultResourceGroup),
-				...normalizeHostWizardState(initialState),
+				...createEmptyHostFormState(defaultResourceGroup),
+				...normalizeHostFormState(initialState),
 				_editMode: mode === "edit",
 			}
 		: null;
 
 	if (sessionState) {
 		return {
-			...(serverState || createEmptyHostWizardState(defaultResourceGroup)),
-			...normalizeHostWizardState(sessionState),
+			...(serverState || createEmptyHostFormState(defaultResourceGroup)),
+			...normalizeHostFormState(sessionState),
 			_editMode: mode === "edit",
 		};
 	}
 
 	return (
 		serverState || {
-			...createEmptyHostWizardState(defaultResourceGroup),
+			...createEmptyHostFormState(defaultResourceGroup),
 			_editMode: mode === "edit",
 		}
 	);
@@ -159,7 +160,7 @@ const buildWizardStateFromSources = ({
  * @param {() => void} [options.onSessionClear]
  * @returns {object}
  */
-export const useHostWizard = ({
+export const useHostConfig = ({
 	open = true,
 	mode,
 	defaultResourceGroup = null,
@@ -169,7 +170,7 @@ export const useHostWizard = ({
 }) => {
 	const sessionKey = React.useMemo(
 		() =>
-			getHostWizardSessionKey({
+			getHostFormSessionKey({
 				mode,
 				defaultResourceGroup,
 				hostId: initialState?.hostId || initialState?.originalHostId,
@@ -185,42 +186,49 @@ export const useHostWizard = ({
 	);
 
 	const bootSession = React.useMemo(
-		() => (open ? loadHostWizardSession(sessionKey) : null),
+		() => (open ? loadHostFormSession(sessionKey) : null),
 		[open, sessionKey],
 	);
 
+	// Scroll/step restore is refresh-only: a session written during this app
+	// lifetime means the user navigated back in-app, where the form starts at the top.
 	const restoredScrollTop = React.useMemo(() => {
 		const top = bootSession?.scrollTop;
-		if (typeof top === "number" && top >= 0) {
+		if (typeof top === "number" && top >= 0 && !isSessionFromCurrentAppBoot(bootSession)) {
 			return top;
 		}
-		const fallback = loadHostWizardScrollPosition(sessionPathname);
-		if (typeof fallback?.scrollTop === "number" && fallback.scrollTop >= 0) {
+		const fallback = loadHostFormScrollPosition(sessionPathname);
+		if (
+			typeof fallback?.scrollTop === "number" &&
+			fallback.scrollTop >= 0 &&
+			!isSessionFromCurrentAppBoot(fallback)
+		) {
 			return fallback.scrollTop;
 		}
 		return null;
 	}, [bootSession, sessionPathname]);
 
 	const restoredActiveStep = React.useMemo(() => {
-		const fromBoot = bootSession?.activeStep;
-		const fromFallback = loadHostWizardScrollPosition(sessionPathname)?.activeStep;
+		const fromBoot = isSessionFromCurrentAppBoot(bootSession) ? null : bootSession?.activeStep;
+		const fallback = loadHostFormScrollPosition(sessionPathname);
+		const fromFallback = isSessionFromCurrentAppBoot(fallback) ? null : fallback?.activeStep;
 		const stepValue = typeof fromBoot === "number" ? fromBoot : fromFallback;
 		if (typeof stepValue !== "number") {
 			return null;
 		}
 		const sessionState = bootSession.state
 			? {
-					...createEmptyHostWizardState(defaultResourceGroup),
-					...normalizeHostWizardState(bootSession.state),
+					...createEmptyHostFormState(defaultResourceGroup),
+					...normalizeHostFormState(bootSession.state),
 				}
-			: createEmptyHostWizardState(defaultResourceGroup);
-		const max = Math.max(0, buildWizardSteps(sessionState).length - 1);
+			: createEmptyHostFormState(defaultResourceGroup);
+		const max = Math.max(0, buildFormSections(sessionState).length - 1);
 		return Math.min(Math.max(0, stepValue), max);
 	}, [bootSession, defaultResourceGroup, sessionPathname]);
 
 	const [activeStep, setActiveStep] = React.useState(() => restoredActiveStep ?? 0);
 	const [state, setState] = React.useState(() =>
-		buildWizardStateFromSources({
+		buildFormStateFromSources({
 			sessionState: bootSession?.state,
 			initialState,
 			defaultResourceGroup,
@@ -264,7 +272,7 @@ export const useHostWizard = ({
 	const stateRef = React.useRef(state);
 	stateRef.current = state;
 
-	const steps = React.useMemo(() => buildWizardSteps(state), [state]);
+	const steps = React.useMemo(() => buildFormSections(state), [state]);
 
 	const selectedProtocolsKey = React.useMemo(
 		() => getOrderedSelectedProtocols(state.selectedProtocols).join("\u0001"),
@@ -365,7 +373,7 @@ export const useHostWizard = ({
 			? null
 			: new Map(connectorCatalog.map((item) => [String(item.id || ""), item]));
 		setState((prev) => {
-			const pruned = pruneWizardConnectorsForHostContext(prev, annotatedConnectorCatalog);
+			const pruned = pruneFormConnectorsForHostContext(prev, annotatedConnectorCatalog);
 			const nextState = {
 				...prev,
 				...pruned,
@@ -425,7 +433,7 @@ export const useHostWizard = ({
 
 	const initialStateFingerprint = React.useMemo(
 		() =>
-			initialState ? getHostWizardCommittedFingerprint(normalizeHostWizardState(initialState)) : "",
+			initialState ? getHostFormCommittedFingerprint(normalizeHostFormState(initialState)) : "",
 		[initialState],
 	);
 
@@ -438,10 +446,10 @@ export const useHostWizard = ({
 		setValidatedStepIds(new Set());
 		setInvalidStepIds(new Set());
 
-		const fromSession = loadHostWizardSession(sessionKey);
+		const fromSession = loadHostFormSession(sessionKey);
 		const sessionState = fromSession?.state;
 
-		const nextState = buildWizardStateFromSources({
+		const nextState = buildFormStateFromSources({
 			sessionState,
 			initialState,
 			defaultResourceGroup,
@@ -450,8 +458,8 @@ export const useHostWizard = ({
 
 		const serverState = initialState
 			? {
-					...createEmptyHostWizardState(defaultResourceGroup),
-					...normalizeHostWizardState(initialState),
+					...createEmptyHostFormState(defaultResourceGroup),
+					...normalizeHostFormState(initialState),
 					_editMode: mode === "edit",
 				}
 			: null;
@@ -460,7 +468,7 @@ export const useHostWizard = ({
 
 		skipNextPersistRef.current = true;
 		setState(nextState);
-		const fallbackScroll = loadHostWizardScrollPosition(sessionPathname);
+		const fallbackScroll = loadHostFormScrollPosition(sessionPathname);
 		if (typeof fromSession?.scrollTop === "number" && fromSession.scrollTop >= 0) {
 			scrollTopRef.current = fromSession.scrollTop;
 		} else if (typeof fallbackScroll?.scrollTop === "number" && fallbackScroll.scrollTop >= 0) {
@@ -468,7 +476,7 @@ export const useHostWizard = ({
 		} else {
 			scrollTopRef.current = 0;
 		}
-		const maxStep = buildWizardSteps(nextState).length - 1;
+		const maxStep = buildFormSections(nextState).length - 1;
 		if (typeof fromSession?.activeStep === "number") {
 			setActiveStep(Math.min(Math.max(0, fromSession.activeStep), maxStep));
 		} else if (typeof fallbackScroll?.activeStep === "number") {
@@ -476,11 +484,11 @@ export const useHostWizard = ({
 		} else {
 			setActiveStep(0);
 		}
-		baselineFingerprintRef.current = getHostWizardCommittedFingerprint(baselineState);
+		baselineFingerprintRef.current = getHostFormCommittedFingerprint(baselineState);
 		baselineStateRef.current = baselineState;
 		if (mode === "edit" && initialState) {
-			const loadedSteps = buildWizardSteps(nextState);
-			if (areAllWizardStepsValid(nextState, loadedSteps)) {
+			const loadedSteps = buildFormSections(nextState);
+			if (areAllFormSectionsValid(nextState, loadedSteps)) {
 				setValidatedStepIds(new Set(loadedSteps.map((step) => step.id)));
 				setInvalidStepIds(new Set());
 			}
@@ -503,7 +511,7 @@ export const useHostWizard = ({
 			skipNextPersistRef.current = false;
 			return;
 		}
-		saveHostWizardSession(sessionKey, {
+		saveHostFormSession(sessionKey, {
 			state,
 			activeStep,
 			furthestStep: state.furthestStep,
@@ -511,18 +519,18 @@ export const useHostWizard = ({
 		});
 	}, [open, sessionKey, state, activeStep]);
 
-	const persistWizardSession = React.useCallback(() => {
+	const persistFormSession = React.useCallback(() => {
 		if (!open) {
 			return;
 		}
-		saveHostWizardSession(sessionKey, {
+		saveHostFormSession(sessionKey, {
 			state: stateRef.current,
 			activeStep: activeStepRef.current,
 			furthestStep: stateRef.current.furthestStep,
 			scrollTop: scrollTopRef.current,
 		});
 		if (sessionPathname) {
-			saveHostWizardScrollPosition(sessionPathname, scrollTopRef.current, activeStepRef.current);
+			saveHostFormScrollPosition(sessionPathname, scrollTopRef.current, activeStepRef.current);
 		}
 	}, [open, sessionKey, sessionPathname]);
 
@@ -531,7 +539,7 @@ export const useHostWizard = ({
 			return undefined;
 		}
 		const persist = () => {
-			persistWizardSession();
+			persistFormSession();
 		};
 		const onVisibilityChange = () => {
 			if (document.visibilityState === "hidden") {
@@ -546,17 +554,17 @@ export const useHostWizard = ({
 			window.removeEventListener("beforeunload", persist);
 			document.removeEventListener("visibilitychange", onVisibilityChange);
 		};
-	}, [open, persistWizardSession]);
+	}, [open, persistFormSession]);
 
 	const updateScrollPosition = React.useCallback(
 		(top) => {
 			scrollTopRef.current = top;
-			persistWizardSession();
+			persistFormSession();
 		},
-		[persistWizardSession],
+		[persistFormSession],
 	);
 
-	const isDirty = mode === "edit" && isHostWizardDirty(state, baselineFingerprintRef.current);
+	const isDirty = mode === "edit" && isHostFormDirty(state, baselineFingerprintRef.current);
 	const showSaveHostChanges = isDirty;
 
 	const patchState = React.useCallback((patch) => {
@@ -847,11 +855,11 @@ export const useHostWizard = ({
 		return null;
 	}, [invalidStepIds, steps, validateStepIndex, validatedStepIds]);
 
-	const allStepsValid = React.useMemo(() => areAllWizardStepsValid(state, steps), [state, steps]);
+	const allStepsValid = React.useMemo(() => areAllFormSectionsValid(state, steps), [state, steps]);
 
 	const commitSavedBaseline = React.useCallback(() => {
-		baselineStateRef.current = normalizeHostWizardState(state);
-		baselineFingerprintRef.current = getHostWizardCommittedFingerprint(state);
+		baselineStateRef.current = normalizeHostFormState(state);
+		baselineFingerprintRef.current = getHostFormCommittedFingerprint(state);
 		setBaselineVersion((version) => version + 1);
 	}, [state]);
 
@@ -863,7 +871,7 @@ export const useHostWizard = ({
 		return steps
 			.filter(
 				(step) =>
-					getWizardStepFingerprint(state, step) !== getWizardStepFingerprint(baseline, step),
+					getFormSectionFingerprint(state, step) !== getFormSectionFingerprint(baseline, step),
 			)
 			.map((step) => step.id);
 		// baselineVersion bumps after save so edited steps clear without a full reload.
@@ -871,8 +879,8 @@ export const useHostWizard = ({
 	}, [mode, state, steps, baselineVersion]);
 
 	const clearSession = React.useCallback(() => {
-		clearHostWizardSession(sessionKey);
-		clearHostWizardScrollPosition(sessionPathname);
+		clearHostFormSession(sessionKey);
+		clearHostFormScrollPosition(sessionPathname);
 		onSessionClear?.();
 	}, [sessionKey, sessionPathname, onSessionClear]);
 
@@ -929,6 +937,17 @@ export const useHostWizard = ({
 		setErrors({});
 	}, []);
 
+	/** Discards edits: restores the last loaded/saved baseline (edit-mode Cancel). */
+	const resetToBaseline = React.useCallback(() => {
+		const baseline = baselineStateRef.current;
+		if (!baseline) {
+			return;
+		}
+		setState(baseline);
+		setErrors({});
+		setSubmitError(null);
+	}, []);
+
 	return {
 		activeStep,
 		steps,
@@ -970,6 +989,7 @@ export const useHostWizard = ({
 		handleBack,
 		clearSession,
 		commitSavedBaseline,
+		resetToBaseline,
 		highlightConnectorInstanceId,
 		clearHighlightConnectorInstance,
 		connectorVariablesValidationAttempt,

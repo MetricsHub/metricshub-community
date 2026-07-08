@@ -43,6 +43,7 @@ import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.uiconfig.AddHostRequestDto;
 import org.metricshub.web.dto.uiconfig.CreateResourceGroupRequestDto;
 import org.metricshub.web.dto.uiconfig.UiAdditionalConnectorDto;
+import org.metricshub.web.dto.uiconfig.UiAlertingSystemConfigDto;
 import org.metricshub.web.dto.uiconfig.UiConfigSnapshotDto;
 import org.metricshub.web.dto.uiconfig.UiConnectorSummaryDto;
 import org.metricshub.web.dto.uiconfig.UpdateResourceGroupRequestDto;
@@ -89,7 +90,7 @@ public class UiConfigService {
 	}
 
 	/**
-	 * Lists connectors for the resource wizard, filtered by host.type and configured protocols.
+	 * Lists connectors for the resource configuration form, filtered by host.type and configured protocols.
 	 *
 	 * @param hostType    host.type attribute (e.g. linux)
 	 * @param protocols   configured protocol keys (e.g. ssh)
@@ -112,7 +113,7 @@ public class UiConfigService {
 	}
 
 	/**
-	 * Returns the static connector catalog for the UI wizard (metadata only).
+	 * Returns the static connector catalog for the UI configuration form (metadata only).
 	 *
 	 * @return connector summaries without host-specific compatibility flags
 	 */
@@ -203,6 +204,7 @@ public class UiConfigService {
 		final ObjectNode hostNode = yamlMapper.valueToTree(new LinkedHashMap<String, Object>());
 		putMap(hostNode, "attributes", request.getAttributes());
 		putMap(hostNode, "protocols", request.getProtocols());
+		applyResourceConfigFields(hostNode, request);
 		if (request.getConnectors() != null && !request.getConnectors().isEmpty()) {
 			hostNode.set("connectors", yamlMapper.valueToTree(request.getConnectors()));
 		}
@@ -428,5 +430,78 @@ public class UiConfigService {
 	 */
 	private void putMap(final ObjectNode parent, final String field, final Map<String, Object> value) {
 		parent.set(field, yamlMapper.valueToTree(value == null ? Map.of() : value));
+	}
+
+	/**
+	 * Writes optional resource-level fields from the add-host request onto the host node.
+	 *
+	 * @param hostNode YAML host node to update
+	 * @param request  add-host request
+	 */
+	private void applyResourceConfigFields(final ObjectNode hostNode, final AddHostRequestDto request) {
+		putIfPresent(hostNode, "loggerLevel", request.getLoggerLevel());
+		putIfPresent(hostNode, "outputDirectory", request.getOutputDirectory());
+		putIfPresent(hostNode, "collectPeriod", request.getCollectPeriod());
+		if (request.getDiscoveryCycle() != null) {
+			hostNode.put("discoveryCycle", request.getDiscoveryCycle());
+		}
+		putIfPresent(hostNode, "jobTimeout", request.getJobTimeout());
+		putIfPresent(hostNode, "stateSetCompression", request.getStateSetCompression());
+
+		putIfPresent(hostNode, "sequential", request.getSequential());
+		putIfPresent(hostNode, "enableSelfMonitoring", request.getEnableSelfMonitoring());
+		putIfPresent(hostNode, "logFileSourceDetails", request.getLogFileSourceDetails());
+		putIfPresent(hostNode, "resolveHostnameToFqdn", request.getResolveHostnameToFqdn());
+
+		if (request.getMonitorFilters() != null && !request.getMonitorFilters().isEmpty()) {
+			hostNode.set("monitorFilters", yamlMapper.valueToTree(request.getMonitorFilters()));
+		}
+		if (request.getEnrichments() != null && !request.getEnrichments().isEmpty()) {
+			hostNode.set("enrichments", yamlMapper.valueToTree(request.getEnrichments()));
+		}
+		if (request.getMetrics() != null && !request.getMetrics().isEmpty()) {
+			hostNode.set("metrics", yamlMapper.valueToTree(request.getMetrics()));
+		}
+
+		final UiAlertingSystemConfigDto alertingSystem = request.getAlertingSystem();
+		if (alertingSystem != null) {
+			final Map<String, Object> alertingYaml = new LinkedHashMap<>();
+			if (alertingSystem.getDisable() != null) {
+				alertingYaml.put("disable", alertingSystem.getDisable());
+			}
+			if (alertingSystem.getProblemTemplate() != null && !alertingSystem.getProblemTemplate().isBlank()) {
+				alertingYaml.put("problemTemplate", alertingSystem.getProblemTemplate());
+			}
+			if (!alertingYaml.isEmpty()) {
+				hostNode.set("alertingSystem", yamlMapper.valueToTree(alertingYaml));
+			}
+		}
+	}
+
+	/**
+	 * Sets a text field on a parent object node when the value is non-blank.
+	 *
+	 * @param parent the parent object node
+	 * @param field  field name
+	 * @param value  text value
+	 */
+	private void putIfPresent(final ObjectNode parent, final String field, final String value) {
+		if (value != null && !value.isBlank()) {
+			parent.put(field, value);
+		}
+	}
+
+	/**
+	 * Sets a boolean field on a parent object node when the value is specified,
+	 * so an explicit false is persisted while an unspecified value stays absent.
+	 *
+	 * @param parent the parent object node
+	 * @param field  field name
+	 * @param value  boolean value
+	 */
+	private void putIfPresent(final ObjectNode parent, final String field, final Boolean value) {
+		if (value != null) {
+			parent.put(field, value);
+		}
 	}
 }

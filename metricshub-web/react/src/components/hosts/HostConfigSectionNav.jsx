@@ -2,7 +2,7 @@ import * as React from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { alpha } from "@mui/material/styles";
 import CheckIcon from "@mui/icons-material/Check";
-import { getWizardStepDescription } from "./host-wizard-steps";
+import { getFormSectionDescription } from "./host-config-sections";
 
 const CIRCLE_SIZE = 32;
 
@@ -17,7 +17,7 @@ const CIRCLE_SIZE = 32;
  * @param {string[]} [props.editedStepIds]
  * @param {(index: number) => void} props.onStepClick
  */
-const HostWizardCardStepper = ({
+const HostConfigSectionNav = ({
 	steps = [],
 	activeStep,
 	validatedStepIds = [],
@@ -37,7 +37,7 @@ const HostWizardCardStepper = ({
 				const isCompleted = validSet.has(step.id) && !isEdited;
 				const isInvalid = invalidSet.has(step.id);
 				const isLast = index === steps.length - 1;
-				const description = isActive ? (step.description ?? getWizardStepDescription(step)) : null;
+				const description = isActive ? (step.description ?? getFormSectionDescription(step)) : null;
 
 				return (
 					<Box
@@ -160,4 +160,4 @@ const HostWizardCardStepper = ({
 	);
 };
 
-export default HostWizardCardStepper;
+export default HostConfigSectionNav;

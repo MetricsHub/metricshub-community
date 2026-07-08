@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Box, InputAdornment, Typography } from "@mui/material";
+import DatabaseIcon from "./DatabaseIcon";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 import KeyOutlinedIcon from "@mui/icons-material/KeyOutlined";
 import LinkIcon from "@mui/icons-material/Link";
@@ -18,6 +19,7 @@ export const protocolFieldIconSx = { color: "action.active", fontSize: 20, displ
 
 /** @type {Record<string, React.ElementType>} */
 const PROTOCOL_FIELD_ICONS = {
+	hostname: DnsOutlinedIcon,
 	username: PersonOutlineIcon,
 	password: LockOutlinedIcon,
 	privacyPassword: LockOutlinedIcon,
@@ -27,7 +29,7 @@ const PROTOCOL_FIELD_ICONS = {
 	privateKey: KeyOutlinedIcon,
 	namespace: StorageIcon,
 	url: LinkIcon,
-	database: StorageIcon,
+	database: DatabaseIcon,
 	vcenter: DnsOutlinedIcon,
 	contextName: SecurityIcon,
 	authentications: SecurityIcon,

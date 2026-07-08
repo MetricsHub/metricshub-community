@@ -28,7 +28,7 @@ const isAbortError = (error) =>
  *
  * @param {object} props
  * @param {string} props.protocol protocol id (e.g. ssh)
- * @param {string} [props.hostName] host.name wizard value
+ * @param {string} [props.hostName] host.name form value
  * @param {string} [props.hostId] resource id
  * @param {Record<string, unknown>} props.protocolValues current protocol form values
  */

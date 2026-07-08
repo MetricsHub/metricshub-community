@@ -89,14 +89,14 @@ const ConnectorConfigurationDialog = ({
 		if (!touched.configurationId && !showValidationErrors) {
 			return "";
 		}
-		const wizardError = errors[`additionalConnectors.${instanceKey || trimmedId}.id`];
+		const formError = errors[`additionalConnectors.${instanceKey || trimmedId}.id`];
 		if (!trimmedId) {
-			return wizardError || "Configuration ID is required.";
+			return formError || "Configuration ID is required.";
 		}
 		if (isAdditionalConnectorIdTaken(additionalConnectors, trimmedId, instanceKey || "")) {
-			return wizardError || "This configuration ID is already in use.";
+			return formError || "This configuration ID is already in use.";
 		}
-		return wizardError || "";
+		return formError || "";
 	}, [
 		additionalConnectors,
 		errors,
@@ -115,7 +115,7 @@ const ConnectorConfigurationDialog = ({
 		const prevEntry = instanceKey ? additionalConnectors?.[instanceKey] : null;
 		const entry = {
 			uses: templateId,
-			force: prevEntry?.force !== false,
+			force: prevEntry ? prevEntry.force !== false : true,
 			variables,
 		};
 		const next = { ...(additionalConnectors || {}) };

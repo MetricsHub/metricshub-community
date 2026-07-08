@@ -26,7 +26,7 @@ import SearchIcon from "@mui/icons-material/Search";
  * @param {() => void} props.onClearFilters
  * @param {React.ReactNode} [props.actions] trailing action buttons
  */
-const HostsHostFilterBar = ({
+const HostsFilterBar = ({
 	search,
 	onSearchChange,
 	protocolFilter,
@@ -107,4 +107,4 @@ const HostsHostFilterBar = ({
 	</Paper>
 );
 
-export default HostsHostFilterBar;
+export default HostsFilterBar;

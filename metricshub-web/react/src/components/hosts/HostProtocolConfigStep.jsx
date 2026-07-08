@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Box, Paper, Stack, Typography } from "@mui/material";
-import GenericProtocolConfigForm from "./GenericProtocolConfigForm";
+import ProtocolConfigForm from "./ProtocolConfigForm";
 import ProtocolTestButton from "./ProtocolTestButton";
 import { guidedConfigBorderedPanelSx } from "./guided-config-form-primitives";
 import {
@@ -67,7 +67,7 @@ const HostProtocolConfigStep = ({
 				hostId={hostId}
 				protocolValues={values}
 			/>
-			<GenericProtocolConfigForm
+			<ProtocolConfigForm
 				protocol={protocol}
 				fields={fields}
 				values={values}

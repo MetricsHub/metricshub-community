@@ -4,7 +4,7 @@ import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
 import { useSnackbar } from "../../hooks/use-snackbar";
 import {
-	CREATE_WIZARD_PASSWORD_HELPER_TEXT,
+	CREATE_MODE_PASSWORD_HELPER_TEXT,
 	PASSWORD_ENCRYPT_HELPER_TEXT,
 	delay,
 	encryptPlainPassword,
@@ -13,7 +13,7 @@ import {
 } from "../../utils/password-encrypt";
 
 /**
- * Password field for protocol configuration in the host wizard / edit form.
+ * Password field for protocol configuration in the host config form / edit form.
  *
  * @param {object} props
  * @param {string} props.label
@@ -23,7 +23,7 @@ import {
  * @param {string} [props.helperText]
  * @param {boolean} [props.required]
  * @param {boolean} [props.disabled]
- * @param {boolean} [props.allowReveal] create wizard: show/hide toggle
+ * @param {boolean} [props.allowReveal] create form: show/hide toggle
  * @param {boolean} [props.deferEncryptUntilSave] skip blur encryption (encrypt on submit only)
  * @param {React.ReactNode} [props.startAdornment] icon node placed at the start of the input
  * @param {boolean} [props.hiddenLabel] use when the label is rendered outside the field
@@ -59,7 +59,7 @@ const ProtocolPasswordField = ({
 			: deferEncryptUntilSave
 				? undefined
 				: allowReveal
-					? CREATE_WIZARD_PASSWORD_HELPER_TEXT
+					? CREATE_MODE_PASSWORD_HELPER_TEXT
 					: PASSWORD_ENCRYPT_HELPER_TEXT);
 
 	React.useEffect(() => {

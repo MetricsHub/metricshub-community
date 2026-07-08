@@ -11,7 +11,7 @@ import HostsGuidedConfigTopBar from "./HostsGuidedConfigTopBar";
 
 import ResourceGroupsOverviewView from "./ResourceGroupsOverviewView";
 
-import HostWizardPage from "./HostWizardPage";
+import HostConfigPage from "./HostConfigPage";
 import HostsHostEditPanel from "./HostsHostEditPanel";
 import ResourceGroupFormPage from "./ResourceGroupFormPage";
 
@@ -109,18 +109,27 @@ const HostsBrowseView = ({
 	onBusyChange,
 	disableNewGroup = false,
 	disableNewResource = false,
+	drafts = [],
+	onOpenDraft,
 }) => {
 	const resourceGroups = React.useMemo(
 		() => Object.keys(snapshot?.resourceGroups || {}).sort((a, b) => a.localeCompare(b)),
 		[snapshot?.resourceGroups],
 	);
-	const existingHostIds = React.useMemo(() => {
-		const grouped = Object.values(snapshot?.resourceGroups || {}).flatMap((groupNode) =>
-			Object.keys(getGroupResources(groupNode)),
-		);
-		const standalone = Object.keys(snapshot?.resources || {});
-		return [...grouped, ...standalone];
-	}, [snapshot?.resourceGroups, snapshot?.resources]);
+	// Resource IDs only need to be unique within their placement scope (one
+	// resource group, or the standalone section) — not across the whole config.
+	const existingHostIdScopes = React.useMemo(
+		() => ({
+			groups: Object.fromEntries(
+				Object.entries(snapshot?.resourceGroups || {}).map(([groupName, groupNode]) => [
+					groupName,
+					Object.keys(getGroupResources(groupNode)),
+				]),
+			),
+			standalone: Object.keys(snapshot?.resources || {}),
+		}),
+		[snapshot?.resourceGroups, snapshot?.resources],
+	);
 	const isInlineCreateOpen = Boolean(inlineCreateContext);
 	const isHostFormView = view?.type === "groupedHost" || view?.type === "standaloneHost";
 	const isResourceGroupFormView = view?.type === "group";
@@ -134,19 +143,19 @@ const HostsBrowseView = ({
 		return pathForView(contextView);
 	}, [inlineCreateContext?.returnView, view]);
 
-	const renderCreateWizard = () => (
+	const renderCreateHostForm = () => (
 		<HostConfigEditLayout breadcrumbPathname={createBreadcrumbPathname}>
-			<HostWizardPage
-				key={`create-host-${pathname}`}
+			<HostConfigPage
+				key={`create-host-${pathname}-${inlineCreateContext?.draftId ?? ""}`}
 				defaultResourceGroup={inlineCreateContext?.defaultResourceGroup ?? null}
 				resourceGroups={resourceGroups}
-				existingHostIds={existingHostIds}
+				existingHostIdScopes={existingHostIdScopes}
 				initialState={inlineCreateContext?.initialState}
+				draftId={inlineCreateContext?.draftId ?? null}
 				busy={busy}
 				sessionPathname={pathname}
 				onCancel={onInlineCreateCancel}
 				onSubmit={onInlineCreateSubmit}
-				onUnsavedChangesChange={onFormUnsavedChange}
 			/>
 		</HostConfigEditLayout>
 	);
@@ -162,7 +171,6 @@ const HostsBrowseView = ({
 				onNavigate={onNavigate}
 				onDeleteGroupedHost={onDeleteGroupedHost}
 				onDeleteStandaloneHost={onDeleteStandaloneHost}
-				onFormUnsavedChange={onFormUnsavedChange}
 			/>
 		</HostConfigEditLayout>
 	);
@@ -282,6 +290,8 @@ const HostsBrowseView = ({
 						busy={busy}
 						disableNewGroup={disableNewGroup}
 						disableNewResource={disableNewResource}
+						drafts={drafts}
+						onOpenDraft={onOpenDraft}
 						onViewChange={onViewChange}
 						onCreateGroup={onCreateGroup}
 						onCreateHost={onCreateHost}
@@ -294,7 +304,7 @@ const HostsBrowseView = ({
 						</Box>
 					) : isInlineCreateOpen ? (
 						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-							{renderCreateWizard()}
+							{renderCreateHostForm()}
 						</Box>
 					) : isResourceGroupFormView ? (
 						<Box sx={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>

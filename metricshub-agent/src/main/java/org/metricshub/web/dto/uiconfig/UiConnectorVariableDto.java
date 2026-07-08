@@ -27,7 +27,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * Definition of a connector template variable for the UI wizard.
+ * Definition of a connector configuration variable for the UI configuration form.
  */
 @Data
 @Builder

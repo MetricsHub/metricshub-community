@@ -30,6 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +39,9 @@ import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.dto.uiconfig.AddHostRequestDto;
 import org.metricshub.web.dto.uiconfig.CreateResourceGroupRequestDto;
+import org.metricshub.web.dto.uiconfig.UiAlertingSystemConfigDto;
 import org.metricshub.web.dto.uiconfig.UiConfigSnapshotDto;
 import org.metricshub.web.dto.uiconfig.UpdateResourceGroupRequestDto;
 import org.mockito.Mockito;
@@ -280,5 +283,54 @@ class UiConfigServiceTest {
 
 		assertTrue(snapshot.getResourceGroups().containsKey("Keep"), "Unrelated group should survive deletion");
 		assertFalse(snapshot.getResourceGroups().containsKey("Remove"), "Deleted group should be gone");
+	}
+
+	@Test
+	void testAddHostPersistsResourceAdvancedFields() {
+		final AddHostRequestDto request = new AddHostRequestDto();
+		request.setHostId("server-advanced");
+		request.setAttributes(Map.of("host.name", "server-advanced", "host.type", "linux", "site", "Paris"));
+		request.setProtocols(Map.of("ping", Map.of("timeout", 5)));
+		request.setLoggerLevel("debug");
+		request.setCollectPeriod("3m");
+		request.setDiscoveryCycle(15);
+		request.setMetrics(Map.of("hw.host.configured", 1.0));
+		request.setEnrichments(List.of("site"));
+		final UiAlertingSystemConfigDto alerting = new UiAlertingSystemConfigDto();
+		alerting.setDisable(true);
+		request.setAlertingSystem(alerting);
+
+		final UiConfigSnapshotDto snapshot = service.addHost(request);
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> host = (Map<String, Object>) snapshot.getResources().get("server-advanced");
+
+		assertNotNull(host, "Host should be present in snapshot");
+		assertEquals("debug", host.get("loggerLevel"));
+		assertEquals("3m", host.get("collectPeriod"));
+		assertEquals(15, host.get("discoveryCycle"));
+		assertEquals(1.0, ((Map<?, ?>) host.get("metrics")).get("hw.host.configured"));
+		assertEquals(List.of("site"), host.get("enrichments"));
+		assertEquals("Paris", ((Map<?, ?>) host.get("attributes")).get("site"));
+		assertEquals(true, ((Map<?, ?>) host.get("alertingSystem")).get("disable"));
+	}
+
+	@Test
+	void testAddHostPersistsExplicitFalseAndOmitsUnspecifiedBooleans() {
+		final AddHostRequestDto request = new AddHostRequestDto();
+		request.setHostId("server-booleans");
+		request.setAttributes(Map.of("host.name", "server-booleans", "host.type", "linux"));
+		request.setProtocols(Map.of("ping", Map.of("timeout", 5)));
+		request.setSequential(false);
+		request.setEnableSelfMonitoring(false);
+
+		final UiConfigSnapshotDto snapshot = service.addHost(request);
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> host = (Map<String, Object>) snapshot.getResources().get("server-booleans");
+
+		assertNotNull(host, "Host should be present in snapshot");
+		assertEquals(false, host.get("sequential"), "Explicit sequential=false should be persisted");
+		assertEquals(false, host.get("enableSelfMonitoring"), "Explicit enableSelfMonitoring=false should be persisted");
+		assertFalse(host.containsKey("logFileSourceDetails"), "Unspecified boolean should stay absent");
+		assertFalse(host.containsKey("resolveHostnameToFqdn"), "Unspecified boolean should stay absent");
 	}
 }

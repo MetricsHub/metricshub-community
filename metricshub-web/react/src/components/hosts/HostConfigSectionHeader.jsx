@@ -31,10 +31,10 @@ const protocolHealthLabel = (up) => {
 };
 
 /**
- * Prominent section heading for the create-resource wizard scroll sections.
+ * Prominent section heading for the host config form scroll sections.
  *
  * @param {object} props
- * @param {import("./host-wizard-steps").WizardStepDescriptor} props.step
+ * @param {import("./host-config-sections").FormSectionDescriptor} props.step
  * @param {number} props.stepNumber 1-based index matching the stepper
  * @param {boolean} [props.isCompleted]
  * @param {boolean} [props.isInvalid]
@@ -43,7 +43,7 @@ const protocolHealthLabel = (up) => {
  * @param {0 | 1 | null} [props.protocolUp] live host.up for protocol sections (single-host edit)
  * @param {React.ReactNode} [props.endAction] optional control aligned with the title row (e.g. delete)
  */
-const HostWizardSectionHeader = ({
+const HostConfigSectionHeader = ({
 	step,
 	stepNumber,
 	isCompleted = false,
@@ -147,4 +147,4 @@ const HostWizardSectionHeader = ({
 	</Box>
 );
 
-export default HostWizardSectionHeader;
+export default HostConfigSectionHeader;

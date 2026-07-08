@@ -59,7 +59,7 @@ import {
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
  */
-const GenericProtocolConfigForm = ({
+const ProtocolConfigForm = ({
 	protocol,
 	fields,
 	values,
@@ -726,4 +726,4 @@ const GenericProtocolConfigForm = ({
 	);
 };
 
-export default GenericProtocolConfigForm;
+export default ProtocolConfigForm;

@@ -42,7 +42,7 @@ const protocolChipSx = (selected) => (theme) => ({
 });
 
 /**
- * Multi-select protocol picker (compact chips; selected state uses primary blue like wizard actions).
+ * Multi-select protocol picker (compact chips; selected state uses primary blue like form actions).
  *
  * @param {object} props
  * @param {string[]} props.value selected protocol ids

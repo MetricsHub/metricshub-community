@@ -2,7 +2,7 @@ import * as React from "react";
 import { Alert, Box, Button, Chip, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
-import HostsHostFilterBar from "./HostsHostFilterBar";
+import HostsFilterBar from "./HostsFilterBar";
 import HostsResourceTable from "./HostsResourceTable";
 import { sortHostEntries } from "./hosts-filter-utils";
 import { useHostsProtocolHealth } from "../../hooks/use-hosts-protocol-health";
@@ -133,7 +133,7 @@ const StandaloneHostsView = ({
 			</Stack>
 
 			{!embedded && (
-				<HostsHostFilterBar
+				<HostsFilterBar
 					search={searchQuery}
 					onSearchChange={setSearchQuery}
 					protocolFilter={protocolFilter}
@@ -178,7 +178,7 @@ const StandaloneHostsView = ({
 
 			{totalHosts === 0 && (
 				<Alert severity="info">
-					No resources yet. Add a resource and choose {NO_RESOURCE_GROUP} placement in the wizard.
+					No resources yet. Add a resource and choose {NO_RESOURCE_GROUP} placement in the form.
 				</Alert>
 			)}
 

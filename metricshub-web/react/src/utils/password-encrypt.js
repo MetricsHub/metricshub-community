@@ -1,6 +1,6 @@
 import { configApi } from "../api/config";
 import { PROTOCOL_FIELDS } from "../components/hosts/protocol-definitions";
-import { getOrderedSelectedProtocols } from "../components/hosts/host-wizard-steps";
+import { getOrderedSelectedProtocols } from "../components/hosts/host-config-sections";
 import { encodeUtf8ToBase64 } from "./base64-utf8";
 
 /** Minimum time to show the encrypt spinner so the UI does not flash on fast responses. */
@@ -43,12 +43,12 @@ export const encryptPlainPassword = async (plain) => {
 export const PASSWORD_ENCRYPT_HELPER_TEXT =
 	"Passwords are encrypted automatically when you change them before saving.";
 
-/** Shown on create-wizard protocol password fields (encryption runs on Add resource). */
-export const CREATE_WIZARD_PASSWORD_HELPER_TEXT =
+/** Shown on create form protocol password fields (encryption runs on Add resource). */
+export const CREATE_MODE_PASSWORD_HELPER_TEXT =
 	"Password will be encrypted when you add the resource.";
 
 /** Shown on edit-form protocol password fields (encryption runs on Save changes). */
-export const EDIT_WIZARD_PASSWORD_HELPER_TEXT = "Password will be encrypted if you update it.";
+export const EDIT_MODE_PASSWORD_HELPER_TEXT = "Password will be encrypted if you update it.";
 
 /**
  * Encrypts plain-text password fields in a protocol form (skips already-encrypted values).
@@ -74,19 +74,19 @@ export const encryptProtocolFormPasswordFields = async (protocolId, formValues =
 };
 
 /**
- * Encrypts password fields for all selected protocols in wizard state (create flow submit).
+ * Encrypts password fields for all selected protocols in form state (create flow submit).
  *
- * @param {object} wizardState
+ * @param {object} formState
  * @returns {Promise<object>}
  */
-export const encryptWizardProtocolPasswords = async (wizardState) => {
-	const selected = getOrderedSelectedProtocols(wizardState.selectedProtocols);
-	const protocols = { ...(wizardState.protocols || {}) };
+export const encryptFormProtocolPasswords = async (formState) => {
+	const selected = getOrderedSelectedProtocols(formState.selectedProtocols);
+	const protocols = { ...(formState.protocols || {}) };
 	for (const protocolId of selected) {
 		protocols[protocolId] = await encryptProtocolFormPasswordFields(
 			protocolId,
 			protocols[protocolId] || {},
 		);
 	}
-	return { ...wizardState, protocols };
+	return { ...formState, protocols };
 };

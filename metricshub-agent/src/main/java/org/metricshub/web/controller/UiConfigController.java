@@ -82,13 +82,13 @@ public class UiConfigController {
 		return uiProtocolCheckService.checkHostUp(request);
 	}
 
-	@Operation(summary = "Static connector catalog for the resource wizard (metadata only)")
+	@Operation(summary = "Static connector catalog for the resource configuration form (metadata only)")
 	@GetMapping(value = "/connectors/catalog", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<UiConnectorSummaryDto> getConnectorCatalog() {
 		return uiConfigService.getConnectorCatalog();
 	}
 
-	@Operation(summary = "List connectors for the resource wizard")
+	@Operation(summary = "List connectors for the resource configuration")
 	@GetMapping(value = "/connectors", produces = MediaType.APPLICATION_JSON_VALUE)
 	public List<UiConnectorSummaryDto> listConnectors(
 		@RequestParam(value = "hostType", required = false) final String hostType,

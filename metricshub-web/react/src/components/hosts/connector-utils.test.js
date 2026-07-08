@@ -9,7 +9,10 @@ import {
 	dedupeConnectorCatalogById,
 	evaluateConnectorCompatibility,
 	filterDirectivesForAdditionalConnectorChips,
+	findCatalogConnectorById,
 	formatInlineConnectorsText,
+	getAdditionalConnectorSelectionKind,
+	getConnectorDirectiveRowKey,
 	hasSelectionOrForceDirectives,
 	normalizeInstanceVariableValues,
 	parseConnectorDirective,
@@ -78,6 +81,17 @@ describe("connector directive parsing", () => {
 		expect(hasSelectionOrForceDirectives(["HPUXSystem", "!Linux"])).toBe(true);
 		expect(hasSelectionOrForceDirectives(["#Windows"])).toBe(true);
 		expect(hasSelectionOrForceDirectives(["!Linux", "!#Windows"])).toBe(false);
+	});
+});
+
+describe("getAdditionalConnectorSelectionKind", () => {
+	it("defaults to force when force is true or omitted", () => {
+		expect(getAdditionalConnectorSelectionKind({ force: true })).toBe("force");
+		expect(getAdditionalConnectorSelectionKind({ uses: "PureStorageREST" })).toBe("force");
+	});
+
+	it("maps force false to select", () => {
+		expect(getAdditionalConnectorSelectionKind({ force: false })).toBe("select");
 	});
 });
 
@@ -209,6 +223,20 @@ describe("applyAdditionalConnectorsChange", () => {
 		expect(patch.connectorDetectionMode).toBe("manual");
 	});
 
+	it("adds a select directive when force is false", () => {
+		const patch = applyAdditionalConnectorsChange(
+			{
+				connectors: [],
+				additionalConnectors: {},
+				connectorDetectionMode: "automatic",
+			},
+			{
+				MyPure: { uses: "PureStorageREST", force: false, variables: {} },
+			},
+		);
+		expect(patch.connectors).toEqual(["MyPure"]);
+	});
+
 	it("removes force directive when an instance is deleted", () => {
 		const patch = applyAdditionalConnectorsChange(
 			{
@@ -282,6 +310,13 @@ describe("instance variable values", () => {
 });
 
 describe("connector category tabs", () => {
+	it("finds catalog connectors by id with case-insensitive fallback", () => {
+		const catalog = [{ id: "LinuxProcess", tags: ["System"] }];
+		expect(findCatalogConnectorById(catalog, "LinuxProcess")?.id).toBe("LinuxProcess");
+		expect(findCatalogConnectorById(catalog, "linuxprocess")?.id).toBe("LinuxProcess");
+		expect(getConnectorDirectiveRowKey("LinuxProcess")).toBe("connector:LinuxProcess");
+	});
+
 	it("dedupes catalog entries by connector id", () => {
 		const linux = { id: "LinuxProcess", displayName: "Linux Process", tags: ["System"] };
 		const deduped = dedupeConnectorCatalogById([linux, { ...linux, information: "dup" }]);
