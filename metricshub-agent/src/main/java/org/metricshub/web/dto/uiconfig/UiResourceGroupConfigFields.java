@@ -21,45 +21,34 @@ package org.metricshub.web.dto.uiconfig;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import jakarta.validation.constraints.NotBlank;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import lombok.Data;
 
 /**
- * Request body used to create a resource group in metricshub-ui.yaml.
+ * Advanced inheritance-aware configuration a resource group shares with its
+ * resources. Implemented by the create and update request DTOs so a single
+ * service helper can serialize them.
  */
-@Data
-public class CreateResourceGroupRequestDto implements UiResourceGroupConfigFields {
+public interface UiResourceGroupConfigFields {
+	String getLoggerLevel();
 
-	@NotBlank(message = "Field 'name' is required.")
-	private String name;
+	String getOutputDirectory();
 
-	private Map<String, Object> attributes = new HashMap<>();
+	String getCollectPeriod();
 
-	private Map<String, Object> metrics = new HashMap<>();
+	Integer getDiscoveryCycle();
 
-	private String loggerLevel;
+	String getJobTimeout();
 
-	private String outputDirectory;
+	String getStateSetCompression();
 
-	private String collectPeriod;
+	Boolean getSequential();
 
-	private Integer discoveryCycle;
+	Boolean getEnableSelfMonitoring();
 
-	private String jobTimeout;
+	Boolean getResolveHostnameToFqdn();
 
-	private String stateSetCompression;
+	Set<String> getMonitorFilters();
 
-	private Boolean sequential;
-
-	private Boolean enableSelfMonitoring;
-
-	private Boolean resolveHostnameToFqdn;
-
-	private Set<String> monitorFilters;
-
-	private List<String> enrichments;
+	List<String> getEnrichments();
 }

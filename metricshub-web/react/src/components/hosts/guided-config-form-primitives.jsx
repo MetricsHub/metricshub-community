@@ -11,6 +11,22 @@ import {
 import { alpha } from "@mui/material/styles";
 import FieldHelpTooltip from "./FieldHelpTooltip";
 
+/**
+ * Field title styling shared by every guided-config form label (resource details,
+ * protocols, connectors) so they all match the section titles "Host Type" and
+ * "Protocols": 1rem, bold, full-strength primary text.
+ *
+ * Uses an explicit fontSize instead of the `subtitle1` variant because the theme
+ * dims subtitle1 with opacity 0.85, which is what made those two titles look faded.
+ */
+export const guidedConfigFieldLabelSx = {
+	fontSize: "1rem",
+	fontWeight: 700,
+	lineHeight: 1.4,
+	color: "text.primary",
+	opacity: 1,
+};
+
 /** Placeholder tone for guided-config fields (static label above the input). */
 export const guidedConfigPlaceholderSx = {
 	"& .MuiInputBase-input::placeholder": {
@@ -18,6 +34,37 @@ export const guidedConfigPlaceholderSx = {
 			alpha(theme.palette.text.secondary, theme.palette.mode === "dark" ? 0.45 : 0.4),
 		opacity: 1,
 	},
+};
+
+/**
+ * Class toggled on a section panel to briefly flash it after the user jumps to it
+ * from the stepper, so the target is obvious. The keyframes/rule live in
+ * {@link guidedConfigSectionFlashSx}, spread onto the scroll container.
+ */
+export const CONFIG_SECTION_FLASH_CLASS = "host-config-section-flash";
+
+/**
+ * Scroll-container styling that defines the temporary "jumped here" flash.
+ * Uses an INSET box-shadow ring (not an outer outline): the scroll container clips
+ * overflow on both axes, so an outward outline would be cut off on the sides. An
+ * inset ring stays inside the panel, follows its border-radius, and is fully visible
+ * on all four sides — growing in, holding, then fading over ~2s.
+ *
+ * @param {import("@mui/material").Theme} theme
+ */
+export const guidedConfigSectionFlashSx = (theme) => {
+	const ring = theme.palette.primary.main;
+	return {
+		"@keyframes hostConfigSectionFlash": {
+			"0%": { boxShadow: `inset 0 0 0 0 ${ring}` },
+			"12%": { boxShadow: `inset 0 0 0 3px ${ring}` },
+			"80%": { boxShadow: `inset 0 0 0 3px ${ring}` },
+			"100%": { boxShadow: `inset 0 0 0 0 ${ring}` },
+		},
+		[`& .${CONFIG_SECTION_FLASH_CLASS}`]: {
+			animation: "hostConfigSectionFlash 2s ease",
+		},
+	};
 };
 
 /** Filled TextField/Select styling when the label is rendered outside the control. */
@@ -111,9 +158,7 @@ export const LabeledTextField = ({
 		<Typography
 			component="label"
 			htmlFor={id}
-			variant="body2"
-			fontWeight={600}
-			sx={{ display: "block", mb: 0.75 }}
+			sx={{ ...guidedConfigFieldLabelSx, display: "block", mb: 0.75 }}
 		>
 			{label}
 			{required ? (
@@ -161,7 +206,7 @@ export const LabeledSelect = ({
 }) => (
 	<Box>
 		<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
-			<Typography component="label" htmlFor={id} variant="body2" fontWeight={600}>
+			<Typography component="label" htmlFor={id} sx={guidedConfigFieldLabelSx}>
 				{label}
 				{required ? (
 					<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>

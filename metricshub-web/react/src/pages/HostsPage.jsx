@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { uiConfigApi } from "../api/ui-config";
 import { useSnackbar } from "../hooks/use-snackbar";
+import { useAppDispatch } from "../hooks/store";
+import { setLastVisitedGuidedConfigPath } from "../store/slices/ui-slice";
 import HostsBrowseView from "../components/hosts/HostsBrowseView";
 import HostConfigEditLayout from "../components/hosts/HostConfigEditLayout";
 import ResourceGroupFormPage from "../components/hosts/ResourceGroupFormPage";
@@ -94,6 +96,7 @@ const returnViewFromCreateParam = (resourceGroupParam) => {
 const HostsPage = () => {
 	const navigate = useNavigate();
 	const location = useLocation();
+	const dispatch = useAppDispatch();
 	const { show: showSnackbar } = useSnackbar();
 	const { groupName: routeGroupName, resourceId, hostId: routeHostId } = useParams();
 	const [snapshot, setSnapshot] = React.useState({ resources: {}, resourceGroups: {} });
@@ -138,6 +141,12 @@ const HostsPage = () => {
 	React.useEffect(() => {
 		load();
 	}, [load]);
+
+	// HostsPage only ever mounts for /configuration/guided-config/* routes, so any
+	// path it sees is a valid "return here" target for the Navbar Configuration button.
+	React.useEffect(() => {
+		dispatch(setLastVisitedGuidedConfigPath(`${location.pathname}${location.search}`));
+	}, [dispatch, location.pathname, location.search]);
 
 	React.useEffect(() => {
 		const navState = location.state;
@@ -341,10 +350,9 @@ const HostsPage = () => {
 					search: location.search,
 					view,
 				};
-				setBrowseCreateContext({
-					...createState,
-					returnView: view,
-				});
+				// Navigate only; the create form renders from the URL (createRouteContext).
+				// Setting browseCreateContext eagerly would swap the currently-open form
+				// out from under its navigation blocker before the blocker can prompt.
 				navigate(createPath, {
 					state: { returnToHosts },
 				});
@@ -397,8 +405,8 @@ const HostsPage = () => {
 
 	const drafts = useHostConfigDrafts();
 
-	const handleOpenDraft = React.useCallback(
-		(draftId) => {
+	const openDraftRoute = React.useCallback(
+		(draftId, { replace = false } = {}) => {
 			const draft = getHostConfigDraft(draftId);
 			if (!draft) {
 				return;
@@ -418,14 +426,26 @@ const HostsPage = () => {
 				defaultResourceGroup: createState.defaultResourceGroup,
 				pathname: createPath,
 			});
+			// When redirecting after "Save as draft" we are already on the create route,
+			// so keep the original browse origin rather than pointing back at ourselves.
+			const returnToHosts = location.state?.returnToHosts ?? {
+				pathname: location.pathname,
+				search: location.search,
+				view,
+			};
 			navigate(createPath, {
-				state: {
-					returnToHosts: { pathname: location.pathname, search: location.search, view },
-					draftId,
-				},
+				replace,
+				state: { returnToHosts, draftId },
 			});
 		},
-		[navigate, location.pathname, location.search, view],
+		[navigate, location.pathname, location.search, location.state, view],
+	);
+
+	const handleOpenDraft = React.useCallback((draftId) => openDraftRoute(draftId), [openDraftRoute]);
+
+	const handleInlineCreateSaveDraft = React.useCallback(
+		(draftId) => openDraftRoute(draftId, { replace: true }),
+		[openDraftRoute],
 	);
 
 	const resourceGroupNames = React.useMemo(
@@ -439,19 +459,27 @@ const HostsPage = () => {
 		});
 	}, [guardNavigation, navigate, view]);
 
-	const handleCreateGroupSubmit = React.useCallback(async (payload) => {
-		setBusy(true);
-		setError(null);
-		try {
-			const updated = await uiConfigApi.createResourceGroup(payload);
-			setSnapshot(updated);
-		} catch (e) {
-			setError(e?.message || "Failed to create resource group");
-			throw e;
-		} finally {
-			setBusy(false);
-		}
-	}, []);
+	const handleCreateGroupSubmit = React.useCallback(
+		async (payload) => {
+			setBusy(true);
+			setError(null);
+			try {
+				const updated = await uiConfigApi.createResourceGroup(payload);
+				setSnapshot(updated);
+				// Redirect to the freshly created group's page and confirm with a success toast.
+				navigateBrowseView(HOSTS_VIEWS.group(payload.name));
+				showSnackbar(`Resource group "${payload.name}" has been created successfully.`, {
+					severity: "success",
+				});
+			} catch (e) {
+				setError(e?.message || "Failed to create resource group");
+				throw e;
+			} finally {
+				setBusy(false);
+			}
+		},
+		[navigateBrowseView, showSnackbar],
+	);
 
 	const handleCancelGroupCreate = React.useCallback(() => {
 		// Honour the view the user came from (passed via location state in
@@ -713,6 +741,7 @@ const HostsPage = () => {
 						inlineCreateContext={activeInlineCreateContext}
 						onInlineCreateCancel={cancelInlineCreateHost}
 						onInlineCreateSubmit={submitInlineCreateHost}
+						onInlineCreateSaveDraft={handleInlineCreateSaveDraft}
 						onDeleteGroup={handleDeleteGroup}
 						onDeleteGroupedHost={handleDeleteGroupedHost}
 						onDeleteGroupedHosts={handleDeleteGroupedHosts}

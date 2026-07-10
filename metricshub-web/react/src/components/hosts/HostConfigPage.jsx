@@ -15,6 +15,7 @@ import {
 } from "@mui/material";
 import SaveIcon from "@mui/icons-material/Save";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import SaveAsOutlinedIcon from "@mui/icons-material/SaveAsOutlined";
 import NodeTypeIcons from "../explorer/tree/icons/NodeTypeIcons";
 import { useSnackbar } from "../../hooks/use-snackbar";
 import { deleteHostConfigDraft, saveHostConfigDraft } from "./host-config-drafts";
@@ -31,6 +32,7 @@ import AboutConnectorsCard from "./AboutConnectorsCard";
 import {
 	guidedConfigDeleteButtonSx,
 	guidedConfigSaveButtonSx,
+	guidedConfigSectionFlashSx,
 } from "./guided-config-form-primitives";
 import {
 	HOST_CONFIG_CREATE_FORM_CONTENT_PR,
@@ -39,6 +41,7 @@ import {
 } from "./host-config-form-layout";
 import { getFormSectionPageSubtitle } from "./host-config-sections";
 import { useHostConfigSectionScrollSpy } from "./useHostConfigSectionScrollSpy";
+import { scrollbarThumbSx } from "../split-screen/SplitScreen";
 
 /**
  * Single-page create/edit form with scroll-driven stepper.
@@ -58,6 +61,7 @@ import { useHostConfigSectionScrollSpy } from "./useHostConfigSectionScrollSpy";
  * @param {string} [props.sessionPathname]
  * @param {(dirty: boolean) => void} [props.onUnsavedChangesChange]
  * @param {React.ReactNode} [props.headerEndAction] optional control above the step rail (edit mode)
+ * @param {(draftId: string) => void} [props.onSaveAsDraft] create-mode: open the saved draft
  */
 const HostConfigPage = ({
 	mode = "create",
@@ -75,6 +79,7 @@ const HostConfigPage = ({
 	onUnsavedChangesChange,
 	headerEndAction,
 	draftId = null,
+	onSaveAsDraft,
 }) => {
 	const isEdit = mode === "edit";
 	const { show: showSnackbar } = useSnackbar();
@@ -84,6 +89,11 @@ const HostConfigPage = ({
 	// True once a save/draft/explicit discard authorized the next navigation, so the
 	// route blocker lets programmatic redirects (after save, delete...) through.
 	const allowNavigationRef = React.useRef(false);
+	// Tracks the draft this session is attached to. Starts at the `draftId` prop
+	// (resuming a saved draft) and is filled in the first time "Save as draft" is
+	// clicked from a blank session, so repeated clicks — and the eventual real
+	// save's cleanup — target the same draft instead of creating a new one each time.
+	const activeDraftIdRef = React.useRef(draftId);
 	const formRootRef = React.useRef(/** @type {HTMLDivElement | null} */ (null));
 	const [scrollAnchorReady, setScrollAnchorReady] = React.useState(false);
 	const bindFormRootRef = React.useCallback((node) => {
@@ -276,8 +286,8 @@ const HostConfigPage = ({
 			if (isEdit) {
 				form.commitSavedBaseline();
 			}
-			if (!isEdit && draftId) {
-				deleteHostConfigDraft(draftId);
+			if (!isEdit && activeDraftIdRef.current) {
+				deleteHostConfigDraft(activeDraftIdRef.current);
 			}
 			form.clearSession();
 			return true;
@@ -291,10 +301,29 @@ const HostConfigPage = ({
 	const hostNames = React.useMemo(() => getHostNames(form.state.hostName), [form.state.hostName]);
 
 	const saveDraftNow = React.useCallback(() => {
-		// Drafts are labeled by resource ID, matching saved resources in the tree.
-		const name = String(form.state.hostId || "").trim() || hostNames[0] || "Untitled resource";
-		saveHostConfigDraft({ id: draftId, name, state: form.state });
-	}, [draftId, form.state, hostNames]);
+		// Drafts are labeled by resource ID, matching saved resources in the tree. When
+		// neither a resource id nor a host name is set, an empty name lets the drafts store
+		// mint a unique "untitled-resource" label ("untitled-resource-2", …).
+		const name = String(form.state.hostId || "").trim() || hostNames[0] || "";
+		activeDraftIdRef.current = saveHostConfigDraft({
+			id: activeDraftIdRef.current,
+			name,
+			state: form.state,
+		});
+		// Reset the dirty baseline so "Save as draft" disables until the next edit.
+		form.commitSavedBaseline();
+	}, [form.state, hostNames, form.commitSavedBaseline]);
+
+	const handleSaveAsDraftClick = () => {
+		saveDraftNow();
+		showSnackbar("Resource saved as draft.", { severity: "success" });
+		// Redirect onto the saved draft: the form re-mounts with the draft as its
+		// baseline, so leaving again without further edits won't prompt to save.
+		if (onSaveAsDraft && activeDraftIdRef.current) {
+			allowNavigationRef.current = true;
+			onSaveAsDraft(activeDraftIdRef.current);
+		}
+	};
 
 	// Blocks in-app navigation while the form holds unsaved work. Tab close/reload is
 	// intentionally not guarded: the form session auto-persists and restores.
@@ -385,6 +414,9 @@ const HostConfigPage = ({
 	// A draft-loaded form is always submittable: its content is real but unsaved,
 	// even when nothing changed since the draft was stored.
 	const canSave = isEdit ? canSaveEdit : hasEnteredInformation || Boolean(draftId);
+	// "Save as draft" only acts on unsaved changes relative to the last draft save (or the
+	// empty form), so it disables right after saving until the next edit.
+	const canSaveDraft = form.isDirtyFromBaseline;
 	const submitLabel = isEdit ? "Save" : "Add Resource";
 
 	return (
@@ -482,6 +514,17 @@ const HostConfigPage = ({
 									Cancel
 								</Button>
 							)}
+							{!isEdit ? (
+								<Button
+									size="small"
+									variant="outlined"
+									startIcon={<SaveAsOutlinedIcon />}
+									onClick={handleSaveAsDraftClick}
+									disabled={busy || !canSaveDraft}
+								>
+									Save as draft
+								</Button>
+							) : null}
 							<Button
 								size="small"
 								variant="contained"
@@ -508,7 +551,7 @@ const HostConfigPage = ({
 
 				<Box
 					ref={bindFormRootRef}
-					sx={{
+					sx={(t) => ({
 						gridColumn: 1,
 						gridRow: 2,
 						minHeight: 0,
@@ -516,7 +559,9 @@ const HostConfigPage = ({
 						overflowY: "auto",
 						overflowX: "hidden",
 						pr: { xs: 0.5, md: HOST_CONFIG_CREATE_FORM_CONTENT_PR },
-					}}
+						...scrollbarThumbSx(t),
+						...guidedConfigSectionFlashSx(t),
+					})}
 				>
 					<HostConfigFormBody
 						form={form}
@@ -542,7 +587,7 @@ const HostConfigPage = ({
 				</Box>
 
 				<Box
-					sx={{
+					sx={(t) => ({
 						gridColumn: { xs: 1, md: 2 },
 						gridRow: { xs: "auto", md: 2 },
 						display: { xs: "none", md: "flex" },
@@ -553,7 +598,8 @@ const HostConfigPage = ({
 						overflowY: "auto",
 						alignSelf: "start",
 						pb: 1,
-					}}
+						...scrollbarThumbSx(t),
+					})}
 				>
 					<Paper
 						elevation={0}
@@ -682,7 +728,11 @@ const HostConfigPage = ({
 							{busy ? "Saving..." : "Save"}
 						</Button>
 					) : (
-						<Button variant="contained" onClick={handleGuardSaveDraft} sx={guidedConfigSaveButtonSx}>
+						<Button
+							variant="contained"
+							onClick={handleGuardSaveDraft}
+							sx={guidedConfigSaveButtonSx}
+						>
 							Save as draft
 						</Button>
 					)}

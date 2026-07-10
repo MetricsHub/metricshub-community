@@ -1,17 +1,7 @@
 import * as React from "react";
 import { Box } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import StorageOutlinedIcon from "@mui/icons-material/StorageOutlined";
 import { HOST_TYPE_LABELS } from "./protocol-definitions";
-
-/** Fixed slot so host.type labels align regardless of logo aspect ratio. */
-const HOST_TYPE_ICON_SLOT_WIDTH_PX = 56;
-
-/**
- * The themed logos ship on a padded 30×30 canvas (artwork only fills the center),
- * so they need to render larger than edge-to-edge logos to look the same size.
- */
-const THEMED_ICON_SCALE = 1.7;
 
 /** @param {string} name */
 const themedHostTypeIcon = (name) => ({
@@ -19,28 +9,25 @@ const themedHostTypeIcon = (name) => ({
 	light: `/host-types/${name}-light.svg`,
 });
 
-/** Palette-mode-specific logos served from /public/host-types. */
+/**
+ * Palette-mode-specific logos served from /public/host-types. Each SVG's viewBox
+ * is cropped tight to its own artwork, so they all scale consistently through
+ * plain object-fit: contain, no per-icon fudge factor.
+ */
 const HOST_TYPE_THEMED_ICONS = {
 	aix: themedHostTypeIcon("aix"),
 	hpux: themedHostTypeIcon("hpux"),
+	ibmi: themedHostTypeIcon("ibmi"),
+	linux: themedHostTypeIcon("linux"),
 	network: themedHostTypeIcon("network"),
 	oob: themedHostTypeIcon("oob"),
 	solaris: themedHostTypeIcon("solaris"),
-};
-
-/** Brand / OS logos served from /public (Wikimedia Commons) — no themed variant. */
-const HOST_TYPE_BRAND_ICONS = {
-	windows: "/windows.svg",
-	linux: "/linux.png",
-};
-
-/** Generic icons for host types without a logo. */
-const GENERIC_HOST_TYPE_ICONS = {
-	storage: StorageOutlinedIcon,
+	storage: themedHostTypeIcon("storage"),
+	windows: themedHostTypeIcon("windows"),
 };
 
 /**
- * Icon for a host.type value: OS brand logos where available, generic icons otherwise.
+ * Icon for a host.type value: palette-aware OS/brand logos, all in a uniform box.
  *
  * @param {object} props
  * @param {string} props.hostType
@@ -49,18 +36,19 @@ const GENERIC_HOST_TYPE_ICONS = {
 const HostTypeIcon = ({ hostType, size = 20 }) => {
 	const theme = useTheme();
 	const mode = theme.palette.mode === "dark" ? "dark" : "light";
-	const themedSrc = HOST_TYPE_THEMED_ICONS[hostType]?.[mode];
-	const renderSize = themedSrc ? Math.round(size * THEMED_ICON_SCALE) : size;
+	// Every icon occupies an identical square box; logos of any aspect ratio are
+	// centered and scaled to fit inside it, so all host types share the exact same
+	// footprint and their labels line up.
 	const slotSx = {
-		width: HOST_TYPE_ICON_SLOT_WIDTH_PX,
-		height: renderSize,
+		width: size,
+		height: size,
 		display: "flex",
 		alignItems: "center",
 		justifyContent: "center",
 		flexShrink: 0,
 	};
 
-	const brandSrc = themedSrc ?? HOST_TYPE_BRAND_ICONS[hostType];
+	const brandSrc = HOST_TYPE_THEMED_ICONS[hostType]?.[mode];
 	if (brandSrc) {
 		return (
 			<Box sx={slotSx}>
@@ -70,22 +58,11 @@ const HostTypeIcon = ({ hostType, size = 20 }) => {
 					alt={HOST_TYPE_LABELS[hostType] || hostType}
 					sx={{
 						maxWidth: "100%",
-						maxHeight: renderSize,
-						width: "auto",
-						height: "auto",
+						maxHeight: "100%",
 						objectFit: "contain",
 						display: "block",
 					}}
 				/>
-			</Box>
-		);
-	}
-
-	const GenericIcon = GENERIC_HOST_TYPE_ICONS[hostType];
-	if (GenericIcon) {
-		return (
-			<Box sx={slotSx}>
-				<GenericIcon sx={{ fontSize: size, color: "text.secondary" }} />
 			</Box>
 		);
 	}

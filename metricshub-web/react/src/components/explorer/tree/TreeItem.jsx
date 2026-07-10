@@ -53,7 +53,12 @@ const ExplorerTreeItemLabel = React.memo(function ExplorerTreeItemLabel({
 						size="small"
 						color="secondary"
 						icon={<PushPinIcon style={{ fontSize: 12 }} />}
-						sx={{ height: 18, fontSize: "0.65rem", flexShrink: 0, "& .MuiChip-label": { px: 0.75 } }}
+						sx={{
+							height: 18,
+							fontSize: "0.65rem",
+							flexShrink: 0,
+							"& .MuiChip-label": { px: 0.75 },
+						}}
 					/>
 				) : null}
 			</Box>

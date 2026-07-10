@@ -31,6 +31,7 @@ import org.metricshub.web.dto.uiconfig.HostUpCheckResponseDto;
 import org.metricshub.web.dto.uiconfig.ProtocolCheckRequestDto;
 import org.metricshub.web.dto.uiconfig.UiConfigSnapshotDto;
 import org.metricshub.web.dto.uiconfig.UiConnectorSummaryDto;
+import org.metricshub.web.dto.uiconfig.UiResourceDefaultsDto;
 import org.metricshub.web.dto.uiconfig.UpdateResourceGroupRequestDto;
 import org.metricshub.web.service.UiConfigService;
 import org.metricshub.web.service.UiProtocolCheckService;
@@ -96,6 +97,16 @@ public class UiConfigController {
 		@RequestParam(value = "includeAll", defaultValue = "false") final boolean includeAll
 	) {
 		return uiConfigService.listConnectors(hostType, protocols, includeAll);
+	}
+
+	@Operation(
+		summary = "Effective default values a new resource inherits (agent settings overridden by the resource group)"
+	)
+	@GetMapping(value = "/resource-defaults", produces = MediaType.APPLICATION_JSON_VALUE)
+	public UiResourceDefaultsDto getResourceDefaults(
+		@RequestParam(value = "resourceGroup", required = false) final String resourceGroup
+	) {
+		return uiConfigService.getResourceDefaults(resourceGroup);
 	}
 
 	@Operation(summary = "Create a resource group")

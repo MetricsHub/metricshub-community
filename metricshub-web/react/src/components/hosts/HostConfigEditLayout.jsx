@@ -10,6 +10,7 @@ import {
 	HOST_CONFIG_BREADCRUMB_ROW_MIN_HEIGHT,
 	HOST_CONFIG_STEP_RAIL_WIDTH,
 } from "./host-config-form-layout";
+import { scrollbarThumbSx } from "../split-screen/SplitScreen";
 
 /**
 
@@ -138,7 +139,7 @@ const HostConfigEditLayout = ({
 						borderColor: "divider",
 					}}
 				>
-					<Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+					<Box sx={(t) => ({ flex: 1, minHeight: 0, overflowY: "auto", ...scrollbarThumbSx(t) })}>
 						<HostConfigStepRail
 							steps={stepRail.steps}
 							activeStep={stepRail.activeStep}

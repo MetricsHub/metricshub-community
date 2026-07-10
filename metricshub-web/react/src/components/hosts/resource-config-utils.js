@@ -1,6 +1,9 @@
 import { objectToKvRows, kvRowsToObject, kvRowsToNumericObject } from "./KeyValueRowsEditor";
 import {
 	createEmptyResourceAdvancedState,
+	DEFAULT_ENABLE_SELF_MONITORING,
+	DEFAULT_ENRICHMENT,
+	DEFAULT_STATE_SET_COMPRESSION,
 	WELL_KNOWN_HOST_ATTRIBUTE_KEYS,
 } from "./resource-config-fields";
 
@@ -21,13 +24,21 @@ const parseCommaSeparatedList = (value) => {
 		.join(", ");
 };
 
-const parseAlertingSystem = (hostConfig) => {
-	const alerting = hostConfig?.alertingSystem || hostConfig?.alertingSystemConfig || {};
-	return {
-		alertingSystemDisable: Boolean(alerting.disable),
-		alertingSystemProblemTemplate:
-			alerting.problemTemplate == null ? "" : String(alerting.problemTemplate),
-	};
+/**
+ * Reduces the configured enrichments list into the single-choice select value.
+ * "BMC Helix" is stored in YAML as {@code bmchelix}; anything else falls back to "none".
+ *
+ * @param {unknown} enrichments
+ * @returns {string}
+ */
+const parseEnrichmentChoice = (enrichments) => {
+	const items = Array.isArray(enrichments)
+		? enrichments.map((entry) => String(entry).trim().toLowerCase())
+		: String(enrichments ?? "")
+				.split(",")
+				.map((entry) => entry.trim().toLowerCase())
+				.filter(Boolean);
+	return items.includes("bmchelix") ? "bmchelix" : DEFAULT_ENRICHMENT;
 };
 
 const formatDurationValue = (value) => {
@@ -54,12 +65,23 @@ export const parseResourceAdvancedFromConfig = (hostConfig = {}) => {
 			? "true"
 			: hostConfig?.enableSelfMonitoring === false
 				? "false"
-				: "";
+				: DEFAULT_ENABLE_SELF_MONITORING;
+
+	// The resource's OWN logger level is the single source of truth for the log section:
+	//   ""    → no explicit level on the resource; it inherits the effective default
+	//           (resource group → agent), which is what "Enable Debug" is derived from.
+	//   "off" → logging explicitly disabled on this resource.
+	//   any level → explicitly set on this resource.
+	// Whether the "Enable Debug" switch shows on/off is derived in the UI from the
+	// effective level (own → inherited → built-in), so it round-trips through a save.
+	const hasLoggerLevel = hostConfig?.loggerLevel != null && hostConfig.loggerLevel !== "";
+	const hasOutputDirectory =
+		hostConfig?.outputDirectory != null && hostConfig.outputDirectory !== "";
 
 	return {
 		...createEmptyResourceAdvancedState(),
-		loggerLevel: hostConfig?.loggerLevel == null ? "" : String(hostConfig.loggerLevel),
-		outputDirectory: hostConfig?.outputDirectory == null ? "" : String(hostConfig.outputDirectory),
+		loggerLevel: hasLoggerLevel ? String(hostConfig.loggerLevel).trim() : "",
+		outputDirectory: hasOutputDirectory ? String(hostConfig.outputDirectory) : "",
 		collectPeriod: formatDurationValue(hostConfig?.collectPeriod),
 		discoveryCycle:
 			hostConfig?.discoveryCycle == null || hostConfig.discoveryCycle === ""
@@ -67,16 +89,16 @@ export const parseResourceAdvancedFromConfig = (hostConfig = {}) => {
 				: String(hostConfig.discoveryCycle),
 		sequential: Boolean(hostConfig?.sequential),
 		enableSelfMonitoring,
-		logFileSourceDetails: Boolean(hostConfig?.logFileSourceDetails),
 		resolveHostnameToFqdn: Boolean(hostConfig?.resolveHostnameToFqdn),
 		monitorFilters: parseCommaSeparatedList(hostConfig?.monitorFilters),
 		jobTimeout: formatDurationValue(hostConfig?.jobTimeout),
 		stateSetCompression:
-			hostConfig?.stateSetCompression == null ? "" : String(hostConfig.stateSetCompression),
-		enrichments: parseCommaSeparatedList(hostConfig?.enrichments),
+			hostConfig?.stateSetCompression == null || hostConfig.stateSetCompression === ""
+				? DEFAULT_STATE_SET_COMPRESSION
+				: String(hostConfig.stateSetCompression),
+		enrichments: parseEnrichmentChoice(hostConfig?.enrichments),
 		customAttributeRows: objectToKvRows(customAttributes),
 		metricRows: objectToKvRows(hostConfig?.metrics),
-		...parseAlertingSystem(hostConfig),
 	};
 };
 
@@ -84,14 +106,6 @@ const setIfPresent = (target, key, value) => {
 	if (value !== undefined && value !== null && value !== "") {
 		target[key] = value;
 	}
-};
-
-const parseListField = (value) => {
-	const items = String(value ?? "")
-		.split(",")
-		.map((entry) => entry.trim())
-		.filter(Boolean);
-	return items.length > 0 ? items : undefined;
 };
 
 /**
@@ -104,15 +118,25 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 	/** @type {Record<string, unknown>} */
 	const payload = {};
 
-	setIfPresent(payload, "loggerLevel", String(resourceAdvanced.loggerLevel ?? "").trim());
-	setIfPresent(payload, "outputDirectory", String(resourceAdvanced.outputDirectory ?? "").trim());
+	// The resource's own logger level is written verbatim when set (""  means "inherit",
+	// so it is omitted; "off" is written explicitly so a disabled resource round-trips).
+	// The output directory only applies while logging is on (level is not "off").
+	const loggerLevel = String(resourceAdvanced.loggerLevel ?? "").trim();
+	if (loggerLevel !== "") {
+		payload.loggerLevel = loggerLevel;
+	}
+	if (loggerLevel.toLowerCase() !== "off") {
+		setIfPresent(payload, "outputDirectory", String(resourceAdvanced.outputDirectory ?? "").trim());
+	}
+
 	setIfPresent(payload, "collectPeriod", String(resourceAdvanced.collectPeriod ?? "").trim());
 	setIfPresent(payload, "jobTimeout", String(resourceAdvanced.jobTimeout ?? "").trim());
-	setIfPresent(
-		payload,
-		"stateSetCompression",
-		String(resourceAdvanced.stateSetCompression ?? "").trim(),
-	);
+
+	// Only persist a non-default state-set compression.
+	const stateSetCompression = String(resourceAdvanced.stateSetCompression ?? "").trim();
+	if (stateSetCompression !== "" && stateSetCompression !== DEFAULT_STATE_SET_COMPRESSION) {
+		payload.stateSetCompression = stateSetCompression;
+	}
 
 	const discoveryCycle = String(resourceAdvanced.discoveryCycle ?? "").trim();
 	if (discoveryCycle !== "") {
@@ -125,28 +149,29 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 	if (resourceAdvanced.sequential) {
 		payload.sequential = true;
 	}
-	if (resourceAdvanced.logFileSourceDetails) {
-		payload.logFileSourceDetails = true;
-	}
 	if (resourceAdvanced.resolveHostnameToFqdn) {
 		payload.resolveHostnameToFqdn = true;
 	}
 
+	// Self monitoring is written only when it differs from the built-in default.
 	const enableSelfMonitoring = String(resourceAdvanced.enableSelfMonitoring ?? "").trim();
-	if (enableSelfMonitoring === "true") {
-		payload.enableSelfMonitoring = true;
-	} else if (enableSelfMonitoring === "false") {
-		payload.enableSelfMonitoring = false;
+	if (
+		(enableSelfMonitoring === "true" || enableSelfMonitoring === "false") &&
+		enableSelfMonitoring !== DEFAULT_ENABLE_SELF_MONITORING
+	) {
+		payload.enableSelfMonitoring = enableSelfMonitoring === "true";
 	}
 
-	const monitorFilters = parseListField(resourceAdvanced.monitorFilters);
-	if (monitorFilters) {
+	const monitorFilters = String(resourceAdvanced.monitorFilters ?? "")
+		.split(",")
+		.map((entry) => entry.trim())
+		.filter(Boolean);
+	if (monitorFilters.length > 0) {
 		payload.monitorFilters = monitorFilters;
 	}
 
-	const enrichments = parseListField(resourceAdvanced.enrichments);
-	if (enrichments) {
-		payload.enrichments = enrichments;
+	if (String(resourceAdvanced.enrichments ?? "").trim() === "bmchelix") {
+		payload.enrichments = ["bmchelix"];
 	}
 
 	const customAttributes = kvRowsToObject(resourceAdvanced.customAttributeRows);
@@ -159,19 +184,20 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 		payload.metrics = metrics;
 	}
 
-	const alertingDisable = Boolean(resourceAdvanced.alertingSystemDisable);
-	const problemTemplate = String(resourceAdvanced.alertingSystemProblemTemplate ?? "").trim();
-	if (alertingDisable || problemTemplate) {
-		/** @type {Record<string, unknown>} */
-		const alertingSystem = {};
-		if (alertingDisable) {
-			alertingSystem.disable = true;
-		}
-		if (problemTemplate) {
-			alertingSystem.problemTemplate = problemTemplate;
-		}
-		payload.alertingSystem = alertingSystem;
-	}
-
 	return payload;
+};
+
+/**
+ * Advanced options that apply to a resource group: the inheritance-aware settings
+ * only, without the custom attributes / metrics (resource groups manage those as
+ * their own top-level sections).
+ *
+ * @param {ReturnType<typeof createEmptyResourceAdvancedState>} [resourceAdvanced]
+ * @returns {Record<string, unknown>}
+ */
+export const buildResourceGroupAdvancedPayload = (resourceAdvanced = {}) => {
+	// eslint-disable-next-line no-unused-vars
+	const { customAttributes, metrics, ...resourceOptions } =
+		buildResourceAdvancedPayload(resourceAdvanced);
+	return resourceOptions;
 };

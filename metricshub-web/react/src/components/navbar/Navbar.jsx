@@ -79,6 +79,10 @@ const NavBar = ({ onToggleTheme }) => {
 
 	const dispatch = useAppDispatch();
 	const lastVisitedPath = useAppSelector(selectLastVisitedPath);
+	// Configuration nav button returns to the last guided-config (Hosts) page
+	// visited, instead of always jumping to the resource-groups root.
+	const lastVisitedGuidedConfigPath = useAppSelector((s) => s.ui?.lastVisitedGuidedConfigPath);
+	const configurationTarget = lastVisitedGuidedConfigPath || paths.hostsResourceGroups();
 
 	// YAML editor dirty/error state — shown as a dot on the Tools button
 	const configDirty = useAppSelector((s) => s.config?.dirtyByName) || {};
@@ -224,11 +228,11 @@ const NavBar = ({ onToggleTheme }) => {
 									Explorer
 								</Button>
 
-								{/* Configuration → direct link to guided-config resource-groups */}
+								{/* Configuration → last guided-config page visited, or resource-groups root */}
 								<Button
 									component={NavLink}
 									size="large"
-									to={paths.hostsResourceGroups()}
+									to={configurationTarget}
 									end={false}
 									sx={[
 										navBtnSx,
@@ -386,7 +390,7 @@ const NavBar = ({ onToggleTheme }) => {
 									</MenuItem>
 									<MenuItem
 										component={NavLink}
-										to={paths.hostsResourceGroups()}
+										to={configurationTarget}
 										onClick={handleMobileMenuClose}
 									>
 										<ListItemIcon>

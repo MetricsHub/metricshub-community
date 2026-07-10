@@ -23,6 +23,7 @@ import ProtocolPasswordField from "./ProtocolPasswordField";
 import {
 	filledInputNoLabelSx,
 	guidedConfigChoiceToggleButtonSx,
+	guidedConfigFieldLabelSx,
 } from "./guided-config-form-primitives";
 import {
 	getDefaultPortForTransport,
@@ -138,14 +139,6 @@ const ProtocolConfigForm = ({
 	/** Validation errors only — static hints stay inline on {@link ProtocolFieldLabelRow}. */
 	const fieldErrorText = (fieldName) => errors[fieldName] || undefined;
 
-	const isAdvancedFieldConfigured = (field) => {
-		const val = String(values[field.name] ?? "").trim();
-		if (field.name === "authentications") {
-			return val !== "" && val !== "NTLM";
-		}
-		return val !== "";
-	};
-
 	const renderField = (field, showDeferredEncryptAlert = false) => {
 		if (field.type === "boolean") {
 			return renderBooleanField(field);
@@ -165,7 +158,40 @@ const ProtocolConfigForm = ({
 		if (field.type === "password") {
 			return renderPasswordField(field, showDeferredEncryptAlert);
 		}
+		if (field.type === "textarea") {
+			return renderTextareaField(field);
+		}
 		return renderTextField(field);
+	};
+
+	const renderTextareaField = (field) => {
+		const value = values[field.name];
+		const error = errors[field.name];
+		const required = showRequiredMarker(field);
+		const description = fieldDescription(field);
+
+		return (
+			<Box key={field.name}>
+				<ProtocolFieldLabelRow
+					label={field.label}
+					required={required}
+					description={description}
+					helpTooltip={fieldHelpTooltip(field)}
+				/>
+				<TextField
+					{...protocolTextFieldProps}
+					fullWidth
+					multiline
+					minRows={4}
+					placeholder={field.placeholder}
+					value={value ?? ""}
+					onChange={(e) => onChange(field.name, e.target.value)}
+					error={Boolean(error)}
+					helperText={fieldErrorText(field.name)}
+					required={required}
+				/>
+			</Box>
+		);
 	};
 
 	const renderBooleanField = (field) => {
@@ -190,7 +216,7 @@ const ProtocolConfigForm = ({
 								columnGap: 0.75,
 							}}
 						>
-							<Typography variant="body2" fontWeight={600}>
+							<Typography component="span" sx={guidedConfigFieldLabelSx}>
 								{field.label}
 							</Typography>
 							{description ? (
@@ -608,23 +634,22 @@ const ProtocolConfigForm = ({
 	};
 
 	const visibleFields = fields.filter((field) => !field.showIf || field.showIf(values));
-	const sudoFields = visibleFields.filter((field) =>
-		["sudoCommand", "useSudoCommands"].includes(field.name),
-	);
-	const useSudoField = visibleFields.find((field) => field.name === "useSudo");
+	// Legacy always-visible sudo toggle (OS Command): only applies when "useSudo" is
+	// NOT marked advanced. SSH moves its own sudo fields inside Advanced options
+	// instead, where they're rendered like any other advanced field (see below).
+	const useSudoField = visibleFields.find((field) => field.name === "useSudo" && !field.advanced);
+	const sudoFields = useSudoField
+		? visibleFields.filter((field) => ["sudoCommand", "useSudoCommands"].includes(field.name))
+		: [];
 	const advancedFields = visibleFields.filter((field) => field.advanced);
-	const hasAdvancedValues = advancedFields.some(isAdvancedFieldConfigured);
-	const [advancedOpen, setAdvancedOpen] = React.useState(hasAdvancedValues);
+	// Advanced options always start collapsed, regardless of whether they hold
+	// configured (non-default) values.
+	const [advancedOpen, setAdvancedOpen] = React.useState(false);
 	const regularFields = visibleFields.filter(
 		(field) =>
-			!field.advanced && !["useSudo", "sudoCommand", "useSudoCommands"].includes(field.name),
+			!field.advanced &&
+			!(useSudoField && ["useSudo", "sudoCommand", "useSudoCommands"].includes(field.name)),
 	);
-
-	React.useEffect(() => {
-		if (hasAdvancedValues) {
-			setAdvancedOpen(true);
-		}
-	}, [hasAdvancedValues]);
 
 	const firstPasswordFieldName = (() => {
 		const standalonePassword = [...regularFields, ...advancedFields].find(
@@ -692,7 +717,8 @@ const ProtocolConfigForm = ({
 							px: 0,
 							minWidth: 0,
 							justifyContent: "flex-start",
-							fontWeight: 600,
+							fontSize: "1rem",
+							fontWeight: 700,
 							color: "text.primary",
 							"&:hover": {
 								backgroundColor: "transparent",

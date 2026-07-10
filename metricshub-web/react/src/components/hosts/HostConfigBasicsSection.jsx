@@ -10,6 +10,8 @@ import ResourceGroupPlacementCombobox from "./ResourceGroupPlacementCombobox";
 import ResourceAdvancedOptionsSection from "./ResourceAdvancedOptionsSection";
 import { createEmptyResourceAdvancedState } from "./resource-config-fields";
 import { getHostNames } from "./host-config-utils";
+import { useResourceDefaults } from "./use-resource-defaults";
+import { useAgentOsType } from "../../hooks/use-agent-os-type";
 import {
 	FormSection,
 	LabeledSelect,
@@ -24,7 +26,7 @@ import {
 	HOST_TYPES,
 } from "./protocol-definitions";
 
-const HOST_TYPE_FIELD_ICON_SIZE = 32;
+const HOST_TYPE_FIELD_ICON_SIZE = 36;
 
 const hostTypeSelectSx = {
 	...filledInputNoLabelSx,
@@ -63,6 +65,18 @@ const HostConfigBasicsSection = ({
 }) => {
 	const manualHostIdRef = React.useRef(false);
 	const [autoSuffixMessage, setAutoSuffixMessage] = React.useState("");
+	const inheritedDefaults = useResourceDefaults(values.targetType, values.resourceGroup);
+	const agentOsType = useAgentOsType();
+
+	// Monitoring Windows hosts requires the agent itself to run on Windows: hide the
+	// Windows host type otherwise (unknown os.type keeps everything visible, and a
+	// resource already configured as Windows stays selectable).
+	const hostTypeOptions = React.useMemo(() => {
+		if (!agentOsType || agentOsType === "windows") {
+			return HOST_TYPES;
+		}
+		return HOST_TYPES.filter((hostType) => hostType !== "windows" || hostType === values.hostType);
+	}, [agentOsType, values.hostType]);
 
 	// A resource ID only has to be unique within its placement scope: the selected
 	// resource group, or the standalone section. The same ID in another group is fine.
@@ -244,7 +258,7 @@ const HostConfigBasicsSection = ({
 							}}
 						>
 							<MenuItem value={HOST_TYPE_UNSELECTED} disabled sx={{ display: "none" }} />
-							{HOST_TYPES.map((t) => (
+							{hostTypeOptions.map((t) => (
 								<MenuItem key={t} value={t} sx={{ py: 1.5 }}>
 									<HostTypeOption hostType={t} />
 								</MenuItem>
@@ -261,6 +275,7 @@ const HostConfigBasicsSection = ({
 					<ResourceAdvancedOptionsSection
 						values={values.resourceAdvanced || createEmptyResourceAdvancedState()}
 						onChange={onChange}
+						inheritedDefaults={inheritedDefaults}
 					/>
 				</Stack>
 			</FormSection>

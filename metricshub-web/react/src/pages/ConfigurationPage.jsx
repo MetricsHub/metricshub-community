@@ -20,7 +20,13 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
 import DeleteIcon from "@mui/icons-material/Delete";
 
-import { SplitScreen, Left, Right } from "../components/split-screen/SplitScreen";
+import {
+	SplitScreen,
+	Left,
+	Right,
+	scrollbarSx,
+	scrollbarThumbSx,
+} from "../components/split-screen/SplitScreen";
 import {
 	ResizableVerticalSplit,
 	Top as SplitTop,
@@ -74,6 +80,9 @@ import { useSnackbar } from "../hooks/use-snackbar";
 import { isBackupFileName } from "../utils/backup-names";
 import { isVmFile } from "../utils/file-type-utils";
 import { useAuth } from "../hooks/use-auth";
+
+/** Last file the user had open in the Configuration editor (restored when returning). */
+const CONFIG_LAST_PATH_KEY = "metricshub-configuration:last-path";
 
 function parseConfigurationPath(pathname) {
 	if (!pathname || !pathname.startsWith("/configuration")) return { repo: null, name: null };
@@ -214,9 +223,34 @@ function ConfigurationPage() {
 		dispatch,
 	]);
 
-	// Auto-navigate to first file when on /configuration with no selection
+	// Remember the open file so returning to /configuration lands on the same page.
+	React.useEffect(() => {
+		if (!routeRepo || !routeName) return;
+		try {
+			sessionStorage.setItem(CONFIG_LAST_PATH_KEY, location.pathname);
+		} catch {
+			// ignore quota errors
+		}
+	}, [routeRepo, routeName, location.pathname]);
+
+	// Auto-navigate when on /configuration with no selection: last visited file
+	// first (if it still exists), then the first available file.
 	React.useEffect(() => {
 		if (routeRepo || routeName) return;
+		const lastPath = sessionStorage.getItem(CONFIG_LAST_PATH_KEY);
+		if (lastPath) {
+			const parsed = parseConfigurationPath(lastPath);
+			const stillExists =
+				parsed.repo === "config"
+					? (configList || []).some((f) => f.name === parsed.name)
+					: parsed.repo === "otel"
+						? (otelList || []).some((f) => f.name === parsed.name)
+						: false;
+			if (stillExists) {
+				navigate(lastPath, { replace: true });
+				return;
+			}
+		}
 		const configFiles = (configList || []).filter((f) => !isBackupFileName(f.name));
 		const otelFiles = (otelList || []).filter((f) => !isBackupFileName(f.name));
 		if (configFiles.length > 0) {
@@ -406,6 +440,15 @@ function ConfigurationPage() {
 		(routeRepo === "config" && configLoadingContent) ||
 		(routeRepo === "otel" && otelLoadingContent);
 
+	// Mirror the Explorer tree: don't render the tree until the lists have loaded, so
+	// it appears fully-formed (already expanded) in one paint instead of visibly filling
+	// in as the config/otel lists stream in. Only gates the initial load — once files
+	// exist, a manual Refresh keeps the current tree on screen.
+	const treeInitialLoading =
+		(configLoadingList || otelLoadingList) &&
+		(configList?.length ?? 0) === 0 &&
+		(otelList?.length ?? 0) === 0;
+
 	const treeContent = (
 		<Stack spacing={1.5} sx={{ p: 1.5 }}>
 			<Stack direction="row" spacing={1} alignItems="center">
@@ -492,17 +535,24 @@ function ConfigurationPage() {
 				</Button>
 				{(configLoadingList || otelLoadingList) && <CircularProgress size={18} />}
 			</Stack>
-			<UnifiedConfigTree
-				selectedRepo={routeRepo}
-				selectedName={routeName}
-				onSelect={onSelect}
-				onRenameConfig={handleRenameConfig}
-				onDeleteConfig={(name) => openDelete("config", name)}
-				onMakeDraftConfig={handleMakeDraftConfig}
-				onRenameOtel={handleRenameOtel}
-				onDeleteOtel={(name) => openDelete("otel", name)}
-				onMakeDraftOtel={handleMakeDraftOtel}
-			/>
+			{treeInitialLoading ? (
+				<Box sx={{ p: 1, display: "flex", alignItems: "center", gap: 1 }}>
+					<CircularProgress size={18} />
+					<Typography variant="body2">Loading configuration…</Typography>
+				</Box>
+			) : (
+				<UnifiedConfigTree
+					selectedRepo={routeRepo}
+					selectedName={routeName}
+					onSelect={onSelect}
+					onRenameConfig={handleRenameConfig}
+					onDeleteConfig={(name) => openDelete("config", name)}
+					onMakeDraftConfig={handleMakeDraftConfig}
+					onRenameOtel={handleRenameOtel}
+					onDeleteOtel={(name) => openDelete("otel", name)}
+					onMakeDraftOtel={handleMakeDraftOtel}
+				/>
+			)}
 			<QuestionDialog
 				open={deleteOpen}
 				title="Delete file"
@@ -562,7 +612,17 @@ function ConfigurationPage() {
 				<Left>{treeContent}</Left>
 				<Right disableScroll>
 					<Stack
-						sx={{ px: 1.5, pt: 0, pb: 1.5, gap: 1, height: "100%", overflow: "auto", minHeight: 0 }}
+						sx={(t) => ({
+							...scrollbarSx(t),
+							px: 1.5,
+							pt: 0,
+							pb: 1.5,
+							gap: 1,
+							minHeight: 0,
+							// The actual scrolling element is CodeMirror's internal .cm-scroller,
+							// not this Stack — WebKit scrollbar pseudo-elements don't inherit.
+							"& .cm-scroller": scrollbarThumbSx(t),
+						})}
 					>
 						{routeRepo === "config" && (
 							<Box

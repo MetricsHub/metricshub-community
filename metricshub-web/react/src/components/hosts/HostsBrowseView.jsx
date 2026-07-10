@@ -103,6 +103,7 @@ const HostsBrowseView = ({
 	inlineCreateContext = null,
 	onInlineCreateCancel,
 	onInlineCreateSubmit,
+	onInlineCreateSaveDraft,
 	editRightPane = null,
 	onSnapshotChange,
 	onNavigate,
@@ -156,6 +157,7 @@ const HostsBrowseView = ({
 				sessionPathname={pathname}
 				onCancel={onInlineCreateCancel}
 				onSubmit={onInlineCreateSubmit}
+				onSaveAsDraft={onInlineCreateSaveDraft}
 			/>
 		</HostConfigEditLayout>
 	);

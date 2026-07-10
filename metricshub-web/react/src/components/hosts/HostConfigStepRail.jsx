@@ -8,6 +8,7 @@ import {
 	ListItemText,
 	Typography,
 } from "@mui/material";
+import { scrollbarThumbSx } from "../split-screen/SplitScreen";
 
 /**
  * Fixed side panel listing configuration steps (numbered).
@@ -32,7 +33,7 @@ const HostConfigStepRail = ({ steps = [], activeStep, onStepClick }) => (
 		<Typography variant="caption" color="text.secondary" sx={{ px: 0.5, mb: 1, display: "block" }}>
 			Configuration steps
 		</Typography>
-		<Box sx={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+		<Box sx={(t) => ({ flex: 1, minHeight: 0, overflowY: "auto", ...scrollbarThumbSx(t) })}>
 			<List dense disablePadding>
 				{steps.map((step, index) => (
 					<ListItemButton

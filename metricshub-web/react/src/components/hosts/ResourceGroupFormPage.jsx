@@ -16,11 +16,19 @@ import {
 	guidedConfigBorderedPanelSx,
 	guidedConfigDeleteButtonSx,
 	guidedConfigSaveButtonSx,
+	guidedConfigSectionFlashSx,
 	LabeledTextField,
 } from "./guided-config-form-primitives";
 import HostConfigSectionNav from "./HostConfigSectionNav";
 import HostConfigSectionHeader from "./HostConfigSectionHeader";
 import HostsResourceTable, { buildMultiHostDerivedIds } from "./HostsResourceTable";
+import ResourceAdvancedOptionsSection from "./ResourceAdvancedOptionsSection";
+import { createEmptyResourceAdvancedState } from "./resource-config-fields";
+import {
+	buildResourceGroupAdvancedPayload,
+	parseResourceAdvancedFromConfig,
+} from "./resource-config-utils";
+import { useResourceDefaults } from "./use-resource-defaults";
 import KeyValueRowsEditor, {
 	kvRowsToNumericObject,
 	kvRowsToObject,
@@ -49,6 +57,7 @@ import {
 	saveHostFormScrollPosition,
 } from "./host-config-session";
 import { useHostConfigSectionScrollSpy } from "./useHostConfigSectionScrollSpy";
+import { scrollbarThumbSx } from "../split-screen/SplitScreen";
 
 const buildDefaultMetricRows = () => DEFAULT_METRIC_SEEDS.map((s) => makeKvRow(s.key, s.value));
 
@@ -94,6 +103,11 @@ const ResourceGroupFormPage = ({
 	const [metricRows, setMetricRows] = React.useState(() =>
 		isEdit ? objectToKvRows(rawMetrics) : buildDefaultMetricRows(),
 	);
+	// Advanced options (Log / Scheduling / Monitoring / Network) shared with resources.
+	// Attributes & metrics are the group's own top-level sections, so they're hidden here.
+	const [resourceAdvanced, setResourceAdvanced] = React.useState(() =>
+		isEdit ? parseResourceAdvancedFromConfig(groupNode) : createEmptyResourceAdvancedState(),
+	);
 	const [nameError, setNameError] = React.useState(null);
 	const [saving, setSaving] = React.useState(false);
 	const [selectedHostIds, setSelectedHostIds] = React.useState([]);
@@ -109,6 +123,7 @@ const ResourceGroupFormPage = ({
 			normalizeGroupMetrics(
 				Object.fromEntries(DEFAULT_METRIC_SEEDS.map((s) => [s.key, Number(s.value)])),
 			),
+			buildResourceGroupAdvancedPayload(createEmptyResourceAdvancedState()),
 		),
 	);
 
@@ -118,11 +133,19 @@ const ResourceGroupFormPage = ({
 					initialGroupName,
 					normalizeGroupAttributes(rawAttributes),
 					normalizeGroupMetrics(rawMetrics),
+					buildResourceGroupAdvancedPayload(parseResourceAdvancedFromConfig(groupNode)),
 				)
 			: null,
 	);
 	const baselineStepsRef = React.useRef(
-		isEdit ? buildResourceGroupBaselineSteps(initialGroupName, rawAttributes, rawMetrics) : null,
+		isEdit
+			? buildResourceGroupBaselineSteps(
+					initialGroupName,
+					rawAttributes,
+					rawMetrics,
+					buildResourceGroupAdvancedPayload(parseResourceAdvancedFromConfig(groupNode)),
+				)
+			: null,
 	);
 	const [baselineVersion, setBaselineVersion] = React.useState(0);
 	const [furthestStep, setFurthestStep] = React.useState(0);
@@ -231,9 +254,12 @@ const ResourceGroupFormPage = ({
 		}
 		const attrs = groupNode?.attributes || {};
 		const mets = groupNode?.metrics || {};
+		const advanced = parseResourceAdvancedFromConfig(groupNode);
+		const advancedFingerprint = buildResourceGroupAdvancedPayload(advanced);
 		setName(initialGroupName);
 		setAttributeRows(objectToKvRows(attrs));
 		setMetricRows(objectToKvRows(mets));
+		setResourceAdvanced(advanced);
 		setNameError(null);
 		setSelectedHostIds([]);
 		siteAutoSyncRef.current = false;
@@ -241,13 +267,26 @@ const ResourceGroupFormPage = ({
 			initialGroupName,
 			normalizeGroupAttributes(attrs),
 			normalizeGroupMetrics(mets),
+			advancedFingerprint,
 		);
-		baselineStepsRef.current = buildResourceGroupBaselineSteps(initialGroupName, attrs, mets);
+		baselineStepsRef.current = buildResourceGroupBaselineSteps(
+			initialGroupName,
+			attrs,
+			mets,
+			advancedFingerprint,
+		);
 		setBaselineVersion((version) => version + 1);
 	}, [groupNode, initialGroupName, isEdit]);
 
 	const currentAttributes = kvRowsToObject(attributeRows);
 	const currentMetrics = kvRowsToNumericObject(metricRows);
+	const advancedPayload = React.useMemo(
+		() => buildResourceGroupAdvancedPayload(resourceAdvanced),
+		[resourceAdvanced],
+	);
+	// A group inherits from the agent global settings (no parent group), so its
+	// advanced fields show the agent-level defaults as placeholders.
+	const inheritedDefaults = useResourceDefaults("", "");
 
 	const currentStep = steps[scrollActiveStep];
 	const stepSubtitle = getResourceGroupStepSubtitle(currentStep);
@@ -273,8 +312,13 @@ const ResourceGroupFormPage = ({
 		const baseline = baselineStepsRef.current;
 		const edited = [];
 		if (
-			getResourceGroupStepFingerprint(name, currentAttributes, currentMetrics, "details") !==
-			baseline.details
+			getResourceGroupStepFingerprint(
+				name,
+				currentAttributes,
+				currentMetrics,
+				"details",
+				advancedPayload,
+			) !== baseline.details
 		) {
 			edited.push("details");
 		}
@@ -287,7 +331,7 @@ const ResourceGroupFormPage = ({
 		return edited;
 		// baselineVersion bumps after save so edited steps clear without a full reload.
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- baselineVersion is intentional
-	}, [isEdit, name, currentAttributes, currentMetrics, baselineVersion]);
+	}, [isEdit, name, currentAttributes, currentMetrics, advancedPayload, baselineVersion]);
 
 	const validatedSet = React.useMemo(() => new Set(validatedStepIds), [validatedStepIds]);
 	const editedSet = React.useMemo(() => new Set(editedStepIds), [editedStepIds]);
@@ -296,6 +340,7 @@ const ResourceGroupFormPage = ({
 		name,
 		currentAttributes,
 		currentMetrics,
+		advancedPayload,
 	);
 	const isDirty = isEdit
 		? currentFingerprint !== baselineRef.current
@@ -362,6 +407,7 @@ const ResourceGroupFormPage = ({
 		name: name.trim(),
 		attributes: currentAttributes,
 		metrics: currentMetrics,
+		...advancedPayload,
 	});
 
 	const resetCreateForm = React.useCallback(() => {
@@ -369,13 +415,20 @@ const ResourceGroupFormPage = ({
 		const defaultMetrics = normalizeGroupMetrics(
 			Object.fromEntries(DEFAULT_METRIC_SEEDS.map((s) => [s.key, Number(s.value)])),
 		);
+		const emptyAdvanced = createEmptyResourceAdvancedState();
 		setName("");
 		setAttributeRows([makeKvRow("site", "")]);
 		setMetricRows(defaultMetricRows);
+		setResourceAdvanced(emptyAdvanced);
 		setNameError(null);
 		setSelectedHostIds([]);
 		siteAutoSyncRef.current = true;
-		createBaselineRef.current = resourceGroupConfigFingerprint("", { site: "" }, defaultMetrics);
+		createBaselineRef.current = resourceGroupConfigFingerprint(
+			"",
+			{ site: "" },
+			defaultMetrics,
+			buildResourceGroupAdvancedPayload(emptyAdvanced),
+		);
 		setBaselineVersion((version) => version + 1);
 		setFurthestStep(0);
 		scrollToStepIndex(0);
@@ -394,11 +447,13 @@ const ResourceGroupFormPage = ({
 					trimmedName,
 					currentAttributes,
 					currentMetrics,
+					advancedPayload,
 				);
 				baselineStepsRef.current = buildResourceGroupBaselineSteps(
 					trimmedName,
 					currentAttributes,
 					currentMetrics,
+					advancedPayload,
 				);
 				setBaselineVersion((version) => version + 1);
 			} else {
@@ -509,7 +564,7 @@ const ResourceGroupFormPage = ({
 
 			<Box
 				ref={formRootRef}
-				sx={{
+				sx={(t) => ({
 					gridColumn: 1,
 					gridRow: 2,
 					minHeight: 0,
@@ -517,7 +572,9 @@ const ResourceGroupFormPage = ({
 					overflowY: "auto",
 					overflowX: "hidden",
 					pr: { xs: 0.5, md: HOST_CONFIG_CREATE_FORM_CONTENT_PR },
-				}}
+					...scrollbarThumbSx(t),
+					...guidedConfigSectionFlashSx(t),
+				})}
 			>
 				<Stack spacing={4}>
 					<Box id={hostConfigSectionId(RESOURCE_GROUP_FORM_STEPS[0])} sx={{ scrollMarginTop: 88 }}>
@@ -563,6 +620,12 @@ const ResourceGroupFormPage = ({
 									labelsAbove
 									bordered
 									defaultRows={[{ key: "site", value: name }]}
+								/>
+								<ResourceAdvancedOptionsSection
+									values={resourceAdvanced}
+									onChange={(patch) => setResourceAdvanced(patch.resourceAdvanced)}
+									inheritedDefaults={inheritedDefaults}
+									showAttributesAndMetrics={false}
 								/>
 							</Stack>
 						</Box>
@@ -650,7 +713,7 @@ const ResourceGroupFormPage = ({
 			</Box>
 
 			<Box
-				sx={{
+				sx={(t) => ({
 					gridColumn: { xs: 1, md: 2 },
 					gridRow: { xs: "auto", md: 2 },
 					display: { xs: "none", md: "flex" },
@@ -661,7 +724,8 @@ const ResourceGroupFormPage = ({
 					overflowY: "auto",
 					alignSelf: "start",
 					pb: 1,
-				}}
+					...scrollbarThumbSx(t),
+				})}
 			>
 				<Paper
 					elevation={0}

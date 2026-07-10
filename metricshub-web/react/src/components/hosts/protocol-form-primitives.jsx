@@ -12,7 +12,7 @@ import SettingsEthernetIcon from "@mui/icons-material/SettingsEthernet";
 import StorageIcon from "@mui/icons-material/Storage";
 import TerminalIcon from "@mui/icons-material/Terminal";
 import TimerOutlinedIcon from "@mui/icons-material/TimerOutlined";
-import { filledInputNoLabelSx } from "./guided-config-form-primitives";
+import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
 
 export const protocolFieldIconSx = { color: "action.active", fontSize: 20, display: "block" };
@@ -94,11 +94,11 @@ export const ProtocolFieldLabelRow = ({ label, required = false, description, he
 			mb: 0.75,
 		}}
 	>
-		<Typography variant="body2" fontWeight={600}>
+		<Typography component="span" sx={guidedConfigFieldLabelSx}>
 			{label}
 		</Typography>
 		{required ? (
-			<Typography component="span" variant="body2" color="error.main" sx={{ lineHeight: 1 }}>
+			<Typography component="span" color="error.main" sx={{ ...guidedConfigFieldLabelSx, ml: 0 }}>
 				*
 			</Typography>
 		) : null}

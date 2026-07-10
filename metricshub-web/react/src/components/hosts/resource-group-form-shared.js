@@ -64,6 +64,10 @@ export const getResourceGroupFormSteps = (mode) =>
 		? [...RESOURCE_GROUP_FORM_STEPS, RESOURCE_GROUP_RESOURCES_STEP]
 		: RESOURCE_GROUP_FORM_STEPS;
 
+/** @param {Record<string, unknown>} [obj] */
+const sortObject = (obj = {}) =>
+	Object.fromEntries(Object.entries(obj || {}).sort(([a], [b]) => a.localeCompare(b)));
+
 /**
  * Canonical stringification used for dirty-checking. Sorts keys so reordering
  * doesn't trigger a false-positive "dirty" state.
@@ -71,20 +75,15 @@ export const getResourceGroupFormSteps = (mode) =>
  * @param {string} name
  * @param {Record<string, string>} attributes
  * @param {Record<string, number>} metrics
+ * @param {Record<string, unknown>} [advanced] serialized advanced-options payload
  */
-export const resourceGroupConfigFingerprint = (name, attributes, metrics) => {
-	const sortedAttrs = Object.fromEntries(
-		Object.entries(attributes).sort(([a], [b]) => a.localeCompare(b)),
-	);
-	const sortedMetrics = Object.fromEntries(
-		Object.entries(metrics).sort(([a], [b]) => a.localeCompare(b)),
-	);
-	return JSON.stringify({
+export const resourceGroupConfigFingerprint = (name, attributes, metrics, advanced = {}) =>
+	JSON.stringify({
 		name: String(name).trim(),
-		attributes: sortedAttrs,
-		metrics: sortedMetrics,
+		attributes: sortObject(attributes),
+		metrics: sortObject(metrics),
+		advanced: sortObject(advanced),
 	});
-};
 
 /**
  * @param {Record<string, unknown>} attrs
@@ -117,29 +116,35 @@ export const getResourceGroupStepSubtitle = (step) => step?.description ?? null;
 
 /**
  * Per-step fingerprint for edit-mode dirty detection (resources step is excluded).
+ * Advanced options are rendered inside the "details" step, so they fold into it.
  *
  * @param {string} name
  * @param {Record<string, string>} attributes
  * @param {Record<string, number>} metrics
  * @param {string} stepId
+ * @param {Record<string, unknown>} [advanced] serialized advanced-options payload
  * @returns {string}
  */
-export const getResourceGroupStepFingerprint = (name, attributes, metrics, stepId) => {
+export const getResourceGroupStepFingerprint = (
+	name,
+	attributes,
+	metrics,
+	stepId,
+	advanced = {},
+) => {
 	const normalizedName = String(name).trim();
 	const normalizedAttrs = normalizeGroupAttributes(attributes);
 	const normalizedMetrics = normalizeGroupMetrics(metrics);
 
 	if (stepId === "details") {
-		const sortedAttrs = Object.fromEntries(
-			Object.entries(normalizedAttrs).sort(([a], [b]) => a.localeCompare(b)),
-		);
-		return JSON.stringify({ name: normalizedName, attributes: sortedAttrs });
+		return JSON.stringify({
+			name: normalizedName,
+			attributes: sortObject(normalizedAttrs),
+			advanced: sortObject(advanced),
+		});
 	}
 	if (stepId === "metrics") {
-		const sortedMetrics = Object.fromEntries(
-			Object.entries(normalizedMetrics).sort(([a], [b]) => a.localeCompare(b)),
-		);
-		return JSON.stringify({ metrics: sortedMetrics });
+		return JSON.stringify({ metrics: sortObject(normalizedMetrics) });
 	}
 	return "";
 };
@@ -176,14 +181,16 @@ export const isResourceGroupStepValid = (name, attributes, metrics, stepId, opti
  * @param {string} name
  * @param {Record<string, unknown>} attributes
  * @param {Record<string, unknown>} metrics
+ * @param {Record<string, unknown>} [advanced] serialized advanced-options payload
  * @returns {{ details: string; metrics: string }}
  */
-export const buildResourceGroupBaselineSteps = (name, attributes, metrics) => ({
+export const buildResourceGroupBaselineSteps = (name, attributes, metrics, advanced = {}) => ({
 	details: getResourceGroupStepFingerprint(
 		name,
 		normalizeGroupAttributes(attributes),
 		{},
 		"details",
+		advanced,
 	),
 	metrics: getResourceGroupStepFingerprint("", {}, normalizeGroupMetrics(metrics), "metrics"),
 });

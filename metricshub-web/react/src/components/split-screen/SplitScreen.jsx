@@ -58,6 +58,29 @@ const Scrollbar = (t) => {
 };
 
 /**
+ * Themed thin scrollbar used by the Explorer split panes (includes overflow:auto,
+ * height:100%). Exported so other scroll containers (e.g. the Configuration
+ * editor pane) match it exactly in both light and dark themes.
+ *
+ * @param {import("@mui/material").Theme} t
+ */
+export const scrollbarSx = Scrollbar;
+
+/**
+ * Just the thin-scrollbar visuals (thumb color, width, hover states) without the
+ * overflow/height/minWidth rules — for scroll containers that already manage their
+ * own layout (CSS grid areas, editor panes) but should still match the Explorer
+ * scrollbar look in both themes.
+ *
+ * @param {import("@mui/material").Theme} t
+ */
+export const scrollbarThumbSx = (t) => {
+	// eslint-disable-next-line no-unused-vars
+	const { overflow, height, minWidth, ...visuals } = Scrollbar(t);
+	return visuals;
+};
+
+/**
  * Left pane of the split screen
  *
  * @param {*} param0  children - content to render

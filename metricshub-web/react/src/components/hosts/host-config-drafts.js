@@ -44,6 +44,28 @@ export const listHostConfigDrafts = () =>
  */
 export const getHostConfigDraft = (draftId) => readDraftsMap()[draftId] ?? null;
 
+/** Base label for a draft with no resource id / host name. */
+const UNTITLED_DRAFT_BASE = "untitled-resource";
+
+/**
+ * Picks the first free "untitled-resource" label ("untitled-resource",
+ * "untitled-resource-2", "untitled-resource-3", …) among existing drafts.
+ *
+ * @param {Record<string, HostConfigDraft>} map
+ * @returns {string}
+ */
+const makeUniqueUntitledName = (map) => {
+	const taken = new Set(Object.values(map).map((draft) => String(draft.name)));
+	if (!taken.has(UNTITLED_DRAFT_BASE)) {
+		return UNTITLED_DRAFT_BASE;
+	}
+	let n = 2;
+	while (taken.has(`${UNTITLED_DRAFT_BASE}-${n}`)) {
+		n += 1;
+	}
+	return `${UNTITLED_DRAFT_BASE}-${n}`;
+};
+
 /**
  * Creates or updates a draft.
  *
@@ -53,9 +75,13 @@ export const getHostConfigDraft = (draftId) => readDraftsMap()[draftId] ?? null;
 export const saveHostConfigDraft = ({ id, name, state }) => {
 	const draftId = id || `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	const map = readDraftsMap();
+	const trimmedName = String(name || "").trim();
+	// Keep an existing draft's label on re-save; only mint a fresh unique "untitled-resource"
+	// label when a brand-new draft is saved without a resource id / host name.
+	const finalName = trimmedName || map[draftId]?.name || makeUniqueUntitledName(map);
 	map[draftId] = {
 		id: draftId,
-		name: String(name || "").trim() || "Untitled resource",
+		name: finalName,
 		state,
 		savedAt: Date.now(),
 	};

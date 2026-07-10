@@ -35,6 +35,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.metricshub.agent.config.AgentConfig;
+import org.metricshub.agent.config.AlertingSystemConfig;
+import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.engine.common.helpers.JsonHelper;
@@ -46,6 +48,8 @@ import org.metricshub.web.dto.uiconfig.UiAdditionalConnectorDto;
 import org.metricshub.web.dto.uiconfig.UiAlertingSystemConfigDto;
 import org.metricshub.web.dto.uiconfig.UiConfigSnapshotDto;
 import org.metricshub.web.dto.uiconfig.UiConnectorSummaryDto;
+import org.metricshub.web.dto.uiconfig.UiResourceDefaultsDto;
+import org.metricshub.web.dto.uiconfig.UiResourceGroupConfigFields;
 import org.metricshub.web.dto.uiconfig.UpdateResourceGroupRequestDto;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -152,6 +156,7 @@ public class UiConfigService {
 		final ObjectNode group = objectNode(groups, request.getName());
 		putMap(group, "attributes", request.getAttributes());
 		putMap(group, "metrics", request.getMetrics());
+		applyResourceGroupConfigFields(group, request);
 		objectNode(group, "resources");
 		writeAndValidate(root);
 		return getSnapshot();
@@ -177,6 +182,7 @@ public class UiConfigService {
 		final ObjectNode groupNode = (ObjectNode) existing;
 		putMap(groupNode, "attributes", request.getAttributes());
 		putMap(groupNode, "metrics", request.getMetrics());
+		applyResourceGroupConfigFields(groupNode, request);
 
 		final String newName = request.getName().trim();
 		if (!newName.equals(groupName)) {
@@ -291,6 +297,111 @@ public class UiConfigService {
 		objectNode(root, "resourceGroups").remove(groupName);
 		writeAndValidate(root);
 		return getSnapshot();
+	}
+
+	/**
+	 * Resolves the effective default values a new resource would inherit:
+	 * agent-level settings overridden by the given resource group when provided.
+	 *
+	 * @param resourceGroup optional resource group name; blank or {@code null} for agent-level defaults
+	 * @return the merged default values, durations in seconds
+	 */
+	public UiResourceDefaultsDto getResourceDefaults(final String resourceGroup) {
+		final AgentContext context = getAgentContext();
+		final AgentConfig agentConfig = context.getAgentConfig() != null ? context.getAgentConfig() : AgentConfig.empty();
+		final ResourceGroupConfig group = resolveResourceGroupConfig(resourceGroup, agentConfig);
+
+		final AlertingSystemConfig globalAlerting =
+			agentConfig.getAlertingSystemConfig() != null
+				? agentConfig.getAlertingSystemConfig()
+				: AlertingSystemConfig.builder().build();
+		final AlertingSystemConfig groupAlerting = group != null ? group.getAlertingSystemConfig() : null;
+		final UiAlertingSystemConfigDto alerting = new UiAlertingSystemConfigDto();
+		alerting.setDisable(
+			groupAlerting != null && groupAlerting.getDisable() != null
+				? groupAlerting.getDisable()
+				: globalAlerting.getDisable()
+		);
+		alerting.setProblemTemplate(
+			groupAlerting != null && groupAlerting.getProblemTemplate() != null
+				? groupAlerting.getProblemTemplate()
+				: globalAlerting.getProblemTemplate()
+		);
+
+		return UiResourceDefaultsDto.builder()
+			.loggerLevel(
+				group != null && group.getLoggerLevel() != null ? group.getLoggerLevel() : agentConfig.getLoggerLevel()
+			)
+			.outputDirectory(
+				group != null && group.getOutputDirectory() != null
+					? group.getOutputDirectory()
+					: agentConfig.getOutputDirectory()
+			)
+			.collectPeriod(
+				group != null && group.getCollectPeriod() != null ? group.getCollectPeriod() : agentConfig.getCollectPeriod()
+			)
+			.discoveryCycle(
+				group != null && group.getDiscoveryCycle() != null ? group.getDiscoveryCycle() : agentConfig.getDiscoveryCycle()
+			)
+			.sequential(group != null && group.getSequential() != null ? group.getSequential() : agentConfig.isSequential())
+			.enableSelfMonitoring(
+				group != null && group.getEnableSelfMonitoring() != null
+					? group.getEnableSelfMonitoring()
+					: agentConfig.isEnableSelfMonitoring()
+			)
+			.logFileSourceDetails(
+				group != null && group.getLogFileSourceDetails() != null
+					? group.getLogFileSourceDetails()
+					: agentConfig.isLogFileSourceDetails()
+			)
+			.resolveHostnameToFqdn(
+				group != null && group.getResolveHostnameToFqdn() != null
+					? group.getResolveHostnameToFqdn()
+					: agentConfig.isResolveHostnameToFqdn()
+			)
+			.monitorFilters(
+				group != null && group.getMonitorFilters() != null ? group.getMonitorFilters() : agentConfig.getMonitorFilters()
+			)
+			.jobTimeout(group != null && group.getJobTimeout() != null ? group.getJobTimeout() : agentConfig.getJobTimeout())
+			.stateSetCompression(
+				group != null && group.getStateSetCompression() != null
+					? group.getStateSetCompression()
+					: agentConfig.getStateSetCompression()
+			)
+			.enrichments(
+				group != null && group.getEnrichments() != null && !group.getEnrichments().isEmpty()
+					? group.getEnrichments()
+					: agentConfig.getEnrichments()
+			)
+			.alertingSystem(alerting)
+			.build();
+	}
+
+	/**
+	 * Resolves a resource group configuration by name. Groups managed through the UI
+	 * live in {@code metricshub-ui.yaml}, which is read fresh so edits not yet loaded
+	 * by the running agent are still reflected; groups from the main configuration
+	 * are taken from the running {@link AgentConfig}.
+	 *
+	 * @param resourceGroup group name, may be {@code null} or blank
+	 * @param runningConfig the currently loaded agent configuration
+	 * @return the group configuration, or {@code null} when not found
+	 */
+	private ResourceGroupConfig resolveResourceGroupConfig(final String resourceGroup, final AgentConfig runningConfig) {
+		if (resourceGroup == null || resourceGroup.isBlank()) {
+			return null;
+		}
+		final JsonNode groupNode = readUiConfigAsObjectNode().path("resourceGroups").path(resourceGroup);
+		if (groupNode.isObject()) {
+			try {
+				final ObjectMapper mapper = AgentContext.newAgentConfigObjectMapper(getAgentContext().getExtensionManager());
+				return mapper.treeToValue(groupNode, ResourceGroupConfig.class);
+			} catch (Exception e) {
+				// Malformed group in metricshub-ui.yaml: fall back to the running configuration.
+			}
+		}
+		final Map<String, ResourceGroupConfig> groups = runningConfig.getResourceGroups();
+		return groups != null ? groups.get(resourceGroup) : null;
 	}
 
 	/**
@@ -475,6 +586,51 @@ public class UiConfigService {
 			if (!alertingYaml.isEmpty()) {
 				hostNode.set("alertingSystem", yamlMapper.valueToTree(alertingYaml));
 			}
+		}
+	}
+
+	/** Group-level keys owned by the UI advanced options; cleared before each write so removals take effect. */
+	private static final List<String> RESOURCE_GROUP_MANAGED_KEYS = List.of(
+		"loggerLevel",
+		"outputDirectory",
+		"collectPeriod",
+		"discoveryCycle",
+		"jobTimeout",
+		"stateSetCompression",
+		"sequential",
+		"enableSelfMonitoring",
+		"resolveHostnameToFqdn",
+		"monitorFilters",
+		"enrichments"
+	);
+
+	/**
+	 * Writes the advanced inheritance-aware fields onto a resource group node. Managed
+	 * keys are removed first so an override cleared in the UI is dropped on update.
+	 *
+	 * @param groupNode YAML resource group node to update
+	 * @param fields    create/update request carrying the advanced values
+	 */
+	private void applyResourceGroupConfigFields(final ObjectNode groupNode, final UiResourceGroupConfigFields fields) {
+		for (final String key : RESOURCE_GROUP_MANAGED_KEYS) {
+			groupNode.remove(key);
+		}
+		putIfPresent(groupNode, "loggerLevel", fields.getLoggerLevel());
+		putIfPresent(groupNode, "outputDirectory", fields.getOutputDirectory());
+		putIfPresent(groupNode, "collectPeriod", fields.getCollectPeriod());
+		if (fields.getDiscoveryCycle() != null) {
+			groupNode.put("discoveryCycle", fields.getDiscoveryCycle());
+		}
+		putIfPresent(groupNode, "jobTimeout", fields.getJobTimeout());
+		putIfPresent(groupNode, "stateSetCompression", fields.getStateSetCompression());
+		putIfPresent(groupNode, "sequential", fields.getSequential());
+		putIfPresent(groupNode, "enableSelfMonitoring", fields.getEnableSelfMonitoring());
+		putIfPresent(groupNode, "resolveHostnameToFqdn", fields.getResolveHostnameToFqdn());
+		if (fields.getMonitorFilters() != null && !fields.getMonitorFilters().isEmpty()) {
+			groupNode.set("monitorFilters", yamlMapper.valueToTree(fields.getMonitorFilters()));
+		}
+		if (fields.getEnrichments() != null && !fields.getEnrichments().isEmpty()) {
+			groupNode.set("enrichments", yamlMapper.valueToTree(fields.getEnrichments()));
 		}
 	}
 

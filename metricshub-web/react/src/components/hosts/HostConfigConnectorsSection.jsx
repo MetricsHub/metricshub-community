@@ -28,6 +28,7 @@ import FieldHelpTooltip from "./FieldHelpTooltip";
 import HostConnectorsCatalogDialog from "./HostConnectorsCatalogDialog";
 import {
 	guidedConfigChoiceToggleButtonSx,
+	guidedConfigFieldLabelSx,
 	guidedConfigPlaceholderSx,
 } from "./guided-config-form-primitives";
 import {
@@ -363,7 +364,8 @@ const ConnectorDirectiveToggleGroup = ({ value, onChange, excludeDisabled, allow
 
 /** Select / Exclude for a tag row (tags have no "force" directive form). */
 const TagDirectiveToggleGroup = ({ value, onChange, excludeDisabled }) => {
-	const toggleValue = value === "include-tag" ? "select" : value === "exclude-tag" ? "exclude" : null;
+	const toggleValue =
+		value === "include-tag" ? "select" : value === "exclude-tag" ? "exclude" : null;
 	return (
 		<ToggleButtonGroup
 			exclusive
@@ -407,7 +409,13 @@ const CONNECTOR_LABEL_CONTAINER_SX = {
 	minWidth: 0,
 };
 
-const ConnectorTableRowLabel = ({ icon, title, description, titleAdornment = null, indentPx = 0 }) => (
+const ConnectorTableRowLabel = ({
+	icon,
+	title,
+	description,
+	titleAdornment = null,
+	indentPx = 0,
+}) => (
 	<Box
 		sx={{
 			...CONNECTOR_LABEL_CONTAINER_SX,
@@ -615,7 +623,7 @@ const ActiveDirectivesPanel = ({
 					spacing={0.25}
 					sx={{ minWidth: 0, flexWrap: "wrap" }}
 				>
-					<Typography variant="body2" fontWeight={600}>
+					<Typography component="span" sx={guidedConfigFieldLabelSx}>
 						Connectors Directives
 					</Typography>
 					<FieldHelpTooltip title={CONNECTORS_DIRECTIVES_HELP} />
@@ -791,7 +799,9 @@ const HostConfigConnectorsSection = ({
 	const stashedExcludesRef = React.useRef([]);
 	const codeFieldFocusedRef = React.useRef(false);
 	const [topEdgePulse, setTopEdgePulse] = React.useState(false);
-	const topEdgePulseTimerRef = React.useRef(/** @type {ReturnType<typeof setTimeout> | null} */ (null));
+	const topEdgePulseTimerRef = React.useRef(
+		/** @type {ReturnType<typeof setTimeout> | null} */ (null),
+	);
 
 	const handleConnectorsTableWheel = React.useCallback((event) => {
 		if (event.deltaY >= 0) {
@@ -1294,9 +1304,7 @@ const HostConfigConnectorsSection = ({
 	return (
 		<Stack spacing={2}>
 			<Box>
-				<Typography variant="body2" fontWeight={600} sx={{ mb: 0.75 }}>
-					Connector Detection
-				</Typography>
+				<Typography sx={{ ...guidedConfigFieldLabelSx, mb: 0.75 }}>Connector Detection</Typography>
 				<ToggleButtonGroup
 					value={detectionMode}
 					exclusive

@@ -49,6 +49,30 @@ class UiConfigApi {
 		}
 	}
 
+	/**
+	 * Effective default values a new resource inherits (agent settings overridden
+	 * by the resource group when provided). Durations are in seconds.
+	 *
+	 * @param {string} [resourceGroup]
+	 */
+	async getResourceDefaults(resourceGroup) {
+		try {
+			const params = new URLSearchParams();
+			if (resourceGroup) {
+				params.set("resourceGroup", resourceGroup);
+			}
+			const query = params.toString();
+			const { data } = await httpRequest({
+				url: `${BASE}/resource-defaults${query ? `?${query}` : ""}`,
+				method: "GET",
+				headers: { Accept: "application/json" },
+			});
+			return data;
+		} catch (e) {
+			throw normalizeAxiosError(e);
+		}
+	}
+
 	async getHosts() {
 		try {
 			const { data } = await httpRequest({

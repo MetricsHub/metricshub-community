@@ -23,14 +23,16 @@ package org.metricshub.web.dto.uiconfig;
 
 import jakarta.validation.constraints.NotBlank;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.Data;
 
 /**
  * Request body used to update a resource group in metricshub-ui.yaml.
  */
 @Data
-public class UpdateResourceGroupRequestDto {
+public class UpdateResourceGroupRequestDto implements UiResourceGroupConfigFields {
 
 	@NotBlank(message = "Field 'name' is required.")
 	private String name;
@@ -38,4 +40,26 @@ public class UpdateResourceGroupRequestDto {
 	private Map<String, Object> attributes = new HashMap<>();
 
 	private Map<String, Object> metrics = new HashMap<>();
+
+	private String loggerLevel;
+
+	private String outputDirectory;
+
+	private String collectPeriod;
+
+	private Integer discoveryCycle;
+
+	private String jobTimeout;
+
+	private String stateSetCompression;
+
+	private Boolean sequential;
+
+	private Boolean enableSelfMonitoring;
+
+	private Boolean resolveHostnameToFqdn;
+
+	private Set<String> monitorFilters;
+
+	private List<String> enrichments;
 }

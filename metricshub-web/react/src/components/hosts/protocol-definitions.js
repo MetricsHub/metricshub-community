@@ -73,6 +73,7 @@ export const JDBC_CONNECTION_MODE_TOOLTIP = `Choose how to reach the database:
 export const HOST_TYPE_LABELS = {
 	aix: "Aix",
 	hpux: "HP-UX",
+	ibmi: "IBM i",
 	linux: "Linux",
 	network: "Network",
 	oob: "OOB",
@@ -259,7 +260,6 @@ export const PROTOCOL_DEFAULTS = {
 		username: "",
 		password: "",
 		privateKey: "",
-		_authMethod: "password",
 		timeout: "2m",
 		useSudo: false,
 		sudoCommand: "sudo",
@@ -318,7 +318,7 @@ export const PROTOCOL_DEFAULTS = {
 		hostname: "",
 	},
 	jdbc: {
-		_jdbcMode: "url",
+		_jdbcMode: "manual",
 		url: "",
 		type: "",
 		database: "",
@@ -373,6 +373,7 @@ export const transportDescriptionForProtocol = (protocol) => {
 export const TIMEOUT_FIELD = {
 	name: "timeout",
 	label: "Timeout",
+	advanced: true,
 	type: "text",
 	required: true,
 };
@@ -453,48 +454,49 @@ export const PROTOCOL_FIELDS = {
 			required: true,
 		},
 		{
-			name: "authentication",
-			label: "Authentication",
-			type: "authChoice",
-			required: true,
-			helperText: "Choose how to authenticate to the SSH server",
-			authOptions: [
-				{
-					value: "password",
-					label: "Password",
-					fieldName: "password",
-					fieldLabel: "Password",
-					fieldType: "password",
-				},
-				{
-					value: "privateKey",
-					label: "Private Key",
-					fieldName: "privateKey",
-					fieldLabel: "Private Key",
-					fieldType: "textarea",
-					placeholder: "Paste PEM private key content",
-				},
-			],
+			name: "password",
+			label: "Password",
+			type: "password",
+			helperText: "Leave blank when authenticating with a private key",
 		},
-		{ name: "port", label: "Port", type: "text", required: true, helperText: "SSH port" },
+		{
+			name: "privateKey",
+			label: "Private Key",
+			type: "textarea",
+			placeholder: "Paste PEM private key content",
+			helperText: "Used instead of the password when provided",
+		},
+		{
+			name: "port",
+			label: "Port",
+			type: "text",
+			required: true,
+			advanced: true,
+			helperText: "SSH port",
+		},
 		TIMEOUT_FIELD,
 		{
 			name: "useSudo",
 			label: "Use sudo",
 			type: "boolean",
+			advanced: true,
 			helperText: "Run commands with sudo privileges",
 		},
 		{
 			name: "sudoCommand",
 			label: "Sudo command",
 			type: "text",
+			advanced: true,
 			helperText: "Sudo command (default: sudo)",
+			showIf: (values) => Boolean(values.useSudo),
 		},
 		{
 			name: "useSudoCommands",
 			label: "Sudo commands (comma-separated)",
 			type: "text",
+			advanced: true,
 			helperText: "Commands that require sudo",
+			showIf: (values) => Boolean(values.useSudo),
 		},
 		PROTOCOL_HOSTNAME_FIELD,
 	],
@@ -522,6 +524,7 @@ export const PROTOCOL_FIELDS = {
 			name: "port",
 			label: "Port",
 			type: "text",
+			advanced: true,
 		},
 		TIMEOUT_FIELD,
 		PROTOCOL_HOSTNAME_FIELD,
@@ -547,6 +550,7 @@ export const PROTOCOL_FIELDS = {
 			label: "Transport",
 			type: "select",
 			required: true,
+			advanced: true,
 			options: [
 				{ value: "HTTP", label: "HTTP" },
 				{ value: "HTTPS", label: "HTTPS" },
@@ -556,11 +560,12 @@ export const PROTOCOL_FIELDS = {
 			name: "port",
 			label: "Port",
 			type: "text",
+			advanced: true,
 		},
 		TIMEOUT_FIELD,
-		PROTOCOL_HOSTNAME_FIELD,
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 		{ name: "vcenter", label: "vCenter hostname", type: "text", advanced: true },
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	http: [
 		{ name: "username", label: "Username", type: "text" },
@@ -570,6 +575,7 @@ export const PROTOCOL_FIELDS = {
 			label: "Transport",
 			type: "select",
 			required: true,
+			advanced: true,
 			options: [
 				{ value: "HTTP", label: "HTTP" },
 				{ value: "HTTPS", label: "HTTPS" },
@@ -579,6 +585,7 @@ export const PROTOCOL_FIELDS = {
 			name: "port",
 			label: "Port",
 			type: "text",
+			advanced: true,
 		},
 		TIMEOUT_FIELD,
 		PROTOCOL_HOSTNAME_FIELD,
@@ -595,15 +602,15 @@ export const PROTOCOL_FIELDS = {
 			],
 		},
 		{ name: "community", label: "Community", type: "password", required: true },
-		{ name: "port", label: "Port", type: "text", required: true },
+		{ name: "port", label: "Port", type: "text", required: true, advanced: true },
 		TIMEOUT_FIELD,
-		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "retryIntervals",
 			label: "Retry intervals (ms, comma-separated)",
 			advanced: true,
 			type: "text",
 		},
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	snmpv3: [
 		{ name: "username", label: "Username", type: "text", required: true },
@@ -641,7 +648,8 @@ export const PROTOCOL_FIELDS = {
 			required: true,
 			showIf: (values) => Boolean(String(values.privacy ?? "").trim()),
 		},
-		PROTOCOL_HOSTNAME_FIELD,
+		{ name: "port", label: "Port", type: "text", required: true, advanced: true },
+		TIMEOUT_FIELD,
 		{
 			name: "contextName",
 			label: "Context name",
@@ -650,14 +658,13 @@ export const PROTOCOL_FIELDS = {
 			helpTooltip: SNMPV3_CONTEXT_NAME_TOOLTIP,
 			advanced: true,
 		},
-		{ name: "port", label: "Port", type: "text", required: true },
-		TIMEOUT_FIELD,
 		{
 			name: "retryIntervals",
 			label: "Retry intervals (ms, comma-separated)",
 			advanced: true,
 			type: "text",
 		},
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	ipmi: [
 		{
@@ -691,7 +698,6 @@ export const PROTOCOL_FIELDS = {
 			],
 		},
 		TIMEOUT_FIELD,
-		PROTOCOL_HOSTNAME_FIELD,
 		{
 			name: "bmcKey",
 			label: "BMC key (hex)",
@@ -700,6 +706,7 @@ export const PROTOCOL_FIELDS = {
 			helperText: "Two-key authentication (hexadecimal)",
 			showIf: (values) => !values.skipAuth,
 		},
+		PROTOCOL_HOSTNAME_FIELD,
 	],
 	jdbc: [
 		{
@@ -708,8 +715,8 @@ export const PROTOCOL_FIELDS = {
 			type: "modeChoice",
 			helpTooltip: JDBC_CONNECTION_MODE_TOOLTIP,
 			options: [
-				{ value: "url", label: "Connection URL", clears: ["database", "port"] },
 				{ value: "manual", label: "Database and port", clears: ["url", "type"] },
+				{ value: "url", label: "Connection URL", clears: ["database", "port"] },
 			],
 		},
 		// URL mode fields
@@ -718,14 +725,14 @@ export const PROTOCOL_FIELDS = {
 			label: "JDBC URL",
 			type: "text",
 			helperText: "Full JDBC connection URL",
-			showIf: (v) => (v._jdbcMode || "url") !== "manual",
+			showIf: (v) => (v._jdbcMode || "manual") === "url",
 		},
 		{
 			name: "type",
 			label: "Database type",
 			type: "select",
 			helperText: "Optional",
-			showIf: (v) => (v._jdbcMode || "url") !== "manual",
+			showIf: (v) => (v._jdbcMode || "manual") === "url",
 			options: [
 				{ value: "", label: "— None —" },
 				{ value: "MySQL", label: "MySQL" },
@@ -742,9 +749,14 @@ export const PROTOCOL_FIELDS = {
 			name: "database",
 			label: "Database name",
 			type: "text",
-			showIf: (v) => v._jdbcMode === "manual",
+			showIf: (v) => (v._jdbcMode || "manual") === "manual",
 		},
-		{ name: "port", label: "Port", type: "text", showIf: (v) => v._jdbcMode === "manual" },
+		{
+			name: "port",
+			label: "Port",
+			type: "text",
+			showIf: (v) => (v._jdbcMode || "manual") === "manual",
+		},
 		// Common fields
 		{ name: "username", label: "Username", type: "text", required: true },
 		{ name: "password", label: "Password", type: "password", required: true },
@@ -754,19 +766,33 @@ export const PROTOCOL_FIELDS = {
 	jmx: [
 		{ name: "username", label: "Username", type: "text" },
 		{ name: "password", label: "Password", type: "password" },
-		{ name: "port", label: "Port", type: "text", required: true },
+		{ name: "port", label: "Port", type: "text", required: true, advanced: true },
 		TIMEOUT_FIELD,
 		PROTOCOL_HOSTNAME_FIELD,
 	],
 	oscommand: [
-		{ name: "useSudo", label: "Use sudo", type: "boolean" },
-		{ name: "sudoCommand", label: "Sudo command", type: "text" },
+		TIMEOUT_FIELD,
+		{
+			name: "useSudo",
+			label: "Use sudo",
+			type: "boolean",
+			advanced: true,
+			helperText: "Run commands with sudo privileges",
+		},
+		{
+			name: "sudoCommand",
+			label: "Sudo command",
+			type: "text",
+			advanced: true,
+			showIf: (values) => Boolean(values.useSudo),
+		},
 		{
 			name: "useSudoCommands",
 			label: "Sudo commands (comma-separated)",
 			type: "text",
+			advanced: true,
+			showIf: (values) => Boolean(values.useSudo),
 		},
-		TIMEOUT_FIELD,
 		PROTOCOL_HOSTNAME_FIELD,
 	],
 	ping: [TIMEOUT_FIELD, PROTOCOL_HOSTNAME_FIELD],
@@ -857,12 +883,8 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 	switch (protocol) {
 		case "ssh": {
 			setIfPresent("username", raw.username);
-			const authMethod = resolveProtocolAuthMethod("ssh", raw);
-			if (authMethod === "privateKey") {
-				setIfPresent("privateKey", raw.privateKey);
-			} else {
-				setIfPresent("password", raw.password);
-			}
+			setIfPresent("password", raw.password);
+			setIfPresent("privateKey", raw.privateKey);
 			setIfPresent("port", parseNumber(raw.port));
 			setIfPresent("timeout", parseTimeoutToSeconds(raw.timeout));
 			if (raw.useSudo) {
@@ -1014,11 +1036,6 @@ export const protocolConfigToForm = (protocol, config = {}) => {
 		form._jdbcMode = cfg.database || cfg.port ? "manual" : "url";
 	}
 
-	if (protocol === "ssh") {
-		const cfg = config || {};
-		form._authMethod = String(cfg.privateKey ?? "").trim() ? "privateKey" : "password";
-	}
-
 	if (protocol === "ipmi") {
 		form._authMethod = config?.skipAuth ? "skipAuth" : "credentials";
 	}
@@ -1093,13 +1110,6 @@ export const isAuthFieldOptionalOnLocalhost = (fieldName) =>
  * @returns {string | null}
  */
 export const resolveProtocolAuthMethod = (protocol, protocolConfig) => {
-	if (protocol === "ssh") {
-		const explicit = String(protocolConfig._authMethod ?? "").trim();
-		if (explicit === "password" || explicit === "privateKey") {
-			return explicit;
-		}
-		return String(protocolConfig.privateKey ?? "").trim() ? "privateKey" : "password";
-	}
 	if (protocol === "ipmi") {
 		if (protocolConfig.skipAuth) {
 			return "skipAuth";
@@ -1216,13 +1226,10 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 	}
 
 	if (protocol === "ssh" && !isLocal) {
-		const authMethod = resolveProtocolAuthMethod("ssh", protocolConfig);
-		if (authMethod === "privateKey") {
-			if (!String(protocolConfig.privateKey || "").trim()) {
-				errors.privateKey = "Private key is required";
-			}
-		} else if (!String(protocolConfig.password || "").trim()) {
-			errors.password = "Password is required";
+		const hasPassword = String(protocolConfig.password || "").trim() !== "";
+		const hasPrivateKey = String(protocolConfig.privateKey || "").trim() !== "";
+		if (!hasPassword && !hasPrivateKey) {
+			errors.password = "Password or private key is required";
 		}
 	}
 

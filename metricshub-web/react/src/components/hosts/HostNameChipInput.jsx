@@ -2,7 +2,7 @@ import * as React from "react";
 import Autocomplete from "@mui/material/Autocomplete";
 import { Box, Chip, Stack, TextField, Typography } from "@mui/material";
 import { getHostNames } from "./host-config-utils";
-import { filledInputNoLabelSx } from "./guided-config-form-primitives";
+import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import FieldHelpTooltip from "./FieldHelpTooltip";
 import { HOST_NAME_UI } from "./protocol-definitions";
 
@@ -146,7 +146,7 @@ const HostNameChipInput = ({ value, onChange, error = false, helperText, staticL
 		<Stack spacing={staticLabel ? 0 : 1}>
 			{staticLabel ? (
 				<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
-					<Typography component="label" htmlFor="host-name-input" variant="body2" fontWeight={600}>
+					<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
 						{HOST_NAME_UI.fieldLabel}
 						<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
 							*

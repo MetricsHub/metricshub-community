@@ -564,7 +564,12 @@ export const useHostConfig = ({
 		[persistFormSession],
 	);
 
-	const isDirty = mode === "edit" && isHostFormDirty(state, baselineFingerprintRef.current);
+	// Dirty relative to the last loaded/saved baseline, regardless of mode. Create mode
+	// uses this to gate "Save as draft": after a draft save (commitSavedBaseline resets
+	// the baseline) it goes false until the next edit. `isDirty` stays edit-only for the
+	// edit-mode Save/Cancel semantics.
+	const isDirtyFromBaseline = isHostFormDirty(state, baselineFingerprintRef.current);
+	const isDirty = mode === "edit" && isDirtyFromBaseline;
 	const showSaveHostChanges = isDirty;
 
 	const patchState = React.useCallback((patch) => {
@@ -962,6 +967,7 @@ export const useHostConfig = ({
 		submitError,
 		setSubmitError,
 		isDirty,
+		isDirtyFromBaseline,
 		allStepsValid,
 		showSaveHostChanges,
 		isLastStep,

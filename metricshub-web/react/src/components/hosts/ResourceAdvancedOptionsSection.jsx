@@ -3,6 +3,7 @@ import {
 	Box,
 	Button,
 	Collapse,
+	Divider,
 	FormControlLabel,
 	MenuItem,
 	Stack,
@@ -16,65 +17,49 @@ import {
 	LabeledSelect,
 	LabeledTextField,
 	filledInputNoLabelSx,
+	guidedConfigFieldLabelSx,
 } from "./guided-config-form-primitives";
 import {
-	ENABLE_SELF_MONITORING_OPTIONS,
+	DEFAULT_ENABLE_SELF_MONITORING,
+	DEFAULT_ENRICHMENT,
+	DEFAULT_LOGGER_LEVEL,
+	DEFAULT_STATE_SET_COMPRESSION,
+	ENRICHMENT_OPTIONS,
 	LOGGER_LEVEL_OPTIONS,
 	STATE_SET_COMPRESSION_OPTIONS,
 } from "./resource-config-fields";
 import { TIMEOUT_FORMAT_TOOLTIP } from "./protocol-definitions";
 import FieldHelpTooltip from "./FieldHelpTooltip";
+import { formatDurationSeconds } from "./use-resource-defaults";
+
+/**
+ * Group heading inside Advanced options (Log / Scheduling / Monitoring / …).
+ * Deliberately larger than the field labels ({@link guidedConfigFieldLabelSx}) so
+ * the group / field hierarchy reads at a glance.
+ */
+const groupTitleSx = {
+	fontSize: "1.2rem",
+	fontWeight: 700,
+	lineHeight: 1.4,
+	color: "text.primary",
+};
+
+/** Two-column responsive grid used by each advanced-options group. */
+const twoColumnGridSx = {
+	display: "grid",
+	gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+	gap: 2,
+	alignItems: "start",
+};
 
 const DurationLabel = ({ label }) => (
 	<Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 0.75 }}>
-		<Typography component="span" variant="body2" fontWeight={600}>
+		<Typography component="span" sx={guidedConfigFieldLabelSx}>
 			{label}
 		</Typography>
 		<FieldHelpTooltip title={TIMEOUT_FORMAT_TOOLTIP} />
 	</Box>
 );
-
-const hasConfiguredValue = (resourceAdvanced) => {
-	if (!resourceAdvanced || typeof resourceAdvanced !== "object") {
-		return false;
-	}
-	const scalarFields = [
-		"loggerLevel",
-		"outputDirectory",
-		"collectPeriod",
-		"discoveryCycle",
-		"monitorFilters",
-		"jobTimeout",
-		"stateSetCompression",
-		"enrichments",
-		"alertingSystemProblemTemplate",
-	];
-	if (scalarFields.some((field) => String(resourceAdvanced[field] ?? "").trim() !== "")) {
-		return true;
-	}
-	if (resourceAdvanced.sequential) {
-		return true;
-	}
-	if (resourceAdvanced.logFileSourceDetails) {
-		return true;
-	}
-	if (resourceAdvanced.resolveHostnameToFqdn) {
-		return true;
-	}
-	if (resourceAdvanced.alertingSystemDisable) {
-		return true;
-	}
-	if (String(resourceAdvanced.enableSelfMonitoring ?? "").trim() !== "") {
-		return true;
-	}
-	if ((resourceAdvanced.customAttributeRows || []).some((row) => String(row?.key ?? "").trim())) {
-		return true;
-	}
-	if ((resourceAdvanced.metricRows || []).some((row) => String(row?.key ?? "").trim())) {
-		return true;
-	}
-	return false;
-};
 
 /**
  * Collapsible advanced resource options aligned with {@code ResourceConfig}.
@@ -82,17 +67,54 @@ const hasConfiguredValue = (resourceAdvanced) => {
  * @param {object} props
  * @param {ReturnType<import("./resource-config-fields").createEmptyResourceAdvancedState>} props.values
  * @param {(patch: object) => void} props.onChange
+ * @param {object | null} [props.inheritedDefaults] effective defaults (agent settings
+ *        overridden by the resource group) shown as placeholders
+ * @param {boolean} [props.showAttributesAndMetrics] include the Additional attributes /
+ *        Metrics group (false for resource groups, which own those as top-level sections)
  */
-const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
-	const [open, setOpen] = React.useState(() => hasConfiguredValue(values));
-
-	React.useEffect(() => {
-		if (hasConfiguredValue(values)) {
-			setOpen(true);
-		}
-	}, [values]);
+const ResourceAdvancedOptionsSection = ({
+	values,
+	onChange,
+	inheritedDefaults = null,
+	showAttributesAndMetrics = true,
+}) => {
+	// Advanced options always start collapsed; the user expands them on demand.
+	const [open, setOpen] = React.useState(false);
 
 	const patch = (partial) => onChange({ resourceAdvanced: { ...values, ...partial } });
+
+	// Logging is on unless the *effective* logger level resolves to "off". The effective
+	// level cascades: the resource's own level → the inherited default (resource group →
+	// agent, already resolved by the resource-defaults endpoint) → the built-in default.
+	const OFF_LEVEL = "off";
+	const ownLevel = String(values.loggerLevel ?? "").trim();
+	const inheritedLevel = String(inheritedDefaults?.loggerLevel ?? "").trim();
+	const inheritedIsReal = inheritedLevel !== "" && inheritedLevel.toLowerCase() !== OFF_LEVEL;
+	const effectiveLevel = ownLevel || inheritedLevel || DEFAULT_LOGGER_LEVEL;
+	const debugEnabled = effectiveLevel.toLowerCase() !== OFF_LEVEL;
+
+	// A concrete, selectable level for the dropdown — never "" (inherit) or "off".
+	const loggerLevelSelectValue =
+		ownLevel && ownLevel.toLowerCase() !== OFF_LEVEL
+			? ownLevel
+			: inheritedIsReal
+				? inheritedLevel
+				: DEFAULT_LOGGER_LEVEL;
+
+	const handleDebugToggle = (checked) => {
+		// Enable → inherit the effective default when it is a real level, otherwise pick the
+		// built-in level so it is not left off. Disable → persist an explicit "off" so the
+		// disabled state survives a save/reload round-trip.
+		if (checked) {
+			patch({ loggerLevel: inheritedIsReal ? "" : DEFAULT_LOGGER_LEVEL });
+		} else {
+			patch({ loggerLevel: OFF_LEVEL });
+		}
+	};
+
+	// Storing "" keeps the resource inheriting when the chosen level equals the inherited one.
+	const handleLoggerLevelChange = (value) =>
+		patch({ loggerLevel: value === inheritedLevel ? "" : value });
 
 	return (
 		<Box>
@@ -112,7 +134,9 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 					px: 0,
 					minWidth: 0,
 					justifyContent: "flex-start",
-					fontWeight: 600,
+					// Matches the "Protocols" title (subtitle1) in the same section.
+					fontSize: "1rem",
+					fontWeight: 700,
 					color: "text.primary",
 					"&:hover": {
 						backgroundColor: "transparent",
@@ -124,24 +148,30 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 			</Button>
 			<Collapse in={open} unmountOnExit>
 				<Stack spacing={2.5} sx={{ mt: 2 }}>
-					<Box
-						sx={{
-							display: "grid",
-							gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-							gap: 2,
-							alignItems: "start",
-						}}
-					>
+					{/* — Log — */}
+					<Typography sx={groupTitleSx}>Log</Typography>
+					<FormControlLabel
+						control={
+							<Switch
+								checked={debugEnabled}
+								onChange={(e) => handleDebugToggle(e.target.checked)}
+							/>
+						}
+						label="Enable Debug"
+						slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
+					/>
+					<Box sx={twoColumnGridSx}>
 						<LabeledSelect
 							id="resource-logger-level"
 							label="Logger level"
 							selectProps={{
-								value: values.loggerLevel ?? "",
-								onChange: (e) => patch({ loggerLevel: e.target.value }),
+								value: loggerLevelSelectValue,
+								disabled: !debugEnabled,
+								onChange: (e) => handleLoggerLevelChange(e.target.value),
 							}}
 						>
 							{LOGGER_LEVEL_OPTIONS.map((option) => (
-								<MenuItem key={option.value || "default"} value={option.value}>
+								<MenuItem key={option.value} value={option.value}>
 									{option.label}
 								</MenuItem>
 							))}
@@ -151,8 +181,16 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 							label="Output directory"
 							value={values.outputDirectory ?? ""}
 							onChange={(e) => patch({ outputDirectory: e.target.value })}
-							placeholder="e.g. /opt/metricshub/logs"
+							disabled={!debugEnabled}
+							placeholder={inheritedDefaults?.outputDirectory || "e.g. /opt/metricshub/logs"}
 						/>
+					</Box>
+
+					<Divider />
+
+					{/* — Scheduling — */}
+					<Typography sx={groupTitleSx}>Scheduling</Typography>
+					<Box sx={twoColumnGridSx}>
 						<Box>
 							<DurationLabel label="Collect period" />
 							<TextField
@@ -162,7 +200,7 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 								hiddenLabel
 								value={values.collectPeriod ?? ""}
 								onChange={(e) => patch({ collectPeriod: e.target.value })}
-								placeholder="e.g. 2m"
+								placeholder={formatDurationSeconds(inheritedDefaults?.collectPeriod) || "e.g. 2m"}
 								helperText="Plain numbers are seconds."
 								sx={filledInputNoLabelSx}
 							/>
@@ -172,7 +210,11 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 							label="Discovery cycle"
 							value={values.discoveryCycle ?? ""}
 							onChange={(e) => patch({ discoveryCycle: e.target.value.replace(/\D/g, "") })}
-							placeholder="e.g. 30"
+							placeholder={
+								inheritedDefaults?.discoveryCycle != null
+									? String(inheritedDefaults.discoveryCycle)
+									: "e.g. 30"
+							}
 							helperText="Number of collects between discovery runs."
 						/>
 						<Box>
@@ -184,34 +226,55 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 								hiddenLabel
 								value={values.jobTimeout ?? ""}
 								onChange={(e) => patch({ jobTimeout: e.target.value })}
-								placeholder="e.g. 5m"
+								placeholder={formatDurationSeconds(inheritedDefaults?.jobTimeout) || "e.g. 5m"}
 								sx={filledInputNoLabelSx}
 							/>
 						</Box>
+					</Box>
+
+					<Divider />
+
+					{/* — Monitoring — */}
+					<Typography sx={groupTitleSx}>Monitoring</Typography>
+					<FormControlLabel
+						control={
+							<Switch
+								checked={
+									String(values.enableSelfMonitoring ?? DEFAULT_ENABLE_SELF_MONITORING) === "true"
+								}
+								onChange={(e) =>
+									patch({ enableSelfMonitoring: e.target.checked ? "true" : "false" })
+								}
+							/>
+						}
+						label="Self monitoring"
+						slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
+					/>
+					<Box sx={twoColumnGridSx}>
 						<LabeledSelect
 							id="resource-state-set-compression"
 							label="State set compression"
 							selectProps={{
-								value: values.stateSetCompression ?? "",
+								value: values.stateSetCompression ?? DEFAULT_STATE_SET_COMPRESSION,
 								onChange: (e) => patch({ stateSetCompression: e.target.value }),
 							}}
 						>
 							{STATE_SET_COMPRESSION_OPTIONS.map((option) => (
-								<MenuItem key={option.value || "default"} value={option.value}>
+								<MenuItem key={option.value} value={option.value}>
 									{option.label}
 								</MenuItem>
 							))}
 						</LabeledSelect>
 						<LabeledSelect
-							id="resource-enable-self-monitoring"
-							label="Self monitoring"
+							id="resource-enrichments"
+							label="Enrichment"
 							selectProps={{
-								value: values.enableSelfMonitoring ?? "",
-								onChange: (e) => patch({ enableSelfMonitoring: e.target.value }),
+								value: values.enrichments ?? DEFAULT_ENRICHMENT,
+								onChange: (e) => patch({ enrichments: e.target.value }),
 							}}
 						>
-							{ENABLE_SELF_MONITORING_OPTIONS.map((option) => (
-								<MenuItem key={option.value || "default"} value={option.value}>
+							{ENRICHMENT_OPTIONS.map((option) => (
+								<MenuItem key={option.value} value={option.value}>
 									{option.label}
 								</MenuItem>
 							))}
@@ -221,17 +284,18 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 							label="Monitor filters"
 							value={values.monitorFilters ?? ""}
 							onChange={(e) => patch({ monitorFilters: e.target.value })}
-							placeholder="Comma-separated monitor names"
-						/>
-						<LabeledTextField
-							id="resource-enrichments"
-							label="Enrichments"
-							value={values.enrichments ?? ""}
-							onChange={(e) => patch({ enrichments: e.target.value })}
-							placeholder="Comma-separated enrichment names"
+							placeholder={
+								(inheritedDefaults?.monitorFilters || []).length > 0
+									? [...inheritedDefaults.monitorFilters].join(", ")
+									: "Comma-separated monitor names"
+							}
 						/>
 					</Box>
 
+					<Divider />
+
+					{/* — Network — */}
+					<Typography sx={groupTitleSx}>Network</Typography>
 					<Stack spacing={1}>
 						<FormControlLabel
 							control={
@@ -241,15 +305,7 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 								/>
 							}
 							label="Sequential network calls"
-						/>
-						<FormControlLabel
-							control={
-								<Switch
-									checked={Boolean(values.logFileSourceDetails)}
-									onChange={(e) => patch({ logFileSourceDetails: e.target.checked })}
-								/>
-							}
-							label="Log file source details"
+							slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
 						/>
 						<FormControlLabel
 							control={
@@ -259,51 +315,41 @@ const ResourceAdvancedOptionsSection = ({ values, onChange }) => {
 								/>
 							}
 							label="Resolve hostname to FQDN"
-						/>
-						<FormControlLabel
-							control={
-								<Switch
-									checked={Boolean(values.alertingSystemDisable)}
-									onChange={(e) => patch({ alertingSystemDisable: e.target.checked })}
-								/>
-							}
-							label="Disable alerting system"
+							slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
 						/>
 					</Stack>
 
-					<LabeledTextField
-						id="resource-alerting-problem-template"
-						label="Alert problem template"
-						value={values.alertingSystemProblemTemplate ?? ""}
-						onChange={(e) => patch({ alertingSystemProblemTemplate: e.target.value })}
-						placeholder="Problem on ${FQDN} with ${MONITOR_NAME}…"
-						multiline
-						minRows={3}
-					/>
+					{showAttributesAndMetrics ? (
+						<>
+							<Divider />
 
-					<KeyValueRowsEditor
-						rows={values.customAttributeRows || []}
-						onRowsChange={(customAttributeRows) => patch({ customAttributeRows })}
-						addLabel="Add attribute"
-						keyLabel="Key"
-						valueLabel="Value"
-						sectionTitle="Additional attributes"
-						labelsAbove
-						bordered
-					/>
+							{/* — Attributes and Metrics — */}
+							<Typography sx={groupTitleSx}>Attributes and Metrics</Typography>
+							<KeyValueRowsEditor
+								rows={values.customAttributeRows || []}
+								onRowsChange={(customAttributeRows) => patch({ customAttributeRows })}
+								addLabel="Add attribute"
+								keyLabel="Key"
+								valueLabel="Value"
+								sectionTitle="Additional attributes"
+								labelsAbove
+								bordered
+							/>
 
-					<KeyValueRowsEditor
-						rows={values.metricRows || []}
-						onRowsChange={(metricRows) => patch({ metricRows })}
-						addLabel="Add metric"
-						keyLabel="Key"
-						valueLabel="Value"
-						sectionTitle="Metrics"
-						labelsAbove
-						bordered
-						monospaceKeys
-						valueInputMode="decimal"
-					/>
+							<KeyValueRowsEditor
+								rows={values.metricRows || []}
+								onRowsChange={(metricRows) => patch({ metricRows })}
+								addLabel="Add metric"
+								keyLabel="Key"
+								valueLabel="Value"
+								sectionTitle="Metrics"
+								labelsAbove
+								bordered
+								monospaceKeys
+								valueInputMode="decimal"
+							/>
+						</>
+					) : null}
 				</Stack>
 			</Collapse>
 		</Box>

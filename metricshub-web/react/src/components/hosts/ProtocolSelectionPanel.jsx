@@ -5,6 +5,7 @@ import { alpha, Box, Chip, FormControl, FormHelperText, Stack, Typography } from
 import { getProtocolOptionsForHostType, HOST_TYPE_UNSELECTED } from "./protocol-definitions";
 import { getProtocolPickerMetadata } from "./protocol-picker-metadata";
 import { guidedConfigRowHoverBg } from "./guided-config-ui-tokens";
+import { guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 
 const DEFAULT_HELPER =
 	"Select at least one protocol. Each choice unlocks a dedicated configuration step in this wizard.";
@@ -98,19 +99,7 @@ const ProtocolSelectionPanel = ({
 
 	return (
 		<FormControl component="fieldset" variant="standard" fullWidth error={error} required>
-			<Box
-				sx={{
-					borderRadius: 2,
-					border: 1,
-					borderColor: error ? "error.main" : "divider",
-					bgcolor: "transparent",
-					p: { xs: 1.5, sm: 2 },
-					transition: (theme) =>
-						theme.transitions.create(["border-color"], {
-							duration: theme.transitions.duration.shorter,
-						}),
-				}}
-			>
+			<Box>
 				<Stack
 					direction={{ xs: "column", sm: "row" }}
 					alignItems={{ xs: "flex-start", sm: "center" }}
@@ -119,7 +108,7 @@ const ProtocolSelectionPanel = ({
 					sx={{ mb: 1.25 }}
 				>
 					<Box>
-						<Typography component="legend" variant="subtitle1" fontWeight={700}>
+						<Typography component="legend" sx={guidedConfigFieldLabelSx}>
 							Protocols
 							<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
 								*

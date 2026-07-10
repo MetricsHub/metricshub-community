@@ -51,6 +51,37 @@ export const CREATE_MODE_PASSWORD_HELPER_TEXT =
 export const EDIT_MODE_PASSWORD_HELPER_TEXT = "Password will be encrypted if you update it.";
 
 /**
+ * Every password-typed field name of a protocol, including credentials nested in
+ * authChoice options (e.g. IPMI). Top-level password fields alone would miss those,
+ * leaving their passwords stored in clear text.
+ *
+ * @param {Array<import("../components/hosts/protocol-definitions").ProtocolField>} fields
+ * @returns {string[]}
+ */
+const collectPasswordFieldNames = (fields) => {
+	const names = [];
+	for (const field of fields) {
+		if (field.type === "password") {
+			names.push(field.name);
+			continue;
+		}
+		if (field.type === "authChoice") {
+			for (const option of field.authOptions || []) {
+				if (option.fieldType === "password" && option.fieldName) {
+					names.push(option.fieldName);
+				}
+				for (const credentialField of option.fields || []) {
+					if (credentialField.fieldType === "password" && credentialField.fieldName) {
+						names.push(credentialField.fieldName);
+					}
+				}
+			}
+		}
+	}
+	return [...new Set(names)];
+};
+
+/**
  * Encrypts plain-text password fields in a protocol form (skips already-encrypted values).
  *
  * @param {string} protocolId
@@ -58,17 +89,14 @@ export const EDIT_MODE_PASSWORD_HELPER_TEXT = "Password will be encrypted if you
  * @returns {Promise<Record<string, unknown>>}
  */
 export const encryptProtocolFormPasswordFields = async (protocolId, formValues = {}) => {
-	const fields = PROTOCOL_FIELDS[protocolId] || [];
+	const passwordFieldNames = collectPasswordFieldNames(PROTOCOL_FIELDS[protocolId] || []);
 	const next = { ...formValues };
-	for (const field of fields) {
-		if (field.type !== "password") {
-			continue;
-		}
-		const raw = String(next[field.name] ?? "").trim();
+	for (const fieldName of passwordFieldNames) {
+		const raw = String(next[fieldName] ?? "").trim();
 		if (!raw || looksEncrypted(raw)) {
 			continue;
 		}
-		next[field.name] = await encryptPlainPassword(raw);
+		next[fieldName] = await encryptPlainPassword(raw);
 	}
 	return next;
 };

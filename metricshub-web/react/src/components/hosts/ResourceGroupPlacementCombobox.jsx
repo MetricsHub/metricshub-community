@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Autocomplete, Box, TextField, Typography } from "@mui/material";
 import { compareLocale } from "../../utils/alphabetic-sort";
-import { filledInputNoLabelSx } from "./guided-config-form-primitives";
+import { filledInputNoLabelSx, guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
 import { NO_RESOURCE_GROUP } from "./hosts-labels";
 
 /**
@@ -57,9 +57,7 @@ const ResourceGroupPlacementCombobox = ({
 				<Typography
 					component="label"
 					htmlFor="resource-group-placement"
-					variant="body2"
-					fontWeight={600}
-					sx={{ display: "block", mb: 0.75 }}
+					sx={{ ...guidedConfigFieldLabelSx, display: "block", mb: 0.75 }}
 				>
 					Resource group
 					<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>

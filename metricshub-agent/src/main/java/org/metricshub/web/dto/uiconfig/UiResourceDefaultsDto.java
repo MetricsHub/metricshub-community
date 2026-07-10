@@ -21,45 +21,49 @@ package org.metricshub.web.dto.uiconfig;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
-import jakarta.validation.constraints.NotBlank;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
- * Request body used to create a resource group in metricshub-ui.yaml.
+ * Effective default values a new resource inherits: agent-level settings
+ * overridden by the selected resource group (when one is provided).
+ * Durations are expressed in seconds.
  */
 @Data
-public class CreateResourceGroupRequestDto implements UiResourceGroupConfigFields {
-
-	@NotBlank(message = "Field 'name' is required.")
-	private String name;
-
-	private Map<String, Object> attributes = new HashMap<>();
-
-	private Map<String, Object> metrics = new HashMap<>();
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+public class UiResourceDefaultsDto {
 
 	private String loggerLevel;
 
 	private String outputDirectory;
 
-	private String collectPeriod;
+	/** Collect period in seconds. */
+	private Long collectPeriod;
 
 	private Integer discoveryCycle;
-
-	private String jobTimeout;
-
-	private String stateSetCompression;
 
 	private Boolean sequential;
 
 	private Boolean enableSelfMonitoring;
 
+	private Boolean logFileSourceDetails;
+
 	private Boolean resolveHostnameToFqdn;
 
 	private Set<String> monitorFilters;
 
+	/** Job timeout in seconds. */
+	private Long jobTimeout;
+
+	private String stateSetCompression;
+
 	private List<String> enrichments;
+
+	private UiAlertingSystemConfigDto alertingSystem;
 }

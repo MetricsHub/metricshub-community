@@ -168,6 +168,10 @@ const HostsHostEditPanel = ({
 				</Alert>
 			)}
 			<HostConfigPage
+				// Remount per resource so switching resources starts a fresh scroll
+				// container at the top (in-app navigation must not carry the previous
+				// resource's scroll position); refresh-restore still works via session storage.
+				key={`edit-host-${isStandalone ? "_standalone" : groupName}-${hostId}`}
 				mode="edit"
 				hostId={hostId}
 				defaultResourceGroup={isStandalone ? null : groupName}
