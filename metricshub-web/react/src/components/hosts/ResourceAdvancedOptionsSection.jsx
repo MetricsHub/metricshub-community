@@ -2,6 +2,7 @@ import * as React from "react";
 import {
 	Box,
 	Button,
+	Checkbox,
 	Collapse,
 	Divider,
 	FormControlLabel,
@@ -71,17 +72,25 @@ const DurationLabel = ({ label }) => (
  *        overridden by the resource group) shown as placeholders
  * @param {boolean} [props.showAttributesAndMetrics] include the Additional attributes /
  *        Metrics group (false for resource groups, which own those as top-level sections)
+ * @param {string} [props.inheritLabel] label for the "inherit from parent" checkbox
+ *        (e.g. "Apply advanced options from resource group" / "…from the Agent")
  */
 const ResourceAdvancedOptionsSection = ({
 	values,
 	onChange,
 	inheritedDefaults = null,
 	showAttributesAndMetrics = true,
+	inheritLabel = "Apply advanced options from the parent",
 }) => {
 	// Advanced options always start collapsed; the user expands them on demand.
 	const [open, setOpen] = React.useState(false);
 
 	const patch = (partial) => onChange({ resourceAdvanced: { ...values, ...partial } });
+
+	// When on (the default), every inheritance-aware field is inherited from the parent
+	// and locked; nothing is written to the config. Turning it off unlocks the fields.
+	const inheritAdvanced = values.inheritAdvanced !== false;
+	const managedDisabled = inheritAdvanced;
 
 	// Logging is on unless the *effective* logger level resolves to "off". The effective
 	// level cascades: the resource's own level → the inherited default (resource group →
@@ -148,12 +157,33 @@ const ResourceAdvancedOptionsSection = ({
 			</Button>
 			<Collapse in={open} unmountOnExit>
 				<Stack spacing={2.5} sx={{ mt: 2 }}>
+					<Box>
+						<FormControlLabel
+							control={
+								<Checkbox
+									checked={inheritAdvanced}
+									onChange={(e) => patch({ inheritAdvanced: e.target.checked })}
+								/>
+							}
+							label={inheritLabel}
+							slotProps={{ typography: { sx: guidedConfigFieldLabelSx } }}
+						/>
+						<Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 4 }}>
+							{inheritAdvanced
+								? "Uncheck to override any of the options below."
+								: "Only the values you change are saved."}
+						</Typography>
+					</Box>
+
+					<Divider />
+
 					{/* — Log — */}
 					<Typography sx={groupTitleSx}>Log</Typography>
 					<FormControlLabel
 						control={
 							<Switch
 								checked={debugEnabled}
+								disabled={managedDisabled}
 								onChange={(e) => handleDebugToggle(e.target.checked)}
 							/>
 						}
@@ -166,7 +196,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="Logger level"
 							selectProps={{
 								value: loggerLevelSelectValue,
-								disabled: !debugEnabled,
+								disabled: managedDisabled || !debugEnabled,
 								onChange: (e) => handleLoggerLevelChange(e.target.value),
 							}}
 						>
@@ -181,7 +211,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="Output directory"
 							value={values.outputDirectory ?? ""}
 							onChange={(e) => patch({ outputDirectory: e.target.value })}
-							disabled={!debugEnabled}
+							disabled={managedDisabled || !debugEnabled}
 							placeholder={inheritedDefaults?.outputDirectory || "e.g. /opt/metricshub/logs"}
 						/>
 					</Box>
@@ -198,6 +228,7 @@ const ResourceAdvancedOptionsSection = ({
 								size="small"
 								fullWidth
 								hiddenLabel
+								disabled={managedDisabled}
 								value={values.collectPeriod ?? ""}
 								onChange={(e) => patch({ collectPeriod: e.target.value })}
 								placeholder={formatDurationSeconds(inheritedDefaults?.collectPeriod) || "e.g. 2m"}
@@ -210,6 +241,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="Discovery cycle"
 							value={values.discoveryCycle ?? ""}
 							onChange={(e) => patch({ discoveryCycle: e.target.value.replace(/\D/g, "") })}
+							disabled={managedDisabled}
 							placeholder={
 								inheritedDefaults?.discoveryCycle != null
 									? String(inheritedDefaults.discoveryCycle)
@@ -224,6 +256,7 @@ const ResourceAdvancedOptionsSection = ({
 								size="small"
 								fullWidth
 								hiddenLabel
+								disabled={managedDisabled}
 								value={values.jobTimeout ?? ""}
 								onChange={(e) => patch({ jobTimeout: e.target.value })}
 								placeholder={formatDurationSeconds(inheritedDefaults?.jobTimeout) || "e.g. 5m"}
@@ -242,6 +275,7 @@ const ResourceAdvancedOptionsSection = ({
 								checked={
 									String(values.enableSelfMonitoring ?? DEFAULT_ENABLE_SELF_MONITORING) === "true"
 								}
+								disabled={managedDisabled}
 								onChange={(e) =>
 									patch({ enableSelfMonitoring: e.target.checked ? "true" : "false" })
 								}
@@ -256,6 +290,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="State set compression"
 							selectProps={{
 								value: values.stateSetCompression ?? DEFAULT_STATE_SET_COMPRESSION,
+								disabled: managedDisabled,
 								onChange: (e) => patch({ stateSetCompression: e.target.value }),
 							}}
 						>
@@ -270,6 +305,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="Enrichment"
 							selectProps={{
 								value: values.enrichments ?? DEFAULT_ENRICHMENT,
+								disabled: managedDisabled,
 								onChange: (e) => patch({ enrichments: e.target.value }),
 							}}
 						>
@@ -284,6 +320,7 @@ const ResourceAdvancedOptionsSection = ({
 							label="Monitor filters"
 							value={values.monitorFilters ?? ""}
 							onChange={(e) => patch({ monitorFilters: e.target.value })}
+							disabled={managedDisabled}
 							placeholder={
 								(inheritedDefaults?.monitorFilters || []).length > 0
 									? [...inheritedDefaults.monitorFilters].join(", ")
@@ -301,6 +338,7 @@ const ResourceAdvancedOptionsSection = ({
 							control={
 								<Switch
 									checked={Boolean(values.sequential)}
+									disabled={managedDisabled}
 									onChange={(e) => patch({ sequential: e.target.checked })}
 								/>
 							}
@@ -311,6 +349,7 @@ const ResourceAdvancedOptionsSection = ({
 							control={
 								<Switch
 									checked={Boolean(values.resolveHostnameToFqdn)}
+									disabled={managedDisabled}
 									onChange={(e) => patch({ resolveHostnameToFqdn: e.target.checked })}
 								/>
 							}

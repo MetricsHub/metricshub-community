@@ -481,6 +481,30 @@ const HostsPage = () => {
 		[navigateBrowseView, showSnackbar],
 	);
 
+	// Inline group creation from the resource form's placement combobox: create the group
+	// immediately (so it shows up in the tree) without navigating away from the resource form.
+	const handleCreateResourceGroupInline = React.useCallback(
+		async (name) => {
+			const trimmed = String(name ?? "").trim();
+			// Selecting an existing group must not overwrite it — only create when new.
+			if (!trimmed || snapshot.resourceGroups?.[trimmed]) {
+				return;
+			}
+			setBusy(true);
+			setError(null);
+			try {
+				const updated = await uiConfigApi.createResourceGroup({ name: trimmed });
+				setSnapshot(updated);
+				showSnackbar(`Resource group "${trimmed}" has been created.`, { severity: "success" });
+			} catch (e) {
+				setError(e?.message || "Failed to create resource group");
+			} finally {
+				setBusy(false);
+			}
+		},
+		[snapshot.resourceGroups, showSnackbar],
+	);
+
 	const handleCancelGroupCreate = React.useCallback(() => {
 		// Honour the view the user came from (passed via location state in
 		// handleCreateGroup). Falls back to Resource Groups when the page was
@@ -736,6 +760,7 @@ const HostsPage = () => {
 						pathname={`${location.pathname}${location.search}`}
 						onViewChange={navigateBrowseView}
 						onCreateGroup={handleCreateGroup}
+						onCreateResourceGroupInline={handleCreateResourceGroupInline}
 						onCreateHost={() => openInlineCreateHost(groupNameForCreateHost(view))}
 						onAddHostToGroup={(groupName) => openInlineCreateHost(groupName)}
 						inlineCreateContext={activeInlineCreateContext}

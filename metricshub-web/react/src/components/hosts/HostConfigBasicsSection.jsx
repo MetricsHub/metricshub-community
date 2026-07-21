@@ -62,6 +62,7 @@ const HostConfigBasicsSection = ({
 	errors = {},
 	resourceGroups,
 	existingHostIdScopes,
+	onCreateResourceGroup,
 }) => {
 	const manualHostIdRef = React.useRef(false);
 	const [autoSuffixMessage, setAutoSuffixMessage] = React.useState("");
@@ -213,6 +214,7 @@ const HostConfigBasicsSection = ({
 									resourceGroup: patch.resourceGroup ?? values.resourceGroup,
 								});
 							}}
+							onCreateResourceGroup={onCreateResourceGroup}
 							error={Boolean(errors.resourceGroup)}
 							helperText={errors.resourceGroup}
 						/>
@@ -276,6 +278,11 @@ const HostConfigBasicsSection = ({
 						values={values.resourceAdvanced || createEmptyResourceAdvancedState()}
 						onChange={onChange}
 						inheritedDefaults={inheritedDefaults}
+						inheritLabel={
+							values.targetType === "group"
+								? "Apply advanced options from resource group"
+								: "Apply advanced options from the Agent"
+						}
 					/>
 				</Stack>
 			</FormSection>

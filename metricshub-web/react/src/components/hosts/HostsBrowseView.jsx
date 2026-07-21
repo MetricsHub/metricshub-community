@@ -96,6 +96,7 @@ const HostsBrowseView = ({
 	onDeleteStandaloneHosts,
 
 	onConfigureGroup,
+	onCreateResourceGroupInline,
 	onUpdateResourceGroup,
 	onCloseResourceGroupForm,
 	onFormUnsavedChange,
@@ -158,6 +159,7 @@ const HostsBrowseView = ({
 				onCancel={onInlineCreateCancel}
 				onSubmit={onInlineCreateSubmit}
 				onSaveAsDraft={onInlineCreateSaveDraft}
+				onCreateResourceGroup={onCreateResourceGroupInline}
 			/>
 		</HostConfigEditLayout>
 	);

@@ -21,6 +21,7 @@ const HostConfigSectionContent = ({
 	existingHostIdScopes,
 	showProtocolStepHeader = false,
 	onScrollToConnectorsStep,
+	onCreateResourceGroup,
 }) => {
 	if (!step) {
 		return null;
@@ -35,6 +36,7 @@ const HostConfigSectionContent = ({
 					errors={form.errors}
 					resourceGroups={resourceGroups}
 					existingHostIdScopes={existingHostIdScopes}
+					onCreateResourceGroup={onCreateResourceGroup}
 				/>
 			);
 		case "protocol":

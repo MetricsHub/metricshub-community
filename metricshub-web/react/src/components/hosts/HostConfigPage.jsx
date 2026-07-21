@@ -80,6 +80,7 @@ const HostConfigPage = ({
 	headerEndAction,
 	draftId = null,
 	onSaveAsDraft,
+	onCreateResourceGroup,
 }) => {
 	const isEdit = mode === "edit";
 	const { show: showSnackbar } = useSnackbar();
@@ -569,6 +570,7 @@ const HostConfigPage = ({
 						existingHostIdScopes={existingHostIdScopes}
 						protocolHealth={protocolHealth}
 						onScrollToConnectorsStep={scrollToConnectorsStep}
+						onCreateResourceGroup={onCreateResourceGroup}
 					/>
 				</Box>
 

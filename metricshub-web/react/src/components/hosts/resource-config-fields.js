@@ -35,6 +35,10 @@ export const ENRICHMENT_OPTIONS = [
 
 /** Default empty resource advanced settings in the host config form. */
 export const createEmptyResourceAdvancedState = () => ({
+	// When true, every inheritance-aware option below is inherited from the parent
+	// (resource group → agent) and nothing is written to the config. Turning it off
+	// unlocks the fields; only values that differ from the inherited ones are persisted.
+	inheritAdvanced: true,
 	// "" = inherit the effective logger level (resource group → agent default);
 	// "off" = logging explicitly disabled. The "Enable Debug" switch is derived from
 	// the effective level, so a new resource inherits (and shows) the default level.

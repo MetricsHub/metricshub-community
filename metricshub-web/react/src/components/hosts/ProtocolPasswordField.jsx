@@ -50,7 +50,10 @@ const ProtocolPasswordField = ({
 	const skipNextBlurRef = React.useRef(false);
 
 	const encrypted = looksEncrypted(value);
-	const canReveal = allowReveal && !encrypted;
+	// The show/hide eye is available on every protocol password field (create and edit),
+	// so the current value can always be checked. Blur-time encryption still depends on the
+	// flow via `allowReveal`.
+	const canReveal = !disabled;
 
 	const resolvedHelperText =
 		helperText ||

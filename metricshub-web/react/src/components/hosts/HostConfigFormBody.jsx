@@ -22,6 +22,7 @@ const HostConfigFormBody = ({
 	existingHostIdScopes,
 	protocolHealth,
 	onScrollToConnectorsStep,
+	onCreateResourceGroup,
 }) => {
 	const validatedSet = React.useMemo(
 		() => new Set(form.validatedStepIds || []),
@@ -43,6 +44,7 @@ const HostConfigFormBody = ({
 				existingHostIdScopes={existingHostIdScopes}
 				showProtocolStepHeader={false}
 				onScrollToConnectorsStep={onScrollToConnectorsStep}
+				onCreateResourceGroup={onCreateResourceGroup}
 			/>
 		);
 

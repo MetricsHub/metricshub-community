@@ -49,6 +49,38 @@ const formatDurationValue = (value) => {
 };
 
 /**
+ * Inheritance-aware advanced keys gated by "Apply advanced options from the parent".
+ * Kept in sync with the backend's RESOURCE_GROUP_MANAGED_KEYS. Custom attributes and
+ * metrics are deliberately excluded — they are the resource's own data, not inherited.
+ */
+const MANAGED_ADVANCED_KEYS = [
+	"loggerLevel",
+	"outputDirectory",
+	"collectPeriod",
+	"discoveryCycle",
+	"jobTimeout",
+	"stateSetCompression",
+	"sequential",
+	"enableSelfMonitoring",
+	"resolveHostnameToFqdn",
+	"monitorFilters",
+	"enrichments",
+];
+
+/**
+ * @param {Record<string, unknown>} [config]
+ * @returns {boolean} true when the config explicitly sets any inheritance-aware key
+ */
+const hasAnyManagedAdvancedKey = (config = {}) =>
+	MANAGED_ADVANCED_KEYS.some((key) => {
+		const value = config?.[key];
+		if (value == null || value === "") {
+			return false;
+		}
+		return !(Array.isArray(value) && value.length === 0);
+	});
+
+/**
  * Maps a host configuration node into form resource advanced settings.
  *
  * @param {Record<string, unknown>} [hostConfig]
@@ -80,6 +112,9 @@ export const parseResourceAdvancedFromConfig = (hostConfig = {}) => {
 
 	return {
 		...createEmptyResourceAdvancedState(),
+		// Inherit everything when the config carries none of the inheritance-aware keys;
+		// as soon as one override is present the form opens with inheritance turned off.
+		inheritAdvanced: !hasAnyManagedAdvancedKey(hostConfig),
 		loggerLevel: hasLoggerLevel ? String(hostConfig.loggerLevel).trim() : "",
 		outputDirectory: hasOutputDirectory ? String(hostConfig.outputDirectory) : "",
 		collectPeriod: formatDurationValue(hostConfig?.collectPeriod),
@@ -118,60 +153,69 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 	/** @type {Record<string, unknown>} */
 	const payload = {};
 
-	// The resource's own logger level is written verbatim when set (""  means "inherit",
-	// so it is omitted; "off" is written explicitly so a disabled resource round-trips).
-	// The output directory only applies while logging is on (level is not "off").
-	const loggerLevel = String(resourceAdvanced.loggerLevel ?? "").trim();
-	if (loggerLevel !== "") {
-		payload.loggerLevel = loggerLevel;
-	}
-	if (loggerLevel.toLowerCase() !== "off") {
-		setIfPresent(payload, "outputDirectory", String(resourceAdvanced.outputDirectory ?? "").trim());
-	}
-
-	setIfPresent(payload, "collectPeriod", String(resourceAdvanced.collectPeriod ?? "").trim());
-	setIfPresent(payload, "jobTimeout", String(resourceAdvanced.jobTimeout ?? "").trim());
-
-	// Only persist a non-default state-set compression.
-	const stateSetCompression = String(resourceAdvanced.stateSetCompression ?? "").trim();
-	if (stateSetCompression !== "" && stateSetCompression !== DEFAULT_STATE_SET_COMPRESSION) {
-		payload.stateSetCompression = stateSetCompression;
-	}
-
-	const discoveryCycle = String(resourceAdvanced.discoveryCycle ?? "").trim();
-	if (discoveryCycle !== "") {
-		const parsed = Number.parseInt(discoveryCycle, 10);
-		if (Number.isFinite(parsed)) {
-			payload.discoveryCycle = parsed;
+	// While "Apply advanced options from the parent" is on, none of the inheritance-aware
+	// keys are written — the resource/group inherits them entirely. Only the resource's own
+	// custom attributes / metrics (handled below) are still emitted.
+	if (!resourceAdvanced.inheritAdvanced) {
+		// The resource's own logger level is written verbatim when set (""  means "inherit",
+		// so it is omitted; "off" is written explicitly so a disabled resource round-trips).
+		// The output directory only applies while logging is on (level is not "off").
+		const loggerLevel = String(resourceAdvanced.loggerLevel ?? "").trim();
+		if (loggerLevel !== "") {
+			payload.loggerLevel = loggerLevel;
 		}
-	}
+		if (loggerLevel.toLowerCase() !== "off") {
+			setIfPresent(
+				payload,
+				"outputDirectory",
+				String(resourceAdvanced.outputDirectory ?? "").trim(),
+			);
+		}
 
-	if (resourceAdvanced.sequential) {
-		payload.sequential = true;
-	}
-	if (resourceAdvanced.resolveHostnameToFqdn) {
-		payload.resolveHostnameToFqdn = true;
-	}
+		setIfPresent(payload, "collectPeriod", String(resourceAdvanced.collectPeriod ?? "").trim());
+		setIfPresent(payload, "jobTimeout", String(resourceAdvanced.jobTimeout ?? "").trim());
 
-	// Self monitoring is written only when it differs from the built-in default.
-	const enableSelfMonitoring = String(resourceAdvanced.enableSelfMonitoring ?? "").trim();
-	if (
-		(enableSelfMonitoring === "true" || enableSelfMonitoring === "false") &&
-		enableSelfMonitoring !== DEFAULT_ENABLE_SELF_MONITORING
-	) {
-		payload.enableSelfMonitoring = enableSelfMonitoring === "true";
-	}
+		// Only persist a non-default state-set compression.
+		const stateSetCompression = String(resourceAdvanced.stateSetCompression ?? "").trim();
+		if (stateSetCompression !== "" && stateSetCompression !== DEFAULT_STATE_SET_COMPRESSION) {
+			payload.stateSetCompression = stateSetCompression;
+		}
 
-	const monitorFilters = String(resourceAdvanced.monitorFilters ?? "")
-		.split(",")
-		.map((entry) => entry.trim())
-		.filter(Boolean);
-	if (monitorFilters.length > 0) {
-		payload.monitorFilters = monitorFilters;
-	}
+		const discoveryCycle = String(resourceAdvanced.discoveryCycle ?? "").trim();
+		if (discoveryCycle !== "") {
+			const parsed = Number.parseInt(discoveryCycle, 10);
+			if (Number.isFinite(parsed)) {
+				payload.discoveryCycle = parsed;
+			}
+		}
 
-	if (String(resourceAdvanced.enrichments ?? "").trim() === "bmchelix") {
-		payload.enrichments = ["bmchelix"];
+		if (resourceAdvanced.sequential) {
+			payload.sequential = true;
+		}
+		if (resourceAdvanced.resolveHostnameToFqdn) {
+			payload.resolveHostnameToFqdn = true;
+		}
+
+		// Self monitoring is written only when it differs from the built-in default.
+		const enableSelfMonitoring = String(resourceAdvanced.enableSelfMonitoring ?? "").trim();
+		if (
+			(enableSelfMonitoring === "true" || enableSelfMonitoring === "false") &&
+			enableSelfMonitoring !== DEFAULT_ENABLE_SELF_MONITORING
+		) {
+			payload.enableSelfMonitoring = enableSelfMonitoring === "true";
+		}
+
+		const monitorFilters = String(resourceAdvanced.monitorFilters ?? "")
+			.split(",")
+			.map((entry) => entry.trim())
+			.filter(Boolean);
+		if (monitorFilters.length > 0) {
+			payload.monitorFilters = monitorFilters;
+		}
+
+		if (String(resourceAdvanced.enrichments ?? "").trim() === "bmchelix") {
+			payload.enrichments = ["bmchelix"];
+		}
 	}
 
 	const customAttributes = kvRowsToObject(resourceAdvanced.customAttributeRows);

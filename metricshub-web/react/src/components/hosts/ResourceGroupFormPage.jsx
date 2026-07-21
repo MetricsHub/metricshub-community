@@ -626,6 +626,7 @@ const ResourceGroupFormPage = ({
 									onChange={(patch) => setResourceAdvanced(patch.resourceAdvanced)}
 									inheritedDefaults={inheritedDefaults}
 									showAttributesAndMetrics={false}
+									inheritLabel="Apply advanced options from the Agent"
 								/>
 							</Stack>
 						</Box>
