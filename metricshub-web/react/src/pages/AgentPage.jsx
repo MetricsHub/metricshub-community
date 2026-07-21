@@ -1,9 +1,12 @@
 import * as React from "react";
-import { Box, Stack, Typography, Collapse, Divider, Link } from "@mui/material";
+import { Box, Stack, Typography, Collapse, Divider, Link, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import TuneIcon from "@mui/icons-material/Tune";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { useAuth } from "../hooks/use-auth";
+import { paths } from "../paths";
 
 import AgentHeader from "../components/agent/AgentHeader";
 import AgentMetrics from "../components/agent/AgentMetrics";
@@ -20,6 +23,7 @@ import AppAlert from "../components/common/AppAlert";
  */
 function AgentPage() {
 	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
 	const snackbar = useSnackbar();
 	const { user } = useAuth();
 	const isReadOnly = user?.role === "ro";
@@ -122,6 +126,16 @@ function AgentPage() {
 		>
 			<Stack spacing={3} sx={{ maxWidth: 1200, mx: "auto" }}>
 				{/* Header */}
+				<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+					<Button
+						variant="outlined"
+						size="small"
+						startIcon={<TuneIcon />}
+						onClick={() => navigate(paths.agentConfig)}
+					>
+						Configure
+					</Button>
+				</Box>
 				<AgentHeader
 					osType={osType}
 					title={title}

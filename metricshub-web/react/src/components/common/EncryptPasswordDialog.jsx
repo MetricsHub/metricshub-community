@@ -54,16 +54,6 @@ function delay(ms) {
 	});
 }
 
-/** Mask ciphertext in the UI: only the last 4 characters are visible; the rest are asterisks. */
-function maskCiphertextForDisplay(ciphertext) {
-	if (!ciphertext) return "";
-	const n = ciphertext.length;
-	if (n <= 4) {
-		return "*".repeat(n);
-	}
-	return `${"*".repeat(n - 4)}${ciphertext.slice(-4)}`;
-}
-
 /** Opens a dialog to encrypt a password via the agent; ciphertext is copied to the clipboard. */
 export default function EncryptPasswordDialog({
 	disabled = false,
@@ -201,7 +191,7 @@ export default function EncryptPasswordDialog({
 						/>
 						<TextField
 							label="Encrypted password"
-							value={maskCiphertextForDisplay(lastCiphertext)}
+							value={lastCiphertext}
 							fullWidth
 							sx={{
 								"& .MuiInputBase-input": {
@@ -210,9 +200,7 @@ export default function EncryptPasswordDialog({
 							}}
 							slotProps={{
 								htmlInput: {
-									"aria-label": lastCiphertext
-										? "Encrypted password, mostly masked; use copy for the full value"
-										: "Encrypted password",
+									"aria-label": "Encrypted password",
 								},
 								input: {
 									readOnly: true,
