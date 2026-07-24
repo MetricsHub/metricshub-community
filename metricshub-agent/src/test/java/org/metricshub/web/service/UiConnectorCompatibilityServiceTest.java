@@ -171,6 +171,27 @@ class UiConnectorCompatibilityServiceTest {
 	}
 
 	@Test
+	void testGetConnectorCatalogFlagsPatchedConnectors() {
+		connectorStore.getStore().get(WINDOWS_CONNECTOR_ID).setPatched(true);
+
+		final List<UiConnectorSummaryDto> catalog = service.getConnectorCatalog(connectorStore, extensionManager);
+
+		final UiConnectorSummaryDto windows = catalog
+			.stream()
+			.filter(item -> WINDOWS_CONNECTOR_ID.equals(item.getId()))
+			.findFirst()
+			.orElseThrow();
+		assertTrue(windows.isPatched(), "Connector from the patch directory should be flagged as patched");
+
+		final UiConnectorSummaryDto linux = catalog
+			.stream()
+			.filter(item -> LINUX_CONNECTOR_ID.equals(item.getId()))
+			.findFirst()
+			.orElseThrow();
+		assertFalse(linux.isPatched(), "Built-in connector should not be flagged as patched");
+	}
+
+	@Test
 	void testListConnectorsReturnsOnlyCompatibleEntriesByDefault() {
 		final List<UiConnectorSummaryDto> compatible = service.listConnectors(
 			"linux",

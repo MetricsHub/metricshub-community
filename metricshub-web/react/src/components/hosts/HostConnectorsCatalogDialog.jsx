@@ -385,9 +385,33 @@ const HostConnectorsCatalogDialog = ({
 														>
 															<ConnectorDocumentationLink connectorId={id} iconOnly />
 															<Box sx={{ minWidth: 0, flex: 1 }}>
-																<Typography variant="body2" noWrap title={item.displayName || id}>
-																	{item.displayName || id}
-																</Typography>
+																<Stack
+																	direction="row"
+																	spacing={0.5}
+																	alignItems="center"
+																	sx={{ minWidth: 0 }}
+																>
+																	<Typography variant="body2" noWrap title={item.displayName || id}>
+																		{item.displayName || id}
+																	</Typography>
+																	{item.patched && (
+																		<Chip
+																			label="Patched"
+																			size="small"
+																			color="warning"
+																			variant="outlined"
+																			sx={{
+																				height: 18,
+																				flexShrink: 0,
+																				"& .MuiChip-label": {
+																					px: 0.75,
+																					fontSize: "0.65rem",
+																					fontWeight: 600,
+																				},
+																			}}
+																		/>
+																	)}
+																</Stack>
 																{!item.compatible && reasons.length > 0 && (
 																	<Typography
 																		variant="caption"

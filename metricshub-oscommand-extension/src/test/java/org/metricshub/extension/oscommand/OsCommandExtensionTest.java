@@ -41,6 +41,7 @@ import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.criterion.CommandLineCriterion;
 import org.metricshub.engine.connector.model.monitor.task.source.CommandLineSource;
+import org.metricshub.engine.connector.model.monitor.task.source.FileSource;
 import org.metricshub.engine.strategy.detection.CriterionTestResult;
 import org.metricshub.engine.strategy.source.SourceTable;
 import org.metricshub.engine.strategy.utils.OsCommandResult;
@@ -116,7 +117,14 @@ class OsCommandExtensionTest {
 
 	@Test
 	void testGetConfigurationToSourceMapping() {
-		assertFalse(osCommandExtension.getConfigurationToSourceMapping().isEmpty());
+		final var mapping = osCommandExtension.getConfigurationToSourceMapping();
+		assertFalse(mapping.isEmpty());
+		// SSH and OS command must be able to process both CommandLineSource and FileSource,
+		// so FileSource connectors are compatible with ssh/oscommand-configured hosts.
+		assertTrue(mapping.get(SshConfiguration.class).contains(CommandLineSource.class));
+		assertTrue(mapping.get(SshConfiguration.class).contains(FileSource.class));
+		assertTrue(mapping.get(OsCommandConfiguration.class).contains(CommandLineSource.class));
+		assertTrue(mapping.get(OsCommandConfiguration.class).contains(FileSource.class));
 	}
 
 	@Test

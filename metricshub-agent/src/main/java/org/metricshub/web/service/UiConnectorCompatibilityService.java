@@ -325,6 +325,7 @@ public class UiConnectorCompatibilityService {
 			.connectionTypes(connectionTypes)
 			.requiredProtocols(requiredProtocols.stream().sorted().toList())
 			.autoDetectionDisabled(autoDetectionDisabled)
+			.patched(connector.isPatched())
 			.compatible(false)
 			.incompatibilityReasons(List.of())
 			.hasVariables(hasVariables)

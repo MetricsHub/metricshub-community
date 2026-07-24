@@ -399,6 +399,19 @@ const CONFIGURABLE_CONNECTOR_CHIP_SX = {
 	"& .MuiChip-label": { px: 0.75, py: 0 },
 };
 
+const PATCHED_CONNECTOR_CHIP_SX = {
+	height: 20,
+	fontSize: "0.625rem",
+	fontWeight: 700,
+	letterSpacing: "0.04em",
+	borderRadius: 0.75,
+	bgcolor: (theme) =>
+		alpha(theme.palette.warning.main, theme.palette.mode === "dark" ? 0.22 : 0.12),
+	color: "warning.main",
+	border: "none",
+	"& .MuiChip-label": { px: 0.75, py: 0 },
+};
+
 const CONNECTOR_LABEL_CONTAINER_SX = {
 	height: "100%",
 	width: "100%",
@@ -456,6 +469,7 @@ const ConnectorRowLabel = ({ item }) => {
 	const title = String(item?.displayName || "").trim() || id;
 	const description = getConnectorListDescription(item);
 	const hasVariables = Boolean(item?.hasVariables);
+	const patched = Boolean(item?.patched);
 	return (
 		<ConnectorTableRowLabel
 			icon={
@@ -468,8 +482,13 @@ const ConnectorRowLabel = ({ item }) => {
 			title={title}
 			description={description || "—"}
 			titleAdornment={
-				hasVariables ? (
-					<Chip size="small" label="CONFIGURABLE" sx={CONFIGURABLE_CONNECTOR_CHIP_SX} />
+				hasVariables || patched ? (
+					<>
+						{hasVariables ? (
+							<Chip size="small" label="CONFIGURABLE" sx={CONFIGURABLE_CONNECTOR_CHIP_SX} />
+						) : null}
+						{patched ? <Chip size="small" label="PATCHED" sx={PATCHED_CONNECTOR_CHIP_SX} /> : null}
+					</>
 				) : null
 			}
 		/>

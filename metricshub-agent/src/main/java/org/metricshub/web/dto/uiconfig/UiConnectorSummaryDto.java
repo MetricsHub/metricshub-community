@@ -68,6 +68,9 @@ public class UiConnectorSummaryDto {
 
 	private boolean autoDetectionDisabled;
 
+	/** True when the connector comes from the connectors patch directory (user-supplied / overriding a built-in). */
+	private boolean patched;
+
 	private boolean compatible;
 
 	@Builder.Default

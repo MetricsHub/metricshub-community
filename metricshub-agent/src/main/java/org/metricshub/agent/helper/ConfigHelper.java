@@ -29,9 +29,12 @@ import static org.metricshub.agent.helper.AgentConstants.LOG_DIRECTORY_NAME;
 import static org.metricshub.agent.helper.AgentConstants.PRODUCT_WIN_DIR_NAME;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.MapperFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import java.io.File;
 import java.io.IOException;
@@ -79,6 +82,7 @@ import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.deserializer.ConnectorDeserializer;
 import org.metricshub.engine.connector.model.Connector;
 import org.metricshub.engine.connector.model.ConnectorStore;
+import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
 import org.metricshub.engine.connector.model.common.DeviceKind;
 import org.metricshub.engine.connector.model.identity.ConnectorIdentity;
@@ -1289,9 +1293,20 @@ public class ConfigHelper {
 		// Parse and add connectors from a specific subdirectory
 		rawConnectorStore.addMany(new RawConnectorStore(getSubDirectory("connectors", false)).getStore());
 
-		// Add user's connectors if the connectors patch path is specified.
+		// Add user's connectors if the connectors patch path is specified. Each patch
+		// connector is flagged with "patched: true" in its raw definition so the compiled
+		// Connector carries the flag through to the Web UI — for both plain and template
+		// (variable) connectors, since the flag rides through the normal deserialization.
 		if (connectorsPatchPath != null) {
-			rawConnectorStore.addMany(new RawConnectorStore(Path.of(connectorsPatchPath)).getStore());
+			final Map<String, RawConnector> patchStore = new RawConnectorStore(Path.of(connectorsPatchPath)).getStore();
+			patchStore.values().forEach(ConfigHelper::flagRawConnectorAsPatched);
+			rawConnectorStore.addMany(patchStore);
+			log.info("Applying connectors patch directory: {}.", connectorsPatchPath);
+			log.debug(
+				"Applying connectors patch directory: {}. Number of patched connectors: {}.",
+				connectorsPatchPath,
+				patchStore.size()
+			);
 		}
 
 		// Generate the connector store from the raw connector store.
@@ -1306,6 +1321,27 @@ public class ConfigHelper {
 		log.info("Global Raw Connector Store size: {}", connectorStore.getRawConnectorStore().getStore().size());
 
 		return connectorStore;
+	}
+
+	/**
+	 * Sets {@code patched: true} on a raw connector's node so the compiled {@link Connector}
+	 * is flagged as patched. Applied to connectors loaded from the patch directory; the flag
+	 * survives connector compilation (including variable/template resolution) because it is
+	 * carried in the connector definition itself.
+	 *
+	 * @param rawConnector the raw connector to flag; unchanged if its node cannot be read
+	 */
+	private static void flagRawConnectorAsPatched(final RawConnector rawConnector) {
+		try {
+			final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+			final JsonNode node = mapper.readTree(rawConnector.getByteConnector());
+			if (node instanceof ObjectNode objectNode) {
+				objectNode.put("patched", true);
+				rawConnector.setByteConnector(mapper.writeValueAsBytes(objectNode));
+			}
+		} catch (IOException e) {
+			log.debug("Unable to flag a patch-directory connector as patched: {}", e.getMessage());
+		}
 	}
 
 	/**
