@@ -106,8 +106,8 @@ public class OsCommandExtension implements IProtocolExtension {
 	@Override
 	public Map<Class<? extends IConfiguration>, Set<Class<? extends Source>>> getConfigurationToSourceMapping() {
 		return Map.ofEntries(
-			Map.entry(SshConfiguration.class, Set.of(CommandLineSource.class)),
-			Map.entry(OsCommandConfiguration.class, Set.of(CommandLineSource.class))
+			Map.entry(SshConfiguration.class, Set.of(CommandLineSource.class, FileSource.class)),
+			Map.entry(OsCommandConfiguration.class, Set.of(CommandLineSource.class, FileSource.class))
 		);
 	}
 

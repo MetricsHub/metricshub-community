@@ -70,6 +70,14 @@ public class Connector implements Serializable {
 	private ConnectorIdentity connectorIdentity;
 
 	/**
+	 * Whether this connector is patched. It is {@code true} when the connector declares
+	 * {@code patched: true} in its YAML, or when it is loaded from the connectors patch
+	 * directory. Defaults to {@code false}. Surfaced in the Web UI as a "Patched" badge.
+	 */
+	@JsonSetter(nulls = SKIP)
+	private boolean patched;
+
+	/**
 	 * Set of connector names that the current connector extends.
 	 */
 	@JsonProperty("extends")

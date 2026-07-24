@@ -5,6 +5,7 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { paths } from "../../paths";
 import NodeTypeIcons from "../explorer/tree/icons/NodeTypeIcons";
 import MonitorTypeIcon from "../explorer/views/monitors/icons/MonitorTypeIcon";
+import { NO_RESOURCE_GROUP } from "../hosts/hosts-labels";
 
 /**
  * Configuration for Explorer routes to generate breadcrumbs.
@@ -88,15 +89,109 @@ const EXPLORER_ROUTES = [
 ];
 
 /**
+ * Configuration for Guided Config (Hosts) routes to generate breadcrumbs.
+ * @type {Array<{pattern: string, getBreadcrumbs: (params: Record<string, string>) => Array<{label: string, to: string|null, iconType?: string}>}>}
+ */
+const guidedConfigResourceGroupsCrumb = () => ({
+	label: "Resource Groups",
+	to: paths.hostsResourceGroups(),
+	iconType: "agent",
+});
+
+const GUIDED_CONFIG_ROUTES = [
+	{
+		pattern: "/configuration/guided-config/resource-groups/:group/resources/:resource/edit",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			return [
+				guidedConfigResourceGroupsCrumb(),
+				{ label: group, to: paths.hostsResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: paths.hostsGroupedResource(group, resource), iconType: "resource" },
+				{ label: "Edit", to: null },
+			];
+		},
+	},
+	{
+		pattern: "/configuration/guided-config/no-resource-group/resources/:resource/edit",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			return [
+				guidedConfigResourceGroupsCrumb(),
+				{
+					label: NO_RESOURCE_GROUP,
+					to: paths.hostsStandaloneSection(),
+					iconType: "resource-group",
+				},
+				{ label: resource, to: paths.hostsStandaloneResource(resource), iconType: "resource" },
+				{ label: "Edit", to: null },
+			];
+		},
+	},
+	{
+		pattern: "/configuration/guided-config/resource-groups/:group/resources/:resource",
+		getBreadcrumbs: (params) => {
+			const group = decodeURIComponent(params.group);
+			const resource = decodeURIComponent(params.resource);
+			return [
+				guidedConfigResourceGroupsCrumb(),
+				{ label: group, to: paths.hostsResourceGroup(group), iconType: "resource-group" },
+				{ label: resource, to: null, iconType: "resource" },
+			];
+		},
+	},
+	{
+		pattern: "/configuration/guided-config/no-resource-group/resources/:resource",
+		getBreadcrumbs: (params) => {
+			const resource = decodeURIComponent(params.resource);
+			return [
+				guidedConfigResourceGroupsCrumb(),
+				{
+					label: NO_RESOURCE_GROUP,
+					to: paths.hostsStandaloneSection(),
+					iconType: "resource-group",
+				},
+				{ label: resource, to: null, iconType: "resource" },
+			];
+		},
+	},
+	{
+		pattern: "/configuration/guided-config/resource-groups",
+		getBreadcrumbs: () => [guidedConfigResourceGroupsCrumb()],
+	},
+	{
+		pattern: "/configuration/guided-config/resource-groups/new",
+		getBreadcrumbs: () => [guidedConfigResourceGroupsCrumb()],
+	},
+	{
+		pattern: "/configuration/guided-config/resource-groups/:name",
+		getBreadcrumbs: (params) => {
+			const name = decodeURIComponent(params.name);
+			return [
+				guidedConfigResourceGroupsCrumb(),
+				{ label: name, to: null, iconType: "resource-group" },
+			];
+		},
+	},
+	{
+		pattern: "/configuration/guided-config/no-resource-group",
+		getBreadcrumbs: () => [
+			guidedConfigResourceGroupsCrumb(),
+			{ label: NO_RESOURCE_GROUP, to: null, iconType: "resource-group" },
+		],
+	},
+];
+
+/**
  * Component to render breadcrumbs based on the current location.
  * Currently supports Explorer routes.
  *
- * @param {{ sx?: import("@mui/material").SxProps, action?: React.ReactNode }} props
+ * @param {{ sx?: import("@mui/material").SxProps, action?: React.ReactNode, pathname?: string, embedded?: boolean }} props
  * @returns {React.ReactElement|null}
  */
-const AppBreadcrumbs = ({ sx, action }) => {
+const AppBreadcrumbs = ({ sx, action, pathname, embedded = false }) => {
 	const location = useLocation();
-	const currentPath = location.pathname;
+	const currentPath = pathname || location.pathname;
 
 	const crumbs = React.useMemo(() => {
 		const items = [];
@@ -111,12 +206,103 @@ const AppBreadcrumbs = ({ sx, action }) => {
 					break; // Stop after first match
 				}
 			}
+		} else if (currentPath.startsWith("/configuration/guided-config")) {
+			for (const route of GUIDED_CONFIG_ROUTES) {
+				const match = matchPath({ path: route.pattern, end: true }, currentPath);
+				if (match && match.params) {
+					items.push(...route.getBreadcrumbs(match.params));
+					break;
+				}
+			}
 		}
 
 		return items;
 	}, [currentPath]);
 
-	if (crumbs.length <= 1) return null;
+	if (crumbs.length === 0 && !action) {
+		return null;
+	}
+	// Guided-config create pages render a single breadcrumb crumb for parent context.
+	// Elsewhere a lone crumb (e.g. Explorer welcome) is still hidden.
+	const allowSingleCrumb =
+		crumbs.length === 1 && currentPath.startsWith("/configuration/guided-config");
+	if (crumbs.length <= 1 && !action && !allowSingleCrumb) {
+		return null;
+	}
+
+	const breadcrumbsEl = (
+		<Breadcrumbs
+			separator={<NavigateNextIcon fontSize="small" />}
+			aria-label="breadcrumb"
+			sx={{
+				"& .MuiBreadcrumbs-separator": {
+					transition: "color 0.4s ease",
+				},
+				"& .MuiBreadcrumbs-li": {
+					transition: "color 0.4s ease",
+				},
+			}}
+		>
+			{crumbs.map((crumb, index) => {
+				const isLast = index === crumbs.length - 1;
+				const to = isLast ? null : crumb.to;
+				const icon = crumb.monitorType ? (
+					<MonitorTypeIcon type={crumb.monitorType} />
+				) : crumb.iconType ? (
+					<NodeTypeIcons type={crumb.iconType} />
+				) : null;
+
+				const content = (
+					<Box
+						component="span"
+						sx={{
+							display: "inline-flex",
+							alignItems: "center",
+							gap: 0.75,
+							verticalAlign: "middle",
+							transition: "color 0.4s ease",
+						}}
+					>
+						{icon && (
+							<Box component="span" sx={{ display: "flex", alignItems: "center" }}>
+								{icon}
+							</Box>
+						)}
+						<Box component="span" sx={{ mt: "1px", transition: "color 0.4s ease" }}>
+							{crumb.label}
+						</Box>
+					</Box>
+				);
+
+				return isLast && !to ? (
+					<Typography
+						key={crumb.label}
+						color="text.primary"
+						variant="body2"
+						sx={{ transition: "color 0.4s ease" }}
+					>
+						{content}
+					</Typography>
+				) : (
+					<Link
+						key={`${crumb.label}-${index}`}
+						underline="hover"
+						color="text.secondary"
+						component={RouterLink}
+						to={to}
+						variant="body2"
+						sx={{ transition: "color 0.4s ease" }}
+					>
+						{content}
+					</Link>
+				);
+			})}
+		</Breadcrumbs>
+	);
+
+	if (embedded) {
+		return breadcrumbsEl;
+	}
 
 	return (
 		<Box
@@ -126,76 +312,16 @@ const AppBreadcrumbs = ({ sx, action }) => {
 				display: "flex",
 				justifyContent: "space-between",
 				alignItems: "center",
+				gap: 1,
 				...sx,
 			}}
 		>
-			<Breadcrumbs
-				separator={<NavigateNextIcon fontSize="small" />}
-				aria-label="breadcrumb"
-				sx={{
-					"& .MuiBreadcrumbs-separator": {
-						transition: "color 0.4s ease",
-					},
-					"& .MuiBreadcrumbs-li": {
-						transition: "color 0.4s ease",
-					},
-				}}
-			>
-				{crumbs.map((crumb, index) => {
-					const isLast = index === crumbs.length - 1;
-					const icon = crumb.monitorType ? (
-						<MonitorTypeIcon type={crumb.monitorType} />
-					) : crumb.iconType ? (
-						<NodeTypeIcons type={crumb.iconType} />
-					) : null;
-
-					const content = (
-						<Box
-							component="span"
-							sx={{
-								display: "inline-flex",
-								alignItems: "center",
-								gap: 0.75,
-								verticalAlign: "middle",
-								transition: "color 0.4s ease",
-							}}
-						>
-							{icon && (
-								<Box component="span" sx={{ display: "flex", alignItems: "center" }}>
-									{icon}
-								</Box>
-							)}
-							<Box component="span" sx={{ mt: "1px", transition: "color 0.4s ease" }}>
-								{crumb.label}
-							</Box>
-						</Box>
-					);
-
-					return isLast ? (
-						<Typography
-							key={crumb.label}
-							color="text.primary"
-							variant="body2"
-							sx={{ transition: "color 0.4s ease" }}
-						>
-							{content}
-						</Typography>
-					) : (
-						<Link
-							key={`${crumb.label}-${index}`}
-							underline="hover"
-							color="text.secondary"
-							component={RouterLink}
-							to={crumb.to}
-							variant="body2"
-							sx={{ transition: "color 0.4s ease" }}
-						>
-							{content}
-						</Link>
-					);
-				})}
-			</Breadcrumbs>
-			{action && <Box>{action}</Box>}
+			{breadcrumbsEl}
+			{action && (
+				<Box sx={{ flexShrink: 0, ml: "auto", display: "flex", alignItems: "flex-start" }}>
+					{action}
+				</Box>
+			)}
 		</Box>
 	);
 };

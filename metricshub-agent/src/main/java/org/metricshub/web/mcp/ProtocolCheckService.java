@@ -22,56 +22,43 @@ package org.metricshub.web.mcp;
  */
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import org.metricshub.engine.common.helpers.NumberHelper;
-import org.metricshub.engine.configuration.HostConfiguration;
-import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.extension.IProtocolExtension;
-import org.metricshub.engine.telemetry.HostProperties;
-import org.metricshub.engine.telemetry.TelemetryManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.service.ProtocolHealthCheckService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Service responsible for checking the reachability and availability of a host
+ * MCP tool service responsible for checking the reachability and availability of a host
  * using a specified protocol (e.g., SSH, WinRM, WMI, etc.).
- * <p>
- * This service dynamically resolves the appropriate {@link IProtocolExtension}
- * based on the provided protocol type, builds the corresponding configuration,
- * and delegates the protocol check operation.
- * </p>
  */
 @Service
 public class ProtocolCheckService implements IMCPToolService {
-
-	/**
-	 * Default timeout to be used for protocol check
-	 */
-	private static final long DEFAULT_PROTOCOL_CHECK_TIMEOUT = 10L;
 
 	/**
 	 * Default pool size for protocol checks.
 	 */
 	private static final int DEFAULT_PROTOCOL_CHECK_POOL_SIZE = 60;
 
-	/**
-	 * Holds contextual information about the current agent instance.
-	 */
-	private AgentContextHolder agentContextHolder;
+	private final AgentContextHolder agentContextHolder;
+
+	private final ProtocolHealthCheckService protocolHealthCheckService;
 
 	/**
-	 * Constructor for PingToolService.
+	 * Constructor for ProtocolCheckService.
 	 *
-	 * @param agentContextHolder the {@link AgentContextHolder} instance to access the agent context
+	 * @param agentContextHolder          the {@link AgentContextHolder} instance to access the agent context
+	 * @param protocolHealthCheckService  shared protocol health-check executor
 	 */
 	@Autowired
-	public ProtocolCheckService(AgentContextHolder agentContextHolder) {
+	public ProtocolCheckService(
+		final AgentContextHolder agentContextHolder,
+		final ProtocolHealthCheckService protocolHealthCheckService
+	) {
 		this.agentContextHolder = agentContextHolder;
+		this.protocolHealthCheckService = protocolHealthCheckService;
 	}
 
 	/**
@@ -116,101 +103,12 @@ public class ProtocolCheckService implements IMCPToolService {
 					host ->
 						HostToolResponse.<ProtocolCheckResponse>builder()
 							.hostname(host)
-							.response(checkWithExtension(host, timeout, extension))
+							.response(protocolHealthCheckService.checkFromAgentContext(host, protocol, timeout, extension))
 							.build(),
 					resolvedPoolSize
 				)
 			)
 			.orElseGet(() -> MultiHostToolResponse.buildError(protocolIdentifier + " extension is not available"));
-	}
-
-	/**
-	 * Performs a safe protocol check using the provided extension.
-	 *
-	 * @param hostname the target host to check
-	 * @param timeout optional timeout for the protocol check in seconds
-	 * @param extension the protocol extension to use
-	 * @return a {@link ProtocolCheckResponse} indicating the reachability status or an error message if an exception occurs
-	 */
-	private ProtocolCheckResponse checkWithExtension(
-		final String hostname,
-		final Long timeout,
-		final IProtocolExtension extension
-	) {
-		try {
-			return checkProtocolWithExtensionSafe(hostname, extension.getIdentifier(), timeout, extension);
-		} catch (Exception e) {
-			// Error
-			return ProtocolCheckResponse.builder()
-				.hostname(hostname)
-				.errorMessage("Error detected during protocol check: " + e.getMessage())
-				.build();
-		}
-	}
-
-	/**
-	 * Executes a protocol check using all available configurations for the given host.
-	 * Returns as soon as one configuration reports the host as reachable.
-	 *
-	 * @param hostname  the host to check
-	 * @param protocol  the protocol type used (e.g., "ssh", "snmp", etc.)
-	 * @param timeout  the timeout for the protocol check operation in seconds
-	 * @param extension the resolved protocol extension responsible for performing the check
-	 * @return a {@link ProtocolCheckResponse} indicating whether the host is reachable and how long it took
-	 */
-	public ProtocolCheckResponse checkProtocolWithExtensionSafe(
-		final String hostname,
-		final String protocol,
-		final Long timeout,
-		final IProtocolExtension extension
-	) {
-		final Set<IConfiguration> configurations = MCPConfigHelper.resolveAllHostConfigurationCopiesFromContext(
-			hostname,
-			agentContextHolder
-		);
-
-		for (final IConfiguration configuration : configurations) {
-			IConfiguration validConfiguration = configuration;
-
-			if (!extension.isValidConfiguration(configuration)) {
-				validConfiguration = MCPConfigHelper.convertConfigurationForProtocol(configuration, protocol, extension);
-				if (validConfiguration == null) {
-					continue;
-				}
-			}
-
-			validConfiguration.setHostname(hostname);
-			validConfiguration.setTimeout(
-				NumberHelper.getPositiveOrDefault(timeout, DEFAULT_PROTOCOL_CHECK_TIMEOUT).longValue()
-			);
-
-			final var telemetryManager = TelemetryManager.builder()
-				.hostConfiguration(
-					HostConfiguration.builder()
-						.configurations(Map.of(validConfiguration.getClass(), validConfiguration))
-						.hostname(hostname)
-						.build()
-				)
-				.hostProperties(HostProperties.builder().mustCheckSshStatus(protocol.equalsIgnoreCase("ssh")).build())
-				.build();
-
-			final long startTime = System.currentTimeMillis();
-			final Optional<Boolean> response = extension.checkProtocol(telemetryManager);
-
-			if (response.isPresent()) {
-				final boolean isUp = response.get();
-				if (isUp) {
-					final double responseTime = (System.currentTimeMillis() - startTime);
-					return ProtocolCheckResponse.builder()
-						.hostname(hostname)
-						.isReachable(true)
-						.responseTime(responseTime)
-						.build();
-				}
-			}
-		}
-
-		return ProtocolCheckResponse.builder().hostname(hostname).isReachable(false).build();
 	}
 
 	/**
