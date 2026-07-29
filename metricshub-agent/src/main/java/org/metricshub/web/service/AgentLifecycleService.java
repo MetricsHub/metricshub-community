@@ -40,7 +40,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.dto.RestartStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -242,6 +244,24 @@ public class AgentLifecycleService {
 	private final Queue<ExtensionManager> pendingLoaderRetirements = new ConcurrentLinkedQueue<>();
 
 	/**
+	 * Tracks request-side readers of the active context (HTTP/MCP operations run on request
+	 * threads, not on the context's task scheduler, and may invoke extension providers
+	 * synchronously). Optional: injected by Spring when the web layer is active; {@code null} in
+	 * plain unit-test or non-web setups, where only the scheduler quiescence check applies.
+	 */
+	private volatile AgentContextReaderTracker readerTracker;
+
+	/**
+	 * Injects the request-side reader tracker when the web layer is active.
+	 *
+	 * @param readerTracker the tracker bean
+	 */
+	@Autowired(required = false)
+	void setReaderTracker(final AgentContextReaderTracker readerTracker) {
+		this.readerTracker = readerTracker;
+	}
+
+	/**
 	 * Constructor.
 	 *
 	 * @param agentContextHolder the shared {@link AgentContextHolder} injected by Spring
@@ -314,6 +334,10 @@ public class AgentLifecycleService {
 	public void restart(final AgentContext runningContext, final AgentContext reloadedContext) {
 		log.info("Restart requested. Restarting MetricsHub Agent...");
 
+		// Generation of the context being replaced: request-side readers that entered at or before
+		// it must complete before its extension class loaders can be retired.
+		final long outgoingGeneration = agentContextHolder.getGeneration();
+
 		// Fire pre-restart hooks (e.g. license guard stop). Any failure is logged but does
 		// not abort the restart.
 		runHooks(preRestartHooks, "pre-restart");
@@ -351,8 +375,9 @@ public class AgentLifecycleService {
 		runningContext.close();
 
 		// Release the isolated extension class loaders orphaned by an extension reload, once the
-		// replaced context's tasks have terminated (plus a grace delay for other in-flight readers).
-		releaseOrphanedExtensionLoaders(runningContext, reloadedContext.getExtensionManager());
+		// replaced context's tasks have terminated and its request-side readers have completed
+		// (plus a grace delay).
+		releaseOrphanedExtensionLoaders(runningContext, reloadedContext.getExtensionManager(), outgoingGeneration);
 
 		// Fire post-restart hooks (e.g. license guard restart with the new context).
 		for (final Consumer<AgentContext> hook : postRestartHooks) {
@@ -383,10 +408,16 @@ public class AgentLifecycleService {
 	 * shorten an older generation's window.
 	 * </p>
 	 *
-	 * @param outgoingContext the context being replaced (its scheduler is the quiescence signal)
-	 * @param incoming        the extension manager of the newly active context
+	 * @param outgoingContext    the context being replaced (its scheduler is one quiescence signal)
+	 * @param incoming           the extension manager of the newly active context
+	 * @param outgoingGeneration the holder generation of the replaced context (request-side readers
+	 *                           that entered at or before it are the other quiescence signal)
 	 */
-	private void releaseOrphanedExtensionLoaders(final AgentContext outgoingContext, final ExtensionManager incoming) {
+	private void releaseOrphanedExtensionLoaders(
+		final AgentContext outgoingContext,
+		final ExtensionManager incoming,
+		final long outgoingGeneration
+	) {
 		final ExtensionManager outgoing = outgoingContext.getExtensionManager();
 		if (outgoing == null || outgoing == incoming) {
 			// A reused manager (configuration reload) orphans nothing.
@@ -399,7 +430,7 @@ public class AgentLifecycleService {
 		pendingLoaderRetirements.add(outgoing);
 		final long deadlineMs = System.currentTimeMillis() + orphanedLoaderCloseGraceMs + RETIREMENT_MAX_WAIT_MS;
 		loaderRetirementExecutor.schedule(
-			() -> retireWhenQuiescent(outgoingContext, outgoing, deadlineMs),
+			() -> retireWhenQuiescent(outgoingContext, outgoing, outgoingGeneration, deadlineMs),
 			orphanedLoaderCloseGraceMs,
 			TimeUnit.MILLISECONDS
 		);
@@ -418,16 +449,17 @@ public class AgentLifecycleService {
 	private void retireWhenQuiescent(
 		final AgentContext outgoingContext,
 		final ExtensionManager orphaned,
+		final long outgoingGeneration,
 		final long deadlineMs
 	) {
 		if (!pendingLoaderRetirements.contains(orphaned)) {
 			// Already flushed by shutdown().
 			return;
 		}
-		final boolean quiescent = isSchedulerTerminated(outgoingContext);
+		final boolean quiescent = isSchedulerTerminated(outgoingContext) && !hasActiveReaders(outgoingGeneration);
 		if (!quiescent && System.currentTimeMillis() < deadlineMs) {
 			loaderRetirementExecutor.schedule(
-				() -> retireWhenQuiescent(outgoingContext, orphaned, deadlineMs),
+				() -> retireWhenQuiescent(outgoingContext, orphaned, outgoingGeneration, deadlineMs),
 				retirementRecheckMs,
 				TimeUnit.MILLISECONDS
 			);
@@ -435,10 +467,22 @@ public class AgentLifecycleService {
 		}
 		if (!quiescent) {
 			log.warn(
-				"Closing the extension class loaders of a replaced context although some of its tasks have not terminated."
+				"Closing the extension class loaders of a replaced context although some of its tasks or readers are still active."
 			);
 		}
 		retireOrphanedManager(orphaned);
+	}
+
+	/**
+	 * Tests whether request-side readers that entered at or before the given generation are still
+	 * active. Without a tracker (non-web setups), there are no request-side readers to wait for.
+	 *
+	 * @param outgoingGeneration the generation of the replaced context
+	 * @return {@code true} while at least one such reader has not completed
+	 */
+	private boolean hasActiveReaders(final long outgoingGeneration) {
+		final AgentContextReaderTracker tracker = readerTracker;
+		return tracker != null && tracker.hasReadersAtOrBefore(outgoingGeneration);
 	}
 
 	/**

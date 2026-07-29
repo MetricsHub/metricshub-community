@@ -46,6 +46,7 @@ import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.dto.RestartStatus;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestAck;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestResult;
@@ -436,6 +437,35 @@ class AgentLifecycleServiceTest {
 
 		// Once the old scheduler terminates, the next recheck retires the orphaned manager.
 		oldExecutor.shutdown();
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
+	}
+
+	@Test
+	void testRetirementWaitsForRequestSideReaders() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+		agentLifecycleService.setRetirementRecheckMs(50L);
+
+		// A request-side reader (HTTP/MCP operation) entered under the outgoing generation.
+		final AgentContextReaderTracker tracker = new AgentContextReaderTracker(agentContextHolder);
+		agentLifecycleService.setReaderTracker(tracker);
+		final long outgoingGeneration = agentContextHolder.getGeneration();
+		tracker.acquire(outgoingGeneration);
+
+		agentLifecycleService.restart(mockContext(m0), mockContext(m1)); // orphans m0
+
+		// Not closed while the reader lease is held, well past the grace delay.
+		Awaitility.await()
+			.pollDelay(Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, never()).close());
+
+		// Releasing the lease lets the next recheck retire the orphaned manager.
+		tracker.release(outgoingGeneration);
 		Awaitility.await()
 			.atMost(Durations.FIVE_SECONDS)
 			.untilAsserted(() -> verify(m0, times(1)).close());
