@@ -67,6 +67,13 @@ public class ExtensionClassLoader extends URLClassLoader {
 	private final List<String> childFirstPackages;
 
 	/**
+	 * The child-first package prefixes converted to resource-path form ({@code com.acme.lib.} →
+	 * {@code com/acme/lib/}), so resources under a child-first package resolve child-first too —
+	 * keeping classes and their package metadata/configuration from the same library version.
+	 */
+	private final List<String> childFirstResourcePrefixes;
+
+	/**
 	 * The class loaders of the extensions this one declares a dependency on. Populated after
 	 * construction (dependency loaders are built first, but the list is assembled by the runtime),
 	 * hence a mutable-then-frozen reference held via a final field initialized in the constructor.
@@ -94,6 +101,9 @@ public class ExtensionClassLoader extends URLClassLoader {
 		super(name, urls, parent);
 		this.delegates = delegates == null ? List.of() : List.copyOf(delegates);
 		this.childFirstPackages = childFirstPackages == null ? List.of() : List.copyOf(childFirstPackages);
+		this.childFirstResourcePrefixes = this.childFirstPackages.stream()
+			.map(prefix -> prefix.replace('.', '/'))
+			.toList();
 	}
 
 	@Override
@@ -163,6 +173,14 @@ public class ExtensionClassLoader extends URLClassLoader {
 
 	@Override
 	public URL getResource(final String name) {
+		// Resources under a child-first package resolve child-first, mirroring class lookup, so a
+		// child-loaded library reads its own metadata/configuration rather than the parent's version.
+		if (isChildFirstResource(name)) {
+			final URL local = findResourceLocal(name);
+			if (local != null) {
+				return local;
+			}
+		}
 		// Parent-first, then dependencies (recursively, mirroring class lookup), then self.
 		final ClassLoader parent = getParent();
 		final URL url = parent == null ? null : parent.getResource(name);
@@ -200,11 +218,34 @@ public class ExtensionClassLoader extends URLClassLoader {
 		final Set<String> seen = new HashSet<>();
 		final List<URL> urls = new ArrayList<>();
 		final ClassLoader parent = getParent();
-		if (parent != null) {
-			addAll(seen, urls, parent.getResources(name));
+		if (isChildFirstResource(name)) {
+			// Child-first ordering for resources under a child-first package (mirrors class lookup).
+			collectResourcesLocal(name, seen, urls);
+			if (parent != null) {
+				addAll(seen, urls, parent.getResources(name));
+			}
+		} else {
+			if (parent != null) {
+				addAll(seen, urls, parent.getResources(name));
+			}
+			collectResourcesLocal(name, seen, urls);
 		}
-		collectResourcesLocal(name, seen, urls);
 		return Collections.enumeration(urls);
+	}
+
+	/**
+	 * Tests whether {@code resourceName} lives under a configured child-first package.
+	 *
+	 * @param resourceName the resource path (slash-separated); must not be {@code null}.
+	 * @return {@code true} if it starts with a configured child-first path prefix.
+	 */
+	private boolean isChildFirstResource(final String resourceName) {
+		for (final String prefix : childFirstResourcePrefixes) {
+			if (resourceName.startsWith(prefix)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**

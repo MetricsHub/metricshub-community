@@ -405,6 +405,41 @@ class AgentLifecycleServiceTest {
 	}
 
 	@Test
+	void testRetirementWaitsForOldSchedulerTermination() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+		agentLifecycleService.setRetirementRecheckMs(50L);
+
+		// The replaced context's scheduler is still alive (a collection may run with an unbounded
+		// job timeout). Extract the mocks first so Mockito's DSL is not confused by nested calls.
+		final AgentContext outgoing = mockContext(m0);
+		final java.util.concurrent.ScheduledThreadPoolExecutor oldExecutor =
+			new java.util.concurrent.ScheduledThreadPoolExecutor(1);
+		final org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler oldScheduler = mock(
+			org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler.class
+		);
+		when(oldScheduler.getScheduledThreadPoolExecutor()).thenReturn(oldExecutor);
+		final TaskSchedulingService outgoingScheduling = outgoing.getTaskSchedulingService();
+		when(outgoingScheduling.getTaskScheduler()).thenReturn(oldScheduler);
+
+		agentLifecycleService.restart(outgoing, mockContext(m1));
+
+		// Well past the grace delay, the manager must NOT be closed while the old scheduler lives.
+		Awaitility.await()
+			.pollDelay(java.time.Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, never()).close());
+
+		// Once the old scheduler terminates, the next recheck retires the orphaned manager.
+		oldExecutor.shutdown();
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
+	}
+
+	@Test
 	void testShutdownClosesPendingOrphanedManagersImmediately() {
 		final ExtensionManager m0 = mock(ExtensionManager.class);
 		final ExtensionManager m1 = mock(ExtensionManager.class);

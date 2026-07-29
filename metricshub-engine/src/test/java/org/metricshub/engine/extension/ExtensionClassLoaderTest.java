@@ -109,6 +109,42 @@ class ExtensionClassLoaderTest {
 	}
 
 	@Test
+	void testChildFirstResourceResolvesFromOwnJar() throws IOException {
+		// The same resource path exists in the parent and in the extension jar; under a child-first
+		// prefix the extension's own version must win so classes and their metadata match.
+		final String resource = "org/example/lib/config.txt";
+		final URL parentJar = writeResourceJar("parent.jar", resource, "parent-version");
+		final URL childJar = writeResourceJar("child.jar", resource, "child-version");
+
+		try (java.net.URLClassLoader parent = new java.net.URLClassLoader(new URL[] { parentJar }, null)) {
+			try (
+				ExtensionClassLoader childFirst = new ExtensionClassLoader(
+					"child-first",
+					new URL[] { childJar },
+					parent,
+					List.of(),
+					List.of("org.example.lib.")
+				);
+				ExtensionClassLoader parentFirst = new ExtensionClassLoader(
+					"parent-first",
+					new URL[] { childJar },
+					parent,
+					List.of(),
+					List.of()
+				)
+			) {
+				assertEquals("child-version", read(childFirst.getResource(resource)), "Child-first prefix wins");
+				assertEquals(
+					"child-version",
+					read(java.util.Collections.list(childFirst.getResources(resource)).get(0)),
+					"getResources must order the child's version first under a child-first prefix"
+				);
+				assertEquals("parent-version", read(parentFirst.getResource(resource)), "Default stays parent-first");
+			}
+		}
+	}
+
+	@Test
 	void testTransitiveDependencyResourceIsVisible() throws IOException {
 		// C -> A -> B: C must reach B's resources through A, matching class lookup's transitivity.
 		final String service = "META-INF/services/org.example.Spi";

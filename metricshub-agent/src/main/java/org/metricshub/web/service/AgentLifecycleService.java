@@ -208,6 +208,20 @@ public class AgentLifecycleService {
 	private volatile long orphanedLoaderCloseGraceMs = DEFAULT_ORPHANED_LOADER_CLOSE_GRACE_MS;
 
 	/**
+	 * Interval between quiescence rechecks once the grace delay has elapsed but the replaced
+	 * context's scheduler still has tasks running (collection jobs have a user-configurable,
+	 * unbounded timeout). Package-private mutable so tests can shorten it.
+	 */
+	private volatile long retirementRecheckMs = 30_000L;
+
+	/**
+	 * Hard cap on how long retirement waits for the replaced context's tasks to terminate after
+	 * the grace delay. A task that ignores interrupts beyond this point would otherwise pin the
+	 * loaders forever; the close proceeds with a warning (classes already loaded remain usable).
+	 */
+	private static final long RETIREMENT_MAX_WAIT_MS = 30 * 60 * 1000L;
+
+	/**
 	 * Dedicated scheduler that retires orphaned extension class loaders after the grace delay.
 	 * Each orphaned manager gets its own full grace window, independent of how quickly further
 	 * restarts follow (back-to-back restarts must not shorten an older generation's window).
@@ -336,9 +350,9 @@ public class AgentLifecycleService {
 		// object; the whole graph becomes GC-eligible once those readers finish.
 		runningContext.close();
 
-		// Release the isolated extension class loaders orphaned by an extension reload, one restart
-		// generation late so in-flight readers of the just-replaced context are not disrupted.
-		releaseOrphanedExtensionLoaders(runningContext.getExtensionManager(), reloadedContext.getExtensionManager());
+		// Release the isolated extension class loaders orphaned by an extension reload, once the
+		// replaced context's tasks have terminated (plus a grace delay for other in-flight readers).
+		releaseOrphanedExtensionLoaders(runningContext, reloadedContext.getExtensionManager());
 
 		// Fire post-restart hooks (e.g. license guard restart with the new context).
 		for (final Consumer<AgentContext> hook : postRestartHooks) {
@@ -357,23 +371,23 @@ public class AgentLifecycleService {
 	}
 
 	/**
-	 * Schedules the close of the extension class loaders orphaned by this restart, after a grace
-	 * delay.
+	 * Schedules the close of the extension class loaders orphaned by this restart: after a grace
+	 * delay, the retirement task waits for the replaced context's scheduler to actually terminate
+	 * (collection jobs carry a user-configurable, unbounded timeout, so a fixed delay alone is not a
+	 * bound), rechecking every {@link #retirementRecheckMs} up to {@link #RETIREMENT_MAX_WAIT_MS}.
 	 * <p>
 	 * A configuration-file reload reuses the {@link ExtensionManager} ({@code outgoing == incoming}),
 	 * so it orphans nothing; only an explicit extension reload (the {@code /restart} endpoint) swaps
-	 * in a different manager and thus orphans the outgoing one. Closing is deferred by
-	 * {@link #orphanedLoaderCloseGraceMs} because {@link #restart(AgentContext, AgentContext)}
-	 * intentionally leaves the replaced context intact for in-flight readers, whose code may still
-	 * load extension classes lazily right after the swap. Each orphaned manager gets its own full
-	 * grace window on the retirement scheduler, so back-to-back restarts cannot shorten an older
-	 * generation's window.
+	 * in a different manager and thus orphans the outgoing one. Each orphaned manager gets its own
+	 * grace window and quiescence wait on the retirement scheduler, so back-to-back restarts cannot
+	 * shorten an older generation's window.
 	 * </p>
 	 *
-	 * @param outgoing the extension manager of the context being replaced
-	 * @param incoming the extension manager of the newly active context
+	 * @param outgoingContext the context being replaced (its scheduler is the quiescence signal)
+	 * @param incoming        the extension manager of the newly active context
 	 */
-	private void releaseOrphanedExtensionLoaders(final ExtensionManager outgoing, final ExtensionManager incoming) {
+	private void releaseOrphanedExtensionLoaders(final AgentContext outgoingContext, final ExtensionManager incoming) {
+		final ExtensionManager outgoing = outgoingContext.getExtensionManager();
 		if (outgoing == null || outgoing == incoming) {
 			// A reused manager (configuration reload) orphans nothing.
 			return;
@@ -383,11 +397,72 @@ public class AgentLifecycleService {
 			orphanedLoaderCloseGraceMs
 		);
 		pendingLoaderRetirements.add(outgoing);
+		final long deadlineMs = System.currentTimeMillis() + orphanedLoaderCloseGraceMs + RETIREMENT_MAX_WAIT_MS;
 		loaderRetirementExecutor.schedule(
-			() -> retireOrphanedManager(outgoing),
+			() -> retireWhenQuiescent(outgoingContext, outgoing, deadlineMs),
 			orphanedLoaderCloseGraceMs,
 			TimeUnit.MILLISECONDS
 		);
+	}
+
+	/**
+	 * Retires an orphaned manager once the replaced context is quiescent: closes it when the old
+	 * scheduler has terminated, reschedules a recheck while its tasks are still running, and forces
+	 * the close with a warning past the hard deadline (a task ignoring interrupts must not pin the
+	 * loaders forever; classes already loaded remain usable after the close).
+	 *
+	 * @param outgoingContext the replaced context whose scheduler signals quiescence
+	 * @param orphaned        the manager to retire
+	 * @param deadlineMs      epoch milliseconds after which the close proceeds regardless
+	 */
+	private void retireWhenQuiescent(
+		final AgentContext outgoingContext,
+		final ExtensionManager orphaned,
+		final long deadlineMs
+	) {
+		if (!pendingLoaderRetirements.contains(orphaned)) {
+			// Already flushed by shutdown().
+			return;
+		}
+		final boolean quiescent = isSchedulerTerminated(outgoingContext);
+		if (!quiescent && System.currentTimeMillis() < deadlineMs) {
+			loaderRetirementExecutor.schedule(
+				() -> retireWhenQuiescent(outgoingContext, orphaned, deadlineMs),
+				retirementRecheckMs,
+				TimeUnit.MILLISECONDS
+			);
+			return;
+		}
+		if (!quiescent) {
+			log.warn(
+				"Closing the extension class loaders of a replaced context although some of its tasks have not terminated."
+			);
+		}
+		retireOrphanedManager(orphaned);
+	}
+
+	/**
+	 * Tests whether the given context's task scheduler has fully terminated (no collection task is
+	 * still running). A context without an initialized scheduler is considered terminated.
+	 *
+	 * @param context the replaced context
+	 * @return {@code true} when no task of the context can still be executing
+	 */
+	private static boolean isSchedulerTerminated(final AgentContext context) {
+		try {
+			final var taskSchedulingService = context.getTaskSchedulingService();
+			if (taskSchedulingService == null) {
+				return true;
+			}
+			final var taskScheduler = taskSchedulingService.getTaskScheduler();
+			if (taskScheduler == null) {
+				return true;
+			}
+			return taskScheduler.getScheduledThreadPoolExecutor().isTerminated();
+		} catch (Exception e) {
+			// Scheduler never initialized (or already torn down): nothing can be running.
+			return true;
+		}
 	}
 
 	/**
@@ -415,6 +490,15 @@ public class AgentLifecycleService {
 	 */
 	void setOrphanedLoaderCloseGraceMs(final long graceMs) {
 		orphanedLoaderCloseGraceMs = graceMs;
+	}
+
+	/**
+	 * Shortens the quiescence recheck interval. Test-only.
+	 *
+	 * @param recheckMs the new recheck interval in milliseconds
+	 */
+	void setRetirementRecheckMs(final long recheckMs) {
+		retirementRecheckMs = recheckMs;
 	}
 
 	/**
