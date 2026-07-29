@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class TcclClassLoaderDecoratorTest {
 	public interface Probe {
 		ClassLoader tccl();
 
-		void boom() throws java.io.IOException;
+		void boom() throws IOException;
 
 		ClassLoader reentrant(Probe inner);
 	}
@@ -55,8 +56,8 @@ class TcclClassLoaderDecoratorTest {
 				}
 
 				@Override
-				public void boom() throws java.io.IOException {
-					throw new java.io.IOException("expected");
+				public void boom() throws IOException {
+					throw new IOException("expected");
 				}
 
 				@Override
@@ -86,8 +87,8 @@ class TcclClassLoaderDecoratorTest {
 				}
 
 				@Override
-				public void boom() throws java.io.IOException {
-					throw new java.io.IOException("expected");
+				public void boom() throws IOException {
+					throw new IOException("expected");
 				}
 
 				@Override
@@ -98,7 +99,7 @@ class TcclClassLoaderDecoratorTest {
 			extensionLoader
 		);
 
-		final java.io.IOException thrown = assertThrows(java.io.IOException.class, probe::boom);
+		final IOException thrown = assertThrows(IOException.class, probe::boom);
 		assertEquals("expected", thrown.getMessage(), "The extension's own checked exception propagates unchanged");
 		assertSame(original, thread.getContextClassLoader(), "TCCL is restored even when the call throws");
 	}
@@ -128,8 +129,8 @@ class TcclClassLoaderDecoratorTest {
 		}
 
 		@Override
-		public void boom() throws java.io.IOException {
-			throw new java.io.IOException("expected");
+		public void boom() throws IOException {
+			throw new IOException("expected");
 		}
 
 		@Override

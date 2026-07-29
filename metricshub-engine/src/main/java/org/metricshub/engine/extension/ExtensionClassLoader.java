@@ -173,17 +173,14 @@ public class ExtensionClassLoader extends URLClassLoader {
 
 	@Override
 	public URL getResource(final String name) {
-		// Resources under a child-first package resolve child-first, mirroring class lookup, so a
-		// child-loaded library reads its own metadata/configuration rather than the parent's or a
-		// dependency's version: this loader's own URLs win, then declared dependencies.
+		// Resources under a child-first package resolve exactly like child-first class lookup: this
+		// loader's own URLs first (a child-loaded library reads its own metadata/configuration),
+		// then the parent, then declared dependencies — the same fallback order as loadClass, so a
+		// parent-loaded class never consumes a dependency's incompatible metadata.
 		if (isChildFirstResource(name)) {
 			final URL own = findResource(name);
 			if (own != null) {
 				return own;
-			}
-			final URL fromDependencies = findResourceLocal(name);
-			if (fromDependencies != null) {
-				return fromDependencies;
 			}
 		}
 		// Parent-first, then dependencies (recursively, mirroring class lookup), then self.
@@ -224,14 +221,14 @@ public class ExtensionClassLoader extends URLClassLoader {
 		final List<URL> urls = new ArrayList<>();
 		final ClassLoader parent = getParent();
 		if (isChildFirstResource(name)) {
-			// Child-first ordering for resources under a child-first package: this loader's own
-			// resources first (so classes and their metadata come from the same jar), then declared
-			// dependencies, then the parent.
+			// Child-first ordering mirrors class lookup: this loader's own resources first (so
+			// classes and their metadata come from the same jar), then the parent, then declared
+			// dependencies — a parent-loaded class must not consume a dependency's metadata.
 			addAll(seen, urls, findResources(name));
-			collectResourcesLocal(name, seen, urls);
 			if (parent != null) {
 				addAll(seen, urls, parent.getResources(name));
 			}
+			collectResourcesLocal(name, seen, urls);
 		} else {
 			if (parent != null) {
 				addAll(seen, urls, parent.getResources(name));

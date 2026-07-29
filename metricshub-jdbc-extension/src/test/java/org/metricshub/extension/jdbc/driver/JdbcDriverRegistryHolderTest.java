@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.DriverManager;
+import org.h2.Driver;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,7 @@ class JdbcDriverRegistryHolderTest {
 		// from the JVM-global DriverManager. Restore H2 for other tests in this JVM that use
 		// DriverManager.getConnection (H2 never self-registers a second time).
 		boolean h2Registered = false;
-		final var drivers = java.sql.DriverManager.getDrivers();
+		final var drivers = DriverManager.getDrivers();
 		while (drivers.hasMoreElements()) {
 			if ("org.h2.Driver".equals(drivers.nextElement().getClass().getName())) {
 				h2Registered = true;
@@ -32,7 +34,7 @@ class JdbcDriverRegistryHolderTest {
 			}
 		}
 		if (!h2Registered) {
-			java.sql.DriverManager.registerDriver(new org.h2.Driver());
+			DriverManager.registerDriver(new Driver());
 		}
 	}
 

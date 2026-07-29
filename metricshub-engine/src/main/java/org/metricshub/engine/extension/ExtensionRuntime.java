@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
+import java.util.Set;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -257,7 +259,10 @@ public final class ExtensionRuntime implements AutoCloseable {
 				final T instance = TcclClassLoaderDecorator.call(loader, provider::get);
 				target.add(TcclClassLoaderDecorator.wrap(spi, instance, loader));
 				log.info("Loaded {} '{}' from extension '{}'.", spi.getSimpleName(), providerClassName, loader.getName());
-			} catch (Exception e) {
+			} catch (Exception | ServiceConfigurationError | LinkageError e) {
+				// Provider.get() reports constructor/factory/assignability failures as
+				// ServiceConfigurationError (an Error): one malformed provider must disable itself,
+				// not abort the whole extension loading and with it the agent startup or restart.
 				log.error(
 					"Failed to instantiate {} '{}' from extension '{}': {}",
 					spi.getSimpleName(),
@@ -303,7 +308,7 @@ public final class ExtensionRuntime implements AutoCloseable {
 	 */
 	private static List<ExtensionDescriptor> orderByDependencies(final Map<String, ExtensionDescriptor> byId) {
 		final List<ExtensionDescriptor> ordered = new ArrayList<>();
-		final java.util.Set<String> resolved = new java.util.HashSet<>();
+		final Set<String> resolved = new HashSet<>();
 		final Map<String, ExtensionDescriptor> remaining = new LinkedHashMap<>(byId);
 
 		// Disable extensions that require an id we never discovered.

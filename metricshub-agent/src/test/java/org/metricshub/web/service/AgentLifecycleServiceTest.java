@@ -32,7 +32,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.awaitility.Awaitility;
 import org.awaitility.Durations;
@@ -47,6 +49,7 @@ import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.RestartStatus;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestAck;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestResult;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
 class AgentLifecycleServiceTest {
 
@@ -401,7 +404,7 @@ class AgentLifecycleServiceTest {
 		agentLifecycleService.restart(c1, mockContext(m1));
 
 		Awaitility.await()
-			.pollDelay(java.time.Duration.ofMillis(300))
+			.pollDelay(Duration.ofMillis(300))
 			.atMost(Durations.FIVE_SECONDS)
 			.untilAsserted(() -> verify(m1, never()).close());
 	}
@@ -417,11 +420,8 @@ class AgentLifecycleServiceTest {
 		// The replaced context's scheduler is still alive (a collection may run with an unbounded
 		// job timeout). Extract the mocks first so Mockito's DSL is not confused by nested calls.
 		final AgentContext outgoing = mockContext(m0);
-		final java.util.concurrent.ScheduledThreadPoolExecutor oldExecutor =
-			new java.util.concurrent.ScheduledThreadPoolExecutor(1);
-		final org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler oldScheduler = mock(
-			org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler.class
-		);
+		final ScheduledThreadPoolExecutor oldExecutor = new ScheduledThreadPoolExecutor(1);
+		final ThreadPoolTaskScheduler oldScheduler = mock(ThreadPoolTaskScheduler.class);
 		when(oldScheduler.getScheduledThreadPoolExecutor()).thenReturn(oldExecutor);
 		final TaskSchedulingService outgoingScheduling = outgoing.getTaskSchedulingService();
 		when(outgoingScheduling.getTaskScheduler()).thenReturn(oldScheduler);
@@ -430,7 +430,7 @@ class AgentLifecycleServiceTest {
 
 		// Well past the grace delay, the manager must NOT be closed while the old scheduler lives.
 		Awaitility.await()
-			.pollDelay(java.time.Duration.ofMillis(300))
+			.pollDelay(Duration.ofMillis(300))
 			.atMost(Durations.FIVE_SECONDS)
 			.untilAsserted(() -> verify(m0, never()).close());
 

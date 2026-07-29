@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
@@ -49,7 +50,7 @@ class ExtensionDescriptorTest {
 			manifest.getMainAttributes().put(new Attributes.Name(keyValues[i]), keyValues[i + 1]);
 		}
 		final File jar = tempDir.resolve(name).toFile();
-		try (var _ = new JarOutputStream(new java.io.FileOutputStream(jar), manifest)) {
+		try (var _ = new JarOutputStream(new FileOutputStream(jar), manifest)) {
 			// empty jar, manifest only
 		}
 		return jar;

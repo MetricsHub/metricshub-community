@@ -28,9 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URL;
+import java.net.URLClassLoader;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -61,7 +65,7 @@ class ExtensionClassLoaderTest {
 			return null;
 		}
 		// Disable jar URL caching so the temp jar is not held open (Windows @TempDir cleanup).
-		final java.net.URLConnection connection = url.openConnection();
+		final URLConnection connection = url.openConnection();
 		connection.setUseCaches(false);
 		try (var in = connection.getInputStream()) {
 			return new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -116,7 +120,7 @@ class ExtensionClassLoaderTest {
 		final URL parentJar = writeResourceJar("parent.jar", resource, "parent-version");
 		final URL childJar = writeResourceJar("child.jar", resource, "child-version");
 
-		try (java.net.URLClassLoader parent = new java.net.URLClassLoader(new URL[] { parentJar }, null)) {
+		try (URLClassLoader parent = new URLClassLoader(new URL[] { parentJar }, null)) {
 			try (
 				ExtensionClassLoader childFirst = new ExtensionClassLoader(
 					"child-first",
@@ -136,7 +140,7 @@ class ExtensionClassLoaderTest {
 				assertEquals("child-version", read(childFirst.getResource(resource)), "Child-first prefix wins");
 				assertEquals(
 					"child-version",
-					read(java.util.Collections.list(childFirst.getResources(resource)).get(0)),
+					read(Collections.list(childFirst.getResources(resource)).get(0)),
 					"getResources must order the child's version first under a child-first prefix"
 				);
 				assertEquals("parent-version", read(parentFirst.getResource(resource)), "Default stays parent-first");
@@ -166,7 +170,7 @@ class ExtensionClassLoaderTest {
 				assertEquals("own-version", read(own.getResource(resource)), "Own jar must win over the dependency");
 				assertEquals(
 					"own-version",
-					read(java.util.Collections.list(own.getResources(resource)).get(0)),
+					read(Collections.list(own.getResources(resource)).get(0)),
 					"getResources must order the own jar's version first"
 				);
 			}
@@ -191,13 +195,13 @@ class ExtensionClassLoaderTest {
 					);
 					assertEquals(
 						List.of("org.example.ImplB"),
-						java.util.Collections.list(c.getResources(service))
+						Collections.list(c.getResources(service))
 							.stream()
 							.map(url -> {
 								try {
 									return read(url);
 								} catch (IOException e) {
-									throw new java.io.UncheckedIOException(e);
+									throw new UncheckedIOException(e);
 								}
 							})
 							.toList(),
