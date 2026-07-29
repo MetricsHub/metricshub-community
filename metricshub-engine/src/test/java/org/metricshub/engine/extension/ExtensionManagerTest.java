@@ -136,20 +136,42 @@ class ExtensionManagerTest {
 	}
 
 	@Test
-	void testCloseClosesLoadersEvenWhenHookThrowsUnanticipatedError() throws Exception {
-		// An error category outside the per-hook catch must still not leave jar handles open:
-		// the loaders are closed on the finally path before the error propagates.
+	void testCloseContinuesHooksAfterArbitraryError() throws Exception {
+		// A non-fatal Error outside the usual categories (e.g. FactoryConfigurationError during
+		// JAXP cleanup) must not prevent the remaining hooks from releasing their own resources.
 		final IProtocolExtension failing = mock(IProtocolExtension.class);
+		final IProtocolExtension healthy = mock(IProtocolExtension.class);
 		final AutoCloseable classLoader = mock(AutoCloseable.class);
 		doThrow(new Error("boom")).when(failing).onShutdown();
 
 		final ExtensionManager extensionManager = ExtensionManager.builder()
-			.withProtocolExtensions(List.of(failing))
+			.withProtocolExtensions(List.of(healthy, failing))
 			.withClassLoaders(List.of(classLoader))
 			.build();
 
-		assertThrows(Error.class, extensionManager::close);
+		extensionManager.close();
 
+		verify(healthy).onShutdown();
+		verify(classLoader).close();
+	}
+
+	@Test
+	void testCloseRethrowsVirtualMachineErrorAfterFullCleanup() throws Exception {
+		// A fatal JVM error is rethrown, but only after every remaining hook has run and every
+		// loader has been closed.
+		final IProtocolExtension fatal = mock(IProtocolExtension.class);
+		final IProtocolExtension healthy = mock(IProtocolExtension.class);
+		final AutoCloseable classLoader = mock(AutoCloseable.class);
+		doThrow(new OutOfMemoryError("boom")).when(fatal).onShutdown();
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(healthy, fatal))
+			.withClassLoaders(List.of(classLoader))
+			.build();
+
+		assertThrows(OutOfMemoryError.class, extensionManager::close);
+
+		verify(healthy).onShutdown();
 		verify(classLoader).close();
 	}
 

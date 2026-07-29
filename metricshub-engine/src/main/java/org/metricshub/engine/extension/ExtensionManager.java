@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -114,30 +113,40 @@ public class ExtensionManager {
 	 * others. Safe to call on an {@link #empty()} manager (no-op).
 	 */
 	public void close() {
-		try {
-			// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
-			// iterating backwards stops dependents before the extensions they require — a dependent's
-			// cleanup may still need classes or state managed by its dependency.
-			for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
-				try {
-					protocolExtensions.get(i).onShutdown();
-				} catch (Exception | ServiceConfigurationError | LinkageError e) {
-					// A hook lazily touching an absent/incompatible class throws NoClassDefFoundError,
-					// and cleanup-time service discovery can throw ServiceConfigurationError: shutdown
-					// is best-effort, the remaining hooks must still run.
-					log.debug("Extension shutdown hook failed: {}", e.getMessage());
+		// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
+		// iterating backwards stops dependents before the extensions they require — a dependent's
+		// cleanup may still need classes or state managed by its dependency.
+		VirtualMachineError fatal = null;
+		for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
+			try {
+				protocolExtensions.get(i).onShutdown();
+			} catch (VirtualMachineError e) {
+				// Fatal JVM state (OutOfMemoryError, ...): remember the first one and rethrow it
+				// after every remaining hook has run and every loader is closed.
+				if (fatal == null) {
+					fatal = e;
 				}
+				log.debug("Extension shutdown hook failed fatally: {}", e.getMessage());
+			} catch (Exception | Error e) {
+				// Shutdown is best-effort: whatever a hook throws (NoClassDefFoundError,
+				// ServiceConfigurationError, FactoryConfigurationError, ...), the remaining hooks
+				// must still release their own resources.
+				log.debug("Extension shutdown hook failed: {}", e.getMessage());
 			}
-		} finally {
-			// The loaders are closed no matter what a hook threw — even an error category not
-			// anticipated above must not leave extension jar handles open.
-			for (final AutoCloseable classLoader : classLoaders) {
-				try {
-					classLoader.close();
-				} catch (Exception e) {
-					log.debug("Failed to close an extension class loader: {}", e.getMessage());
-				}
+		}
+
+		// The loaders are closed no matter what the hooks threw: extension jar handles must never
+		// be left open.
+		for (final AutoCloseable classLoader : classLoaders) {
+			try {
+				classLoader.close();
+			} catch (Exception e) {
+				log.debug("Failed to close an extension class loader: {}", e.getMessage());
 			}
+		}
+
+		if (fatal != null) {
+			throw fatal;
 		}
 	}
 
