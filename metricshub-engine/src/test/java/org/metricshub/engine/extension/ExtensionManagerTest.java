@@ -2,8 +2,10 @@ package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.util.HashMap;
 import java.util.List;
@@ -89,6 +91,26 @@ class ExtensionManagerTest {
 		final InOrder order = inOrder(protocolExtension, classLoader);
 		order.verify(protocolExtension).onShutdown();
 		order.verify(classLoader).close();
+	}
+
+	@Test
+	void testCloseSurvivesLinkageErrorFromShutdownHook() throws Exception {
+		// A hook lazily touching an absent class throws NoClassDefFoundError (a LinkageError):
+		// the remaining hooks and every class loader must still be closed.
+		final IProtocolExtension failing = mock(IProtocolExtension.class);
+		final IProtocolExtension healthy = mock(IProtocolExtension.class);
+		final AutoCloseable classLoader = mock(AutoCloseable.class);
+		doThrow(new NoClassDefFoundError("com/acme/Gone")).when(failing).onShutdown();
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(healthy, failing))
+			.withClassLoaders(List.of(classLoader))
+			.build();
+
+		extensionManager.close();
+
+		verify(healthy).onShutdown();
+		verify(classLoader).close();
 	}
 
 	@Test

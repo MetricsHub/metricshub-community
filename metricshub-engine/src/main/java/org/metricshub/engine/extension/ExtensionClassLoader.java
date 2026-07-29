@@ -149,6 +149,16 @@ public class ExtensionClassLoader extends URLClassLoader {
 			if (loaded != null) {
 				return loaded;
 			}
+			// Honor this loader's own child-first prefixes for delegated lookups too: a dependent
+			// must resolve the same class identity this extension resolves for itself, not a copy
+			// from one of this extension's own dependencies.
+			if (isChildFirst(name)) {
+				try {
+					return findClass(name);
+				} catch (ClassNotFoundException e) {
+					// Not in our URLs: fall through to dependencies then self.
+				}
+			}
 			return findInDelegatesOrSelf(name);
 		}
 	}
@@ -204,6 +214,14 @@ public class ExtensionClassLoader extends URLClassLoader {
 	 *         defines it.
 	 */
 	URL findResourceLocal(final String name) {
+		// Mirror loadLocal: this loader's own child-first prefixes win before its dependencies, so
+		// a dependent sees the same resource this extension resolves for itself.
+		if (isChildFirstResource(name)) {
+			final URL own = findResource(name);
+			if (own != null) {
+				return own;
+			}
+		}
 		for (final ExtensionClassLoader delegate : delegates) {
 			final URL url = delegate.findResourceLocal(name);
 			if (url != null) {
@@ -264,6 +282,11 @@ public class ExtensionClassLoader extends URLClassLoader {
 	 * @throws IOException if the resource lookup fails.
 	 */
 	void collectResourcesLocal(final String name, final Set<String> seen, final List<URL> target) throws IOException {
+		// Mirror loadLocal: under a child-first prefix this loader's own resources are ordered
+		// before its dependencies', so a dependent enumerates them the way this extension does.
+		if (isChildFirstResource(name)) {
+			addAll(seen, target, findResources(name));
+		}
 		for (final ExtensionClassLoader delegate : delegates) {
 			delegate.collectResourcesLocal(name, seen, target);
 		}

@@ -119,7 +119,10 @@ public class ExtensionManager {
 		for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
 			try {
 				protocolExtensions.get(i).onShutdown();
-			} catch (Exception e) {
+			} catch (Exception | LinkageError e) {
+				// A hook lazily touching an absent/incompatible class throws NoClassDefFoundError
+				// (a LinkageError): shutdown is best-effort, the remaining hooks and every class
+				// loader must still be closed.
 				log.debug("Extension shutdown hook failed: {}", e.getMessage());
 			}
 		}

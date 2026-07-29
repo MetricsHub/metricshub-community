@@ -178,6 +178,43 @@ class ExtensionClassLoaderTest {
 	}
 
 	@Test
+	void testDelegatedLookupHonorsDependencyChildFirstPrefix() throws IOException {
+		// C requires A, A requires B, and A marks the package child-first while both A and B ship
+		// the resource: a lookup delegated through A (from C) must resolve A's own version — the
+		// same one A resolves for itself — not B's.
+		final String resource = "org/example/lib/config.txt";
+		final URL jarB = writeResourceJar("b.jar", resource, "b-version");
+		final URL jarA = writeResourceJar("a.jar", resource, "a-version");
+		final URL jarC = writeResourceJar("c.jar", "res/only-in-c.txt", "C");
+
+		try (ExtensionClassLoader b = loader("B", jarB, List.of())) {
+			try (
+				ExtensionClassLoader a = new ExtensionClassLoader(
+					"A",
+					new URL[] { jarA },
+					ClassLoader.getPlatformClassLoader(),
+					List.of(b),
+					List.of("org.example.lib.")
+				)
+			) {
+				try (ExtensionClassLoader c = loader("C", jarC, List.of(a))) {
+					assertEquals("a-version", read(a.getResource(resource)), "A resolves its own child-first version");
+					assertEquals(
+						"a-version",
+						read(c.getResource(resource)),
+						"C's delegated lookup must resolve the same version A resolves for itself"
+					);
+					assertEquals(
+						"a-version",
+						read(Collections.list(c.getResources(resource)).get(0)),
+						"getResources through delegation must order A's version first"
+					);
+				}
+			}
+		}
+	}
+
+	@Test
 	void testTransitiveDependencyResourceIsVisible() throws IOException {
 		// C -> A -> B: C must reach B's resources through A, matching class lookup's transitivity.
 		final String service = "META-INF/services/org.example.Spi";
