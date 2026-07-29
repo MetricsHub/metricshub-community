@@ -1,8 +1,10 @@
 package org.metricshub.engine.connector.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -71,6 +73,22 @@ class ConnectorStoreComposerTest {
 		// All connectors containing a variable in their JsonNode or in their embedded files should be found
 		assertEquals(2, connectorsWithVariables.size());
 		assertTrue(connectorsWithVariables.containsAll(List.of("ConnectorVariables", "EmbeddedConnectorVariables")));
+	}
+
+	@Test
+	void testConnectorDeserializesPatchedFlag() throws Exception {
+		final ObjectMapper mapper = JsonHelper.buildYamlMapper();
+		final ConnectorDeserializer deserializer = new ConnectorDeserializer(mapper);
+
+		// A connector declaring "patched: true" in its YAML is flagged as patched.
+		final Connector patched = deserializer.deserialize(
+			mapper.readTree("connector:\n  displayName: Patched Connector\npatched: true\n")
+		);
+		assertTrue(patched.isPatched(), "patched: true in the connector YAML must set Connector.patched");
+
+		// A connector that does not declare it defaults to not patched.
+		final Connector plain = deserializer.deserialize(mapper.readTree("connector:\n  displayName: Plain Connector\n"));
+		assertFalse(plain.isPatched(), "A connector without the patched flag must default to false");
 	}
 
 	@Test
