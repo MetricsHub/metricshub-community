@@ -21,6 +21,8 @@ package org.metricshub.web;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import jakarta.servlet.AsyncEvent;
+import jakarta.servlet.AsyncListener;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,6 +31,7 @@ import jakarta.servlet.ServletResponse;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.stereotype.Component;
 
@@ -72,10 +75,63 @@ public class AgentContextReaderTracker implements Filter {
 		throws IOException, ServletException {
 		final long generation = agentContextHolder.getGeneration();
 		acquire(generation);
+		boolean releaseNow = true;
 		try {
 			chain.doFilter(request, response);
 		} finally {
-			release(generation);
+			if (request.isAsyncStarted()) {
+				// The request went asynchronous (e.g. an SseEmitter whose work continues on another
+				// thread): hand the lease over to an AsyncListener so it is released only when the
+				// asynchronous processing actually completes, errors out or times out.
+				try {
+					request.getAsyncContext().addListener(new LeaseReleaseListener(generation));
+					releaseNow = false;
+				} catch (IllegalStateException e) {
+					// The asynchronous cycle completed concurrently: release the lease right away.
+				}
+			}
+			if (releaseNow) {
+				release(generation);
+			}
+		}
+	}
+
+	/**
+	 * Releases a request's lease when its asynchronous processing completes. The release happens
+	 * exactly once, on {@link #onComplete(AsyncEvent)} — the servlet container fires it after
+	 * errors and timeouts as well. A new asynchronous cycle started on the same request clears the
+	 * listeners, so {@link #onStartAsync(AsyncEvent)} re-registers this one to keep the lease.
+	 */
+	private final class LeaseReleaseListener implements AsyncListener {
+
+		private final long generation;
+		private final AtomicBoolean released = new AtomicBoolean();
+
+		private LeaseReleaseListener(final long generation) {
+			this.generation = generation;
+		}
+
+		@Override
+		public void onComplete(final AsyncEvent event) {
+			if (released.compareAndSet(false, true)) {
+				release(generation);
+			}
+		}
+
+		@Override
+		public void onError(final AsyncEvent event) {
+			// onComplete follows; release there exactly once.
+		}
+
+		@Override
+		public void onTimeout(final AsyncEvent event) {
+			// onComplete follows; release there exactly once.
+		}
+
+		@Override
+		public void onStartAsync(final AsyncEvent event) {
+			// A restarted asynchronous cycle clears the listeners: keep holding the lease.
+			event.getAsyncContext().addListener(this);
 		}
 	}
 

@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ServiceConfigurationError;
 import java.util.Set;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -113,24 +114,29 @@ public class ExtensionManager {
 	 * others. Safe to call on an {@link #empty()} manager (no-op).
 	 */
 	public void close() {
-		// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
-		// iterating backwards stops dependents before the extensions they require — a dependent's
-		// cleanup may still need classes or state managed by its dependency.
-		for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
-			try {
-				protocolExtensions.get(i).onShutdown();
-			} catch (Exception | LinkageError e) {
-				// A hook lazily touching an absent/incompatible class throws NoClassDefFoundError
-				// (a LinkageError): shutdown is best-effort, the remaining hooks and every class
-				// loader must still be closed.
-				log.debug("Extension shutdown hook failed: {}", e.getMessage());
+		try {
+			// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
+			// iterating backwards stops dependents before the extensions they require — a dependent's
+			// cleanup may still need classes or state managed by its dependency.
+			for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
+				try {
+					protocolExtensions.get(i).onShutdown();
+				} catch (Exception | ServiceConfigurationError | LinkageError e) {
+					// A hook lazily touching an absent/incompatible class throws NoClassDefFoundError,
+					// and cleanup-time service discovery can throw ServiceConfigurationError: shutdown
+					// is best-effort, the remaining hooks must still run.
+					log.debug("Extension shutdown hook failed: {}", e.getMessage());
+				}
 			}
-		}
-		for (final AutoCloseable classLoader : classLoaders) {
-			try {
-				classLoader.close();
-			} catch (Exception e) {
-				log.debug("Failed to close an extension class loader: {}", e.getMessage());
+		} finally {
+			// The loaders are closed no matter what a hook threw — even an error category not
+			// anticipated above must not leave extension jar handles open.
+			for (final AutoCloseable classLoader : classLoaders) {
+				try {
+					classLoader.close();
+				} catch (Exception e) {
+					log.debug("Failed to close an extension class loader: {}", e.getMessage());
+				}
 			}
 		}
 	}

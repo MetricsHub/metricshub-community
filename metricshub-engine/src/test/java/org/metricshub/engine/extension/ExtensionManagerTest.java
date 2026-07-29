@@ -2,6 +2,7 @@ package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -10,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.RawConnector;
@@ -110,6 +112,44 @@ class ExtensionManagerTest {
 		extensionManager.close();
 
 		verify(healthy).onShutdown();
+		verify(classLoader).close();
+	}
+
+	@Test
+	void testCloseClosesLoadersWhenHookThrowsServiceConfigurationError() throws Exception {
+		// Cleanup-time service discovery can throw ServiceConfigurationError (an Error): the
+		// remaining hooks and the loader closes must still run, without propagation.
+		final IProtocolExtension failing = mock(IProtocolExtension.class);
+		final IProtocolExtension healthy = mock(IProtocolExtension.class);
+		final AutoCloseable classLoader = mock(AutoCloseable.class);
+		doThrow(new ServiceConfigurationError("boom")).when(failing).onShutdown();
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(healthy, failing))
+			.withClassLoaders(List.of(classLoader))
+			.build();
+
+		extensionManager.close();
+
+		verify(healthy).onShutdown();
+		verify(classLoader).close();
+	}
+
+	@Test
+	void testCloseClosesLoadersEvenWhenHookThrowsUnanticipatedError() throws Exception {
+		// An error category outside the per-hook catch must still not leave jar handles open:
+		// the loaders are closed on the finally path before the error propagates.
+		final IProtocolExtension failing = mock(IProtocolExtension.class);
+		final AutoCloseable classLoader = mock(AutoCloseable.class);
+		doThrow(new Error("boom")).when(failing).onShutdown();
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(failing))
+			.withClassLoaders(List.of(classLoader))
+			.build();
+
+		assertThrows(Error.class, extensionManager::close);
+
 		verify(classLoader).close();
 	}
 
