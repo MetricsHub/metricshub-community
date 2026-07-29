@@ -25,10 +25,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -107,12 +111,59 @@ class ExtensionIsolationIT {
 		}
 	}
 
+	@Test
+	void testMalformedDependencyServiceDoesNotDisableDependent() throws Exception {
+		// A's IProtocolExtension service file is corrupted with a parse-time-invalid entry; C
+		// (requires A) is untouched. Because resource delegation makes A's service file visible to
+		// C's ServiceLoader enumeration, the malformed entry must be skipped per element — C's own
+		// provider must still register, and C must still reach A's classes through delegation.
+		copyFixtureWithCorruptedServiceFile("it-extension-a", "it-extension-a.jar");
+		copyFixture("it-extension-c", "it-extension-c.jar");
+
+		final ExtensionManager extensionManager = new ExtensionLoader(extensionsDir.toFile()).load();
+		try {
+			final List<IProtocolExtension> protocolExtensions = extensionManager.getProtocolExtensions();
+			assertEquals(1, protocolExtensions.size(), "Only C must load (A's provider entry is unreadable)");
+
+			final IProtocolExtension extensionC = findByIdentifier(protocolExtensions, "it-c");
+			assertEquals("found", extensionC.executeQuery(null, null), "C must still load A's classes via delegation");
+		} finally {
+			extensionManager.close();
+		}
+	}
+
 	/**
 	 * Copies a fixture jar built by the invoker plugin into the shared extensions directory.
 	 */
 	private void copyFixture(final String fixture, final String targetName) throws IOException {
 		final Path source = Path.of("target", "it", fixture, "target", fixture + "-1-SNAPSHOT.jar");
 		Files.copy(source, extensionsDir.resolve(targetName), StandardCopyOption.REPLACE_EXISTING);
+	}
+
+	/**
+	 * Copies a fixture jar while replacing its {@code IProtocolExtension} service file content with
+	 * a parse-time-invalid entry, so its provider enumeration fails with a
+	 * {@link java.util.ServiceConfigurationError}.
+	 */
+	private void copyFixtureWithCorruptedServiceFile(final String fixture, final String targetName) throws IOException {
+		final Path source = Path.of("target", "it", fixture, "target", fixture + "-1-SNAPSHOT.jar");
+		final Path targetJar = extensionsDir.resolve(targetName);
+		final String serviceEntry = "META-INF/services/org.metricshub.engine.extension.IProtocolExtension";
+		try (
+			ZipInputStream zin = new ZipInputStream(Files.newInputStream(source));
+			ZipOutputStream zout = new ZipOutputStream(Files.newOutputStream(targetJar))
+		) {
+			ZipEntry entry;
+			while ((entry = zin.getNextEntry()) != null) {
+				zout.putNextEntry(new ZipEntry(entry.getName()));
+				if (serviceEntry.equals(entry.getName())) {
+					zout.write("!!not a valid class name!!".getBytes(StandardCharsets.UTF_8));
+				} else {
+					zin.transferTo(zout);
+				}
+				zout.closeEntry();
+			}
+		}
 	}
 
 	/**

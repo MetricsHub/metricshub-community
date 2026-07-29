@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -208,40 +209,88 @@ public final class ExtensionRuntime implements AutoCloseable {
 	 * @param target the list to append the wrapped instances to.
 	 */
 	private static <T> void loadSpi(final Class<T> spi, final ExtensionClassLoader loader, final List<T> target) {
+		// Enumerate the providers lazily and handle errors per element: the enumeration also sees
+		// the service files of declared dependencies (resource delegation), so a malformed entry or
+		// broken provider linkage in a DEPENDENCY must not prevent this loader's own providers from
+		// registering — nor abort the whole discovery.
+		final Iterator<Provider<T>> providers;
 		try {
-			for (final Provider<T> provider : ServiceLoader.load(spi, loader).stream().toList()) {
+			providers = ServiceLoader.load(spi, loader).stream().iterator();
+		} catch (ServiceConfigurationError | LinkageError e) {
+			logDiscoveryError(spi, loader, e);
+			return;
+		}
+
+		// Safety bound: the JDK iterator advances past a failed service file on the next call, but
+		// cap consecutive failures so an unexpected non-advancing error cannot loop forever.
+		int consecutiveErrors = 0;
+		while (consecutiveErrors < 100) {
+			final Provider<T> provider;
+			try {
+				if (!providers.hasNext()) {
+					return;
+				}
+				provider = providers.next();
+			} catch (ServiceConfigurationError | LinkageError e) {
+				consecutiveErrors++;
+				logDiscoveryError(spi, loader, e);
+				continue;
+			}
+
+			final String providerClassName;
+			try {
 				// A provider visible through the parent or a delegate is registered during that owner's
-				// own pass; skip it here to avoid loading the same extension twice.
+				// own pass; skip it here to avoid loading the same extension twice. Provider.type()
+				// loads the class, so a missing/broken provider class surfaces here — per provider.
 				if (provider.type().getClassLoader() != loader) {
 					continue;
 				}
-				final String providerClassName = provider.type().getName();
-				try {
-					final T instance = TcclClassLoaderDecorator.call(loader, provider::get);
-					target.add(TcclClassLoaderDecorator.wrap(spi, instance, loader));
-					log.info("Loaded {} '{}' from extension '{}'.", spi.getSimpleName(), providerClassName, loader.getName());
-				} catch (Exception e) {
-					log.error(
-						"Failed to instantiate {} '{}' from extension '{}': {}",
-						spi.getSimpleName(),
-						providerClassName,
-						loader.getName(),
-						e.getMessage()
-					);
-					log.debug("Extension provider instantiation exception:", e);
-				}
+				providerClassName = provider.type().getName();
+			} catch (ServiceConfigurationError | LinkageError e) {
+				consecutiveErrors++;
+				logDiscoveryError(spi, loader, e);
+				continue;
 			}
-		} catch (ServiceConfigurationError | LinkageError e) {
-			// A malformed META-INF/services entry or a provider type with broken linkage must disable
-			// that extension's SPI, not abort the whole discovery (which would leak every loader).
-			log.error(
-				"Failed to discover {} providers of extension '{}': {}",
-				spi.getSimpleName(),
-				loader.getName(),
-				e.getMessage()
-			);
-			log.debug("Extension provider discovery error:", e);
+
+			consecutiveErrors = 0;
+			try {
+				final T instance = TcclClassLoaderDecorator.call(loader, provider::get);
+				target.add(TcclClassLoaderDecorator.wrap(spi, instance, loader));
+				log.info("Loaded {} '{}' from extension '{}'.", spi.getSimpleName(), providerClassName, loader.getName());
+			} catch (Exception e) {
+				log.error(
+					"Failed to instantiate {} '{}' from extension '{}': {}",
+					spi.getSimpleName(),
+					providerClassName,
+					loader.getName(),
+					e.getMessage()
+				);
+				log.debug("Extension provider instantiation exception:", e);
+			}
 		}
+		log.error(
+			"Aborting {} provider discovery of extension '{}' after too many consecutive errors.",
+			spi.getSimpleName(),
+			loader.getName()
+		);
+	}
+
+	/**
+	 * Logs a provider-discovery error (malformed {@code META-INF/services} entry or broken provider
+	 * linkage) at ERROR with a DEBUG stack trace.
+	 *
+	 * @param spi    the SPI being discovered.
+	 * @param loader the extension loader whose enumeration failed.
+	 * @param error  the discovery error.
+	 */
+	private static void logDiscoveryError(final Class<?> spi, final ExtensionClassLoader loader, final Throwable error) {
+		log.error(
+			"Skipping an unreadable {} provider visible from extension '{}': {}",
+			spi.getSimpleName(),
+			loader.getName(),
+			error.getMessage()
+		);
+		log.debug("Extension provider discovery error:", error);
 	}
 
 	/**
