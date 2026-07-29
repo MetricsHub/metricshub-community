@@ -174,9 +174,9 @@ public class MetricsHubAgentApplication implements Runnable {
 				// or updated extension jars exactly like the /restart endpoint. The comparison context only
 				// reused the current manager to diff the configuration and is no longer needed; the restart
 				// rebuilds a context with a freshly loaded extension manager, and AgentLifecycleService
-				// releases the previous loaders one restart generation later.
+				// releases the previous loaders after a grace delay.
 				newAgentContext.close();
-				lifecycle.restartAsync(() -> loadNewAgentContext(ConfigHelper.loadExtensionManager()));
+				lifecycle.restartAsync(this::reloadExtensionsAndBuildContext);
 			}
 			case LOCAL_ONLY ->
 				// ReloadService already grafted the required TelemetryManagers from newAgentContext
@@ -190,15 +190,33 @@ public class MetricsHubAgentApplication implements Runnable {
 	}
 
 	/**
+	 * Reloads the extensions and builds the {@link AgentContext} served to a full restart. When the
+	 * context construction fails (for example, an invalid reloaded configuration), the freshly
+	 * loaded manager's isolated class loaders are closed before propagating, so repeated failed
+	 * restarts cannot accumulate open jar handles.
+	 *
+	 * @return the new context carrying a freshly loaded {@link ExtensionManager}
+	 */
+	private AgentContext reloadExtensionsAndBuildContext() {
+		final ExtensionManager reloadedExtensionManager = ConfigHelper.loadExtensionManager();
+		try {
+			return loadNewAgentContext(reloadedExtensionManager);
+		} catch (Exception e) {
+			reloadedExtensionManager.close();
+			throw e;
+		}
+	}
+
+	/**
 	 * Loads a new AgentContext which will be used in the reload service.
 	 * <p>
-	 * The {@link ExtensionManager} is loaded once at boot and carried forward across reloads rather
-	 * than rebuilt: the extension jars cannot change while the agent is running (the watcher observes
-	 * the configuration directory, not the extensions directory), so reusing the same manager avoids
-	 * re-scanning the extensions and leaking their isolated class loaders on every reload.
+	 * The {@link ExtensionManager} is loaded once at boot and carried forward across configuration
+	 * reloads rather than rebuilt (the watcher observes the configuration directory, not the
+	 * extensions directory); only a full restart supplies a freshly reloaded manager via
+	 * {@link #reloadExtensionsAndBuildContext()}.
 	 * </p>
 	 *
-	 * @param extensionManager the shared extension manager to reuse in the new context
+	 * @param extensionManager the extension manager to carry in the new context
 	 */
 	private synchronized AgentContext loadNewAgentContext(final ExtensionManager extensionManager) {
 		try {
