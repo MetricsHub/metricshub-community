@@ -17,9 +17,23 @@ class JdbcDriverRegistryHolderTest {
 
 	@BeforeEach
 	@AfterEach
-	void reset() {
+	void reset() throws Exception {
 		System.clearProperty(JdbcDriverRegistryHolder.DRIVERS_DIR_PROPERTY);
 		JdbcDriverRegistryHolder.resetForTests();
+		// resetForTests() closes the registry, which deregisters the drivers owned by its loaders
+		// from the JVM-global DriverManager. Restore H2 for other tests in this JVM that use
+		// DriverManager.getConnection (H2 never self-registers a second time).
+		boolean h2Registered = false;
+		final var drivers = java.sql.DriverManager.getDrivers();
+		while (drivers.hasMoreElements()) {
+			if ("org.h2.Driver".equals(drivers.nextElement().getClass().getName())) {
+				h2Registered = true;
+				break;
+			}
+		}
+		if (!h2Registered) {
+			java.sql.DriverManager.registerDriver(new org.h2.Driver());
+		}
 	}
 
 	@Test
