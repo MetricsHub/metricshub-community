@@ -24,9 +24,13 @@ package org.metricshub.web.service;
 import jakarta.annotation.PreDestroy;
 import java.time.Instant;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -188,14 +192,40 @@ public class AgentLifecycleService {
 	private volatile Predicate<AgentContext> collectorLaunchPredicate = _ -> true;
 
 	/**
-	 * The {@link ExtensionManager} orphaned by the previous restart, held for exactly one restart
-	 * generation before its isolated extension class loaders are closed. Closing is deferred so a
-	 * thread still holding the just-replaced context can finish (and lazily load extension classes)
-	 * before its loaders disappear. {@code null} when the last restart reused the manager (a
-	 * configuration reload) and therefore orphaned nothing. See
-	 * {@link #releaseOrphanedExtensionLoaders(ExtensionManager, ExtensionManager)}.
+	 * Default grace delay, in milliseconds, between the moment an {@link ExtensionManager} is
+	 * orphaned by an extension reload and the moment its isolated class loaders are closed.
+	 * Sized to comfortably exceed the bounded durations of in-flight work that may still hold the
+	 * replaced context (HTTP/MCP requests, collect jobs), so lazy class loading never fails
+	 * mid-operation. Note that classes already loaded remain usable after the close; only
+	 * not-yet-loaded classes/resources would be affected.
 	 */
-	private volatile ExtensionManager pendingExtensionManagerClose;
+	private static final long DEFAULT_ORPHANED_LOADER_CLOSE_GRACE_MS = 5 * 60 * 1000L;
+
+	/**
+	 * Grace delay applied before closing an orphaned {@link ExtensionManager}. Package-private
+	 * mutable so tests can shorten it.
+	 */
+	private volatile long orphanedLoaderCloseGraceMs = DEFAULT_ORPHANED_LOADER_CLOSE_GRACE_MS;
+
+	/**
+	 * Dedicated scheduler that retires orphaned extension class loaders after the grace delay.
+	 * Each orphaned manager gets its own full grace window, independent of how quickly further
+	 * restarts follow (back-to-back restarts must not shorten an older generation's window).
+	 */
+	private final ScheduledExecutorService loaderRetirementExecutor = Executors.newSingleThreadScheduledExecutor(
+		runnable -> {
+			final Thread thread = new Thread(runnable, "metricshub-extension-loader-retirement");
+			thread.setDaemon(true);
+			return thread;
+		}
+	);
+
+	/**
+	 * The orphaned managers whose close is scheduled but has not run yet. Tracked explicitly so
+	 * {@link #shutdown()} can close them immediately at process exit (tasks drained from a
+	 * scheduled executor's {@code shutdownNow()} refuse to run once the executor is stopped).
+	 */
+	private final Queue<ExtensionManager> pendingLoaderRetirements = new ConcurrentLinkedQueue<>();
 
 	/**
 	 * Constructor.
@@ -327,32 +357,64 @@ public class AgentLifecycleService {
 	}
 
 	/**
-	 * Closes the extension class loaders orphaned by the previous restart, then records the manager
-	 * this restart orphaned (if any) so it is closed at the next restart rather than now.
+	 * Schedules the close of the extension class loaders orphaned by this restart, after a grace
+	 * delay.
 	 * <p>
 	 * A configuration-file reload reuses the {@link ExtensionManager} ({@code outgoing == incoming}),
 	 * so it orphans nothing; only an explicit extension reload (the {@code /restart} endpoint) swaps
-	 * in a different manager and thus orphans the outgoing one. Closing is deferred a full restart
-	 * generation because {@link #restart(AgentContext, AgentContext)} intentionally leaves the
-	 * replaced context intact for in-flight readers, whose code may still load extension classes
-	 * lazily right after the swap; by the next restart those readers have finished.
+	 * in a different manager and thus orphans the outgoing one. Closing is deferred by
+	 * {@link #orphanedLoaderCloseGraceMs} because {@link #restart(AgentContext, AgentContext)}
+	 * intentionally leaves the replaced context intact for in-flight readers, whose code may still
+	 * load extension classes lazily right after the swap. Each orphaned manager gets its own full
+	 * grace window on the retirement scheduler, so back-to-back restarts cannot shorten an older
+	 * generation's window.
 	 * </p>
 	 *
 	 * @param outgoing the extension manager of the context being replaced
 	 * @param incoming the extension manager of the newly active context
 	 */
 	private void releaseOrphanedExtensionLoaders(final ExtensionManager outgoing, final ExtensionManager incoming) {
-		// Close the manager orphaned by the previous restart (a full generation has elapsed). Guard
-		// against closing anything still referenced by the active or the just-replaced context.
-		final ExtensionManager previous = pendingExtensionManagerClose;
-		if (previous != null && previous != incoming && previous != outgoing) {
-			log.debug("Closing the extension class loaders orphaned by a previous extension reload.");
-			previous.close();
+		if (outgoing == null || outgoing == incoming) {
+			// A reused manager (configuration reload) orphans nothing.
+			return;
 		}
+		log.debug(
+			"Scheduling the close of the extension class loaders orphaned by an extension reload in {} ms.",
+			orphanedLoaderCloseGraceMs
+		);
+		pendingLoaderRetirements.add(outgoing);
+		loaderRetirementExecutor.schedule(
+			() -> retireOrphanedManager(outgoing),
+			orphanedLoaderCloseGraceMs,
+			TimeUnit.MILLISECONDS
+		);
+	}
 
-		// If this restart swapped in a different manager, defer closing the outgoing one until the
-		// next restart; a reused manager (configuration reload) orphans nothing.
-		pendingExtensionManagerClose = outgoing != incoming ? outgoing : null;
+	/**
+	 * Closes an orphaned manager's extension class loaders if it is still pending (i.e. not already
+	 * closed by {@link #shutdown()}).
+	 *
+	 * @param orphaned the manager to retire
+	 */
+	private void retireOrphanedManager(final ExtensionManager orphaned) {
+		if (!pendingLoaderRetirements.remove(orphaned)) {
+			return;
+		}
+		try {
+			orphaned.close();
+			log.debug("Closed the extension class loaders orphaned by an extension reload.");
+		} catch (Exception e) {
+			log.debug("Failed to close an orphaned ExtensionManager: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Shortens the orphaned-loader close grace delay. Test-only.
+	 *
+	 * @param graceMs the new grace delay in milliseconds
+	 */
+	void setOrphanedLoaderCloseGraceMs(final long graceMs) {
+		orphanedLoaderCloseGraceMs = graceMs;
 	}
 
 	/**
@@ -579,16 +641,27 @@ public class AgentLifecycleService {
 		final ExtensionManager manager = context.getExtensionManager();
 		final AgentContext active = agentContextHolder.getAgentContext();
 		final ExtensionManager activeManager = active == null ? null : active.getExtensionManager();
-		if (manager != null && manager != activeManager && manager != pendingExtensionManagerClose) {
+		if (manager != null && manager != activeManager) {
 			manager.close();
 		}
 	}
 
 	/**
-	 * Shuts down the background restart executor when the service is destroyed.
+	 * Shuts down the background restart executor and the loader-retirement scheduler when the
+	 * service is destroyed. Pending retirement tasks are executed immediately: the process is
+	 * exiting, so the grace delay no longer matters and closing releases the jar handles now.
 	 */
 	@PreDestroy
 	void shutdown() {
 		restartExecutor.shutdownNow();
+		loaderRetirementExecutor.shutdownNow();
+		ExtensionManager pending;
+		while ((pending = pendingLoaderRetirements.poll()) != null) {
+			try {
+				pending.close();
+			} catch (Exception e) {
+				log.debug("Failed to close a pending orphaned ExtensionManager: {}", e.getMessage());
+			}
+		}
 	}
 }

@@ -366,41 +366,56 @@ class AgentLifecycleServiceTest {
 		// An extension reload swaps in a different manager (e.g. the /restart endpoint).
 		agentLifecycleService.restart(mockContext(oldManager), mockContext(newManager));
 
-		// The orphaned manager is not closed immediately; the close is deferred one generation.
+		// The orphaned manager is not closed immediately; the close is deferred by the grace delay.
 		verify(oldManager, never()).close();
 		verify(newManager, never()).close();
 	}
 
 	@Test
-	void testNextRestartClosesPreviouslyOrphanedLoaders() {
+	void testOrphanedManagerClosedAfterGracePeriod() {
 		final ExtensionManager m0 = mock(ExtensionManager.class);
 		final ExtensionManager m1 = mock(ExtensionManager.class);
-		final ExtensionManager m2 = mock(ExtensionManager.class);
 
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+
+		// Two back-to-back restarts: each orphaned manager gets its own full grace window.
 		final AgentContext c1 = mockContext(m1);
+		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0
 
-		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0 (deferred)
-		verify(m0, never()).close();
-
-		agentLifecycleService.restart(c1, mockContext(m2)); // closes m0; orphans m1 (deferred)
-		verify(m0, times(1)).close();
+		Awaitility.await()
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m0, times(1)).close());
 		verify(m1, never()).close();
-		verify(m2, never()).close();
 	}
 
 	@Test
-	void testReusedManagerOrphansNothingButFlushesPending() {
+	void testReusedManagerIsNeverScheduledForClose() {
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(50L);
+
+		// A configuration-file reload reuses the same manager (m1 -> m1): nothing is orphaned.
+		final AgentContext c1 = mockContext(m1);
+		agentLifecycleService.restart(c1, mockContext(m1));
+
+		Awaitility.await()
+			.pollDelay(java.time.Duration.ofMillis(300))
+			.atMost(Durations.FIVE_SECONDS)
+			.untilAsserted(() -> verify(m1, never()).close());
+	}
+
+	@Test
+	void testShutdownClosesPendingOrphanedManagersImmediately() {
 		final ExtensionManager m0 = mock(ExtensionManager.class);
 		final ExtensionManager m1 = mock(ExtensionManager.class);
 
-		final AgentContext c1 = mockContext(m1);
+		// Long grace: the scheduled close cannot have fired yet when shutdown() runs.
+		agentLifecycleService.setOrphanedLoaderCloseGraceMs(60_000L);
+		agentLifecycleService.restart(mockContext(m0), mockContext(m1)); // orphans m0
+		verify(m0, never()).close();
 
-		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0
-
-		// A configuration-file reload reuses the same manager (m1 -> m1): it must orphan nothing
-		// but still flush the manager orphaned by the previous restart.
-		agentLifecycleService.restart(c1, mockContext(m1));
-
+		// Process exit: pending retirements are flushed immediately.
+		agentLifecycleService.shutdown();
 		verify(m0, times(1)).close();
 		verify(m1, never()).close();
 	}
