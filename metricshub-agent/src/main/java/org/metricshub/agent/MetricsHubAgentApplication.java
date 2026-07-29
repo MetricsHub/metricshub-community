@@ -148,8 +148,9 @@ public class MetricsHubAgentApplication implements Runnable {
 	void onConfigurationChange(final AgentContextHolder agentContextHolder) {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 
-		// Build the new agent context eagerly so we can compare configurations
-		final AgentContext newAgentContext = loadNewAgentContext();
+		// Build the new agent context eagerly so we can compare configurations, reusing the
+		// boot-time extension manager (extensions do not change while the agent is running).
+		final AgentContext newAgentContext = loadNewAgentContext(currentContext.getExtensionManager());
 
 		final ReloadService reloadService = ReloadService.builder()
 			.withRunningAgentContext(currentContext)
@@ -187,16 +188,24 @@ public class MetricsHubAgentApplication implements Runnable {
 	}
 
 	/**
-	 * Loads a new AgentContext which will be used in the reload service
+	 * Loads a new AgentContext which will be used in the reload service.
+	 * <p>
+	 * The {@link ExtensionManager} is loaded once at boot and carried forward across reloads rather
+	 * than rebuilt: the extension jars cannot change while the agent is running (the watcher observes
+	 * the configuration directory, not the extensions directory), so reusing the same manager avoids
+	 * re-scanning the extensions and leaking their isolated class loaders on every reload.
+	 * </p>
+	 *
+	 * @param extensionManager the shared extension manager to reuse in the new context
 	 */
-	private synchronized AgentContext loadNewAgentContext() {
+	private synchronized AgentContext loadNewAgentContext(final ExtensionManager extensionManager) {
 		try {
-			// Initialize the application context
-			return new AgentContext(alternateConfigDirectory, ConfigHelper.loadExtensionManager());
+			// Initialize the application context reusing the boot-time extension manager
+			return new AgentContext(alternateConfigDirectory, extensionManager);
 		} catch (Exception e) {
 			configureGlobalErrorLogger();
 			log.error("Failed to reload the Agent.", e);
-			throw new IllegalStateException("Error dectected during MetricsHub agent reloading.", e);
+			throw new IllegalStateException("Error detected during MetricsHub agent reloading.", e);
 		}
 	}
 

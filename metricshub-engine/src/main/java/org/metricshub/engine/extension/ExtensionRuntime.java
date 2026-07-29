@@ -265,12 +265,18 @@ public final class ExtensionRuntime implements AutoCloseable {
 	 * @param descriptor the extension descriptor.
 	 * @return the sanitized child-first prefix list.
 	 */
-	private static List<String> sanitizeChildFirst(final ExtensionDescriptor descriptor) {
+	static List<String> sanitizeChildFirst(final ExtensionDescriptor descriptor) {
 		return descriptor
 			.childFirstPackages()
 			.stream()
 			.filter(prefix -> {
-				final boolean forced = FORCED_PARENT_PREFIXES.stream().anyMatch(prefix::startsWith);
+				// Reject a declared prefix that overlaps a forced-parent prefix in either direction:
+				// a more specific prefix (e.g. "org.metricshub.engine.telemetry.") that falls under a
+				// forced one, or a broader ancestor (e.g. "org.metricshub.") that would itself capture
+				// a forced namespace and load engine classes child-first.
+				final boolean forced = FORCED_PARENT_PREFIXES.stream().anyMatch(
+					forcedPrefix -> prefix.startsWith(forcedPrefix) || forcedPrefix.startsWith(prefix)
+				);
 				if (forced) {
 					log.warn(
 						"Ignoring child-first prefix '{}' of extension '{}': it must resolve from the engine.",
