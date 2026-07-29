@@ -145,6 +145,35 @@ class ExtensionClassLoaderTest {
 	}
 
 	@Test
+	void testChildFirstResourcePrefersOwnJarOverDependency() throws IOException {
+		// Both the extension and its declared dependency ship the same resource: under a child-first
+		// prefix the extension's OWN version must win, so its classes read their own metadata rather
+		// than the dependency's.
+		final String resource = "org/example/lib/config.txt";
+		final URL dependencyJar = writeResourceJar("dep.jar", resource, "dependency-version");
+		final URL ownJar = writeResourceJar("own.jar", resource, "own-version");
+
+		try (ExtensionClassLoader dependency = loader("DEP", dependencyJar, List.of())) {
+			try (
+				ExtensionClassLoader own = new ExtensionClassLoader(
+					"OWN",
+					new URL[] { ownJar },
+					ClassLoader.getPlatformClassLoader(),
+					List.of(dependency),
+					List.of("org.example.lib.")
+				)
+			) {
+				assertEquals("own-version", read(own.getResource(resource)), "Own jar must win over the dependency");
+				assertEquals(
+					"own-version",
+					read(java.util.Collections.list(own.getResources(resource)).get(0)),
+					"getResources must order the own jar's version first"
+				);
+			}
+		}
+	}
+
+	@Test
 	void testTransitiveDependencyResourceIsVisible() throws IOException {
 		// C -> A -> B: C must reach B's resources through A, matching class lookup's transitivity.
 		final String service = "META-INF/services/org.example.Spi";

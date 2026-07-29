@@ -113,9 +113,12 @@ public class ExtensionManager {
 	 * others. Safe to call on an {@link #empty()} manager (no-op).
 	 */
 	public void close() {
-		for (final IProtocolExtension protocolExtension : protocolExtensions) {
+		// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
+		// iterating backwards stops dependents before the extensions they require — a dependent's
+		// cleanup may still need classes or state managed by its dependency.
+		for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
 			try {
-				protocolExtension.onShutdown();
+				protocolExtensions.get(i).onShutdown();
 			} catch (Exception e) {
 				log.debug("Extension shutdown hook failed: {}", e.getMessage());
 			}

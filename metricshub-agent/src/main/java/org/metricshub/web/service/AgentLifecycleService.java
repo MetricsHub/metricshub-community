@@ -55,8 +55,8 @@ import org.springframework.stereotype.Service;
  * at a time and at most one further request is held pending. When a new request arrives while
  * a restart is already running, it is queued; if another one arrives while a request is
  * already queued, the queued one is <em>coalesced</em> (the newest wins, the older is
- * discarded and its pre-built {@link AgentContext} — if any — is closed to avoid leaking
- * scheduler threads / gRPC channels).
+ * discarded without ever invoking its supplier — suppliers are lazy and only build their
+ * {@link AgentContext} when the restart actually runs).
  * </p>
  * <p>
  * At the end of every successful restart the previous {@link AgentContext} is
@@ -568,8 +568,11 @@ public class AgentLifecycleService {
 		}
 
 		if (toDiscard != null) {
+			// The discarded supplier is intentionally NOT invoked: suppliers are lazy (they reload
+			// the extensions and build a full AgentContext when the restart actually runs), so
+			// invoking one here — on the coalescing caller's thread, potentially an HTTP request —
+			// would build an expensive context only to throw it away.
 			log.info("Coalesced a pending restart with a newer request; dropping the previous pending one.");
-			tryReleasePreBuiltContext(toDiscard.supplier());
 		} else if (!submitNow) {
 			log.info("A MetricsHub Agent restart is running; queued the new request to run after it.");
 		}
@@ -685,22 +688,6 @@ public class AgentLifecycleService {
 		if (next != null) {
 			log.info("Running queued restart request now that the previous one has completed.");
 			submitRestart(next.supplier(), next.requestId());
-		}
-	}
-
-	/**
-	 * Best-effort disposal of a discarded pending supplier's context. If the supplier was a
-	 * simple {@code () -> preBuiltContext} closure (as produced by the DirectoryWatcher path),
-	 * invoking it returns the already-built context which we then close to release its
-	 * scheduler threads and gRPC channel. For a lazy supplier that would build a fresh
-	 * context on invocation, this still safely releases whatever gets built. Any exception is
-	 * caught and logged at debug level.
-	 */
-	private void tryReleasePreBuiltContext(final Supplier<AgentContext> supplier) {
-		try {
-			releaseDiscardedContext(supplier.get());
-		} catch (Exception e) {
-			log.debug("Failed to release the discarded pending AgentContext: {}", e.getMessage());
 		}
 	}
 

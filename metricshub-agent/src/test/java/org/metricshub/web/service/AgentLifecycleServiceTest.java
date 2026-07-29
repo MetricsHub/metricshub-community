@@ -208,8 +208,10 @@ class AgentLifecycleServiceTest {
 		assertEquals(RestartRequestResult.COALESCED, coalescedAck.result());
 		assertTrue(coalescedAck.requestId() > queuedAck.requestId(), "Request ids must be monotonically increasing");
 
-		// The discarded (older pending) context should be closed by the service so we don't leak it
-		verify(olderPending, times(1)).close();
+		// The discarded (older pending) supplier is dropped WITHOUT being invoked: suppliers are
+		// lazy (they build a full context with freshly reloaded extensions), so instantiating one
+		// on the coalescing caller's thread just to close it would be wasted, blocking work.
+		verify(olderPending, never()).close();
 
 		releaseFirstRestart.countDown();
 

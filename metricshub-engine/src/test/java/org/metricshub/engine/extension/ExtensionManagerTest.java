@@ -90,4 +90,22 @@ class ExtensionManagerTest {
 		order.verify(protocolExtension).onShutdown();
 		order.verify(classLoader).close();
 	}
+
+	@Test
+	void testCloseRunsShutdownHooksInReverseDiscoveryOrder() {
+		// Providers are discovered dependency-first ([dependency, dependent]); shutdown must run in
+		// reverse so a dependent can still use its dependency's state while cleaning up.
+		final IProtocolExtension dependency = mock(IProtocolExtension.class);
+		final IProtocolExtension dependent = mock(IProtocolExtension.class);
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(dependency, dependent))
+			.build();
+
+		extensionManager.close();
+
+		final InOrder order = inOrder(dependency, dependent);
+		order.verify(dependent).onShutdown();
+		order.verify(dependency).onShutdown();
+	}
 }

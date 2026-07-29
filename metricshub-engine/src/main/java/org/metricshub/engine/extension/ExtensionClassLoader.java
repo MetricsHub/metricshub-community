@@ -174,11 +174,16 @@ public class ExtensionClassLoader extends URLClassLoader {
 	@Override
 	public URL getResource(final String name) {
 		// Resources under a child-first package resolve child-first, mirroring class lookup, so a
-		// child-loaded library reads its own metadata/configuration rather than the parent's version.
+		// child-loaded library reads its own metadata/configuration rather than the parent's or a
+		// dependency's version: this loader's own URLs win, then declared dependencies.
 		if (isChildFirstResource(name)) {
-			final URL local = findResourceLocal(name);
-			if (local != null) {
-				return local;
+			final URL own = findResource(name);
+			if (own != null) {
+				return own;
+			}
+			final URL fromDependencies = findResourceLocal(name);
+			if (fromDependencies != null) {
+				return fromDependencies;
 			}
 		}
 		// Parent-first, then dependencies (recursively, mirroring class lookup), then self.
@@ -219,7 +224,10 @@ public class ExtensionClassLoader extends URLClassLoader {
 		final List<URL> urls = new ArrayList<>();
 		final ClassLoader parent = getParent();
 		if (isChildFirstResource(name)) {
-			// Child-first ordering for resources under a child-first package (mirrors class lookup).
+			// Child-first ordering for resources under a child-first package: this loader's own
+			// resources first (so classes and their metadata come from the same jar), then declared
+			// dependencies, then the parent.
+			addAll(seen, urls, findResources(name));
 			collectResourcesLocal(name, seen, urls);
 			if (parent != null) {
 				addAll(seen, urls, parent.getResources(name));
