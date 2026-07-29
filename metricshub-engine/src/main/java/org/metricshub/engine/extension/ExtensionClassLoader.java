@@ -163,14 +163,29 @@ public class ExtensionClassLoader extends URLClassLoader {
 
 	@Override
 	public URL getResource(final String name) {
-		// Parent-first, then dependencies (own resources only), then self.
+		// Parent-first, then dependencies (recursively, mirroring class lookup), then self.
 		final ClassLoader parent = getParent();
-		URL url = parent == null ? null : parent.getResource(name);
+		final URL url = parent == null ? null : parent.getResource(name);
 		if (url != null) {
 			return url;
 		}
+		return findResourceLocal(name);
+	}
+
+	/**
+	 * Finds a resource in this extension's declared dependencies (recursively, in declared order) or
+	 * in its own URLs, without ever consulting the shared parent. This is the resource counterpart of
+	 * {@link #loadLocal(String)}: a dependent extension reaches the whole dependency subtree, so
+	 * transitive chains such as C → A → B expose B's resources to C. The dependency graph is acyclic
+	 * (cycles are disabled at load time), so the recursion terminates.
+	 *
+	 * @param name the resource name.
+	 * @return the resource {@link URL}, or {@code null} when neither a dependency nor this loader
+	 *         defines it.
+	 */
+	URL findResourceLocal(final String name) {
 		for (final ExtensionClassLoader delegate : delegates) {
-			url = delegate.findResource(name);
+			final URL url = delegate.findResourceLocal(name);
 			if (url != null) {
 				return url;
 			}
@@ -188,11 +203,25 @@ public class ExtensionClassLoader extends URLClassLoader {
 		if (parent != null) {
 			addAll(seen, urls, parent.getResources(name));
 		}
-		for (final ExtensionClassLoader delegate : delegates) {
-			addAll(seen, urls, delegate.findResources(name));
-		}
-		addAll(seen, urls, findResources(name));
+		collectResourcesLocal(name, seen, urls);
 		return Collections.enumeration(urls);
+	}
+
+	/**
+	 * Collects the resources of this extension's declared dependencies (recursively, in declared
+	 * order) and of its own URLs into {@code target}, without consulting the shared parent. Resource
+	 * counterpart of {@link #loadLocal(String)} for {@link #getResources(String)}.
+	 *
+	 * @param name   the resource name.
+	 * @param seen   the set of already-collected URL external forms (deduplication).
+	 * @param target the destination list, in insertion order.
+	 * @throws IOException if the resource lookup fails.
+	 */
+	void collectResourcesLocal(final String name, final Set<String> seen, final List<URL> target) throws IOException {
+		for (final ExtensionClassLoader delegate : delegates) {
+			delegate.collectResourcesLocal(name, seen, target);
+		}
+		addAll(seen, target, findResources(name));
 	}
 
 	/**

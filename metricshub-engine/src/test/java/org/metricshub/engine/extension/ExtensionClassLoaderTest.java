@@ -1,5 +1,26 @@
 package org.metricshub.engine.extension;
 
+/*-
+ * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
+ * MetricsHub Engine
+ * ჻჻჻჻჻჻
+ * Copyright 2023 - 2026 MetricsHub
+ * ჻჻჻჻჻჻
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
+ */
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -83,6 +104,41 @@ class ExtensionClassLoaderTest {
 			try (ExtensionClassLoader c = loader("C", urlC, List.of(a))) {
 				assertNotNull(c.getResource("res/only-in-c.txt"), "C sees its own resource");
 				assertNotNull(c.getResource("res/only-in-a.txt"), "C (requires A) sees A's resource through delegation");
+			}
+		}
+	}
+
+	@Test
+	void testTransitiveDependencyResourceIsVisible() throws IOException {
+		// C -> A -> B: C must reach B's resources through A, matching class lookup's transitivity.
+		final String service = "META-INF/services/org.example.Spi";
+		final URL urlB = writeResourceJar("b.jar", service, "org.example.ImplB");
+		final URL urlA = writeResourceJar("a.jar", "res/only-in-a.txt", "A");
+		final URL urlC = writeResourceJar("c.jar", "res/only-in-c.txt", "C");
+
+		try (ExtensionClassLoader b = loader("B", urlB, List.of())) {
+			try (ExtensionClassLoader a = loader("A", urlA, List.of(b))) {
+				try (ExtensionClassLoader c = loader("C", urlC, List.of(a))) {
+					assertEquals(
+						"org.example.ImplB",
+						read(c.getResource(service)),
+						"C (requires A, which requires B) sees B's service file transitively"
+					);
+					assertEquals(
+						List.of("org.example.ImplB"),
+						java.util.Collections.list(c.getResources(service))
+							.stream()
+							.map(url -> {
+								try {
+									return read(url);
+								} catch (IOException e) {
+									throw new java.io.UncheckedIOException(e);
+								}
+							})
+							.toList(),
+						"getResources must traverse the dependency graph transitively"
+					);
+				}
 			}
 		}
 	}
