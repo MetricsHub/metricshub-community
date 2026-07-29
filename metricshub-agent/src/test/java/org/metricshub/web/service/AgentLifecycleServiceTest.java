@@ -42,6 +42,7 @@ import org.junit.jupiter.api.Test;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.service.OtelCollectorProcessService;
 import org.metricshub.agent.service.TaskSchedulingService;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.RestartStatus;
 import org.metricshub.web.service.AgentLifecycleService.RestartRequestAck;
@@ -346,5 +347,95 @@ class AgentLifecycleServiceTest {
 		when(context.getTaskSchedulingService()).thenReturn(scheduling);
 		when(context.getOtelCollectorProcessService()).thenReturn(otel);
 		return context;
+	}
+
+	/**
+	 * Builds a mock context whose {@link AgentContext#getExtensionManager()} returns {@code manager}.
+	 */
+	private static AgentContext mockContext(final ExtensionManager manager) {
+		final AgentContext context = mockContext();
+		when(context.getExtensionManager()).thenReturn(manager);
+		return context;
+	}
+
+	@Test
+	void testExtensionReloadDefersOldLoaderClose() {
+		final ExtensionManager oldManager = mock(ExtensionManager.class);
+		final ExtensionManager newManager = mock(ExtensionManager.class);
+
+		// An extension reload swaps in a different manager (e.g. the /restart endpoint).
+		agentLifecycleService.restart(mockContext(oldManager), mockContext(newManager));
+
+		// The orphaned manager is not closed immediately; the close is deferred one generation.
+		verify(oldManager, never()).close();
+		verify(newManager, never()).close();
+	}
+
+	@Test
+	void testNextRestartClosesPreviouslyOrphanedLoaders() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+		final ExtensionManager m2 = mock(ExtensionManager.class);
+
+		final AgentContext c1 = mockContext(m1);
+
+		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0 (deferred)
+		verify(m0, never()).close();
+
+		agentLifecycleService.restart(c1, mockContext(m2)); // closes m0; orphans m1 (deferred)
+		verify(m0, times(1)).close();
+		verify(m1, never()).close();
+		verify(m2, never()).close();
+	}
+
+	@Test
+	void testReusedManagerOrphansNothingButFlushesPending() {
+		final ExtensionManager m0 = mock(ExtensionManager.class);
+		final ExtensionManager m1 = mock(ExtensionManager.class);
+
+		final AgentContext c1 = mockContext(m1);
+
+		agentLifecycleService.restart(mockContext(m0), c1); // orphans m0
+
+		// A configuration-file reload reuses the same manager (m1 -> m1): it must orphan nothing
+		// but still flush the manager orphaned by the previous restart.
+		agentLifecycleService.restart(c1, mockContext(m1));
+
+		verify(m0, times(1)).close();
+		verify(m1, never()).close();
+	}
+
+	@Test
+	void testFailedRestartReleasesNeverActivatedReloadedManager() {
+		final ExtensionManager bootManager = mock(ExtensionManager.class);
+		final ExtensionManager reloadedManager = mock(ExtensionManager.class);
+
+		// A boot context carrying its own manager, with a scheduler that throws on stop() so the
+		// restart fails before the context is swapped in. Extract the scheduler mock first so
+		// Mockito's stubbing DSL is not confused by the nested mock call.
+		final AgentContext boot = mockContext(bootManager);
+		final TaskSchedulingService bootScheduler = boot.getTaskSchedulingService();
+		doAnswer(_ -> {
+			throw new IllegalStateException("boom");
+		})
+			.when(bootScheduler)
+			.stop();
+
+		final AgentContextHolder holder = new AgentContextHolder(boot);
+		final AgentLifecycleService service = new AgentLifecycleService(holder);
+		try {
+			service.restartAsync(() -> mockContext(reloadedManager));
+
+			Awaitility.await()
+				.atMost(Durations.FIVE_SECONDS)
+				.untilAsserted(() -> assertEquals(RestartStatus.State.FAILED, service.getRestartStatus().getState()));
+
+			// The reloaded context never became active, so its freshly reloaded extension loaders
+			// are released immediately; the active (boot) manager is left untouched.
+			verify(reloadedManager, times(1)).close();
+			verify(bootManager, never()).close();
+		} finally {
+			service.shutdown();
+		}
 	}
 }

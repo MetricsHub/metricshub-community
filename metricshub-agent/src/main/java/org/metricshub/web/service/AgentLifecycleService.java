@@ -34,6 +34,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.RestartStatus;
 import org.springframework.stereotype.Service;
@@ -187,6 +188,16 @@ public class AgentLifecycleService {
 	private volatile Predicate<AgentContext> collectorLaunchPredicate = _ -> true;
 
 	/**
+	 * The {@link ExtensionManager} orphaned by the previous restart, held for exactly one restart
+	 * generation before its isolated extension class loaders are closed. Closing is deferred so a
+	 * thread still holding the just-replaced context can finish (and lazily load extension classes)
+	 * before its loaders disappear. {@code null} when the last restart reused the manager (a
+	 * configuration reload) and therefore orphaned nothing. See
+	 * {@link #releaseOrphanedExtensionLoaders(ExtensionManager, ExtensionManager)}.
+	 */
+	private volatile ExtensionManager pendingExtensionManagerClose;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param agentContextHolder the shared {@link AgentContextHolder} injected by Spring
@@ -295,6 +306,10 @@ public class AgentLifecycleService {
 		// object; the whole graph becomes GC-eligible once those readers finish.
 		runningContext.close();
 
+		// Release the isolated extension class loaders orphaned by an extension reload, one restart
+		// generation late so in-flight readers of the just-replaced context are not disrupted.
+		releaseOrphanedExtensionLoaders(runningContext.getExtensionManager(), reloadedContext.getExtensionManager());
+
 		// Fire post-restart hooks (e.g. license guard restart with the new context).
 		for (final Consumer<AgentContext> hook : postRestartHooks) {
 			try {
@@ -309,6 +324,35 @@ public class AgentLifecycleService {
 			"MetricsHub Agent restarted successfully. Active context generation: {}",
 			agentContextHolder.getGeneration()
 		);
+	}
+
+	/**
+	 * Closes the extension class loaders orphaned by the previous restart, then records the manager
+	 * this restart orphaned (if any) so it is closed at the next restart rather than now.
+	 * <p>
+	 * A configuration-file reload reuses the {@link ExtensionManager} ({@code outgoing == incoming}),
+	 * so it orphans nothing; only an explicit extension reload (the {@code /restart} endpoint) swaps
+	 * in a different manager and thus orphans the outgoing one. Closing is deferred a full restart
+	 * generation because {@link #restart(AgentContext, AgentContext)} intentionally leaves the
+	 * replaced context intact for in-flight readers, whose code may still load extension classes
+	 * lazily right after the swap; by the next restart those readers have finished.
+	 * </p>
+	 *
+	 * @param outgoing the extension manager of the context being replaced
+	 * @param incoming the extension manager of the newly active context
+	 */
+	private void releaseOrphanedExtensionLoaders(final ExtensionManager outgoing, final ExtensionManager incoming) {
+		// Close the manager orphaned by the previous restart (a full generation has elapsed). Guard
+		// against closing anything still referenced by the active or the just-replaced context.
+		final ExtensionManager previous = pendingExtensionManagerClose;
+		if (previous != null && previous != incoming && previous != outgoing) {
+			log.debug("Closing the extension class loaders orphaned by a previous extension reload.");
+			previous.close();
+		}
+
+		// If this restart swapped in a different manager, defer closing the outgoing one until the
+		// next restart; a reused manager (configuration reload) orphans nothing.
+		pendingExtensionManagerClose = outgoing != incoming ? outgoing : null;
 	}
 
 	/**
@@ -463,15 +507,9 @@ public class AgentLifecycleService {
 			);
 		} catch (Exception e) {
 			log.error("Failed to restart MetricsHub Agent.", e);
-			// If we built a reloaded context but the restart failed, release its heavy
-			// state so we don't leak it.
-			if (reloadedContext != null) {
-				try {
-					reloadedContext.close();
-				} catch (Exception closeException) {
-					log.debug("Failed to close the partially-initialized reloaded context.", closeException);
-				}
-			}
+			// If we built a reloaded context but the restart failed, release its heavy state (and,
+			// when it never became active, its freshly reloaded extension loaders) so we don't leak.
+			releaseDiscardedContext(reloadedContext);
 			publishStatus(
 				RestartStatus.State.FAILED,
 				"Failed to restart MetricsHub Agent: " + e.getMessage(),
@@ -514,12 +552,35 @@ public class AgentLifecycleService {
 	 */
 	private void tryReleasePreBuiltContext(final Supplier<AgentContext> supplier) {
 		try {
-			final AgentContext orphan = supplier.get();
-			if (orphan != null) {
-				orphan.close();
-			}
+			releaseDiscardedContext(supplier.get());
 		} catch (Exception e) {
 			log.debug("Failed to release the discarded pending AgentContext: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Closes a discarded context and, when it carries its own freshly reloaded
+	 * {@link ExtensionManager} that never became the active one, closes that manager's isolated
+	 * extension class loaders too. Because the context was never published, nothing can be using it,
+	 * so the loaders are released immediately. A context that reused the active manager (a
+	 * configuration reload) leaves the manager untouched. Best-effort: exceptions are logged.
+	 *
+	 * @param context the discarded context; may be {@code null}.
+	 */
+	private void releaseDiscardedContext(final AgentContext context) {
+		if (context == null) {
+			return;
+		}
+		try {
+			context.close();
+		} catch (Exception e) {
+			log.debug("Failed to close a discarded AgentContext: {}", e.getMessage());
+		}
+		final ExtensionManager manager = context.getExtensionManager();
+		final AgentContext active = agentContextHolder.getAgentContext();
+		final ExtensionManager activeManager = active == null ? null : active.getExtensionManager();
+		if (manager != null && manager != activeManager && manager != pendingExtensionManagerClose) {
+			manager.close();
 		}
 	}
 

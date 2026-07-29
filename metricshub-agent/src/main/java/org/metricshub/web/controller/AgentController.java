@@ -27,6 +27,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.dto.RestartStatus;
@@ -109,10 +110,10 @@ public class AgentController {
 
 			final RestartRequestAck ack = agentLifecycleService.restartAsync(() -> {
 				try {
-					// Reuse the boot-time extension manager (loaded once, carried across restarts) instead
-					// of rebuilding it: extensions do not change while the agent is running, and rebuilding
-					// would leak the previous set of isolated extension class loaders.
-					final ExtensionManager extensionManager = agentContextHolder.getAgentContext().getExtensionManager();
+					// Reload the extension manager so an operator can pick up new or updated extension jars
+					// by calling /restart, without a full JVM restart. The isolated class loaders orphaned by
+					// the replaced manager are released by AgentLifecycleService, one restart generation later.
+					final ExtensionManager extensionManager = ConfigHelper.loadExtensionManager();
 					// Create new context reusing the current configuration directory
 					return new AgentContext(configDir, extensionManager);
 				} catch (Exception e) {

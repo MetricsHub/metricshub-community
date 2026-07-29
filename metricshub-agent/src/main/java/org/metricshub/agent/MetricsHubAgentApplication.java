@@ -170,11 +170,13 @@ public class MetricsHubAgentApplication implements Runnable {
 					newAgentContext.close();
 					return;
 				}
-				// The lifecycle service always accepts the request (SCHEDULED, QUEUED or
-				// COALESCED). Ownership of newAgentContext is now with the service — do NOT
-				// close it here. On COALESCED the service itself closes the previously queued
-				// context.
-				lifecycle.restartAsync(() -> newAgentContext);
+				// A full restart reloads the extensions as well, so a file-triggered restart picks up new
+				// or updated extension jars exactly like the /restart endpoint. The comparison context only
+				// reused the current manager to diff the configuration and is no longer needed; the restart
+				// rebuilds a context with a freshly loaded extension manager, and AgentLifecycleService
+				// releases the previous loaders one restart generation later.
+				newAgentContext.close();
+				lifecycle.restartAsync(() -> loadNewAgentContext(ConfigHelper.loadExtensionManager()));
 			}
 			case LOCAL_ONLY ->
 				// ReloadService already grafted the required TelemetryManagers from newAgentContext
