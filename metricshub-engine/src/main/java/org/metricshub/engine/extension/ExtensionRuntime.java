@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.ServiceLoader.Provider;
 import lombok.Getter;
@@ -132,8 +133,26 @@ public final class ExtensionRuntime implements AutoCloseable {
 			classLoaders.add(loader);
 		}
 
-		// Discover and wrap the SPI providers of every loader.
-		final ExtensionManager.ExtensionManagerBuilder builder = ExtensionManager.builder();
+		// Discover and wrap the SPI providers of every loader. On any unexpected discovery or build
+		// failure, close every loader constructed above before propagating: the caller never sees the
+		// runtime, so nothing else could release the jar handles (repeated failed reloads would
+		// otherwise retain them until GC and block jar replacement on Windows).
+		try {
+			return new ExtensionRuntime(discoverExtensions(classLoaders));
+		} catch (RuntimeException | Error e) {
+			closeQuietly(classLoaders);
+			throw e;
+		}
+	}
+
+	/**
+	 * Runs the seven SPI {@link ServiceLoader}s against every extension loader and builds the
+	 * {@link ExtensionManager} exposing the discovered providers.
+	 *
+	 * @param classLoaders the extension loaders, in dependency-first order.
+	 * @return the built {@link ExtensionManager}.
+	 */
+	private static ExtensionManager discoverExtensions(final List<ExtensionClassLoader> classLoaders) {
 		final List<IProtocolExtension> protocolExtensions = new ArrayList<>();
 		final List<IStrategyProviderExtension> strategyProviderExtensions = new ArrayList<>();
 		final List<IConnectorStoreProviderExtension> connectorStoreProviderExtensions = new ArrayList<>();
@@ -152,7 +171,7 @@ public final class ExtensionRuntime implements AutoCloseable {
 			loadSpi(IMetricEnrichmentExtension.class, loader, metricEnrichmentExtensions);
 		}
 
-		final ExtensionManager extensionManager = builder
+		return ExtensionManager.builder()
 			.withProtocolExtensions(protocolExtensions)
 			.withStrategyProviderExtensions(strategyProviderExtensions)
 			.withConnectorStoreProviderExtensions(connectorStoreProviderExtensions)
@@ -162,8 +181,21 @@ public final class ExtensionRuntime implements AutoCloseable {
 			.withMetricEnrichmentExtensions(metricEnrichmentExtensions)
 			.withClassLoaders(new ArrayList<>(classLoaders))
 			.build();
+	}
 
-		return new ExtensionRuntime(extensionManager);
+	/**
+	 * Best-effort close of every loader in {@code classLoaders}; failures are logged at debug level.
+	 *
+	 * @param classLoaders the loaders to close.
+	 */
+	private static void closeQuietly(final List<ExtensionClassLoader> classLoaders) {
+		for (final ExtensionClassLoader loader : classLoaders) {
+			try {
+				loader.close();
+			} catch (Exception closeException) {
+				log.debug("Failed to close extension class loader '{}': {}", loader.getName(), closeException.getMessage());
+			}
+		}
 	}
 
 	/**
@@ -176,27 +208,39 @@ public final class ExtensionRuntime implements AutoCloseable {
 	 * @param target the list to append the wrapped instances to.
 	 */
 	private static <T> void loadSpi(final Class<T> spi, final ExtensionClassLoader loader, final List<T> target) {
-		for (final Provider<T> provider : ServiceLoader.load(spi, loader).stream().toList()) {
-			// A provider visible through the parent or a delegate is registered during that owner's
-			// own pass; skip it here to avoid loading the same extension twice.
-			if (provider.type().getClassLoader() != loader) {
-				continue;
+		try {
+			for (final Provider<T> provider : ServiceLoader.load(spi, loader).stream().toList()) {
+				// A provider visible through the parent or a delegate is registered during that owner's
+				// own pass; skip it here to avoid loading the same extension twice.
+				if (provider.type().getClassLoader() != loader) {
+					continue;
+				}
+				final String providerClassName = provider.type().getName();
+				try {
+					final T instance = TcclClassLoaderDecorator.call(loader, provider::get);
+					target.add(TcclClassLoaderDecorator.wrap(spi, instance, loader));
+					log.info("Loaded {} '{}' from extension '{}'.", spi.getSimpleName(), providerClassName, loader.getName());
+				} catch (Exception e) {
+					log.error(
+						"Failed to instantiate {} '{}' from extension '{}': {}",
+						spi.getSimpleName(),
+						providerClassName,
+						loader.getName(),
+						e.getMessage()
+					);
+					log.debug("Extension provider instantiation exception:", e);
+				}
 			}
-			final String providerClassName = provider.type().getName();
-			try {
-				final T instance = TcclClassLoaderDecorator.call(loader, provider::get);
-				target.add(TcclClassLoaderDecorator.wrap(spi, instance, loader));
-				log.info("Loaded {} '{}' from extension '{}'.", spi.getSimpleName(), providerClassName, loader.getName());
-			} catch (Exception e) {
-				log.error(
-					"Failed to instantiate {} '{}' from extension '{}': {}",
-					spi.getSimpleName(),
-					providerClassName,
-					loader.getName(),
-					e.getMessage()
-				);
-				log.debug("Extension provider instantiation exception:", e);
-			}
+		} catch (ServiceConfigurationError | LinkageError e) {
+			// A malformed META-INF/services entry or a provider type with broken linkage must disable
+			// that extension's SPI, not abort the whole discovery (which would leak every loader).
+			log.error(
+				"Failed to discover {} providers of extension '{}': {}",
+				spi.getSimpleName(),
+				loader.getName(),
+				e.getMessage()
+			);
+			log.debug("Extension provider discovery error:", e);
 		}
 	}
 

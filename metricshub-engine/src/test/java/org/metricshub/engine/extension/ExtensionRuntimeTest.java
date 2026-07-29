@@ -24,10 +24,22 @@ package org.metricshub.engine.extension;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class ExtensionRuntimeTest {
+
+	@TempDir
+	Path tempDir;
 
 	/**
 	 * Builds a descriptor carrying the given child-first prefixes (id/jar are irrelevant here).
@@ -87,5 +99,33 @@ class ExtensionRuntimeTest {
 			ExtensionRuntime.sanitizeChildFirst(descriptor),
 			"Only the overlapping prefix must be dropped; the rest kept in order"
 		);
+	}
+
+	@Test
+	void testMalformedServiceEntryDoesNotAbortDiscoveryOrLeakLoaders() throws IOException {
+		// A jar whose IProtocolExtension service file names a class that does not exist: discovery
+		// must skip it (ServiceConfigurationError handled) instead of unwinding with open loaders.
+		final File jar = tempDir.resolve("broken-extension.jar").toFile();
+		try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jar))) {
+			zos.putNextEntry(new ZipEntry("META-INF/services/org.metricshub.engine.extension.IProtocolExtension"));
+			zos.write("does.not.Exist".getBytes(StandardCharsets.UTF_8));
+			zos.closeEntry();
+		}
+
+		final ExtensionRuntime runtime = ExtensionRuntime.load(
+			tempDir.toFile(),
+			ExtensionRuntimeTest.class.getClassLoader()
+		);
+		try {
+			assertTrue(
+				runtime.getExtensionManager().getProtocolExtensions().isEmpty(),
+				"The broken provider must be skipped, not loaded"
+			);
+		} finally {
+			runtime.close();
+		}
+
+		// After close(), the loader no longer holds the jar: it must be deletable (Windows file lock).
+		assertTrue(Files.deleteIfExists(jar.toPath()), "The extension jar must be released after close()");
 	}
 }

@@ -106,11 +106,20 @@ public class ExtensionManager {
 	}
 
 	/**
-	 * Closes the class loaders backing the loaded extensions, releasing their jar file handles.
-	 * Best-effort: a failure to close one loader is logged and does not prevent closing the others.
-	 * Safe to call on an {@link #empty()} manager (no-op).
+	 * Shuts down the loaded extensions then closes the class loaders backing them, releasing their
+	 * jar file handles. The {@link IProtocolExtension#onShutdown()} hooks run first so extensions can
+	 * dispose resources of their own (for example, isolated JDBC driver class loaders) before their
+	 * loader disappears. Best-effort: a failure in one step is logged and does not prevent the
+	 * others. Safe to call on an {@link #empty()} manager (no-op).
 	 */
 	public void close() {
+		for (final IProtocolExtension protocolExtension : protocolExtensions) {
+			try {
+				protocolExtension.onShutdown();
+			} catch (Exception e) {
+				log.debug("Extension shutdown hook failed: {}", e.getMessage());
+			}
+		}
 		for (final AutoCloseable classLoader : classLoaders) {
 			try {
 				classLoader.close();

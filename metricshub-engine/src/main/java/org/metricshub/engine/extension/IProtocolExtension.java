@@ -176,4 +176,15 @@ public interface IProtocolExtension {
 	 * @param telemetryManager The telemetry manager of the completed session.
 	 */
 	default void onRecordingSessionEnd(TelemetryManager telemetryManager) {}
+
+	/**
+	 * Invoked when the extension's hosting {@link ExtensionManager} is shut down, before the
+	 * extension's class loader is closed.
+	 *
+	 * <p>Extensions that hold process-wide resources of their own — additional class loaders
+	 * (for example, isolated JDBC driver loaders), caches, background threads — should override
+	 * this hook to release them so the whole loader graph can be reclaimed deterministically.
+	 * Implementations without such resources can rely on this default no-op behavior.
+	 */
+	default void onShutdown() {}
 }

@@ -2,6 +2,8 @@ package org.metricshub.engine.extension;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 
 import java.util.HashMap;
 import java.util.List;
@@ -10,6 +12,7 @@ import java.util.TreeMap;
 import org.junit.jupiter.api.Test;
 import org.metricshub.engine.connector.model.RawConnector;
 import org.metricshub.engine.connector.model.RawConnectorStore;
+import org.mockito.InOrder;
 
 class ExtensionManagerTest {
 
@@ -67,5 +70,24 @@ class ExtensionManagerTest {
 		rawConnectorStoreExpected.setStore(rawStore);
 		assertInstanceOf(TreeMap.class, rawConnectorStore.getStore());
 		assertEquals(rawConnectorStoreExpected.getStore(), rawConnectorStore.getStore());
+	}
+
+	@Test
+	void testCloseRunsShutdownHooksBeforeClosingLoaders() throws Exception {
+		final IProtocolExtension protocolExtension = mock(IProtocolExtension.class);
+		final AutoCloseable classLoader = mock(AutoCloseable.class);
+
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withProtocolExtensions(List.of(protocolExtension))
+			.withClassLoaders(List.of(classLoader))
+			.build();
+
+		extensionManager.close();
+
+		// The extension's own resources (e.g. isolated JDBC driver loaders) must be released
+		// before its class loader disappears.
+		final InOrder order = inOrder(protocolExtension, classLoader);
+		order.verify(protocolExtension).onShutdown();
+		order.verify(classLoader).close();
 	}
 }
