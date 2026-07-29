@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -117,9 +118,11 @@ public class AgentController {
 					extensionManager = ConfigHelper.loadExtensionManager();
 					// Create new context reusing the current configuration directory
 					return new AgentContext(configDir, extensionManager);
-				} catch (Exception e) {
-					// The freshly loaded manager never made it into a context: close its isolated class
-					// loaders now, or repeated failed restarts would accumulate open jar handles.
+				} catch (Exception | ServiceConfigurationError | LinkageError e) {
+					// A provider invoked during the context build can throw linkage/service errors
+					// too. The freshly loaded manager never made it into a context: close its isolated
+					// class loaders now, and convert the failure into an exception the lifecycle
+					// service records (instead of leaving the restart status IN_PROGRESS).
 					if (extensionManager != null) {
 						extensionManager.close();
 					}

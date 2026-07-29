@@ -23,6 +23,7 @@ package org.metricshub.agent;
 
 import java.nio.file.Path;
 import java.nio.file.WatchEvent;
+import java.util.ServiceConfigurationError;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.logging.log4j.Level;
@@ -35,6 +36,7 @@ import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.MetricsHubAgentServer;
 import org.metricshub.web.service.AgentLifecycleService;
 import picocli.CommandLine;
@@ -146,6 +148,31 @@ public class MetricsHubAgentApplication implements Runnable {
 	 * @param agentContextHolder the shared holder, always read to get the freshest context
 	 */
 	void onConfigurationChange(final AgentContextHolder agentContextHolder) {
+		// The comparison build below invokes extension providers on this watcher thread — covered
+		// by neither the scheduler-termination check nor the servlet reader tracker. Lease the
+		// current generation so a concurrent /restart cannot retire the reused manager's loaders
+		// while this reload is still using them.
+		final AgentContextReaderTracker readerTracker = MetricsHubAgentServer.getBean(AgentContextReaderTracker.class);
+		final long generation = agentContextHolder.getGeneration();
+		if (readerTracker != null) {
+			readerTracker.acquire(generation);
+		}
+		try {
+			doOnConfigurationChange(agentContextHolder);
+		} finally {
+			if (readerTracker != null) {
+				readerTracker.release(generation);
+			}
+		}
+	}
+
+	/**
+	 * Performs the configuration-change handling under the reader lease taken by
+	 * {@link #onConfigurationChange(AgentContextHolder)}.
+	 *
+	 * @param agentContextHolder the shared holder, always read to get the freshest context
+	 */
+	private void doOnConfigurationChange(final AgentContextHolder agentContextHolder) {
 		final AgentContext currentContext = agentContextHolder.getAgentContext();
 
 		// Build the new agent context eagerly so we can compare configurations, reusing the
@@ -201,9 +228,11 @@ public class MetricsHubAgentApplication implements Runnable {
 		final ExtensionManager reloadedExtensionManager = ConfigHelper.loadExtensionManager();
 		try {
 			return loadNewAgentContext(reloadedExtensionManager);
-		} catch (Exception e) {
+		} catch (Exception | ServiceConfigurationError | LinkageError e) {
+			// A provider invoked during the context build can throw linkage/service errors too:
+			// close the freshly loaded manager and surface a failure the lifecycle service records.
 			reloadedExtensionManager.close();
-			throw e;
+			throw new IllegalStateException("Failed to build the reloaded AgentContext: " + e.getMessage(), e);
 		}
 	}
 

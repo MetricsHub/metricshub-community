@@ -22,8 +22,10 @@ package org.metricshub.engine.extension;
  */
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -109,6 +111,23 @@ class ExtensionClassLoaderTest {
 				assertNotNull(c.getResource("res/only-in-c.txt"), "C sees its own resource");
 				assertNotNull(c.getResource("res/only-in-a.txt"), "C (requires A) sees A's resource through delegation");
 			}
+		}
+	}
+
+	@Test
+	void testChildFirstPrefixRespectsPackageBoundaries() throws IOException {
+		// "com.foo" must cover com.foo.* only — never an unrelated namespace such as com.foobar.*.
+		try (
+			ExtensionClassLoader loader = new ExtensionClassLoader(
+				"boundaries",
+				new URL[0],
+				ClassLoader.getPlatformClassLoader(),
+				List.of(),
+				List.of("com.foo")
+			)
+		) {
+			assertTrue(loader.isChildFirst("com.foo.Client"));
+			assertFalse(loader.isChildFirst("com.foobar.Client"));
 		}
 	}
 
