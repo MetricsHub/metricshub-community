@@ -358,6 +358,7 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	public synchronized void close() {
 		deregisterOwnedDrivers();
 		for (final IsolatedDriverClassLoader loader : isolatedLoaders) {
+			deregisterIsolatedDrivers(loader);
 			try {
 				loader.close();
 			} catch (IOException e) {
@@ -369,22 +370,41 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 	}
 
 	/**
+	 * Deregisters the {@link DriverManager} registrations made by drivers the given isolated loader
+	 * defined. Such registrations are invisible to this class (caller-visibility rules), so the
+	 * deregistration is performed by a {@link IsolatedDriverDeregistrar} copy defined
+	 * <em>inside</em> the isolated loader (see {@link IsolatedDriverClassLoader#defineDeregistrar()}).
+	 * Best-effort: failures are logged at debug level.
+	 *
+	 * @param loader the isolated loader being retired.
+	 */
+	private static void deregisterIsolatedDrivers(final IsolatedDriverClassLoader loader) {
+		try {
+			final Class<?> deregistrar = loader.defineDeregistrar();
+			final int deregistered = (int) deregistrar.getMethod("deregisterOwnDrivers").invoke(null);
+			if (deregistered > 0) {
+				log.debug("Deregistered {} JDBC driver(s) registered from isolated loader {}.", deregistered, loader.getName());
+			}
+		} catch (Exception | LinkageError e) {
+			log.debug("Failed to deregister the drivers of isolated loader {}: {}", loader.getName(), e.getMessage());
+		}
+	}
+
+	/**
 	 * Deregisters from the JVM-global {@link DriverManager} every driver whose class was loaded by
-	 * this registry's loaders. Although connections are opened through {@code driver.connect()}
+	 * {@link #parentLoader}. Although connections are opened through {@code driver.connect()}
 	 * directly, {@link #instantiate(JdbcDriverDescriptor, ClassLoader)} initializes the driver
 	 * class, letting self-registering drivers (MySQL, PostgreSQL, MariaDB, ...) put an instance
 	 * into the global registry — which would otherwise strongly retain this registry's class
-	 * loaders after an extension reload. Best-effort: {@link DriverManager} only exposes drivers
-	 * whose class is visible from this class's own loader, which covers the built-ins (loaded by
-	 * {@link #parentLoader}); an isolated driver invisible to this caller cannot be enumerated nor
-	 * deregistered here, and is logged when its loader closes.
+	 * loaders after an extension reload. Drivers registered from isolated loaders are invisible to
+	 * this caller ({@link DriverManager}'s caller-visibility rules) and are handled per loader by
+	 * {@link #deregisterIsolatedDrivers(IsolatedDriverClassLoader)}.
 	 */
 	private void deregisterOwnedDrivers() {
 		final Enumeration<Driver> drivers = DriverManager.getDrivers();
 		while (drivers.hasMoreElements()) {
 			final Driver driver = drivers.nextElement();
-			final ClassLoader driverLoader = driver.getClass().getClassLoader();
-			if (driverLoader == parentLoader || isOwnedIsolatedLoader(driverLoader)) {
+			if (driver.getClass().getClassLoader() == parentLoader) {
 				try {
 					DriverManager.deregisterDriver(driver);
 					log.debug("Deregistered JDBC driver {} from DriverManager.", driver.getClass().getName());
@@ -393,22 +413,6 @@ public final class JdbcDriverRegistry implements AutoCloseable {
 				}
 			}
 		}
-	}
-
-	/**
-	 * Tests whether {@code loader} is one of the isolated driver class loaders owned by this
-	 * registry.
-	 *
-	 * @param loader the class loader to test; may be {@code null} (bootstrap).
-	 * @return {@code true} when this registry created {@code loader}.
-	 */
-	private boolean isOwnedIsolatedLoader(final ClassLoader loader) {
-		for (final IsolatedDriverClassLoader owned : isolatedLoaders) {
-			if (owned == loader) {
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/**
