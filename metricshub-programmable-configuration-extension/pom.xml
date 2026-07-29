@@ -204,6 +204,8 @@
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
+										<MetricsHub-Extension-Id>metricshub-programmable-configuration-extension</MetricsHub-Extension-Id>
+										<MetricsHub-Extension-Requires>metricshub-jdbc-extension</MetricsHub-Extension-Requires>
 									</manifestEntries>
 								</transformer>
 							</transformers>

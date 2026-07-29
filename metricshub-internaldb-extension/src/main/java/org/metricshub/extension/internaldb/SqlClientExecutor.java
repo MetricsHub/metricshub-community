@@ -53,6 +53,20 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Builder
 public class SqlClientExecutor {
 
+	static {
+		// Register the bundled H2 driver explicitly with this extension's own class loader. Under
+		// per-extension isolation, DriverManager's lazy service scan runs with the thread context
+		// class loader of whichever thread first touched DriverManager, which may not see this
+		// extension's shaded H2. Forcing the driver's static registration here makes
+		// DriverManager.getConnection("jdbc:h2:...") resolve reliably, since the caller
+		// (SqlClientExecutor) and the driver share the same class loader.
+		try {
+			Class.forName("org.h2.Driver", true, SqlClientExecutor.class.getClassLoader());
+		} catch (ClassNotFoundException e) {
+			log.error("The bundled H2 driver could not be loaded for the Internal DB extension: {}", e.getMessage());
+		}
+	}
+
 	private TelemetryManager telemetryManager;
 	private String connectorId;
 

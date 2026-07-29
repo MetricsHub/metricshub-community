@@ -79,11 +79,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.metricshub</groupId>
-			<artifactId>metricshub-classloader-agent</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-internaldb-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -192,11 +187,6 @@
 									<groupId>org.metricshub</groupId>
 									<artifactId>metricshub-bmchelix-enrichment-extension</artifactId>
 									<destFileName>metricshub-bmchelix-enrichment-extension.jar</destFileName>
-								</artifactItem>
-								<artifactItem>
-									<groupId>org.metricshub</groupId>
-									<artifactId>metricshub-classloader-agent</artifactId>
-									<destFileName>metricshub-classloader-agent.jar</destFileName>
 								</artifactItem>
 								<artifactItem>
 									<groupId>org.metricshub</groupId>

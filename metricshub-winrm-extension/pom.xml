@@ -166,18 +166,11 @@
 						</goals>
 						<configuration>
 							<artifactSet>
-								<excludes>
-									<exclude>org.metricshub:xflat</exclude>
-									<exclude>org.metricshub:wbem-java</exclude>
-									<exclude>org.metricshub:vcenter-java</exclude>
-									<exclude>org.metricshub:tablejoin</exclude>
-									<exclude>org.metricshub:printf4j</exclude>
-									<exclude>org.metricshub:metricshub-engine</exclude>
-									<exclude>org.metricshub:jflat</exclude>
-									<exclude>org.metricshub:jawk</exclude>
-									<exclude>org.metricshub:snmp-java</exclude>
-									<exclude>org.metricshub:ssh-java</exclude>
-								</excludes>
+								<includes>
+									<include>org.metricshub:metricshub-winrm-extension</include>
+									<include>org.metricshub:winrm-java</include>
+									<include>org.metricshub:metricshub-win-extension-common</include>
+								</includes>
 							</artifactSet>
 							<transformers>
 								<transformer
@@ -185,9 +178,6 @@
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
 									</manifestEntries>
-								</transformer>
-								<transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
-									<resource>META-INF/cxf/bus-extensions.txt</resource>
 								</transformer>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
 							</transformers>
