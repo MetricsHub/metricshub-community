@@ -29,7 +29,7 @@ graph TD
 
     PROG -. "Requires: jdbc" .-> JDBC
     EMU -. "Requires: http, jdbc, ..." .-> HTTP
-    EMU -. " " .-> JDBC
+    EMU -.-> JDBC
 
     JDBC --> D1
 
@@ -92,26 +92,15 @@ URL external form.
 
 ```mermaid
 flowchart TD
-    S["scan extensions/*.jar"] --> M["read manifest per jar ->
-    ExtensionDescriptor
-    (Id, Requires, Child-First)"]
+    S["scan extensions/*.jar"] --> M["read manifest per jar -><br/>ExtensionDescriptor<br/>(Id, Requires, Child-First)"]
     M --> DUP["drop duplicate Ids"]
-    DUP --> TOPO["topological sort:
-    dependencies before dependents;
-    disable unresolved / cyclic (log ERROR)"]
-    TOPO --> BUILD["build one ExtensionClassLoader per jar,
-    wiring Requires as delegate loaders"]
-    BUILD --> SPI["per loader x 7 SPIs: lazy ServiceLoader
-    - skip providers owned by ANOTHER extension loader
-    - dedupe by SPI + provider class (parent-resolved kept once)
-    - per-element error handling (malformed entry != abort)"]
+    DUP --> TOPO["topological sort:<br/>dependencies before dependents;<br/>disable unresolved / cyclic (log ERROR)"]
+    TOPO --> BUILD["build one ExtensionClassLoader per jar,<br/>wiring Requires as delegate loaders"]
+    BUILD --> SPI["per loader x 7 SPIs: lazy ServiceLoader<br/>- skip providers owned by ANOTHER extension loader<br/>- dedupe by SPI + provider class (parent-resolved kept once)<br/>- per-element error handling (malformed entry != abort)"]
     SPI --> INST["instantiate under TCCL = extension loader"]
     INST --> WRAP["wrap in TcclClassLoaderDecorator proxy"]
-    WRAP --> EM["ExtensionManager
-    (holds providers + loaders; close() =
-    onShutdown reverse order, then close loaders)"]
-    SPI -. "any unexpected failure" .-> CQ["close every constructed
-    loader, rethrow"]
+    WRAP --> EM["ExtensionManager<br/>(holds providers + loaders; close() =<br/>onShutdown reverse order, then close loaders)"]
+    SPI -. "any unexpected failure" .-> CQ["close every constructed<br/>loader, rethrow"]
 ```
 
 ## 4. Runtime invocation — why TCCL-based lookups keep working
@@ -124,7 +113,7 @@ sequenceDiagram
     participant CL as ExtensionClassLoader
 
     Engine->>Proxy: any SPI method (processSource, load, ...)
-    Proxy->>Proxy: save TCCL; TCCL = extension loader
+    Proxy->>Proxy: save TCCL, set TCCL = extension loader
     Proxy->>Ext: delegate call
     Ext->>CL: TCCL lookups resolve HERE:<br/>JAXP factories, DriverManager,<br/>Spring ClassPathResource, ServiceLoader
     Ext-->>Proxy: result
