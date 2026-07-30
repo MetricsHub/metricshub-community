@@ -25,7 +25,6 @@ import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -119,11 +118,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 			// The engine's compute steps mutate the result in place (add columns, transform rows,
 			// ...): deep-copy the executor's unmodifiable (and possibly null) rows into mutable lists.
-			final List<List<String>> table = Optional.ofNullable(result.getRows())
-				.orElseGet(List::of)
-				.stream()
-				.map(row -> (List<String>) new ArrayList<>(row))
-				.collect(Collectors.toCollection(ArrayList::new));
+			final List<List<String>> rows = result.getRows();
+			final List<List<String>> table =
+				rows == null
+					? new ArrayList<>()
+					: rows
+							.stream()
+							.map(row -> (List<String>) new ArrayList<>(row))
+							.collect(Collectors.toCollection(ArrayList::new));
 
 			LoggingHelper.trace(() ->
 				log.trace(
