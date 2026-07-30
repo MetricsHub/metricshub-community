@@ -50,9 +50,9 @@ import lombok.extern.slf4j.Slf4j;
  *       dependency is missing or forms a cycle.</li>
  *   <li>Create one {@link ExtensionClassLoader} per extension, wiring dependency loaders as
  *       delegates.</li>
- *   <li>Run the seven MetricsHub SPI {@link ServiceLoader}s against each loader, keeping only the
- *       providers that loader actually owns (so a provider visible through the parent or a delegate
- *       is not registered twice), and wrap each provider so it runs under its extension's TCCL.</li>
+ *   <li>Run the seven MetricsHub SPI {@link ServiceLoader}s against each loader, registering every
+ *       provider exactly once (a provider owned by another extension loader is registered by its
+ *       own pass), and wrap each provider so it runs under its extension's TCCL.</li>
  * </ol>
  */
 @Slf4j
@@ -164,14 +164,25 @@ public final class ExtensionRuntime implements AutoCloseable {
 		final List<IConfigurationProvider> configurationProviderExtensions = new ArrayList<>();
 		final List<IMetricEnrichmentExtension> metricEnrichmentExtensions = new ArrayList<>();
 
+		// Providers already registered (keyed by SPI + provider class), across all loaders: a
+		// provider whose class resolves from the shared parent (e.g. the extension's classes are
+		// also on the application classpath) must be registered exactly once even when several
+		// enumerations see it.
+		final Set<String> registeredProviderTypes = new HashSet<>();
+
 		for (final ExtensionClassLoader loader : classLoaders) {
-			loadSpi(IProtocolExtension.class, loader, protocolExtensions);
-			loadSpi(IStrategyProviderExtension.class, loader, strategyProviderExtensions);
-			loadSpi(IConnectorStoreProviderExtension.class, loader, connectorStoreProviderExtensions);
-			loadSpi(ISourceComputationExtension.class, loader, sourceComputationExtensions);
-			loadSpi(ICompositeSourceScriptExtension.class, loader, compositeSourceScriptExtensions);
-			loadSpi(IConfigurationProvider.class, loader, configurationProviderExtensions);
-			loadSpi(IMetricEnrichmentExtension.class, loader, metricEnrichmentExtensions);
+			loadSpi(IProtocolExtension.class, loader, protocolExtensions, registeredProviderTypes);
+			loadSpi(IStrategyProviderExtension.class, loader, strategyProviderExtensions, registeredProviderTypes);
+			loadSpi(
+				IConnectorStoreProviderExtension.class,
+				loader,
+				connectorStoreProviderExtensions,
+				registeredProviderTypes
+			);
+			loadSpi(ISourceComputationExtension.class, loader, sourceComputationExtensions, registeredProviderTypes);
+			loadSpi(ICompositeSourceScriptExtension.class, loader, compositeSourceScriptExtensions, registeredProviderTypes);
+			loadSpi(IConfigurationProvider.class, loader, configurationProviderExtensions, registeredProviderTypes);
+			loadSpi(IMetricEnrichmentExtension.class, loader, metricEnrichmentExtensions, registeredProviderTypes);
 		}
 
 		return ExtensionManager.builder()
@@ -202,15 +213,23 @@ public final class ExtensionRuntime implements AutoCloseable {
 	}
 
 	/**
-	 * Runs the {@link ServiceLoader} for a single SPI against a single extension loader, keeps only
-	 * the providers that loader owns, wraps each in a TCCL proxy, and appends them to {@code target}.
+	 * Runs the {@link ServiceLoader} for a single SPI against a single extension loader, skips the
+	 * providers owned by other extension loaders (each registers its own) and the ones already
+	 * registered, wraps each kept provider in a TCCL proxy, and appends it to {@code target}.
 	 *
 	 * @param <T>    the SPI interface type.
-	 * @param spi    the SPI interface class.
-	 * @param loader the extension loader to query.
-	 * @param target the list to append the wrapped instances to.
+	 * @param spi                     the SPI interface class.
+	 * @param loader                  the extension loader to query.
+	 * @param target                  the list to append the wrapped instances to.
+	 * @param registeredProviderTypes the {@code SPI#providerClass} keys already registered, shared
+	 *                                across all loaders.
 	 */
-	private static <T> void loadSpi(final Class<T> spi, final ExtensionClassLoader loader, final List<T> target) {
+	private static <T> void loadSpi(
+		final Class<T> spi,
+		final ExtensionClassLoader loader,
+		final List<T> target,
+		final Set<String> registeredProviderTypes
+	) {
 		// Enumerate the providers lazily and handle errors per element: the enumeration also sees
 		// the service files of declared dependencies (resource delegation), so a malformed entry or
 		// broken provider in a DEPENDENCY must not prevent this loader's own providers from
@@ -226,10 +245,16 @@ public final class ExtensionRuntime implements AutoCloseable {
 					return;
 				}
 				provider = providers.next();
-				// A provider visible through the parent or a delegate is registered during that
-				// owner's own pass; skip it to avoid loading the same extension twice. Provider.type()
-				// loads the class, so a missing/broken provider class also surfaces here.
-				if (provider.type().getClassLoader() != loader) {
+				// A provider defined by ANOTHER extension loader (a delegate) is registered during
+				// that owner's own pass; skip it here. A provider resolving from the shared parent
+				// (e.g. its classes are also on the application classpath) has no other pass to
+				// register it — keep it, deduplicated across loaders. Provider.type() loads the
+				// class, so a missing/broken provider class also surfaces here.
+				final ClassLoader definingLoader = provider.type().getClassLoader();
+				if (definingLoader != loader && definingLoader instanceof ExtensionClassLoader) {
+					continue;
+				}
+				if (!registeredProviderTypes.add(spi.getName() + "#" + provider.type().getName())) {
 					continue;
 				}
 			} catch (ServiceConfigurationError | LinkageError e) {
