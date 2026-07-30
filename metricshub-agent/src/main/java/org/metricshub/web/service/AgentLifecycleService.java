@@ -4,7 +4,7 @@ package org.metricshub.web.service;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -503,7 +503,7 @@ public class AgentLifecycleService {
 				return true;
 			}
 			return taskScheduler.getScheduledThreadPoolExecutor().isTerminated();
-		} catch (Exception e) {
+		} catch (Exception _) {
 			// Scheduler never initialized (or already torn down): nothing can be running.
 			return true;
 		}
@@ -770,10 +770,10 @@ public class AgentLifecycleService {
 	void shutdown() {
 		restartExecutor.shutdownNow();
 		loaderRetirementExecutor.shutdownNow();
-		ExtensionManager pending;
-		while ((pending = pendingLoaderRetirements.poll()) != null) {
+		ExtensionManager pendingExtensionManager;
+		while ((pendingExtensionManager = pendingLoaderRetirements.poll()) != null) {
 			try {
-				pending.close();
+				pendingExtensionManager.close();
 			} catch (Exception e) {
 				log.debug("Failed to close a pending orphaned ExtensionManager: {}", e.getMessage());
 			}

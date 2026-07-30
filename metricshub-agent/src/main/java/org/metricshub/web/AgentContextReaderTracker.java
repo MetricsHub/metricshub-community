@@ -86,7 +86,7 @@ public class AgentContextReaderTracker implements Filter {
 				try {
 					request.getAsyncContext().addListener(new LeaseReleaseListener(generation));
 					releaseNow = false;
-				} catch (IllegalStateException e) {
+				} catch (IllegalStateException _) {
 					// The asynchronous cycle completed concurrently: release the lease right away.
 				}
 			}
@@ -141,7 +141,7 @@ public class AgentContextReaderTracker implements Filter {
 	 * @param generation the context generation active when the reader entered
 	 */
 	public void acquire(final long generation) {
-		readersByGeneration.computeIfAbsent(generation, g -> new AtomicLong()).incrementAndGet();
+		readersByGeneration.computeIfAbsent(generation, _ -> new AtomicLong()).incrementAndGet();
 	}
 
 	/**

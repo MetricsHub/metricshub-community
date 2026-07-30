@@ -200,7 +200,7 @@
 									implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
-										<MetricsHub-Extension-Id>metricshub-emulation-extension</MetricsHub-Extension-Id>
+										<MetricsHub-Extension-Id>${project.artifactId}</MetricsHub-Extension-Id>
 										<MetricsHub-Extension-Requires>metricshub-http-extension,metricshub-oscommand-extension,metricshub-snmp-extension,metricshub-wbem-extension,metricshub-jdbc-extension,metricshub-ipmi-extension,metricshub-jmx-extension,metricshub-wmi-extension</MetricsHub-Extension-Requires>
 									</manifestEntries>
 								</transformer>

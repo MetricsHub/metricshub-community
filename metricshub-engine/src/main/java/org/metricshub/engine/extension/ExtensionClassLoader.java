@@ -37,7 +37,7 @@ import java.util.Set;
  *
  * <p>Every extension jar gets its own {@link ExtensionClassLoader}. Because the jar is no longer
  * appended to the system class loader, an extension's {@code META-INF/services} entries (JAXP/StAX
- * factories, {@code java.sql.Driver}, Jackson, security providers, …) are visible only to that
+ * factories, {@code java.sql.Driver}, Jackson, security providers, ...) are visible only to that
  * extension, so one extension can never change JVM-global service resolution for another.
  *
  * <p><b>Delegation order</b> for {@link #loadClass(String, boolean)}:
@@ -103,15 +103,21 @@ public class ExtensionClassLoader extends URLClassLoader {
 		// Normalize each prefix to end with a package separator, so "com.foo" matches com.foo.* but
 		// never an unrelated namespace such as com.foobar.*.
 		this.childFirstPackages =
-			childFirstPackages == null
-				? List.of()
-				: childFirstPackages
-						.stream()
-						.map(prefix -> prefix.endsWith(".") ? prefix : prefix + ".")
-						.toList();
+			childFirstPackages == null ? List.of() : childFirstPackages.stream().map(this::normalizePackagePrefix).toList();
 		this.childFirstResourcePrefixes = this.childFirstPackages.stream()
 			.map(prefix -> prefix.replace('.', '/'))
 			.toList();
+	}
+
+	/**
+	 * Ensures a package prefix ends with a dot, so "com.foo" matches com.foo.* but never an unrelated
+	 * namespace such as com.foobar.*.
+	 *
+	 * @param prefix the package prefix to normalize; never {@code null}.
+	 * @return the normalized prefix, guaranteed to end with a dot.
+	 */
+	private String normalizePackagePrefix(final String prefix) {
+		return prefix.endsWith(".") ? prefix : prefix + ".";
 	}
 
 	@Override
@@ -163,7 +169,7 @@ public class ExtensionClassLoader extends URLClassLoader {
 			if (isChildFirst(name)) {
 				try {
 					return findClass(name);
-				} catch (ClassNotFoundException e) {
+				} catch (ClassNotFoundException _) {
 					// Not in our URLs: fall through to dependencies then self.
 				}
 			}

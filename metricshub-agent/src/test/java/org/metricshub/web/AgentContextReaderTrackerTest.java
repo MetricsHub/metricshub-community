@@ -63,7 +63,7 @@ class AgentContextReaderTrackerTest {
 		final AtomicBoolean leaseHeldDuringChain = new AtomicBoolean();
 
 		final ServletRequest request = mock(ServletRequest.class);
-		tracker.doFilter(request, null, (req, res) -> leaseHeldDuringChain.set(tracker.hasReadersAtOrBefore(generation)));
+		tracker.doFilter(request, null, (_, _) -> leaseHeldDuringChain.set(tracker.hasReadersAtOrBefore(generation)));
 
 		assertTrue(leaseHeldDuringChain.get(), "The lease must be held while the chain executes");
 		assertFalse(tracker.hasReadersAtOrBefore(generation), "The lease must be released after the request completes");
@@ -82,7 +82,7 @@ class AgentContextReaderTrackerTest {
 		when(request.isAsyncStarted()).thenReturn(true);
 		when(request.getAsyncContext()).thenReturn(asyncContext);
 
-		tracker.doFilter(request, null, (req, res) -> {});
+		tracker.doFilter(request, null, (_, _) -> {});
 
 		assertTrue(
 			tracker.hasReadersAtOrBefore(generation),
