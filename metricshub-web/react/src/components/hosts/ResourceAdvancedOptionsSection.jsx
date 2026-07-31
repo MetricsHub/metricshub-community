@@ -125,6 +125,41 @@ const ResourceAdvancedOptionsSection = ({
 	const handleLoggerLevelChange = (value) =>
 		patch({ loggerLevel: value === inheritedLevel ? "" : value });
 
+	// Turning "apply from parent" off writes every option locally, materialized from the
+	// effective default values, so the resource/group keeps its configuration even if those
+	// defaults change later. Turning it back on returns to using the defaults for everything.
+	const handleInheritToggle = (checked) => {
+		if (checked) {
+			patch({ inheritAdvanced: true });
+			return;
+		}
+		const inh = inheritedDefaults || {};
+		const inheritedMonitorFilters = Array.isArray(inh.monitorFilters) ? inh.monitorFilters : [];
+		const inheritedEnrichments = Array.isArray(inh.enrichments)
+			? inh.enrichments.map((entry) => String(entry).toLowerCase())
+			: [];
+		patch({
+			inheritAdvanced: false,
+			loggerLevel: inheritedLevel || DEFAULT_LOGGER_LEVEL,
+			outputDirectory: String(inh.outputDirectory ?? ""),
+			collectPeriod: formatDurationSeconds(inh.collectPeriod) || "",
+			discoveryCycle: inh.discoveryCycle != null ? String(inh.discoveryCycle) : "",
+			jobTimeout: formatDurationSeconds(inh.jobTimeout) || "",
+			stateSetCompression:
+				String(inh.stateSetCompression ?? "").trim() || DEFAULT_STATE_SET_COMPRESSION,
+			sequential: Boolean(inh.sequential),
+			enableSelfMonitoring:
+				inh.enableSelfMonitoring == null
+					? DEFAULT_ENABLE_SELF_MONITORING
+					: inh.enableSelfMonitoring
+						? "true"
+						: "false",
+			resolveHostnameToFqdn: Boolean(inh.resolveHostnameToFqdn),
+			monitorFilters: inheritedMonitorFilters.join(", "),
+			enrichments: inheritedEnrichments.includes("bmchelix") ? "bmchelix" : DEFAULT_ENRICHMENT,
+		});
+	};
+
 	return (
 		<Box>
 			<Button
@@ -162,7 +197,7 @@ const ResourceAdvancedOptionsSection = ({
 							control={
 								<Checkbox
 									checked={inheritAdvanced}
-									onChange={(e) => patch({ inheritAdvanced: e.target.checked })}
+									onChange={(e) => handleInheritToggle(e.target.checked)}
 								/>
 							}
 							label={inheritLabel}
@@ -170,8 +205,8 @@ const ResourceAdvancedOptionsSection = ({
 						/>
 						<Typography variant="caption" color="text.secondary" sx={{ display: "block", ml: 4 }}>
 							{inheritAdvanced
-								? "Uncheck to override any of the options below."
-								: "Only the values you change are saved."}
+								? "Uncheck to set every option below explicitly, so later changes to the defaults won't affect it."
+								: "Every option below is set explicitly and won't be affected by changes to the defaults."}
 						</Typography>
 					</Box>
 

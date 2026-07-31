@@ -383,7 +383,8 @@ const HostConnectorsCatalogDialog = ({
 															alignItems="flex-start"
 															sx={{ minWidth: 0 }}
 														>
-															<ConnectorDocumentationLink connectorId={id} iconOnly />
+															{/* Patched connectors are user-supplied and not in the docs, so no link. */}
+															{!item.patched && <ConnectorDocumentationLink connectorId={id} iconOnly />}
 															<Box sx={{ minWidth: 0, flex: 1 }}>
 																<Stack
 																	direction="row"

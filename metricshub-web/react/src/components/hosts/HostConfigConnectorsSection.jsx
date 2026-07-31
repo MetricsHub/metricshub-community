@@ -1184,13 +1184,26 @@ const HostConfigConnectorsSection = ({
 				minWidth: 120,
 				sortable: false,
 				disableColumnMenu: true,
-				renderCell: (params) =>
-					params.row.rowType === ROW_TYPE_CONFIGURATION ? null : (
+				renderCell: (params) => {
+					if (params.row.rowType === ROW_TYPE_CONFIGURATION) {
+						return null;
+					}
+					// Patched connectors are user-supplied and not in the documentation, so the
+					// id is shown as plain text instead of a (dead) documentation link.
+					if (params.row.item?.patched) {
+						return (
+							<Typography variant="caption" sx={{ fontWeight: 600 }} noWrap>
+								{params.row.connectorId}
+							</Typography>
+						);
+					}
+					return (
 						<ConnectorDocumentationLink
 							connectorId={params.row.connectorId}
 							label={params.row.connectorId}
 						/>
-					),
+					);
+				},
 			},
 			{
 				field: "configuration",

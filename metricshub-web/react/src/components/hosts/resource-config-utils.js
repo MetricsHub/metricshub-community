@@ -154,12 +154,13 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 	const payload = {};
 
 	// While "Apply advanced options from the parent" is on, none of the inheritance-aware
-	// keys are written — the resource/group inherits them entirely. Only the resource's own
-	// custom attributes / metrics (handled below) are still emitted.
+	// keys are written — the resource/group inherits them entirely. Once it is off, EVERY
+	// option is written verbatim (materialized from the effective defaults in the UI) so the
+	// resource/group stays fixed even if those defaults later change. Only the resource's own
+	// custom attributes / metrics (handled below) are always emitted.
 	if (!resourceAdvanced.inheritAdvanced) {
-		// The resource's own logger level is written verbatim when set (""  means "inherit",
-		// so it is omitted; "off" is written explicitly so a disabled resource round-trips).
-		// The output directory only applies while logging is on (level is not "off").
+		// The logger level is written verbatim ("off" persists a disabled resource). The
+		// output directory only applies while logging is on (level is not "off").
 		const loggerLevel = String(resourceAdvanced.loggerLevel ?? "").trim();
 		if (loggerLevel !== "") {
 			payload.loggerLevel = loggerLevel;
@@ -175,9 +176,8 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 		setIfPresent(payload, "collectPeriod", String(resourceAdvanced.collectPeriod ?? "").trim());
 		setIfPresent(payload, "jobTimeout", String(resourceAdvanced.jobTimeout ?? "").trim());
 
-		// Only persist a non-default state-set compression.
 		const stateSetCompression = String(resourceAdvanced.stateSetCompression ?? "").trim();
-		if (stateSetCompression !== "" && stateSetCompression !== DEFAULT_STATE_SET_COMPRESSION) {
+		if (stateSetCompression !== "") {
 			payload.stateSetCompression = stateSetCompression;
 		}
 
@@ -189,19 +189,11 @@ export const buildResourceAdvancedPayload = (resourceAdvanced = {}) => {
 			}
 		}
 
-		if (resourceAdvanced.sequential) {
-			payload.sequential = true;
-		}
-		if (resourceAdvanced.resolveHostnameToFqdn) {
-			payload.resolveHostnameToFqdn = true;
-		}
+		payload.sequential = Boolean(resourceAdvanced.sequential);
+		payload.resolveHostnameToFqdn = Boolean(resourceAdvanced.resolveHostnameToFqdn);
 
-		// Self monitoring is written only when it differs from the built-in default.
 		const enableSelfMonitoring = String(resourceAdvanced.enableSelfMonitoring ?? "").trim();
-		if (
-			(enableSelfMonitoring === "true" || enableSelfMonitoring === "false") &&
-			enableSelfMonitoring !== DEFAULT_ENABLE_SELF_MONITORING
-		) {
+		if (enableSelfMonitoring === "true" || enableSelfMonitoring === "false") {
 			payload.enableSelfMonitoring = enableSelfMonitoring === "true";
 		}
 

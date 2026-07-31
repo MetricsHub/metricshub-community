@@ -18,6 +18,12 @@ import { getLicenseWarning } from "../utils/license-warning";
 import AppAlert from "../components/common/AppAlert";
 
 /**
+ * Temporarily hides the agent "Configure" button: the agent configuration form is not
+ * complete yet. Flip to true (or remove the guard) to re-enable it — the code is kept.
+ */
+const SHOW_AGENT_CONFIGURE_BUTTON = false;
+
+/**
  * Agent page component showing agent information, metrics, and actions.
  * Displays status metrics, agent info table, and other status details.
  */
@@ -125,17 +131,19 @@ function AgentPage() {
 			}}
 		>
 			<Stack spacing={3} sx={{ maxWidth: 1200, mx: "auto" }}>
-				{/* Header */}
-				<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-					<Button
-						variant="outlined"
-						size="small"
-						startIcon={<TuneIcon />}
-						onClick={() => navigate(paths.agentConfig)}
-					>
-						Configure
-					</Button>
-				</Box>
+				{/* Header — the Configure button is hidden until the agent configuration form is ready. */}
+				{SHOW_AGENT_CONFIGURE_BUTTON && (
+					<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+						<Button
+							variant="outlined"
+							size="small"
+							startIcon={<TuneIcon />}
+							onClick={() => navigate(paths.agentConfig)}
+						>
+							Configure
+						</Button>
+					</Box>
+				)}
 				<AgentHeader
 					osType={osType}
 					title={title}

@@ -29,6 +29,7 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ExploreIcon from "@mui/icons-material/Explore";
 import SettingsIcon from "@mui/icons-material/Settings";
 import BuildIcon from "@mui/icons-material/Build";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import ChatIcon from "@mui/icons-material/Chat";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import LightModeIcon from "@mui/icons-material/LightMode";
@@ -281,6 +282,14 @@ const NavBar = ({ onToggleTheme }) => {
 									aria-haspopup="true"
 									aria-expanded={toolsMenuOpen ? "true" : undefined}
 									aria-controls={toolsMenuOpen ? "tools-menu" : undefined}
+									endIcon={
+										<KeyboardArrowDownIcon
+											sx={{
+												transition: "transform 0.2s",
+												transform: toolsMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+											}}
+										/>
+									}
 									sx={[
 										navBtnSx,
 										{ position: "relative" },
