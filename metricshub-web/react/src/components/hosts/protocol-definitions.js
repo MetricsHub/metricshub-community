@@ -461,10 +461,10 @@ export const PROTOCOL_FIELDS = {
 		},
 		{
 			name: "privateKey",
-			label: "Private Key",
-			type: "textarea",
-			placeholder: "Paste PEM private key content",
-			helperText: "Used instead of the password when provided",
+			label: "Private Key Path",
+			type: "text",
+			placeholder: "/path/to/private/key",
+			helperText: "Path to the private key file, used instead of the password when provided",
 		},
 		{
 			name: "port",

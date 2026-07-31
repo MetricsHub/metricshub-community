@@ -30,7 +30,7 @@ describe("collectProtocolConfigErrors SSH credentials", () => {
 	it("accepts a private key alone", () => {
 		const errors = collectProtocolConfigErrors(
 			"ssh",
-			{ ...base, password: "", privateKey: "-----BEGIN OPENSSH PRIVATE KEY-----" },
+			{ ...base, password: "", privateKey: "/home/admin/.ssh/id_rsa" },
 			{ hostId: "server-1", hostName: "server-1" },
 		);
 		expect(errors.password).toBeUndefined();

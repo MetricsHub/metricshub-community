@@ -59,6 +59,43 @@ export const standaloneHostTreeId = (hostId) =>
  */
 export const groupTreeId = (groupName) => `hosts-tree/group/${encodeURIComponent(groupName)}`;
 
+/** Read-only nodes coming from other YAML files (not metricshub-ui.yaml). */
+const EXTERNAL_ID_PREFIX = "hosts-tree/external/";
+const EXTERNAL_DISABLED_TITLE =
+	"Not configured through the web UI — likely defined in another configuration file (e.g. metricshub.yaml). Read-only here.";
+
+/** Read-only top-level node grouping everything configured outside metricshub-ui.yaml. */
+const EXTERNAL_ROOT_ID = `${EXTERNAL_ID_PREFIX}root`;
+/** "No resource group" section inside the External tree (mirrors the editable one). */
+const EXTERNAL_STANDALONE_ID = `${EXTERNAL_ID_PREFIX}standalone-section`;
+
+const externalGroupTreeId = (groupName) =>
+	`${EXTERNAL_ID_PREFIX}group/${encodeURIComponent(groupName)}`;
+const externalGroupedHostTreeId = (groupName, hostId) =>
+	`${EXTERNAL_ID_PREFIX}group/${encodeURIComponent(groupName)}/host/${encodeURIComponent(hostId)}`;
+const externalStandaloneHostTreeId = (hostId) =>
+	`${EXTERNAL_ID_PREFIX}standalone/host/${encodeURIComponent(hostId)}`;
+
+/**
+ * @param {string} id tree item id
+ * @param {string} hostId resource id
+ * @param {object} hostConfig raw resource config node
+ * @returns {object} a dimmed, read-only tree node
+ */
+const externalResourceNode = (id, hostId, hostConfig) => ({
+	id,
+	name: hostId,
+	type: isMultiHostConfig(hostConfig) ? "multi-host-resource" : "resource",
+	children: [],
+	isExpandable: false,
+	disabled: true,
+	disabledTitle: EXTERNAL_DISABLED_TITLE,
+});
+
+/** @param {unknown} groupValue external resource-group node @returns {Record<string, object>} */
+const externalGroupResources = (groupValue) =>
+	groupValue && typeof groupValue === "object" && groupValue.resources ? groupValue.resources : {};
+
 /**
  * @param {object} view
  * @returns {string | null}
@@ -164,7 +201,16 @@ const HostsResourcesTree = ({
 		[summary.standaloneHosts, filterSearch, protocolFilterForHosts],
 	);
 
-	const treeRoot = React.useMemo(() => {
+	const externalResources = React.useMemo(
+		() => snapshot?.externalResources || {},
+		[snapshot?.externalResources],
+	);
+	const externalResourceGroups = React.useMemo(
+		() => snapshot?.externalResourceGroups || {},
+		[snapshot?.externalResourceGroups],
+	);
+
+	const treeRoots = React.useMemo(() => {
 		// A draft belongs to its target resource group; drafts without a (still
 		// existing) group land in the "No resource group" section.
 		const groupNames = new Set(visibleGroups.map((group) => group.name));
@@ -201,9 +247,19 @@ const HostsResourcesTree = ({
 					isExpandable: false,
 				}));
 
+			// Read-only resources of this (editable) group that live in other YAML files.
+			const externalHostNodes = Object.entries(
+				externalGroupResources(externalResourceGroups[group.name]),
+			)
+				.sort(([a], [b]) => compareLocale(a, b))
+				.map(([hostId, hostConfig]) =>
+					externalResourceNode(externalGroupedHostTreeId(group.name, hostId), hostId, hostConfig),
+				);
+
 			const children = [
 				...hostNodes,
 				...(draftsByGroup.get(group.name) || []).sort((a, b) => compareLocale(a.name, b.name)),
+				...externalHostNodes,
 			];
 			return {
 				id: groupTreeId(group.name),
@@ -213,6 +269,35 @@ const HostsResourcesTree = ({
 				isExpandable: children.length > 0,
 			};
 		});
+
+		// Resource groups defined only in other YAML files — shown read-only (dimmed) under "External".
+		const editableGroupNames = new Set(visibleGroups.map((group) => group.name));
+		const externalGroupNodes = Object.entries(externalResourceGroups)
+			.filter(([name]) => !editableGroupNames.has(name))
+			.sort(([a], [b]) => compareLocale(a, b))
+			.map(([name, value]) => {
+				const children = Object.entries(externalGroupResources(value))
+					.sort(([a], [b]) => compareLocale(a, b))
+					.map(([hostId, hostConfig]) =>
+						externalResourceNode(externalGroupedHostTreeId(name, hostId), hostId, hostConfig),
+					);
+				return {
+					id: externalGroupTreeId(name),
+					name,
+					type: "resource-group",
+					children,
+					isExpandable: children.length > 0,
+					disabled: true,
+					disabledTitle: EXTERNAL_DISABLED_TITLE,
+				};
+			});
+
+		// Standalone resources defined only in other YAML files — shown read-only (dimmed) under "External".
+		const externalStandaloneNodes = Object.entries(externalResources)
+			.sort(([a], [b]) => compareLocale(a, b))
+			.map(([hostId, hostConfig]) =>
+				externalResourceNode(externalStandaloneHostTreeId(hostId), hostId, hostConfig),
+			);
 
 		const standaloneChildren = [
 			...visibleStandaloneHosts.map((host) => ({
@@ -225,24 +310,57 @@ const HostsResourcesTree = ({
 			...ungroupedDrafts,
 		].sort((a, b) => a.name.localeCompare(b.name));
 
-		const standaloneSection = [
-			{
-				id: HOSTS_TREE_STANDALONE_ID,
-				name: NO_RESOURCE_GROUP,
-				type: "resource-group",
-				children: standaloneChildren,
-				isExpandable: true,
-			},
-		];
+		const standaloneSection = {
+			id: HOSTS_TREE_STANDALONE_ID,
+			name: NO_RESOURCE_GROUP,
+			type: "resource-group",
+			children: standaloneChildren,
+			isExpandable: true,
+		};
 
-		return {
+		const resourceGroupsRoot = {
 			id: HOSTS_TREE_ROOT_ID,
 			name: "Resource Groups",
 			type: "agent",
-			children: [...groupNodes, ...standaloneSection],
+			children: [...groupNodes, standaloneSection],
 			isExpandable: true,
 		};
-	}, [visibleGroups, visibleStandaloneHosts, drafts, filterSearch, protocolFilterForHosts]);
+
+		// Everything configured outside metricshub-ui.yaml lives under a read-only "External" root,
+		// a sibling of "Resource Groups" that mirrors its structure: external resource groups, then a
+		// "No resource group" section holding external standalone resources.
+		const hasExternal = externalGroupNodes.length > 0 || externalStandaloneNodes.length > 0;
+		const externalStandaloneSection = {
+			id: EXTERNAL_STANDALONE_ID,
+			name: NO_RESOURCE_GROUP,
+			type: "resource-group",
+			children: externalStandaloneNodes,
+			isExpandable: true,
+			disabled: true,
+			disabledTitle: EXTERNAL_DISABLED_TITLE,
+		};
+		const externalRoot = hasExternal
+			? {
+					id: EXTERNAL_ROOT_ID,
+					name: "External",
+					type: "external",
+					children: [...externalGroupNodes, externalStandaloneSection],
+					isExpandable: true,
+					disabled: true,
+					disabledTitle: EXTERNAL_DISABLED_TITLE,
+				}
+			: null;
+
+		return externalRoot ? [resourceGroupsRoot, externalRoot] : [resourceGroupsRoot];
+	}, [
+		visibleGroups,
+		visibleStandaloneHosts,
+		drafts,
+		filterSearch,
+		protocolFilterForHosts,
+		externalResources,
+		externalResourceGroups,
+	]);
 
 	const selectedNodeId = hostsViewToTreeItemId(view);
 
@@ -263,7 +381,7 @@ const HostsResourcesTree = ({
 				walk(child);
 			}
 		};
-		walk(treeRoot);
+		treeRoots.forEach(walk);
 		if (view?.type === "group" || view?.type === "groupedHost") {
 			ids.add(groupTreeId(view.groupName));
 		}
@@ -271,7 +389,7 @@ const HostsResourcesTree = ({
 			ids.add(HOSTS_TREE_STANDALONE_ID);
 		}
 		return [...ids];
-	}, [treeRoot, view]);
+	}, [treeRoots, view]);
 
 	const [controlledExpandedItems, setControlledExpandedItems] = React.useState(expandedItems);
 
@@ -282,6 +400,11 @@ const HostsResourcesTree = ({
 	const handleItemClick = React.useCallback(
 		(event, itemId) => {
 			if (event.target.closest(`.${treeItemClasses.iconContainer}`)) {
+				return;
+			}
+			// External (read-only) items are not editable from the UI — clicking does nothing
+			// (the expand arrow still works so their contents remain visible).
+			if (itemId.startsWith(EXTERNAL_ID_PREFIX)) {
 				return;
 			}
 			if (itemId.startsWith(DRAFT_TREE_ID_PREFIX)) {
@@ -313,7 +436,9 @@ const HostsResourcesTree = ({
 						[`& .${treeItemClasses.label}`]: { flex: 1, minWidth: 0 },
 					}}
 				>
-					<ExplorerTreeItem node={treeRoot} selectedNodeId={selectedNodeId} />
+					{treeRoots.map((root) => (
+						<ExplorerTreeItem key={root.id} node={root} selectedNodeId={selectedNodeId} />
+					))}
 				</SimpleTreeView>
 			</Box>
 		</Box>

@@ -4,6 +4,7 @@ import DeviceHubIcon from "@mui/icons-material/DeviceHub";
 import DomainIcon from "@mui/icons-material/Domain";
 import DnsOutlinedIcon from "@mui/icons-material/DnsOutlined";
 import DynamicFeedIcon from "@mui/icons-material/DynamicFeed";
+import FolderSpecialOutlinedIcon from "@mui/icons-material/FolderSpecialOutlined";
 import MonitorTypeIcon from "../../views/monitors/icons/MonitorTypeIcon";
 
 const ICONS = {
@@ -11,6 +12,8 @@ const ICONS = {
 	"resource-group": DomainIcon,
 	resource: DnsOutlinedIcon,
 	"multi-host-resource": DynamicFeedIcon,
+	// Read-only tree grouping everything configured outside metricshub-ui.yaml.
+	external: FolderSpecialOutlinedIcon,
 };
 
 const COLOR_GETTERS = {
@@ -22,6 +25,7 @@ const COLOR_GETTERS = {
 	"multi-host-resource": (t) => t.palette.secondary.main,
 	"monitor-type": (t) => t.palette.warning.main,
 	instance: (t) => t.palette.success.main,
+	external: (t) => t.palette.text.secondary,
 };
 
 /**

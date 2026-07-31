@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.configuration.YamlConfigurationProvider;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
@@ -81,6 +83,72 @@ class UiConfigServiceTest {
 		assertNotNull(snapshot, "Snapshot should never be null");
 		assertTrue(snapshot.getResources().isEmpty(), "Resources should be empty when no config file exists");
 		assertTrue(snapshot.getResourceGroups().isEmpty(), "Resource groups should be empty when no config file exists");
+	}
+
+	@Test
+	void testExternalConfigIsFreshAndExcludesItemsDeletedFromUiYaml() throws Exception {
+		// A resource group and a standalone resource defined in another YAML file (not metricshub-ui.yaml).
+		Files.writeString(
+			tempDir.resolve("metricshub-other.yaml"),
+			"""
+			resourceGroups:
+			  OtherFileGroup:
+			    resources:
+			      other-host:
+			        attributes:
+			          host.name: other-host
+			resources:
+			  external-host:
+			    attributes:
+			      host.name: external-host
+			"""
+		);
+
+		// Wire a context whose extension manager actually reads the YAML files on disk.
+		final AgentContext agentContext = Mockito.mock(AgentContext.class, Mockito.RETURNS_DEEP_STUBS);
+		when(agentContext.getConfigDirectory()).thenReturn(tempDir);
+		when(agentContext.getExtensionManager()).thenReturn(
+			ExtensionManager.builder().withConfigurationProviderExtensions(List.of(new YamlConfigurationProvider())).build()
+		);
+		final AgentContextHolder holder = mock(AgentContextHolder.class);
+		when(holder.getAgentContext()).thenReturn(agentContext);
+		final UiConfigService svc = new UiConfigService(
+			holder,
+			mock(UiConnectorCompatibilityService.class),
+			new ConnectorStore()
+		);
+
+		// A group created through the UI lands in metricshub-ui.yaml and must NOT be flagged as external.
+		final CreateResourceGroupRequestDto create = new CreateResourceGroupRequestDto();
+		create.setName("UiGroup");
+		svc.createResourceGroup(create);
+
+		UiConfigSnapshotDto snapshot = svc.getSnapshot();
+		assertTrue(snapshot.getResourceGroups().containsKey("UiGroup"), "UI group should be editable");
+		assertFalse(
+			snapshot.getExternalResourceGroups().containsKey("UiGroup"),
+			"UI group must not be reported as external"
+		);
+		assertTrue(
+			snapshot.getExternalResourceGroups().containsKey("OtherFileGroup"),
+			"A group defined only in another YAML file should be external"
+		);
+		assertTrue(
+			snapshot.getExternalResources().containsKey("external-host"),
+			"A resource defined only in another YAML file should be external"
+		);
+
+		// Deleting the UI group must not resurrect it as an external (read-only) group,
+		// even though the running merged config would still contain it until a restart.
+		snapshot = svc.deleteResourceGroup("UiGroup");
+		assertFalse(
+			snapshot.getResourceGroups().containsKey("UiGroup"),
+			"Deleted group should be gone from editable groups"
+		);
+		assertFalse(
+			snapshot.getExternalResourceGroups().containsKey("UiGroup"),
+			"Deleted UI group must not reappear as an external group"
+		);
 	}
 
 	// -------------------------------------------------------------------------

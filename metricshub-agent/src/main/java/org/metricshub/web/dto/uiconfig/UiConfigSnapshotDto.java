@@ -38,4 +38,18 @@ public class UiConfigSnapshotDto {
 
 	@Builder.Default
 	private Map<String, Object> resourceGroups = new HashMap<>();
+
+	/**
+	 * Standalone resources present in the running configuration (other YAML files) but not in
+	 * metricshub-ui.yaml. They are shown in the UI as read-only and are not editable here.
+	 */
+	@Builder.Default
+	private Map<String, Object> externalResources = new HashMap<>();
+
+	/**
+	 * Resource groups (or, for a group also defined in metricshub-ui.yaml, only its extra
+	 * resources) present in the running configuration but not in metricshub-ui.yaml. Read-only.
+	 */
+	@Builder.Default
+	private Map<String, Object> externalResourceGroups = new HashMap<>();
 }

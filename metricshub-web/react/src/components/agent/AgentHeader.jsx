@@ -18,6 +18,24 @@ const AgentHeader = memo(
 			if (lower.includes("linux")) {
 				return <Box component="img" src="/linux.png" alt="Linux" sx={{ width: 64, height: 64 }} />;
 			}
+			if (lower.includes("hp-ux") || lower.includes("hpux")) {
+				return (
+					<Box component="img" src="/hpux.svg" alt="HP-UX" sx={{ height: 40, width: "auto" }} />
+				);
+			}
+			if (lower.includes("solaris") || lower.includes("sunos")) {
+				return (
+					<Box
+						component="img"
+						src="/solaris.svg"
+						alt="Solaris"
+						sx={{ height: 34, width: "auto" }}
+					/>
+				);
+			}
+			if (lower.includes("aix")) {
+				return <Box component="img" src="/aix.svg" alt="AIX" sx={{ width: 48, height: 48 }} />;
+			}
 			return null;
 		}, [osType]);
 

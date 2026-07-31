@@ -28,37 +28,39 @@ const GuidedConfigTreePanel = ({
 	onViewChange,
 	onCreateGroup,
 	onCreateHost,
-}) => (
-	<Stack
-		spacing={1.5}
-		sx={{
-			p: 1.5,
-			height: "100%",
-			minHeight: 0,
-			boxSizing: "border-box",
-		}}
-	>
-		<GuidedConfigTreeActions
-			busy={busy}
-			disableNewGroup={disableNewGroup}
-			disableNewResource={disableNewResource}
-			onCreateGroup={onCreateGroup}
-			onCreateHost={onCreateHost}
-		/>
-		<GuidedConfigSearch snapshot={snapshot} onViewChange={onViewChange} />
-		<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-			<HostsResourcesTree
-				snapshot={snapshot}
-				view={view}
-				onViewChange={onViewChange}
-				drafts={drafts}
-				onOpenDraft={onOpenDraft}
-				filterSearch=""
-				filterProtocol=""
-				filterSortBy="name-asc"
+}) => {
+	return (
+		<Stack
+			spacing={1.5}
+			sx={{
+				p: 1.5,
+				height: "100%",
+				minHeight: 0,
+				boxSizing: "border-box",
+			}}
+		>
+			<GuidedConfigTreeActions
+				busy={busy}
+				disableNewGroup={disableNewGroup}
+				disableNewResource={disableNewResource}
+				onCreateGroup={onCreateGroup}
+				onCreateHost={onCreateHost}
 			/>
-		</Box>
-	</Stack>
-);
+			<GuidedConfigSearch snapshot={snapshot} onViewChange={onViewChange} />
+			<Box sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+				<HostsResourcesTree
+					snapshot={snapshot}
+					view={view}
+					onViewChange={onViewChange}
+					drafts={drafts}
+					onOpenDraft={onOpenDraft}
+					filterSearch=""
+					filterProtocol=""
+					filterSortBy="name-asc"
+				/>
+			</Box>
+		</Stack>
+	);
+};
 
 export default React.memo(GuidedConfigTreePanel);

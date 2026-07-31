@@ -39,6 +39,7 @@ import org.metricshub.agent.config.AlertingSystemConfig;
 import org.metricshub.agent.config.ResourceGroupConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
+import org.metricshub.agent.service.ConfigurationService;
 import org.metricshub.engine.common.helpers.JsonHelper;
 import org.metricshub.engine.connector.model.ConnectorStore;
 import org.metricshub.web.AgentContextHolder;
@@ -136,10 +137,103 @@ public class UiConfigService {
 	 */
 	public UiConfigSnapshotDto getSnapshot() {
 		final ObjectNode root = readUiConfigAsObjectNode();
+		final Map<String, Object> uiResources = asMap(root.get("resources"));
+		final Map<String, Object> uiResourceGroups = asMap(root.get("resourceGroups"));
+
+		// The running configuration is every YAML file merged together, including
+		// metricshub-ui.yaml. Anything present there but absent from metricshub-ui.yaml comes
+		// from other YAML files and is not editable through the UI. When the agent context is
+		// not available yet, no external items are reported.
+		//
+		// The merged config is re-read fresh from disk here rather than reused from the running
+		// AgentContext#getConfigNode(): that node is only refreshed when the agent restarts, so a
+		// resource or resource group just deleted through the UI would still be present there and
+		// get misreported as an external (other-file) definition.
+		final AgentContext context = agentContextHolder.getAgentContext();
+		final JsonNode mergedConfig = loadMergedConfiguration(context);
+		final Map<String, Object> mergedResources = asMap(mergedConfig == null ? null : mergedConfig.get("resources"));
+		final Map<String, Object> mergedResourceGroups = asMap(
+			mergedConfig == null ? null : mergedConfig.get("resourceGroups")
+		);
+
+		final Map<String, Object> externalResources = new LinkedHashMap<>();
+		mergedResources.forEach((id, node) -> {
+			if (!uiResources.containsKey(id)) {
+				externalResources.put(id, node);
+			}
+		});
+
+		final Map<String, Object> externalResourceGroups = new LinkedHashMap<>();
+		mergedResourceGroups.forEach((groupName, groupNode) -> {
+			final Object uiGroup = uiResourceGroups.get(groupName);
+			if (uiGroup == null) {
+				// The whole group only exists in other YAML files.
+				externalResourceGroups.put(groupName, groupNode);
+				return;
+			}
+			// The group is editable (defined in metricshub-ui.yaml) but may carry resources
+			// that come from other YAML files; surface only those extra resources as read-only.
+			final Map<String, Object> uiGroupResources = nestedResources(uiGroup);
+			final Map<String, Object> extraResources = new LinkedHashMap<>();
+			nestedResources(groupNode).forEach((rid, rnode) -> {
+				if (!uiGroupResources.containsKey(rid)) {
+					extraResources.put(rid, rnode);
+				}
+			});
+			if (!extraResources.isEmpty()) {
+				final Map<String, Object> partialGroup = new LinkedHashMap<>();
+				partialGroup.put("resources", extraResources);
+				externalResourceGroups.put(groupName, partialGroup);
+			}
+		});
+
 		return UiConfigSnapshotDto.builder()
-			.resources(asMap(root.get("resources")))
-			.resourceGroups(asMap(root.get("resourceGroups")))
+			.resources(uiResources)
+			.resourceGroups(uiResourceGroups)
+			.externalResources(externalResources)
+			.externalResourceGroups(externalResourceGroups)
 			.build();
+	}
+
+	/**
+	 * Loads a fresh merged configuration from disk: every YAML file in the configuration directory
+	 * merged together (including {@code metricshub-ui.yaml}).
+	 * <p>
+	 * This deliberately re-reads the files instead of reusing {@link AgentContext#getConfigNode()},
+	 * which is only refreshed when the agent restarts. Re-reading guarantees that items removed
+	 * through the UI are no longer seen and therefore not misclassified as external.
+	 *
+	 * @param context the current agent context, may be {@code null}
+	 * @return the freshly merged configuration node, or {@code null} when it cannot be loaded
+	 */
+	private JsonNode loadMergedConfiguration(final AgentContext context) {
+		if (context == null || context.getConfigDirectory() == null || context.getExtensionManager() == null) {
+			return null;
+		}
+		try {
+			return ConfigurationService.builder()
+				.withConfigDirectory(context.getConfigDirectory())
+				.build()
+				.loadConfiguration(context.getExtensionManager());
+		} catch (Exception e) {
+			// On any failure, report no external configuration rather than risk stale data.
+			return null;
+		}
+	}
+
+	/**
+	 * Extracts the nested {@code resources} map from a resource-group node produced by
+	 * {@link #asMap(JsonNode)}.
+	 *
+	 * @param groupNode a resource-group node (expected to be a {@link Map})
+	 * @return the group's resources map, or an empty map when absent
+	 */
+	@SuppressWarnings("unchecked")
+	private static Map<String, Object> nestedResources(final Object groupNode) {
+		if (groupNode instanceof Map<?, ?> map && map.get("resources") instanceof Map<?, ?> resources) {
+			return (Map<String, Object>) resources;
+		}
+		return Map.of();
 	}
 
 	/**
@@ -526,7 +620,9 @@ public class UiConfigService {
 	 */
 	@SuppressWarnings("unchecked")
 	private Map<String, Object> asMap(final JsonNode node) {
-		if (node == null || node.isNull()) {
+		// Only real object nodes are converted; anything else (null, missing, scalar, array)
+		// maps to an empty map.
+		if (node == null || !node.isObject()) {
 			return Map.of();
 		}
 		return yamlMapper.convertValue(node, Map.class);
