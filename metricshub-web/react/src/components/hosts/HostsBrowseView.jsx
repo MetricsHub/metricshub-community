@@ -166,16 +166,20 @@ const HostsBrowseView = ({
 
 	const renderHostEditForm = () => (
 		<HostConfigEditLayout breadcrumbPathname={pathForView(view)}>
-			<HostsHostEditPanel
-				snapshot={snapshot}
-				view={view}
-				busy={busy}
-				onBusyChange={onBusyChange}
-				onSnapshotChange={onSnapshotChange}
-				onNavigate={onNavigate}
-				onDeleteGroupedHost={onDeleteGroupedHost}
-				onDeleteStandaloneHost={onDeleteStandaloneHost}
-			/>
+			{loading ? (
+				<Skeleton variant="rounded" height={320} />
+			) : (
+				<HostsHostEditPanel
+					snapshot={snapshot}
+					view={view}
+					busy={busy}
+					onBusyChange={onBusyChange}
+					onSnapshotChange={onSnapshotChange}
+					onNavigate={onNavigate}
+					onDeleteGroupedHost={onDeleteGroupedHost}
+					onDeleteStandaloneHost={onDeleteStandaloneHost}
+				/>
+			)}
 		</HostConfigEditLayout>
 	);
 
@@ -184,21 +188,25 @@ const HostsBrowseView = ({
 		const groupNode = snapshot.resourceGroups?.[groupName];
 		return (
 			<HostConfigEditLayout breadcrumbPathname={pathForView(view)}>
-				<ResourceGroupFormPage
-					mode="edit"
-					groupName={groupName}
-					groupNode={groupNode}
-					existingGroupNames={resourceGroups}
-					busy={busy}
-					onUpdate={(payload) => onUpdateResourceGroup?.(groupName, payload)}
-					onCancel={onCloseResourceGroupForm}
-					onDeleteGroup={() =>
-						onDeleteGroup?.(groupName, Object.keys(getGroupResources(groupNode || {})).length)
-					}
-					onOpenResource={(hostId) => onViewChange(HOSTS_VIEWS.groupedHost(groupName, hostId))}
-					onDeleteResources={(hostIds) => onDeleteGroupedHosts?.(groupName, hostIds)}
-					onUnsavedChangesChange={onFormUnsavedChange}
-				/>
+				{loading ? (
+					<Skeleton variant="rounded" height={320} />
+				) : (
+					<ResourceGroupFormPage
+						mode="edit"
+						groupName={groupName}
+						groupNode={groupNode}
+						existingGroupNames={resourceGroups}
+						busy={busy}
+						onUpdate={(payload) => onUpdateResourceGroup?.(groupName, payload)}
+						onCancel={onCloseResourceGroupForm}
+						onDeleteGroup={() =>
+							onDeleteGroup?.(groupName, Object.keys(getGroupResources(groupNode || {})).length)
+						}
+						onOpenResource={(hostId) => onViewChange(HOSTS_VIEWS.groupedHost(groupName, hostId))}
+						onDeleteResources={(hostIds) => onDeleteGroupedHosts?.(groupName, hostIds)}
+						onUnsavedChangesChange={onFormUnsavedChange}
+					/>
+				)}
 			</HostConfigEditLayout>
 		);
 	};
