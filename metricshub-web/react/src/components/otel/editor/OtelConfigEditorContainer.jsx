@@ -14,6 +14,7 @@ import QuestionDialog from "../../common/QuestionDialog";
 import { isBackupFileName } from "../../../utils/backup-names";
 import { Typography } from "@mui/material";
 import { useAuth } from "../../../hooks/use-auth";
+import { useEditorScrollMemory } from "../../../hooks/use-editor-scroll-memory";
 
 /**
  * Container for OTel configuration editor. Uses otelConfig slice and OTel thunks.
@@ -29,6 +30,7 @@ function OtelConfigEditorContainer(props) {
 		selected,
 		content: storeContent,
 		saving,
+		loadingContent,
 		dirtyByName = {},
 	} = useAppSelector((s) => s.otelConfig);
 	const isBackupSelected = !!(selected && isBackupFileName(selected));
@@ -58,6 +60,15 @@ function OtelConfigEditorContainer(props) {
 
 	const [dialog, setDialog] = React.useState(null);
 	const editorViewRef = React.useRef(null);
+	const [editorReady, setEditorReady] = React.useState(false);
+
+	useEditorScrollMemory({
+		repo: "otel",
+		selected,
+		editorViewRef,
+		ready: editorReady && !loadingContent,
+		content: storeContent,
+	});
 
 	const isDraft = selected?.endsWith(".draft");
 
@@ -196,6 +207,7 @@ function OtelConfigEditorContainer(props) {
 				validateFn={validateFn}
 				onEditorReady={(view) => {
 					editorViewRef.current = view;
+					setEditorReady(true);
 				}}
 			/>
 			<QuestionDialog

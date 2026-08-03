@@ -13,6 +13,7 @@ import ConfigEditor from "./ConfigEditor";
 import QuestionDialog from "../../common/QuestionDialog";
 import { isBackupFileName } from "../../../utils/backup-names";
 import { isVmFile } from "../../../utils/file-type-utils";
+import { useEditorScrollMemory } from "../../../hooks/use-editor-scroll-memory";
 import { Typography } from "@mui/material";
 import { useAuth } from "../../../hooks/use-auth";
 
@@ -32,6 +33,7 @@ function ConfigEditorContainer(props) {
 		selected,
 		content: storeContent,
 		saving,
+		loadingContent,
 		dirtyByName = {},
 	} = useAppSelector((s) => s.config);
 	const isBackupSelected = !!(selected && isBackupFileName(selected));
@@ -68,6 +70,15 @@ function ConfigEditorContainer(props) {
 
 	// editor view ref - set by YamlEditor via onEditorReady
 	const editorViewRef = React.useRef(null);
+	const [editorReady, setEditorReady] = React.useState(false);
+
+	useEditorScrollMemory({
+		repo: "config",
+		selected,
+		editorViewRef,
+		ready: editorReady && !loadingContent,
+		content: storeContent,
+	});
 
 	// -------------------------------------------------------------------------
 	// New logic for Draft vs Normal files
@@ -253,6 +264,7 @@ function ConfigEditorContainer(props) {
 				validateFn={validateFn}
 				onEditorReady={(view) => {
 					editorViewRef.current = view;
+					setEditorReady(true);
 				}}
 			/>
 			<QuestionDialog

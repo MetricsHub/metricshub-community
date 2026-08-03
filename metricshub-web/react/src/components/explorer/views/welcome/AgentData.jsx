@@ -117,7 +117,17 @@ const AgentData = ({ agent, totalResources, status }) => {
 				<Box component="img" src="/windows.svg" alt="Windows" sx={{ width: 40, height: 40 }} />
 			);
 		} else if (lower.includes("linux")) {
-			action = <Box component="img" src="/linux.svg" alt="Linux" sx={{ width: 60, height: 60 }} />;
+			action = <Box component="img" src="/linux.png" alt="Linux" sx={{ width: 60, height: 60 }} />;
+		} else if (lower.includes("hp-ux") || lower.includes("hpux")) {
+			action = (
+				<Box component="img" src="/hpux.svg" alt="HP-UX" sx={{ height: 34, width: "auto" }} />
+			);
+		} else if (lower.includes("solaris") || lower.includes("sunos")) {
+			action = (
+				<Box component="img" src="/solaris.svg" alt="Solaris" sx={{ height: 30, width: "auto" }} />
+			);
+		} else if (lower.includes("aix")) {
+			action = <Box component="img" src="/aix.svg" alt="AIX" sx={{ width: 40, height: 40 }} />;
 		}
 	}
 

@@ -20,6 +20,7 @@ import MonitorsView from "../monitors/MonitorsView";
 import HoverInfo from "../monitors/components/HoverInfo";
 import WarningIcon from "@mui/icons-material/Warning";
 import { debounce } from "@mui/material";
+import { compareLocale } from "../../../../utils/alphabetic-sort";
 import { getMetricValue } from "../../../../utils/metrics-helper";
 import { useResourceFetcher } from "../../../../hooks/use-resource-fetcher";
 
@@ -135,7 +136,11 @@ const ResourceView = ({ resourceName, resourceGroupName, isPaused, onTogglePause
 		[currentResource, hierarchyResource],
 	);
 
-	const connectors = React.useMemo(() => resource?.connectors || [], [resource?.connectors]);
+	const connectors = React.useMemo(() => {
+		const list = resource?.connectors || [];
+		return [...list].sort((a, b) => compareLocale(a?.name, b?.name));
+	}, [resource?.connectors]);
+
 	const failedConnectors = React.useMemo(() => {
 		if (!connectors || connectors.length === 0) return [];
 		return connectors.filter((c) => {
