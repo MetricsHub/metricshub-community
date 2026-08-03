@@ -142,7 +142,14 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 		[],
 	);
 
+	// A protocol-level hostname overrides the resource one: it is the host actually contacted.
+	const protocolHostname = String(protocolValues?.hostname ?? "").trim();
+
 	const handleTestClick = () => {
+		if (protocolHostname) {
+			void runTest(protocolHostname);
+			return;
+		}
 		const hostnames = getHostNames(hostName);
 		if (hostnames.length === 0) {
 			setResult({
