@@ -80,10 +80,34 @@ class ProtocolHealthCheckServiceTest {
 		final ProtocolCheckResponse response = service.checkWithInlineConfiguration(
 			"  ",
 			"http",
-			Map.of("http", HttpConfiguration.builder().hostname(HOSTNAME).build())
+			Map.of("http", HttpConfiguration.builder().build())
 		);
 
 		assertEquals("Hostname must be provided.", response.getErrorMessage());
+	}
+
+	@Test
+	void testCheckWithInlineConfigurationPrefersProtocolHostname() {
+		final ProtocolCheckResponse response = service.checkWithInlineConfiguration(
+			"resource-host",
+			"http",
+			Map.of("http", HttpConfiguration.builder().hostname(HOSTNAME).username("user").build())
+		);
+
+		assertTrue(response.isReachable());
+		assertEquals(HOSTNAME, response.getHostname());
+	}
+
+	@Test
+	void testCheckWithInlineConfigurationFallsBackToProtocolHostnameWhenResourceHostnameIsBlank() {
+		final ProtocolCheckResponse response = service.checkWithInlineConfiguration(
+			"  ",
+			"http",
+			Map.of("http", HttpConfiguration.builder().hostname(HOSTNAME).username("user").build())
+		);
+
+		assertTrue(response.isReachable());
+		assertEquals(HOSTNAME, response.getHostname());
 	}
 
 	@Test

@@ -86,8 +86,12 @@ public class ProtocolHealthCheckService {
 
 	/**
 	 * Checks protocol reachability using an inline configuration supplied by the UI configuration form.
+	 * <p>
+	 * Hostname precedence follows the engine contract: the protocol-level hostname is authoritative and
+	 * the resource hostname only back-fills it when absent, exactly like
+	 * {@code ConfigHelper.validateAndNormalizeProtocols} at configuration load time.
 	 *
-	 * @param hostname       target hostname
+	 * @param hostname       resource hostname
 	 * @param protocol       protocol identifier (e.g. ssh)
 	 * @param protocolConfig protocol block as written in YAML
 	 * @return check result
@@ -97,26 +101,45 @@ public class ProtocolHealthCheckService {
 		final String protocol,
 		final Map<String, IConfiguration> protocolConfig
 	) {
-		if (hostname == null || hostname.isBlank()) {
-			return ProtocolCheckResponse.builder().errorMessage("Hostname must be provided.").build();
+		final IConfiguration configuration = ProtocolConfigurationMaps.resolveForProtocol(protocol, protocolConfig);
+
+		if (configuration == null) {
+			if (isBlank(hostname)) {
+				return ProtocolCheckResponse.builder().errorMessage("Hostname must be provided.").build();
+			}
+			return ProtocolCheckResponse.builder()
+				.hostname(hostname.trim())
+				.errorMessage("Invalid protocol configuration")
+				.build();
 		}
 
-		final IConfiguration configuration = ProtocolConfigurationMaps.resolveForProtocol(protocol, protocolConfig);
-		if (configuration == null) {
-			return ProtocolCheckResponse.builder().hostname(hostname).errorMessage("Invalid protocol configuration").build();
+		// Mirror ConfigHelper.validateAndNormalizeProtocols: the resource hostname only
+		// back-fills the protocol configuration when it doesn't declare its own hostname.
+		final IConfiguration activeConfiguration = configuration.copy();
+		if (isBlank(activeConfiguration.getHostname())) {
+			if (isBlank(hostname)) {
+				return ProtocolCheckResponse.builder().errorMessage("Hostname must be provided.").build();
+			}
+			activeConfiguration.setHostname(hostname.trim());
 		}
+
+		final String targetHostname = activeConfiguration.getHostname();
 
 		return agentContextHolder
 			.getAgentContext()
 			.getExtensionManager()
 			.findExtensionByType(protocol)
-			.map(extension -> checkWithInlineConfiguration(hostname, protocol, configuration, extension))
+			.map(extension -> checkWithInlineConfiguration(targetHostname, protocol, activeConfiguration, extension))
 			.orElseGet(() ->
 				ProtocolCheckResponse.builder()
-					.hostname(hostname)
+					.hostname(targetHostname)
 					.errorMessage(protocol + " extension is not available")
 					.build()
 			);
+	}
+
+	private static boolean isBlank(final String value) {
+		return value == null || value.isBlank();
 	}
 
 	private ProtocolCheckResponse checkWithInlineConfiguration(
@@ -132,13 +155,11 @@ public class ProtocolHealthCheckService {
 					.errorMessage("Invalid protocol configuration")
 					.build();
 			}
-			final IConfiguration activeConfiguration = configuration.copy();
-			activeConfiguration.setHostname(hostname);
 			return executeProtocolCheck(
 				hostname,
 				protocol,
-				resolveTimeoutFromConfiguration(activeConfiguration),
-				activeConfiguration,
+				resolveTimeoutFromConfiguration(configuration),
+				configuration,
 				extension
 			);
 		} catch (Exception e) {
