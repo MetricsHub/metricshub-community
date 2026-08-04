@@ -6,7 +6,6 @@ import {
 	getProtocolOptionsForHostType,
 	HOST_TYPE_UNSELECTED,
 	isProtocolAvailableOnAgentOs,
-	WINDOWS_AGENT_ONLY_HINT,
 } from "./protocol-definitions";
 import { getProtocolPickerMetadata } from "./protocol-picker-metadata";
 import { guidedConfigRowHoverBg } from "./guided-config-ui-tokens";
@@ -20,7 +19,7 @@ const DEFAULT_HELPER =
  * @param {boolean} [error]
  */
 const protocolCardSx =
-	(selected, error = false, disabled = false) =>
+	(selected, error = false) =>
 	(theme) => ({
 		display: "flex",
 		alignItems: "flex-start",
@@ -53,16 +52,6 @@ const protocolCardSx =
 			outline: `2px solid ${theme.palette.primary.main}`,
 			outlineOffset: 2,
 		},
-		...(disabled
-			? {
-					opacity: 0.5,
-					cursor: "not-allowed",
-					"&:hover": {
-						borderColor: theme.palette.divider,
-						bgcolor: "transparent",
-					},
-				}
-			: {}),
 	});
 
 const protocolIconBoxSx = (selected) => (theme) => ({
@@ -98,8 +87,18 @@ const ProtocolSelectionPanel = ({
 	hostType = "",
 	agentOsType = "",
 }) => {
-	const protocolOptions = React.useMemo(() => getProtocolOptionsForHostType(hostType), [hostType]);
 	const selectedSet = React.useMemo(() => new Set(value || []), [value]);
+	// Protocols the agent OS cannot run (WMI on a non-Windows agent) are not offered at
+	// all; one already selected in an existing configuration stays visible so the user
+	// can deselect it.
+	const protocolOptions = React.useMemo(
+		() =>
+			getProtocolOptionsForHostType(hostType).filter(
+				(protocol) =>
+					isProtocolAvailableOnAgentOs(protocol.id, agentOsType) || selectedSet.has(protocol.id),
+			),
+		[hostType, agentOsType, selectedSet],
+	);
 	const hostTypeReady = Boolean(hostType) && hostType !== HOST_TYPE_UNSELECTED;
 
 	const toggle = (protocolId) => {
@@ -178,11 +177,7 @@ const ProtocolSelectionPanel = ({
 					>
 						{protocolOptions.map((protocol) => {
 							const selected = selectedSet.has(protocol.id);
-							// A protocol the agent OS cannot run is disabled — unless it is already
-							// selected (existing configuration), so the user can still deselect it.
-							const disabled = !isProtocolAvailableOnAgentOs(protocol.id, agentOsType) && !selected;
 							const { Icon, summary } = getProtocolPickerMetadata(protocol.id);
-							const cardSummary = disabled ? WINDOWS_AGENT_ONLY_HINT : summary;
 							return (
 								<Box
 									key={protocol.id}
@@ -190,10 +185,9 @@ const ProtocolSelectionPanel = ({
 									type="button"
 									role="checkbox"
 									aria-checked={selected}
-									aria-label={`${protocol.label}. ${cardSummary}`}
-									disabled={disabled}
+									aria-label={`${protocol.label}. ${summary}`}
 									onClick={() => toggle(protocol.id)}
-									sx={protocolCardSx(selected, error && !selected && selectedCount === 0, disabled)}
+									sx={protocolCardSx(selected, error && !selected && selectedCount === 0)}
 								>
 									<Box sx={protocolIconBoxSx(selected)}>
 										<Icon sx={{ fontSize: 22 }} />
@@ -220,7 +214,7 @@ const ProtocolSelectionPanel = ({
 											color="text.secondary"
 											sx={{ display: "block", mt: 0.5, lineHeight: 1.35 }}
 										>
-											{cardSummary}
+											{summary}
 										</Typography>
 									</Box>
 								</Box>

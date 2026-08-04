@@ -125,9 +125,6 @@ export const WINDOWS_ONLY_PROTOCOL_IDS = ["wmi", "winrm"];
 /** Protocol ids requiring the MetricsHub agent itself to run on Windows. */
 export const WINDOWS_AGENT_ONLY_PROTOCOL_IDS = ["wmi"];
 
-/** Hint shown on a protocol card disabled because of the agent's operating system. */
-export const WINDOWS_AGENT_ONLY_HINT = "Requires MetricsHub running on Windows.";
-
 /**
  * Whether a protocol can run from the machine hosting the MetricsHub agent.
  * WMI is native to Windows: a Linux agent cannot use it (WinRM works from any OS).
