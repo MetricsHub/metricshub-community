@@ -69,15 +69,9 @@ const HostConfigBasicsSection = ({
 	const inheritedDefaults = useResourceDefaults(values.targetType, values.resourceGroup);
 	const agentOsType = useAgentOsType();
 
-	// Monitoring Windows hosts requires the agent itself to run on Windows: hide the
-	// Windows host type otherwise (unknown os.type keeps everything visible, and a
-	// resource already configured as Windows stays selectable).
-	const hostTypeOptions = React.useMemo(() => {
-		if (!agentOsType || agentOsType === "windows") {
-			return HOST_TYPES;
-		}
-		return HOST_TYPES.filter((hostType) => hostType !== "windows" || hostType === values.hostType);
-	}, [agentOsType, values.hostType]);
+	// Windows hosts can be monitored from any agent OS (via WinRM); only the WMI
+	// protocol needs the agent itself to run on Windows, handled per-protocol below.
+	const hostTypeOptions = HOST_TYPES;
 
 	// A resource ID only has to be unique within its placement scope: the selected
 	// resource group, or the standalone section. The same ID in another group is fine.
@@ -269,6 +263,7 @@ const HostConfigBasicsSection = ({
 					</Box>
 					<ProtocolSelectionPanel
 						hostType={values.hostType}
+						agentOsType={agentOsType}
 						value={values.selectedProtocols || []}
 						onChange={(selectedProtocols) => onChange({ selectedProtocols })}
 						error={Boolean(errors.selectedProtocols)}

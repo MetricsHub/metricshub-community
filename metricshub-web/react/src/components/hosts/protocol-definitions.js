@@ -122,6 +122,30 @@ export const HOST_TYPE_UI = {
 /** Protocol ids offered only when host.type is windows. */
 export const WINDOWS_ONLY_PROTOCOL_IDS = ["wmi", "winrm"];
 
+/** Protocol ids requiring the MetricsHub agent itself to run on Windows. */
+export const WINDOWS_AGENT_ONLY_PROTOCOL_IDS = ["wmi"];
+
+/** Hint shown on a protocol card disabled because of the agent's operating system. */
+export const WINDOWS_AGENT_ONLY_HINT = "Requires MetricsHub running on Windows.";
+
+/**
+ * Whether a protocol can run from the machine hosting the MetricsHub agent.
+ * WMI is native to Windows: a Linux agent cannot use it (WinRM works from any OS).
+ *
+ * @param {string} protocolId
+ * @param {string} [agentOsType] lowercase os.type of the agent host ("" while unknown)
+ * @returns {boolean}
+ */
+export const isProtocolAvailableOnAgentOs = (protocolId, agentOsType = "") => {
+	const os = String(agentOsType ?? "")
+		.trim()
+		.toLowerCase();
+	if (!os) {
+		return true;
+	}
+	return !(WINDOWS_AGENT_ONLY_PROTOCOL_IDS.includes(protocolId) && os !== "windows");
+};
+
 const PROTOCOL_OPTIONS_SOURCE = [
 	{ id: "ssh", label: "SSH" },
 	{ id: "wmi", label: "WMI" },
