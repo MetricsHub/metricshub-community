@@ -77,7 +77,7 @@ const HostProtocolConfigStep = ({
 				isRequired={fieldRequired}
 				allowPasswordReveal={allowPasswordReveal}
 				deferEncryptUntilSave={deferEncryptUntilSave}
-				multiHostname={getHostNames(hostName).length > 1}
+				hostNameCount={getHostNames(hostName).length}
 			/>
 		</Stack>
 	);

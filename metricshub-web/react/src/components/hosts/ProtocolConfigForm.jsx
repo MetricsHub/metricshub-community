@@ -2,6 +2,7 @@ import * as React from "react";
 import {
 	Box,
 	Button,
+	Chip,
 	Collapse,
 	FormControl,
 	FormControlLabel,
@@ -19,6 +20,7 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
+import { getHostNames } from "./host-config-utils";
 import { HostnamesChipField } from "./HostNameChipInput";
 import ProtocolPasswordField from "./ProtocolPasswordField";
 import {
@@ -60,7 +62,7 @@ import {
  * @param {(field: import("./protocol-definitions").ProtocolField) => boolean} props.isRequired
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
- * @param {boolean} [props.multiHostname] resource host.name is multi-valued: the protocol hostname accepts one value per host
+ * @param {number} [props.hostNameCount] number of resource host.name entries; above 1 the protocol hostname accepts one value per host
  */
 const ProtocolConfigForm = ({
 	protocol,
@@ -71,7 +73,7 @@ const ProtocolConfigForm = ({
 	isRequired,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
-	multiHostname = false,
+	hostNameCount = 0,
 }) => {
 	const transportLinkedPort = hasTransportLinkedPort(protocol);
 
@@ -164,7 +166,7 @@ const ProtocolConfigForm = ({
 		if (field.type === "textarea") {
 			return renderTextareaField(field);
 		}
-		if (field.name === "hostname" && multiHostname) {
+		if (field.name === "hostname" && hostNameCount > 1) {
 			return renderMultiHostnameField(field);
 		}
 		return renderTextField(field);
@@ -173,14 +175,24 @@ const ProtocolConfigForm = ({
 	/** Chip input mirroring host.name: one collection hostname per configured host. */
 	const renderMultiHostnameField = (field) => {
 		const error = errors[field.name];
+		const configuredCount = getHostNames(values[field.name]).length;
 
 		return (
 			<Box key={field.name}>
 				<ProtocolFieldLabelRow
 					label={field.label}
 					required={showRequiredMarker(field)}
-					description="One hostname per host.name entry; the last one applies to any remaining hosts."
+					description="One hostname per host.name entry."
 					helpTooltip={fieldHelpTooltip(field)}
+					trailing={
+						<Chip
+							size="small"
+							color={configuredCount === hostNameCount ? "primary" : "default"}
+							variant="outlined"
+							label={`${configuredCount}/${hostNameCount} configured`}
+							sx={{ fontWeight: 600 }}
+						/>
+					}
 				/>
 				<HostnamesChipField
 					value={values[field.name] ?? ""}

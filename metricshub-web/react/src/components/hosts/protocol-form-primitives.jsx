@@ -82,8 +82,15 @@ export const ProtocolFieldHelpTooltip = FieldHelpTooltip;
  * @param {boolean} [props.required]
  * @param {string} [props.description]
  * @param {string} [props.helpTooltip]
+ * @param {React.ReactNode} [props.trailing] right-aligned content (e.g. a count chip)
  */
-export const ProtocolFieldLabelRow = ({ label, required = false, description, helpTooltip }) => (
+export const ProtocolFieldLabelRow = ({
+	label,
+	required = false,
+	description,
+	helpTooltip,
+	trailing,
+}) => (
 	<Box
 		sx={{
 			display: "flex",
@@ -108,6 +115,7 @@ export const ProtocolFieldLabelRow = ({ label, required = false, description, he
 			</Typography>
 		) : null}
 		{helpTooltip ? <ProtocolFieldHelpTooltip title={helpTooltip} /> : null}
+		{trailing ? <Box sx={{ ml: "auto" }}>{trailing}</Box> : null}
 	</Box>
 );
 

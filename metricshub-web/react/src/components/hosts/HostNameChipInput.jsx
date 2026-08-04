@@ -225,36 +225,48 @@ export const HostnamesChipField = ({
  * @param {React.ReactNode} [props.helperText]
  * @param {boolean} [props.staticLabel] render the label above the field instead of a floating label
  */
-const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => (
-	<Stack spacing={staticLabel ? 0 : 1}>
-		{staticLabel ? (
-			<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
-				<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
-					{HOST_NAME_UI.fieldLabel}
-					<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
-						*
-					</Box>
-				</Typography>
-				<FieldHelpTooltip
-					title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
-				/>
-			</Stack>
-		) : null}
-		<HostnamesChipField
-			value={value}
-			onChange={onChange}
-			error={error}
-			helperText={helperText}
-			textFieldProps={{
-				id: "host-name-input",
-				label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
-				hiddenLabel: staticLabel,
-				variant: staticLabel ? "filled" : "outlined",
-				required: true,
-				sx: staticLabel ? filledInputNoLabelSx : undefined,
-			}}
-		/>
-	</Stack>
-);
+const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => {
+	const hostNameCount = getHostNames(value).length;
+	return (
+		<Stack spacing={staticLabel ? 0 : 1}>
+			{staticLabel ? (
+				<Stack direction="row" alignItems="center" spacing={0.25} useFlexGap sx={{ mb: 0.75 }}>
+					<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
+						{HOST_NAME_UI.fieldLabel}
+						<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
+							*
+						</Box>
+					</Typography>
+					<FieldHelpTooltip
+						title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
+					/>
+					{hostNameCount > 1 ? (
+						<Chip
+							size="small"
+							color="primary"
+							variant="outlined"
+							label={`${hostNameCount} hostnames`}
+							sx={{ ml: "auto", fontWeight: 600 }}
+						/>
+					) : null}
+				</Stack>
+			) : null}
+			<HostnamesChipField
+				value={value}
+				onChange={onChange}
+				error={error}
+				helperText={helperText}
+				textFieldProps={{
+					id: "host-name-input",
+					label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
+					hiddenLabel: staticLabel,
+					variant: staticLabel ? "filled" : "outlined",
+					required: true,
+					sx: staticLabel ? filledInputNoLabelSx : undefined,
+				}}
+			/>
+		</Stack>
+	);
+};
 
 export default React.memo(HostNameChipInput);

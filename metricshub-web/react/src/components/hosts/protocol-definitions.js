@@ -1322,13 +1322,18 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 		}
 	}
 
-	// Multiple collection hostnames are only meaningful when host.name lists multiple hosts
-	// (they are matched by position — see PostConfigDeserializer.normalizeProtocolHostnames).
-	if (
-		getHostNames(protocolConfig.hostname).length > 1 &&
-		getHostNames(options.hostName).length <= 1
-	) {
-		errors.hostname = "Multiple hostnames require a multi-valued host.name";
+	// When set, the protocol hostname must define exactly one value per host.name entry:
+	// values are matched by position (see PostConfigDeserializer.normalizeProtocolHostnames).
+	{
+		const protocolHostnameCount = getHostNames(protocolConfig.hostname).length;
+		const resourceHostnameCount = getHostNames(options.hostName).length;
+		if (
+			protocolHostnameCount > 0 &&
+			resourceHostnameCount > 0 &&
+			protocolHostnameCount !== resourceHostnameCount
+		) {
+			errors.hostname = `Define one hostname per host.name entry (${resourceHostnameCount} expected, ${protocolHostnameCount} configured)`;
+		}
 	}
 
 	return errors;

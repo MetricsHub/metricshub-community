@@ -46,3 +46,58 @@ describe("collectProtocolConfigErrors SSH credentials", () => {
 		expect(errors.password).toBeUndefined();
 	});
 });
+
+// Protocol hostnames are matched to host.name entries by position, so when the
+// protocol declares hostnames it must declare exactly one per host.name entry.
+describe("collectProtocolConfigErrors protocol hostname count", () => {
+	const ping = { timeout: 5 };
+
+	it("rejects fewer protocol hostnames than host.name entries", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: ["host1", "host2"] },
+			{ hostId: "multi", hostName: ["host1-sys", "host2-sys", "host3-sys"] },
+		);
+		expect(errors.hostname).toBe(
+			"Define one hostname per host.name entry (3 expected, 2 configured)",
+		);
+	});
+
+	it("rejects more protocol hostnames than host.name entries", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: ["host1", "host2"] },
+			{ hostId: "server-1", hostName: "server-1" },
+		);
+		expect(errors.hostname).toBe(
+			"Define one hostname per host.name entry (1 expected, 2 configured)",
+		);
+	});
+
+	it("accepts one protocol hostname per host.name entry", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: ["host1", "host2", "host3"] },
+			{ hostId: "multi", hostName: ["host1-sys", "host2-sys", "host3-sys"] },
+		);
+		expect(errors.hostname).toBeUndefined();
+	});
+
+	it("accepts an empty protocol hostname (host.name entries are used)", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: "" },
+			{ hostId: "multi", hostName: ["host1-sys", "host2-sys"] },
+		);
+		expect(errors.hostname).toBeUndefined();
+	});
+
+	it("accepts a single override hostname on a single-host resource", () => {
+		const errors = collectProtocolConfigErrors(
+			"ping",
+			{ ...ping, hostname: "collect-host" },
+			{ hostId: "server-1", hostName: "server-1" },
+		);
+		expect(errors.hostname).toBeUndefined();
+	});
+});
