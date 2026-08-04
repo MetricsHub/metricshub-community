@@ -2,6 +2,7 @@ import * as React from "react";
 import { Alert, Button, CircularProgress, Stack } from "@mui/material";
 import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import { getHostNames } from "./host-config-utils";
+import { PROTOCOL_OPTIONS } from "./protocol-definitions";
 import { runProtocolCheck } from "./protocol-test";
 import ProtocolTestHostnameDialog from "./ProtocolTestHostnameDialog";
 
@@ -138,6 +139,7 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 			<ProtocolTestHostnameDialog
 				open={hostnamePickerOpen}
 				hostnames={candidateHostnames}
+				protocolLabel={PROTOCOL_OPTIONS.find((option) => option.id === protocol)?.label || protocol}
 				onClose={() => setHostnamePickerOpen(false)}
 				runTest={runHostnameTest}
 			/>

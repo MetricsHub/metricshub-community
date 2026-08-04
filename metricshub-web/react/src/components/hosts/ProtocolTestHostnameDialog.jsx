@@ -21,6 +21,7 @@ import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
 import SearchIcon from "@mui/icons-material/Search";
 import { filledInputNoLabelSx } from "./guided-config-form-primitives";
 import { ProtocolFieldStartAdornment } from "./protocol-form-primitives";
+import { scrollbarSx } from "../split-screen/SplitScreen";
 
 /** Same look as the protocol form fields, with a softened focus (no primary glow). */
 const SEARCH_FIELD_SX = {
@@ -59,10 +60,17 @@ const HostStatusIcon = ({ result }) => {
  * @param {object} props
  * @param {boolean} props.open
  * @param {string[]} props.hostnames
+ * @param {string} [props.protocolLabel] display name of the tested protocol (e.g. "Ping (ICMP)")
  * @param {() => void} props.onClose
  * @param {(hostname: string, signal: AbortSignal) => Promise<{ severity: string, message: string } | null>} props.runTest
  */
-const ProtocolTestHostnameDialog = ({ open, hostnames = [], onClose, runTest }) => {
+const ProtocolTestHostnameDialog = ({
+	open,
+	hostnames = [],
+	protocolLabel = "",
+	onClose,
+	runTest,
+}) => {
 	const [query, setQuery] = React.useState("");
 	const [results, setResults] = React.useState(
 		/** @type {Record<string, { status: string, message?: string }>} */ ({}),
@@ -165,6 +173,7 @@ const ProtocolTestHostnameDialog = ({ open, hostnames = [], onClose, runTest }) 
 						Test connection
 					</Typography>
 					<Typography variant="body2" color="text.secondary">
+						{protocolLabel ? `${protocolLabel} — ` : ""}
 						{hostnames.length} hostnames
 					</Typography>
 				</Box>
@@ -172,7 +181,8 @@ const ProtocolTestHostnameDialog = ({ open, hostnames = [], onClose, runTest }) 
 					<CloseIcon fontSize="small" />
 				</IconButton>
 			</Box>
-			<DialogContent sx={{ px: 2.5, py: 1 }}>
+			{/* Search and warnings stay put; only the hostname list below scrolls. */}
+			<Box sx={{ px: 2.5, pb: 1 }}>
 				<TextField
 					fullWidth
 					hiddenLabel
@@ -180,7 +190,7 @@ const ProtocolTestHostnameDialog = ({ open, hostnames = [], onClose, runTest }) 
 					placeholder="Search hostnames…"
 					value={query}
 					onChange={(e) => setQuery(e.target.value)}
-					sx={{ ...SEARCH_FIELD_SX, mb: 1 }}
+					sx={SEARCH_FIELD_SX}
 					slotProps={{
 						input: {
 							startAdornment: (
@@ -192,10 +202,20 @@ const ProtocolTestHostnameDialog = ({ open, hostnames = [], onClose, runTest }) 
 					}}
 				/>
 				{configWarning ? (
-					<Alert severity="warning" sx={{ mb: 1, py: 0.25 }} onClose={() => setConfigWarning(null)}>
+					<Alert severity="warning" sx={{ mt: 1, py: 0.25 }} onClose={() => setConfigWarning(null)}>
 						{configWarning}
 					</Alert>
 				) : null}
+			</Box>
+			<DialogContent
+				sx={(theme) => ({
+					...scrollbarSx(theme),
+					height: "auto",
+					maxHeight: 320,
+					px: 2.5,
+					py: 0.5,
+				})}
+			>
 				{filteredHostnames.length > 0 ? (
 					<List dense disablePadding>
 						{filteredHostnames.map((hostname) => {
