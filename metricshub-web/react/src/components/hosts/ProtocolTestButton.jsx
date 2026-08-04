@@ -1,9 +1,8 @@
 import * as React from "react";
 import { Alert, Button, CircularProgress, Stack } from "@mui/material";
 import NetworkCheckIcon from "@mui/icons-material/NetworkCheck";
-import { uiConfigApi } from "../../api/ui-config";
 import { getHostNames } from "./host-config-utils";
-import { buildProtocolConfigFromForm, collectProtocolConfigErrors } from "./protocol-definitions";
+import { runProtocolCheck } from "./protocol-test";
 import ProtocolTestHostnameDialog from "./ProtocolTestHostnameDialog";
 
 const COMPACT_ALERT_SX = {
@@ -19,9 +18,6 @@ const COMPACT_ALERT_SX = {
 		lineHeight: 1.4,
 	},
 };
-
-const isAbortError = (error) =>
-	error?.code === "ERR_CANCELED" || error?.name === "CanceledError" || error?.name === "AbortError";
 
 /**
  * On-demand protocol test button for guided configuration protocol steps.
@@ -50,90 +46,38 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 
 	const runTest = React.useCallback(
 		async (hostname) => {
-			const validationErrors = collectProtocolConfigErrors(protocol, protocolValues, {
-				hostId,
-				hostName,
-			});
-			const firstError = Object.values(validationErrors)[0];
-			if (firstError) {
-				setResult({
-					severity: "warning",
-					message: firstError,
-				});
-				return;
-			}
-
 			abortControllerRef.current?.abort();
 			const controller = new AbortController();
 			abortControllerRef.current = controller;
 
 			setTesting(true);
 			setResult(null);
-			try {
-				const response = await uiConfigApi.checkProtocol(
-					{
-						hostname,
-						protocol,
-						// The configured hostname may list one value per host.name entry; the test
-						// targets a single host, so pin the chosen one in the protocol config too.
-						protocolConfig: {
-							[protocol]: { ...buildProtocolConfigFromForm(protocol, protocolValues), hostname },
-						},
-					},
-					{ signal: controller.signal },
-				);
-
-				if (controller.signal.aborted) {
-					return;
-				}
-
-				if (response.timedOut) {
-					setResult({
-						severity: "warning",
-						message: "Connection timed out.",
-					});
-					return;
-				}
-
-				if (response.errorMessage) {
-					setResult({
-						severity: "error",
-						message: "Protocol test failed.",
-					});
-					return;
-				}
-
-				if (response.hostUp === 1) {
-					const suffix =
-						response.responseTimeMs != null ? ` (${Math.round(response.responseTimeMs)} ms)` : "";
-					setResult({
-						severity: "success",
-						message: `Connection successful${suffix}`,
-					});
-					return;
-				}
-
-				setResult({
-					severity: "error",
-					message: "Protocol test failed.",
-				});
-			} catch (error) {
-				if (controller.signal.aborted || isAbortError(error)) {
-					return;
-				}
-				setResult({
-					severity: "error",
-					message: "Protocol test failed.",
-				});
-			} finally {
-				if (abortControllerRef.current === controller) {
-					abortControllerRef.current = null;
-				}
-				if (!controller.signal.aborted) {
-					setTesting(false);
-				}
+			const testResult = await runProtocolCheck({
+				protocol,
+				protocolValues,
+				hostname,
+				hostId,
+				hostName,
+				signal: controller.signal,
+			});
+			if (abortControllerRef.current === controller) {
+				abortControllerRef.current = null;
+			}
+			if (controller.signal.aborted) {
+				return;
+			}
+			setTesting(false);
+			if (testResult) {
+				setResult(testResult);
 			}
 		},
+		[hostId, hostName, protocol, protocolValues],
+	);
+
+	// Runner handed to the multi-host dialog: same check, per-host abort signal.
+	const runHostnameTest = React.useCallback(
+		(hostname, signal) =>
+			runProtocolCheck({ protocol, protocolValues, hostname, hostId, hostName, signal }),
 		[hostId, hostName, protocol, protocolValues],
 	);
 
@@ -195,7 +139,7 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 				open={hostnamePickerOpen}
 				hostnames={candidateHostnames}
 				onClose={() => setHostnamePickerOpen(false)}
-				onSelect={(hostname) => void runTest(hostname)}
+				runTest={runHostnameTest}
 			/>
 		</>
 	);
