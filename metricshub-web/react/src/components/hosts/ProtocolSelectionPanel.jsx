@@ -2,7 +2,12 @@ import * as React from "react";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
 import { alpha, Box, Chip, FormControl, FormHelperText, Stack, Typography } from "@mui/material";
-import { getProtocolOptionsForHostType, HOST_TYPE_UNSELECTED } from "./protocol-definitions";
+import {
+	getProtocolOptionsForHostType,
+	HOST_TYPE_UNSELECTED,
+	isProtocolAvailableOnAgentOs,
+	WINDOWS_AGENT_ONLY_HINT,
+} from "./protocol-definitions";
 import { getProtocolPickerMetadata } from "./protocol-picker-metadata";
 import { guidedConfigRowHoverBg } from "./guided-config-ui-tokens";
 import { guidedConfigFieldLabelSx } from "./guided-config-form-primitives";
@@ -15,7 +20,7 @@ const DEFAULT_HELPER =
  * @param {boolean} [error]
  */
 const protocolCardSx =
-	(selected, error = false) =>
+	(selected, error = false, disabled = false) =>
 	(theme) => ({
 		display: "flex",
 		alignItems: "flex-start",
@@ -48,6 +53,16 @@ const protocolCardSx =
 			outline: `2px solid ${theme.palette.primary.main}`,
 			outlineOffset: 2,
 		},
+		...(disabled
+			? {
+					opacity: 0.5,
+					cursor: "not-allowed",
+					"&:hover": {
+						borderColor: theme.palette.divider,
+						bgcolor: "transparent",
+					},
+				}
+			: {}),
 	});
 
 const protocolIconBoxSx = (selected) => (theme) => ({
@@ -73,6 +88,7 @@ const protocolIconBoxSx = (selected) => (theme) => ({
  * @param {boolean} [props.error]
  * @param {string} [props.helperText]
  * @param {string} [props.hostType]
+ * @param {string} [props.agentOsType] os.type of the agent host; gates agent-OS-bound protocols (WMI)
  */
 const ProtocolSelectionPanel = ({
 	value = [],
@@ -80,6 +96,7 @@ const ProtocolSelectionPanel = ({
 	error = false,
 	helperText,
 	hostType = "",
+	agentOsType = "",
 }) => {
 	const protocolOptions = React.useMemo(() => getProtocolOptionsForHostType(hostType), [hostType]);
 	const selectedSet = React.useMemo(() => new Set(value || []), [value]);
@@ -161,7 +178,11 @@ const ProtocolSelectionPanel = ({
 					>
 						{protocolOptions.map((protocol) => {
 							const selected = selectedSet.has(protocol.id);
+							// A protocol the agent OS cannot run is disabled — unless it is already
+							// selected (existing configuration), so the user can still deselect it.
+							const disabled = !isProtocolAvailableOnAgentOs(protocol.id, agentOsType) && !selected;
 							const { Icon, summary } = getProtocolPickerMetadata(protocol.id);
+							const cardSummary = disabled ? WINDOWS_AGENT_ONLY_HINT : summary;
 							return (
 								<Box
 									key={protocol.id}
@@ -169,9 +190,10 @@ const ProtocolSelectionPanel = ({
 									type="button"
 									role="checkbox"
 									aria-checked={selected}
-									aria-label={`${protocol.label}. ${summary}`}
+									aria-label={`${protocol.label}. ${cardSummary}`}
+									disabled={disabled}
 									onClick={() => toggle(protocol.id)}
-									sx={protocolCardSx(selected, error && !selected && selectedCount === 0)}
+									sx={protocolCardSx(selected, error && !selected && selectedCount === 0, disabled)}
 								>
 									<Box sx={protocolIconBoxSx(selected)}>
 										<Icon sx={{ fontSize: 22 }} />
@@ -198,7 +220,7 @@ const ProtocolSelectionPanel = ({
 											color="text.secondary"
 											sx={{ display: "block", mt: 0.5, lineHeight: 1.35 }}
 										>
-											{summary}
+											{cardSummary}
 										</Typography>
 									</Box>
 								</Box>
