@@ -29,10 +29,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -400,5 +404,55 @@ class UiConfigServiceTest {
 		assertEquals(false, host.get("enableSelfMonitoring"), "Explicit enableSelfMonitoring=false should be persisted");
 		assertFalse(host.containsKey("logFileSourceDetails"), "Unspecified boolean should stay absent");
 		assertFalse(host.containsKey("resolveHostnameToFqdn"), "Unspecified boolean should stay absent");
+	}
+
+	@Test
+	void testAddHostSucceedsWhileConfigFileIsHeldOpenByAReader() throws Exception {
+		// Seed the configuration file so the save below must replace an existing target.
+		final AddHostRequestDto first = new AddHostRequestDto();
+		first.setHostId("server-1");
+		first.setAttributes(Map.of("host.name", "server-1", "host.type", "linux"));
+		first.setProtocols(Map.of("ping", Map.of("timeout", 5)));
+		service.addHost(first);
+
+		// Simulate the configuration watcher re-reading the file during the save: on
+		// Windows an open read handle blocks the file replacement until it is closed.
+		final Path uiConfig = tempDir.resolve("metricshub-ui.yaml");
+		final FileChannel reader = FileChannel.open(uiConfig, StandardOpenOption.READ);
+		final Thread releaser = new Thread(() -> {
+			try {
+				Thread.sleep(400L);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} finally {
+				try {
+					reader.close();
+				} catch (IOException ignored) {
+					// nothing to release
+				}
+			}
+		});
+		releaser.start();
+
+		try {
+			final AddHostRequestDto second = new AddHostRequestDto();
+			second.setHostId("server-2");
+			second.setAttributes(Map.of("host.name", "server-2", "host.type", "linux"));
+			second.setProtocols(Map.of("ping", Map.of("timeout", 5)));
+
+			final UiConfigSnapshotDto snapshot = service.addHost(second);
+
+			assertTrue(snapshot.getResources().containsKey("server-1"), "Existing host should survive the save");
+			assertTrue(snapshot.getResources().containsKey("server-2"), "New host should be persisted");
+		} finally {
+			releaser.join();
+		}
+
+		try (Stream<Path> files = Files.list(tempDir)) {
+			assertTrue(
+				files.noneMatch(path -> path.getFileName().toString().endsWith(".tmp")),
+				"No orphaned temporary file should remain after the save"
+			);
+		}
 	}
 }

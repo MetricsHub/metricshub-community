@@ -66,6 +66,16 @@ import org.springframework.web.server.ResponseStatusException;
 public class UiConfigService {
 
 	/**
+	 * Number of attempts to replace the configuration file when the move fails transiently.
+	 */
+	private static final int MOVE_MAX_ATTEMPTS = 5;
+
+	/**
+	 * Delay in milliseconds between two configuration file move attempts.
+	 */
+	private static final long MOVE_RETRY_DELAY_MS = 200L;
+
+	/**
 	 * Provides access to the current {@link AgentContext} and configuration directory.
 	 */
 	private final AgentContextHolder agentContextHolder;
@@ -555,6 +565,7 @@ public class UiConfigService {
 
 	/**
 	 * Writes content to a temporary file and moves it to the target path atomically when supported.
+	 * The temporary file is always removed, even when the move fails.
 	 *
 	 * @param target  destination file path
 	 * @param content serialized YAML content
@@ -563,12 +574,48 @@ public class UiConfigService {
 	private static void writeAtomically(final Path target, final String content) throws IOException {
 		Files.createDirectories(target.getParent());
 		final Path tmp = Files.createTempFile(target.getParent(), target.getFileName().toString() + ".", ".tmp");
-		Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
 		try {
-			Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-		} catch (AtomicMoveNotSupportedException ex) {
-			Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+			Files.writeString(tmp, content, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+			moveWithRetry(tmp, target);
+		} finally {
+			Files.deleteIfExists(tmp);
 		}
+	}
+
+	/**
+	 * Replaces {@code target} with {@code tmp}, retrying briefly when the move fails.
+	 * <p>
+	 * Every configuration write wakes the configuration directory watcher, which re-reads
+	 * all configuration files (checksum, then context reload). On Windows an open read
+	 * handle blocks the replace, so a save issued while a previous change is still being
+	 * reloaded fails transiently.
+	 *
+	 * @param tmp    temporary file holding the new content
+	 * @param target destination file path
+	 * @throws IOException when the move still fails after all attempts
+	 */
+	private static void moveWithRetry(final Path tmp, final Path target) throws IOException {
+		IOException lastFailure = null;
+		for (int attempt = 1; attempt <= MOVE_MAX_ATTEMPTS; attempt++) {
+			try {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+				return;
+			} catch (AtomicMoveNotSupportedException ex) {
+				Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+				return;
+			} catch (IOException ex) {
+				lastFailure = ex;
+				if (attempt < MOVE_MAX_ATTEMPTS) {
+					try {
+						Thread.sleep(MOVE_RETRY_DELAY_MS);
+					} catch (InterruptedException interrupted) {
+						Thread.currentThread().interrupt();
+						throw lastFailure;
+					}
+				}
+			}
+		}
+		throw lastFailure;
 	}
 
 	/**
