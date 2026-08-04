@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import DeferredPasswordEncryptAlert from "./DeferredPasswordEncryptAlert";
+import { HostnamesChipField } from "./HostNameChipInput";
 import ProtocolPasswordField from "./ProtocolPasswordField";
 import {
 	filledInputNoLabelSx,
@@ -59,6 +60,7 @@ import {
  * @param {(field: import("./protocol-definitions").ProtocolField) => boolean} props.isRequired
  * @param {boolean} [props.allowPasswordReveal]
  * @param {boolean} [props.deferEncryptUntilSave]
+ * @param {boolean} [props.multiHostname] resource host.name is multi-valued: the protocol hostname accepts one value per host
  */
 const ProtocolConfigForm = ({
 	protocol,
@@ -69,6 +71,7 @@ const ProtocolConfigForm = ({
 	isRequired,
 	allowPasswordReveal = false,
 	deferEncryptUntilSave = false,
+	multiHostname = false,
 }) => {
 	const transportLinkedPort = hasTransportLinkedPort(protocol);
 
@@ -161,7 +164,33 @@ const ProtocolConfigForm = ({
 		if (field.type === "textarea") {
 			return renderTextareaField(field);
 		}
+		if (field.name === "hostname" && multiHostname) {
+			return renderMultiHostnameField(field);
+		}
 		return renderTextField(field);
+	};
+
+	/** Chip input mirroring host.name: one collection hostname per configured host. */
+	const renderMultiHostnameField = (field) => {
+		const error = errors[field.name];
+
+		return (
+			<Box key={field.name}>
+				<ProtocolFieldLabelRow
+					label={field.label}
+					required={showRequiredMarker(field)}
+					description="One hostname per host.name entry; the last one applies to any remaining hosts."
+					helpTooltip={fieldHelpTooltip(field)}
+				/>
+				<HostnamesChipField
+					value={values[field.name] ?? ""}
+					onChange={(next) => onChange(field.name, next)}
+					error={Boolean(error)}
+					helperText={fieldErrorText(field.name)}
+					textFieldProps={{ ...protocolTextFieldProps, fullWidth: true }}
+				/>
+			</Box>
+		);
 	};
 
 	const renderTextareaField = (field) => {
