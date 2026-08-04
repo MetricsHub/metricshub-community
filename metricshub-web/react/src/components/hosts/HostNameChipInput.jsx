@@ -28,8 +28,9 @@ const HOST_NAME_CHIP_SX = (theme) => ({
 
 /**
  * Generic chip input for hostname values. Single values remain a plain string;
- * multiple values are emitted as an alphabetized array. Chips render inside the
- * text field. Presentation (label, variant, required) is left to the caller.
+ * multiple values are emitted as an array in entry order (order is positional in
+ * the configuration). Chips render inside the text field. Presentation (label,
+ * variant, required) is left to the caller.
  *
  * @param {object} props
  * @param {string | string[]} props.value

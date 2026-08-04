@@ -202,8 +202,10 @@ export const flattenToRows = (obj, prefix = "") => {
 		if (value !== null && typeof value === "object" && !Array.isArray(value)) {
 			rows.push(...flattenToRows(value, path));
 		} else {
+			// Arrays keep their configured order: multi-valued entries (host.name,
+			// protocol hostnames) are positional in the YAML.
 			const displayValue = Array.isArray(value)
-				? [...value].map(String).sort(compareLocale).join(", ")
+				? value.map(String).join(", ")
 				: value === undefined || value === null
 					? ""
 					: String(value);

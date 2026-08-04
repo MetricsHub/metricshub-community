@@ -1,8 +1,8 @@
-import { compareLocale } from "./alphabetic-sort";
-
 /**
  * Splits a hostname value (string with `,`/`;` separators, or array) into a
- * deduplicated, alphabetized list of host names.
+ * deduplicated list of host names, preserving the entry order. Order is
+ * significant: multi-host protocol hostnames are matched to host.name entries
+ * by position (see PostConfigDeserializer.normalizeProtocolHostnames).
  *
  * @param {unknown} hostName
  * @returns {string[]}
@@ -24,8 +24,7 @@ export const getHostNames = (hostName) => {
 			}
 			seen.add(key);
 			return true;
-		})
-		.sort(compareLocale);
+		});
 };
 
 /**
