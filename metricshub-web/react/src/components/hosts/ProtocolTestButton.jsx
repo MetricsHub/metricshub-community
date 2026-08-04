@@ -74,8 +74,10 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 					{
 						hostname,
 						protocol,
+						// The configured hostname may list one value per host.name entry; the test
+						// targets a single host, so pin the chosen one in the protocol config too.
 						protocolConfig: {
-							[protocol]: buildProtocolConfigFromForm(protocol, protocolValues),
+							[protocol]: { ...buildProtocolConfigFromForm(protocol, protocolValues), hostname },
 						},
 					},
 					{ signal: controller.signal },
@@ -142,27 +144,25 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 		[],
 	);
 
-	// A protocol-level hostname overrides the resource one: it is the host actually contacted.
-	const protocolHostname = String(protocolValues?.hostname ?? "").trim();
+	// Protocol-level hostnames override the resource ones: they are the hosts actually contacted.
+	const candidateHostnames = React.useMemo(() => {
+		const protocolHostnames = getHostNames(protocolValues?.hostname);
+		return protocolHostnames.length > 0 ? protocolHostnames : getHostNames(hostName);
+	}, [protocolValues?.hostname, hostName]);
 
 	const handleTestClick = () => {
-		if (protocolHostname) {
-			void runTest(protocolHostname);
-			return;
-		}
-		const hostnames = getHostNames(hostName);
-		if (hostnames.length === 0) {
+		if (candidateHostnames.length === 0) {
 			setResult({
 				severity: "warning",
 				message: "Specify host.name before testing this protocol.",
 			});
 			return;
 		}
-		if (hostnames.length > 1) {
+		if (candidateHostnames.length > 1) {
 			setHostnamePickerOpen(true);
 			return;
 		}
-		void runTest(hostnames[0]);
+		void runTest(candidateHostnames[0]);
 	};
 
 	return (
@@ -193,7 +193,7 @@ const ProtocolTestButton = ({ protocol, hostName, hostId, protocolValues }) => {
 			</Stack>
 			<ProtocolTestHostnameDialog
 				open={hostnamePickerOpen}
-				hostnames={getHostNames(hostName)}
+				hostnames={candidateHostnames}
 				onClose={() => setHostnamePickerOpen(false)}
 				onSelect={(hostname) => void runTest(hostname)}
 			/>

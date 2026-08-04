@@ -3,6 +3,7 @@ import { Box, Paper, Stack, Typography } from "@mui/material";
 import ProtocolConfigForm from "./ProtocolConfigForm";
 import ProtocolTestButton from "./ProtocolTestButton";
 import { guidedConfigBorderedPanelSx } from "./guided-config-form-primitives";
+import { getHostNames } from "./host-config-utils";
 import {
 	PROTOCOL_FIELDS,
 	PROTOCOL_OPTIONS,
@@ -76,6 +77,7 @@ const HostProtocolConfigStep = ({
 				isRequired={fieldRequired}
 				allowPasswordReveal={allowPasswordReveal}
 				deferEncryptUntilSave={deferEncryptUntilSave}
+				multiHostname={getHostNames(hostName).length > 1}
 			/>
 		</Stack>
 	);

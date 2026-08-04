@@ -1,4 +1,5 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
+import { getHostNames, normalizeHostNameValue } from "../../utils/host-names";
 import { encryptFormProtocolPasswords } from "../../utils/password-encrypt";
 
 /** Common MetricsHub protocol keys used in host filters (A–Z). */
@@ -99,42 +100,7 @@ export const getHostProtocolNames = (hostConfig) => {
 	return Object.keys(protocols).sort(compareLocale);
 };
 
-/**
- * @param {unknown} hostName
- * @returns {string[]}
- */
-export const getHostNames = (hostName) => {
-	const rawNames = Array.isArray(hostName)
-		? hostName
-		: String(hostName ?? "")
-				.split(/[;,]/)
-				.map((name) => name.trim());
-	const seen = new Set();
-	return rawNames
-		.map((name) => String(name ?? "").trim())
-		.filter(Boolean)
-		.filter((name) => {
-			const key = name.toLowerCase();
-			if (seen.has(key)) {
-				return false;
-			}
-			seen.add(key);
-			return true;
-		})
-		.sort(compareLocale);
-};
-
-/**
- * @param {unknown} hostName
- * @returns {string | string[]}
- */
-export const normalizeHostNameValue = (hostName) => {
-	const names = getHostNames(hostName);
-	if (names.length > 1) {
-		return names;
-	}
-	return names[0] || "";
-};
+export { getHostNames, normalizeHostNameValue };
 
 /**
  * @param {Record<string, unknown>} hostConfig

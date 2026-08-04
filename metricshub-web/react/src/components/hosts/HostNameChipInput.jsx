@@ -27,17 +27,24 @@ const HOST_NAME_CHIP_SX = (theme) => ({
 });
 
 /**
- * Chip input for host.name. Single values remain a plain string; multiple values
- * are emitted as an alphabetized array. Chips render inside the text field.
+ * Generic chip input for hostname values. Single values remain a plain string;
+ * multiple values are emitted as an alphabetized array. Chips render inside the
+ * text field. Presentation (label, variant, required) is left to the caller.
  *
  * @param {object} props
  * @param {string | string[]} props.value
  * @param {(value: string | string[]) => void} props.onChange
  * @param {boolean} [props.error]
  * @param {React.ReactNode} [props.helperText]
- * @param {boolean} [props.staticLabel] render the label above the field instead of a floating label
+ * @param {object} [props.textFieldProps] extra props forwarded to the underlying {@link TextField}
  */
-const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => {
+export const HostnamesChipField = ({
+	value,
+	onChange,
+	error = false,
+	helperText,
+	textFieldProps = {},
+}) => {
 	const committedNames = React.useMemo(() => {
 		if (Array.isArray(value)) {
 			return getHostNames(value);
@@ -143,88 +150,110 @@ const HostNameChipInput = ({ value, onChange, error = false, helperText, staticL
 		: "Type a host name";
 
 	return (
-		<Stack spacing={staticLabel ? 0 : 1}>
-			{staticLabel ? (
-				<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
-					<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
-						{HOST_NAME_UI.fieldLabel}
-						<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
-							*
-						</Box>
-					</Typography>
-					<FieldHelpTooltip
-						title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
-					/>
-				</Stack>
-			) : null}
-			<Autocomplete
-				multiple
-				freeSolo
-				disableClearable
-				filterOptions={(options) => options}
-				options={[]}
-				value={committedNames}
-				inputValue={isChipMode ? inputValue : String(value ?? "")}
-				onChange={handleAutocompleteChange}
-				onInputChange={handleInputChange}
-				renderTags={(tagValue, getTagProps) =>
-					tagValue.map((option, index) => {
-						const { key, ...tagProps } = getTagProps({ index });
-						return (
-							<Chip
-								key={key}
-								label={option}
-								size="medium"
-								color="secondary"
-								variant="filled"
-								{...tagProps}
-								sx={HOST_NAME_CHIP_SX}
-							/>
-						);
-					})
-				}
-				renderInput={(params) => (
-					<TextField
-						{...params}
-						id="host-name-input"
-						label={staticLabel ? undefined : HOST_NAME_UI.fieldLabel}
-						hiddenLabel={staticLabel}
-						size="small"
-						variant={staticLabel ? "filled" : "outlined"}
-						placeholder={placeholder}
-						error={error}
-						helperText={helperText}
-						required
-						onPaste={handlePaste}
-						onKeyDown={handleKeyDown}
-						onBlur={() => {
-							if (isChipMode) {
-								commitInput();
-							}
-						}}
-						sx={staticLabel ? filledInputNoLabelSx : undefined}
-					/>
-				)}
-				slotProps={{
-					popper: {
-						sx: { display: "none" },
-					},
-				}}
-				sx={{
-					"& .MuiAutocomplete-inputRoot": {
-						flexWrap: "wrap",
-						gap: 0.75,
-						alignItems: "center",
-						...(isChipMode ? { py: 0.875 } : {}),
-					},
-					"& .MuiAutocomplete-input": {
-						minWidth: 80,
-						flexGrow: 1,
-					},
-				}}
-			/>
-		</Stack>
+		<Autocomplete
+			multiple
+			freeSolo
+			disableClearable
+			filterOptions={(options) => options}
+			options={[]}
+			value={committedNames}
+			inputValue={isChipMode ? inputValue : String(value ?? "")}
+			onChange={handleAutocompleteChange}
+			onInputChange={handleInputChange}
+			renderTags={(tagValue, getTagProps) =>
+				tagValue.map((option, index) => {
+					const { key, ...tagProps } = getTagProps({ index });
+					return (
+						<Chip
+							key={key}
+							label={option}
+							size="medium"
+							color="secondary"
+							variant="filled"
+							{...tagProps}
+							sx={HOST_NAME_CHIP_SX}
+						/>
+					);
+				})
+			}
+			renderInput={(params) => (
+				<TextField
+					{...params}
+					size="small"
+					placeholder={placeholder}
+					error={error}
+					helperText={helperText}
+					onPaste={handlePaste}
+					onKeyDown={handleKeyDown}
+					onBlur={() => {
+						if (isChipMode) {
+							commitInput();
+						}
+					}}
+					{...textFieldProps}
+				/>
+			)}
+			slotProps={{
+				popper: {
+					sx: { display: "none" },
+				},
+			}}
+			sx={{
+				"& .MuiAutocomplete-inputRoot": {
+					flexWrap: "wrap",
+					gap: 0.75,
+					alignItems: "center",
+					...(isChipMode ? { py: 0.875 } : {}),
+				},
+				"& .MuiAutocomplete-input": {
+					minWidth: 80,
+					flexGrow: 1,
+				},
+			}}
+		/>
 	);
 };
+
+/**
+ * Chip input for host.name with its label and help tooltip.
+ *
+ * @param {object} props
+ * @param {string | string[]} props.value
+ * @param {(value: string | string[]) => void} props.onChange
+ * @param {boolean} [props.error]
+ * @param {React.ReactNode} [props.helperText]
+ * @param {boolean} [props.staticLabel] render the label above the field instead of a floating label
+ */
+const HostNameChipInput = ({ value, onChange, error = false, helperText, staticLabel = false }) => (
+	<Stack spacing={staticLabel ? 0 : 1}>
+		{staticLabel ? (
+			<Stack direction="row" alignItems="center" spacing={0.25} sx={{ mb: 0.75 }}>
+				<Typography component="label" htmlFor="host-name-input" sx={guidedConfigFieldLabelSx}>
+					{HOST_NAME_UI.fieldLabel}
+					<Box component="span" sx={{ color: "error.main", ml: 0.25 }}>
+						*
+					</Box>
+				</Typography>
+				<FieldHelpTooltip
+					title={`MetricsHub attribute: ${HOST_NAME_UI.attributeName}\n\n${HOST_NAME_UI.fieldHelper}`}
+				/>
+			</Stack>
+		) : null}
+		<HostnamesChipField
+			value={value}
+			onChange={onChange}
+			error={error}
+			helperText={helperText}
+			textFieldProps={{
+				id: "host-name-input",
+				label: staticLabel ? undefined : HOST_NAME_UI.fieldLabel,
+				hiddenLabel: staticLabel,
+				variant: staticLabel ? "filled" : "outlined",
+				required: true,
+				sx: staticLabel ? filledInputNoLabelSx : undefined,
+			}}
+		/>
+	</Stack>
+);
 
 export default React.memo(HostNameChipInput);

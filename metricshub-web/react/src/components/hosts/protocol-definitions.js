@@ -1,4 +1,5 @@
 import { compareLocale } from "../../utils/alphabetic-sort";
+import { getHostNames, normalizeHostNameValue } from "../../utils/host-names";
 
 /** @typedef {'text' | 'password' | 'number' | 'boolean' | 'select' | 'radio' | 'authChoice' | 'modeChoice'} FieldType */
 
@@ -1015,7 +1016,8 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 			break;
 	}
 
-	setIfPresent("hostname", raw.hostname);
+	// Multi-valued hostnames (one per host.name entry) are written as an array, like host.name.
+	setIfPresent("hostname", normalizeHostNameValue(raw.hostname));
 
 	return config;
 };
@@ -1247,6 +1249,15 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 			errors.url = message;
 			errors.type = message;
 		}
+	}
+
+	// Multiple collection hostnames are only meaningful when host.name lists multiple hosts
+	// (they are matched by position — see PostConfigDeserializer.normalizeProtocolHostnames).
+	if (
+		getHostNames(protocolConfig.hostname).length > 1 &&
+		getHostNames(options.hostName).length <= 1
+	) {
+		errors.hostname = "Multiple hostnames require a multi-valued host.name";
 	}
 
 	return errors;
