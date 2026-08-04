@@ -110,7 +110,7 @@ const HostConfigPage = ({
 		sessionPathname: isEdit ? "" : sessionPathname,
 	});
 
-	const { goToStep } = form;
+	const { goToStep, updateScrollPosition, commitSavedBaseline } = form;
 	const [restoreEpoch, setRestoreEpoch] = React.useState(0);
 	const [scrollRestoreLocked, setScrollRestoreLocked] = React.useState(
 		() => form.initialScrollTop != null,
@@ -166,7 +166,7 @@ const HostConfigPage = ({
 				if (reachedTarget || frame >= 300) {
 					scrollRestoreDoneRef.current = true;
 				}
-				form.updateScrollPosition(el.scrollTop);
+				updateScrollPosition(el.scrollTop);
 				setScrollRestoreLocked(false);
 				setRestoreEpoch((value) => value + 1);
 				return;
@@ -184,7 +184,7 @@ const HostConfigPage = ({
 		form.initialScrollTop,
 		form.state.connectorDetectionMode,
 		form.steps.length,
-		form.updateScrollPosition,
+		updateScrollPosition,
 	]);
 
 	const handleActiveStepChange = React.useCallback(
@@ -312,8 +312,8 @@ const HostConfigPage = ({
 			state: form.state,
 		});
 		// Reset the dirty baseline so "Save as draft" disables until the next edit.
-		form.commitSavedBaseline();
-	}, [form.state, hostNames, form.commitSavedBaseline]);
+		commitSavedBaseline();
+	}, [form.state, hostNames, commitSavedBaseline]);
 
 	const handleSaveAsDraftClick = () => {
 		saveDraftNow();

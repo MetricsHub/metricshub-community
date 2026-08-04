@@ -63,6 +63,13 @@ export const PROTOCOL_HOSTNAME_FIELD = {
 	helpTooltip: PROTOCOL_HOSTNAME_TOOLTIP,
 };
 
+/** Help tooltip for the external JDBC driver fields (resource-level driver block). */
+export const JDBC_DRIVER_TOOLTIP = `MetricsHub ships with a set of built-in JDBC drivers. Use these fields to connect with a database whose driver is not bundled, by providing an external JDBC driver.
+
+• JDBC Driver Class Name — fully-qualified java.sql.Driver implementation (for example com.ibm.as400.access.AS400JDBCDriver).
+
+• Driver JAR Path — optional path to the driver JAR file. Placeholders such as $APP_DIR, $USER_HOME, and $WORKING_DIR are accepted. Leave empty to scan the default drivers directory ($APP_DIR/lib/extensions/jdbc).`;
+
 /** Help tooltip for JDBC connection mode. */
 export const JDBC_CONNECTION_MODE_TOOLTIP = `Choose how to reach the database:
 
@@ -327,6 +334,8 @@ export const PROTOCOL_DEFAULTS = {
 		username: "",
 		password: "",
 		timeout: 30,
+		driverClassName: "",
+		driverJarPath: "",
 		hostname: "",
 	},
 	jmx: { username: "", password: "", port: 1099, timeout: 30, hostname: "" },
@@ -762,6 +771,23 @@ export const PROTOCOL_FIELDS = {
 		{ name: "username", label: "Username", type: "text", required: true },
 		{ name: "password", label: "Password", type: "password", required: true },
 		TIMEOUT_FIELD,
+		// External JDBC driver, written as protocols.jdbc.driver in metricshub-ui.yaml
+		{
+			name: "driverClassName",
+			label: "JDBC Driver Class Name",
+			type: "text",
+			advanced: true,
+			helperText: "Fully-qualified java.sql.Driver implementation",
+			helpTooltip: JDBC_DRIVER_TOOLTIP,
+		},
+		{
+			name: "driverJarPath",
+			label: "Driver JAR Path",
+			type: "text",
+			advanced: true,
+			helperText: "Path to the driver JAR; $APP_DIR, $USER_HOME, and $WORKING_DIR allowed",
+			helpTooltip: JDBC_DRIVER_TOOLTIP,
+		},
 		PROTOCOL_HOSTNAME_FIELD,
 	],
 	jmx: [
@@ -989,6 +1015,17 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 			setIfPresent("database", raw.database);
 			setIfPresent("port", parseNumber(raw.port));
 			setIfPresent("timeout", parseTimeoutToSeconds(raw.timeout));
+			{
+				// External JDBC driver: className is required by the backend parser,
+				// so an orphan jarPath is never written.
+				const driverClassName = String(raw.driverClassName ?? "").trim();
+				const driverJarPath = String(raw.driverJarPath ?? "").trim();
+				if (driverClassName) {
+					config.driver = driverJarPath
+						? { className: driverClassName, jarPath: driverJarPath }
+						: { className: driverClassName };
+				}
+			}
 			break;
 		case "jmx":
 			setIfPresent("port", parseNumber(raw.port));
@@ -1036,6 +1073,9 @@ export const protocolConfigToForm = (protocol, config = {}) => {
 		// Infer UI mode from which fields are configured in YAML.
 		const cfg = config || {};
 		form._jdbcMode = cfg.database || cfg.port ? "manual" : "url";
+		// Flatten the driver block into the form fields.
+		form.driverClassName = String(cfg.driver?.className ?? "");
+		form.driverJarPath = String(cfg.driver?.jarPath ?? "");
 	}
 
 	if (protocol === "ipmi") {
@@ -1044,6 +1084,10 @@ export const protocolConfigToForm = (protocol, config = {}) => {
 
 	Object.entries(config || {}).forEach(([key, value]) => {
 		if (value === undefined || value === null) {
+			return;
+		}
+		if (key === "driver") {
+			// Already flattened into driverClassName / driverJarPath above.
 			return;
 		}
 		if (key === "useSudoCommands" || key === "retryIntervals") {
@@ -1248,6 +1292,12 @@ export const collectProtocolConfigErrors = (protocol, protocolConfig, options = 
 			const message = "Provide a JDBC URL or a database type";
 			errors.url = message;
 			errors.type = message;
+		}
+		// The backend driver block requires className; jarPath alone is rejected.
+		const hasDriverClassName = String(protocolConfig.driverClassName || "").trim();
+		const hasDriverJarPath = String(protocolConfig.driverJarPath || "").trim();
+		if (hasDriverJarPath && !hasDriverClassName) {
+			errors.driverClassName = "JDBC Driver Class Name is required when a driver JAR path is set";
 		}
 	}
 
