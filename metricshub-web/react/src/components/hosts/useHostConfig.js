@@ -185,9 +185,30 @@ export const useHostConfig = ({
 		],
 	);
 
+	const initialStateFingerprint = React.useMemo(
+		() =>
+			initialState ? getHostFormCommittedFingerprint(normalizeHostFormState(initialState)) : "",
+		[initialState],
+	);
+
+	// A session draft only applies to the server config it was edited from. A matching
+	// key with a different baseline means the resource was deleted, recreated, or edited
+	// elsewhere in the meantime — restoring it would resurrect stale configuration.
+	const loadMatchingSession = React.useCallback(() => {
+		const payload = loadHostFormSession(sessionKey);
+		if (!payload) {
+			return null;
+		}
+		if ((payload.baselineFingerprint ?? "") !== initialStateFingerprint) {
+			clearHostFormSession(sessionKey);
+			return null;
+		}
+		return payload;
+	}, [sessionKey, initialStateFingerprint]);
+
 	const bootSession = React.useMemo(
-		() => (open ? loadHostFormSession(sessionKey) : null),
-		[open, sessionKey],
+		() => (open ? loadMatchingSession() : null),
+		[open, loadMatchingSession],
 	);
 
 	// Scroll/step restore is refresh-only: a session written during this app
@@ -431,12 +452,6 @@ export const useHostConfig = ({
 		}
 	}, [state.selectedProtocols, steps, activeStep]);
 
-	const initialStateFingerprint = React.useMemo(
-		() =>
-			initialState ? getHostFormCommittedFingerprint(normalizeHostFormState(initialState)) : "",
-		[initialState],
-	);
-
 	React.useEffect(() => {
 		if (!open) {
 			return;
@@ -446,7 +461,7 @@ export const useHostConfig = ({
 		setValidatedStepIds(new Set());
 		setInvalidStepIds(new Set());
 
-		const fromSession = loadHostFormSession(sessionKey);
+		const fromSession = loadMatchingSession();
 		const sessionState = fromSession?.state;
 
 		const nextState = buildFormStateFromSources({
@@ -516,8 +531,9 @@ export const useHostConfig = ({
 			activeStep,
 			furthestStep: state.furthestStep,
 			scrollTop: scrollTopRef.current,
+			baselineFingerprint: initialStateFingerprint,
 		});
-	}, [open, sessionKey, state, activeStep]);
+	}, [open, sessionKey, state, activeStep, initialStateFingerprint]);
 
 	const persistFormSession = React.useCallback(() => {
 		if (!open) {
@@ -528,11 +544,12 @@ export const useHostConfig = ({
 			activeStep: activeStepRef.current,
 			furthestStep: stateRef.current.furthestStep,
 			scrollTop: scrollTopRef.current,
+			baselineFingerprint: initialStateFingerprint,
 		});
 		if (sessionPathname) {
 			saveHostFormScrollPosition(sessionPathname, scrollTopRef.current, activeStepRef.current);
 		}
-	}, [open, sessionKey, sessionPathname]);
+	}, [open, sessionKey, sessionPathname, initialStateFingerprint]);
 
 	React.useEffect(() => {
 		if (!open) {
