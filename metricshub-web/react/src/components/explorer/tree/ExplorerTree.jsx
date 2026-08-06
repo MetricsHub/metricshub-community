@@ -3,6 +3,7 @@ import { SimpleTreeView, treeItemClasses } from "@mui/x-tree-view";
 import { Box, CircularProgress, Typography } from "@mui/material";
 import ExplorerTreeItem from "./TreeItem";
 import ExplorerSearch from "./ExplorerSearch";
+import { compareLocale } from "../../../utils/alphabetic-sort";
 import { useAppDispatch, useAppSelector } from "../../../hooks/store";
 import { fetchExplorerHierarchy } from "../../../store/thunks/explorer-thunks";
 import {
@@ -40,7 +41,9 @@ const buildTree = (raw) => {
 		const id = [...pathParts, name].join("/");
 		const rawChildren = collectChildren(node);
 		const children = Array.isArray(rawChildren)
-			? rawChildren.map((c) => walk(c, [...pathParts, name], node))
+			? rawChildren
+					.map((c) => walk(c, [...pathParts, name], node))
+					.sort((a, b) => compareLocale(a.name, b.name))
 			: [];
 		const isExpandable = children.length > 0;
 		return { id, name, type: node.type, children, parent, isExpandable };

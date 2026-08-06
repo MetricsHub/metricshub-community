@@ -59,6 +59,10 @@ public class AgentConstants {
 	 */
 	public static final String DEFAULT_CONFIG_FILENAME = PRODUCT_CODE + ".yaml";
 	/**
+	 * UI managed configuration filename.
+	 */
+	public static final String UI_CONFIG_FILENAME = PRODUCT_CODE + "-ui.yaml";
+	/**
 	 * Default Open Telemetry configuration filename
 	 */
 	public static final String DEFAULT_OTEL_CONFIG_FILENAME = "otel-config.yaml";

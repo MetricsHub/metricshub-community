@@ -22,6 +22,8 @@ package org.metricshub.web.config;
  */
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.springframework.context.annotation.Configuration;
@@ -52,14 +54,16 @@ public class UiConfig implements WebMvcConfigurer {
 	 */
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		final String webRoot = "file:" + getWebDirectory() + "/";
+		final Path webDirectory = Paths.get(getWebDirectory()).toAbsolutePath().normalize();
+		final String webRoot = webDirectory.toUri().toString();
+		final String webRootLocation = webRoot.endsWith("/") ? webRoot : webRoot + "/";
 
-		log.info("Serving web resources from {}", webRoot);
+		log.info("Serving web resources from {}", webRootLocation);
 
 		registry
 			.setOrder(Ordered.LOWEST_PRECEDENCE)
 			.addResourceHandler("/**")
-			.addResourceLocations(webRoot)
+			.addResourceLocations(webRootLocation)
 			.resourceChain(true)
 			.addResolver(
 				new PathResourceResolver() {
@@ -76,11 +80,55 @@ public class UiConfig implements WebMvcConfigurer {
 							return requested;
 						}
 
+						// Missing static assets must 404 — never return index.html (wrong MIME type for .js/.css)
+						if (isStaticAssetPath(resourcePath)) {
+							return null;
+						}
+
 						// Fallback to the SPA entry point for client-side routes
 						return location.createRelative("index.html");
 					}
 				}
 			);
+	}
+
+	/**
+	 * Returns whether the request path targets a bundled static asset rather than a client route.
+	 *
+	 * @param resourcePath path relative to the web root
+	 * @return {@code true} when the path should not fall back to {@code index.html}
+	 */
+	private static boolean isStaticAssetPath(final String resourcePath) {
+		if (resourcePath == null || resourcePath.isBlank()) {
+			return false;
+		}
+		if (resourcePath.startsWith("assets/")) {
+			return true;
+		}
+		final int dotIndex = resourcePath.lastIndexOf('.');
+		if (dotIndex < 0 || dotIndex == resourcePath.length() - 1) {
+			return false;
+		}
+		return switch (resourcePath.substring(dotIndex + 1).toLowerCase()) {
+			case
+				"js",
+				"mjs",
+				"css",
+				"map",
+				"woff",
+				"woff2",
+				"ttf",
+				"otf",
+				"eot",
+				"png",
+				"jpg",
+				"jpeg",
+				"gif",
+				"svg",
+				"webp",
+				"ico" -> true;
+			default -> false;
+		};
 	}
 
 	/**

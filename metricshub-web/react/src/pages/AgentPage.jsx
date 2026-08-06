@@ -1,9 +1,12 @@
 import * as React from "react";
-import { Box, Stack, Typography, Collapse, Divider, Link } from "@mui/material";
+import { Box, Stack, Typography, Collapse, Divider, Link, Button } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import TuneIcon from "@mui/icons-material/Tune";
 import { useAppDispatch, useAppSelector } from "../hooks/store";
 import { fetchApplicationStatus, restartAgent } from "../store/thunks/application-status-thunks";
 import { useSnackbar } from "../hooks/use-snackbar";
 import { useAuth } from "../hooks/use-auth";
+import { paths } from "../paths";
 
 import AgentHeader from "../components/agent/AgentHeader";
 import AgentMetrics from "../components/agent/AgentMetrics";
@@ -15,11 +18,18 @@ import { getLicenseWarning } from "../utils/license-warning";
 import AppAlert from "../components/common/AppAlert";
 
 /**
+ * Temporarily hides the agent "Configure" button: the agent configuration form is not
+ * complete yet. Flip to true (or remove the guard) to re-enable it — the code is kept.
+ */
+const SHOW_AGENT_CONFIGURE_BUTTON = false;
+
+/**
  * Agent page component showing agent information, metrics, and actions.
  * Displays status metrics, agent info table, and other status details.
  */
 function AgentPage() {
 	const dispatch = useAppDispatch();
+	const navigate = useNavigate();
 	const snackbar = useSnackbar();
 	const { user } = useAuth();
 	const isReadOnly = user?.role === "ro";
@@ -121,7 +131,19 @@ function AgentPage() {
 			}}
 		>
 			<Stack spacing={3} sx={{ maxWidth: 1200, mx: "auto" }}>
-				{/* Header */}
+				{/* Header — the Configure button is hidden until the agent configuration form is ready. */}
+				{SHOW_AGENT_CONFIGURE_BUTTON && (
+					<Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+						<Button
+							variant="outlined"
+							size="small"
+							startIcon={<TuneIcon />}
+							onClick={() => navigate(paths.agentConfig)}
+						>
+							Configure
+						</Button>
+					</Box>
+				)}
 				<AgentHeader
 					osType={osType}
 					title={title}
