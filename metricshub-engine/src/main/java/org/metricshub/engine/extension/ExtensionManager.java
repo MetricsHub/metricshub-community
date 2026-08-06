@@ -4,7 +4,7 @@ package org.metricshub.engine.extension;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Engine
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -35,8 +35,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.InvalidConfigurationException;
 import org.metricshub.engine.configuration.IConfiguration;
 import org.metricshub.engine.connector.model.RawConnectorStore;
@@ -57,6 +60,7 @@ import org.metricshub.engine.telemetry.TelemetryManager;
  * </p>
  */
 @Data
+@Slf4j
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder(setterPrefix = "with")
@@ -84,11 +88,66 @@ public class ExtensionManager {
 	private List<IMetricEnrichmentExtension> metricEnrichmentExtensions = new ArrayList<>();
 
 	/**
+	 * The class loaders backing the loaded extensions, held so they can be released via
+	 * {@link #close()}. Excluded from {@code toString}/{@code equals} since they carry no business
+	 * identity.
+	 */
+	@Default
+	@ToString.Exclude
+	@EqualsAndHashCode.Exclude
+	private List<AutoCloseable> classLoaders = new ArrayList<>();
+
+	/**
 	 * Create a new empty instance of the Extension Manager.
 	 * @return a new instance of {@link ExtensionManager}.
 	 */
 	public static ExtensionManager empty() {
 		return ExtensionManager.builder().build();
+	}
+
+	/**
+	 * Shuts down the loaded extensions then closes the class loaders backing them, releasing their
+	 * jar file handles. The {@link IProtocolExtension#onShutdown()} hooks run first so extensions can
+	 * dispose resources of their own (for example, isolated JDBC driver class loaders) before their
+	 * loader disappears. Best-effort: a failure in one step is logged and does not prevent the
+	 * others. Safe to call on an {@link #empty()} manager (no-op).
+	 */
+	public void close() {
+		// Run the hooks in reverse discovery order: providers are discovered dependency-first, so
+		// iterating backwards stops dependents before the extensions they require — a dependent's
+		// cleanup may still need classes or state managed by its dependency.
+		VirtualMachineError fatal = null;
+		for (int i = protocolExtensions.size() - 1; i >= 0; i--) {
+			try {
+				protocolExtensions.get(i).onShutdown();
+			} catch (VirtualMachineError e) {
+				// Fatal JVM state (OutOfMemoryError, ...): remember the first one and rethrow it
+				// after every remaining hook has run and every loader is closed.
+				if (fatal == null) {
+					fatal = e;
+				}
+				log.debug("Extension shutdown hook failed fatally: {}", e.getMessage());
+			} catch (Exception | Error e) {
+				// Shutdown is best-effort: whatever a hook throws (NoClassDefFoundError,
+				// ServiceConfigurationError, FactoryConfigurationError, ...), the remaining hooks
+				// must still release their own resources.
+				log.debug("Extension shutdown hook failed: {}", e.getMessage());
+			}
+		}
+
+		// The loaders are closed no matter what the hooks threw: extension jar handles must never
+		// be left open.
+		for (final AutoCloseable classLoader : classLoaders) {
+			try {
+				classLoader.close();
+			} catch (Exception e) {
+				log.debug("Failed to close an extension class loader: {}", e.getMessage());
+			}
+		}
+
+		if (fatal != null) {
+			throw fatal;
+		}
 	}
 
 	/**
@@ -397,7 +456,7 @@ public class ExtensionManager {
 		protocolExtensions.forEach(extension -> {
 			try {
 				extension.onRecordingSessionEnd(telemetryManager);
-			} catch (Exception ignored) {
+			} catch (Exception _) {
 				// NOSONAR keep flush resilient
 				// Recording flush should not fail the engine lifecycle.
 			}

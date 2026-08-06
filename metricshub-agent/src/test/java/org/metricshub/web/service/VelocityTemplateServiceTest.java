@@ -9,9 +9,12 @@ import static org.mockito.Mockito.when;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.extension.ExtensionManager;
+import org.metricshub.programmable.configuration.ProgrammableConfigurationProvider;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.exception.ConfigFilesException;
 import org.mockito.Mockito;
@@ -22,13 +25,18 @@ class VelocityTemplateServiceTest {
 	Path tempConfigDir;
 
 	/**
-	 * Create a VelocityTemplateService with a mocked AgentContextHolder.
+	 * Create a VelocityTemplateService with a mocked AgentContextHolder whose extension
+	 * manager exposes a real {@link ProgrammableConfigurationProvider}.
 	 */
 	private VelocityTemplateService newServiceWithDir(final Path dir) {
 		final AgentContextHolder holder = Mockito.mock(AgentContextHolder.class);
 		final AgentContext agentContext = Mockito.mock(AgentContext.class);
+		final ExtensionManager extensionManager = ExtensionManager.builder()
+			.withConfigurationProviderExtensions(List.of(new ProgrammableConfigurationProvider()))
+			.build();
 		when(holder.getAgentContext()).thenReturn(agentContext);
 		when(agentContext.getConfigDirectory()).thenReturn(dir);
+		when(agentContext.getExtensionManager()).thenReturn(extensionManager);
 		return new VelocityTemplateService(holder);
 	}
 

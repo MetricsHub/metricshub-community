@@ -22,6 +22,7 @@ package org.metricshub.extension.jdbc.driver;
  */
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -30,8 +31,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.URL;
 import java.sql.Driver;
+import java.sql.DriverManager;
 import java.util.List;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 class JdbcDriverRegistryTest {
@@ -44,6 +47,67 @@ class JdbcDriverRegistryTest {
 		DriverOrigin.BUILT_IN,
 		List.of("org.h2")
 	);
+
+	@Test
+	void closeDeregistersSelfRegisteredBuiltInDrivers() throws Exception {
+		final JdbcDriverRegistry registry = new JdbcDriverRegistry(
+			List.of(H2_BUILTIN),
+			NO_OP,
+			JdbcDriverRegistryTest.class.getClassLoader()
+		);
+		try {
+			final LoadedDriver loaded = registry.resolve("org.h2.Driver", (String) null);
+			assertNotNull(loaded);
+
+			// H2 self-registers in the JVM-global DriverManager during class initialization. That
+			// happens only on the FIRST initialization in the JVM: if another test already triggered
+			// it (and a previous registry close deregistered it), re-register explicitly so the
+			// pre-state is deterministic regardless of test execution order.
+			if (!isRegisteredInDriverManager("org.h2.Driver")) {
+				DriverManager.registerDriver(loaded.driver());
+			}
+			assertTrue(isRegisteredInDriverManager("org.h2.Driver"), "H2 must be registered before close()");
+
+			registry.close();
+
+			// close() must remove the registered instance so the global registry no longer retains
+			// this registry's class loaders after an extension reload.
+			assertFalse(
+				isRegisteredInDriverManager("org.h2.Driver"),
+				"close() must deregister the driver owned by the registry's loaders"
+			);
+		} finally {
+			registry.close();
+		}
+	}
+
+	/**
+	 * Restores H2's JVM-global {@link DriverManager} registration after each test: every
+	 * registry {@code close()} in this class deregisters the drivers owned by its loaders (the
+	 * production behavior under test), but other tests in this JVM (e.g. {@code JdbcClientTest})
+	 * use {@code DriverManager.getConnection} and H2 will not self-register a second time (its
+	 * internal "registered" flag stays set after class initialization).
+	 */
+	@AfterEach
+	void restoreH2DriverManagerRegistration() throws Exception {
+		if (!isRegisteredInDriverManager("org.h2.Driver")) {
+			DriverManager.registerDriver(new org.h2.Driver());
+		}
+	}
+
+	/**
+	 * Tests whether a driver with the given class name is currently registered in the JVM-global
+	 * {@link DriverManager}.
+	 */
+	private static boolean isRegisteredInDriverManager(final String driverClassName) {
+		final var drivers = DriverManager.getDrivers();
+		while (drivers.hasMoreElements()) {
+			if (drivers.nextElement().getClass().getName().equals(driverClassName)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	@Test
 	void resolveBuiltInUsesParentLoaderAndCaches() {

@@ -178,6 +178,7 @@
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<manifestEntries>
 										<Multi-Release>true</Multi-Release>
+										<MetricsHub-Extension-Id>${project.artifactId}</MetricsHub-Extension-Id>
 									</manifestEntries>
 								</transformer>
 							</transformers>

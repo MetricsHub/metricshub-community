@@ -17,10 +17,6 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>org.metricshub</groupId>
-			<artifactId>metricshub-classloader-agent</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<scope>compile</scope>

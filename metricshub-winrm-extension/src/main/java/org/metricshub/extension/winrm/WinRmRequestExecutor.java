@@ -23,7 +23,10 @@ package org.metricshub.extension.winrm;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
@@ -114,7 +117,14 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
-			final List<List<String>> table = result.getRows();
+			// The engine's compute steps mutate the result in place (add columns, transform rows,
+			// ...): deep-copy the executor's unmodifiable (and possibly null) rows into mutable lists.
+			// List.of() is only the stream source; the collector always yields a mutable ArrayList.
+			final List<List<String>> table = Optional.ofNullable(result.getRows())
+				.orElseGet(List::of)
+				.stream()
+				.map(row -> (List<String>) new ArrayList<>(row))
+				.collect(Collectors.toCollection(ArrayList::new));
 
 			LoggingHelper.trace(() ->
 				log.trace(

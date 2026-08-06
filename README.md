@@ -32,9 +32,8 @@ curl -fsSL https://get.metricshub.com | bash
 This is a multi-module project:
 
 * **/**: The root (parent of all submodules)
-* **metricshub-engine**: The brain, the heart of this project. It houses the core logic and essential functionalities that power the entire system.
+* **metricshub-engine**: The brain, the heart of this project. It houses the core logic and essential functionalities that power the entire system. It also loads each extension in its own dedicated class loader, so one extension's libraries and service registrations can never conflict with another's; extensions declare dependencies on sibling extensions through the `MetricsHub-Extension-Requires` manifest attribute.
 * **metricshub-agent**: The MetricsHub Agent module includes a Command-Line Interface (CLI) and is responsible for interacting with the MetricsHub engine. It acts as an entry point, collecting and transmitting data to the OpenTelemetry Collector.
-* **metricshub-classloader-agent**: Manages class loading for extensions, ensuring that they are loaded correctly within the JVM.
 * **metricshub-ipmi-extension**: Provides support for the Intelligent Platform Management Interface (IPMI) to monitor and manage hardware at the firmware level.
 * **metricshub-oscommand-extension**: Allows execution of OS-level commands and scripts to gather metrics and other data from the operating system.
 * **metricshub-snmp-extension-common**: Contains common functionalities and utilities used by SNMP-based extensions.

@@ -4,7 +4,7 @@ package org.metricshub.web.service;
  * ╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲
  * MetricsHub Agent
  * ჻჻჻჻჻჻
- * Copyright 2023 - 2025 MetricsHub
+ * Copyright 2023 - 2026 MetricsHub
  * ჻჻჻჻჻჻
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as published by
@@ -24,9 +24,13 @@ package org.metricshub.web.service;
 import jakarta.annotation.PreDestroy;
 import java.time.Instant;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -34,8 +38,11 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
+import org.metricshub.engine.extension.ExtensionManager;
 import org.metricshub.web.AgentContextHolder;
+import org.metricshub.web.AgentContextReaderTracker;
 import org.metricshub.web.dto.RestartStatus;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -50,8 +57,8 @@ import org.springframework.stereotype.Service;
  * at a time and at most one further request is held pending. When a new request arrives while
  * a restart is already running, it is queued; if another one arrives while a request is
  * already queued, the queued one is <em>coalesced</em> (the newest wins, the older is
- * discarded and its pre-built {@link AgentContext} — if any — is closed to avoid leaking
- * scheduler threads / gRPC channels).
+ * discarded without ever invoking its supplier — suppliers are lazy and only build their
+ * {@link AgentContext} when the restart actually runs).
  * </p>
  * <p>
  * At the end of every successful restart the previous {@link AgentContext} is
@@ -187,6 +194,74 @@ public class AgentLifecycleService {
 	private volatile Predicate<AgentContext> collectorLaunchPredicate = _ -> true;
 
 	/**
+	 * Default grace delay, in milliseconds, between the moment an {@link ExtensionManager} is
+	 * orphaned by an extension reload and the moment its isolated class loaders are closed.
+	 * Sized to comfortably exceed the bounded durations of in-flight work that may still hold the
+	 * replaced context (HTTP/MCP requests, collect jobs), so lazy class loading never fails
+	 * mid-operation. Note that classes already loaded remain usable after the close; only
+	 * not-yet-loaded classes/resources would be affected.
+	 */
+	private static final long DEFAULT_ORPHANED_LOADER_CLOSE_GRACE_MS = 5 * 60 * 1000L;
+
+	/**
+	 * Grace delay applied before closing an orphaned {@link ExtensionManager}. Package-private
+	 * mutable so tests can shorten it.
+	 */
+	private volatile long orphanedLoaderCloseGraceMs = DEFAULT_ORPHANED_LOADER_CLOSE_GRACE_MS;
+
+	/**
+	 * Interval between quiescence rechecks once the grace delay has elapsed but the replaced
+	 * context's scheduler still has tasks running (collection jobs have a user-configurable,
+	 * unbounded timeout). Package-private mutable so tests can shorten it.
+	 */
+	private volatile long retirementRecheckMs = 30_000L;
+
+	/**
+	 * Hard cap on how long retirement waits for the replaced context's tasks to terminate after
+	 * the grace delay. A task that ignores interrupts beyond this point would otherwise pin the
+	 * loaders forever; the close proceeds with a warning (classes already loaded remain usable).
+	 */
+	private static final long RETIREMENT_MAX_WAIT_MS = 30 * 60 * 1000L;
+
+	/**
+	 * Dedicated scheduler that retires orphaned extension class loaders after the grace delay.
+	 * Each orphaned manager gets its own full grace window, independent of how quickly further
+	 * restarts follow (back-to-back restarts must not shorten an older generation's window).
+	 */
+	private final ScheduledExecutorService loaderRetirementExecutor = Executors.newSingleThreadScheduledExecutor(
+		runnable -> {
+			final Thread thread = new Thread(runnable, "metricshub-extension-loader-retirement");
+			thread.setDaemon(true);
+			return thread;
+		}
+	);
+
+	/**
+	 * The orphaned managers whose close is scheduled but has not run yet. Tracked explicitly so
+	 * {@link #shutdown()} can close them immediately at process exit (tasks drained from a
+	 * scheduled executor's {@code shutdownNow()} refuse to run once the executor is stopped).
+	 */
+	private final Queue<ExtensionManager> pendingLoaderRetirements = new ConcurrentLinkedQueue<>();
+
+	/**
+	 * Tracks request-side readers of the active context (HTTP/MCP operations run on request
+	 * threads, not on the context's task scheduler, and may invoke extension providers
+	 * synchronously). Optional: injected by Spring when the web layer is active; {@code null} in
+	 * plain unit-test or non-web setups, where only the scheduler quiescence check applies.
+	 */
+	private volatile AgentContextReaderTracker readerTracker;
+
+	/**
+	 * Injects the request-side reader tracker when the web layer is active.
+	 *
+	 * @param readerTracker the tracker bean
+	 */
+	@Autowired(required = false)
+	void setReaderTracker(final AgentContextReaderTracker readerTracker) {
+		this.readerTracker = readerTracker;
+	}
+
+	/**
 	 * Constructor.
 	 *
 	 * @param agentContextHolder the shared {@link AgentContextHolder} injected by Spring
@@ -259,6 +334,10 @@ public class AgentLifecycleService {
 	public void restart(final AgentContext runningContext, final AgentContext reloadedContext) {
 		log.info("Restart requested. Restarting MetricsHub Agent...");
 
+		// Generation of the context being replaced: request-side readers that entered at or before
+		// it must complete before its extension class loaders can be retired.
+		final long outgoingGeneration = agentContextHolder.getGeneration();
+
 		// Fire pre-restart hooks (e.g. license guard stop). Any failure is logged but does
 		// not abort the restart.
 		runHooks(preRestartHooks, "pre-restart");
@@ -295,6 +374,11 @@ public class AgentLifecycleService {
 		// object; the whole graph becomes GC-eligible once those readers finish.
 		runningContext.close();
 
+		// Release the isolated extension class loaders orphaned by an extension reload, once the
+		// replaced context's tasks have terminated and its request-side readers have completed
+		// (plus a grace delay).
+		releaseOrphanedExtensionLoaders(runningContext, reloadedContext.getExtensionManager(), outgoingGeneration);
+
 		// Fire post-restart hooks (e.g. license guard restart with the new context).
 		for (final Consumer<AgentContext> hook : postRestartHooks) {
 			try {
@@ -309,6 +393,156 @@ public class AgentLifecycleService {
 			"MetricsHub Agent restarted successfully. Active context generation: {}",
 			agentContextHolder.getGeneration()
 		);
+	}
+
+	/**
+	 * Schedules the close of the extension class loaders orphaned by this restart: after a grace
+	 * delay, the retirement task waits for the replaced context's scheduler to actually terminate
+	 * (collection jobs carry a user-configurable, unbounded timeout, so a fixed delay alone is not a
+	 * bound), rechecking every {@link #retirementRecheckMs} up to {@link #RETIREMENT_MAX_WAIT_MS}.
+	 * <p>
+	 * A configuration-file reload reuses the {@link ExtensionManager} ({@code outgoing == incoming}),
+	 * so it orphans nothing; only an explicit extension reload (the {@code /restart} endpoint) swaps
+	 * in a different manager and thus orphans the outgoing one. Each orphaned manager gets its own
+	 * grace window and quiescence wait on the retirement scheduler, so back-to-back restarts cannot
+	 * shorten an older generation's window.
+	 * </p>
+	 *
+	 * @param outgoingContext    the context being replaced (its scheduler is one quiescence signal)
+	 * @param incoming           the extension manager of the newly active context
+	 * @param outgoingGeneration the holder generation of the replaced context (request-side readers
+	 *                           that entered at or before it are the other quiescence signal)
+	 */
+	private void releaseOrphanedExtensionLoaders(
+		final AgentContext outgoingContext,
+		final ExtensionManager incoming,
+		final long outgoingGeneration
+	) {
+		final ExtensionManager outgoing = outgoingContext.getExtensionManager();
+		if (outgoing == null || outgoing == incoming) {
+			// A reused manager (configuration reload) orphans nothing.
+			return;
+		}
+		log.debug(
+			"Scheduling the close of the extension class loaders orphaned by an extension reload in {} ms.",
+			orphanedLoaderCloseGraceMs
+		);
+		pendingLoaderRetirements.add(outgoing);
+		final long deadlineMs = System.currentTimeMillis() + orphanedLoaderCloseGraceMs + RETIREMENT_MAX_WAIT_MS;
+		loaderRetirementExecutor.schedule(
+			() -> retireWhenQuiescent(outgoingContext, outgoing, outgoingGeneration, deadlineMs),
+			orphanedLoaderCloseGraceMs,
+			TimeUnit.MILLISECONDS
+		);
+	}
+
+	/**
+	 * Retires an orphaned manager once the replaced context is quiescent: closes it when the old
+	 * scheduler has terminated, reschedules a recheck while its tasks are still running, and forces
+	 * the close with a warning past the hard deadline (a task ignoring interrupts must not pin the
+	 * loaders forever; classes already loaded remain usable after the close).
+	 *
+	 * @param outgoingContext the replaced context whose scheduler signals quiescence
+	 * @param orphaned        the manager to retire
+	 * @param deadlineMs      epoch milliseconds after which the close proceeds regardless
+	 */
+	private void retireWhenQuiescent(
+		final AgentContext outgoingContext,
+		final ExtensionManager orphaned,
+		final long outgoingGeneration,
+		final long deadlineMs
+	) {
+		if (!pendingLoaderRetirements.contains(orphaned)) {
+			// Already flushed by shutdown().
+			return;
+		}
+		final boolean quiescent = isSchedulerTerminated(outgoingContext) && !hasActiveReaders(outgoingGeneration);
+		if (!quiescent && System.currentTimeMillis() < deadlineMs) {
+			loaderRetirementExecutor.schedule(
+				() -> retireWhenQuiescent(outgoingContext, orphaned, outgoingGeneration, deadlineMs),
+				retirementRecheckMs,
+				TimeUnit.MILLISECONDS
+			);
+			return;
+		}
+		if (!quiescent) {
+			log.warn(
+				"Closing the extension class loaders of a replaced context although some of its tasks or readers are still active."
+			);
+		}
+		retireOrphanedManager(orphaned);
+	}
+
+	/**
+	 * Tests whether request-side readers that entered at or before the given generation are still
+	 * active. Without a tracker (non-web setups), there are no request-side readers to wait for.
+	 *
+	 * @param outgoingGeneration the generation of the replaced context
+	 * @return {@code true} while at least one such reader has not completed
+	 */
+	private boolean hasActiveReaders(final long outgoingGeneration) {
+		final AgentContextReaderTracker tracker = readerTracker;
+		return tracker != null && tracker.hasReadersAtOrBefore(outgoingGeneration);
+	}
+
+	/**
+	 * Tests whether the given context's task scheduler has fully terminated (no collection task is
+	 * still running). A context without an initialized scheduler is considered terminated.
+	 *
+	 * @param context the replaced context
+	 * @return {@code true} when no task of the context can still be executing
+	 */
+	private static boolean isSchedulerTerminated(final AgentContext context) {
+		try {
+			final var taskSchedulingService = context.getTaskSchedulingService();
+			if (taskSchedulingService == null) {
+				return true;
+			}
+			final var taskScheduler = taskSchedulingService.getTaskScheduler();
+			if (taskScheduler == null) {
+				return true;
+			}
+			return taskScheduler.getScheduledThreadPoolExecutor().isTerminated();
+		} catch (Exception _) {
+			// Scheduler never initialized (or already torn down): nothing can be running.
+			return true;
+		}
+	}
+
+	/**
+	 * Closes an orphaned manager's extension class loaders if it is still pending (i.e. not already
+	 * closed by {@link #shutdown()}).
+	 *
+	 * @param orphaned the manager to retire
+	 */
+	private void retireOrphanedManager(final ExtensionManager orphaned) {
+		if (!pendingLoaderRetirements.remove(orphaned)) {
+			return;
+		}
+		try {
+			orphaned.close();
+			log.debug("Closed the extension class loaders orphaned by an extension reload.");
+		} catch (Exception e) {
+			log.debug("Failed to close an orphaned ExtensionManager: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Shortens the orphaned-loader close grace delay. Test-only.
+	 *
+	 * @param graceMs the new grace delay in milliseconds
+	 */
+	void setOrphanedLoaderCloseGraceMs(final long graceMs) {
+		orphanedLoaderCloseGraceMs = graceMs;
+	}
+
+	/**
+	 * Shortens the quiescence recheck interval. Test-only.
+	 *
+	 * @param recheckMs the new recheck interval in milliseconds
+	 */
+	void setRetirementRecheckMs(final long recheckMs) {
+		retirementRecheckMs = recheckMs;
 	}
 
 	/**
@@ -378,8 +612,11 @@ public class AgentLifecycleService {
 		}
 
 		if (toDiscard != null) {
+			// The discarded supplier is intentionally NOT invoked: suppliers are lazy (they reload
+			// the extensions and build a full AgentContext when the restart actually runs), so
+			// invoking one here — on the coalescing caller's thread, potentially an HTTP request —
+			// would build an expensive context only to throw it away.
 			log.info("Coalesced a pending restart with a newer request; dropping the previous pending one.");
-			tryReleasePreBuiltContext(toDiscard.supplier());
 		} else if (!submitNow) {
 			log.info("A MetricsHub Agent restart is running; queued the new request to run after it.");
 		}
@@ -463,15 +700,9 @@ public class AgentLifecycleService {
 			);
 		} catch (Exception e) {
 			log.error("Failed to restart MetricsHub Agent.", e);
-			// If we built a reloaded context but the restart failed, release its heavy
-			// state so we don't leak it.
-			if (reloadedContext != null) {
-				try {
-					reloadedContext.close();
-				} catch (Exception closeException) {
-					log.debug("Failed to close the partially-initialized reloaded context.", closeException);
-				}
-			}
+			// If we built a reloaded context but the restart failed, release its heavy state (and,
+			// when it never became active, its freshly reloaded extension loaders) so we don't leak.
+			releaseDiscardedContext(reloadedContext);
 			publishStatus(
 				RestartStatus.State.FAILED,
 				"Failed to restart MetricsHub Agent: " + e.getMessage(),
@@ -505,29 +736,47 @@ public class AgentLifecycleService {
 	}
 
 	/**
-	 * Best-effort disposal of a discarded pending supplier's context. If the supplier was a
-	 * simple {@code () -> preBuiltContext} closure (as produced by the DirectoryWatcher path),
-	 * invoking it returns the already-built context which we then close to release its
-	 * scheduler threads and gRPC channel. For a lazy supplier that would build a fresh
-	 * context on invocation, this still safely releases whatever gets built. Any exception is
-	 * caught and logged at debug level.
+	 * Closes a discarded context and, when it carries its own freshly reloaded
+	 * {@link ExtensionManager} that never became the active one, closes that manager's isolated
+	 * extension class loaders too. Because the context was never published, nothing can be using it,
+	 * so the loaders are released immediately. A context that reused the active manager (a
+	 * configuration reload) leaves the manager untouched. Best-effort: exceptions are logged.
+	 *
+	 * @param context the discarded context; may be {@code null}.
 	 */
-	private void tryReleasePreBuiltContext(final Supplier<AgentContext> supplier) {
+	private void releaseDiscardedContext(final AgentContext context) {
+		if (context == null) {
+			return;
+		}
 		try {
-			final AgentContext orphan = supplier.get();
-			if (orphan != null) {
-				orphan.close();
-			}
+			context.close();
 		} catch (Exception e) {
-			log.debug("Failed to release the discarded pending AgentContext: {}", e.getMessage());
+			log.debug("Failed to close a discarded AgentContext: {}", e.getMessage());
+		}
+		final ExtensionManager manager = context.getExtensionManager();
+		final AgentContext active = agentContextHolder.getAgentContext();
+		final ExtensionManager activeManager = active == null ? null : active.getExtensionManager();
+		if (manager != null && manager != activeManager) {
+			manager.close();
 		}
 	}
 
 	/**
-	 * Shuts down the background restart executor when the service is destroyed.
+	 * Shuts down the background restart executor and the loader-retirement scheduler when the
+	 * service is destroyed. Pending retirement tasks are executed immediately: the process is
+	 * exiting, so the grace delay no longer matters and closing releases the jar handles now.
 	 */
 	@PreDestroy
 	void shutdown() {
 		restartExecutor.shutdownNow();
+		loaderRetirementExecutor.shutdownNow();
+		ExtensionManager pendingExtensionManager;
+		while ((pendingExtensionManager = pendingLoaderRetirements.poll()) != null) {
+			try {
+				pendingExtensionManager.close();
+			} catch (Exception e) {
+				log.debug("Failed to close a pending orphaned ExtensionManager: {}", e.getMessage());
+			}
+		}
 	}
 }

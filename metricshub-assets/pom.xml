@@ -79,11 +79,6 @@
 		</dependency>
 		<dependency>
 			<groupId>org.metricshub</groupId>
-			<artifactId>metricshub-classloader-agent</artifactId>
-			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.metricshub</groupId>
 			<artifactId>metricshub-internaldb-extension</artifactId>
 			<version>${project.version}</version>
 		</dependency>
@@ -195,11 +190,6 @@
 								</artifactItem>
 								<artifactItem>
 									<groupId>org.metricshub</groupId>
-									<artifactId>metricshub-classloader-agent</artifactId>
-									<destFileName>metricshub-classloader-agent.jar</destFileName>
-								</artifactItem>
-								<artifactItem>
-									<groupId>org.metricshub</groupId>
 									<artifactId>metricshub-internaldb-extension</artifactId>
 									<destFileName>metricshub-internaldb-extension.jar</destFileName>
 								</artifactItem>
@@ -301,6 +291,10 @@
 							<unpack>true</unpack>
 							<outputDirectory>${project.build.directory}/nssm</outputDirectory>
 							<sha1>${nssm.checksum}</sha1>
+							<!-- The nssm.cc mirror is occasionally slow; retry with a generous timeout
+							     instead of failing the whole build on a transient read timeout. -->
+							<retries>4</retries>
+							<readTimeOut>120000</readTimeOut>
 						</configuration>
 					</execution>
 				</executions>

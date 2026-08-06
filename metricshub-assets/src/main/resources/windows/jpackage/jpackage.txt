@@ -20,5 +20,4 @@
 --java-options java.base/sun.net.www.protocol.http=ALL-UNNAMED
 --java-options --add-opens
 --java-options java.base/sun.security.ssl=ALL-UNNAMED
---java-options -javaagent:$APPDIR\..\extensions\metricshub-classloader-agent.jar
 --java-options --enable-native-access=ALL-UNNAMED

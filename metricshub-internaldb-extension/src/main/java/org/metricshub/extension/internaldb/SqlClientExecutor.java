@@ -22,6 +22,7 @@ package org.metricshub.extension.internaldb;
  */
 
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -29,8 +30,10 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -53,8 +56,55 @@ import org.metricshub.engine.telemetry.TelemetryManager;
 @Builder
 public class SqlClientExecutor {
 
+	/**
+	 * The bundled H2 driver, obtained from this extension's own class loader and connected to
+	 * directly (see {@link #executeQuery(List, String)}). It is deliberately kept out of the
+	 * JVM-global {@link DriverManager}: connecting through the instance avoids relying on
+	 * DriverManager's one-shot, thread-context-classloader-dependent driver discovery (which, under
+	 * per-extension isolation, cannot be trusted to ever see this extension's shaded H2), and it
+	 * keeps the driver from leaking into the global registry or pinning this isolated class loader.
+	 */
+	private static final Driver H2_DRIVER = loadIsolatedH2Driver();
+
 	private TelemetryManager telemetryManager;
 	private String connectorId;
+
+	/**
+	 * Loads the bundled H2 driver with this extension's class loader and removes the instance H2
+	 * self-registers into the JVM-global {@link DriverManager} during its static initialization, so
+	 * the driver stays private to this extension. The returned instance is used to open connections
+	 * directly, mirroring the JDBC extension's driver handling.
+	 *
+	 * @return the isolated H2 {@link Driver}, or {@code null} if it could not be loaded.
+	 */
+	private static Driver loadIsolatedH2Driver() {
+		final ClassLoader classLoader = SqlClientExecutor.class.getClassLoader();
+		try {
+			// Triggers H2's static initializer, which self-registers a singleton in DriverManager.
+			Class.forName("org.h2.Driver", true, classLoader);
+		} catch (ClassNotFoundException e) {
+			log.error("The bundled H2 driver could not be loaded for the Internal DB extension: {}", e.getMessage());
+			return null;
+		}
+
+		// Find the driver H2 registered from our own class loader and detach it from the global
+		// registry; we connect through the instance directly instead.
+		final Enumeration<Driver> drivers = DriverManager.getDrivers();
+		while (drivers.hasMoreElements()) {
+			final Driver driver = drivers.nextElement();
+			if (driver.getClass().getClassLoader() == classLoader) {
+				try {
+					DriverManager.deregisterDriver(driver);
+				} catch (SQLException e) {
+					log.debug("Could not deregister the bundled H2 driver from DriverManager: {}", e.getMessage());
+				}
+				return driver;
+			}
+		}
+
+		log.error("The bundled H2 driver did not register itself; Internal DB queries will fail.");
+		return null;
+	}
 
 	/**
 	 * Creates a new H2 in-memory database and create a connection to it.
@@ -75,10 +125,16 @@ public class SqlClientExecutor {
 			return new ArrayList<>();
 		}
 
+		if (H2_DRIVER == null) {
+			log.error("The bundled H2 driver is not available; cannot run the Internal DB Query.");
+			return new ArrayList<>();
+		}
+
 		final String hostId = telemetryManager.getHostConfiguration().getHostId();
 		final String connectionName = "jdbc:h2:mem:" + hostId + UUID.randomUUID().toString();
-		// Creation of the connection to the H2 database in memory
-		try (Connection connection = DriverManager.getConnection(connectionName)) {
+		// Creation of the connection to the H2 database in memory, through the isolated driver
+		// instance (never DriverManager) so the driver stays private to this extension.
+		try (Connection connection = H2_DRIVER.connect(connectionName, new Properties())) {
 			connection.setAutoCommit(false);
 
 			// Prepare the SQL tables

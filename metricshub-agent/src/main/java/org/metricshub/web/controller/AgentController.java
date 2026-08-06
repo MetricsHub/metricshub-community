@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Map;
+import java.util.ServiceConfigurationError;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
@@ -109,12 +110,22 @@ public class AgentController {
 			final String configDir = agentContextHolder.getAgentContext().getConfigDirectory().toAbsolutePath().toString();
 
 			final RestartRequestAck ack = agentLifecycleService.restartAsync(() -> {
+				// Reload the extension manager so an operator can pick up new or updated extension jars
+				// by calling /restart, without a full JVM restart. The isolated class loaders orphaned by
+				// the replaced manager are released by AgentLifecycleService after a grace delay.
+				ExtensionManager extensionManager = null;
 				try {
-					// Reload extension manager to pick up any new or updated extensions
-					final ExtensionManager extensionManager = ConfigHelper.loadExtensionManager();
+					extensionManager = ConfigHelper.loadExtensionManager();
 					// Create new context reusing the current configuration directory
 					return new AgentContext(configDir, extensionManager);
-				} catch (Exception e) {
+				} catch (Exception | ServiceConfigurationError | LinkageError e) {
+					// A provider invoked during the context build can throw linkage/service errors
+					// too. The freshly loaded manager never made it into a context: close its isolated
+					// class loaders now, and convert the failure into an exception the lifecycle
+					// service records (instead of leaving the restart status IN_PROGRESS).
+					if (extensionManager != null) {
+						extensionManager.close();
+					}
 					throw new IllegalStateException("Failed to build reloaded AgentContext: " + e.getMessage(), e);
 				}
 			});

@@ -361,6 +361,16 @@ public class JdbcExtension implements IProtocolExtension {
 		}
 	}
 
+	/**
+	 * Disposes the JDBC driver registry — closing every isolated driver class loader it owns — when
+	 * this extension's hosting extension manager is shut down, so external driver jars are released
+	 * before the extension's own class loader is closed.
+	 */
+	@Override
+	public void onShutdown() {
+		JdbcDriverRegistryHolder.shutdown();
+	}
+
 	@Override
 	public String executeQuery(final IConfiguration configuration, final JsonNode queryNode) throws Exception {
 		final String hostname = configuration.getHostname();

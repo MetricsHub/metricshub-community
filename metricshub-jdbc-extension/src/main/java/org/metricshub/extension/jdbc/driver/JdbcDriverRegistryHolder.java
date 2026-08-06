@@ -219,18 +219,31 @@ public final class JdbcDriverRegistryHolder {
 	}
 
 	/**
-	 * Disposes the current registry instance, if any, and clears the holder.
+	 * Disposes the current registry instance, if any, and clears the holder, closing every isolated
+	 * driver class loader the registry owns.
 	 *
-	 * <p>Intended for unit-test isolation. Calling this from production code defeats the
-	 * registration cache and leaks isolated classloaders until the next {@link #get()}.
+	 * <p>Invoked by the JDBC extension's shutdown hook when its hosting extension manager is closed
+	 * (an extension reload discarding this loader generation), so external driver jars are released
+	 * deterministically instead of waiting for the whole loader graph to be garbage-collected. A
+	 * subsequent {@link #get()} — which should not happen on a discarded generation — would simply
+	 * rebuild a fresh registry.
 	 */
-	public static void resetForTests() {
+	public static void shutdown() {
 		synchronized (JdbcDriverRegistryHolder.class) {
 			final JdbcDriverRegistry previous = INSTANCE.getAndSet(null);
 			if (previous != null) {
 				previous.close();
 			}
 		}
+	}
+
+	/**
+	 * Disposes the current registry instance, if any, and clears the holder.
+	 *
+	 * <p>Intended for unit-test isolation; equivalent to {@link #shutdown()}.
+	 */
+	public static void resetForTests() {
+		shutdown();
 	}
 
 	/**
