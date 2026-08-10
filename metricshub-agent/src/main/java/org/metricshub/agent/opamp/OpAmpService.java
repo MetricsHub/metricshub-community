@@ -231,6 +231,11 @@ public class OpAmpService {
 			newClient.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));
 			newClient.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 			newClient.start();
+			if (packagesHandler instanceof OpampUpgradeAdapter adapter && upgradeEnabled) {
+				// The client seeded its package statuses from a pre-start snapshot: re-report the
+				// latest snapshot so a transition that raced the handoff is not lost
+				adapter.republishSnapshot();
+			}
 			client = newClient;
 		} catch (Exception e) {
 			// Release the resources of a client whose startup failed: the retry below builds a

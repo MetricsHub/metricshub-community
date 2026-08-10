@@ -76,6 +76,7 @@ public class UpgradeManager {
 	private final ExecutorService worker;
 
 	private volatile UpgradeStatusListener statusListener = event -> {};
+	private volatile String installedHashHex;
 
 	private final Object snapshotLock = new Object();
 	private UpgradeEvent lastEvent;
@@ -131,6 +132,18 @@ public class UpgradeManager {
 			thread.setDaemon(true);
 			return thread;
 		});
+		loadInstalledPackageIdentity();
+	}
+
+	/**
+	 * Loads the identity hash of the currently installed package, learned from a previously
+	 * completed OpAMP upgrade, when it still matches the running version.
+	 */
+	private void loadInstalledPackageIdentity() {
+		final UpgradeTransactionStore.InstalledPackageRecord record = transactionStore.readInstalledPackage();
+		if (record != null && VersionHelper.isSameVersion(record.version(), currentVersion())) {
+			installedHashHex = record.packageHash();
+		}
 	}
 
 	/**
@@ -159,7 +172,15 @@ public class UpgradeManager {
 	public UpgradeEvent getCurrentSnapshot() {
 		synchronized (snapshotLock) {
 			if (lastEvent == null) {
-				lastEvent = UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, currentVersion(), null, null, null);
+				lastEvent = UpgradeEvent.of(
+					PACKAGE_NAME,
+					UpgradeState.IDLE,
+					currentVersion(),
+					installedHash(),
+					null,
+					null,
+					null
+				);
 			}
 			return lastEvent;
 		}
@@ -193,6 +214,7 @@ public class UpgradeManager {
 					PACKAGE_NAME,
 					UpgradeState.VERIFYING,
 					current,
+					installedHash(),
 					transaction.getToVersion(),
 					hashOf(transaction),
 					null
@@ -213,11 +235,15 @@ public class UpgradeManager {
 				);
 			}
 		} else if (state == UpgradeState.SUCCEEDED || state == UpgradeState.FAILED) {
+			if (state == UpgradeState.SUCCEEDED) {
+				adoptInstalledIdentity(transaction);
+			}
 			publish(
 				UpgradeEvent.of(
 					PACKAGE_NAME,
 					state,
 					current,
+					installedHash(),
 					transaction.getToVersion(),
 					hashOf(transaction),
 					transaction.getError()
@@ -264,6 +290,7 @@ public class UpgradeManager {
 					PACKAGE_NAME,
 					UpgradeState.FAILED,
 					current,
+					installedHash(),
 					offer.version(),
 					offer.packageHash(),
 					"Automatic upgrades are disabled by configuration (upgrade.enabled)"
@@ -272,9 +299,27 @@ public class UpgradeManager {
 			return;
 		}
 
-		if (VersionHelper.isSameVersion(current, offer.version())) {
+		if (VersionHelper.isSameVersion(current, offer.version()) && !hasDifferentPackageIdentity(offer)) {
 			log.info("The offered version {} is already installed.", offer.version());
-			publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, current, offer.version(), offer.packageHash(), null));
+			// The agent runs the offered version: adopt the offered identity hash so the fleet
+			// state converges even for packages that were not installed through OpAMP.
+			if (installedHashHex == null && offer.packageHash() != null && offer.packageHash().length > 0) {
+				installedHashHex = offer.packageHashHex();
+				transactionStore.writeInstalledPackage(
+					new UpgradeTransactionStore.InstalledPackageRecord(current, installedHashHex)
+				);
+			}
+			publish(
+				UpgradeEvent.of(
+					PACKAGE_NAME,
+					UpgradeState.IDLE,
+					current,
+					installedHash(),
+					offer.version(),
+					offer.packageHash(),
+					null
+				)
+			);
 			return;
 		}
 
@@ -310,6 +355,7 @@ public class UpgradeManager {
 						PACKAGE_NAME,
 						UpgradeState.DOWNLOADING,
 						current,
+						installedHash(),
 						targetVersion,
 						offer.packageHash(),
 						null,
@@ -374,7 +420,17 @@ public class UpgradeManager {
 		// Release the lock before publishing: the event is the observable signal that the
 		// attempt is fully terminated.
 		lock.release();
-		publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.FAILED, current, offer.version(), offer.packageHash(), error));
+		publish(
+			UpgradeEvent.of(
+				PACKAGE_NAME,
+				UpgradeState.FAILED,
+				current,
+				installedHash(),
+				offer.version(),
+				offer.packageHash(),
+				error
+			)
+		);
 	}
 
 	/**
@@ -395,6 +451,7 @@ public class UpgradeManager {
 				PACKAGE_NAME,
 				state,
 				transaction.getFromVersion(),
+				installedHash(),
 				transaction.getToVersion(),
 				hashOf(transaction),
 				error
@@ -427,7 +484,20 @@ public class UpgradeManager {
 		transactionStore.archive(transaction);
 		deleteStagedFile(transaction);
 		lock.releaseStale();
-		publish(UpgradeEvent.of(PACKAGE_NAME, verdict, current, transaction.getToVersion(), hashOf(transaction), error));
+		if (verdict == UpgradeState.SUCCEEDED) {
+			adoptInstalledIdentity(transaction);
+		}
+		publish(
+			UpgradeEvent.of(
+				PACKAGE_NAME,
+				verdict,
+				current,
+				installedHash(),
+				transaction.getToVersion(),
+				hashOf(transaction),
+				error
+			)
+		);
 		if (verdict == UpgradeState.SUCCEEDED) {
 			log.info("Upgrade to version {} succeeded.", transaction.getToVersion());
 		} else {
@@ -464,6 +534,54 @@ public class UpgradeManager {
 			statusListener.onUpgradeEvent(event);
 		} catch (Exception e) {
 			log.warn("The upgrade status listener failed: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Indicates whether the offered package identity differs from the installed one. Per the
+	 * OpAMP specification, package identity is defined by the offered package hash: a differing
+	 * hash must be installed even when the version string is unchanged (same-version hotfix). An
+	 * offer without a hash, or an unknown installed identity, is treated as identical.
+	 *
+	 * @param offer the package offer
+	 * @return {@code true} when the offered identity is known to differ from the installed one
+	 */
+	private boolean hasDifferentPackageIdentity(final PackageOffer offer) {
+		if (offer.packageHash() == null || offer.packageHash().length == 0 || installedHashHex == null) {
+			return false;
+		}
+		return !installedHashHex.equalsIgnoreCase(offer.packageHashHex());
+	}
+
+	/**
+	 * Records the identity of a successfully installed package.
+	 *
+	 * @param transaction the succeeded transaction
+	 */
+	private void adoptInstalledIdentity(final UpgradeTransaction transaction) {
+		final String hash = transaction.getPackageHash();
+		if (hash != null && !hash.isBlank()) {
+			installedHashHex = hash;
+			transactionStore.writeInstalledPackage(
+				new UpgradeTransactionStore.InstalledPackageRecord(transaction.getToVersion(), hash)
+			);
+		}
+	}
+
+	/**
+	 * Decodes the identity hash of the currently installed package.
+	 *
+	 * @return the hash bytes, or {@code null} when unknown
+	 */
+	private byte[] installedHash() {
+		final String hex = installedHashHex;
+		if (hex == null || hex.isBlank()) {
+			return null;
+		}
+		try {
+			return HexFormat.of().parseHex(hex);
+		} catch (IllegalArgumentException e) {
+			return null;
 		}
 	}
 

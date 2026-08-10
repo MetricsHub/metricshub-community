@@ -109,6 +109,7 @@ class OpampUpgradeAdapterTest {
 				UpgradeManager.PACKAGE_NAME,
 				UpgradeState.FAILED,
 				"3.9.05",
+				new byte[] { 1, 1 },
 				"3.10.00",
 				new byte[] { 5, 6 },
 				"boom"
@@ -122,7 +123,11 @@ class OpampUpgradeAdapterTest {
 		assertEquals("3.9.05", status.getAgentHasVersion());
 		assertEquals("3.10.00", status.getServerOfferedVersion());
 		assertEquals(ByteString.copyFrom(new byte[] { 5, 6 }), status.getServerOfferedHash());
-		assertTrue(status.getAgentHasHash().isEmpty(), "A failed upgrade must not claim the offered package");
+		assertEquals(
+			ByteString.copyFrom(new byte[] { 1, 1 }),
+			status.getAgentHasHash(),
+			"A failed upgrade must keep reporting the installed package identity, not the offered one"
+		);
 		assertEquals("boom", status.getErrorMessage());
 	}
 
@@ -133,6 +138,7 @@ class OpampUpgradeAdapterTest {
 				UpgradeManager.PACKAGE_NAME,
 				UpgradeState.SUCCEEDED,
 				"3.10.00",
+				new byte[] { 5, 6 },
 				"3.10.00",
 				new byte[] { 5, 6 },
 				null
@@ -141,6 +147,29 @@ class OpampUpgradeAdapterTest {
 
 		assertEquals(ByteString.copyFrom(new byte[] { 5, 6 }), status.getServerOfferedHash());
 		assertEquals(ByteString.copyFrom(new byte[] { 5, 6 }), status.getAgentHasHash());
+	}
+
+	@Test
+	void republishSnapshotShouldReportThroughTheBoundSink() {
+		when(upgradeManager.getCurrentSnapshot()).thenReturn(
+			UpgradeEvent.of(
+				UpgradeManager.PACKAGE_NAME,
+				UpgradeState.SUCCEEDED,
+				"3.10.00",
+				new byte[] { 5, 6 },
+				"3.10.00",
+				new byte[] { 5, 6 },
+				null
+			)
+		);
+		final OpampUpgradeAdapter adapter = newAdapter();
+		adapter.bindSink(sink);
+
+		adapter.republishSnapshot();
+
+		final ArgumentCaptor<PackageStatus> captor = ArgumentCaptor.forClass(PackageStatus.class);
+		verify(sink).report(captor.capture());
+		assertEquals(PackageStatusEnum.PackageStatusEnum_Installed, captor.getValue().getStatus());
 	}
 
 	@Test
@@ -153,7 +182,7 @@ class OpampUpgradeAdapterTest {
 		adapter.bindSink(newSink);
 
 		listener.onUpgradeEvent(
-			UpgradeEvent.of(UpgradeManager.PACKAGE_NAME, UpgradeState.FAILED, "3.9.05", "3.10.00", null, "boom")
+			UpgradeEvent.of(UpgradeManager.PACKAGE_NAME, UpgradeState.FAILED, "3.9.05", null, "3.10.00", null, "boom")
 		);
 
 		verify(sink, never()).report(any());
@@ -167,7 +196,17 @@ class OpampUpgradeAdapterTest {
 		adapter.onPackagesAvailable(offerWithPackage(), sink, downloadContext);
 
 		listener.onUpgradeEvent(
-			new UpgradeEvent(UpgradeManager.PACKAGE_NAME, UpgradeState.DOWNLOADING, "3.9.05", "3.10.00", null, null, 42, 1024)
+			new UpgradeEvent(
+				UpgradeManager.PACKAGE_NAME,
+				UpgradeState.DOWNLOADING,
+				"3.9.05",
+				null,
+				"3.10.00",
+				null,
+				null,
+				42,
+				1024
+			)
 		);
 
 		final ArgumentCaptor<PackageDownloadDetails> captor = ArgumentCaptor.forClass(PackageDownloadDetails.class);
@@ -227,6 +266,7 @@ class OpampUpgradeAdapterTest {
 				UpgradeManager.PACKAGE_NAME,
 				UpgradeState.SUCCEEDED,
 				"3.10.00",
+				new byte[] { 5, 6 },
 				"3.10.00",
 				new byte[] { 5, 6 },
 				null

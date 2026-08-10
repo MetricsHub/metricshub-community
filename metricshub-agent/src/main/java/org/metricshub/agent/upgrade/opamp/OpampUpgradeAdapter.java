@@ -73,6 +73,19 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 		this.statusSink = sink;
 	}
 
+	/**
+	 * Re-reports the latest upgrade snapshot through the bound sink. Called after a new OpAMP
+	 * client has started: the client seeds its status from a snapshot taken before startup, so an
+	 * upgrade transition occurring during the handoff could otherwise be overwritten by that
+	 * older snapshot.
+	 */
+	public void republishSnapshot() {
+		final PackageStatusSink sink = statusSink;
+		if (sink != null) {
+			sink.report(toPackageStatus(upgradeManager.getCurrentSnapshot()));
+		}
+	}
+
 	@Override
 	public void onPackagesAvailable(
 		final PackagesAvailable packagesAvailable,
@@ -150,6 +163,12 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 			.setStatus(toPackageStatusEnum(event.state()));
 		if (event.currentVersion() != null && !event.currentVersion().isBlank()) {
 			builder.setAgentHasVersion(event.currentVersion());
+			// The identity hash of the installed package accompanies agent_has_version whenever
+			// the agent knows it (learned from a previous OpAMP-driven installation)
+			final byte[] currentHash = event.currentHash();
+			if (currentHash != null && currentHash.length > 0) {
+				builder.setAgentHasHash(ByteString.copyFrom(currentHash));
+			}
 		}
 		if (event.targetVersion() != null && !event.targetVersion().isBlank()) {
 			builder.setServerOfferedVersion(event.targetVersion());
@@ -157,12 +176,8 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 		final byte[] targetHash = event.targetHash();
 		if (targetHash != null && targetHash.length > 0) {
 			// The offered package identity hash is required by the OpAMP specification for
-			// statuses of an offer-initiated installation; once installed, the agent has that
-			// same package.
+			// statuses of an offer-initiated installation
 			builder.setServerOfferedHash(ByteString.copyFrom(targetHash));
-			if (event.state() == UpgradeState.SUCCEEDED) {
-				builder.setAgentHasHash(ByteString.copyFrom(targetHash));
-			}
 		}
 		if (event.errorMessage() != null && !event.errorMessage().isBlank()) {
 			builder.setErrorMessage(event.errorMessage());

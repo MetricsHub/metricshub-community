@@ -30,6 +30,8 @@ import org.metricshub.agent.upgrade.UpgradeState;
  * @param packageName            the package being upgraded
  * @param state                  the new upgrade state
  * @param currentVersion         the version the agent currently runs
+ * @param currentHash            the identity hash of the currently installed package, when known
+ *                               (learned from a previous OpAMP-driven installation)
  * @param targetVersion          the offered version; {@code null} outside an upgrade attempt
  * @param targetHash             the offered package identity hash ({@code PackageAvailable.hash});
  *                               {@code null} outside an upgrade attempt
@@ -41,6 +43,7 @@ public record UpgradeEvent(
 	String packageName,
 	UpgradeState state,
 	String currentVersion,
+	byte[] currentHash,
 	String targetVersion,
 	byte[] targetHash,
 	String errorMessage,
@@ -53,6 +56,7 @@ public record UpgradeEvent(
 	 * @param packageName    the package being upgraded
 	 * @param state          the new upgrade state
 	 * @param currentVersion the version the agent currently runs
+	 * @param currentHash    the identity hash of the currently installed package, when known
 	 * @param targetVersion  the offered version
 	 * @param targetHash     the offered package identity hash
 	 * @param errorMessage   the failure cause when the state is {@code FAILED}
@@ -62,10 +66,21 @@ public record UpgradeEvent(
 		final String packageName,
 		final UpgradeState state,
 		final String currentVersion,
+		final byte[] currentHash,
 		final String targetVersion,
 		final byte[] targetHash,
 		final String errorMessage
 	) {
-		return new UpgradeEvent(packageName, state, currentVersion, targetVersion, targetHash, errorMessage, 0, 0);
+		return new UpgradeEvent(
+			packageName,
+			state,
+			currentVersion,
+			currentHash,
+			targetVersion,
+			targetHash,
+			errorMessage,
+			0,
+			0
+		);
 	}
 }

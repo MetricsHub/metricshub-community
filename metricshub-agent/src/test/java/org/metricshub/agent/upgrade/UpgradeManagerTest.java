@@ -218,6 +218,34 @@ class UpgradeManagerTest {
 	}
 
 	@Test
+	void sameVersionOfferWithDifferentIdentityShouldTriggerTheUpgrade() throws Exception {
+		final UpgradeManager manager = newManager((transaction, stagedPackage, stagingDirectory) ->
+			launches.incrementAndGet()
+		);
+
+		// First same-version offer: the unknown installed identity adopts the offered hash
+		final CountDownLatch idle = expectState(manager, UpgradeState.IDLE);
+		manager.onPackageOffer(offer(CURRENT_VERSION));
+		assertTrue(idle.await(10, TimeUnit.SECONDS));
+		assertEquals(0, launches.get());
+
+		// Second same-version offer with a DIFFERENT identity hash: a hotfix must be installed
+		final CountDownLatch restarting = expectState(manager, UpgradeState.RESTARTING);
+		manager.onPackageOffer(
+			new PackageOffer(
+				UpgradeManager.PACKAGE_NAME,
+				CURRENT_VERSION,
+				"https://repo.example.com/metricshub.pkg",
+				new byte[] { 1 },
+				new byte[] { 9, 9 },
+				Map.of()
+			)
+		);
+		assertTrue(restarting.await(10, TimeUnit.SECONDS));
+		assertEquals(1, launches.get());
+	}
+
+	@Test
 	void upgradeSupportShouldFollowTheDeploymentKind() {
 		assertTrue(newManager((t, p, s) -> {}).isPackageUpgradeSupported());
 

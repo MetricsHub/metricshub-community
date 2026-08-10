@@ -132,6 +132,62 @@ public class UpgradeTransactionStore {
 	}
 
 	/**
+	 * Identity of the currently installed package as learned from a completed OpAMP upgrade.
+	 *
+	 * @param version     the installed version
+	 * @param packageHash the installed package identity hash, hexadecimal
+	 */
+	public record InstalledPackageRecord(String version, String packageHash) {}
+
+	/**
+	 * Name of the file recording the installed package identity.
+	 */
+	public static final String INSTALLED_PACKAGE_FILE_NAME = "installed-package.json";
+
+	/**
+	 * Reads the installed package identity record.
+	 *
+	 * @return the record, or {@code null} when none exists or it cannot be parsed
+	 */
+	public InstalledPackageRecord readInstalledPackage() {
+		final Path file = stagingDirectory.resolve(INSTALLED_PACKAGE_FILE_NAME);
+		if (!Files.isRegularFile(file)) {
+			return null;
+		}
+		try {
+			return OBJECT_MAPPER.readValue(Files.readString(file, StandardCharsets.UTF_8), InstalledPackageRecord.class);
+		} catch (IOException e) {
+			log.warn("Cannot read the installed package record {}: {}", file, e.getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * Persists the installed package identity record atomically.
+	 *
+	 * @param record the record to persist
+	 */
+	public void writeInstalledPackage(final InstalledPackageRecord record) {
+		final Path file = stagingDirectory.resolve(INSTALLED_PACKAGE_FILE_NAME);
+		try {
+			Files.createDirectories(stagingDirectory);
+			final Path temporaryFile = Files.createTempFile(stagingDirectory, INSTALLED_PACKAGE_FILE_NAME, ".tmp");
+			try {
+				Files.writeString(temporaryFile, OBJECT_MAPPER.writeValueAsString(record), StandardCharsets.UTF_8);
+				try {
+					Files.move(temporaryFile, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+				} catch (AtomicMoveNotSupportedException e) {
+					Files.move(temporaryFile, file, StandardCopyOption.REPLACE_EXISTING);
+				}
+			} finally {
+				Files.deleteIfExists(temporaryFile);
+			}
+		} catch (IOException e) {
+			log.warn("Cannot persist the installed package record {}: {}", file, e.getMessage());
+		}
+	}
+
+	/**
 	 * Renames a corrupt transaction file so it does not block subsequent upgrades.
 	 */
 	private void archiveCorrupt() {
