@@ -31,6 +31,8 @@ import org.apache.logging.log4j.ThreadContext;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.AgentConstants;
 import org.metricshub.agent.helper.ConfigHelper;
+import org.metricshub.agent.opamp.OpAmpService;
+import org.metricshub.agent.process.runtime.ProcessControl;
 import org.metricshub.agent.service.ReloadService;
 import org.metricshub.agent.service.ReloadService.ReloadResult;
 import org.metricshub.agent.service.task.DirectoryWatcherTask;
@@ -99,6 +101,13 @@ public class MetricsHubAgentApplication implements Runnable {
 			// Start the Spring server on a separate thread, handing it the holder so the
 			// AgentContextHolder singleton bean is our own instance (used by every service).
 			new Thread(() -> MetricsHubAgentServer.startServer(agentContextHolder)).start();
+
+			// Start the OpAMP service at application level, outside the restartable AgentContext:
+			// its supervisor re-reads the opamp: configuration from the holder and keeps the
+			// OpAMP connection alive across configuration reloads.
+			final var opAmpService = new OpAmpService(agentContextHolder);
+			opAmpService.start();
+			ProcessControl.addShutdownHook(opAmpService::shutdown);
 
 			// Start the DirectoryWatcherTask to watch for changes in the configuration directory
 			final Path configDirectory = bootAgentContext.getConfigDirectory();
