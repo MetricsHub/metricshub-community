@@ -50,6 +50,7 @@ This is a multi-module project:
 * **metricshub-jmx-extension**: Enables monitoring of Java applications through JMX (Java Management Extensions).
 * **metricshub-emulation-extension**: Replays recorded protocol exchanges (HTTP, SNMP, WMI, WBEM, SSH, IPMI, JDBC, JMX) from local files, enabling offline testing and development without live infrastructure.
 * **metricshub-hardware**: Hardware Energy and Sustainability module, dedicated to managing and monitoring hardware-related metrics, focusing on energy consumption and sustainability aspects.
+* **metricshub-opamp-client**: In-house minimal [OpAMP](https://opentelemetry.io/docs/specs/opamp/) (Open Agent Management Protocol) client embedded in the MetricsHub Agent for remote management: status, identity and health reporting over HTTP polling, plus package-offer handling for automatic upgrades.
 * **metricshub-yaml-configuration-extension**: Extension that loads configuration fragments from YAML files located in a configuration directory.
 * **metricshub-programmable-configuration-extension**: Provides a programmable configuration mechanism, allowing users to define custom configurations through [Apache Velocity](https://velocity.apache.org/) scripts.
 * **metricshub-web**: Provides a user interface for interacting with MetricsHub features and functionalities.
@@ -58,6 +59,26 @@ This is a multi-module project:
 
 > [!TIP]
 > Looking for connectors? Check the [MetricsHub Community Connectors](https://github.com/metricshub/community-connectors) repository.
+
+## Remote Management (OpAMP)
+
+The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling, reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch` and `build_number`), status and health, and can receive software package offers for automatic upgrades.
+
+The feature is **disabled by default**. Enable it with a top-level `opamp:` section in `metricshub.yaml`:
+
+```yaml
+opamp:
+  enabled: true
+  endpoint: https://opamp.example.com/v1/opamp  # OpAMP server endpoint (plain HTTP transport)
+  headers:                                      # Optional headers sent with every request;
+    Authorization: Bearer ${env::OPAMP_TOKEN}   # values may be encrypted with the MetricsHub keystore
+  certificateFile: /opt/metricshub/security/opamp-ca.pem # Optional trusted certificate (PEM)
+  pollInterval: 30s                             # Interval between two polls (default: 30s)
+  requestTimeout: 10s                           # Timeout of one HTTP exchange (default: 10s)
+  reportHealth: true                            # Report agent health (default: true)
+```
+
+Changing the `opamp:` section triggers a configuration reload; the OpAMP connection itself survives reloads that do not touch this section. The agent identity (`instance_uid`, a UUIDv7) is persisted in the `security` directory next to the MetricsHub keystore, so it survives restarts and upgrades.
 
 ## How to build the Project
 

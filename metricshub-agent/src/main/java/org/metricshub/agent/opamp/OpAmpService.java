@@ -189,6 +189,10 @@ public class OpAmpService {
 			newClient.start();
 			client = newClient;
 		} catch (Exception e) {
+			// Clear the active configuration so the next supervisor tick retries the startup:
+			// a transient failure (e.g. missing CA file) must not disable OpAMP until the
+			// configuration changes or the agent restarts.
+			activeConfig = null;
 			log.error("Failed to start the OpAMP client on {}: {}", endpoint, e.getMessage());
 			log.debug("Failed to start the OpAMP client:", e);
 		}
@@ -209,11 +213,42 @@ public class OpAmpService {
 			.withEndpoint(URI.create(config.getEndpoint().trim()))
 			.withHeaders(headers)
 			.withCertificateFile(config.getCertificateFile())
-			.withPollInterval(Duration.ofSeconds(config.getPollInterval()))
-			.withRequestTimeout(Duration.ofSeconds(config.getRequestTimeout()))
+			.withPollInterval(
+				Duration.ofSeconds(
+					atLeastOneSecond("pollInterval", config.getPollInterval(), OpAmpConfig.DEFAULT_POLL_INTERVAL)
+				)
+			)
+			.withRequestTimeout(
+				Duration.ofSeconds(
+					atLeastOneSecond("requestTimeout", config.getRequestTimeout(), OpAmpConfig.DEFAULT_REQUEST_TIMEOUT)
+				)
+			)
 			.withInstanceUidFile(resolveInstanceUidFile())
 			.withReportHealth(config.isReportHealth())
 			.build();
+	}
+
+	/**
+	 * Guards a duration setting against zero or negative values (e.g. {@code pollInterval: 0} or
+	 * a sub-second duration collapsing to zero seconds), which would turn the polling loop into a
+	 * tight loop hammering the OpAMP server.
+	 *
+	 * @param settingName  the name of the setting, used for logging
+	 * @param seconds      the configured value in seconds
+	 * @param defaultValue the default value in seconds applied when the configured value is invalid
+	 * @return a positive number of seconds
+	 */
+	private static long atLeastOneSecond(final String settingName, final long seconds, final long defaultValue) {
+		if (seconds < 1) {
+			log.warn(
+				"Invalid OpAMP {} ({} seconds); using the default value of {} seconds.",
+				settingName,
+				seconds,
+				defaultValue
+			);
+			return defaultValue;
+		}
+		return seconds;
 	}
 
 	/**

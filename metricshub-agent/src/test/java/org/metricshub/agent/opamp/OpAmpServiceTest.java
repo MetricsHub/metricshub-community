@@ -155,6 +155,41 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void startupFailureShouldBeRetriedOnTheNextTick() {
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		final AtomicReference<Boolean> failFirstAttempt = new AtomicReference<>(true);
+		final OpAmpService retryingService = new OpAmpService(agentContextHolder, settings -> {
+			factoryInvocations++;
+			if (Boolean.TRUE.equals(failFirstAttempt.getAndSet(false))) {
+				throw new IllegalStateException("Simulated transient startup failure");
+			}
+			return client;
+		});
+
+		retryingService.supervise();
+		// The transient failure is retried with the unchanged configuration
+		retryingService.supervise();
+
+		assertEquals(2, factoryInvocations);
+		verify(client, times(1)).start();
+	}
+
+	@Test
+	void invalidDurationsShouldFallBackToDefaults() {
+		final OpAmpConfig config = OpAmpConfig.builder()
+			.enabled(true)
+			.endpoint(ENDPOINT)
+			.pollInterval(0)
+			.requestTimeout(-5)
+			.build();
+
+		final OpampClientSettings settings = opAmpService.buildSettings(config);
+
+		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_POLL_INTERVAL), settings.getPollInterval());
+		assertEquals(Duration.ofSeconds(OpAmpConfig.DEFAULT_REQUEST_TIMEOUT), settings.getRequestTimeout());
+	}
+
+	@Test
 	void buildSettingsShouldMapTheConfiguration() {
 		final OpAmpConfig config = OpAmpConfig.builder()
 			.enabled(true)
