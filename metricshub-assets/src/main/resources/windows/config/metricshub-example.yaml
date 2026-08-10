@@ -12,6 +12,16 @@ otel:
   # otel.exporter.otlp.metrics.endpoint: http://localhost:4317
   # otel.exporter.otlp.metrics.protocol: grpc # Options include grpc and http/protobuf
 
+# Remote management through OpAMP (Open Agent Management Protocol)
+# opamp:
+#   enabled: true
+#   endpoint: https://opamp.example.com/v1/opamp
+#   headers:
+#     Authorization: Bearer ${env::OPAMP_TOKEN}
+#   # certificateFile: C:\ProgramData\MetricsHub\security\opamp-ca.pem # Trusted certificate (PEM) for the OpAMP server
+#   # pollInterval: 30s
+#   # reportHealth: true
+
 # Simple resource configuration
 resources:
 
