@@ -119,7 +119,7 @@ public class PackageStatusAggregator implements PackageStatusSink {
 		}
 		// Atomic update, applied only while the package is still downloading, so a progress
 		// report racing with a terminal report() can never overwrite the terminal state.
-		final PackageStatus updated = statuses.computeIfPresent(packageName, (name, current) ->
+		final PackageStatus updated = statuses.computeIfPresent(packageName, (_, current) ->
 			current.getStatus() == PackageStatusEnum.PackageStatusEnum_Downloading
 				? current.toBuilder().setDownloadDetails(downloadDetails).build()
 				: current

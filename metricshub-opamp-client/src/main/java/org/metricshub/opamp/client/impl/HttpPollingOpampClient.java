@@ -202,13 +202,19 @@ public class HttpPollingOpampClient implements OpampClient {
 
 	@Override
 	public void setAgentDescription(final AgentDescription agentDescription) {
-		currentAssembler().setAgentDescription(agentDescription);
+		// Synchronized with the startup handoff in start() so an update can never land in the
+		// early-state buffer after it was copied into the live assembler.
+		synchronized (lifecycleLock) {
+			currentAssembler().setAgentDescription(agentDescription);
+		}
 	}
 
 	@Override
 	public void setHealth(final ComponentHealth health) {
 		if (settings.isReportHealth()) {
-			currentAssembler().setHealth(health);
+			synchronized (lifecycleLock) {
+				currentAssembler().setHealth(health);
+			}
 		}
 	}
 
@@ -367,10 +373,12 @@ public class HttpPollingOpampClient implements OpampClient {
 		if (newInstanceUid.isEmpty()) {
 			return;
 		}
+		// The new identity must be used for all further communication even when persisting it
+		// for the next restart fails.
+		assembler.setInstanceUid(newInstanceUid);
+		log.info("The OpAMP server assigned a new agent instance UID.");
 		try {
 			instanceUidStore.store(newInstanceUid.toByteArray());
-			assembler.setInstanceUid(newInstanceUid);
-			log.info("The OpAMP server assigned a new agent instance UID.");
 		} catch (IOException e) {
 			log.error("Failed to persist the new OpAMP instance UID: {}", e.getMessage());
 			log.debug("Failed to persist the new OpAMP instance UID:", e);
