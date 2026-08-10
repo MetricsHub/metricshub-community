@@ -34,6 +34,8 @@ import org.metricshub.opamp.proto.PackageStatus;
 import org.metricshub.opamp.proto.PackageStatusEnum;
 import org.metricshub.opamp.proto.PackageStatuses;
 import org.metricshub.opamp.proto.PackagesAvailable;
+import org.metricshub.opamp.proto.ServerErrorResponse;
+import org.metricshub.opamp.proto.ServerErrorResponseType;
 import org.metricshub.opamp.proto.ServerToAgent;
 import org.metricshub.opamp.proto.ServerToAgentFlags;
 
@@ -295,6 +297,120 @@ class HttpPollingOpampClientTest {
 		assertTrue(last.hasAgentDisconnect());
 		assertTrue(transport.isClosed());
 		assertFalse(client.isStarted());
+	}
+
+	@Test
+	void unavailableErrorShouldNotCommitPendingState() throws Exception {
+		newClient(null, null);
+		client.setAgentDescription(description("1.0.0"));
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setErrorResponse(
+						ServerErrorResponse.newBuilder()
+							.setType(ServerErrorResponseType.ServerErrorResponseType_Unavailable)
+							.build()
+					)
+					.build()
+			)
+		);
+		client.start();
+
+		final AgentToServer first = transport.awaitRequest(AWAIT);
+		assertTrue(first.hasAgentDescription());
+
+		// The server did not process the first message: the retry must carry the state again
+		final AgentToServer retry = transport.awaitRequest(AWAIT);
+		assertTrue(retry.hasAgentDescription(), "State reported in an unprocessed message must be sent again");
+
+		// The retry got a plain 200: from now on unchanged state is compressed away
+		final AgentToServer delta = transport.awaitRequest(AWAIT);
+		assertFalse(delta.hasAgentDescription());
+	}
+
+	@Test
+	void handlerFailureShouldNotAcknowledgeOfferHash() throws Exception {
+		final ByteString offerHash = ByteString.copyFromUtf8("offer-hash");
+		final AtomicReference<PackageStatusSink> sink = new AtomicReference<>();
+		final CountDownLatch firstDispatch = new CountDownLatch(1);
+		final CountDownLatch secondDispatch = new CountDownLatch(2);
+		final OpampPackagesHandler handler = new OpampPackagesHandler() {
+			private int calls;
+
+			@Override
+			public void onPackagesAvailable(
+				final PackagesAvailable packagesAvailable,
+				final PackageStatusSink statusSink,
+				final PackageDownloadContext downloadContext
+			) {
+				sink.set(statusSink);
+				calls++;
+				firstDispatch.countDown();
+				secondDispatch.countDown();
+				if (calls == 1) {
+					throw new RuntimeException("Simulated handler failure");
+				}
+			}
+
+			@Override
+			public PackageStatuses currentPackageStatuses() {
+				return PackageStatuses.getDefaultInstance();
+			}
+		};
+
+		newClient(null, handler);
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setPackagesAvailable(PackagesAvailable.newBuilder().setAllPackagesHash(offerHash).build())
+					.build()
+			)
+		);
+		client.start();
+
+		assertTrue(firstDispatch.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
+
+		// The handler rejected the offer: the reported statuses must NOT echo the offer hash
+		sink
+			.get()
+			.report(
+				PackageStatus.newBuilder()
+					.setName("metricshub")
+					.setStatus(PackageStatusEnum.PackageStatusEnum_InstallFailed)
+					.build()
+			);
+		AgentToServer failedReport = transport.awaitRequest(AWAIT);
+		while (!failedReport.hasPackageStatuses()) {
+			failedReport = transport.awaitRequest(AWAIT);
+		}
+		assertEquals(ByteString.EMPTY, failedReport.getPackageStatuses().getServerProvidedAllPackagesHash());
+
+		// The server offers again; this time the handler accepts and the hash is acknowledged
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setPackagesAvailable(PackagesAvailable.newBuilder().setAllPackagesHash(offerHash).build())
+					.build()
+			)
+		);
+		assertTrue(secondDispatch.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
+
+		sink
+			.get()
+			.report(
+				PackageStatus.newBuilder()
+					.setName("metricshub")
+					.setStatus(PackageStatusEnum.PackageStatusEnum_Installed)
+					.build()
+			);
+		AgentToServer ackedReport = transport.awaitRequest(AWAIT);
+		while (
+			!ackedReport.hasPackageStatuses() ||
+			!offerHash.equals(ackedReport.getPackageStatuses().getServerProvidedAllPackagesHash())
+		) {
+			ackedReport = transport.awaitRequest(AWAIT);
+		}
+		assertEquals(offerHash, ackedReport.getPackageStatuses().getServerProvidedAllPackagesHash());
 	}
 
 	@Test

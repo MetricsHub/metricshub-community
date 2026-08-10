@@ -82,6 +82,7 @@ public class HttpPollingOpampClient implements OpampClient {
 
 	private final Object lifecycleLock = new Object();
 	private ScheduledFuture<?> nextPoll;
+	private long pollGeneration;
 	private volatile boolean started;
 	private volatile boolean stopped;
 	private volatile boolean connected;
@@ -159,7 +160,7 @@ public class HttpPollingOpampClient implements OpampClient {
 
 			started = true;
 			log.info("OpAMP client started. Endpoint: {}.", settings.getEndpoint());
-			scheduleNext(Duration.ZERO);
+			scheduleNext(Duration.ZERO, pollGeneration);
 		}
 	}
 
@@ -227,7 +228,11 @@ public class HttpPollingOpampClient implements OpampClient {
 			if (nextPoll != null) {
 				nextPoll.cancel(false);
 			}
-			nextPoll = executor.schedule(this::pollOnce, 0, TimeUnit.MILLISECONDS);
+			// Advancing the generation invalidates any pending or currently executing poll:
+			// its rescheduling attempt becomes a no-op, keeping a single polling chain.
+			pollGeneration++;
+			final long generation = pollGeneration;
+			nextPoll = executor.schedule(() -> pollOnce(generation), 0, TimeUnit.MILLISECONDS);
 		}
 	}
 
@@ -243,17 +248,21 @@ public class HttpPollingOpampClient implements OpampClient {
 
 	/**
 	 * Performs one OpAMP exchange and schedules the next one. Runs on the polling thread.
+	 *
+	 * @param generation the polling-chain generation this invocation belongs to; stale
+	 *                   invocations (superseded by {@link #pollNow()}) return immediately
 	 */
-	private void pollOnce() {
-		if (stopped) {
-			return;
+	private void pollOnce(final long generation) {
+		synchronized (lifecycleLock) {
+			if (stopped || generation != pollGeneration) {
+				return;
+			}
 		}
 		Duration nextDelay;
 		try {
 			final AgentToServer request = assembler.assemble();
 			final TransportResponse response = transport.send(request.toByteArray());
 			if (response.isSuccess()) {
-				assembler.commit();
 				final ServerToAgent serverToAgent = ServerToAgent.parseFrom(response.body());
 				nextDelay = processServerToAgent(serverToAgent);
 			} else {
@@ -268,7 +277,7 @@ public class HttpPollingOpampClient implements OpampClient {
 		} catch (IOException | RuntimeException e) {
 			nextDelay = onTransportFailure(e, null);
 		}
-		scheduleNext(nextDelay);
+		scheduleNext(nextDelay, generation);
 	}
 
 	/**
@@ -279,9 +288,12 @@ public class HttpPollingOpampClient implements OpampClient {
 	 */
 	private Duration processServerToAgent(final ServerToAgent response) {
 		if (response.hasErrorResponse()) {
+			// The server did not process the message: the reported state is not committed, so
+			// pending changes are sent again with the next attempt.
 			return processErrorResponse(response.getErrorResponse());
 		}
 
+		assembler.commit();
 		retrySchedule.reset();
 		if (!connected) {
 			connected = true;
@@ -356,9 +368,12 @@ public class HttpPollingOpampClient implements OpampClient {
 			log.warn("Received an OpAMP package offer, but package management is not enabled; the offer is ignored.");
 			return;
 		}
-		packageStatusAggregator.setServerProvidedAllPackagesHash(response.getPackagesAvailable().getAllPackagesHash());
 		try {
 			packagesHandler.onPackagesAvailable(response.getPackagesAvailable(), packageStatusAggregator, downloadContext);
+			// Acknowledge the offer hash only once the handler accepted the offer: on failure the
+			// previous hash keeps being echoed, so the server knows the offer is not synchronized
+			// and offers it again.
+			packageStatusAggregator.setServerProvidedAllPackagesHash(response.getPackagesAvailable().getAllPackagesHash());
 		} catch (Exception e) {
 			log.error("The OpAMP packages handler failed to process a package offer: {}", e.getMessage());
 			log.debug("The OpAMP packages handler failed to process a package offer:", e);
@@ -397,16 +412,20 @@ public class HttpPollingOpampClient implements OpampClient {
 	}
 
 	/**
-	 * Schedules the next poll after the given delay.
+	 * Schedules the next poll after the given delay, unless this polling chain was superseded by
+	 * {@link #pollNow()} in the meantime.
 	 *
-	 * @param delay the delay before the next poll
+	 * @param delay          the delay before the next poll
+	 * @param fromGeneration the generation of the poll requesting the rescheduling
 	 */
-	private void scheduleNext(final Duration delay) {
+	private void scheduleNext(final Duration delay, final long fromGeneration) {
 		synchronized (lifecycleLock) {
-			if (!started || stopped) {
+			if (!started || stopped || fromGeneration != pollGeneration) {
 				return;
 			}
-			nextPoll = executor.schedule(this::pollOnce, delay.toMillis(), TimeUnit.MILLISECONDS);
+			pollGeneration++;
+			final long generation = pollGeneration;
+			nextPoll = executor.schedule(() -> pollOnce(generation), delay.toMillis(), TimeUnit.MILLISECONDS);
 		}
 	}
 
