@@ -62,7 +62,9 @@ This is a multi-module project:
 
 ## Remote Management (OpAMP)
 
-The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling and reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch` and `build_number`), status and health. Automatic software upgrades through OpAMP package offers are under development (see [#1286](https://github.com/MetricsHub/metricshub-community/issues/1286)); until that lands, package offers are not accepted.
+The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling and reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch` and `build_number`), status and health.
+
+On package-manager based installations (Debian, RPM, Windows MSI), the agent also advertises the OpAMP `AcceptsPackages` capability and processes software package offers: the offered package is downloaded from the repository over HTTPS, verified against the offered SHA-256, staged in an upgrade directory that survives the installation, and tracked through a persistent upgrade transaction whose outcome (success or failure) is reconciled and reported after the agent restarts. The final detached installation step ships with the platform upgrade runners (see [#1286](https://github.com/MetricsHub/metricshub-community/issues/1286)); until they land, offers fail cleanly at the installation stage with an explicit status. The upgrade policy is configured through the top-level `upgrade:` section (`enabled`, `allowDowngrade`, `hostAllowlist`, `maxPackageSizeBytes`, `downloadTimeout`, `downloadRetries`, `installTimeout`, `trustedCertificateFile`). Archive (tar.gz/zip) and Docker deployments never accept package offers.
 
 The feature is **disabled by default**. Enable it with a top-level `opamp:` section in `metricshub.yaml`:
 

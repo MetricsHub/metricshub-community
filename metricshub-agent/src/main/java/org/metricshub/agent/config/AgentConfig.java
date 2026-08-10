@@ -163,6 +163,10 @@ public class AgentConfig {
 	@JsonSetter(nulls = SKIP)
 	private OpAmpConfig opamp = OpAmpConfig.builder().build();
 
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private UpgradeConfig upgrade = UpgradeConfig.builder().build();
+
 	/**
 	 * Build a new empty instance
 	 *

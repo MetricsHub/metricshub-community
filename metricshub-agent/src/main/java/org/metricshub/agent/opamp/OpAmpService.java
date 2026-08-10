@@ -40,6 +40,7 @@ import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
 import org.metricshub.opamp.client.impl.HttpPollingOpampClient;
+import org.metricshub.opamp.client.packages.OpampPackagesHandler;
 import org.metricshub.web.AgentContextHolder;
 import org.metricshub.web.service.ApplicationStatusService;
 
@@ -71,23 +72,37 @@ public class OpAmpService {
 	private final ApplicationStatusService applicationStatusService;
 	private final Function<OpampClientSettings, OpampClient> clientFactory;
 	private final ScheduledExecutorService supervisor;
+	private final OpampPackagesHandler packagesHandler;
 
 	private OpampClient client;
 	private OpAmpConfig activeConfig;
+	private Boolean activeUpgradeEnabled;
+
+	/**
+	 * Creates the service with the default OpAMP client factory and no packages handler.
+	 *
+	 * @param agentContextHolder the holder of the current agent context
+	 */
+	public OpAmpService(final AgentContextHolder agentContextHolder) {
+		this(agentContextHolder, (OpampPackagesHandler) null);
+	}
 
 	/**
 	 * Creates the service with the default OpAMP client factory.
 	 *
 	 * @param agentContextHolder the holder of the current agent context
+	 * @param packagesHandler    the handler receiving OpAMP package offers; {@code null} when
+	 *                           automatic upgrades are not supported on this deployment
 	 */
-	public OpAmpService(final AgentContextHolder agentContextHolder) {
-		this(agentContextHolder, settings ->
+	public OpAmpService(final AgentContextHolder agentContextHolder, final OpampPackagesHandler packagesHandler) {
+		this(agentContextHolder, packagesHandler, settings ->
 			HttpPollingOpampClient.builder().withSettings(settings).withCallbacks(new LoggingCallbacks()).build()
 		);
 	}
 
 	/**
-	 * Creates the service with a caller-provided client factory (used by tests).
+	 * Creates the service with a caller-provided client factory and no packages handler (used by
+	 * tests).
 	 *
 	 * @param agentContextHolder the holder of the current agent context
 	 * @param clientFactory      the factory building an {@link OpampClient} from settings
@@ -96,7 +111,23 @@ public class OpAmpService {
 		final AgentContextHolder agentContextHolder,
 		final Function<OpampClientSettings, OpampClient> clientFactory
 	) {
+		this(agentContextHolder, null, clientFactory);
+	}
+
+	/**
+	 * Creates the service with caller-provided collaborators.
+	 *
+	 * @param agentContextHolder the holder of the current agent context
+	 * @param packagesHandler    the handler receiving OpAMP package offers; may be {@code null}
+	 * @param clientFactory      the factory building an {@link OpampClient} from settings
+	 */
+	OpAmpService(
+		final AgentContextHolder agentContextHolder,
+		final OpampPackagesHandler packagesHandler,
+		final Function<OpampClientSettings, OpampClient> clientFactory
+	) {
 		this.agentContextHolder = agentContextHolder;
+		this.packagesHandler = packagesHandler;
 		this.applicationStatusService = new ApplicationStatusService(agentContextHolder);
 		this.clientFactory = clientFactory;
 		this.supervisor = Executors.newSingleThreadScheduledExecutor(runnable -> {
@@ -147,8 +178,9 @@ public class OpAmpService {
 		}
 
 		final OpAmpConfig config = agentContext.getAgentConfig().getOpamp();
-		if (!Objects.equals(config, activeConfig)) {
-			reconfigure(agentContext, config);
+		final boolean upgradeEnabled = isUpgradeEnabled(agentContext);
+		if (!Objects.equals(config, activeConfig) || !Objects.equals(upgradeEnabled, activeUpgradeEnabled)) {
+			reconfigure(agentContext, config, upgradeEnabled);
 		}
 
 		if (client != null && client.isStarted()) {
@@ -164,12 +196,13 @@ public class OpAmpService {
 	 * @param agentContext the current agent context
 	 * @param newConfig    the new OpAMP configuration
 	 */
-	private void reconfigure(final AgentContext agentContext, final OpAmpConfig newConfig) {
+	private void reconfigure(final AgentContext agentContext, final OpAmpConfig newConfig, final boolean upgradeEnabled) {
 		if (client != null) {
 			client.stop("OpAMP configuration changed");
 			client = null;
 		}
 		activeConfig = newConfig;
+		activeUpgradeEnabled = upgradeEnabled;
 
 		if (newConfig == null || !newConfig.isEnabled()) {
 			log.info("OpAMP is disabled.");
@@ -184,6 +217,10 @@ public class OpAmpService {
 		OpampClient newClient = null;
 		try {
 			newClient = clientFactory.apply(buildSettings(newConfig));
+			if (packagesHandler != null && upgradeEnabled) {
+				// Advertises the AcceptsPackages/ReportsPackageStatuses capabilities
+				newClient.setPackagesHandler(packagesHandler);
+			}
 			// Report a complete first message
 			newClient.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));
 			newClient.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
@@ -216,6 +253,16 @@ public class OpAmpService {
 		} catch (Exception stopError) {
 			log.debug("Failed to release the OpAMP client that could not start:", stopError);
 		}
+	}
+
+	/**
+	 * Indicates whether automatic upgrades are enabled in the agent configuration.
+	 *
+	 * @param agentContext the current agent context
+	 * @return {@code true} when the {@code upgrade:} section is enabled
+	 */
+	private static boolean isUpgradeEnabled(final AgentContext agentContext) {
+		return agentContext.getAgentConfig().getUpgrade() != null && agentContext.getAgentConfig().getUpgrade().isEnabled();
 	}
 
 	/**
