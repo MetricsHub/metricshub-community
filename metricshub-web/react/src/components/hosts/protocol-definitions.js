@@ -547,7 +547,7 @@ export const PROTOCOL_FIELDS = {
 			type: "select",
 			required: true,
 			options: [
-				{ value: "HTTP", label: "HTTP" },
+				{ value: "HTTP", label: "HTTP (Encrypted)" },
 				{ value: "HTTPS", label: "HTTPS" },
 			],
 		},
