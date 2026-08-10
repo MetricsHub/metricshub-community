@@ -329,6 +329,100 @@ class HttpPollingOpampClientTest {
 	}
 
 	@Test
+	void badRequestErrorShouldNotBeRetried() throws Exception {
+		newClient(null, null);
+		client.setAgentDescription(description("1.0.0"));
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setErrorResponse(
+						ServerErrorResponse.newBuilder().setType(ServerErrorResponseType.ServerErrorResponseType_BadRequest).build()
+					)
+					.build()
+			)
+		);
+		client.start();
+
+		final AgentToServer first = transport.awaitRequest(AWAIT);
+		assertTrue(first.hasAgentDescription());
+
+		// A BadRequest rejection must not be retried: the baseline advances
+		final AgentToServer next = transport.awaitRequest(AWAIT);
+		assertFalse(next.hasAgentDescription(), "State rejected with BadRequest must not be resent");
+	}
+
+	@Test
+	void mismatchedInstanceUidShouldBeIgnored() throws Exception {
+		final CountDownLatch offerReceived = new CountDownLatch(1);
+		final OpampPackagesHandler handler = new OpampPackagesHandler() {
+			@Override
+			public void onPackagesAvailable(
+				final PackagesAvailable packagesAvailable,
+				final PackageStatusSink statusSink,
+				final PackageDownloadContext downloadContext
+			) {
+				offerReceived.countDown();
+			}
+
+			@Override
+			public PackageStatuses currentPackageStatuses() {
+				return PackageStatuses.getDefaultInstance();
+			}
+		};
+
+		newClient(null, handler);
+		client.setAgentDescription(description("1.0.0"));
+		transport.enqueue(
+			RecordingTransport.ScriptedReply.ok(
+				ServerToAgent.newBuilder()
+					.setInstanceUid(ByteString.copyFrom(UuidV7.generate()))
+					.setPackagesAvailable(PackagesAvailable.newBuilder().setAllPackagesHash(ByteString.copyFromUtf8("h")))
+					.build()
+			)
+		);
+		client.start();
+
+		final AgentToServer first = transport.awaitRequest(AWAIT);
+		assertTrue(first.hasAgentDescription());
+
+		// The misrouted response must be ignored entirely: no dispatch, no commit
+		final AgentToServer next = transport.awaitRequest(AWAIT);
+		assertTrue(next.hasAgentDescription(), "An ignored response must not commit the reported state");
+		assertFalse(offerReceived.await(200, TimeUnit.MILLISECONDS), "The package offer must not be dispatched");
+	}
+
+	@Test
+	void stopFromPollingThreadShouldSendDisconnect() throws Exception {
+		final AtomicReference<HttpPollingOpampClient> clientRef = new AtomicReference<>();
+		final CountDownLatch stopExecuted = new CountDownLatch(1);
+		final OpampClientCallbacks callbacks = new OpampClientCallbacks() {
+			private boolean stopRequested;
+
+			@Override
+			public void onMessage(final ServerToAgent message) {
+				if (!stopRequested) {
+					stopRequested = true;
+					clientRef.get().stop("Stopped from the polling thread");
+					stopExecuted.countDown();
+				}
+			}
+		};
+
+		newClient(callbacks, null);
+		clientRef.set(client);
+		client.start();
+
+		assertTrue(stopExecuted.await(AWAIT.toMillis(), TimeUnit.MILLISECONDS));
+
+		AgentToServer last = transport.awaitRequest(AWAIT);
+		while (!last.hasAgentDisconnect()) {
+			last = transport.awaitRequest(AWAIT);
+		}
+		assertTrue(last.hasAgentDisconnect());
+		assertFalse(client.isStarted());
+	}
+
+	@Test
 	void handlerFailureShouldNotAcknowledgeOfferHash() throws Exception {
 		final ByteString offerHash = ByteString.copyFromUtf8("offer-hash");
 		final AtomicReference<PackageStatusSink> sink = new AtomicReference<>();

@@ -83,6 +83,7 @@ public class HttpPollingOpampClient implements OpampClient {
 	private final Object lifecycleLock = new Object();
 	private ScheduledFuture<?> nextPoll;
 	private long pollGeneration;
+	private volatile Thread pollingThread;
 	private volatile boolean started;
 	private volatile boolean stopped;
 	private volatile boolean connected;
@@ -128,6 +129,7 @@ public class HttpPollingOpampClient implements OpampClient {
 		final ThreadFactory threadFactory = runnable -> {
 			final Thread thread = new Thread(runnable, POLLING_THREAD_NAME);
 			thread.setDaemon(true);
+			pollingThread = thread;
 			return thread;
 		};
 		this.executor = Executors.newSingleThreadScheduledExecutor(threadFactory);
@@ -178,13 +180,19 @@ public class HttpPollingOpampClient implements OpampClient {
 
 		if (started) {
 			log.info("OpAMP client stopping. Reason: {}.", reason);
-			final Future<?> disconnectFuture = executor.submit(this::sendDisconnect);
-			try {
-				disconnectFuture.get(DISCONNECT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			} catch (ExecutionException | TimeoutException e) {
-				log.debug("The OpAMP AgentDisconnect message could not be delivered.", e);
+			if (Thread.currentThread() == pollingThread) {
+				// stop() was invoked from a client callback running on the polling thread: the
+				// executor cannot run another task until this one returns, so send inline.
+				sendDisconnect();
+			} else {
+				final Future<?> disconnectFuture = executor.submit(this::sendDisconnect);
+				try {
+					disconnectFuture.get(DISCONNECT_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+				} catch (ExecutionException | TimeoutException e) {
+					log.debug("The OpAMP AgentDisconnect message could not be delivered.", e);
+				}
 			}
 		}
 
@@ -264,7 +272,12 @@ public class HttpPollingOpampClient implements OpampClient {
 			final TransportResponse response = transport.send(request.toByteArray());
 			if (response.isSuccess()) {
 				final ServerToAgent serverToAgent = ServerToAgent.parseFrom(response.body());
-				nextDelay = processServerToAgent(serverToAgent);
+				if (isForAnotherAgent(request, serverToAgent)) {
+					log.warn("Ignored an OpAMP response addressed to another agent instance.");
+					nextDelay = settings.getPollInterval();
+				} else {
+					nextDelay = processServerToAgent(serverToAgent);
+				}
 			} else {
 				nextDelay = onTransportFailure(
 					new IOException("The OpAMP server answered with HTTP status " + response.statusCode()),
@@ -288,9 +301,15 @@ public class HttpPollingOpampClient implements OpampClient {
 	 */
 	private Duration processServerToAgent(final ServerToAgent response) {
 		if (response.hasErrorResponse()) {
-			// The server did not process the message: the reported state is not committed, so
-			// pending changes are sent again with the next attempt.
-			return processErrorResponse(response.getErrorResponse());
+			final ServerErrorResponse errorResponse = response.getErrorResponse();
+			// Unavailable means the server did not process the message: the reported state is not
+			// committed so it is sent again with the retry. BadRequest and Unknown must not be
+			// retried (per the OpAMP specification), so the baseline advances to avoid resending
+			// the same rejected state forever.
+			if (errorResponse.getType() != ServerErrorResponseType.ServerErrorResponseType_Unavailable) {
+				assembler.commit();
+			}
+			return processErrorResponse(errorResponse);
 		}
 
 		assembler.commit();
@@ -378,6 +397,19 @@ public class HttpPollingOpampClient implements OpampClient {
 			log.error("The OpAMP packages handler failed to process a package offer: {}", e.getMessage());
 			log.debug("The OpAMP packages handler failed to process a package offer:", e);
 		}
+	}
+
+	/**
+	 * Indicates whether a response is addressed to another agent instance: the OpAMP
+	 * specification requires {@code ServerToAgent.instance_uid} to match the UID of the request
+	 * it answers. Empty response UIDs are tolerated.
+	 *
+	 * @param request  the request that was sent
+	 * @param response the response received
+	 * @return {@code true} when the response carries a different, non-empty instance UID
+	 */
+	private static boolean isForAnotherAgent(final AgentToServer request, final ServerToAgent response) {
+		return !response.getInstanceUid().isEmpty() && !response.getInstanceUid().equals(request.getInstanceUid());
 	}
 
 	/**

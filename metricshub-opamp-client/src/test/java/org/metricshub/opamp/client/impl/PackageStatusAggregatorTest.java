@@ -80,6 +80,18 @@ class PackageStatusAggregatorTest {
 	}
 
 	@Test
+	void progressShouldNotOverwriteTerminalStatus() {
+		aggregator.report(status(PackageStatusEnum.PackageStatusEnum_Downloading));
+		aggregator.report(status(PackageStatusEnum.PackageStatusEnum_Installed));
+
+		aggregator.reportDownloadProgress(PACKAGE_NAME, PackageDownloadDetails.newBuilder().setDownloadPercent(50).build());
+
+		final PackageStatuses proto = aggregator.toProto();
+		assertEquals(PackageStatusEnum.PackageStatusEnum_Installed, proto.getPackagesOrThrow(PACKAGE_NAME).getStatus());
+		assertFalse(proto.getPackagesOrThrow(PACKAGE_NAME).hasDownloadDetails());
+	}
+
+	@Test
 	void downloadProgressForUnknownPackageShouldBeIgnored() {
 		aggregator.reportDownloadProgress("unknown", PackageDownloadDetails.newBuilder().setDownloadPercent(50).build());
 

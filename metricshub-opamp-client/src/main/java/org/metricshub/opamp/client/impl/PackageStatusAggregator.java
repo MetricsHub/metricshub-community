@@ -111,19 +111,24 @@ public class PackageStatusAggregator implements PackageStatusSink {
 
 	@Override
 	public void reportDownloadProgress(final String packageName, final PackageDownloadDetails downloadDetails) {
-		final PackageStatus current = statuses.get(packageName);
-		if (current == null) {
-			log.warn("Ignored a download progress report for the unknown package {}.", packageName);
-			return;
-		}
 		final long now = System.currentTimeMillis();
 		final Long lastUpdate = lastProgressUpdateMs.get(packageName);
 		final boolean complete = downloadDetails.getDownloadPercent() >= 100.0;
 		if (!complete && lastUpdate != null && now - lastUpdate < PROGRESS_UPDATE_MIN_INTERVAL_MS) {
 			return;
 		}
+		// Atomic update, applied only while the package is still downloading, so a progress
+		// report racing with a terminal report() can never overwrite the terminal state.
+		final PackageStatus updated = statuses.computeIfPresent(packageName, (name, current) ->
+			current.getStatus() == PackageStatusEnum.PackageStatusEnum_Downloading
+				? current.toBuilder().setDownloadDetails(downloadDetails).build()
+				: current
+		);
+		if (updated == null) {
+			log.warn("Ignored a download progress report for the unknown package {}.", packageName);
+			return;
+		}
 		lastProgressUpdateMs.put(packageName, now);
-		statuses.put(packageName, current.toBuilder().setDownloadDetails(downloadDetails).build());
 	}
 
 	/**

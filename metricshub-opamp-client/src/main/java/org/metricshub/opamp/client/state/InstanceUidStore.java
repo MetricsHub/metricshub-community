@@ -59,7 +59,7 @@ public class InstanceUidStore {
 		if (Files.isRegularFile(file)) {
 			try {
 				return UuidV7.fromCanonicalString(Files.readString(file, StandardCharsets.UTF_8));
-			} catch (IllegalArgumentException e) {
+			} catch (IllegalArgumentException _) {
 				log.warn("Invalid OpAMP instance UID in {}; a new instance UID is generated.", file);
 			}
 		}
