@@ -99,6 +99,7 @@ class UpgradeManagerTest {
 			version,
 			"https://repo.example.com/metricshub.pkg",
 			new byte[] { 1 },
+			new byte[] { 7, 7 },
 			Map.of()
 		);
 	}

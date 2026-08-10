@@ -47,6 +47,7 @@ class UpgradeReconciliationTest {
 			.packageName(UpgradeManager.PACKAGE_NAME)
 			.fromVersion("3.9.05")
 			.toVersion("3.10.00")
+			.packageHash("0506")
 			.state(state)
 			.createdAt(System.currentTimeMillis())
 			.installStartedAt(System.currentTimeMillis())
@@ -70,6 +71,11 @@ class UpgradeReconciliationTest {
 		final UpgradeEvent verdict = events.get(events.size() - 1);
 		assertEquals(UpgradeState.SUCCEEDED, verdict.state());
 		assertEquals("3.10.00", verdict.currentVersion());
+		org.junit.jupiter.api.Assertions.assertArrayEquals(
+			new byte[] { 5, 6 },
+			verdict.targetHash(),
+			"The verdict must carry the offered package hash persisted in the transaction"
+		);
 
 		// Transaction archived, staged file cleaned, lock released
 		assertNull(new UpgradeTransactionStore(tempDir).read());

@@ -59,6 +59,7 @@ public class PackageDownloader {
 	private static final int BUFFER_SIZE = 64 * 1024;
 	private static final long PROGRESS_EMIT_INTERVAL_MS = 1000;
 	private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(30);
+	private static final int MAX_REDIRECTS = 5;
 
 	/**
 	 * Downloads the offered package into the given directory, retrying up to the configured
@@ -179,16 +180,7 @@ public class PackageDownloader {
 			Files.createDirectories(targetFile.getParent());
 
 			final HttpClient httpClient = createHttpClient(config);
-			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-				.uri(uri)
-				.timeout(Duration.ofSeconds(config.getDownloadTimeout()))
-				.GET();
-			offer.headers().forEach(requestBuilder::header);
-
-			final HttpResponse<InputStream> response = httpClient.send(
-				requestBuilder.build(),
-				HttpResponse.BodyHandlers.ofInputStream()
-			);
+			final HttpResponse<InputStream> response = sendFollowingRedirects(httpClient, offer, config, uri);
 			if (response.statusCode() != 200) {
 				throw new UpgradeException("The package repository answered with HTTP status " + response.statusCode());
 			}
@@ -227,6 +219,91 @@ public class PackageDownloader {
 				log.debug("Cannot delete the partial download {}: {}", partFile, cleanupError.getMessage());
 			}
 		}
+	}
+
+	/**
+	 * Sends the download request, following redirects manually so every hop is re-validated
+	 * against the HTTPS requirement and the configured host allowlist (automatic redirects would
+	 * allow an approved host to bounce the client to an arbitrary destination). The offer headers
+	 * (e.g. repository credentials) are only sent to the originally offered host.
+	 *
+	 * @param httpClient the HTTP client (configured with {@code Redirect.NEVER})
+	 * @param offer      the package offer
+	 * @param config     the upgrade configuration
+	 * @param initialUri the validated initial download URI
+	 * @return the final, non-redirect response
+	 * @throws UpgradeException     when a redirect hop is not acceptable or too many hops occur
+	 * @throws IOException          on I/O failure
+	 * @throws InterruptedException when the downloading thread is interrupted
+	 */
+	private static HttpResponse<InputStream> sendFollowingRedirects(
+		final HttpClient httpClient,
+		final PackageOffer offer,
+		final UpgradeConfig config,
+		final URI initialUri
+	) throws UpgradeException, IOException, InterruptedException {
+		final String offeredHost = initialUri.getHost();
+		URI currentUri = initialUri;
+		for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
+			final HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+				.uri(currentUri)
+				.timeout(Duration.ofSeconds(config.getDownloadTimeout()))
+				.GET();
+			if (currentUri.getHost() != null && currentUri.getHost().equalsIgnoreCase(offeredHost)) {
+				offer.headers().forEach(requestBuilder::header);
+			}
+
+			final HttpResponse<InputStream> response = httpClient.send(
+				requestBuilder.build(),
+				HttpResponse.BodyHandlers.ofInputStream()
+			);
+			if (!isRedirect(response.statusCode())) {
+				return response;
+			}
+
+			try (InputStream discarded = response.body()) {
+				// Drop the redirect body
+			}
+			final String location = response
+				.headers()
+				.firstValue("Location")
+				.orElseThrow(() ->
+					new UpgradeException("The package repository answered a redirect without a Location header")
+				);
+			currentUri = validateRedirectTarget(currentUri.resolve(location), config);
+			log.debug("Package download redirected to {}.", currentUri);
+		}
+		throw new UpgradeException("The package download exceeded " + MAX_REDIRECTS + " redirects");
+	}
+
+	/**
+	 * Indicates whether the given HTTP status code is a redirect.
+	 *
+	 * @param statusCode the HTTP status code
+	 * @return {@code true} for 301, 302, 303, 307 and 308
+	 */
+	private static boolean isRedirect(final int statusCode) {
+		return statusCode == 301 || statusCode == 302 || statusCode == 303 || statusCode == 307 || statusCode == 308;
+	}
+
+	/**
+	 * Validates a redirect target against the same restrictions as the initial download source.
+	 *
+	 * @param target the redirect target URI
+	 * @param config the upgrade configuration
+	 * @return the validated target
+	 * @throws UpgradeException when the target is not acceptable
+	 */
+	private static URI validateRedirectTarget(final URI target, final UpgradeConfig config) throws UpgradeException {
+		final String scheme = target.getScheme() == null ? "" : target.getScheme().toLowerCase(Locale.ROOT);
+		final String host = target.getHost() == null ? "" : target.getHost();
+		if (!"https".equals(scheme) && !("http".equals(scheme) && isLoopback(host))) {
+			throw new UpgradeException("The package download was redirected to a non-HTTPS location: " + target);
+		}
+		if (!config.getHostAllowlist().isEmpty() && config.getHostAllowlist().stream().noneMatch(host::equalsIgnoreCase)) {
+			throw new UpgradeException("The package download was redirected to a host outside the allowlist: " + host);
+		}
+		return target;
 	}
 
 	/**
@@ -309,9 +386,11 @@ public class PackageDownloader {
 	 */
 	private static HttpClient createHttpClient(final UpgradeConfig config) throws UpgradeException {
 		try {
+			// Redirects are followed manually so every hop is re-validated against the HTTPS
+			// requirement and the host allowlist
 			final HttpClient.Builder builder = HttpClient.newBuilder()
 				.connectTimeout(CONNECT_TIMEOUT)
-				.followRedirects(HttpClient.Redirect.NORMAL);
+				.followRedirects(HttpClient.Redirect.NEVER);
 			final String certificateFile = config.getTrustedCertificateFile();
 			if (certificateFile != null && !certificateFile.isBlank()) {
 				builder.sslContext(createSslContext(certificateFile));

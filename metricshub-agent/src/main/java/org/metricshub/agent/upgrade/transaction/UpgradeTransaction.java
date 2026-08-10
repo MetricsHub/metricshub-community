@@ -90,6 +90,12 @@ public class UpgradeTransaction {
 	private String sha256;
 
 	/**
+	 * Offered package identity hash ({@code PackageAvailable.hash}), hexadecimal; echoed back in
+	 * the package statuses as required by the OpAMP specification.
+	 */
+	private String packageHash;
+
+	/**
 	 * Detected deployment kind (deb, rpm, msi).
 	 */
 	private String deploymentKind;

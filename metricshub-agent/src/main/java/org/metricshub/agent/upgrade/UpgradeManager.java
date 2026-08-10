@@ -26,6 +26,7 @@ import static org.metricshub.agent.helper.AgentConstants.AGENT_INFO_VERSION_ATTR
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HexFormat;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -158,7 +159,7 @@ public class UpgradeManager {
 	public UpgradeEvent getCurrentSnapshot() {
 		synchronized (snapshotLock) {
 			if (lastEvent == null) {
-				lastEvent = UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, currentVersion(), null, null);
+				lastEvent = UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, currentVersion(), null, null, null);
 			}
 			return lastEvent;
 		}
@@ -187,7 +188,16 @@ public class UpgradeManager {
 		);
 
 		if (state != null && state.isInstallPhase()) {
-			publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.VERIFYING, current, transaction.getToVersion(), null));
+			publish(
+				UpgradeEvent.of(
+					PACKAGE_NAME,
+					UpgradeState.VERIFYING,
+					current,
+					transaction.getToVersion(),
+					hashOf(transaction),
+					null
+				)
+			);
 			if (VersionHelper.isSameVersion(current, transaction.getToVersion())) {
 				finishReconciliation(transaction, UpgradeState.SUCCEEDED, null, current);
 			} else {
@@ -203,7 +213,16 @@ public class UpgradeManager {
 				);
 			}
 		} else if (state == UpgradeState.SUCCEEDED || state == UpgradeState.FAILED) {
-			publish(UpgradeEvent.of(PACKAGE_NAME, state, current, transaction.getToVersion(), transaction.getError()));
+			publish(
+				UpgradeEvent.of(
+					PACKAGE_NAME,
+					state,
+					current,
+					transaction.getToVersion(),
+					hashOf(transaction),
+					transaction.getError()
+				)
+			);
 			transactionStore.archive(transaction);
 			lock.releaseStale();
 		} else {
@@ -246,6 +265,7 @@ public class UpgradeManager {
 					UpgradeState.FAILED,
 					current,
 					offer.version(),
+					offer.packageHash(),
 					"Automatic upgrades are disabled by configuration (upgrade.enabled)"
 				)
 			);
@@ -254,7 +274,7 @@ public class UpgradeManager {
 
 		if (VersionHelper.isSameVersion(current, offer.version())) {
 			log.info("The offered version {} is already installed.", offer.version());
-			publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, current, offer.version(), null));
+			publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.IDLE, current, offer.version(), offer.packageHash(), null));
 			return;
 		}
 
@@ -274,6 +294,7 @@ public class UpgradeManager {
 				.toVersion(offer.version())
 				.downloadUrl(offer.downloadUrl())
 				.sha256(offer.sha256Hex())
+				.packageHash(offer.packageHashHex())
 				.deploymentKind(deploymentDetector.detect().name())
 				.state(UpgradeState.UPDATE_AVAILABLE)
 				.createdAt(System.currentTimeMillis())
@@ -290,6 +311,7 @@ public class UpgradeManager {
 						UpgradeState.DOWNLOADING,
 						current,
 						targetVersion,
+						offer.packageHash(),
 						null,
 						percent,
 						bytesPerSecond
@@ -352,7 +374,7 @@ public class UpgradeManager {
 		// Release the lock before publishing: the event is the observable signal that the
 		// attempt is fully terminated.
 		lock.release();
-		publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.FAILED, current, offer.version(), error));
+		publish(UpgradeEvent.of(PACKAGE_NAME, UpgradeState.FAILED, current, offer.version(), offer.packageHash(), error));
 	}
 
 	/**
@@ -368,7 +390,16 @@ public class UpgradeManager {
 		transaction.setState(state);
 		transaction.setError(error);
 		transactionStore.write(transaction);
-		publish(UpgradeEvent.of(PACKAGE_NAME, state, transaction.getFromVersion(), transaction.getToVersion(), error));
+		publish(
+			UpgradeEvent.of(
+				PACKAGE_NAME,
+				state,
+				transaction.getFromVersion(),
+				transaction.getToVersion(),
+				hashOf(transaction),
+				error
+			)
+		);
 	}
 
 	/**
@@ -396,7 +427,7 @@ public class UpgradeManager {
 		transactionStore.archive(transaction);
 		deleteStagedFile(transaction);
 		lock.releaseStale();
-		publish(UpgradeEvent.of(PACKAGE_NAME, verdict, current, transaction.getToVersion(), error));
+		publish(UpgradeEvent.of(PACKAGE_NAME, verdict, current, transaction.getToVersion(), hashOf(transaction), error));
 		if (verdict == UpgradeState.SUCCEEDED) {
 			log.info("Upgrade to version {} succeeded.", transaction.getToVersion());
 		} else {
@@ -433,6 +464,24 @@ public class UpgradeManager {
 			statusListener.onUpgradeEvent(event);
 		} catch (Exception e) {
 			log.warn("The upgrade status listener failed: {}", e.getMessage());
+		}
+	}
+
+	/**
+	 * Decodes the package identity hash persisted in a transaction.
+	 *
+	 * @param transaction the transaction
+	 * @return the hash bytes, or {@code null} when the transaction carries none
+	 */
+	private static byte[] hashOf(final UpgradeTransaction transaction) {
+		final String hex = transaction.getPackageHash();
+		if (hex == null || hex.isBlank()) {
+			return null;
+		}
+		try {
+			return HexFormat.of().parseHex(hex);
+		} catch (IllegalArgumentException e) {
+			return null;
 		}
 	}
 

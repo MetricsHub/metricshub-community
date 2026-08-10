@@ -31,6 +31,8 @@ import java.util.Map;
  * @param version     the offered version
  * @param downloadUrl the URL the package must be downloaded from
  * @param sha256      the expected SHA-256 of the package content, as raw bytes
+ * @param packageHash the offered package identity hash ({@code PackageAvailable.hash}), echoed
+ *                    back in the package statuses as required by the OpAMP specification
  * @param headers     headers to send with the download request; never {@code null}
  */
 public record PackageOffer(
@@ -38,6 +40,7 @@ public record PackageOffer(
 	String version,
 	String downloadUrl,
 	byte[] sha256,
+	byte[] packageHash,
 	Map<String, String> headers
 ) {
 	/**
@@ -47,5 +50,14 @@ public record PackageOffer(
 	 */
 	public String sha256Hex() {
 		return sha256 == null ? "" : HexFormat.of().formatHex(sha256);
+	}
+
+	/**
+	 * Returns the offered package identity hash as a lowercase hexadecimal string.
+	 *
+	 * @return the hexadecimal representation of the package hash
+	 */
+	public String packageHashHex() {
+		return packageHash == null ? "" : HexFormat.of().formatHex(packageHash);
 	}
 }

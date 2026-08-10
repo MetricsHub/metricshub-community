@@ -31,6 +31,8 @@ import org.metricshub.agent.upgrade.UpgradeState;
  * @param state                  the new upgrade state
  * @param currentVersion         the version the agent currently runs
  * @param targetVersion          the offered version; {@code null} outside an upgrade attempt
+ * @param targetHash             the offered package identity hash ({@code PackageAvailable.hash});
+ *                               {@code null} outside an upgrade attempt
  * @param errorMessage           the failure cause when {@code state} is {@code FAILED}
  * @param downloadPercent        the download progress (0-100) during {@code DOWNLOADING}
  * @param downloadBytesPerSecond the download rate during {@code DOWNLOADING}
@@ -40,6 +42,7 @@ public record UpgradeEvent(
 	UpgradeState state,
 	String currentVersion,
 	String targetVersion,
+	byte[] targetHash,
 	String errorMessage,
 	double downloadPercent,
 	double downloadBytesPerSecond
@@ -51,6 +54,7 @@ public record UpgradeEvent(
 	 * @param state          the new upgrade state
 	 * @param currentVersion the version the agent currently runs
 	 * @param targetVersion  the offered version
+	 * @param targetHash     the offered package identity hash
 	 * @param errorMessage   the failure cause when the state is {@code FAILED}
 	 * @return the event
 	 */
@@ -59,8 +63,9 @@ public record UpgradeEvent(
 		final UpgradeState state,
 		final String currentVersion,
 		final String targetVersion,
+		final byte[] targetHash,
 		final String errorMessage
 	) {
-		return new UpgradeEvent(packageName, state, currentVersion, targetVersion, errorMessage, 0, 0);
+		return new UpgradeEvent(packageName, state, currentVersion, targetVersion, targetHash, errorMessage, 0, 0);
 	}
 }

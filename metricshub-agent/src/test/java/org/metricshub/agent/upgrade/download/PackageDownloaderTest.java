@@ -53,6 +53,16 @@ class PackageDownloaderTest {
 			exchange.sendResponseHeaders(404, -1);
 			exchange.close();
 		});
+		server.createContext("/redirect-same-host/", exchange -> {
+			exchange.getResponseHeaders().set("Location", baseUrl() + "/repo/metricshub-redirected.deb");
+			exchange.sendResponseHeaders(302, -1);
+			exchange.close();
+		});
+		server.createContext("/redirect-other-host/", exchange -> {
+			exchange.getResponseHeaders().set("Location", "https://evil.example.com/metricshub.deb");
+			exchange.sendResponseHeaders(302, -1);
+			exchange.close();
+		});
 		server.start();
 	}
 
@@ -66,7 +76,7 @@ class PackageDownloaderTest {
 	}
 
 	private PackageOffer offer(final String url, final byte[] sha256) {
-		return new PackageOffer("metricshub", "3.10.00", url, sha256, Map.of());
+		return new PackageOffer("metricshub", "3.10.00", url, sha256, new byte[] { 7 }, Map.of());
 	}
 
 	private UpgradeConfig config() {
@@ -120,6 +130,37 @@ class PackageDownloaderTest {
 		);
 
 		assertTrue(failure.getMessage().contains("maximum"));
+	}
+
+	@Test
+	void redirectWithinTheAllowedHostShouldBeFollowed() throws Exception {
+		final Path staged = downloader.download(
+			offer(baseUrl() + "/redirect-same-host/metricshub.deb", packageSha256),
+			config(),
+			tempDir,
+			(p, r) -> {}
+		);
+
+		assertArrayEquals(packageContent, Files.readAllBytes(staged));
+	}
+
+	@Test
+	void redirectOutsideTheAllowlistShouldBeRejected() {
+		final UpgradeConfig allowlisted = UpgradeConfig.builder()
+			.hostAllowlist(java.util.List.of("127.0.0.1"))
+			.downloadRetries(1)
+			.build();
+
+		final UpgradeException failure = assertThrows(UpgradeException.class, () ->
+			downloader.download(
+				offer(baseUrl() + "/redirect-other-host/metricshub.deb", packageSha256),
+				allowlisted,
+				tempDir,
+				(p, r) -> {}
+			)
+		);
+
+		assertTrue(failure.getMessage().contains("redirected"));
 	}
 
 	@Test

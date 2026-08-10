@@ -36,6 +36,7 @@ import org.metricshub.agent.config.OpAmpConfig;
 import org.metricshub.agent.context.AgentContext;
 import org.metricshub.agent.helper.ConfigHelper;
 import org.metricshub.agent.security.PasswordEncrypt;
+import org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter;
 import org.metricshub.opamp.client.OpampClient;
 import org.metricshub.opamp.client.OpampClientCallbacks;
 import org.metricshub.opamp.client.OpampClientSettings;
@@ -220,6 +221,11 @@ public class OpAmpService {
 			if (packagesHandler != null && upgradeEnabled) {
 				// Advertises the AcceptsPackages/ReportsPackageStatuses capabilities
 				newClient.setPackagesHandler(packagesHandler);
+				if (packagesHandler instanceof OpampUpgradeAdapter adapter) {
+					// Rebind the status sink to the new client so upgrade transitions occurring
+					// before the next package offer still reach the live client
+					adapter.bindSink(newClient.packageStatusSink());
+				}
 			}
 			// Report a complete first message
 			newClient.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));

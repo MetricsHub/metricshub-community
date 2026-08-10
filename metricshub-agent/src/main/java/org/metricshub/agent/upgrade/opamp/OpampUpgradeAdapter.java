@@ -21,6 +21,7 @@ package org.metricshub.agent.upgrade.opamp;
  * ╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱╲╱
  */
 
+import com.google.protobuf.ByteString;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +62,17 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 		upgradeManager.setStatusListener(this::forwardEvent);
 	}
 
+	/**
+	 * Binds the sink of the currently active OpAMP client. Called whenever the OpAMP client is
+	 * (re)created, so upgrade transitions occurring between a client rebuild and the next package
+	 * offer are still delivered to the live client.
+	 *
+	 * @param sink the status sink of the active client
+	 */
+	public void bindSink(final PackageStatusSink sink) {
+		this.statusSink = sink;
+	}
+
 	@Override
 	public void onPackagesAvailable(
 		final PackagesAvailable packagesAvailable,
@@ -87,6 +99,7 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 				offered.getVersion(),
 				file.getDownloadUrl(),
 				file.getContentHash().toByteArray(),
+				offered.getHash().toByteArray(),
 				headers
 			)
 		);
@@ -140,6 +153,16 @@ public class OpampUpgradeAdapter implements OpampPackagesHandler {
 		}
 		if (event.targetVersion() != null && !event.targetVersion().isBlank()) {
 			builder.setServerOfferedVersion(event.targetVersion());
+		}
+		final byte[] targetHash = event.targetHash();
+		if (targetHash != null && targetHash.length > 0) {
+			// The offered package identity hash is required by the OpAMP specification for
+			// statuses of an offer-initiated installation; once installed, the agent has that
+			// same package.
+			builder.setServerOfferedHash(ByteString.copyFrom(targetHash));
+			if (event.state() == UpgradeState.SUCCEEDED) {
+				builder.setAgentHasHash(ByteString.copyFrom(targetHash));
+			}
 		}
 		if (event.errorMessage() != null && !event.errorMessage().isBlank()) {
 			builder.setErrorMessage(event.errorMessage());

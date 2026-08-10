@@ -26,7 +26,7 @@ class PackageValidatorTest {
 	private final UpgradeConfig config = UpgradeConfig.builder().build();
 
 	private static PackageOffer offer(final String version, final String url) {
-		return new PackageOffer("metricshub", version, url, new byte[] { 1, 2, 3 }, Map.of());
+		return new PackageOffer("metricshub", version, url, new byte[] { 1, 2, 3 }, new byte[] { 7 }, Map.of());
 	}
 
 	@Test
@@ -79,7 +79,14 @@ class PackageValidatorTest {
 
 	@Test
 	void missingHashShouldBeRejected() {
-		final PackageOffer offer = new PackageOffer("metricshub", "3.10.00", "https://repo/m.deb", new byte[0], Map.of());
+		final PackageOffer offer = new PackageOffer(
+			"metricshub",
+			"3.10.00",
+			"https://repo/m.deb",
+			new byte[0],
+			new byte[] { 7 },
+			Map.of()
+		);
 		assertThrows(UpgradeException.class, () ->
 			validator.validateOffer(offer, CURRENT_VERSION, config, DeploymentKind.DEB)
 		);
@@ -130,7 +137,14 @@ class PackageValidatorTest {
 		Files.write(stagedPackage, content);
 		final byte[] sha256 = MessageDigest.getInstance("SHA-256").digest(content);
 
-		final PackageOffer matching = new PackageOffer("metricshub", "3.10.00", "https://repo/m.deb", sha256, Map.of());
+		final PackageOffer matching = new PackageOffer(
+			"metricshub",
+			"3.10.00",
+			"https://repo/m.deb",
+			sha256,
+			new byte[] { 7 },
+			Map.of()
+		);
 		assertDoesNotThrow(() -> validator.validateStagedPackage(stagedPackage, matching, config));
 
 		final PackageOffer mismatching = offer("3.10.00", "https://repo/m.deb");
