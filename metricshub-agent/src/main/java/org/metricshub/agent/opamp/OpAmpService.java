@@ -181,20 +181,40 @@ public class OpAmpService {
 			return;
 		}
 
+		OpampClient newClient = null;
 		try {
-			final OpampClient newClient = clientFactory.apply(buildSettings(newConfig));
+			newClient = clientFactory.apply(buildSettings(newConfig));
 			// Report a complete first message
 			newClient.setAgentDescription(OpAmpAgentDescriptionMapper.map(agentContext.getAgentInfo()));
 			newClient.setHealth(OpAmpHealthMapper.map(applicationStatusService.reportApplicationStatus()));
 			newClient.start();
 			client = newClient;
 		} catch (Exception e) {
+			// Release the resources of a client whose startup failed: the retry below builds a
+			// fresh one, and leaking an executor and HTTP client on every attempt must not happen.
+			closeQuietly(newClient);
 			// Clear the active configuration so the next supervisor tick retries the startup:
 			// a transient failure (e.g. missing CA file) must not disable OpAMP until the
 			// configuration changes or the agent restarts.
 			activeConfig = null;
 			log.error("Failed to start the OpAMP client on {}: {}", endpoint, e.getMessage());
 			log.debug("Failed to start the OpAMP client:", e);
+		}
+	}
+
+	/**
+	 * Stops a client best-effort, swallowing any secondary failure.
+	 *
+	 * @param failedClient the client to stop; {@code null} is ignored
+	 */
+	private static void closeQuietly(final OpampClient failedClient) {
+		if (failedClient == null) {
+			return;
+		}
+		try {
+			failedClient.stop("OpAMP client startup failed");
+		} catch (Exception stopError) {
+			log.debug("Failed to release the OpAMP client that could not start:", stopError);
 		}
 	}
 

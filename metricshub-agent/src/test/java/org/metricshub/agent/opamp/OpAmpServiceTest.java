@@ -155,6 +155,16 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void failedStartShouldReleaseTheClientResources() {
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		org.mockito.Mockito.doThrow(new IllegalStateException("Simulated start failure")).when(client).start();
+
+		opAmpService.supervise();
+
+		verify(client, times(1)).stop("OpAMP client startup failed");
+	}
+
+	@Test
 	void startupFailureShouldBeRetriedOnTheNextTick() {
 		agentConfig.setOpamp(enabledConfig(ENDPOINT));
 		final AtomicReference<Boolean> failFirstAttempt = new AtomicReference<>(true);

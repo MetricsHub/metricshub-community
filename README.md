@@ -62,7 +62,7 @@ This is a multi-module project:
 
 ## Remote Management (OpAMP)
 
-The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling, reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch` and `build_number`), status and health, and can receive software package offers for automatic upgrades.
+The MetricsHub Agent embeds an [OpAMP](https://opentelemetry.io/docs/specs/opamp/) client for centralized fleet management. When enabled, the agent connects to an OpAMP server over plain HTTP polling and reports its identity (`service.name`, `service.version`, `host.name`, plus `os.type`, `host.arch` and `build_number`), status and health. Automatic software upgrades through OpAMP package offers are under development (see [#1286](https://github.com/MetricsHub/metricshub-community/issues/1286)); until that lands, package offers are not accepted.
 
 The feature is **disabled by default**. Enable it with a top-level `opamp:` section in `metricshub.yaml`:
 
