@@ -200,6 +200,48 @@ class OpAmpServiceTest {
 	}
 
 	@Test
+	void upgradeAdapterSinkShouldBeReboundOnEveryClientBuild() {
+		final org.metricshub.agent.upgrade.UpgradeManager upgradeManager = mock(
+			org.metricshub.agent.upgrade.UpgradeManager.class
+		);
+		final org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter adapter =
+			new org.metricshub.agent.upgrade.opamp.OpampUpgradeAdapter(upgradeManager);
+		final org.metricshub.opamp.client.packages.PackageStatusSink clientSink = mock(
+			org.metricshub.opamp.client.packages.PackageStatusSink.class
+		);
+		when(client.packageStatusSink()).thenReturn(clientSink);
+
+		final OpAmpService service = new OpAmpService(agentContextHolder, adapter, settings -> {
+			factoryInvocations++;
+			return client;
+		});
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+
+		service.supervise();
+
+		verify(client).setPackagesHandler(adapter);
+		verify(client).packageStatusSink();
+	}
+
+	@Test
+	void packagesHandlerShouldNotBeRegisteredWhenUpgradesAreDisabled() {
+		final org.metricshub.opamp.client.packages.OpampPackagesHandler handler = mock(
+			org.metricshub.opamp.client.packages.OpampPackagesHandler.class
+		);
+		final OpAmpService service = new OpAmpService(agentContextHolder, handler, settings -> {
+			factoryInvocations++;
+			return client;
+		});
+		agentConfig.setOpamp(enabledConfig(ENDPOINT));
+		agentConfig.setUpgrade(org.metricshub.agent.config.UpgradeConfig.builder().enabled(false).build());
+
+		service.supervise();
+
+		verify(client, never()).setPackagesHandler(any());
+		verify(client, times(1)).start();
+	}
+
+	@Test
 	void buildSettingsShouldMapTheConfiguration() {
 		final OpAmpConfig config = OpAmpConfig.builder()
 			.enabled(true)
