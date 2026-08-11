@@ -51,6 +51,13 @@ class WinRmConfigurationTest {
 	}
 
 	@Test
+	void testTrustAllCertificatesDefaultsToTrue() {
+		assertTrue(new WinRmConfiguration().isTrustAllCertificates());
+		assertTrue(WinRmConfiguration.builder().build().isTrustAllCertificates());
+		assertFalse(WinRmConfiguration.builder().trustAllCertificates(false).build().isTrustAllCertificates());
+	}
+
+	@Test
 	void testCopy() {
 		final WinRmConfiguration winRmConfiguration = WinRmConfiguration.builder()
 			.authentications(List.of(AuthenticationEnum.KERBEROS))
@@ -59,6 +66,7 @@ class WinRmConfigurationTest {
 			.port(100)
 			.protocol(TransportProtocols.HTTPS)
 			.timeout(100L)
+			.trustAllCertificates(false)
 			.username("username")
 			.build();
 
@@ -95,6 +103,7 @@ class WinRmConfigurationTest {
 		assertEquals("myUsername", winRmConfiguration.getProperty("username"));
 		assertEquals("100", winRmConfiguration.getProperty("timeout"));
 		assertEquals("myHostname", winRmConfiguration.getProperty("hostname"));
+		assertEquals("true", winRmConfiguration.getProperty("trustAllCertificates"));
 	}
 
 	@Test

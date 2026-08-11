@@ -79,6 +79,20 @@ public class WinRmConfiguration implements IWinConfiguration {
 	@JsonDeserialize(using = TimeDeserializer.class)
 	private Long timeout = 120L;
 
+	/**
+	 * Whether to trust all the server certificates and skip the hostname verification when
+	 * connecting over HTTPS. Enabled by default: WinRM services are commonly exposed with the
+	 * self-signed certificate Windows generates for them. Set it to {@code false} to have the
+	 * certificate chain validated and the hostname verified during the handshake: the certificate,
+	 * or its issuing CA, must then be present in the trust store of the runtime embedded in
+	 * MetricsHub - {@code C:\Program Files\MetricsHub\runtime\lib\security\cacerts} on Windows,
+	 * {@code /opt/metricshub/lib/runtime/lib/security/cacerts} on Linux - or in the store designated
+	 * by {@code -Djavax.net.ssl.trustStore}.
+	 */
+	@Default
+	@JsonSetter(nulls = SKIP)
+	private boolean trustAllCertificates = true;
+
 	@Override
 	public void validateConfiguration(String resourceKey) throws InvalidConfigurationException {
 		StringHelper.validateConfigurationAttribute(
@@ -138,6 +152,7 @@ public class WinRmConfiguration implements IWinConfiguration {
 			.port(port)
 			.protocol(protocol)
 			.timeout(timeout)
+			.trustAllCertificates(trustAllCertificates)
 			.username(username)
 			.hostname(hostname)
 			.build();
@@ -159,6 +174,8 @@ public class WinRmConfiguration implements IWinConfiguration {
 				return getProtocol().toString();
 			case "timeout":
 				return getTimeout().toString();
+			case "trustallcertificates":
+				return String.valueOf(isTrustAllCertificates());
 			case "username":
 				return getUsername();
 			case "hostname":
