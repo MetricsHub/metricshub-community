@@ -95,7 +95,6 @@ public class WinRmExtension implements IProtocolExtension {
 	 * Creates a new instance of the {@link WinRmExtension} implementation.
 	 */
 	public WinRmExtension() {
-		System.setProperty("org.metricshub.winrm.tls.insecure", "true");
 		winRmRequestExecutor = new WinRmRequestExecutor();
 		wmiDetectionService = new WmiDetectionService(winRmRequestExecutor);
 		winCommandService = new WinCommandService(winRmRequestExecutor);

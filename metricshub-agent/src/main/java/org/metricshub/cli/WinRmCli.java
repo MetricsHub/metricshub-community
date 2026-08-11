@@ -23,6 +23,7 @@ package org.metricshub.cli;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.IntNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -160,14 +161,23 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 	private String namespace;
 
 	@Option(
-		names = { "-h", "-?", "--help" },
+		names = "--trust-all-certificates",
 		order = 9,
+		paramLabel = "true|false",
+		arity = "1",
+		description = "Trusts all server certificates and skips hostname verification over HTTPS (default: true)"
+	)
+	private Boolean trustAllCertificates;
+
+	@Option(
+		names = { "-h", "-?", "--help" },
+		order = 10,
 		usageHelp = true,
 		description = "Shows this help message and exits"
 	)
 	boolean usageHelpRequested;
 
-	@Option(names = "-v", order = 10, description = "Verbose mode (repeat the option to increase verbosity)")
+	@Option(names = "-v", order = 11, description = "Verbose mode (repeat the option to increase verbosity)")
 	boolean[] verbose;
 
 	PrintWriter printWriter;
@@ -296,6 +306,10 @@ public class WinRmCli implements IQuery, Callable<Integer> {
 						final ArrayNode authenticationsNode = JsonNodeFactory.instance.arrayNode();
 						authentications.stream().forEach(authenticationsNode::add);
 						configurationNode.set("authentications", authenticationsNode);
+					}
+
+					if (trustAllCertificates != null) {
+						configurationNode.set("trustAllCertificates", BooleanNode.valueOf(trustAllCertificates));
 					}
 
 					// Build an IConfiguration from the configuration ObjectNode

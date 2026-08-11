@@ -304,6 +304,7 @@ export const PROTOCOL_DEFAULTS = {
 		timeout: 30,
 		namespace: "",
 		authentications: "NTLM",
+		trustAllCertificates: true,
 		hostname: "",
 	},
 	wbem: {
@@ -570,6 +571,18 @@ export const PROTOCOL_FIELDS = {
 				{ value: WINRM_AUTH_KERBEROS, label: "Kerberos" },
 				{ value: WINRM_AUTH_BOTH, label: "NTLM and Kerberos" },
 			],
+		},
+		{
+			name: "trustAllCertificates",
+			label: "Trust all certificates",
+			type: "boolean",
+			advanced: true,
+			helperText:
+				"Trusts all server certificates and skips hostname verification over HTTPS (default: true)",
+			showIf: (values) =>
+				String(values.protocol ?? "")
+					.trim()
+					.toUpperCase() === "HTTPS",
 		},
 		{ name: "namespace", label: "Force namespace", type: "text", advanced: true },
 	],
@@ -966,6 +979,10 @@ export const buildProtocolConfigFromForm = (protocol, values) => {
 				if (!isDefaultNtlm) {
 					config.authentications = auths;
 				}
+			}
+			// The engine trusts all certificates by default: only an explicit opt-out is written.
+			if (raw.trustAllCertificates === false || raw.trustAllCertificates === "false") {
+				config.trustAllCertificates = false;
 			}
 			break;
 		case "wbem":

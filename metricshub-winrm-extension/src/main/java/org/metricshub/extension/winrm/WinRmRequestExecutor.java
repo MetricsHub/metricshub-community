@@ -23,10 +23,9 @@ package org.metricshub.extension.winrm;
 
 import io.opentelemetry.instrumentation.annotations.SpanAttribute;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.metricshub.engine.common.exception.ClientException;
@@ -37,13 +36,18 @@ import org.metricshub.engine.configuration.TransportProtocols;
 import org.metricshub.extension.win.IWinConfiguration;
 import org.metricshub.extension.win.IWinRequestExecutor;
 import org.metricshub.extension.win.WmiRecorder;
+import org.metricshub.winrm.AuthScheme;
+import org.metricshub.winrm.CommandResult;
+import org.metricshub.winrm.WinRMClient;
 import org.metricshub.winrm.WinRMHttpProtocolEnum;
-import org.metricshub.winrm.WindowsRemoteCommandResult;
-import org.metricshub.winrm.command.WinRMCommandExecutor;
+import org.metricshub.winrm.WqlRequest;
+import org.metricshub.winrm.WqlResult;
+import org.metricshub.winrm.WqlRow;
+import org.metricshub.winrm.exceptions.WinRMFaultException;
 import org.metricshub.winrm.exceptions.WindowsRemoteException;
 import org.metricshub.winrm.exceptions.WqlQuerySyntaxException;
+import org.metricshub.winrm.exceptions.WqlSyntaxException;
 import org.metricshub.winrm.service.client.auth.AuthenticationEnum;
-import org.metricshub.winrm.wql.WinRMWqlExecutor;
 
 /**
  * The WinRmRequestExecutor class provides utility methods for executing
@@ -51,6 +55,51 @@ import org.metricshub.winrm.wql.WinRMWqlExecutor;
  */
 @Slf4j
 public class WinRmRequestExecutor implements IWinRequestExecutor {
+
+	/**
+	 * Build the {@link WinRMClient} that carries out a request on the given host: transport, port,
+	 * credentials, authentication schemes, timeout and TLS trust policy all come from the WinRM
+	 * configuration. Nothing is connected yet: the first operation authenticates and, when several
+	 * operations run on the same client, they share that single authenticated connection.
+	 *
+	 * @param hostname           The hostname of the device where the WinRM service is running
+	 * @param winRmConfiguration WinRM Protocol configuration (credentials, timeout, ...)
+	 * @return A new client, to be closed once the operation is over
+	 */
+	static WinRMClient newClient(final String hostname, final WinRmConfiguration winRmConfiguration) {
+		final WinRMClient.Builder builder = WinRMClient.builder(hostname)
+			.credentials(winRmConfiguration.getUsername(), winRmConfiguration.getPassword())
+			.timeout(Duration.ofSeconds(winRmConfiguration.getTimeout()));
+
+		if (TransportProtocols.HTTP.equals(winRmConfiguration.getProtocol())) {
+			builder.http();
+		} else {
+			builder.https();
+		}
+
+		final Integer port = winRmConfiguration.getPort();
+		if (port != null) {
+			builder.port(port);
+		}
+
+		final List<AuthenticationEnum> authentications = winRmConfiguration.getAuthentications();
+		if (authentications != null && !authentications.isEmpty()) {
+			builder.authentication(
+				authentications
+					.stream()
+					.map(authentication ->
+						AuthenticationEnum.KERBEROS.equals(authentication) ? AuthScheme.KERBEROS : AuthScheme.NTLM
+					)
+					.toArray(AuthScheme[]::new)
+			);
+		}
+
+		if (winRmConfiguration.isTrustAllCertificates()) {
+			builder.trustAllCertificates();
+		}
+
+		return builder.build();
+	}
 
 	/**
 	 * Execute a WinRM query
@@ -102,29 +151,28 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		try {
 			final long startTime = System.currentTimeMillis();
 
-			WinRMWqlExecutor result = WinRMWqlExecutor.executeWql(
-				httpProtocol,
-				hostname,
-				port,
-				username,
-				winRmConfiguration.getPassword(),
-				namespace,
-				query,
-				timeout * 1000L,
-				null,
-				authentications
-			);
+			final WqlResult result;
+			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+				final WqlRequest request = client.wql(query);
+				if (!namespace.isBlank()) {
+					request.namespace(namespace);
+				}
+				result = request.execute();
+			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
 			// The engine's compute steps mutate the result in place (add columns, transform rows,
-			// ...): deep-copy the executor's unmodifiable (and possibly null) rows into mutable lists.
-			// List.of() is only the stream source; the collector always yields a mutable ArrayList.
-			final List<List<String>> table = Optional.ofNullable(result.getRows())
-				.orElseGet(List::of)
-				.stream()
-				.map(row -> (List<String>) new ArrayList<>(row))
-				.collect(Collectors.toCollection(ArrayList::new));
+			// ...): build mutable lists, with the columns in the order the query declares them.
+			final List<String> columns = result.columns();
+			final List<List<String>> table = new ArrayList<>(result.size());
+			for (final WqlRow row : result) {
+				final List<String> values = new ArrayList<>(columns.size());
+				for (final String column : columns) {
+					values.add(row.string(column));
+				}
+				table.add(values);
+			}
 
 			LoggingHelper.trace(() ->
 				log.trace(
@@ -160,10 +208,15 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 			return false;
 		}
 
-		if (t instanceof WindowsRemoteException) {
+		if (t instanceof WinRMFaultException winRmFaultException) {
+			// The provider-level detail is where WMI reports its WBEM_E_* mnemonics; the fault message
+			// repeats it, and is the only place it shows up on a fault carrying no detail element.
+			final String faultDetail = winRmFaultException.getFaultDetail();
+			return IWinRequestExecutor.isAcceptableWmiComError(faultDetail == null ? t.getMessage() : faultDetail);
+		} else if (t instanceof WindowsRemoteException) {
 			final String message = t.getMessage();
 			return IWinRequestExecutor.isAcceptableWmiComError(message);
-		} else if (t instanceof WqlQuerySyntaxException) {
+		} else if (t instanceof WqlQuerySyntaxException || t instanceof WqlSyntaxException) {
 			return true;
 		}
 
@@ -226,28 +279,19 @@ public class WinRmRequestExecutor implements IWinRequestExecutor {
 		try {
 			final long startTime = System.currentTimeMillis();
 
-			WindowsRemoteCommandResult result = WinRMCommandExecutor.execute(
-				command,
-				httpProtocol,
-				hostname,
-				port,
-				username,
-				winRmConfiguration.getPassword(),
-				null,
-				timeout * 1000L,
-				null,
-				null,
-				authentications
-			);
+			final CommandResult result;
+			try (WinRMClient client = newClient(hostname, winRmConfiguration)) {
+				result = client.command(command).execute();
+			}
 
 			final long responseTime = System.currentTimeMillis() - startTime;
 
 			// If the command returns an error
-			if (result.getStatusCode() != 0) {
-				throw new ClientException(String.format("WinRM remote command failed on %s: %s", hostname, result.getStderr()));
+			if (result.exitCode() != 0) {
+				throw new ClientException(String.format("WinRM remote command failed on %s: %s", hostname, result.stderr()));
 			}
 
-			final String resultStdout = result.getStdout();
+			final String resultStdout = result.stdout();
 
 			LoggingHelper.trace(() ->
 				log.trace(
